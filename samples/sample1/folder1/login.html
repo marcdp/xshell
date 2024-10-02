@@ -1,0 +1,45 @@
+
+<script type="module">
+    export default class {
+        async onCommand(command, args) {
+            if (command == "load") {
+                //load
+                this.label = "this is a login page";
+            } else if (command == "show-page-stack") {
+                //show page stack
+                xshell.showPageStack({url:"/folder1/message.html?message=hello+world"});
+            } else if (command == "show-page-dialog") {
+                //show page dialog
+                xshell.showPageDialog({url:"/folder1/dialog.html"});
+            }
+        }
+    }
+</script>
+
+<p>
+    Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since the 1500s, 
+    when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap 
+    into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum 
+    passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.
+</p>
+
+<ul>
+    
+    <li><x-anchor href="help.html">Help</x-anchor></li>
+    <li><x-button command="show-page-stack">Show page stack</x-button></li>
+    <li><x-button command="show-page-dialog" data-dddd="2" data-asdas="321">Show page dialog</x-button></li>
+
+    <x-clock></x-clock>
+    <x-icon icon="x-bell"></x-icon>
+    <x-icon icon="x-account_circle"></x-icon>
+    <x-icon icon="material-add_alert"></x-icon>
+
+    <!--
+    <x-page src="/folder1/message.html?x-layout=embed" style="border:1px red solid"></x-page>
+    <img src="animal.webp" style="width:10em; display:block"/>
+    -->
+
+</ul>
+
+
+

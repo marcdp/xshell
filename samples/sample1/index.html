@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+
+    <!-- head -->
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="shortcut icon" type="image/x-icon" href="favicon.ico" />
+
+    <!-- import map -->
+    <script type="importmap">
+        {
+            "imports": {
+              "x-shell": "/src/x-shell.js",
+              "x-page": "/src/x-page.js",
+              "x-element": "/src/x-element.js"
+            }
+        }
+    </script>
+    
+    <!-- xshell -->
+    <script type="module">
+        import xshell from "/src/x-shell.js";
+        //init
+        await xshell.start({
+            //app info
+            app: {
+                name:       "sample1",
+                title:      "Sample 1",
+                version:    "1.0",
+                copyright:  "",
+                logo:       "logo.svg"
+            },
+            //browser config
+            browser: { 
+                styleSheets: [] //array of styleSheets urls to load
+            },
+            //bus config
+            bus: { 
+                debug: true
+            },
+            //i18n config
+            i18n: { 
+                culture: "en",
+                strings: {
+                    "hello": "hola",
+                    "bye": "adios"
+                }
+            },
+            //list of url patterns to load components, icons, and images: "component:prefix": "/path/to/component{name.js}"
+            loader: {
+                map:{
+                    "icon:material": "https://material-icons.github.io/material-icons/svg/{name-unprefixed}/baseline.svg"
+                }                
+            }, 
+            //logger setup
+            logger: { 
+                debug: true
+            },
+            //menus to use
+            menus: {  
+                main: [
+                    {label: "File", icon: "x-file1"},
+                    {label: "Edit", enabled: false},
+                    {label: "Tools", childs:[
+                        {label: "Option 1"},
+                        {label: "Option 2"},
+                        {label: "Option 3", hidden: true},
+                    ]},
+                ],
+                footer: [
+                    {label: "About"},
+                    {label: "Copyright"},
+                ]
+            },
+            //list of modules to load
+            modules: [ 
+                {module:"/src/modules/x/module.js", args:{a:1, b:2}}
+            ],
+            //navigator configuration
+            navigator: { 
+                type:  "hash", //hash || path
+                base:  "/samples/sample1",                
+                start: "/folder1/login.html",
+                titlePrefix: "",
+                titleSuffix: " (XShell)"
+            },
+            //ui
+            ui: {
+                errors: {
+                    default:""
+                },
+                layouts: {
+                    default:"",
+                    stack:"",
+                    dialog:"",
+                    embed:""
+                },
+                styleSheets: [], //array of styleSheets urls to load
+            },
+            // user
+            user: {  
+                id: "",
+                username: "",
+                authenticated: false,
+                claims: {}
+            },
+            //server info
+            server: {}, 
+        });
+     </script>
+
+</head>
+<body>
+</body> 
+</html>
+
+<!--
+
+x - auto add styles.css to x-shell
+x - x-icon
+x- loader: avoid parallel loader of the same resource
+x - auto create importmap for x-shell ?? NO
+x - x-breadcrumb
+x - we can override the layout used, using a query parameter (ex: ...my-page.html?x-page-layout=xxxxxx)
+x - x-page
+x - load custom page
+x - show detailed errors
+x - show error page
+x - embed page
+x - x-page close
+x - x-page back
+
+- posar x-breacrumb a x-layout-default, i fer que funcioni
+
+- pass breadcrumb encoded in query string
+
+- global layout (like layouts but for the x-shell wrapper), in order to avoid repaint flicks
+
+- the page should decide its own layout (ex: <x-page title="..." icon="..." layout="xxxxxxxxx">....)
+
+
+-->
