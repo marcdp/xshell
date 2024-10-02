@@ -1,0 +1,19 @@
+html {
+    margin:0;
+    padding:0;
+}
+body {
+    margin:0;
+    padding:0;
+}
+
+/* variables */
+
+
+/* x-page */
+x-page {display:block;}
+x-page.dialog > dialog {padding:0;}
+x-page.stack > dialog {top:0; bottom:0; right: 0!important; width:80vw; height: unset; margin-right:0; border:none; outline:none; border:none; max-height:unset; padding:0}
+x-page.stack + x-page.stack > dialog {width:78vw;}
+x-page.stack + x-page.stack + x-page.stack > dialog {width:76vw;}
+x-page.stack + x-page.stack + x-page.stack + x-page.stack > dialog {width:74vw;}
