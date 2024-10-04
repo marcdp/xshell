@@ -1,3 +1,4 @@
+import xshell from "x-shell";
 
 class XBreadcrumb extends HTMLElement {
 
@@ -8,33 +9,34 @@ class XBreadcrumb extends HTMLElement {
         super();
         this.attachShadow({ mode: "open" });
         this.shadowRoot.innerHTML = "&nbsp;";
-    }
-
-    //props
-    get page() {
-        var target = this;
-        while (target) {
-            if (!target.parentNode) {
-                target = target.host;
-            }
-            if (target.localName == "x-page") return target;
-            target = target.parentNode;
-        }
-        return null;
-    }
+    } 
 
     //events
     connectedCallback() { 
-        this.page.addEventListener("load", () => {
+        let page = xshell.getPage(this);
+        page.addEventListener("page:load", () => {
+            this.render();
+        });
+        page.addEventListener("page:change", () => {
             this.render();
         });
     } 
     render() {
         let html = [];
-        html.push(this.page.label);
-        this.shadowRoot.innerHTML = html.join("");
-    }
+        let page = xshell.getPage(this);
+        if (page) {
+            for(let item of page.breadcrumb) {
+                let href = xshell.getRealUrl(item.href);
+                html.push("<a href='" + href + "'>");
+                html.push(item.label.replace(/</g,"&lt;"));
+                html.push("</a>");
+                html.push(" / ");
 
+            }
+            html.push(page.label);
+            this.shadowRoot.innerHTML = html.join("");
+        }
+    }
 
 }
 

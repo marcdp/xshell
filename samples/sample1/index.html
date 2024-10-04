@@ -11,17 +11,51 @@
     <script type="importmap">
         {
             "imports": {
-              "x-shell": "/src/x-shell.js",
-              "x-page": "/src/x-page.js",
-              "x-element": "/src/x-element.js"
+              "x-shell": "/src/x-shell.js"
             }
         }
     </script>
-    
+
     <!-- xshell -->
     <script type="module">
         import xshell from "/src/x-shell.js";
-        //init
+        import XTemplate from "/src/x-template.js"
+
+        // test
+        var state = {
+            var1: 1,
+            var2: 2,
+            var3: {
+                str1: "hello",
+                str2: "bye"
+            },
+            var4: [
+                {name:"aaaaa"},
+                {name:"bbbbbbbb"},
+                {name:"cccc"}
+            ]
+        }
+        var div = document.createElement("DIV");
+        document.body.appendChild(div);
+        var xTemplate = XTemplate.compileTemplate(`
+            <div>hello <b>world</b>: {{ state.var1 }}</div>
+            <x-icon></x-icon>{{ state.var2 }}
+            <button x-on:click="onClick">mybut</button>
+            {{ state.var3.str1 }},
+            <ul>
+                <li x-for="item in state.var4" x-key="name">
+                    {{ item.name }}
+                </li>
+            </ul>
+        `);
+        var handler = {
+            onClick: (event) => {
+                debugger;
+            }
+        }
+        XTemplate.render(state, xTemplate, div, handler);
+
+        // init
         await xshell.start({
             //app info
             app: {
@@ -43,14 +77,18 @@
             i18n: { 
                 culture: "en",
                 strings: {
-                    "hello": "hola",
+                    "hello world": "hola mundo",
                     "bye": "adios"
                 }
             },
             //list of url patterns to load components, icons, and images: "component:prefix": "/path/to/component{name.js}"
             loader: {
-                map:{
-                    "icon:material": "https://material-icons.github.io/material-icons/svg/{name-unprefixed}/baseline.svg"
+                map: {
+                    //"component:fluent": "https://unpkg.com/@fluentui/web-components",
+                    //"component:vaadin": "https://cdn.jsdelivr.net/npm/@vaadin/{name-unprefixed}@23.5.6/+esm",
+                    //"component:md": "@material/web/all.js",
+                    //"component:sl": "https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.17.1/cdn/shoelace.js",
+                    "icon:material": "https://material-icons.github.io/material-icons/svg/{name-unprefixed}/outline.svg"
                 }                
             }, 
             //logger setup
@@ -79,7 +117,6 @@
             ],
             //navigator configuration
             navigator: { 
-                type:  "hash", //hash || path
                 base:  "/samples/sample1",                
                 start: "/folder1/login.html",
                 titlePrefix: "",
@@ -91,10 +128,15 @@
                     default:""
                 },
                 layouts: {
-                    default:"",
-                    stack:"",
-                    dialog:"",
-                    embed:""
+                    app: {
+                        main: "",
+                    },
+                    page: {
+                        main:  "",
+                        stack: "",
+                        dialog:"",
+                        default: ""
+                    }
                 },
                 styleSheets: [], //array of styleSheets urls to load
             },
@@ -112,6 +154,8 @@
 
 </head>
 <body>
+    
+    
 </body> 
 </html>
 
@@ -130,14 +174,51 @@ x - show error page
 x - embed page
 x - x-page close
 x - x-page back
+x - posar x-breacrumb a x-layout-default, i fer que funcioni
+x - pass breadcrumb encoded in query string
+x - global layout (like layouts but for the x-shell wrapper), in order to avoid repaint flicks
+x - x-navigator
+x - autoload layouts at ui.start()
+x- layout default -> rename to main
+x- layout default -> use that as the embed + remove embed
+x - side panel with deafult layout
+x - css with defaults styles
+x - beautifulize layouts
+x - allow navigate using anchors inside an embedeed page
+x- loading
 
-- posar x-breacrumb a x-layout-default, i fer que funcioni
+- create user at npmjs
+- create npm package + publish: npm publish
+- add package to npm
 
-- pass breadcrumb encoded in query string
+- responsive design
+- store user settings locally
+- rpc
+- routes alias (/about -- > /pages/folder/about.html)
 
-- global layout (like layouts but for the x-shell wrapper), in order to avoid repaint flicks
 
-- the page should decide its own layout (ex: <x-page title="..." icon="..." layout="xxxxxxxxx">....)
+- var renderer = XUI.create(state, template, handler, HTMLElement);
+- x-element
+- menus
+- show avatar + drop down avatar menu
 
+x - x-i18n
+
+- page: handlers ?? !! no --  > needs an script that returns a class, and thats all
+- showPage animations/transition
+
+x - integrar Fluent UI Web Components
+- integrar vaadin
+x - integrar material components: https://github.com/material-components/material-web/blob/main/docs/quick-start.md
+x- integrar shoelace
+- integrar ionic (https://ionicframework.com/docs/intro/cdn)
+- integrar ui5 components: https://sap.github.io/ui5-webcomponents/components/Button/
+- loader: []
+    "component:sl": [
+        {tag:"link", rel:"stylesheet", href:"https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.17.1/cdn/themes/light.css"},
+        {tag:"script", type:"module", src:"https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.17.1/cdn/shoelace.js"}
+    ]
+  }
+x - lit-element
 
 -->

@@ -10,9 +10,8 @@ import ui           from "./ui.js";
 import user         from "./user.js";
 import utils        from "./utils.js";
 
-import XPage                from "./x-page.js";
-import XNavigatorHash   from "./x-navigator-hash.js";
-import XNavigatorPath   from "./x-navigator-path.js";
+import XPage        from "./x-page.js";
+import XNavigator   from "./x-navigator.js";
 
 
 // class
@@ -29,7 +28,6 @@ class XShell extends HTMLElement {
         menus: menus.config,
         modules: modules.config,
         navigator: {
-            type:  "hash",
             base:  "",
             start: "",
             titlePrefix: "",
@@ -43,7 +41,7 @@ class XShell extends HTMLElement {
     //ctor
     constructor() {
         super();
-        window["xshell"] = this;
+        
     }
 
     //props
@@ -69,13 +67,9 @@ class XShell extends HTMLElement {
         await menus.init(this._config.menus);
         await server.init(this._config.server);
         await ui.init(this._config.ui);
-        await user.init(this._config.user);
+        await user.init(this._config.user);        
         //init navigator
-        if (this._config.navigator.type == "path") {
-            this.appendChild(new XNavigatorPath());
-        } else {
-            this.appendChild(new XNavigatorHash());
-        }
+        this.appendChild(new XNavigator());
         await this.navigator.init(this._config.navigator);
         //start ui
         await ui.start();
@@ -92,17 +86,17 @@ class XShell extends HTMLElement {
     }
 
     //public
-    async showPage({url}) {
-        await this.navigator.showPage({url});
+    async showPage({url, type, sender}) {
+        await this.navigator.showPage({url, type, sender});
     }
-    async showPageStack({url}) {
-        await this.navigator.showPage({url, type: "stack"});
+    async showPageStack({url, sender}) {
+        await this.navigator.showPage({url, type: "stack", sender});
     }
-    async showPageDialog({url}) {
-        return await this.navigator.showPage({url, type: "dialog"});
+    async showPageDialog({url, sender}) {
+        return await this.navigator.showPage({url, type: "dialog", sender});
     }
-    getRealUrl(url, page = null){
-        return this.navigator.getRealUrl(url, page);
+    getRealUrl(url, page = null, includeCurrentPage = false){
+        return this.navigator.getRealUrl(url, page, includeCurrentPage);
     }
     getPage(target) {
         while (target) {
