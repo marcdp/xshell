@@ -27,6 +27,7 @@ class Loader {
         this._cache[type + ":" + name] = value;
     }
     resolveUrl(type, name) {
+        //if (!name) debugger;
         let url = this._config.map[type + ":" + name];
         if (url) return url;
         let aux = name;
@@ -36,8 +37,8 @@ class Loader {
             url = this._config.map[type + ":" + aux];
             if (url) {
                 let result = url;
-                if (result.indexOf("{name}")!=-1) result = result.replace("{name}", name);
-                if (result.indexOf("{name-unprefixed}")!=-1) result = result.replace("{name-unprefixed}", name.substring(aux.length + 1));
+                if (result.indexOf("{name}")!=-1) result = result.replaceAll("{name}", name);
+                if (result.indexOf("{name-unprefixed}")!=-1) result = result.replaceAll("{name-unprefixed}", name.substring(aux.length + 1));
                 return result;
             }
             i = aux.lastIndexOf("-");
@@ -46,6 +47,8 @@ class Loader {
         return null;
     }
     async load(type, nameOrNames) {
+        if (nameOrNames == undefined) return null;
+        if (nameOrNames == "" ) return null;
         let names = (typeof(nameOrNames) == "string" ? [nameOrNames] : nameOrNames);
         let tasks = [];
         for(let name of names) {

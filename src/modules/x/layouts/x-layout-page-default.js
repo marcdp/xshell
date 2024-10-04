@@ -1,12 +1,14 @@
+// template
 let template = document.createElement("template");
 template.innerHTML = ` 
     <style>
         :host {display:block;}
     </style>
-    embed:<slot></slot>
+    <slot></slot>
 `;
 
-class XLayoutEmbded extends HTMLElement {
+// class
+class XLayoutPageDefault extends HTMLElement {
 
     //ctor
     constructor() {
@@ -15,9 +17,8 @@ class XLayoutEmbded extends HTMLElement {
         this.shadowRoot.appendChild(template.content.cloneNode(true));
     }
 
-    //events 
-
 }
 
-export default XLayoutEmbded;
-customElements.define('x-layout-embed', XLayoutEmbded);
+// export
+export default XLayoutPageDefault;
+customElements.define('x-layout-page-default', XLayoutPageDefault);

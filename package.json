@@ -18,6 +18,7 @@
   },
   "dependencies": {
     "@material-icons/svg": "^1.0.33",
+    "@material/web": "^2.2.0",
     "http-server": "^14.1.1",
     "material-symbols": "^0.24.0"
   }

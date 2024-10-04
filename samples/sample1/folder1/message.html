@@ -1,15 +1,20 @@
 
 <script type="module">
     export default class {
+        //ctor
+        constructor(element) {
+            //this.renderer = new XRenderer({}, 'adfasdf', {}, element);
+        }
+        //methods
         async onCommand(command, args) {
             if (command == "load") {
                 this.label = "Message page: " + args.message;
             } else if (command == "show-page-stack") {
                 //show page stack
-                xshell.showPageStack({url:"/folder1/message.html?message=hello+world"});
+                this.showPageStack({url:"/folder1/message.html?message=hello+world"});
             } else if (command == "show-page-dialog") {
                 //show page dialog
-                xshell.showPageDialog({url:"/folder1/dialog.html"});
+                this.showPageDialog({url:"/folder1/dialog.html"});
             }
         }
     }

@@ -1,10 +1,11 @@
 
+<title>Lorem ipsum</title>
+
 <script type="module">
     export default class {
         async onCommand(command, args) {
             if (command == "load") {
                 //load
-                this.label = "Dialog page";
             } else if (command == "close") {
                 //close
                 this.close();
@@ -23,8 +24,12 @@
 
 <p>The standard chunk of Lorem Ipsum used since the 1500s is reproduced below for those interested. Sections 1.10.32 and 1.10.33 from "de Finibus Bonorum et Malorum" by Cicero are also reproduced in their exact original form, accompanied by English versions from the 1914 translation by H. Rackham.</p>
 
-<div slot="buttons">
-    <x-button command="close">Close</x-button>
-</ul>
+<div slot="header">   
+    aaaaa
+</div>
+
+<div slot="footer">   
+    <x-button appearance="accent" command="close">Close</x-button>
+</div>
 
 

@@ -1,5 +1,15 @@
 import loader from "../../../loader.js";
 
+let template = document.createElement("template");
+template.innerHTML = ` 
+    <style>
+        :host {display:inline-block; }
+        :host span {}
+        :host svg {height:1.25em; aaspect-ratio:1; width:1.25em;  fill:currentcolor; vertical-align:middle;}
+    </style>
+    <span></span>
+`;	
+
 class XIcon extends HTMLElement {
 
     //static
@@ -13,6 +23,7 @@ class XIcon extends HTMLElement {
     constructor() {
         super();
         this.attachShadow({ mode: "open" });
+        this.shadowRoot.appendChild(template.content.cloneNode(true));
     }
 
     //props
@@ -25,13 +36,13 @@ class XIcon extends HTMLElement {
 
     //events
     async attributeChangedCallback(name, oldVal, newVal) {
-        if (name === "icon") this.icon = newVal;
+        if (name === "icon") this.icon = (newVal == "" ? null : newVal);
     }
     connectedCallback() { 
     }
     async render() {
         this._svg = await loader.load("icon", this._icon);
-        this.shadowRoot.innerHTML = this._svg ?? "?";
+        this.shadowRoot.lastElementChild.innerHTML = (this._icon ? this._svg ?? "?" : "");
     }
 
 }

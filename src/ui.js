@@ -1,3 +1,4 @@
+import loader from "./loader.js";
 
 // class
 class UI {
@@ -6,10 +7,15 @@ class UI {
     //vars
     _config = {
         layouts: {
-            default: "",
-            stack: "",
-            dialog: "",
-            embed: "",
+            app: {
+                main:""
+            },
+            page: {
+                main: "",
+                stack: "",
+                dialog: "",
+                embed: "",    
+            }
         },
         styleSheets: []
     };
@@ -27,9 +33,20 @@ class UI {
     }
     async start() { 
         var tasks = [];
+        //load layouts
+        for(let layoutKey in this._config.layouts) {
+            let layoutValue = this._config.layouts[layoutKey]; 
+            for(var layoutSubkey in layoutValue) {
+                let layoutSubvalue = layoutValue[layoutSubkey];
+                let task = loader.load("layout", layoutSubvalue);
+                tasks.push(task);
+            }
+        }
+        //load style sheets
         for(var url of this._config.styleSheets) {
             tasks.push(this.addStyleSheet(url));
         }
+        //return
         return Promise.all(tasks);
     }
     

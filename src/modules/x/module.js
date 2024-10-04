@@ -29,13 +29,18 @@ export default class {
             },
             ui: {
                 errors: {
-                    default:    "x-error"
+                    default:        "x-error"
                 },
                 layouts: {
-                    default:    "x-layout-default",
-                    stack:      "x-layout-stack",
-                    dialog:     "x-layout-dialog",
-                    embed:      "x-layout-embed",
+                    app: {
+                        main:    "x-layout-app-main",
+                    },
+                    page: {
+                        main:       "x-layout-page-main",
+                        stack:      "x-layout-page-stack",
+                        dialog:     "x-layout-page-dialog",
+                        default:     "x-layout-page-default",
+                    }
                 },
                 styleSheets: [
                     base + "/css/index.css"

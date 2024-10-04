@@ -7,13 +7,14 @@ class XPage extends HTMLElement {
     
     //static
     static get observedAttributes() { 
-        return ["src", "dialog"]; 
+        return ["src", "type"]; 
     }
 
     //fields
     _connected = false;
+    _breadcrumb = [];
     _src = "";
-    _dialog = false;
+    _type = "";
     _status = "";
     _result = null;
     _label = "";
@@ -27,32 +28,42 @@ class XPage extends HTMLElement {
     //props
     get src() {return this._src;}
     set src(value) {
+        let changed = (this._src != value);
         this._src = value; 
-        if (this._src && this._connected) this.loadPage();
+        if (changed){
+            this._breadcrumb = [];
+            this._result = null;
+            if (this._src && this._connected) this.loadPage();
+        }
     }
 
-    get dialog() {return this._dialog;}
-    set dialog(value) {
-        this._dialog = value; 
-        if (this._src && this._connected) this.loadPage();
-    }
+    get breadcrumb() {return this._breadcrumb;}
+    set breadcrumb(value) {this._breadcrumb = value; }
 
     get result() {return this._result;}
     set result(value) {this._result = value;}
+
+    get type() {return this._type;}
+    set type(value) {this._type = value;}
 
     get label() {return this._label;}
     set label(value) {
         let changed = (this._label != value);
         this._label = value; 
-        if (changed && this._status == "loaded") this._raiseLabelChangeEvent();
+        if (changed) this._raisePageChangeEvent();
     }
 
-    //methods
+    get icon() {return this._icon;}
+    set icon(value) {
+        let changed = (this._icon != value);
+        this._icon = value; 
+        if (changed) this._raisePageChangeEvent();
+    }
+
+    //events
     attributeChangedCallback(name, oldValue, newValue) {
         if (name == "src") this.src = newValue;
-        if (name == "dialog") {
-            this.dialog = (newValue != null ? true : false);
-        }
+        if (name == "type") this.type = newValue;
     }
     connectedCallback() {
         this._connected = true;
@@ -61,8 +72,19 @@ class XPage extends HTMLElement {
     disconnectedCallback() {
         this._connected = false;
     }
+
+    //methods
+    async showPage({url}) {
+        await xshell.showPage({url, sender:this});
+    }
+    async showPageStack({url}) {
+        await xshell.showPageStack({url, sender:this});
+    }
+    async showPageDialog({url}) {
+        return xshell.showPageDialog({url, sender:this});
+    }
     close() {
-        this._raiseCloseEvent();
+        this._raisePageCloseEvent();
     }
     async loadPage() {
         logger.log(`x-page.loadPage('${this.src}')`);
@@ -72,28 +94,34 @@ class XPage extends HTMLElement {
         this._icon = "";
         this._status = "loading";
         this.classList.add("loading");
+        //search
+        let searchParams = new URLSearchParams(this.src.indexOf("?") != -1 ? this.src.substring(this.src.indexOf("?")+1) : "");
+        //class
+        let className = "";
+        if (searchParams.get("x-class")) className = searchParams.get("x-class");
+        if (className) for(let classNamePart of className.split(",")) this.classList.add(classNamePart);
         //create dialog before fetch
         let dialog = null;
-        if (this._dialog) {
-            this.replaceChildren();
-            dialog = document.createElement("dialog");
-            this.appendChild(dialog);
-            dialog.showModal();
-            dialog.addEventListener('click', (event) => {
-                let rect = dialog.getBoundingClientRect();
-                let isInDialog = (rect.top <= event.clientY && event.clientY <= rect.top + rect.height && rect.left <= event.clientX && event.clientX <= rect.left + rect.width);
-                if (!isInDialog) {
-                    event.preventDefault();
-                    event.stopPropagation();
-                    this._raiseCloseEvent();
-                }
-            });
+        if (this._type == "dialog" || this._type == "stack") {
+            if (this.firstChild && this.firstChild.localName == "dialog") {
+                dialog = this.firstChild;
+            } else {
+                dialog = document.createElement("dialog");
+                this.appendChild(dialog);
+                dialog.showModal();
+                dialog.addEventListener('click', (event) => {
+                    let rect = dialog.getBoundingClientRect();
+                    let isInDialog = (rect.top <= event.clientY && event.clientY <= rect.top + rect.height && rect.left <= event.clientX && event.clientX <= rect.left + rect.width);
+                    if (!isInDialog) {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        this._raisePageCloseEvent();
+                    }
+                });
+            }
         }
-        //load
-        let searchParams = new URLSearchParams(this.src.indexOf("?") != -1 ? this.src.substring(this.src.indexOf("?")+1) : "");
         //load html page
-        let src = this.src;
-        
+        let src = this.src;        
         if (!src.startsWith("/")) src = loader.resolveUrl("page", src.split("?")[0]);
         if (src.indexOf("://") == -1) src = xshell.config.navigator.base + src;
         let response = await fetch(src);
@@ -110,38 +138,26 @@ class XPage extends HTMLElement {
             let html = content;
             let parser = new DOMParser();
             let doc = parser.parseFromString(html, "text/html");
-            //class
-            let className = "";
-            if (searchParams.get("x-class")) className = searchParams.get("x-class");
-            if (className) this.classList.add(className);
             //layout
-            let layout = xshell.config.ui.layouts.default;
-            if (this._dialog) layout = xshell.config.ui.layouts.dialog;
-            if (this._dialog && this.classList.contains("stack")) layout = xshell.config.ui.layouts.stack;
-            if (searchParams.get("x-layout")) layout = xshell.config.ui.layouts[searchParams.get("x-layout")] || layout;
+            let layout = xshell.config.ui.layouts.page.default;
+            if (this._type) layout = xshell.config.ui.layouts.page[this._type];
+            doc.head.querySelectorAll("meta[name='x-page:layout']").forEach((sender)=>{layout = xshell.config.ui.layouts.page[sender.content];});
+            if (searchParams.get("x-layout")) layout = xshell.config.ui.layouts.page[searchParams.get("x-layout")] || layout;
             await loader.load("layout", layout);
-            //title
-            let title = doc.title;
-            if (searchParams.get("x-title")) title = searchParams.get("x-title");
+            //label
+            let label = doc.title;
+            doc.head.querySelectorAll("meta[name='x-page:label']").forEach((sender)=>{label = sender.content;});
+            if (searchParams.get("x-label")) label = searchParams.get("x-label");
+            //icon
+            let icon = "";
+            doc.head.querySelectorAll("meta[name='x-page:icon']").forEach((sender)=>{icon = sender.content;});
+            if (searchParams.get("x-icon")) icon = searchParams.get("x-icon");
+            //breadcrumb
+            let breadcrumb = [];
+            if (searchParams.get("x-breadcrumb")) breadcrumb = JSON.parse(atob(searchParams.get("x-breadcrumb").replace(/_/g,"/").replace(/-/g,"+")));
             //load required components
             let componentNames = [...new Set(Array.from(doc.querySelectorAll('*')).filter(el => el.tagName.includes('-')).map(el => el.tagName.toLowerCase()))];
-            await loader.load("component", componentNames);
-            //process
-            /*
-            if (html.indexOf("<html") != -1) {
-                //raw
-                this._processRawHtml(doc);
-                let container = dialog || this;
-                if (layout) {
-                    let layoutElement = document.createElement(layout);
-                    container.appendChild(layoutElement);
-                    container = layoutElement;
-                }                
-                container.innerHTML = doc.body.innerHTML;
-                await this._processRawHtml(doc);  
-                this.label = title;
-            } else {
-             */
+            await loader.load("component", componentNames);          
             //single file page 
             let container = dialog || this;
             container.replaceChildren();
@@ -150,28 +166,39 @@ class XPage extends HTMLElement {
                 container.appendChild(layoutElement);
                 container = layoutElement;
             }
+            //get script
             let script = doc.body.querySelector(":scope > script[type='module']");
             if (!script) script = doc.head.querySelector(":scope > script[type='module']");
             doc.body.childNodes.forEach((node) => {
                 container.appendChild(node.cloneNode(true)); 
             });            
+            //clone script
             if (script) {
                 const moduleText = script.textContent;
                 const blob = new Blob([moduleText], { type: "application/javascript" });
                 const moduleURL = URL.createObjectURL(blob);
                 const module = await import(moduleURL);
                 const constructor = module.default;
-                const skeleton = new constructor();
-                this.onCommand = skeleton.onCommand;
-                this.onCommand("load", Object.fromEntries(searchParams));
+                const instance = new constructor();
+                this.onCommand = instance.onCommand;
+                let loadArgs = {};
+                for(const [key, value] of searchParams.entries()){
+                    if (!key.startsWith("x-")) {
+                        loadArgs[key] = value;
+                    }
+                }
+                this.onCommand("load", loadArgs);
                 URL.revokeObjectURL(moduleURL);
             }            
+            if(label) this.label = label;
+            if(icon) this.icon = icon;
+            if (breadcrumb) this.breadcrumb = breadcrumb;
         }
         //set
         this._status = "loaded"; 
         this.classList.remove("loading");
         //load
-        this._raiseLoadChangeEvent();
+        this._raisePageLoadEvent();
     }    
 
 
@@ -186,36 +213,15 @@ class XPage extends HTMLElement {
         error.setAttribute("stacktrace", stacktrace);
         this.appendChild(error);
     }
-    _raiseLoadChangeEvent() {
-        this.dispatchEvent(new CustomEvent("load"));
+    _raisePageLoadEvent() {
+        this.dispatchEvent(new CustomEvent("page:load"));
     }
-    _raiseLabelChangeEvent() {
-        this.dispatchEvent(new CustomEvent("label-change"));
+    _raisePageChangeEvent() {
+        this.dispatchEvent(new CustomEvent("page:change"));
     }
-    _raiseCloseEvent() {
-        this.dispatchEvent(new CustomEvent("close", {bubbles: false,cancelable: false,}));
+    _raisePageCloseEvent() {
+        this.dispatchEvent(new CustomEvent("page:close"));
     }    
-
-    // raw html
-    async _processRawHtml(doc) {
-        let baseUrl = this.src.substring(0, this.src.lastIndexOf("/"));
-        doc.querySelectorAll('a[href]').forEach(a => {a.href = this._prefixAnchorUrl(a.getAttribute('href'), baseUrl, "");});
-        doc.querySelectorAll('img[src],video[src],audio[src],iframe[src]').forEach(element => {element.src = this._prefixResourceUrl(element.getAttribute('src'), baseUrl, "");});
-    }
-    _prefixAnchorUrl(url, baseUrl, urlPrefix) {
-        if (url.startsWith("#")) return url;
-        if (url.indexOf(":") != -1) return url;
-        if (!url.startsWith("/")) url = baseUrl + "/" + url;
-        url = url.replace("/./", "/");
-        return (urlPrefix ?? "") + "#!" + url;
-    }
-    _prefixResourceUrl(url, baseUrl, urlPrefix) {
-        if (url.startsWith("#")) return url;
-        if (url.indexOf(":") != -1) return url;
-        if (!url.startsWith("/")) url = xshell.config.navigator.base + baseUrl + "/" + url;
-        url = url.replace("/./", "/");
-        return (urlPrefix ?? "") + url;
-    }
 
 }
 
