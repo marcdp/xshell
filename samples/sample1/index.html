@@ -5,157 +5,24 @@
     <!-- head -->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="shortcut icon" type="image/x-icon" href="favicon.ico" />
+    <link rel="shortcut icon" type="image/x-icon" href="images/favicon.ico" />
 
     <!-- import map -->
     <script type="importmap">
         {
             "imports": {
-              "x-shell": "/src/x-shell.js"
+              "x-shell": "/src/x-shell.js",
+              "x-page": "/src/x-page.js"
             }
         }
     </script>
 
     <!-- xshell -->
-    <script type="module">
-        import xshell from "/src/x-shell.js";
-        import XTemplate from "/src/x-template.js"
-
-        // test
-        var state = {
-            var1: 1,
-            var2: 2,
-            var3: {
-                str1: "hello",
-                str2: "bye"
-            },
-            var4: [
-                {name:"aaaaa"},
-                {name:"bbbbbbbb"},
-                {name:"cccc"}
-            ]
-        }
-        var div = document.createElement("DIV");
-        document.body.appendChild(div);
-        var xTemplate = XTemplate.compileTemplate(`
-            <div>hello <b>world</b>: {{ state.var1 }}</div>
-            <x-icon></x-icon>{{ state.var2 }}
-            <button x-on:click="onClick">mybut</button>
-            {{ state.var3.str1 }},
-            <ul>
-                <li x-for="item in state.var4" x-key="name">
-                    {{ item.name }}
-                </li>
-            </ul>
-        `);
-        var handler = {
-            onClick: (event) => {
-                debugger;
-            }
-        }
-        XTemplate.render(state, xTemplate, div, handler);
-
-        // init
-        await xshell.start({
-            //app info
-            app: {
-                name:       "sample1",
-                title:      "Sample 1",
-                version:    "1.0",
-                copyright:  "",
-                logo:       "logo.svg"
-            },
-            //browser config
-            browser: { 
-                styleSheets: [] //array of styleSheets urls to load
-            },
-            //bus config
-            bus: { 
-                debug: true
-            },
-            //i18n config
-            i18n: { 
-                culture: "en",
-                strings: {
-                    "hello world": "hola mundo",
-                    "bye": "adios"
-                }
-            },
-            //list of url patterns to load components, icons, and images: "component:prefix": "/path/to/component{name.js}"
-            loader: {
-                map: {
-                    //"component:fluent": "https://unpkg.com/@fluentui/web-components",
-                    //"component:vaadin": "https://cdn.jsdelivr.net/npm/@vaadin/{name-unprefixed}@23.5.6/+esm",
-                    //"component:md": "@material/web/all.js",
-                    //"component:sl": "https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.17.1/cdn/shoelace.js",
-                    "icon:material": "https://material-icons.github.io/material-icons/svg/{name-unprefixed}/outline.svg"
-                }                
-            }, 
-            //logger setup
-            logger: { 
-                debug: true
-            },
-            //menus to use
-            menus: {  
-                main: [
-                    {label: "File", icon: "x-file1"},
-                    {label: "Edit", enabled: false},
-                    {label: "Tools", childs:[
-                        {label: "Option 1"},
-                        {label: "Option 2"},
-                        {label: "Option 3", hidden: true},
-                    ]},
-                ],
-                footer: [
-                    {label: "About"},
-                    {label: "Copyright"},
-                ]
-            },
-            //list of modules to load
-            modules: [ 
-                {module:"/src/modules/x/module.js", args:{a:1, b:2}}
-            ],
-            //navigator configuration
-            navigator: { 
-                base:  "/samples/sample1",                
-                start: "/folder1/login.html",
-                titlePrefix: "",
-                titleSuffix: " (XShell)"
-            },
-            //ui
-            ui: {
-                errors: {
-                    default:""
-                },
-                layouts: {
-                    app: {
-                        main: "",
-                    },
-                    page: {
-                        main:  "",
-                        stack: "",
-                        dialog:"",
-                        default: ""
-                    }
-                },
-                styleSheets: [], //array of styleSheets urls to load
-            },
-            // user
-            user: {  
-                id: "",
-                username: "",
-                authenticated: false,
-                claims: {}
-            },
-            //server info
-            server: {}, 
-        });
-     </script>
+    <script src="/src/x-shell.js" type="module"></script>
 
 </head>
 <body>
-    
-    
+    <x-shell src="index.json"></x-shell>   
 </body> 
 </html>
 
@@ -186,6 +53,23 @@ x - css with defaults styles
 x - beautifulize layouts
 x - allow navigate using anchors inside an embedeed page
 x- loading
+x - XTemplate
+x - loader.load("icon:x-icon")
+x - remove transformations in loader
+x - de moment no faren els web components en HTML (en un futur si)
+x - pensar com utilitzar el XTemplate des d'una x-page, per a renderitzar el HTML
+x - chrome:  show dialog scroll top
+x - XPageInstance --  ui template
+x - no permetre configurar el x-error. Utilitzar aquest, i punt.
+x - x-page: permetre configurar quin tipus de processor/handler utiliza: none, x-element, etc. Per omissió cap handler
+
+x - <x-shell src="...json"></x-shell>
+x - fer que els moduls siguin fitxers json pasius, i no moduls es6 actius 
+- loader -- > transform els components en format html en components normals (que hi poguin haver diferents transformations, the diferents formats, cap al format ES6)
+- x-menubar + x-menu + x-menuitem
+
+- XElement load dependencies automatically
+- XElement proxy recursive ???
 
 - create user at npmjs
 - create npm package + publish: npm publish

@@ -165,7 +165,7 @@ x-page[type='main'] {
 /* x-page.loading */
 x-page[type='main'].loading {_position:relative;}
 x-page[type='main'].loading::before {content:"";border-top:var(--page-progressbar-height) var(--page-progressbar-color) solid; position:absolute; top:0; animation: progressBar 3s ease-in-out; animation-delay: 0ms; animation-fill-mode:both; }
-x-page[type='stack'].loading dialog {position:relative; }
+
 x-page[type='stack'].loading dialog::before {content:"";border-top:var(--page-progressbar-height) var(--page-progressbar-color) solid; position:absolute; top:0; animation: progressBar 3s ease-in-out; animation-delay: 0ms; animation-fill-mode:both; }
 
 x-page[type='dialog'].loading dialog {position:relative; min-width:20em; min-height:10em;}

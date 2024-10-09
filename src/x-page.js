@@ -1,6 +1,93 @@
 import loader from "./loader.js";
 import logger from "./logger.js";
 import xshell from "./x-shell.js";
+import XTemplate from "./x-template.js";
+
+
+// class
+class XPageInstance {
+
+    //fields
+    _page = null;
+    _container = null;
+    _state = null;
+    _xtemplate = null;
+    _xtemplateInstance = null;
+
+    //ctor
+    constructor(page, container, template, styles) {
+        this._page = page;
+        this._container = container;
+        this._xtemplate = new XTemplate({
+            template: template,
+            styleSheets: styles
+        });
+        
+    }
+
+    //properties
+    get dependencies() {return this._xtemplate.dependencies;}
+    get src() {return this._page.src;}
+    get label() {return this._page.label;}
+    set label(value) {this._page.label = value;}
+    get icon() {return this._page.icon;}
+    set icon(value) {this._page.icon = value;}
+    get result() {return this._page.result;}
+    set result(value) {this._page.result = value;}
+
+    get state() {return this._state;}
+    set state(value) {this._state = value;}
+
+    //methods
+    load(args) {       
+        //state
+        let self = this;
+        let rawState = this.state || {};
+        delete this.state;
+        this.state = new Proxy(rawState, {
+            set(target, prop, newValue) {
+                let oldValue = target[prop];
+                target[prop] = newValue;
+                self.stateChanged(prop, oldValue, newValue);
+                self.render();
+                return true;
+            }
+        });
+        //template instance
+        this._xtemplateInstance = this._xtemplate.createInstance(rawState, (aa,bb)=>{
+            debugger;
+        }, this._container);
+        //load
+        this.onCommand("load", args);
+        this.render();
+    }
+    onCommand(command, args) {
+    }
+    unload() {
+    }
+    showPage(args) {
+        return this._page.showPage(args);
+    }
+    showPageStack(args) {
+        return this._page.showPageStack(args);
+    }
+    showPageDialog(args) {
+        return this._page.showPageDialog(args);
+    }
+    close(result) {
+        return this._page.close(result);
+    }
+    stateChanged(prop, oldvalue, newValue) {
+    }
+    invalidate() {
+        //TODO: timeout
+        //...        
+    }
+    render() {
+        this._xtemplateInstance.render();
+    }   
+}
+
 
 // class
 class XPage extends HTMLElement {
@@ -19,6 +106,7 @@ class XPage extends HTMLElement {
     _result = null;
     _label = "";
     _icon = "";
+    _instance = null;
 
     //ctor
     constructor() {
@@ -74,6 +162,9 @@ class XPage extends HTMLElement {
     }
 
     //methods
+    onCommand(command, args) {  
+        if (this._instance) this._instance.onCommand(command, args);
+    }
     async showPage({url}) {
         await xshell.showPage({url, sender:this});
     }
@@ -83,11 +174,12 @@ class XPage extends HTMLElement {
     async showPageDialog({url}) {
         return xshell.showPageDialog({url, sender:this});
     }
-    close() {
+    close(result) {
+        if (result != undefined) this._result = result;
         this._raisePageCloseEvent();
     }
     async loadPage() {
-        logger.log(`x-page.loadPage('${this.src}')`);
+        logger.log(`x-page.loadPage('${this.src}')`);        
         //reset
         this._result = null;
         this._label = "";
@@ -107,8 +199,6 @@ class XPage extends HTMLElement {
                 dialog = this.firstChild;
             } else {
                 dialog = document.createElement("dialog");
-                this.appendChild(dialog);
-                dialog.showModal();
                 dialog.addEventListener('click', (event) => {
                     let rect = dialog.getBoundingClientRect();
                     let isInDialog = (rect.top <= event.clientY && event.clientY <= rect.top + rect.height && rect.left <= event.clientX && event.clientX <= rect.left + rect.width);
@@ -118,11 +208,12 @@ class XPage extends HTMLElement {
                         this._raisePageCloseEvent();
                     }
                 });
+                this.appendChild(dialog);
+                dialog.showModal();
             }
         }
         //load html page
         let src = this.src;        
-        if (!src.startsWith("/")) src = loader.resolveUrl("page", src.split("?")[0]);
         if (src.indexOf("://") == -1) src = xshell.config.navigator.base + src;
         let response = await fetch(src);
         let contentType = response.headers.get("Content-Type");
@@ -131,7 +222,7 @@ class XPage extends HTMLElement {
             //error
             this._status = "error"; 
             this.classList.remove("loading");
-            this._loadError(response.status, response.statusText);
+            this._showError(response.status, response.statusText);
             return;
         } else if (contentType.indexOf("text/html")!=-1) {
             //html page
@@ -143,7 +234,7 @@ class XPage extends HTMLElement {
             if (this._type) layout = xshell.config.ui.layouts.page[this._type];
             doc.head.querySelectorAll("meta[name='x-page:layout']").forEach((sender)=>{layout = xshell.config.ui.layouts.page[sender.content];});
             if (searchParams.get("x-layout")) layout = xshell.config.ui.layouts.page[searchParams.get("x-layout")] || layout;
-            await loader.load("layout", layout);
+            await loader.load("layout:" + layout);
             //label
             let label = doc.title;
             doc.head.querySelectorAll("meta[name='x-page:label']").forEach((sender)=>{label = sender.content;});
@@ -158,7 +249,10 @@ class XPage extends HTMLElement {
             //load required components
             let componentNames = [...new Set(Array.from(doc.querySelectorAll('*')).filter(el => el.tagName.includes('-')).map(el => el.tagName.toLowerCase()))];
             await loader.load("component", componentNames);          
-            //single file page 
+            //handler
+            let handler = "";
+            doc.head.querySelectorAll("meta[name='x-page:handler']").forEach((sender) => { handler = sender.content; });
+            //container
             let container = dialog || this;
             container.replaceChildren();
             if (layout) {
@@ -166,30 +260,77 @@ class XPage extends HTMLElement {
                 container.appendChild(layoutElement);
                 container = layoutElement;
             }
-            //get script
-            let script = doc.body.querySelector(":scope > script[type='module']");
-            if (!script) script = doc.head.querySelector(":scope > script[type='module']");
-            doc.body.childNodes.forEach((node) => {
-                container.appendChild(node.cloneNode(true)); 
-            });            
-            //clone script
-            if (script) {
-                const moduleText = script.textContent;
+            //init
+            if (handler == "") {
+                //init page
+                doc.head.childNodes.forEach((node) => {
+                    container.appendChild(node.cloneNode(true)); 
+                });
+                doc.body.childNodes.forEach((node) => {
+                    container.appendChild(node.cloneNode(true)); 
+                });
+                //activate scripts
+                container.querySelectorAll("script").forEach((script) => {
+                    let newScript = document.createElement("script");
+                    for(var i = 0; i < script.attributes.length; i++) {
+                        newScript.setAttribute(script.attributes[i].name, script.attributes[i].value);
+                    }
+                    newScript.textContent = script.textContent;
+                    if (container.contains(script)) {
+                        script.parentNode.replaceChild(newScript, script);
+                    } else {
+                        container.appendChild(newScript);
+                    }
+                });
+
+            } else if (handler == "x") {
+                //init page
+                //styles
+                let styles = [];
+                doc.body.querySelectorAll(":scope > style").forEach((style) => {styles.push(style);});
+                doc.head.querySelectorAll(":scope > style").forEach((style) => {styles.push(style);});
+                //template
+                let template = doc.body.querySelector(":scope > template") || doc.head.querySelector(":scope > template");
+                //script
+                let script = doc.body.querySelector(":scope > script[type='module']") || doc.head.querySelector(":scope > script[type='module']");
+                let moduleText = script.textContent;
+                let baseUrl = src.substring(0, src.lastIndexOf("/"));
+                if (moduleText.indexOf("import ") != -1) {
+                    //replace each relative URL with an absolute URL
+                    const importRegex = /(import\s+.*?['"])(\.\/|\.\.\/|\/)([^'"]+)(['"])/g;
+                    moduleText = moduleText.replace(importRegex, (match, start, pathType, urlPath, end) => {
+                        let absoluteUrl;
+                        if (pathType === '/') {
+                            const base = new URL(baseUrl);
+                            absoluteUrl = `${base.origin}${pathType}${urlPath}`;
+                        } else {
+                            absoluteUrl = new URL(pathType + urlPath, baseUrl).href;
+                        }
+                        return `${start}${absoluteUrl}${end}`;
+                    });
+                }
+                //load from blob
                 const blob = new Blob([moduleText], { type: "application/javascript" });
                 const moduleURL = URL.createObjectURL(blob);
                 const module = await import(moduleURL);
-                const constructor = module.default;
-                const instance = new constructor();
-                this.onCommand = instance.onCommand;
-                let loadArgs = {};
-                for(const [key, value] of searchParams.entries()){
-                    if (!key.startsWith("x-")) {
-                        loadArgs[key] = value;
-                    }
-                }
-                this.onCommand("load", loadArgs);
                 URL.revokeObjectURL(moduleURL);
-            }            
+                //create instance
+                this._instance = new module.default(this, container, template.innerHTML, styles);
+                //load dependencies
+                await loader.load("component", this._instance.dependencies);
+                //load instance
+                let loadArgs = {};
+                for(const [key, value] of searchParams.entries()) if (!key.startsWith("x-")) loadArgs[key] = value;
+                this._instance.load(loadArgs);
+                //init
+                if(label) this.label = label;
+                if(icon) this.icon = icon;
+                if (breadcrumb) this.breadcrumb = breadcrumb;
+            } else {
+                //error
+                this._showError("", "Handler not implemented: " + handler, "", container);
+            }
+            //init
             if(label) this.label = label;
             if(icon) this.icon = icon;
             if (breadcrumb) this.breadcrumb = breadcrumb;
@@ -201,17 +342,20 @@ class XPage extends HTMLElement {
         this._raisePageLoadEvent();
     }    
 
-
     //private methods
-    async _loadError(code, message, stacktrace) {
+    async _showError(code, message, stacktrace, container) {
         var name = xshell.config.ui.errors[code];
         if (!name) name = xshell.config.ui.errors.default;
-        await loader.load("component", name);
+        await loader.load("component:" + name);
         let error = document.createElement(name);
         error.setAttribute("code", code);
         error.setAttribute("message", message);
         error.setAttribute("stacktrace", stacktrace);
-        this.appendChild(error);
+        if (container) {
+            container.appendChild(error);
+        } else {
+            this.appendChild(error);
+        }
     }
     _raisePageLoadEvent() {
         this.dispatchEvent(new CustomEvent("page:load"));
@@ -230,4 +374,5 @@ customElements.define('x-page', XPage);
 
 //export 
 export default XPage;
+export { XPageInstance };
 

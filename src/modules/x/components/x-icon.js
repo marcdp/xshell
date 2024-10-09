@@ -5,7 +5,7 @@ template.innerHTML = `
     <style>
         :host {display:inline-block; }
         :host span {}
-        :host svg {height:1.25em; aaspect-ratio:1; width:1.25em;  fill:currentcolor; vertical-align:middle;}
+        :host svg {height:1.25em;width:1.25em; fill:currentcolor; vertical-align:middle;}
     </style>
     <span></span>
 `;	
@@ -41,7 +41,7 @@ class XIcon extends HTMLElement {
     connectedCallback() { 
     }
     async render() {
-        this._svg = await loader.load("icon", this._icon);
+        this._svg = ( this._icon ? await loader.load("icon:" + this._icon) : null);
         this.shadowRoot.lastElementChild.innerHTML = (this._icon ? this._svg ?? "?" : "");
     }
 

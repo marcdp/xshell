@@ -1,5 +1,18 @@
+import XElement from "../../../x-element.js";
 
-class XClock extends HTMLElement {
+class XClock extends XElement {
+
+    //static
+    static definition = {
+        template: `
+            {{ state.time }}
+        `,
+        state() {
+            return {
+                time: new Date().toLocaleTimeString()
+            };
+        }
+    };
 
     //fields
     _timerId = 0;
@@ -7,25 +20,22 @@ class XClock extends HTMLElement {
     //ctor
     constructor() {
         super();
-        var shadow = this.attachShadow({ mode: "open" });
-        shadow.innerHTML = "<slot></slot>";
     }
 
     //events
-    connectedCallback() {
-        this.render();
-        this._timerId = setInterval(()=>{
-            this.render();
+    onLoad() {
+        this._timerId = setInterval(() => {
+            this.state.time = new Date().toLocaleTimeString();
         }, 1000);
     }
-    disconnectedCallback() {
+    onUnload() {
         clearInterval(this._timerId);
-    }
-    render() {
-        this.innerHTML = new Date().toLocaleTimeString();
     }
 
 }
 
-export default XClock;
+// define
 customElements.define('x-clock', XClock);
+
+// export
+export default XClock;

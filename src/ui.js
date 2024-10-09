@@ -14,7 +14,7 @@ class UI {
                 main: "",
                 stack: "",
                 dialog: "",
-                embed: "",    
+                default: "",    
             }
         },
         styleSheets: []
@@ -38,7 +38,7 @@ class UI {
             let layoutValue = this._config.layouts[layoutKey]; 
             for(var layoutSubkey in layoutValue) {
                 let layoutSubvalue = layoutValue[layoutSubkey];
-                let task = loader.load("layout", layoutSubvalue);
+                let task = loader.load("layout:" + layoutSubvalue);
                 tasks.push(task);
             }
         }

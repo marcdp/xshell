@@ -1,6 +1,7 @@
-import XPageHeader from "../components/x-page-header.js"
-import XPageBody from "../components/x-page-body.js"
+import XPageHeader from "../components/x-page-header.js";
+import XPageBody from "../components/x-page-body.js";
 import XBreadcrumb from "../components/x-breadcrumb.js";
+import XBreadcrumb2 from "../components/x-breadcrumb2.js";
 
 // template
 let template = document.createElement("template");
@@ -10,7 +11,7 @@ template.innerHTML = `
     </style>
     <main>                
         <x-page-header class="hide-close">
-            <x-breadcrumb slot="breadcrumb"></x-breadcrumb>
+            <x-breadcrumb2 slot="breadcrumb"></x-breadcrumb2>
             <slot name="header"></slot>
         </x-page-header>
         <x-page-body class="">

@@ -1,0 +1,32 @@
+{
+    "name": "x",
+    "version": "1.0.0",
+    "config": {
+        "loader": {
+            "map": [
+                {"resource": "component:x",   "url": "./components/{name}.js"},
+                {"resource": "layout:x",      "url": "./layouts/{name}.js"},
+                {"resource": "icon:x",        "url": "./icons/{name-unprefixed}.svg"}
+            ]
+        },
+        "ui": {
+            "errors": {
+                "default": "x-error"
+            },
+            "layouts": {
+                "app": {
+                    "main": "x-layout-app-main"
+                },
+                "page": {
+                    "main":     "x-layout-page-main",
+                    "stack":    "x-layout-page-stack",
+                    "dialog":   "x-layout-page-dialog",
+                    "default":  "x-layout-page-default"
+                }
+            },
+            "styleSheets": [
+                "./css/index.css"
+            ]
+        }
+    }
+}

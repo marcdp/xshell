@@ -1,302 +1,301 @@
 import logger from "./logger.js";
 
-
-// func
-function compileTemplate(template) {
-    //create template from string if required
-    if (typeof(template)=="string") {
-        let element = document.createElement("template");
-        element.innerHTML = template.replaceAll("{{", "<x:text>").replaceAll("}}", "</x:text>").trim();
-        template = element;
-    }
-    //get script
-    let script = template.content.querySelector(":scope > script");
-    if (script) template.content.removeChild(script);
-    //get style
-    let style = template.content.querySelector(":scope > style");
-    if (style) template.content.removeChild(style);
-    //get used components
-    let referenced = [...new Set(Array.from(template.content.querySelectorAll('*')).filter(el => el.tagName.includes('-')).map(el => el.tagName.toLowerCase()))];
-    //compile to a function
-    let code = [];
-    code.push("let _ifs = {};");
-    code.push("return [");
-    let name = "x-something";
-    let index = 0;
-    template.content.childNodes.forEach((subNode) => {
-        index += compileTemplateToJsRecursive(name, subNode, index, code, 0);
-    });
-    code.push("];");
-    code = code.join("\n");
-    let render = new Function("state", "handler", "createVDOM", "renderUtils", "renderCount", code);
-    //return
-    return {
-        template,
-        render,
-        style,
-        referenced 
-    };
-}
-//compile DOM node recursive into a function that creates virtual dom objects
-function compileTemplateToJsRecursive(name, node, index, js, level) {
-    let indent = " ".repeat((level + 1) * 4);
-    let incs = 0;
-    if (node.nodeType == Node.TEXT_NODE) {
-        //#text
-        let textContent = node.textContent;
-        let jsLine = [];
-        jsLine.push(indent);
-        jsLine.push("createVDOM(\"#text\", null, null, null, {index: " + index + "}, " + JSON.stringify(textContent) + "),");
-        js.push(jsLine.join(""));
-        incs++;
-    } else if (node.nodeType == Node.COMMENT_NODE) {
-        //#comment
-        let textContent = node.textContent;
-        let jsLine = [];
-        jsLine.push(indent);
-        jsLine.push("createVDOM(\"#comment\", null, null, null, {index: " + index + "}, " + JSON.stringify(textContent) + "),");
-        js.push(jsLine.join(""));
-        incs++;
-    } else if (node.localName == "x:text") {
-        //x:text
-        let jsLine = [];
-        jsLine.push(indent);
-        jsLine.push("createVDOM(\"#text\", null, null, null, {index: " + index + "}, \"\" + " + node.textContent + "),");
-        js.push(jsLine.join(""));
-        incs++;
-    } else if (node.localName.startsWith("x:")) {
-        //error
-        logger.error("Error compiling component ${name}: invalid node ${node.localName}: not implemented");
-    } else {
-        //element
-        let jsLine = [];
-        jsLine.push(indent);
-        jsLine.push("createVDOM(\"" + node.tagName.toLowerCase() + "\"");
-        let jsPostLine = [];
-        let jsPost = [];
-        let attrs = [];
-        let props = [];
-        let events = [];
-        let options = [];
-        let text = "";
-        options.push("index:" + index);
-        for (let i = 0; i < node.attributes.length; i++) {
-            let attr = node.attributes[i];
-            if (attr.name == "x-text") {
-                //...<span x-text="state.value"></span>...
-                if (node.childNodes.length) logger.error("Error compiling component ${name}: invalid x-text node: non empty");
-                text = "\"\" + " + attr.value;
-            } else if (attr.name == "x-html") {
-                //...<span x-html="state.value"></span>...
-                if (node.childNodes.length) logger.error("Error compiling component ${name}: invalid x-html node: non empty");
-                options.push("format:\"html\"");
-                text = "\"\" + " + attr.value;
-            } else if (attr.name == "x-attr" || attr.name == ":") {
-                //...<span x-attr="state.value"></span>...
-                //...<span :="state.value"></span>...
-                let attrValue = attr.value;
-                attrs.push("...renderUtils.toObject(" + attrValue + ")");
-            } else if (attr.name.startsWith("x-attr:") || attr.name.startsWith(":")) {
-                //...<span x-attr:title="state.value"></span>...
-                let attrName = (attr.name.startsWith(":") ? attr.name.substring(1) : attr.name.substr(attr.name.indexOf(':') + 1));
-                let attrValue = attr.value;
-                if (attrName.startsWith("[") && attrName.endsWith("]")) {
-                    attrs.push("...renderUtils.toDynamicArgument(" + attrName.substring(1, attrName.length - 1) + ", " + attrValue + ")");
-                } else {
-                    attrs.push('"' + attrName + '":' + attrValue);
-                }
-            } else if (attr.name == "x-prop" || attr.name == ".") {
-                //...<span x-prop="state.value"></span>...
-                //...<span .="state.value"></span>...
-                let propValue = attr.value;
-                attrs.push("..." + propValue + "");
-            } else if (attr.name.startsWith("x-prop:") || attr.name.startsWith(".")) {
-                //...<input x-prop:value="state.value"></input>...
-                //...<input .value="state.value"></input>...
-                let propName = kebabToCamel((attr.name.startsWith(".") ? attr.name.substring(1) : attr.name.substr(attr.name.indexOf(':') + 1)));
-                let propValue = attr.value;
-                if (propName.startsWith("[") && propName.endsWith("]")) {
-                    props.push("...renderUtils.toDynamicProperty(" + propName.substring(1, propName.length - 1) + ", " + propValue + ")");
-                } else {
-                    props.push(propName + ":" + propValue);
-                }
-            } else if (attr.name.startsWith("x-on:") || attr.name.startsWith("@")) {
-                //...<button x-on:click="this.onIncrement(event)">+1</button>...
-                //...<button x-on:click="onIncrement">+1</button>...
-                //...<button @click="onIncrement">+1</button>...
-                let eventName = (attr.name.startsWith("@") ? attr.name.substring(1) : attr.name.substr(attr.name.indexOf(':') + 1));
-                let eventHandler = attr.value;
-                if (eventHandler.indexOf("(") == -1 && eventHandler.indexOf(")") == -1 && eventHandler.indexOf(".") == -1) eventHandler = "handler." + eventHandler + "(event)";
-                events.push("'" + eventName + "': (event) => " + eventHandler);
-            } else if (attr.name == "x-if") {
-                //...<span x-if="state.value > 0">greather than 0</span>...
-                jsLine[0] = indent + "...((_ifs.c" + level + " = (" + attr.value + ")) ? [";
-                jsPostLine.push("] : []),");
-            } else if (attr.name == "x-elseif") {
-                //...<span x-elseif="state.value < 0">less than 0</span>...
-                jsLine[0] = indent + "...(_ifs.c" + level + " ? [] : (_ifs.c" + level + " = (" + attr.value + ")) ? [";
-                jsPostLine.push("] : []),");
-            } else if (attr.name == "x-else") {
-                //...<span x-else>is 0</span>...
-                jsLine[0] = indent + "...(!_ifs.c" + level + " ? [";
-                jsPostLine.push("] : []),");
-            } else if (attr.name == "x-for") {
-                //...<li x-for="item in state.items" x-key="name">{{item.name + '(' + item.count + ') '}}</li>...
-                let keyName = node.getAttribute("x-key");
-                let forType = "";
-                if (keyName) {
-                    forType = "key";
-                } else {
-                    forType = "position";
-                }
-                //creates a comment virtual node that indicates the start of the for loop, and the type of the loop
-                js.push(indent + "createVDOM(\"#comment\", null, null, null, {index: " + index + ", forType:'" + forType + "'}, 'x-for-start'),");
-                //add loop
-                let parts = attr.value.split(" in ");
-                if (parts.length != 2) logger.error(`Error compiling template: invalid x-for attribute detected: ${attr.value}`);
-                let itemName = parts[0].trim();
-                let indexName = "index";
-                if (itemName.startsWith("(") && itemName.endsWith(")")) {
-                    let arr = itemName.substring(1, itemName.length - 1).split(",");
-                    itemName = arr[0].trim();
-                    indexName = arr[1].trim();
-                }
-                let listName = parts[1].trim();
-                jsLine[0] = indent + "...(renderUtils.toArray(" + listName + ").map((" + itemName + ", " + indexName + ") => ";
-                jsPostLine.push(")),");
-                options.push("\"key\":" + itemName + "." + keyName);
-                //creates a comment end node that indicates the end of the for loop
-                jsPost.push(indent + "createVDOM(\"#comment\", null, null, null, {index: " + index + ", forType:'" + forType + "'}, 'x-for-end'),");
-            } else if (attr.name == "x-key") {
-                //used in x-for
-            } else if (attr.name == "x-show") {
-                //...<span x-show="state.value > 0">greather than 0</span>...
-                attrs.push("...(" + (attr.value) + " ? null : {style:'display:none'})");
-            } else if (attr.name == "x-model") {
-                //...<input type="text" x-model="state.name"/>... --> <input type="text" x-prop:value="state.name" x-on:change="state.name = event.target.value"/>
-                //prop
-                let nodeName = node.tagName.toLowerCase();
-                let propertyName = "value";
-                let propValue = attr.value;
-                if (nodeName == "input") {
-                    let type = node.getAttribute("type");
-                    if (type == "range") {
-                        propertyName = "valueAsNumber";
-                    } else if (type == "checkbox") {
-                        propertyName = "checked"
-                    } else if (type == "radio") {
-                        propertyName = "checked"
-                        propValue += "=='" + node.getAttribute("value") + "'";
-                    }
-                } else if (nodeName == "select") {
-                } else if (nodeName == "textarea") {
-                }
-                props.push(propertyName + ":" + propValue);
-                //event
-                let eventName = "change";
-                if (nodeName == "input") {
-                    let type = node.getAttribute("type");
-                    if (type == "number") {
-                        propertyName = "valueAsNumber";
-                    } else if (type == "range") {
-                        propertyName = "valueAsNumber";
-                    } else if (type == "checkbox") {
-                        propertyName = "checked"
-                    } else if (type == "radio") {
-                        propValue = attr.value;
-                        propertyName = "value";
-                    }
-                } else if (nodeName == "select") {
-                } else if (nodeName == "textarea") {
-                }
-                events.push("'" + eventName + "': (event) => { " + propValue + " = event.target." + propertyName + "; handler.invalidate(); }");
-
-            } else if (attr.name == "x-once") {
-                //x-once: only render once
-                jsLine[0] = indent + "...((renderCount==0) ? [";
-                jsPostLine.push("] : [createVDOM('" + node.tagName.toLowerCase() + "', null, null, null, {once:true})]),");
-            } else if (attr.name == "x-pre") {
-                //v-pre: skip childs
-                options.push("format:\"html\"");
-                text = JSON.stringify(node.innerHTML).replaceAll("<x:text>", "{{").replaceAll("</x:text>", "}}");
-            } else if (attr.name.startsWith("x-")) {
-                //error
-                logger.error(`Error compiling template: invalid template attribute detected: ${attr.name}`);
-            } else {
-                attrs.push("'" + attr.name + "':" + JSON.stringify(attr.value));
-            }
-        }
-        jsLine.push(", " + (attrs.length ? '{' + attrs.join(',') + '}' : "null"));
-        jsLine.push(", " + (props.length ? '{' + props.join(',') + '}' : "null"));
-        jsLine.push(", " + (events.length ? '{' + events.join(',') + '}' : "null"));
-        jsLine.push(", " + (options.length ? '{' + options.join(',') + '}' : "null"));
-        if (text) {
-            jsLine.push(", " + text + "");
-            jsLine.push(")," + (jsPostLine.length ? jsPostLine.join('') : ''));
-            js.push(jsLine.join(''));
-        } else if (node.childNodes.length > 0) {
-            jsLine.push(", [");
-            js.push(jsLine.join(''));
-            node.childNodes.forEach((subNode, subIndex) => {
-                compileTemplateToJsRecursive(name, subNode, subIndex, js, level + 1);
-            });
-            js.push(indent + "])," + (jsPostLine.length ? jsPostLine.join('') : ''));
-        } else {
-            jsLine.push(")," + (jsPostLine.length ? jsPostLine.join('') : ''));
-            js.push(jsLine.join(''));
-        }
-        if (jsPost.length) js.push(jsPost.join(''));
-        incs++;
-    }
-    return incs;
-}
-function kebabToCamel(str) {
-    return str.split('-')
-        .map((word, index) => index === 0 ? word : word.charAt(0).toUpperCase() + word.slice(1))
-        .join('');
-}
-
- 
-
-
-// class
 class XTemplate {
 
+    //fields
+    _template = "";
+    _styleSheets = null;
+    _dependencies = null;
+    _render = null;
 
     //ctor
-    contructor() {
-
+    constructor({ template, styleSheets = [] }) { 
+        this._compile({ template, styleSheets });
     }
 
-    //static
-    static compileTemplate(template) {
-        return compileTemplate(template);
+    //props
+    get template() {return this._template;}
+    get styleSheets() {return this._styleSheets;}
+    get dependencies() {return this._dependencies;}
+    get render() {return this._render;}
+    
+    //methods
+    _compile({ template, styleSheets = [] }) { 
+        //create template from string if required
+        if (typeof(template)=="string") {
+            let templateElement = document.createElement("template");
+            templateElement.innerHTML = template.replaceAll("{{", "<x:text>").replaceAll("}}", "</x:text>").trim();
+            template = templateElement;
+        }
+        this._template = template;
+        //create array of styleSheets if required
+        if (styleSheets != null && !Array.isArray(styleSheets)) {
+            styleSheets = [styleSheets];
+        }
+        for (let i=0; i < styleSheets.length; i++) {
+            let styleSheet = styleSheets[i];
+            if (styleSheet.sheet) {
+                styleSheets[i] = styleSheet.sheet;
+            } else if (typeof(styleSheet)=="string") {
+                const newStyleSheet = new CSSStyleSheet();
+                newStyleSheet.replaceSync(styleSheet);
+                styleSheets[i] = newStyleSheet;
+            }
+        }
+        this._styleSheets = styleSheets;
+        //get dependencies
+        this._dependencies = [...new Set(Array.from(template.content.querySelectorAll('*')).filter(el => el.tagName.includes('-')).map(el => el.tagName.toLowerCase()))];
+        //compiles
+        let code = [];
+        code.push("let _ifs = {};");
+        code.push("return [");
+        let name = "x-something";
+        let index = 0;
+        template.content.childNodes.forEach((subNode) => {
+            index += this._compileTemplateToJsRecursive(name, subNode, index, code, 0);
+        });
+        code.push("];");
+        code = code.join("\n");
+        this._render = new Function("state", "handler", "utils", "renderCount", code);
     }
-    static render(state, xTemplate, element, handler) {
-        let aux = new XTemplateRenderer(state, xTemplate, element, handler);
-        aux.render();
+    _compileTemplateToJsRecursive(name, node, index, js, level) {
+        let indent = " ".repeat((level + 1) * 4);
+        let incs = 0;
+        if (node.nodeType == Node.TEXT_NODE) {
+            //#text
+            let textContent = node.textContent;
+            let jsLine = [];
+            jsLine.push(indent);
+            jsLine.push("utils.createVDOM(\"#text\", null, null, null, {index: " + index + "}, " + JSON.stringify(textContent) + "),");
+            js.push(jsLine.join(""));
+            incs++;
+        } else if (node.nodeType == Node.COMMENT_NODE) {
+            //#comment
+            let textContent = node.textContent;
+            let jsLine = [];
+            jsLine.push(indent);
+            jsLine.push("utils.createVDOM(\"#comment\", null, null, null, {index: " + index + "}, " + JSON.stringify(textContent) + "),");
+            js.push(jsLine.join(""));
+            incs++;
+        } else if (node.localName == "x:text") {
+            //x:text
+            let jsLine = [];
+            jsLine.push(indent);
+            jsLine.push("utils.createVDOM(\"#text\", null, null, null, {index: " + index + "}, \"\" + " + node.textContent + "),");
+            js.push(jsLine.join(""));
+            incs++;
+        } else if (node.localName.startsWith("x:")) {
+            //error
+            logger.error("Error compiling component ${name}: invalid node ${node.localName}: not implemented");
+        } else {
+            //element
+            let jsLine = [];
+            jsLine.push(indent);
+            jsLine.push("utils.createVDOM(\"" + node.tagName.toLowerCase() + "\"");
+            let jsPostLine = [];
+            let jsPost = [];
+            let attrs = [];
+            let props = [];
+            let events = [];
+            let options = [];
+            let text = "";
+            options.push("index:" + index);
+            for (let i = 0; i < node.attributes.length; i++) {
+                let attr = node.attributes[i];
+                if (attr.name == "x-text") {
+                    //...<span x-text="state.value"></span>...
+                    if (node.childNodes.length) logger.error("Error compiling component ${name}: invalid x-text node: non empty");
+                    text = "\"\" + " + attr.value;
+                } else if (attr.name == "x-html") {
+                    //...<span x-html="state.value"></span>...
+                    if (node.childNodes.length) logger.error("Error compiling component ${name}: invalid x-html node: non empty");
+                    options.push("format:\"html\"");
+                    text = "\"\" + " + attr.value;
+                } else if (attr.name == "x-attr" || attr.name == ":") {
+                    //...<span x-attr="state.value"></span>...
+                    //...<span :="state.value"></span>...
+                    let attrValue = attr.value;
+                    attrs.push("...utils.toObject(" + attrValue + ")");
+                } else if (attr.name.startsWith("x-attr:") || attr.name.startsWith(":")) {
+                    //...<span x-attr:title="state.value"></span>...
+                    let attrName = (attr.name.startsWith(":") ? attr.name.substring(1) : attr.name.substr(attr.name.indexOf(':') + 1));
+                    let attrValue = attr.value;
+                    if (attrName.startsWith("[") && attrName.endsWith("]")) {
+                        attrs.push("...utils.toDynamicArgument(" + attrName.substring(1, attrName.length - 1) + ", " + attrValue + ")");
+                    } else {
+                        attrs.push('"' + attrName + '":' + attrValue);
+                    }
+                } else if (attr.name == "x-prop" || attr.name == ".") {
+                    //...<span x-prop="state.value"></span>...
+                    //...<span .="state.value"></span>...
+                    let propValue = attr.value;
+                    attrs.push("..." + propValue + "");
+                } else if (attr.name.startsWith("x-prop:") || attr.name.startsWith(".")) {
+                    //...<input x-prop:value="state.value"></input>...
+                    //...<input .value="state.value"></input>...
+                    let propName = this._kebabToCamel((attr.name.startsWith(".") ? attr.name.substring(1) : attr.name.substr(attr.name.indexOf(':') + 1)));
+                    let propValue = attr.value;
+                    if (propName.startsWith("[") && propName.endsWith("]")) {
+                        props.push("...utils.toDynamicProperty(" + propName.substring(1, propName.length - 1) + ", " + propValue + ")");
+                    } else {
+                        props.push(propName + ":" + propValue);
+                    }
+                } else if (attr.name.startsWith("x-on:") || attr.name.startsWith("@")) {
+                    //...<button x-on:click="onIncrement">+1</button>...
+                    //...<button @click="onIncrement">+1</button>...
+                    let eventName = (attr.name.startsWith("@") ? attr.name.substring(1) : attr.name.substr(attr.name.indexOf(':') + 1));
+                    let eventHandler = attr.value;
+                    events.push("'" + eventName + "': (event) => handler('" + eventHandler + "', event)");
+                } else if (attr.name == "x-if") {
+                    //...<span x-if="state.value > 0">greather than 0</span>...
+                    jsLine[0] = indent + "...((_ifs.c" + level + " = (" + attr.value + ")) ? [";
+                    jsPostLine.push("] : []),");
+                } else if (attr.name == "x-elseif") {
+                    //...<span x-elseif="state.value < 0">less than 0</span>...
+                    jsLine[0] = indent + "...(_ifs.c" + level + " ? [] : (_ifs.c" + level + " = (" + attr.value + ")) ? [";
+                    jsPostLine.push("] : []),");
+                } else if (attr.name == "x-else") {
+                    //...<span x-else>is 0</span>...
+                    jsLine[0] = indent + "...(!_ifs.c" + level + " ? [";
+                    jsPostLine.push("] : []),");
+                } else if (attr.name == "x-for") {
+                    //...<li x-for="item in state.items" x-key="name">{{item.name + '(' + item.count + ') '}}</li>...
+                    let keyName = node.getAttribute("x-key");
+                    let forType = "";
+                    if (keyName) {
+                        forType = "key";
+                    } else {
+                        forType = "position";
+                    }
+                    //creates a comment virtual node that indicates the start of the for loop, and the type of the loop
+                    js.push(indent + "utils.createVDOM(\"#comment\", null, null, null, {index: " + index + ", forType:'" + forType + "'}, 'x-for-start'),");
+                    //add loop
+                    let parts = attr.value.split(" in ");
+                    if (parts.length != 2) logger.error(`Error compiling template: invalid x-for attribute detected: ${attr.value}`);
+                    let itemName = parts[0].trim();
+                    let indexName = "index";
+                    if (itemName.startsWith("(") && itemName.endsWith(")")) {
+                        let arr = itemName.substring(1, itemName.length - 1).split(",");
+                        itemName = arr[0].trim();
+                        indexName = arr[1].trim();
+                    }
+                    let listName = parts[1].trim();
+                    jsLine[0] = indent + "...(utils.toArray(" + listName + ").map((" + itemName + ", " + indexName + ") => ";
+                    jsPostLine.push(")),");
+                    options.push("\"key\":" + itemName + "." + keyName);
+                    //creates a comment end node that indicates the end of the for loop
+                    jsPost.push(indent + "utils.createVDOM(\"#comment\", null, null, null, {index: " + index + ", forType:'" + forType + "'}, 'x-for-end'),");
+                } else if (attr.name == "x-key") {
+                    //used in x-for
+                } else if (attr.name == "x-show") {
+                    //...<span x-show="state.value > 0">greather than 0</span>...
+                    attrs.push("...(" + (attr.value) + " ? null : {style:'display:none'})");
+                } else if (attr.name == "x-model") {
+                    //...<input type="text" x-model="state.name"/>... --> <input type="text" x-prop:value="state.name" x-on:change="state.name = event.target.value"/>
+                    //prop
+                    let nodeName = node.tagName.toLowerCase();
+                    let propertyName = "value";
+                    let propValue = attr.value;
+                    if (nodeName == "input") {
+                        let type = node.getAttribute("type");
+                        if (type == "range") {
+                            propertyName = "valueAsNumber";
+                        } else if (type == "checkbox") {
+                            propertyName = "checked";
+                        } else if (type == "radio") {
+                            propertyName = "checked";
+                            propValue += "=='" + node.getAttribute("value") + "'";
+                        }
+                    } else if (nodeName == "select") {
+                    } else if (nodeName == "textarea") {
+                    }
+                    props.push(propertyName + ":" + propValue);
+                    //event
+                    let eventName = "change";
+                    if (nodeName == "input") {
+                        let type = node.getAttribute("type");
+                        if (type == "number") {
+                            propertyName = "valueAsNumber";
+                        } else if (type == "range") {
+                            propertyName = "valueAsNumber";
+                        } else if (type == "checkbox") {
+                            propertyName = "checked";
+                        } else if (type == "radio") {
+                            propValue = attr.value;
+                            propertyName = "value";
+                        }
+                    } else if (nodeName == "select") {
+                    } else if (nodeName == "textarea") {
+                    }
+                    events.push("'" + eventName + "': (event) => { " + propValue + " = event.target." + propertyName + "; handler.invalidate(); }");
+
+                } else if (attr.name == "x-once") {
+                    //x-once: only render once
+                    jsLine[0] = indent + "...((renderCount==0) ? [";
+                    jsPostLine.push("] : [utils.createVDOM('" + node.tagName.toLowerCase() + "', null, null, null, {once:true})]),");
+                } else if (attr.name == "x-pre") {
+                    //v-pre: skip childs
+                    options.push("format:\"html\"");
+                    text = JSON.stringify(node.innerHTML).replaceAll("<x:text>", "{{").replaceAll("</x:text>", "}}");
+                } else if (attr.name.startsWith("x-")) {
+                    //error
+                    logger.error(`Error compiling template: invalid template attribute detected: ${attr.name}`);
+                } else {
+                    attrs.push("'" + attr.name + "':" + JSON.stringify(attr.value));
+                }
+            }
+            jsLine.push(", " + (attrs.length ? '{' + attrs.join(',') + '}' : "null"));
+            jsLine.push(", " + (props.length ? '{' + props.join(',') + '}' : "null"));
+            jsLine.push(", " + (events.length ? '{' + events.join(',') + '}' : "null"));
+            jsLine.push(", " + (options.length ? '{' + options.join(',') + '}' : "null"));
+            if (text) {
+                jsLine.push(", " + text + "");
+                jsLine.push(")," + (jsPostLine.length ? jsPostLine.join('') : ''));
+                js.push(jsLine.join(''));
+            } else if (node.childNodes.length > 0) {
+                jsLine.push(", [");
+                js.push(jsLine.join(''));
+                node.childNodes.forEach((subNode, subIndex) => {
+                    this._compileTemplateToJsRecursive(name, subNode, subIndex, js, level + 1);
+                });
+                js.push(indent + "])," + (jsPostLine.length ? jsPostLine.join('') : ''));
+            } else {
+                jsLine.push(")," + (jsPostLine.length ? jsPostLine.join('') : ''));
+                js.push(jsLine.join(''));
+            }
+            if (jsPost.length) js.push(jsPost.join(''));
+            incs++;
+        }
+        return incs;
+    }
+    _kebabToCamel(str) {
+        return str.split('-')
+            .map((word, index) => index === 0 ? word : word.charAt(0).toUpperCase() + word.slice(1))
+            .join('');
+    }
+
+    //public methods
+    createInstance(state, handler, element) {
+        return new XTemplateInstance(this, state, handler, element);
     }
 
 }
+ 
 
-// createVDOM
+// utils
 const emptyObject = {};
 const emptyArray = [];
-const createVDOM = (tag, attrs, props, events, options, children) => {
-    let vdom = {
-        tag: tag,
-        attrs: attrs ?? emptyObject,
-        props: props ?? emptyObject,
-        events: events ?? emptyObject,
-        options: options ?? { index: 0 },
-        children: children ?? emptyArray
+const utils = new class {
+    createVDOM = (tag, attrs, props, events, options, children) => {
+        return {
+            tag: tag,
+            attrs: attrs ?? emptyObject,
+            props: props ?? emptyObject,
+            events: events ?? emptyObject,
+            options: options ?? { index: 0 },
+            children: children ?? emptyArray
+        };
     };
-    return vdom;
-};
-
-
-// renderUtils
-const renderUtils = new class {
     toArray = (value) => {
         if (Array.isArray(value)) return value;
         if (typeof (value) == "number") return Array.from({ length: value }, (v, i) => i + 1);
@@ -328,38 +327,35 @@ const renderUtils = new class {
 
 
 // class
-class XTemplateRenderer {
+class XTemplateInstance {
 
     //fields
+    _xtemplate = null;
     _state = null;
-    _template = null;
     _element = null;
     _handler = null;
 
-    _renderDomTimeoutId = 0;
+    //work fields
     _renderCount = 0;
     _vdom = null;
 
     //ctor
-    constructor(state, template, element, handler) {
+    constructor(xtemplate, state, handler, element) {
+        this._xtemplate = xtemplate;
         this._state = state;
-        this._template = template;
         this._element = element;
+        this._element.adoptedStyleSheets = xtemplate.styleSheets;
         this._handler = handler;
     }
 
-    // private methods
+    //props
+    get state() {return this._state;}
+
+    // methods
     render() {
-        //count
-        const start = performance.now();
-        //cancel pending render
-        if (this._renderDomTimeoutId) {
-            window.cancelAnimationFrame(this._renderDomTimeoutId);
-            this._renderDomTimeoutId = 0;
-        };
-        //render
-        let vdom = this._template.render(this._state, this._handler, createVDOM, renderUtils, this._renderCount++);
-        //vdom to dom
+        //render vdom
+        let vdom = this._xtemplate.render(this._state, this._handler, utils, this._renderCount++);
+        //render vdom to dom
         if (this._vdom == null) {
             let index = 0;
             for (let vNode of vdom) {
@@ -374,12 +370,9 @@ class XTemplateRenderer {
             }
             this._vdom = vdom;
         } else {
-            this._diffDom(this._vdom, vdom, this._element);
+            this._diffDom(this._vdom, vdom, this._element, 0);
             this._vdom = vdom;
         }
-        //log
-        const end = performance.now();
-        logger.log(`Rendered ${this.localName}, in ${end-start} ms`);
     }
     _createDomElement(vNode) {
         //create element from vdom node
@@ -400,7 +393,7 @@ class XTemplateRenderer {
                 }
             }
             for (let prop in vNode.props) {
-                let propValue = vNode.props[prop]
+                let propValue = vNode.props[prop];
                 el[prop] = propValue;
             }
             for (let event in vNode.events) {
@@ -468,11 +461,11 @@ class XTemplateRenderer {
             return el;
         }
     }
-    _diffDom(vNodesOld, vNodesNew, parent) {
+    _diffDom(vNodesOld, vNodesNew, parent, level) {
         //apply differences between two arrays of vdom elements
         let iold = 0;
         let inew = 0;
-        for (let i = 0; true ; i++) {
+        for (let i = 0; ; i++) {
             let vNodeOld = vNodesOld[i + iold] ?? null;
             let vNodeNew = vNodesNew[i + inew] ?? null;
             if (vNodeOld == null && vNodeNew == null) {
@@ -488,12 +481,12 @@ class XTemplateRenderer {
             } else if (vNodeOld.options.index < vNodeNew.options.index) {
                 //remove old node
                 let comment = document.createComment("");
-                parent.replaceChild(comment, parent.childNodes[vNodeOld.options.index])
+                parent.replaceChild(comment, parent.childNodes[vNodeOld.options.index]);
                 inew--;
             } else if (vNodeOld.options.index > vNodeNew.options.index) {
                 //replace node
                 let element = this._createDomElement(vNodeNew);
-                parent.replaceChild(element, parent.childNodes[vNodeNew.options.index])
+                parent.replaceChild(element, parent.childNodes[vNodeNew.options.index]);
                 iold--;
             } else if (vNodeOld.tag == "#comment" && vNodeOld.options.forType == "key" && vNodeNew.tag == "#comment" && vNodeNew.options.forType == "key") {
                 //for loop by key
@@ -503,7 +496,7 @@ class XTemplateRenderer {
                 let newStartIndex = i + inew;
                 let newEndIndex = newStartIndex;
                 while (vNodesNew[newEndIndex].children != 'x-for-end') newEndIndex++;
-                this._diffDomListByKey(vNodesOld, oldStartIndex, oldEndIndex, vNodesNew, newStartIndex, newEndIndex, parent);
+                this._diffDomListByKey(vNodesOld, oldStartIndex, oldEndIndex, vNodesNew, newStartIndex, newEndIndex, parent, level + 1);
                 iold += oldEndIndex - oldStartIndex;
                 inew += newEndIndex - newStartIndex;
             } else if (vNodeOld.tag == "#comment" && vNodeOld.options.forType == "position" && vNodeNew.tag == "#comment" && vNodeNew.options.forType == "position") {
@@ -514,23 +507,25 @@ class XTemplateRenderer {
                 let newStartIndex = i + inew;
                 let newEndIndex = newStartIndex;
                 while (vNodesNew[newEndIndex].children != 'x-for-end') newEndIndex++;
-                this._diffDomListByPosition(vNodesOld, oldStartIndex, oldEndIndex, vNodesNew, newStartIndex, newEndIndex, parent);
+                this._diffDomListByPosition(vNodesOld, oldStartIndex, oldEndIndex, vNodesNew, newStartIndex, newEndIndex, parent, level + 1);
                 iold += oldEndIndex - oldStartIndex;
                 inew += newEndIndex - newStartIndex;
             } else if (vNodeOld.tag == "slot" && vNodeNew.tag == "slot") {
                 //slot
             } else {
                 //diff node
+                if (!parent) debugger;
                 let child = parent.childNodes[vNodeNew.options.index + inew];
-                try {
-                    this._diffDomElement(vNodeOld, vNodeNew, child);
-                } catch (e) {
-                    debugger;
-                }
+                this._diffDomElement(vNodeOld, vNodeNew, child, level + 1);
+                //try {
+                //    this._diffDomElement(vNodeOld, vNodeNew, child, level + 1);
+                //} catch (e) {
+                //    debugger;
+                //}
             }
         }
     }
-    _diffDomElement(vNodeOld, vNodeNew, element) {
+    _diffDomElement(vNodeOld, vNodeNew, element, level) {
         if (vNodeNew.options.once) {
             return;
         }
@@ -567,7 +562,7 @@ class XTemplateRenderer {
         }
         //children
         if (Array.isArray(vNodeNew.children)) {
-            this._diffDom(vNodeOld.children, vNodeNew.children, element);
+            this._diffDom(vNodeOld.children, vNodeNew.children, element, level + 1);
         } else if (typeof (vNodeNew.children) == "string") {
             if (vNodeOld.children != vNodeNew.children) {
                 if (vNodeNew.options.format == 'html') {
@@ -580,7 +575,7 @@ class XTemplateRenderer {
             }
         }
     }
-    _diffDomListByPosition(vNodesOld, oldStartIndex, oldEndIndex, vNodesNew, newStartIndex, newEndIndex, parent) {
+    _diffDomListByPosition(vNodesOld, oldStartIndex, oldEndIndex, vNodesNew, newStartIndex, newEndIndex, parent, level) {
         //diff by position
         let oldLength = oldEndIndex - 1 - oldStartIndex;
         let newLength = newEndIndex - 1 - newStartIndex;
@@ -593,7 +588,7 @@ class XTemplateRenderer {
                 parent.insertBefore(element, parent.childNodes[newStartIndex + 1 + i]);
             } else {
                 let element = parent.childNodes[newStartIndex + 1 + i];
-                this._diffDomElement(vNodeOld, vNodeNew, element);
+                this._diffDomElement(vNodeOld, vNodeNew, element, level + 1);
             }        
         }
         while (newLength < oldLength) {
@@ -602,7 +597,7 @@ class XTemplateRenderer {
             oldLength--;
         }        
     }
-    _diffDomListByKey(vNodesOld, oldStartIndex, oldEndIndex, vNodesNew, newStartIndex, newEndIndex, parent) {
+    _diffDomListByKey(vNodesOld, oldStartIndex, oldEndIndex, vNodesNew, newStartIndex, newEndIndex, parent, level) {
         //get oldKeys and newKeys
         let oldKeys = [];
         for (let i = oldStartIndex + 1; i < oldEndIndex; i++) {
@@ -642,7 +637,7 @@ class XTemplateRenderer {
         for (let i = 0; i < newKeys.length; i++) {
             let key = newKeys[i];
             let newIndex = i;
-            let oldIndex = oldKeys.indexOf(key)
+            let oldIndex = oldKeys.indexOf(key);
             if (newIndex != oldIndex) {
                 parent.insertBefore(parent.childNodes[oldStartIndex + oldIndex + 1], parent.childNodes[oldStartIndex + newIndex + 1]);
                 oldKeys.splice(oldIndex, 1);
@@ -659,7 +654,7 @@ class XTemplateRenderer {
                 let vNodeOld = vNodesOld[oldStartIndex + 1 + i];
                 let vNodeNew = vNodesNew[newStartIndex + 1 + i];
                 let element = parent.childNodes[newStartIndex + 1 + i];
-                this._diffDomElement(vNodeOld, vNodeNew, element);
+                this._diffDomElement(vNodeOld, vNodeNew, element, level);
             }
         }
     }

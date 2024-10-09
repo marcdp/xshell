@@ -13,7 +13,10 @@ class XNavigator extends HTMLElement {
     }
 
     //fields
-    _config = {};
+    _config = {
+        base:  document.location.pathname.substring(0, document.location.pathname.lastIndexOf("/")),
+        start: ""
+    };
     
 
     //ctor
@@ -38,6 +41,9 @@ class XNavigator extends HTMLElement {
     //methods
     async init(config) {
         this._config = config;
+        if (this._config.base.startsWith("/")) {
+            this._config.base = document.location.protocol + "//" + document.location.host + this._config.base;
+        }
     }
     start() {
         window.addEventListener("hashchange", () => {
@@ -61,8 +67,14 @@ class XNavigator extends HTMLElement {
         }
         return this.config.base + "/" + prefix + HASH_PREFIX + src;
     }
-    async showPage({url, type = ""}) {
+    async showPage({url, type = "", sender = null}) {
         if (url.startsWith(HASH_PREFIX)) url =url.substring(HASH_PREFIX.length);
+        //resolve url
+        if (!url.startsWith("/") && sender) {
+            let aux = sender.src;
+            aux = aux.substring(0, aux.lastIndexOf("/") + 1);
+            url = aux + url;
+        }
         if (type == "dialog") {
             //show dialog
             let resolveFunc = null;
@@ -115,7 +127,7 @@ class XNavigator extends HTMLElement {
                         let hashParts = document.location.hash.substring(HASH_PREFIX.length).split(HASH_PREFIX);
                         let index = this.pages.indexOf(event.target);
                         hashParts = hashParts.filter((_, idx) => idx !== index);
-                        document.location.hash = HASH_PREFIX + hashParts.join(HASH_PREFIX);                        
+                        document.location.hash = HASH_PREFIX + hashParts.join(HASH_PREFIX);
                     });
                 } else {
                     page.setAttribute("type", "main");
@@ -123,13 +135,13 @@ class XNavigator extends HTMLElement {
                 page.addEventListener("page:change", (event) => {
                     if (this.pages.indexOf(event.target) == 0) {
                         var label = event.target.label;
-                        if (label) document.title = this.config.titlePrefix + label + this.config.titleSuffix;
+                        if (label) document.title = label + " (" + xshell.config.app.title + ")";
                     }
                 });
                 page.addEventListener("page:load", (event) => {
                     if (this.pages.indexOf(event.target) == 0) {
                         var label = event.target.label;
-                        if (label) document.title = this.config.titlePrefix + label + this.config.titleSuffix;
+                        if (label) document.title = label + " (" + xshell.config.app.title + ")";
                     }
                 });
                 let container = this;

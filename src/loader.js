@@ -5,11 +5,11 @@ class Loader {
 
     //vars
     _config = {
-        preload:[],
-        map:{}
+        map:[],
     };
+    _cacheMap = {};
     _cache = {};
-
+    
     //ctor
     constructor() {
     }
@@ -20,73 +20,96 @@ class Loader {
     //methods
     async init(config) {
         this._config = config;
+        //sort
+        this._config.map.sort((a,b)=>{
+            return a.resource.localeCompare(b.resource);
+        });
+        //cache map by: resource
+        let cacheMap = {};
+        this._config.map.reverse().forEach((definition)=>{
+            cacheMap[definition.resource] = definition;
+        });
+        this._cacheMap = cacheMap;
     }
 
     //methods
-    register(type, name, value) {
-        this._cache[type + ":" + name] = value;
+    register(resource, value) {
+        this._cache[resource] = value;
     }
-    resolveUrl(type, name) {
-        //if (!name) debugger;
-        let url = this._config.map[type + ":" + name];
-        if (url) return url;
-        let aux = name;
-        let i = name.lastIndexOf("-");
-        while (i!=-1) {
-            aux = aux.substring(0, i);
-            url = this._config.map[type + ":" + aux];
-            if (url) {
-                let result = url;
-                if (result.indexOf("{name}")!=-1) result = result.replaceAll("{name}", name);
-                if (result.indexOf("{name-unprefixed}")!=-1) result = result.replaceAll("{name-unprefixed}", name.substring(aux.length + 1));
-                return result;
+    resolve(resource) {
+        let scheme = resource.substring(0, resource.indexOf(":"));
+        let name = resource.substring(resource.indexOf(":") + 1);
+        let aux = resource;
+        while (aux) {
+            let definition = this._cacheMap[aux];
+            if (definition) {
+                let url = definition.url;
+                if (url.indexOf("{name}")!=-1) url = url.replaceAll("{name}", name);
+                if (url.indexOf("{name-unprefixed}")!=-1) url = url.replaceAll("{name-unprefixed}", name.substring(aux.length - scheme.length));
+                return { definition, url };
             }
-            i = aux.lastIndexOf("-");
+            let i = aux.lastIndexOf("-");
+            if (i==0) break;
+            aux = aux.substring(0, i);
         }
-        logger.error(`loader.resolveUrl('${type}', '${name}'): unable to resolve url`);
+        logger.error(`loader.resolve('${resource}'): unable to resolve`);
         return null;
     }
-    async load(type, nameOrNames) {
-        if (nameOrNames == undefined) return null;
-        if (nameOrNames == "" ) return null;
-        let names = (typeof(nameOrNames) == "string" ? [nameOrNames] : nameOrNames);
+    resolveUrl(resource) {
+        let result = this.resolve(resource);
+        if (result) return result.url;
+        return null;
+    }
+    async load(resources, names) {
+        if (names) {
+            let aux = [];
+            for(let name of names) {
+                aux.push(resources + ":" + name);
+            }
+            resources=aux;
+        }
+        let isString = typeof(resources) == "string";
+        if (resources == undefined) return null;
+        if (resources == "" ) return null;
+        if (resources == [""] ) return null;;
+        if (typeof(resources) == "string") resources = [resources];
         let tasks = [];
-        for(let name of names) {
-            let cacheItem = this._cache[type + ":" + name];
+        for(let resource of resources) {
+            let scheme = resource.substring(0, resource.indexOf(":"));
+            let name = resource.substring(resource.indexOf(":") + 1);
+            let cacheItem = this._cache[resource];
             if (cacheItem && cacheItem.then){
                 tasks.push(cacheItem);
-            } else if (type == "component" && window.customElements.get(name)) {
-                this._cache[type + ":" + name] = window.customElements.get(name);
-            } else if (type == "layout" && window.customElements.get(name)) {
-                this._cache[type + ":" + name] = window.customElements.get(name);
+            } else if (scheme == "component" && window.customElements.get(name)) {
+                this._cache[scheme + ":" + name] = window.customElements.get(name);
+            } else if (scheme == "layout" && window.customElements.get(name)) {
+                this._cache[scheme + ":" + name] = window.customElements.get(name);
             } else if (!cacheItem) {
-                let url = this.resolveUrl(type, name);
+                let { definition , url} = this.resolve(resource);
                 let promise = (async ()=> {
-                    if (type == "component" || type == "layout") {
+                    if ((scheme == "component" || scheme == "layout")) {
                         let module = await import(url);
-                        this.register(type, name, module.default);    
+                        this.register(resource, module.default);    
                     } else {
                         let value = await fetch(url);
                         if (value.ok) {
-                            if (type == "icon") value = await value.text();
-                            this.register(type, name, value);
+                            value = await value.text();
+                            this.register(resource, value);
                         } else {
-                            this.register(type, name, null);
+                            this.register(resource, null);
                         }
                     }
                 })();
-                this.register(type, name, promise);
+                this.register(resource, promise);
                 tasks.push(promise);
             }
         }
         await Promise.all(tasks);        
         let result = [];
-        for(let name of names) {
-            result.push(this._cache[type + ":" + name]);
+        for(let resource of resources) {
+            result.push(this._cache[resource]);
         }
-        if (typeof(nameOrNames) == "string") {
-            return result[0];
-        }
+        if (isString) return result[0];
         return result;
     }
     
