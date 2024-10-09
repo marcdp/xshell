@@ -1,7 +1,7 @@
 import xshell from "x-shell";
 
 // class
-class XAnchor  extends HTMLElement {
+class XAnchor extends HTMLElement {
     
     //static
     static get observedAttributes() { 
@@ -9,6 +9,7 @@ class XAnchor  extends HTMLElement {
     }
 
     //fields
+    _connected = false;
     _href = "";
     _breadcrumb = false;
     _target = "";
@@ -22,7 +23,6 @@ class XAnchor  extends HTMLElement {
         this.shadowRoot.innerHTML = `<a href='#'><slot></slot></a>`;
         this.shadowRoot.querySelector("a").addEventListener("click", (event) => {
             let page = xshell.getPage(this);
-            let a = this.shadowRoot.firstChild;
             if (this._page) {
                 //target x-page element
                 var targetPage = this.ownerDocument.getElementById(this._page);
@@ -41,7 +41,7 @@ class XAnchor  extends HTMLElement {
                 xshell.showPage({ url: src, type: this._type});
                 event.preventDefault();
             }
-        })
+        });
     }
 
     //props
@@ -49,31 +49,31 @@ class XAnchor  extends HTMLElement {
     set href(value) {
         var changed = (this._href != value);
         this._href = value; 
-        if (changed) this.render();
+        if (changed && this._connected) this.render();
     }
     get type() {return this._type;}
     set type(value) {
         var changed = (this._type != value);
         this._type = value; 
-        if (changed) this.render();
+        if (changed && this._connected) this.render();
     }
     get breadcrumb() {return this._breadcrumb;}
     set breadcrumb(value) {
         var changed = (this._breadcrumb != value);
         this._breadcrumb = value; 
-        if (changed) this.render();
+        if (changed && this._connected) this.render();
     }
     get target() {return this._target;}
     set target(value) {
         var changed = (this._target != value);
         this._target = value; 
-        if (changed) this.render();
+        if (changed && this._connected) this.render();
     }
     get page() {return this._page;}
     set page(value) {
         var changed = (this._page != value);
         this._page = value; 
-        if (changed) this.render();
+        if (changed && this._connected) this.render();
     }
     
 
@@ -84,6 +84,10 @@ class XAnchor  extends HTMLElement {
         if (name == "type") this.type = newValue;
         if (name == "page") this.page = newValue;
         if (name == "breadcrumb") this.breadcrumb = (newValue != null);
+    }
+    connectedCallback(){
+        this._connected = true;
+        this.render();
     }
     getSrc() {
         let page = xshell.getPage(this);
@@ -110,23 +114,24 @@ class XAnchor  extends HTMLElement {
         return src;
     }
     render() {
-        //href & target
         let page = xshell.getPage(this);
-        let src = this.getSrc();
-        let href = "";
-        if (this._type == "stack") {
-            href = xshell.getRealUrl(src, page, true);
-        } else if (this._type == "dialog") {
-            href = xshell.getRealUrl(src, page, true);
-        } else {
-            href = xshell.getRealUrl(src, page);
-        }
-        let a = this.shadowRoot.firstChild;
-        a.setAttribute("href", href);
-        if (this.target) {
-            a.setAttribute("target", this.target);
-        } else{
-            a.removeAttribute("target");
+        if (page) {
+            let src = this.getSrc();
+            let href = "";
+            if (this._type == "stack") {
+                href = xshell.getRealUrl(src, page, true);
+            } else if (this._type == "dialog") {
+                href = xshell.getRealUrl(src, page, true);
+            } else {
+                href = xshell.getRealUrl(src, page);
+            }
+            let a = this.shadowRoot.firstChild;
+            a.setAttribute("href", href);
+            if (this.target) {
+                a.setAttribute("target", this.target);
+            } else{
+                a.removeAttribute("target");
+            }
         }
     }
 

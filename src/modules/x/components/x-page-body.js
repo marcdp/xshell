@@ -1,4 +1,3 @@
-import xshell from "x-shell";
 
 // template
 let template = document.createElement("template");

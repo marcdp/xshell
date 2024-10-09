@@ -48,7 +48,7 @@ class XError  extends HTMLElement {
     disconnectedCallback() {
     }
     render() {
-        this.shadowRoot.innerHTML = `Error ${this.code}: ${this.message}`;
+        this.shadowRoot.innerHTML = `<span style='color:red'>Error ${this.code}: ${this.message}</span>`;
     }
     
 

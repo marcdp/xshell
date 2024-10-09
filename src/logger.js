@@ -17,7 +17,9 @@ class Logger  {
 
     //methods
     log(message, ...args) {
-        if (this._config.debug) console.log(this.getTime() + "[XShell] " + message, ...args);
+        if (this._config.debug) {
+            console.log(this.getTime() + "[XShell] " + message, ...args);
+        }
     }
     warn(message, ...args) {
         console.warn(this.getTime() + "[XShell] " + message, ...args);

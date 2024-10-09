@@ -1,20 +1,47 @@
+<!-- metadata -->
+<meta name="x-page:handler" content="x">
 
+<!-- script -->
 <script type="module">
-    export default class {
+    import { XPageInstance }  from "x-page"
+
+    // class
+    export default class extends XPageInstance {
+        state = {
+            counter: 123
+        }
         async onCommand(command, args) {
             if (command == "load") {
-                this.label = "Ajuda";
+                //load
+                this.label = "Ajudaaaaaa";
+                
+            } else if (command == "something") {
+                //something
+                this.showPageDialog({url: "dialog.html"});
+
+            } else if (command == "inc") {
+                //inc counter
+                this.state.counter++;
+
+            } else if (command == "dec") {
+                //dec counter
+                this.state.counter--;
             }
         }
-    }
+    };
 </script>
 
-<p>
-    This is the help page
-</p>
+<!-- template -->
+<template>
+    {{ state.counter }}
+    <p>
+        This is the help page:     
+    </p>    
+    <ul>
+        <li><x-anchor href="login.html">Help</x-anchor></li>
+    </ul>       
+    <x-button command="inc">inc</x-button>
+    <x-button command="dec">dec</x-button>
+</template>
 
-<li>
-    <x-anchor href="login.html">
-        Help
-    </x-anchor>
-</li>
+

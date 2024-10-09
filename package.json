@@ -5,7 +5,7 @@
   "browser": "src/index.js",
   "scripts": {
     "lint": "eslint .",
-    "start": "http-server -c-1 -p 8080"
+    "start": "http-server -c-1 --port 8080 "
   },
   "keywords": [],
   "author": "",
@@ -17,9 +17,6 @@
     "globals": "^15.9.0"
   },
   "dependencies": {
-    "@material-icons/svg": "^1.0.33",
-    "@material/web": "^2.2.0",
-    "http-server": "^14.1.1",
-    "material-symbols": "^0.24.0"
+    "http-server": "^14.1.1"
   }
 }

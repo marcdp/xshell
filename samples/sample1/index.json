@@ -1,0 +1,53 @@
+{
+    "app": {
+        "name":       "sample1",
+        "title":      "Sample 1",
+        "version":    "1.0",
+        "copyright":  "",
+        "logo":       "./images/logo.svg"
+    },
+    "i18n": { 
+        "culture": "en",
+        "strings": {
+            "hello world": "hola mundo",
+            "bye": "adios"
+        }
+    },
+    "loader": {
+        "map": [
+            {"resource":"icon:material", "url":"https://material-icons.github.io/material-icons/svg/{name-unprefixed}/outline.svg"}
+        ]
+    }, 
+    "logger": {
+        "debug": true
+    },
+    "menus": {
+        "main": [
+            {"label": "File", "icon": "x-file1"},
+            {"label": "Edit", "enabled": false},
+            {"label": "Tools", "childs":[
+                {"label": "Option 1"},
+                {"label": "Option 2"},
+                {"label": "Option 3", "hidden": true}
+            ]}
+        ],
+        "footer": [
+            {"label": "About"},
+            {"label": "Copyright"}
+        ]
+    },
+    "modules": [
+        {"url":"/src/modules/x/module.json"},
+        {"url":"./module.json"}
+    ],
+    "navigator": {
+        "base":  ".",
+        "start": "/folder1/login.html"
+    },
+    "user": {
+        "id": "",
+        "username": "",
+        "authenticated": false,
+        "claims": {}
+    }
+}

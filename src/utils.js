@@ -1,4 +1,5 @@
 
+// funcs
 function deepAssign(obj1, obj2) {
     for (let key in obj2) {
         if (Object.prototype.hasOwnProperty.call(obj2, key)) {
@@ -22,12 +23,43 @@ function deepAssign(obj1, obj2) {
 // class
 class Utils {
 
-    deepAssign(target, ...sources) {
+    static deepAssign(target, ...sources) {
         return deepAssign(target, ...sources);
     }
+    static traverse(obj, callback) {
+        for (let key in obj) {
+            if (Object.prototype.hasOwnProperty.call(obj, key)) {
+                if (obj[key] instanceof Object) {
+                    this.traverse(obj[key], callback);
+                } else {
+                    callback(obj, key);
+                }
+            }
+        }
+    }
+    static combineUrls(a, b) {
+        if (b.indexOf(":") != -1) return b;
+        if (b.startsWith("./")) {
+            if (a.endsWith("/")) a = a.substring(0, a.length - 1);
+            return a + b.substring(1);
+        } else if (b.startsWith("../")) {
+            if (a.endsWith("/")) a = a.substring(0, a.length - 1);
+            return a + b.substring(2);
+        } else if (b.startsWith("/")) {
+            if (a.indexOf("://") != -1) {
+                let i = a.indexOf("/", a.indexOf("://") + 3);
+                if (i != -1) a = a.substring(0, i);
+                return a + b;
+            }
+            return b;
+        } else {
+            if (!a.endsWith("/")) a += "/";
+            return a + b;
+        }
+      }
 
 };
 
 
 //export
-export default new Utils();
+export default Utils;

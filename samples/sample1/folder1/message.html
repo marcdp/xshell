@@ -1,17 +1,22 @@
 
+<meta name="x-page:label"   content="Messsage page">
+<meta name="x-page:handler" content="x">
+<meta name="x-page:state"   content="{var1:1}">
+
 <script type="module">
-    export default class {
-        //ctor
-        constructor(element) {
-            //this.renderer = new XRenderer({}, 'adfasdf', {}, element);
-        }
-        //methods
+    import { XPageInstance }  from "x-page"
+
+    // class
+    export default class extends XPageInstance {
         async onCommand(command, args) {
             if (command == "load") {
+                //load
                 this.label = "Message page: " + args.message;
+
             } else if (command == "show-page-stack") {
                 //show page stack
                 this.showPageStack({url:"/folder1/message.html?message=hello+world"});
+
             } else if (command == "show-page-dialog") {
                 //show page dialog
                 this.showPageDialog({url:"/folder1/dialog.html"});
@@ -20,18 +25,19 @@
     }
 </script>
 
-This is a message:
+<template>
+    This is a message:
 
-<ul>
+    <ul>
 
-    <li><x-anchor href="help.html">Help</x-anchor></li>
-    <li><x-button command="show-page-stack">Show page stack</x-button></li>
-    <li><x-button command="show-page-dialog" data-dddd="2" data-asdas="321">Show page dialog</x-button></li>
+        <li><x-anchor href="help.html">Help</x-anchor></li>
+        <li><x-button command="show-page-stack">Show page stack</x-button></li>
+        <li><x-button command="show-page-dialog" data-dddd="2" data-asdas="321">Show page dialog</x-button></li>
 
-    <x-clock></x-clock>
+        <x-clock></x-clock>
 
-    <x-icon icon="x-bell"></x-icon>
+        <x-icon icon="x-bell"></x-icon>
 
-</ul>
+    </ul>
 
-
+</template>

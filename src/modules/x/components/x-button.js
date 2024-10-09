@@ -45,10 +45,13 @@ class XButton extends HTMLElement  {
         super();
         this.attachShadow({ mode: "open" });
         this.shadowRoot.appendChild(template.content.cloneNode(true));
-        this.shadowRoot.addEventListener("click", (event)=>{
-            let page = xshell.getPage(event.target);
+        this.addEventListener("click", (event)=>{
+            let page = xshell.getPage(this);
             page.onCommand(this.command, this.dataset);
-        });
+            event.preventDefault();
+            event.stopPropagation();
+            return false;
+        }, true);
     }
 
     //props

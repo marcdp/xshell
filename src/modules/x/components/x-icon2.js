@@ -31,7 +31,7 @@ class XIcon extends LitElement {
         }
     }
     async loadSvg() {
-        this.svg = await loader.load("icon", this.icon);
+        this.svg = await loader.load("icon:" + this.icon);
     }
     render(){    
         return html`
