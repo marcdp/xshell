@@ -1,10 +1,12 @@
+// CSSStyleSheet
+let styleSheet = new CSSStyleSheet();
+styleSheet.replaceSync(`
+    :host {display:flex; justify-content:end; padding-bottom:var(--page-padding-bottom); padding-left:var(--page-padding-left); padding-right:var(--page-padding-right); }
+`);
 
 // template
 let template = document.createElement("template");
 template.innerHTML = ` 
-    <style>
-        :host {display:flex; justify-content:end; padding-bottom:var(--page-padding-bottom); padding-left:var(--page-padding-left); padding-right:var(--page-padding-right); }
-    </style>
     <slot></slot>
 `;
 
@@ -15,6 +17,7 @@ class XPageFooter extends HTMLElement {
     constructor() {
         super();
         this.attachShadow({ mode: "open" });
+        this.shadowRoot.adoptedStyleSheets = [styleSheet];        
         this.shadowRoot.appendChild(template.content.cloneNode(true));
     }
 

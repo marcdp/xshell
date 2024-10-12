@@ -65,15 +65,29 @@ x - x-page: permetre configurar quin tipus de processor/handler utiliza: none, x
 
 x - <x-shell src="...json"></x-shell>
 x - fer que els moduls siguin fitxers json pasius, i no moduls es6 actius 
-- loader -- > transform els components en format html en components normals (que hi poguin haver diferents transformations, the diferents formats, cap al format ES6)
+
+x - loader: url -- > src
+x - loader transform: "to-json"
+x - loader transform: "to-wc"
+x - loader transform: "to-module"
+x - loader: remove "component", "icon", etc
+x - loader {"resource":"coponent:x{name}"}
+x - x-icon : use cloneNode, and not svg innerhtml
+
+x - html-component
+x - html-component: fer que funcioni les properties
+- page handler: /folder1/ help.html
+- routes: pensar sistema de accedir a rutes, sense posar la extensió .html
+
+
 - x-menubar + x-menu + x-menuitem
 
 - XElement load dependencies automatically
 - XElement proxy recursive ???
 
-- create user at npmjs
-- create npm package + publish: npm publish
-- add package to npm
+x - create user at npmjs
+x - create npm package 
+- publish: npm publish
 
 - responsive design
 - store user settings locally

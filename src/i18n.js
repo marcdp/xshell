@@ -5,8 +5,8 @@ class I18n {
         culture: "en",
         strings: {
         }
-    }
-
+    };
+    
     //ctor
     constructor(){
     }

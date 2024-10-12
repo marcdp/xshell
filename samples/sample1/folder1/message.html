@@ -1,13 +1,10 @@
 
 <meta name="x-page:label"   content="Messsage page">
-<meta name="x-page:handler" content="x">
+<meta name="x-page:type"    content="x-page-html">
 <meta name="x-page:state"   content="{var1:1}">
 
 <script type="module">
-    import { XPageInstance }  from "x-page"
-
-    // class
-    export default class extends XPageInstance {
+    export default {
         async onCommand(command, args) {
             if (command == "load") {
                 //load

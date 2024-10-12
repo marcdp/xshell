@@ -43,8 +43,8 @@ class UI {
             }
         }
         //load style sheets
-        for(var url of this._config.styleSheets) {
-            tasks.push(this.addStyleSheet(url));
+        for(var item of this._config.styleSheets) {
+            tasks.push(this.addStyleSheet(item.src));
         }
         //return
         return Promise.all(tasks);
@@ -52,11 +52,11 @@ class UI {
     
 
     //methods
-    async addStyleSheet(url) { 
+    async addStyleSheet(src) { 
         let resolve = null;
         let link = document.createElement("link");
         link.setAttribute("rel", "stylesheet");
-        link.setAttribute("href", url);
+        link.setAttribute("href", src);
         link.addEventListener("load", ()=>{
             resolve();
         });

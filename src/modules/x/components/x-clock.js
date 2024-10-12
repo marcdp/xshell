@@ -1,41 +1,28 @@
-import XElement from "../../../x-element.js";
-
-class XClock extends XElement {
-
-    //static
-    static definition = {
-        template: `
-            {{ state.time }}
-        `,
-        state() {
-            return {
-                time: new Date().toLocaleTimeString()
-            };
-        }
-    };
-
-    //fields
-    _timerId = 0;
-    
-    //ctor
-    constructor() {
-        super();
-    }
-
-    //events
-    onLoad() {
-        this._timerId = setInterval(() => {
-            this.state.time = new Date().toLocaleTimeString();
-        }, 1000);
-    }
-    onUnload() {
-        clearInterval(this._timerId);
-    }
-
-}
-
-// define
-customElements.define('x-clock', XClock);
+import XElement from "../ui/x-element.js";
 
 // export
-export default XClock;
+export default XElement.define("x-clock", {
+    template: `
+        {{ state.time }}
+    `,
+    state: {
+        time: new Date().toLocaleTimeString(),
+    },
+    onCommand(command) {
+        if (command == "load") {
+            //load
+            this.onCommand("refresh");
+            this._timerId = setInterval(() => {
+                this.onCommand("refresh");
+            }, 1000);
+
+        } else if (command == "refresh") {
+            //refresh
+            this.state.time = new Date().toLocaleTimeString();
+
+        } else if (command == "unload") {
+            //refresh
+            clearInterval(this._timerId);
+        }
+    }
+});

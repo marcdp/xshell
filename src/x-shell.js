@@ -166,7 +166,7 @@ class XShell extends HTMLElement {
                 target = target.host;
             }
             if (!target) {
-                debugger;
+                //debugger;
                 return null;
             }
             if (target.localName == "x-page") return target;

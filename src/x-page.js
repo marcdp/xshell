@@ -1,92 +1,6 @@
 import loader from "./loader.js";
 import logger from "./logger.js";
 import xshell from "./x-shell.js";
-import XTemplate from "./x-template.js";
-
-
-// class
-class XPageInstance {
-
-    //fields
-    _page = null;
-    _container = null;
-    _state = null;
-    _xtemplate = null;
-    _xtemplateInstance = null;
-
-    //ctor
-    constructor(page, container, template, styles) {
-        this._page = page;
-        this._container = container;
-        this._xtemplate = new XTemplate({
-            template: template,
-            styleSheets: styles
-        });
-        
-    }
-
-    //properties
-    get dependencies() {return this._xtemplate.dependencies;}
-    get src() {return this._page.src;}
-    get label() {return this._page.label;}
-    set label(value) {this._page.label = value;}
-    get icon() {return this._page.icon;}
-    set icon(value) {this._page.icon = value;}
-    get result() {return this._page.result;}
-    set result(value) {this._page.result = value;}
-
-    get state() {return this._state;}
-    set state(value) {this._state = value;}
-
-    //methods
-    load(args) {       
-        //state
-        let self = this;
-        let rawState = this.state || {};
-        delete this.state;
-        this.state = new Proxy(rawState, {
-            set(target, prop, newValue) {
-                let oldValue = target[prop];
-                target[prop] = newValue;
-                self.stateChanged(prop, oldValue, newValue);
-                self.render();
-                return true;
-            }
-        });
-        //template instance
-        this._xtemplateInstance = this._xtemplate.createInstance(rawState, (aa,bb)=>{
-            debugger;
-        }, this._container);
-        //load
-        this.onCommand("load", args);
-        this.render();
-    }
-    onCommand(command, args) {
-    }
-    unload() {
-    }
-    showPage(args) {
-        return this._page.showPage(args);
-    }
-    showPageStack(args) {
-        return this._page.showPageStack(args);
-    }
-    showPageDialog(args) {
-        return this._page.showPageDialog(args);
-    }
-    close(result) {
-        return this._page.close(result);
-    }
-    stateChanged(prop, oldvalue, newValue) {
-    }
-    invalidate() {
-        //TODO: timeout
-        //...        
-    }
-    render() {
-        this._xtemplateInstance.render();
-    }   
-}
 
 
 // class
@@ -106,7 +20,6 @@ class XPage extends HTMLElement {
     _result = null;
     _label = "";
     _icon = "";
-    _instance = null;
 
     //ctor
     constructor() {
@@ -126,7 +39,7 @@ class XPage extends HTMLElement {
     }
 
     get breadcrumb() {return this._breadcrumb;}
-    set breadcrumb(value) {this._breadcrumb = value; }
+    set breadcrumb(value) {this._breadcrumb = value;}
 
     get result() {return this._result;}
     set result(value) {this._result = value;}
@@ -163,7 +76,8 @@ class XPage extends HTMLElement {
 
     //methods
     onCommand(command, args) {  
-        if (this._instance) this._instance.onCommand(command, args);
+        //TODO ...
+        debugger;
     }
     async showPage({url}) {
         await xshell.showPage({url, sender:this});
@@ -248,10 +162,16 @@ class XPage extends HTMLElement {
             if (searchParams.get("x-breadcrumb")) breadcrumb = JSON.parse(atob(searchParams.get("x-breadcrumb").replace(/_/g,"/").replace(/-/g,"+")));
             //load required components
             let componentNames = [...new Set(Array.from(doc.querySelectorAll('*')).filter(el => el.tagName.includes('-')).map(el => el.tagName.toLowerCase()))];
-            await loader.load("component", componentNames);          
-            //handler
-            let handler = "";
-            doc.head.querySelectorAll("meta[name='x-page:handler']").forEach((sender) => { handler = sender.content; });
+            if (componentNames) {
+                let resourceNames = [];
+                componentNames.forEach((componentName) => {
+                    resourceNames.push("component:" + componentName);
+                });
+                await loader.load(resourceNames);          
+            }
+            //type
+            let type = "";
+            doc.head.querySelectorAll("meta[name='x-page:type']").forEach((sender) => { type = sender.content; });
             //container
             let container = dialog || this;
             container.replaceChildren();
@@ -261,7 +181,7 @@ class XPage extends HTMLElement {
                 container = layoutElement;
             }
             //init
-            if (handler == "") {
+            if (type == "") {
                 //init page
                 doc.head.childNodes.forEach((node) => {
                     container.appendChild(node.cloneNode(true)); 
@@ -283,52 +203,12 @@ class XPage extends HTMLElement {
                     }
                 });
 
-            } else if (handler == "x") {
-                //init page
-                //styles
-                let styles = [];
-                doc.body.querySelectorAll(":scope > style").forEach((style) => {styles.push(style);});
-                doc.head.querySelectorAll(":scope > style").forEach((style) => {styles.push(style);});
-                //template
-                let template = doc.body.querySelector(":scope > template") || doc.head.querySelector(":scope > template");
-                //script
-                let script = doc.body.querySelector(":scope > script[type='module']") || doc.head.querySelector(":scope > script[type='module']");
-                let moduleText = script.textContent;
-                let baseUrl = src.substring(0, src.lastIndexOf("/"));
-                if (moduleText.indexOf("import ") != -1) {
-                    //replace each relative URL with an absolute URL
-                    const importRegex = /(import\s+.*?['"])(\.\/|\.\.\/|\/)([^'"]+)(['"])/g;
-                    moduleText = moduleText.replace(importRegex, (match, start, pathType, urlPath, end) => {
-                        let absoluteUrl;
-                        if (pathType === '/') {
-                            const base = new URL(baseUrl);
-                            absoluteUrl = `${base.origin}${pathType}${urlPath}`;
-                        } else {
-                            absoluteUrl = new URL(pathType + urlPath, baseUrl).href;
-                        }
-                        return `${start}${absoluteUrl}${end}`;
-                    });
-                }
-                //load from blob
-                const blob = new Blob([moduleText], { type: "application/javascript" });
-                const moduleURL = URL.createObjectURL(blob);
-                const module = await import(moduleURL);
-                URL.revokeObjectURL(moduleURL);
-                //create instance
-                this._instance = new module.default(this, container, template.innerHTML, styles);
-                //load dependencies
-                await loader.load("component", this._instance.dependencies);
-                //load instance
-                let loadArgs = {};
-                for(const [key, value] of searchParams.entries()) if (!key.startsWith("x-")) loadArgs[key] = value;
-                this._instance.load(loadArgs);
-                //init
-                if(label) this.label = label;
-                if(icon) this.icon = icon;
-                if (breadcrumb) this.breadcrumb = breadcrumb;
             } else {
-                //error
-                this._showError("", "Handler not implemented: " + handler, "", container);
+                //load 
+                await loader.load("component:" + type);
+                let instance = document.createElement(type);
+                await instance.init(doc, src);
+                container.appendChild(instance);
             }
             //init
             if(label) this.label = label;
@@ -350,7 +230,7 @@ class XPage extends HTMLElement {
         let error = document.createElement(name);
         error.setAttribute("code", code);
         error.setAttribute("message", message);
-        error.setAttribute("stacktrace", stacktrace);
+        error.setAttribute("stacktrace", stacktrace || "");
         if (container) {
             container.appendChild(error);
         } else {
@@ -374,5 +254,5 @@ customElements.define('x-page', XPage);
 
 //export 
 export default XPage;
-export { XPageInstance };
+//export { XPageInstance };
 

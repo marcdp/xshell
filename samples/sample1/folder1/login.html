@@ -1,15 +1,12 @@
 <html>
     <head>
-        <meta name="x-page:label" content="My titttttle" >
-        <meta name="x-page:icon" content="x-bell" >
-        <meta name="x-page:layout" content="main" >
-        <meta name="x-page:handler" content="x">
+        <meta name="x-page:label"   content="My titttttle" >
+        <meta name="x-page:icon"    content="x-bell" >
+        <meta name="x-page:layout"  content="main" >
+        <meta name="x-page:type"    content="x-page-html">
         
         <script type="module">
-            import { XPageInstance }  from "x-page"
-
-            // class
-            export default class extends XPageInstance {
+            export default {
                 //methods
                 async onCommand(command, args) {
                     if (command == "load") {
@@ -56,7 +53,7 @@
                 The title is: <x-i18n label="hello world"></x-i18n>
             </h2>
             
-            <x-icon4 icon="x-bell" counter-value="50" ></x-icon4>
+            <x-icon icon="x-bell" counter-value="50" ></x-icon>
             
             <hr/>
 
@@ -105,8 +102,6 @@
                 <x-page id="my-page">
                     Default content
                 </x-page>
-            
-                <x-icon2 icon="x-bell"></x-icon2>
             
             <!--
             

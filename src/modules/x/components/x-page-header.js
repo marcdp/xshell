@@ -1,30 +1,29 @@
 import xshell from "x-shell";
-import XIcon from "../components/x-icon.js"
+
+// CSSStyleSheet
+let styleSheet = new CSSStyleSheet();
+styleSheet.replaceSync(`
+    :host {display:flex; padding:var(--page-padding-top) var(--page-padding-left) 1em var(--page-padding-right); flex-wrap:wrap; flex-direction:column;}
+    .breadcrumb {width:100%;}
+    .breadcrumb:empty {display:none;}
+
+    div {display:flex; align-items:center; flex:1;}
+    div > x-icon {display:none;}
+    div > x-icon[icon] {display:inline; margin-right:.5em;}
+    div label {display:block; font-size:var(--font-size-title); font-weight: 600;}
+    div div {flex:1; padding-left:1em; text-align:right; padding-right:1em;}
+    div button {border:none; height:2.5em; border-radius:var(--button-border-radius); padding:0; aspect-ratio:1; background:var(--background-page); display:flex; align-items:center; justify-content:center}
+    div button:hover {cursor: pointer; background:var(--background-gray);}
+    div button:active {background:var(--background-x-gray);}
+    div button:hover x-icon {fill:var(--font-color);}
+    div button x-icon {}
+
+    :host(.hide-close) div button {display:none;}
+`);
 
 // template
 let template = document.createElement("template");
 template.innerHTML = ` 
-    <style>
-        :host {display:flex; padding:var(--page-padding-top) var(--page-padding-left) 1em var(--page-padding-right); flex-wrap:wrap; flex-direction:column;}
-
-        .breadcrumb {width:100%;}
-        .breadcrumb:empty {display:none;}
-
-        div {display:flex; align-items:center; flex:1;}
-        div > x-icon {display:none;}
-        div > x-icon[icon] {display:inline; margin-right:.5em;}
-        div label {display:block; font-size:var(--font-size-title); font-weight: 600;}
-        div div {flex:1; padding-left:1em; text-align:right; padding-right:1em;}
-        div button {border:none; height:2.5em; border-radius:var(--button-border-radius); padding:0; aspect-ratio:1; background:var(--background-page); display:flex; align-items:center; justify-content:center}
-        div button:hover {cursor: pointer; background:var(--background-gray);}
-        div button:active {background:var(--background-x-gray);}
-        div button:hover x-icon {fill:var(--font-color);}
-        div button x-icon {}
-
-        :host(.hide-close) div button {display:none;}
-
-    </style>
-
     <div class="breadcrumb">
         <slot name="breadcrumb" ></slot>
     </div>
@@ -57,6 +56,7 @@ class XPageHeader  extends HTMLElement {
     constructor() {
         super();
         this.attachShadow({ mode: "open" });
+        this.shadowRoot.adoptedStyleSheets = [styleSheet];
         this.shadowRoot.appendChild(template.content.cloneNode(true));
         this.shadowRoot.querySelector("button").addEventListener("click", (event) => {
             xshell.getPage(event.target).close();

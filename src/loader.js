@@ -1,14 +1,39 @@
 import logger from "./logger.js";
 
+
 // class
 class Loader {
 
     //vars
     _config = {
-        map:[],
+        map:[
+        ],
     };
-    _cacheMap = {};
     _cache = {};
+    _typeConverters = {
+        "css": async (module) => {
+            let css = await module.text();
+            let styleSheet = new CSSStyleSheet();
+            styleSheet.replaceSync(css);
+            return styleSheet;
+        },
+        "html": async (module) => {
+            let html = await module.text();
+            let template = document.createElement("template");
+            template.innerHTML = html;
+            return template;
+        },
+        "json": async (module) => {
+            let json = await module.text();
+            return JSON.parse(json);
+        },
+        "svg": async (response) => {
+            let text = await response.text();
+            let div = document.createElement("div");
+            div.innerHTML = text;
+            return div.firstChild;
+        }
+    };
     
     //ctor
     constructor() {
@@ -24,12 +49,21 @@ class Loader {
         this._config.map.sort((a,b)=>{
             return a.resource.localeCompare(b.resource);
         });
-        //cache map by: resource
-        let cacheMap = {};
-        this._config.map.reverse().forEach((definition)=>{
-            cacheMap[definition.resource] = definition;
+        this._config.map.forEach((definition) => {
+            // convert expressions like "component:x-{name}" to regular expressions like "component:x-(?<name>.+)"
+            let regexp = "";
+            let resource = definition.resource;
+            let k = 0;
+            let i = resource.indexOf("{"), j = resource.indexOf("}");
+            while (i != -1) {
+                regexp += resource.substring(k, i);
+                regexp += "(?<" + resource.substring(i + 1, j) + ">.+)";
+                k = j + 1;
+                i = resource.indexOf("{", j), j = resource.indexOf("}", i);
+            }
+            regexp += resource.substring(k);
+            definition.regexp = new RegExp(regexp);
         });
-        this._cacheMap = cacheMap;
     }
 
     //methods
@@ -37,79 +71,78 @@ class Loader {
         this._cache[resource] = value;
     }
     resolve(resource) {
-        let scheme = resource.substring(0, resource.indexOf(":"));
-        let name = resource.substring(resource.indexOf(":") + 1);
-        let aux = resource;
-        while (aux) {
-            let definition = this._cacheMap[aux];
-            if (definition) {
-                let url = definition.url;
-                if (url.indexOf("{name}")!=-1) url = url.replaceAll("{name}", name);
-                if (url.indexOf("{name-unprefixed}")!=-1) url = url.replaceAll("{name-unprefixed}", name.substring(aux.length - scheme.length));
-                return { definition, url };
+        for(let i = this._config.map.length - 1; i >= 0; i--) {
+            let mapitem = this._config.map[i];
+            let match = resource.match(mapitem.regexp);
+            if (match) {
+                let src = mapitem.src;
+                for(var key in match.groups) {
+                    src = src.replaceAll("{" + key + "}", match.groups[key]);
+                }
+                return { definition: mapitem, src };
             }
-            let i = aux.lastIndexOf("-");
-            if (i==0) break;
-            aux = aux.substring(0, i);
         }
         logger.error(`loader.resolve('${resource}'): unable to resolve`);
         return null;
     }
-    resolveUrl(resource) {
+    resolveSrc(resource) {
         let result = this.resolve(resource);
-        if (result) return result.url;
+        if (result) return result.src;
         return null;
     }
-    async load(resources, names) {
-        if (names) {
-            let aux = [];
-            for(let name of names) {
-                aux.push(resources + ":" + name);
-            }
-            resources=aux;
-        }
+    async load(resources) {
+        //prepare
         let isString = typeof(resources) == "string";
         if (resources == undefined) return null;
         if (resources == "" ) return null;
         if (resources == [""] ) return null;;
         if (typeof(resources) == "string") resources = [resources];
+        //load resources
         let tasks = [];
-        for(let resource of resources) {
+        for(let resource of resources) {            
             let scheme = resource.substring(0, resource.indexOf(":"));
             let name = resource.substring(resource.indexOf(":") + 1);
+            let { definition, src } = this.resolve(resource);
             let cacheItem = this._cache[resource];
             if (cacheItem && cacheItem.then){
                 tasks.push(cacheItem);
-            } else if (scheme == "component" && window.customElements.get(name)) {
-                this._cache[scheme + ":" + name] = window.customElements.get(name);
-            } else if (scheme == "layout" && window.customElements.get(name)) {
+            } else if (!definition.with && window.customElements.get(name)) {
                 this._cache[scheme + ":" + name] = window.customElements.get(name);
             } else if (!cacheItem) {
-                let { definition , url} = this.resolve(resource);
+                logger.log(`  loader.load('${resource}') ... ${src}`);
                 let promise = (async ()=> {
-                    if ((scheme == "component" || scheme == "layout")) {
-                        let module = await import(url);
-                        this.register(resource, module.default);    
+                    let value = null;
+                    //fetch/import
+                    if(definition.with) {
+                        value = await fetch(src);
                     } else {
-                        let value = await fetch(url);
-                        if (value.ok) {
-                            value = await value.text();
-                            this.register(resource, value);
-                        } else {
-                            this.register(resource, null);
-                        }
+                        value = await import(src);
                     }
+                    //convert
+                    if (definition.with && definition.with.type) {
+                        let typeConverter = this._typeConverters[definition.with.type];
+                        if (!typeConverter) {
+                            typeConverter = (await this.load("type:" + definition.with.type)).default;
+                            this._typeConverters[definition.with.type] = typeConverter;
+                        }
+                        value = await typeConverter(value, src);
+                    }        
+                    //set            
+                    this.register(resource, value);
                 })();
                 this.register(resource, promise);
                 tasks.push(promise);
             }
         }
+        //wait until all resources have been loaded
         await Promise.all(tasks);        
+        //return result
         let result = [];
         for(let resource of resources) {
             result.push(this._cache[resource]);
         }
         if (isString) return result[0];
+        //return
         return result;
     }
     

@@ -1,10 +1,13 @@
 
+// CSSStyleSheet
+let styleSheet = new CSSStyleSheet();
+styleSheet.replaceSync(`
+    :host {display:block; padding:0 var(--page-padding-left) 0 var(--page-padding-right);}
+`);
+
 // template
 let template = document.createElement("template");
 template.innerHTML = ` 
-    <style>
-        :host {display:block; padding:0 var(--page-padding-left) 0 var(--page-padding-right);}
-    </style>
     <slot></slot>
 `;
 
@@ -15,9 +18,9 @@ class XPageBody extends HTMLElement {
     constructor() {
         super();
         this.attachShadow({ mode: "open" });
+        this.shadowRoot.adoptedStyleSheets = [styleSheet];
         this.shadowRoot.appendChild(template.content.cloneNode(true));
     }
-
 }
 
 

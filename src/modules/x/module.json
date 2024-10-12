@@ -1,12 +1,21 @@
 {
     "name": "x",
+    "label": "X module",
     "version": "1.0.0",
     "config": {
         "loader": {
             "map": [
-                {"resource": "component:x",   "url": "./components/{name}.js"},
-                {"resource": "layout:x",      "url": "./layouts/{name}.js"},
-                {"resource": "icon:x",        "url": "./icons/{name-unprefixed}.svg"}
+                {"resource": "component:x-{name}",          "src": "./components/x-{name}.js"},
+                {"resource": "layout:x-{name}",             "src": "./layouts/x-{name}.js"},
+                {"resource": "icon:x-{name}",               "src": "./icons/{name}.svg", "with": {"type":"svg"}},
+
+
+                {"resource": "page-handler:x",               "src": "./ui/page-handler.js"},
+                
+                {"resource": "type:html-component",          "src": "./ui/html-component.js"},
+                {"resource": "type:html-page",               "src": "./ui/html-page.js"},
+                {"resource": "component:x-breadcrumb3",      "src": "./components/x-breadcrumb3.html",  "with": {"type": "html-component"}},
+                {"resource": "component:x-page-html",        "src": "./ui/x-page-html.js"}
             ]
         },
         "ui": {
@@ -15,7 +24,7 @@
             },
             "layouts": {
                 "app": {
-                    "main": "x-layout-app-main"
+                    "main":     "x-layout-app-main"
                 },
                 "page": {
                     "main":     "x-layout-page-main",
@@ -25,7 +34,7 @@
                 }
             },
             "styleSheets": [
-                "./css/index.css"
+                {"src": "./css/index.css"}
             ]
         }
     }
