@@ -1,19 +1,16 @@
 <!-- metadata -->
-<meta name="x-page:handler" content="x">
+<meta name="x-page:type" content="x-page-html">
 
 <!-- script -->
 <script type="module">
-    import { XPageInstance }  from "x-page"
-
-    // class
-    export default class extends XPageInstance {
-        state = {
+    export default {
+        state: {
             counter: 123
-        }
+        },
         async onCommand(command, args) {
             if (command == "load") {
                 //load
-                this.label = "Ajudaaaaaa";
+                this.label = "Ajudaaaaaa: " + this.state.counter;
                 
             } else if (command == "something") {
                 //something
@@ -33,6 +30,10 @@
 
 <!-- template -->
 <template>
+
+    <x-breadcrumb2></x-breadcrumb2>
+    <x-breadcrumb3></x-breadcrumb3>
+
     {{ state.counter }}
     <p>
         This is the help page:     
@@ -42,6 +43,8 @@
     </ul>       
     <x-button command="inc">inc</x-button>
     <x-button command="dec">dec</x-button>
+
+    <div x-on:click="something">Show dialog</div>
+
+    <x-clock></x-clock>
 </template>
-
-

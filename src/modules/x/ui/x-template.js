@@ -1,4 +1,3 @@
-import logger from "./logger.js";
 
 class XTemplate {
 
@@ -86,7 +85,7 @@ class XTemplate {
             incs++;
         } else if (node.localName.startsWith("x:")) {
             //error
-            logger.error("Error compiling component ${name}: invalid node ${node.localName}: not implemented");
+            console.error(`Error compiling component ${name}: invalid node ${node.localName}: not implemented`);
         } else {
             //element
             let jsLine = [];
@@ -104,11 +103,11 @@ class XTemplate {
                 let attr = node.attributes[i];
                 if (attr.name == "x-text") {
                     //...<span x-text="state.value"></span>...
-                    if (node.childNodes.length) logger.error("Error compiling component ${name}: invalid x-text node: non empty");
+                    if (node.childNodes.length) console.error(`Error compiling component ${name}: invalid x-text node: non empty`);
                     text = "\"\" + " + attr.value;
                 } else if (attr.name == "x-html") {
                     //...<span x-html="state.value"></span>...
-                    if (node.childNodes.length) logger.error("Error compiling component ${name}: invalid x-html node: non empty");
+                    if (node.childNodes.length) console.error(`Error compiling component ${name}: invalid x-html node: non empty`);
                     options.push("format:\"html\"");
                     text = "\"\" + " + attr.value;
                 } else if (attr.name == "x-attr" || attr.name == ":") {
@@ -171,7 +170,7 @@ class XTemplate {
                     js.push(indent + "utils.createVDOM(\"#comment\", null, null, null, {index: " + index + ", forType:'" + forType + "'}, 'x-for-start'),");
                     //add loop
                     let parts = attr.value.split(" in ");
-                    if (parts.length != 2) logger.error(`Error compiling template: invalid x-for attribute detected: ${attr.value}`);
+                    if (parts.length != 2) console.error(`Error compiling template: invalid x-for attribute detected: ${attr.value}`);
                     let itemName = parts[0].trim();
                     let indexName = "index";
                     if (itemName.startsWith("(") && itemName.endsWith(")")) {
@@ -239,7 +238,7 @@ class XTemplate {
                     text = JSON.stringify(node.innerHTML).replaceAll("<x:text>", "{{").replaceAll("</x:text>", "}}");
                 } else if (attr.name.startsWith("x-")) {
                     //error
-                    logger.error(`Error compiling template: invalid template attribute detected: ${attr.name}`);
+                    console.error(`Error compiling template: invalid template attribute detected: ${attr.name}`);
                 } else {
                     attrs.push("'" + attr.name + "':" + JSON.stringify(attr.value));
                 }
@@ -517,11 +516,6 @@ class XTemplateInstance {
                 if (!parent) debugger;
                 let child = parent.childNodes[vNodeNew.options.index + inew];
                 this._diffDomElement(vNodeOld, vNodeNew, child, level + 1);
-                //try {
-                //    this._diffDomElement(vNodeOld, vNodeNew, child, level + 1);
-                //} catch (e) {
-                //    debugger;
-                //}
             }
         }
     }
@@ -610,7 +604,7 @@ class XTemplateInstance {
         //check for duplicates
         const duplicates = newKeys.filter((item, index) => newKeys.indexOf(item) !== index);
         if (duplicates.length) {
-            logger.warn("Duplicated keys detected in x-for loop: ", duplicates);
+            console.warn(`Duplicated keys detected in x-for loop: ${duplicates}`);
         }
         //remove old keys, and old DOM elements
         let removeKeys = [];

@@ -15,7 +15,7 @@
     },
     "loader": {
         "map": [
-            {"resource":"icon:material", "url":"https://material-icons.github.io/material-icons/svg/{name-unprefixed}/outline.svg"}
+            {"resource":"icon:material-{name}", "src":"https://material-icons.github.io/material-icons/svg/{name}/outline.svg", "with":{"type":"svg"}}
         ]
     }, 
     "logger": {
@@ -37,7 +37,7 @@
         ]
     },
     "modules": [
-        {"url":"/src/modules/x/module.json"},
+        {"url":"../../src/modules/x/module.json"},
         {"url":"./module.json"}
     ],
     "navigator": {

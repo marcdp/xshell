@@ -1,62 +1,23 @@
+import XElement from "../ui/x-element.js";
 
-// class
-class XError  extends HTMLElement {
-    
-    //static
-    static get observedAttributes() { 
-        return ["code", "message", "stacktrace"]; 
+// definition
+export default await XElement.define("x-error", {
+    style: `
+        :host {color:red;}
+        PRE {margin:0; padding:0;}
+    `,
+    template: `
+        <div x-on:click="aaaa">Error</div> {{ state.code }}: {{ state.message }}
+        <pre x-show="state.stacktrace">
+            {{ state.stacktrace }}
+        </pre>
+    `,
+    state: {
+        code: 0,
+        message:"",
+        stacktrace: ""
+    },
+    settings: {
+        observedAttributes: ["code", "message", "stacktrace"]
     }
-
-    //fields
-    _code = 0;
-    _message = "";
-
-    //ctor
-    constructor() {
-        super();
-        this.attachShadow({ mode: "open" });
-    }
-
-    //props
-    get code() {return this._code;}
-    set code(value) {
-        this._code = value; 
-        this.render();
-    }
-
-    get message() {return this._message;}
-    set message(value) {
-        this._message = value; 
-        this.render();
-    }
-
-    get stacktrace() {return this._stacktrace;}
-    set stacktrace(value) {
-        this._stacktrace = value; 
-        this.render();
-    }
-    
-
-    //methods
-    attributeChangedCallback(name, oldValue, newValue) {
-        if (name == "code") this.code = newValue;
-        if (name == "message") this.message = newValue;
-        if (name == "stacktrace") this.stacktrace = newValue;
-    }
-    connectedCallback() {
-    }
-    disconnectedCallback() {
-    }
-    render() {
-        this.shadowRoot.innerHTML = `<span style='color:red'>Error ${this.code}: ${this.message}</span>`;
-    }
-    
-
-}
-
-//define web component
-customElements.define('x-error', XError);
-
-//export 
-export default XError;
-
+});
