@@ -136,8 +136,7 @@ class XPage extends HTMLElement {
             //error
             this._status = "error"; 
             this.classList.remove("loading");
-            this._showError(response.status, response.statusText);
-            return;
+            this._showError(response.status, response.statusText, "", this);
         } else if (contentType.indexOf("text/html")!=-1) {
             //html page
             let html = content;
@@ -169,9 +168,6 @@ class XPage extends HTMLElement {
                 });
                 await loader.load(resourceNames);          
             }
-            //type
-            let type = "";
-            doc.head.querySelectorAll("meta[name='x-page:type']").forEach((sender) => { type = sender.content; });
             //container
             let container = dialog || this;
             container.replaceChildren();
@@ -180,8 +176,11 @@ class XPage extends HTMLElement {
                 container.appendChild(layoutElement);
                 container = layoutElement;
             }
+            //handler
+            let handler = xshell.config.ui.defaults.pageHandler;
+            doc.head.querySelectorAll("meta[name='x-page:handler']").forEach((sender) => { handler = sender.content; });
             //init
-            if (type == "") {
+            if (handler == "") {
                 //init page
                 doc.head.childNodes.forEach((node) => {
                     container.appendChild(node.cloneNode(true)); 
@@ -205,8 +204,8 @@ class XPage extends HTMLElement {
 
             } else {
                 //load 
-                await loader.load("component:" + type);
-                let instance = document.createElement(type);
+                await loader.load("component:" + handler);
+                let instance = document.createElement(handler);
                 await instance.init(doc, src);
                 container.appendChild(instance);
             }
@@ -214,28 +213,24 @@ class XPage extends HTMLElement {
             if(label) this.label = label;
             if(icon) this.icon = icon;
             if (breadcrumb) this.breadcrumb = breadcrumb;
+            //set
+            this._status = "loaded"; 
+            this.classList.remove("loading");
+            //load
+            this._raisePageLoadEvent();
         }
-        //set
-        this._status = "loaded"; 
-        this.classList.remove("loading");
-        //load
-        this._raisePageLoadEvent();
     }    
 
     //private methods
     async _showError(code, message, stacktrace, container) {
-        var name = xshell.config.ui.errors[code];
-        if (!name) name = xshell.config.ui.errors.default;
+        var name = xshell.config.ui.defaults.errorHandler;
         await loader.load("component:" + name);
         let error = document.createElement(name);
         error.setAttribute("code", code);
         error.setAttribute("message", message);
         error.setAttribute("stacktrace", stacktrace || "");
-        if (container) {
-            container.appendChild(error);
-        } else {
-            this.appendChild(error);
-        }
+        container.replaceChildren();
+        container.appendChild(error);
     }
     _raisePageLoadEvent() {
         this.dispatchEvent(new CustomEvent("page:load"));

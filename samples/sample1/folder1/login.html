@@ -1,160 +1,154 @@
-<html>
-    <head>
-        <meta name="x-page:label"   content="My titttttle" >
-        <meta name="x-page:icon"    content="x-bell" >
-        <meta name="x-page:layout"  content="main" >
-        <meta name="x-page:type"    content="x-page-html">
-        
-        <script type="module">
-            export default {
-                //methods
-                async onCommand(command, args) {
-                    if (command == "load") {
-                        //load
+<!-- metadata -->
+<meta name="x-page:label"   content="My titttttle" >
+<meta name="x-page:icon"    content="x-bell" >
+<meta name="x-page:layout"  content="main" >
 
-                    } else if (command == "show-page-stack") {
-                        //show page stack
-                        this.label = "vale"
-                        this.showPageStack({url:"/folder1/message.html?message=hello+world"});
+<!-- script -->
+<script type="module">
+    export default {
+        async onCommand(command, args) {
+            if (command == "load") {
+                //load
 
-                    } else if (command == "show-page-stack-thin") {
-                        //show page stack thin
-                        this.showPageStack({url:"/folder1/message.html?message=hello+world&x-class=thin"});
+            } else if (command == "show-page-stack") {
+                //show page stack
+                this.showPageStack({url:"/folder1/message.html?message=hello+world"});
 
-                    } else if (command == "show-page-stack-thin-right") {
-                        //show page stack thin right
-                        this.showPageStack({url:"/folder1/message.html?message=hello+world&x-class=thin,right"});
+            } else if (command == "show-page-stack-thin") {
+                //show page stack thin
+                this.showPageStack({url:"/folder1/message.html?message=hello+world&x-class=thin"});
 
-                    } else if (command == "show-page-stack-popup") {
-                        //show page stack popup
-                        this.showPageStack({url:"/folder1/message.html?message=hello+world&x-class=popup"});
+            } else if (command == "show-page-stack-thin-right") {
+                //show page stack thin right
+                this.showPageStack({url:"/folder1/message.html?message=hello+world&x-class=thin,right"});
 
-                    } else if (command == "show-page-dialog") {
-                        //show page dialog
-                        this.showPageDialog({url:"/folder1/dialog.html"});
-                    }
-                }
+            } else if (command == "show-page-stack-popup") {
+                //show page stack popup
+                this.showPageStack({url:"/folder1/message.html?message=hello+world&x-class=popup"});
+
+            } else if (command == "show-page-dialog") {
+                //show page dialog
+                this.showPageDialog({url:"/folder1/dialog.html"});
             }
-        </script>
-    </head>
-    <body>
-        <template>
-            
-            <x-clock></x-clock>
+        }
+    }
+</script>
 
-            <p>
-                Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since the 1500s, 
-                when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap 
-                into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum 
-                passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.
-            </p>
-            
-            <h2>
-                The title is: <x-i18n label="hello world"></x-i18n>
-            </h2>
-            
-            <x-icon icon="x-bell" counter-value="50" ></x-icon>
-            
-            <hr/>
+<template>
+    
+    <x-clock></x-clock>
 
-            <ul>
-                
-                <li><x-anchor href="help.html">Help</x-anchor></li>
-                <li><x-anchor href="help2.html" breadcrumb>Help2</x-anchor></li>
-                
+    <p>
+        Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since the 1500s, 
+        when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap 
+        into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum 
+        passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.
+    </p>
+    
+    <h2>
+        The title is: <x-i18n label="hello world"></x-i18n>
+    </h2>
+    
+    <x-icon icon="x-bell" counter-value="50" ></x-icon>
+    
+    <hr/>
 
-                <hr/>
-            
-                <li><x-anchor href="help.html" breadcrumb>Help with breadcrumb</x-anchor></li>
-                <li><x-anchor href="help.html?x-label=helllllloooooo" breadcrumb>Help with breadcrumb and label</x-anchor></li>
-            
-                <li><x-button command="show-page-stack">Show page stack</x-button></li>
-                <li><x-button command="show-page-stack-thin">Show page stack thin</x-button></li>
-                <li><x-button command="show-page-stack-thin-right">Show page stack thin right</x-button></li>
-                <li><x-button command="show-page-stack-popup">Show page stack popup</x-button></li>
-            
-                <li><x-button command="show-page-dialog" data-dddd="2" data-asdas="321">Show page dialog</x-button></li>
-            
-                <x-icon icon="x-bell"></x-icon>
-                <x-clock></x-clock>
-                <x-icon icon="x-account_circle"></x-icon>
-                <x-icon icon="material-add_alert"></x-icon>
-            
-                <x-page src="/folder1/message.html?x-layout=embed" ></x-page>
-            
-            
-                <x-button icon="x-settings">Hello world 1</x-button>
-                <x-button appearance="accent" icon="x-settings">Hello world 2</x-button>
-                <x-button appearance="lightweight">Hello world 3</x-button>
-                <x-button appearance="outline">Hello world 4</x-button></x-button>
-                
-                <hr/>
-                x-anchor to an stack page: 
-                <x-anchor href="help.html" type="stack">Load help file inside stack </x-anchor>
-            
-                <hr/>
-                x-anchor to a dialog page: 
-                <x-anchor href="help.html" type="dialog">Load help file inside dialog </x-anchor>
-            
-                <hr/>
-                x-anchor to an embedded page: 
-                <x-anchor href="help.html" page="my-page">Load help file inside iframe </x-anchor>
-                <x-page id="my-page">
-                    Default content
-                </x-page>
-            
-            <!--
-            
-                <fluent-button >Hello world 1</fluent-button>
-                <fluent-button appearance="accent">Hello world 2</fluent-button>
-                <fluent-button appearance="lightweight">Hello world 3</fluent-button>
-                <fluent-button appearance="outline">Hello world 4</fluent-button>
-                <br/><hr/>
-            
-                <fluent-progress value="64"></fluent-progress>
-            
-                <fluent-tree-view>
-                    Root
-                    <fluent-tree-item>
-                    Fruit
-                    <fluent-tree-item>Pear</fluent-tree-item>
-                    <fluent-tree-item>Mango</fluent-tree-item>
-                    <fluent-tree-item>Guava</fluent-tree-item>
-                    <fluent-tree-item>Pomegranate</fluent-tree-item>
-                    </fluent-tree-item>
-                    <fluent-tree-item>
-                    Guitars
-                    <fluent-tree-item>Fender</fluent-tree-item>
-                    <fluent-tree-item>Gibson</fluent-tree-item>
-                    <fluent-tree-item>Teisco</fluent-tree-item>
-                    <fluent-tree-item>Martin</fluent-tree-item>
-                    </fluent-tree-item>
-                    <fluent-tree-item>Earth</fluent-tree-item>
-                </fluent-tree-view>
-            -->
-            
-                <!--<vaadin-button theme="primary">Primary</vaadin-button>-->
-            
-                <!--
-                <md-checkbox></md-checkbox>
-                <div>
-                    <md-radio name="group"></md-radio>
-                    <md-radio name="group"></md-radio>
-                    <md-radio name="group"></md-radio>
-                </div>
-            
-                <md-outlined-button>Back</md-outlined-button>
-            <md-filled-button>Next</md-filled-button>
-            
-                <sl-button>Button</sl-button>
-            
-                
-            -->
-            </ul>
+    <ul>
         
-        </template>
-    </body>
-</html>
+        <li><x-anchor href="help.html">Help</x-anchor></li>
+        <li><x-anchor href="help2.html" breadcrumb>Help2</x-anchor></li>
+        
+
+        <hr/>
+    
+        <li><x-anchor href="help.html" breadcrumb>Help with breadcrumb</x-anchor></li>
+        <li><x-anchor href="help.html?x-label=helllllloooooo" breadcrumb>Help with breadcrumb and label</x-anchor></li>
+    
+        <li><x-button command="show-page-stack">Show page stack</x-button></li>
+        <li><x-button command="show-page-stack-thin">Show page stack thin</x-button></li>
+        <li><x-button command="show-page-stack-thin-right">Show page stack thin right</x-button></li>
+        <li><x-button command="show-page-stack-popup">Show page stack popup</x-button></li>
+    
+        <li><x-button command="show-page-dialog" data-dddd="2" data-asdas="321">Show page dialog</x-button></li>
+    
+        <x-icon icon="x-bell"></x-icon>
+        <x-clock></x-clock>
+        <x-icon icon="x-account_circle"></x-icon>
+        <x-icon icon="material-add_alert"></x-icon>
+    
+        <x-page src="/folder1/message.html?x-layout=embed" ></x-page>
+    
+    
+        <x-button icon="x-settings">Hello world 1</x-button>
+        <x-button appearance="accent" icon="x-settings">Hello world 2</x-button>
+        <x-button appearance="lightweight">Hello world 3</x-button>
+        <x-button appearance="outline">Hello world 4</x-button></x-button>
+        
+        <hr/>
+        x-anchor to an stack page: 
+        <x-anchor href="help.html" type="stack">Load help file inside stack </x-anchor>
+    
+        <hr/>
+        x-anchor to a dialog page: 
+        <x-anchor href="help.html" type="dialog">Load help file inside dialog </x-anchor>
+    
+        <hr/>
+        x-anchor to an embedded page: 
+        <x-anchor href="help.html" page="my-page">Load help file inside iframe </x-anchor>
+        <x-page id="my-page">
+            Default content
+        </x-page>
+    
+    <!--
+    
+        <fluent-button >Hello world 1</fluent-button>
+        <fluent-button appearance="accent">Hello world 2</fluent-button>
+        <fluent-button appearance="lightweight">Hello world 3</fluent-button>
+        <fluent-button appearance="outline">Hello world 4</fluent-button>
+        <br/><hr/>
+    
+        <fluent-progress value="64"></fluent-progress>
+    
+        <fluent-tree-view>
+            Root
+            <fluent-tree-item>
+            Fruit
+            <fluent-tree-item>Pear</fluent-tree-item>
+            <fluent-tree-item>Mango</fluent-tree-item>
+            <fluent-tree-item>Guava</fluent-tree-item>
+            <fluent-tree-item>Pomegranate</fluent-tree-item>
+            </fluent-tree-item>
+            <fluent-tree-item>
+            Guitars
+            <fluent-tree-item>Fender</fluent-tree-item>
+            <fluent-tree-item>Gibson</fluent-tree-item>
+            <fluent-tree-item>Teisco</fluent-tree-item>
+            <fluent-tree-item>Martin</fluent-tree-item>
+            </fluent-tree-item>
+            <fluent-tree-item>Earth</fluent-tree-item>
+        </fluent-tree-view>
+    -->
+    
+        <!--<vaadin-button theme="primary">Primary</vaadin-button>-->
+    
+        <!--
+        <md-checkbox></md-checkbox>
+        <div>
+            <md-radio name="group"></md-radio>
+            <md-radio name="group"></md-radio>
+            <md-radio name="group"></md-radio>
+        </div>
+    
+        <md-outlined-button>Back</md-outlined-button>
+    <md-filled-button>Next</md-filled-button>
+    
+        <sl-button>Button</sl-button>
+    
+        
+    -->
+    </ul>
+
+</template>
 
 
 

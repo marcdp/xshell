@@ -1,10 +1,10 @@
 import xshell from "../../../x-shell.js";
-import XTemplate from "./x-template.js";
+import XTemplate from "../ui/x-template.js";
 import utils from "../../../utils.js";
 import loader from "../../../loader.js";
 
 // class
-class XPageHtml extends HTMLElement  {
+class XPageHandler extends HTMLElement  {
 
     //fields
     _state = null;
@@ -123,8 +123,8 @@ class XPageHtml extends HTMLElement  {
 // custom
 
 //define web component
-customElements.define('x-page-html', XPageHtml);
+customElements.define('x-page-handler', XPageHandler);
 
 //export 
-export default XPageHtml;
+export default XPageHandler;
 

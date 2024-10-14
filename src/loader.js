@@ -6,11 +6,23 @@ class Loader {
 
     //vars
     _config = {
+        preload: [],
         map:[
-        ],
+            {"resource": "type:x-element",              "src": "./modules/x/ui/types/from-html.js"},
+            {"resource": "type:x-element",              "src": "./modules/x/ui/types/from-html.js"},
+        ]
     };
     _cache = {};
     _typeConverters = {
+        "arrayBuffer": async (response) => {
+            return await response.arrayBuffer();
+        },
+        "blob": async (response) => {
+            return await response.blob();
+        },
+        "bytes": async (response) => {
+            return await response.bytes();
+        },
         "css": async (module) => {
             let css = await module.text();
             let styleSheet = new CSSStyleSheet();
@@ -24,8 +36,7 @@ class Loader {
             return template;
         },
         "json": async (module) => {
-            let json = await module.text();
-            return JSON.parse(json);
+            return await module.json();
         },
         "svg": async (response) => {
             let text = await response.text();
@@ -49,8 +60,8 @@ class Loader {
         this._config.map.sort((a,b)=>{
             return a.resource.localeCompare(b.resource);
         });
+        // convert expressions like "component:x-{name}" to regular expressions like "component:x-(?<name>.+)"
         this._config.map.forEach((definition) => {
-            // convert expressions like "component:x-{name}" to regular expressions like "component:x-(?<name>.+)"
             let regexp = "";
             let resource = definition.resource;
             let k = 0;
@@ -64,6 +75,8 @@ class Loader {
             regexp += resource.substring(k);
             definition.regexp = new RegExp(regexp);
         });
+        //preload
+        await this.load(this._config.preload);
     }
 
     //methods

@@ -14,6 +14,7 @@
         }
     },
     "loader": {
+        // some comments
         "map": [
             {"resource":"icon:material-{name}", "src":"https://material-icons.github.io/material-icons/svg/{name}/outline.svg", "with":{"type":"svg"}}
         ]

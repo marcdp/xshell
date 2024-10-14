@@ -1,5 +1,3 @@
-<!-- metadata -->
-<meta name="x-page:type" content="x-page-html">
 
 <!-- script -->
 <script type="module">
@@ -10,6 +8,7 @@
         async onCommand(command, args) {
             if (command == "load") {
                 //load
+                this.icon = "x-bell";
                 this.label = "Ajudaaaaaa: " + this.state.counter;
                 
             } else if (command == "something") {
@@ -30,9 +29,6 @@
 
 <!-- template -->
 <template>
-
-    <x-breadcrumb2></x-breadcrumb2>
-    <x-breadcrumb3></x-breadcrumb3>
 
     {{ state.counter }}
     <p>

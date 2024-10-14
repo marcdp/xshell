@@ -64,7 +64,8 @@ class XShell extends HTMLElement {
             let base = url.substring(0, url.lastIndexOf("/"));
             let response = await fetch(url);
             if (response.ok) {
-                config = await response.json();
+                let json = utils.stripJsonComments(await response.text());
+                config = JSON.parse(json);
                 utils.traverse(config, (obj, key) => {
                     let value = obj[key];
                     if (typeof value === "string") {
@@ -102,7 +103,8 @@ class XShell extends HTMLElement {
                     if (!response.ok) {
                         module.error = `HTTP error! status: ${response.status}`;
                     }  else {
-                        module = Object.assign(module, await response.json());
+                        let json = JSON.parse(utils.stripJsonComments(await response.text()));
+                        module = Object.assign(module, json);
                         this.config.modules[i] = module;
                     }
                 })());

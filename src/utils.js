@@ -85,7 +85,58 @@ class Utils {
         URL.revokeObjectURL(moduleURL);
         //return
         return module;
-      }
+    }
+    static stripJsonComments(jsonString){
+        let result = '';
+        let insideString = false;
+        let skipNextChar = false;
+        let i = 0;
+
+        while (i < jsonString.length) {
+            const char = jsonString[i];
+            const nextChar = jsonString[i + 1];
+
+            // Toggle the `insideString` flag when encountering a double-quote not escaped
+            if (char === '"' && !skipNextChar) {
+                insideString = !insideString;
+            }
+
+            // If not inside a string, check for comments
+            if (!insideString) {
+                // Check for single-line comment
+                if (char === '/' && nextChar === '/') {
+                    // Skip until the end of the line
+                    i += 2;
+                    while (i < jsonString.length && jsonString[i] !== '\n') {
+                        i++;
+                    }
+                    continue;
+                }
+
+                // Check for multi-line comment
+                if (char === '/' && nextChar === '*') {
+                    // Skip until the end of the comment
+                    i += 2;
+                    while (i < jsonString.length && !(jsonString[i] === '*' && jsonString[i + 1] === '/')) {
+                        i++;
+                    }
+                    i += 2; // Skip past the closing */
+                    continue;
+                }
+            }
+
+            // Append current character to result
+            result += char;
+
+            // Check if this character is an escape character
+            skipNextChar = char === '\\' && !skipNextChar;
+
+            // Move to the next character
+            i++;
+        }
+
+        return result.trim();
+    }
 
 };
 

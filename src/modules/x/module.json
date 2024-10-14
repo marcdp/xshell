@@ -7,27 +7,20 @@
             "map": [
                 {"resource": "component:x-{name}",          "src": "./components/x-{name}.js"},
                 {"resource": "layout:x-{name}",             "src": "./layouts/x-{name}.js"},
-                {"resource": "icon:x-{name}",               "src": "./icons/{name}.svg", "with": {"type":"svg"}},
-
-
-                {"resource": "page-handler:x",               "src": "./ui/page-handler.js"},
-                
-                {"resource": "type:html-component",          "src": "./ui/html-component.js"},
-                {"resource": "type:html-page",               "src": "./ui/html-page.js"},
-                {"resource": "component:x-breadcrumb3",      "src": "./components/x-breadcrumb3.html",  "with": {"type": "html-component"}},
-                {"resource": "component:x-page-html",        "src": "./ui/x-page-html.js"}
+                {"resource": "icon:x-{name}",               "src": "./icons/{name}.svg", "with": {"type":"svg"}}
             ]
         },
         "ui": {
-            "errors": {
-                "default": "x-error"
+            "defaults":{
+                "pageHandler":  "x-page-handler",
+                "errorHandler": "x-page-error"
             },
             "layouts": {
                 "app": {
                     "main":     "x-layout-app-main"
                 },
                 "page": {
-                    "main":     "x-layout-page-main",
+                    "main":     "x-layout-page-main", 
                     "stack":    "x-layout-page-stack",
                     "dialog":   "x-layout-page-dialog",
                     "default":  "x-layout-page-default"

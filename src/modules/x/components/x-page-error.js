@@ -1,7 +1,7 @@
 import XElement from "../ui/x-element.js";
 
 // definition
-export default await XElement.define("x-error", {
+export default await XElement.define("x-page-error", {
     style: `
         :host {color:red;}
         PRE {margin:0; padding:0;}

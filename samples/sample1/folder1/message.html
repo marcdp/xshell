@@ -1,7 +1,4 @@
 
-<meta name="x-page:label"   content="Messsage page">
-<meta name="x-page:type"    content="x-page-html">
-<meta name="x-page:state"   content="{var1:1}">
 
 <script type="module">
     export default {
@@ -9,6 +6,10 @@
             if (command == "load") {
                 //load
                 this.label = "Message page: " + args.message;
+
+            } else if (command == "change-title") {
+                //change title
+                this.label = "New title";
 
             } else if (command == "show-page-stack") {
                 //show page stack
@@ -34,6 +35,8 @@
         <x-clock></x-clock>
 
         <x-icon icon="x-bell"></x-icon>
+
+        <x-button command="change-title">change-title</x-button>
 
     </ul>
 

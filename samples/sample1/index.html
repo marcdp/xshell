@@ -62,10 +62,8 @@ x - chrome:  show dialog scroll top
 x - XPageInstance --  ui template
 x - no permetre configurar el x-error. Utilitzar aquest, i punt.
 x - x-page: permetre configurar quin tipus de processor/handler utiliza: none, x-element, etc. Per omissió cap handler
-
 x - <x-shell src="...json"></x-shell>
 x - fer que els moduls siguin fitxers json pasius, i no moduls es6 actius 
-
 x - loader: url -- > src
 x - loader transform: "to-json"
 x - loader transform: "to-wc"
@@ -73,16 +71,24 @@ x - loader transform: "to-module"
 x - loader: remove "component", "icon", etc
 x - loader {"resource":"coponent:x{name}"}
 x - x-icon : use cloneNode, and not svg innerhtml
-
 x - html-component
 x - html-component: fer que funcioni les properties
-- page handler: /folder1/ help.html
+x - XElement load dependencies automatically
+x - XPageInstance ... ????
+x - XElement.define -- x-button
+x - XElement.define -- x-page-header
+x - page handler: /folder1/ help.html
+x - definition.methods
+x - jsonc
+
+
+
+- XElement.define -- x-anchor
+
+- circular dependencies between web components
 - routes: pensar sistema de accedir a rutes, sense posar la extensió .html
-
-
 - x-menubar + x-menu + x-menuitem
 
-- XElement load dependencies automatically
 - XElement proxy recursive ???
 
 x - create user at npmjs

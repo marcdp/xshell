@@ -1,14 +1,12 @@
 
 
-<meta name="x-page:label" content="Lorem ipsum">
-<meta name="x-page:type"    content="x-page-html">
-
-
 <script type="module">
     export default {
         async onCommand(command, args) {
             if (command == "load") {
                 //load
+                this.label = "Dialog page";
+                
             } else if (command == "close") {
                 //close
                 this.close();
