@@ -1,44 +1,58 @@
-import xshell from "x-shell";
+import XElement from "../ui/x-element.js";
 
-class XBreadcrumb extends HTMLElement {
+// definition
+export default XElement.define("x-breadcrumb", {
+    style: `
+        :host {display:block; border:1px red solid}
+        ul {margin:0; padding:0}
+        li {display:inline}
+        li + li:before {content: ' / '}
+    `,
+    template: `
+        <nav>
+            <ul>
+                <li x-for="item in state.breadcrumb">
+                    <a x-attr:href="item.href">{{ item.label }}</a>
+                </li>
+                <li>
+                    {{ state.label }}
+                </li>
+            </ul>
+        </nav>
+    `,
+    state: {
+        breadcrumb: [],
+        label: ""
+    },
+    methods: {
+        onCommand(command) {
+            if (command == "load") {
+                //load
+                let page = this.page;
+                if (page) {
+                    page.addEventListener("page:load", () => {
+                        this.onCommand("refresh");
+                    });
+                    page.addEventListener("page:change", () => {
+                        this.onCommand("refresh");
+                    });
+                }
+                this.onCommand("refresh");
 
-    //fields
-    
-    //ctor
-    constructor() {
-        super();
-        this.attachShadow({ mode: "open" });
-        this.shadowRoot.innerHTML = "&nbsp;";
-    } 
-
-    //events
-    connectedCallback() { 
-        let page = xshell.getPage(this);
-        page.addEventListener("page:load", () => {
-            this.render();
-        });
-        page.addEventListener("page:change", () => {
-            this.render();
-        });
-    } 
-    render() {
-        let html = [];
-        let page = xshell.getPage(this);
-        if (page) {
-            for(let item of page.breadcrumb) {
-                let href = xshell.getRealUrl(item.href);
-                html.push("<a href='" + href + "'>");
-                html.push(item.label.replace(/</g,"&lt;"));
-                html.push("</a>");
-                html.push(" / ");
-
+            } else if (command == "refresh") {
+                //refresh
+                let page = this.page;
+                if (page) {
+                    let breadcrumb = [];
+                    for (let item of page.breadcrumb) {
+                        let label = item.label;
+                        let href = this.xshell.getRealUrl(item.href);
+                        breadcrumb.push({label, href});
+                    }
+                    this.state.breadcrumb = breadcrumb;
+                    this.state.label = page.label;
+                }
             }
-            html.push(page.label);
-            this.shadowRoot.innerHTML = html.join("");
         }
     }
-
-}
-
-export default XBreadcrumb;
-customElements.define('x-breadcrumb', XBreadcrumb);
+});

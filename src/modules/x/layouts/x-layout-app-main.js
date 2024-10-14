@@ -1,9 +1,8 @@
-import XIcon from "../components/x-icon.js"
+import XElement from "../ui/x-element.js";
 
-// template
-let template = document.createElement("template");
-template.innerHTML = ` 
-    <style>
+// class
+export default XElement.define("x-layout-app-main", {
+    style: `
         :host {display:block;}
         nav {
             height:3em;
@@ -16,30 +15,16 @@ template.innerHTML = `
         }
         nav x-icon {width:2.5em; text-align:center;}
         div {margin-top:3em;}
-    </style>
-    <nav>
-        <x-icon icon="x-settings"></x-icon>
-        <label>This is header</label>
-        &nbsp;
-        <slot name="toolbar"></slot>
-    </nav>
-    <div>
-        <slot></slot>
-    </div>
-`;
-
-// class
-class XLayoutAppMain extends HTMLElement {
-
-    //ctor
-    constructor() {
-        super();
-        this.attachShadow({ mode: "open" });
-        this.shadowRoot.appendChild(template.content.cloneNode(true));
-    }
-
-}
-
-// export
-export default XLayoutAppMain;
-customElements.define('x-layout-app-main', XLayoutAppMain);
+    `,
+    template: `
+        <nav>
+            <x-icon icon="x-settings"></x-icon>
+            <label>This is header</label>
+            &nbsp;
+            <slot name="toolbar"></slot>
+        </nav>
+        <div>
+            <slot></slot>
+        </div>
+    `
+});

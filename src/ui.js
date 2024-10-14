@@ -6,6 +6,10 @@ class UI {
 
     //vars
     _config = {
+        defaults:{
+            pageHandler: "",
+            errorHandler: ""
+        },
         layouts: {
             app: {
                 main:""
@@ -32,7 +36,7 @@ class UI {
         this._config = config;
     }
     async start() { 
-        var tasks = [];
+        let tasks = [];
         //load layouts
         for(let layoutKey in this._config.layouts) {
             let layoutValue = this._config.layouts[layoutKey]; 

@@ -1,4 +1,90 @@
 import xshell from "x-shell";
+import XElement from "../ui/x-element.js";
+
+/*
+// class
+export default XElement.define("x-anchor", {
+    style: `
+        :host {display:block;}
+    `,
+    template: `
+        <a x-attr:href="state.ahref" x-on:click="click">
+            <slot></slot>
+        </a>
+    `,
+    state: {
+        href: "",
+        ahref: "#",
+        breadcrumb: false,
+        target: "",
+        type: "",
+        page: ""
+    },
+    settings:{
+        observedAttributes: ["href", "target", "type", "breadcrumb"]
+    },
+    methods: {
+        getSrc() {
+            let page = this.page;
+            debugger
+            if (!page) return null;
+            //compute url relative to base
+            let src = page.src;
+            if (this.href.startsWith("/")) {
+                src = this.href;
+            } else {
+                if (src.indexOf("?")!=-1) src = src.substring(0, src.indexOf("?"));
+                if (src.indexOf("/")!=-1) {
+                    src = src.substring(0, src.lastIndexOf("/"));
+                }
+                src += "/" + this.href;
+            }
+            //breadcrumb
+            if (this.breadcrumb) {
+                let breadcrumb = [];
+                for(let item in page.breadcrumb) {
+                    breadcrumb.push(item);
+                }
+                breadcrumb.push({label: page.label + "xxxx", href: page.src});
+                src += (src.indexOf("?")!=-1 ? "&" : "?") + "x-breadcrumb=" + btoa(JSON.stringify(breadcrumb)).replace(/\+/g,"-").replace(/\//g,"_");
+            }
+        },
+        onStateChanged(name, oldValue, newValue) {
+            if (name == "href") {
+                let page = this.page;
+                let src = this.getSrc();
+                let href = "";
+                if (this.state.type == "stack") {
+                    href = xshell.getRealUrl(src, page, true);
+                } else if (this._type == "dialog") {
+                    href = xshell.getRealUrl(src, page, true);
+                } else {
+                    href = xshell.getRealUrl(src, page);
+                }
+                this.state.ahref = href;
+                //let a = this.shadowRoot.firstChild;
+                //a.setAttribute("href", href);
+                //if (this.target) {
+                //    a.setAttribute("target", this.target);
+                //} else{
+                //    a.removeAttribute("target");
+                //}
+                //debugger
+            }
+        },
+        onCommand(command){
+            if (command == "load") {
+                //load
+
+            } else if (command == "click") {
+                //click
+                debugger;
+            }
+        }
+    }
+});
+*/
+
 
 // class
 class XAnchor extends HTMLElement {
