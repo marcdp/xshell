@@ -86,32 +86,48 @@ export default XElement.define("x-anchor", {
 */
 
 
+// style
+let styleSheet = new CSSStyleSheet();
+styleSheet.replaceSync(`
+    :host {}
+    :host(.menuitem) a {text-decoration:none; display:block; flex:1; display:flex;}
+`);
+
 // class
 class XAnchor extends HTMLElement {
     
     //static
     static get observedAttributes() { 
-        return ["href", "target", "type", "breadcrumb", "page"]; 
+        return ["href", "command", "target", "type", "for", "breadcrumb", "disabled"]; 
     }
 
     //fields
     _connected = false;
     _href = "";
+    _command = "";
+    _disabled = false;
     _breadcrumb = false;
     _target = "";
     _type = "";
-    _page = "";
+    _for = "";
 
     //ctor
     constructor() {
         super();
         this.attachShadow({ mode: "open" });
+        this.shadowRoot.adoptedStyleSheets = [styleSheet];
         this.shadowRoot.innerHTML = `<a href='#'><slot></slot></a>`;
         this.shadowRoot.querySelector("a").addEventListener("click", (event) => {
             let page = xshell.getPage(this);
-            if (this._page) {
+            if (this._command) {
+                //command
+                this.dispatchEvent(new CustomEvent("page:command", {detail: {command: this._command, data: this.dataset}, bubbles: true, composed: true}));
+                event.preventDefault();
+                event.stopPropagation();
+                return false;
+            } else if (this._for) {
                 //target x-page element
-                var targetPage = this.ownerDocument.getElementById(this._page);
+                var targetPage = this.ownerDocument.getElementById(this._for);
                 if (targetPage) {
                     targetPage.src = this.getSrc();
                 }
@@ -137,6 +153,12 @@ class XAnchor extends HTMLElement {
         this._href = value; 
         if (changed && this._connected) this.render();
     }
+    get command() {return this._command;}
+    set command(value) {
+        var changed = (this._command != value);
+        this._command = value; 
+        if (changed && this._connected) this.render();
+    }
     get type() {return this._type;}
     set type(value) {
         var changed = (this._type != value);
@@ -155,10 +177,16 @@ class XAnchor extends HTMLElement {
         this._target = value; 
         if (changed && this._connected) this.render();
     }
-    get page() {return this._page;}
-    set page(value) {
-        var changed = (this._page != value);
-        this._page = value; 
+    get for() {return this._for;}
+    set for(value) {
+        var changed = (this._for != value);
+        this._for = value; 
+        if (changed && this._connected) this.render();
+    }
+    get disabled() {return this._disabled;}
+    set disabled(value) {
+        var changed = (this._disabled != value);
+        this._disabled = value; 
         if (changed && this._connected) this.render();
     }
     
@@ -166,10 +194,12 @@ class XAnchor extends HTMLElement {
     //methods
     attributeChangedCallback(name, oldValue, newValue) {
         if (name == "href") this.href = newValue;
+        if (name == "command") this.command = newValue;
         if (name == "target") this.target = newValue;
         if (name == "type") this.type = newValue;
-        if (name == "page") this.page = newValue;
+        if (name == "for") this.for = newValue;
         if (name == "breadcrumb") this.breadcrumb = (newValue != null);
+        if (name == "disabled") this.disabled = (newValue != null);        
     }
     connectedCallback(){
         this._connected = true;
@@ -215,8 +245,14 @@ class XAnchor extends HTMLElement {
             a.setAttribute("href", href);
             if (this.target) {
                 a.setAttribute("target", this.target);
-            } else{
+            } else {
                 a.removeAttribute("target");
+            }
+            if (this.disabled) {
+                a.setAttribute("disabled", "");
+                a.removeAttribute("href");
+            } else {
+                a.removeAttribute("disabled");
             }
         }
     }

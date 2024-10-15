@@ -15,6 +15,10 @@
                 //something
                 this.showPageDialog({url: "dialog.html"});
 
+            } else if (command == "something2") {
+                //something
+                alert("something 2 clicked");
+
             } else if (command == "inc") {
                 //inc counter
                 this.state.counter++;
@@ -30,12 +34,55 @@
 <!-- template -->
 <template>
 
+    <x-menu class="menu-bar">
+        <x-menuitem label="label1" icon="x-bell" command="something2"></x-menuitem>
+        <x-menuitem icon="x-bell"></x-menuitem>
+        <x-menuitem label="label3">
+            <x-menuitem label="label3.1" icon="x-settings"></x-menuitem>
+            <x-menuitem label="label3.2"></x-menuitem>
+            <x-menuitem label="label3.3 asdf asdf asdfg asdfasdf asdf MARC" >
+                <x-menuitem label="label3.3.1"></x-menuitem>
+                <x-menuitem label="label3.3.2"></x-menuitem>
+            </x-menuitem>
+        </x-menuitem>
+    </x-menu>
+
+    <br>
+
+    <x-menu class="menu-plain">
+        <x-menuitem label="label1" icon="x-bell" command="something2" checked></x-menuitem>
+        <x-menuitem label="label2 asdfasd flajsdfh laskjdhf alskjfh alksjd asf a MARC"></x-menuitem>
+        <x-menuitem label="label3">
+            <x-menuitem label="label3.1" icon="x-settings"></x-menuitem>
+            <x-menuitem label="label3.2"></x-menuitem>
+            <x-menuitem label="label3.3 asdf asdf asdfg asdfasdf asdf MARC" >
+                <x-menuitem label="label3.3.1"></x-menuitem>
+                <x-menuitem label="label3.3.2"></x-menuitem>
+            </x-menuitem>
+        </x-menuitem>
+    </x-menu>
+
+    <br/>
+
+    <x-tabs selected-index="1">
+        <x-tab label="First tab">
+            This is the content of first tab
+        </x-tab>
+        <x-tab label="Second tab">
+            Second content
+        </x-tab>
+        <x-tab label="Third tab">
+            Third content
+        </x-tab>
+    </x-tabs>
+ 
     {{ state.counter }}
     <p>
         This is the help page:     
     </p>    
     <ul>
         <li><x-anchor href="login.html">Help</x-anchor></li>
+        <li><x-anchor href="login.html" command="something">Help something</x-anchor></li>
     </ul>       
     <x-button command="inc">inc</x-button>
     <x-button command="dec">dec</x-button>

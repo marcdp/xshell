@@ -6,8 +6,8 @@ export default XElement.define("x-layout-app-main", {
         :host {display:block;}
         nav {
             height:3em;
-            color:var(--font-color-inverse); 
-            background:var(--color-main); 
+            color:var(--x-font-color-inverse); 
+            background:var(--x-color-main); 
             display:flex;
             align-items:center;
             position:fixed;

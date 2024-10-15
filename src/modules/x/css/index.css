@@ -40,48 +40,57 @@
     */
 
     /* backgrounds */
-    --background-page: #FFFFFF;
-    --background-gray: #F5F5F5;
-    --background-x-gray: #F0F0F0;
-    --background-xx-gray: #D5D5D5;
-    --background-xxx-gray: #C5C5C5;
+    --x-background-page: #FFFFFF;
+    --x-background-gray: #F5F5F5;
+    --x-background-x-gray: #F0F0F0;
+    --x-background-xx-gray: #D5D5D5;
+    --x-background-xxx-gray: #C5C5C5;
 
     /* button */
-    --button-border-radius: .25em;
+    --x-button-border-radius: .25em;
     
     /* colors */
-    --color-main:#036AC4;
-    --color-main-light:#0473CE;
-    --color-main-x-light:#0481E0;
+    --x-color-main:#036AC4;
+    --x-color-main-light:#0473CE;
+    --x-color-main-x-light:#0481E0;
     
     /* dialog */
-    --dialog-backdrop: rgba(0,0,0,.4);
-    --dialog-border-radius: .65em;
-    --dialog-box-shadow: rgba(0, 0, 0, 0.22) 0px 25.6px 57.6px 0px, rgba(0, 0, 0, 0.18) 0px 4.8px 14.4px 0px;
+    --x-dialog-backdrop: rgba(0,0,0,.4);
+    --x-dialog-border-radius: .65em;
+    --x-dialog-box-shadow: rgba(0, 0, 0, 0.22) 0px 25.6px 57.6px 0px, rgba(0, 0, 0, 0.18) 0px 4.8px 14.4px 0px;
 
     /* font */
-    --font-family:"Segoe UI",-apple-system, BlinkMacSystemFont, Roboto, "Helvetica Neue", sans-serif;
-    --font-size:14px;
-    --font-size-subtitle:17px;
+    --x-font-family:"Segoe UI",-apple-system, BlinkMacSystemFont, Roboto, "Helvetica Neue", sans-serif;
+    --x-font-size:14px;
+    --x-font-size-subtitle:17px;
     --font-size-title:21px;
-    --font-color: #242424;
-    --font-color-inverse: #EEEEEE;
+    --x-font-color: #242424;
+    --x-font-color-inverse: #EEEEEE;
+    --x-font-color-disabled: gray;
 
     /* input */
-    --input-border-radius: .35em;
+    --x-input-border-radius: .35em;
     
+    /* menu */
+    --x-menu-width: 20em;
+    --x-menu-border: .1em #D0D7DE solid;
+    --x-menu-shadow: rgba(0, 0, 0, 0.11) 0px 12px 25px 0px, rgba(0, 0, 0, 0.09) 0px 2.4px 7px 0px;
+    --x-menu-border-radius: .25em;
+    --x-menu-item-border-radius: .25em;
+    --x-menu-item-tab-selected-border: .25em;
+
     /* x-page */
-    --page-padding-top:2em;
-    --page-padding-left:2.5em;
-    --page-padding-right:2.5em;
-    --page-padding-bottom:2em;
-    --page-progressbar-color: red;
-    --page-progressbar-height: .25em;
+    --x-page-padding-top:2em;
+    --x-page-padding-left:2.5em;
+    --x-page-padding-right:2.5em;
+    --x-page-padding-bottom:2em;
+    --x-page-progressbar-color: red;
+    --x-page-progressbar-height: .25em;
 
     /* stack */
-    --stack-backdrop: rgba(0,0,0,.2);
-    --stack-border-radius: 0;
-    --stack-box-shadow:rgba(0, 0, 0, 0.22) 0px 25.6px 57.6px 0px, rgba(0, 0, 0, 0.18) 0px 4.8px 14.4px 0px;
+    --x-stack-backdrop: rgba(0,0,0,.2);
+    --x-stack-border-radius: 0;
+    --x-stack-box-shadow:rgba(0, 0, 0, 0.22) 0px 25.6px 57.6px 0px, rgba(0, 0, 0, 0.18) 0px 4.8px 14.4px 0px;
 
     /* shadow */
 
@@ -121,22 +130,23 @@
 }  
  
 html {
-    font-family:var(--font-family);
-    font-size:var(--font-size);
-    color:var(--font-color);   
+    font-family:var(--x-font-family);
+    font-size:var(--x-font-size);
+    color:var(--x-font-color);   
 
     scrollbar-width: thin;
 }
 :not(:defined) {
     visibility: hidden;
 }
-h1 {font-size:var(--font-size-title); font-weight:600;}
-h2 {font-size:var(--font-size-subtitle); font-weight:600;}
-h3 {font-size:var(--font-size-subtitle); font-weight:normal;}
-h4 {font-size:var(--font-size); font-weight:700;}
-h5 {font-size:var(--font-size); font-weight:600;}
-h6 {font-size:var(--font-size); font-weight:normal;}
+h1 {font-size:var(--x-font-size-title); font-weight:600;}
+h2 {font-size:var(--x-font-size-subtitle); font-weight:600;}
+h3 {font-size:var(--x-font-size-subtitle); font-weight:normal;}
+h4 {font-size:var(--x-font-size); font-weight:700;}
+h5 {font-size:var(--x-font-size); font-weight:600;}
+h6 {font-size:var(--x-font-size); font-weight:normal;}
 
+/* x-menu */
 
 /* x-page */
 x-page {display:block;}
@@ -144,14 +154,14 @@ x-page {display:block;}
 /* x-page.dialog */
 x-page[type='dialog'] > dialog {
     padding:0; 
-    box-shadow: var(--dialog-box-shadow);
-    border-radius:var(--dialog-border-radius); 
+    box-shadow: var(--x-dialog-box-shadow);
+    border-radius:var(--x-dialog-border-radius); 
     outline:none;
     border:none;
-    color:var(--font-color);
+    color:var(--x-font-color);
 }
 x-page[type='dialog'] > dialog::backdrop {
-    background: var(--dialog-backdrop);
+    background: var(--x-dialog-backdrop);
 }
 
 /* x-page embed*/
@@ -164,15 +174,15 @@ x-page[type='main'] {
 
 /* x-page.loading */
 x-page[type='main'].loading {_position:relative;}
-x-page[type='main'].loading::before {content:"";border-top:var(--page-progressbar-height) var(--page-progressbar-color) solid; position:absolute; top:0; animation: progressBar 3s ease-in-out; animation-delay: 0ms; animation-fill-mode:both; }
+x-page[type='main'].loading::before {content:"";border-top:var(--x-page-progressbar-height) var(--x-page-progressbar-color) solid; position:absolute; top:0; animation: progressBar 3s ease-in-out; animation-delay: 0ms; animation-fill-mode:both; }
 
-x-page[type='stack'].loading dialog::before {content:"";border-top:var(--page-progressbar-height) var(--page-progressbar-color) solid; position:absolute; top:0; animation: progressBar 3s ease-in-out; animation-delay: 0ms; animation-fill-mode:both; }
+x-page[type='stack'].loading dialog::before {content:"";border-top:var(--x-page-progressbar-height) var(--x-page-progressbar-color) solid; position:absolute; top:0; animation: progressBar 3s ease-in-out; animation-delay: 0ms; animation-fill-mode:both; }
 
 x-page[type='dialog'].loading dialog {position:relative; min-width:20em; min-height:10em;}
-x-page[type='dialog'].loading dialog::before {content:"";border-top:var(--page-progressbar-height) var(--page-progressbar-color) solid; position:absolute; top:0; animation: progressBar 3s ease-in-out; animation-delay: 0ms; animation-fill-mode:both; }
+x-page[type='dialog'].loading dialog::before {content:"";border-top:var(--x-page-progressbar-height) var(--x-page-progressbar-color) solid; position:absolute; top:0; animation: progressBar 3s ease-in-out; animation-delay: 0ms; animation-fill-mode:both; }
 
 x-page:not([type]).loading {position:relative;}
-x-page:not([type]).loading::before {content:"";border-top:var(--page-progressbar-height) var(--page-progressbar-color) solid; position:absolute; left:0; top:0; animation: progressBar 3s ease-in-out; animation-delay: 0ms; animation-fill-mode:both; }
+x-page:not([type]).loading::before {content:"";border-top:var(--x-page-progressbar-height) var(--x-page-progressbar-color) solid; position:absolute; left:0; top:0; animation: progressBar 3s ease-in-out; animation-delay: 0ms; animation-fill-mode:both; }
 
 
 @keyframes progressBar {
@@ -189,11 +199,11 @@ x-page[type='stack']:not(.popup) > dialog {
     height: unset; 
     margin-right:0; 
     border:none; outline:none; border:none; max-height:unset; padding:0; 
-    border-radius:var(--stack-border-radius);
-    box-shadow: var(--stack-box-shadow);
+    border-radius:var(--x-stack-border-radius);
+    box-shadow: var(--x-stack-box-shadow);
 }
 x-page[type='stack'] > dialog::backdrop {
-    background: var(--stack-backdrop);
+    background: var(--x-stack-backdrop);
 }
 x-page[type='stack'].thin > dialog {
     width:25em;
@@ -204,15 +214,15 @@ x-page[type='stack'].right > dialog {
 }
 x-page[type='stack'].popup > dialog {
     padding:0; 
-    box-shadow: var(--dialog-box-shadow);
-    border-radius:var(--dialog-border-radius); 
+    box-shadow: var(--x-dialog-box-shadow);
+    border-radius:var(--x-dialog-border-radius); 
     outline:none;
     border:none;
-    color:var(--font-color);
+    color:var(--x-font-color);
     padding-bottom:2em;
 }
 x-page[type='stack'].popup > dialog::backdrop {
-    background: var(--dialog-backdrop);
+    background: var(--x-dialog-backdrop);
 }
 x-page[type='stack'] + x-page[type='stack'] > dialog {
     width:78vw; 
