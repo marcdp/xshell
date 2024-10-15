@@ -7,10 +7,10 @@ export default XElement.define("x-layout-page-stack", {
     `,
     template: `
         <x-page-header>
-        <slot name="header"></slot>    
-    </x-page-header>
-    <x-page-body>
-        <slot></slot>
-    </x-page-body>
+            <slot name="header"></slot>    
+        </x-page-header>
+        <x-page-body>
+            <slot></slot>
+        </x-page-body>
     `
 });

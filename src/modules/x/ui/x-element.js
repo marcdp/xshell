@@ -159,23 +159,18 @@ class XElement extends HTMLElement {
             static get observedAttributes() { return settings.observedAttributes || []; }
             //props
             get settings() { return settings ;}
-            //events
-            //onCommand(command, args) {
-                //if (definition.onCommand) {
-                //    definition.onCommand.apply(this, [command, args]);
-                //}
-            //}
-            //onStateChanged(name, oldValue, newValue) {
-                //if (definition.onStateChanged){
-                //    definition.onStateChanged.apply(this, [name, oldValue, newValue]);
-                //}
-            //}
         };
         //xtemplate
         result.prototype.xtemplate = new XTemplate({ 
             template: definition.template || "", 
             styleSheets: definition.styleSheets || definition.style || []
         });
+        //style global
+        if (definition.styleGlobal){
+            let style = document.createElement("style");
+            style.innerHTML = definition.styleGlobal;
+            document.head.appendChild(style);
+        }
         //load dependencies
         let names = [];
         result.prototype.xtemplate.dependencies.forEach((name) => {

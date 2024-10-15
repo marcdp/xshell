@@ -80,21 +80,55 @@ x - XElement.define -- x-page-header
 x - page handler: /folder1/ help.html
 x - definition.methods
 x - jsonc
+x - x-menu
+x - icon from https://fonts.google.com/icons?icon.set=Material+Symbols&selected=Material+Symbols+Outlined:check:FILL@0;wght@400;GRAD@0;opsz@24&icon.size=24&icon.color=%23e8eaed&icon.query=check
+x - x-menuitem -> use x-anchor
+x - x-menubar + x-menu + x-menuitem
+x - prefix css variables with x-
+
+x - x-tabs
+
+- x-anchor
+- x-label
+- x-anchor title
+- x-badge
+- x-card + x-card-header + x-card-footer
+- x-nav-menu --- > left menu
+- x-accordion
+- x-datagrid
+- x-divider
+- x-notice
+- x-popover
+- x-toolbar
+- x-listview
+- x-treeview
+- x-treelistview
+- x-wizard
+- x-markdown
+- x-drawer
+- x-panel-overflow
+- x-spinner
+- x-avatar
+
+- x-form
+- x-section {}
+- x-datafield (text, number, date, boolean, multiple, textarea, html, markdown)
+
+
+- toast
+
 
 
 
 - XElement.define -- x-anchor
-
 - circular dependencies between web components
 - routes: pensar sistema de accedir a rutes, sense posar la extensió .html
-- x-menubar + x-menu + x-menuitem
-
 - XElement proxy recursive ???
 
 x - create user at npmjs
 x - create npm package 
-- publish: npm publish
 
+- publish: npm publish
 - responsive design
 - store user settings locally
 - rpc
