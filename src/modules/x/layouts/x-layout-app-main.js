@@ -12,6 +12,7 @@ export default XElement.define("x-layout-app-main", {
             align-items:center;
             position:fixed;
             top:0; left:0; right:0;
+            z-index:20;
         }
         nav x-icon {width:2.5em; text-align:center;}
         div {margin-top:3em;}

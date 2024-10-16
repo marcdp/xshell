@@ -1,9 +1,12 @@
 import XElement from "../ui/x-element.js";
 
 // class
-export default XElement.define("x-menu", {
+export default XElement.define("x-contextmenu", {
     style: `
         :host {
+            background:var(--x-menu-background);
+            position:absolute;
+            z-index:10;
             display:flex; 
             width:var(--x-menu-width); 
             flex-direction:column; 
@@ -12,19 +15,8 @@ export default XElement.define("x-menu", {
             box-shadow:var(--x-menu-shadow); 
             border:var(--x-menu-border); 
         }
-        
-        :host(.tabs) {
-            display:flex;
-            width:unset;
-            flex-direction:row;
-            padding:0;
-            box-shadow:none;
-            border:none;
-        }
-
+        :host(.plain) {width:100%;}
     `,
-    state: {
-    },
     template: `
         <slot></slot>
     `

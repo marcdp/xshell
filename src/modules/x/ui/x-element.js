@@ -205,7 +205,8 @@ class XElement extends HTMLElement {
                 }
             }
             for(let propName of propNames) {
-                Object.defineProperty(result, propName, {
+                //if (propName == "expanded") debugger;
+                Object.defineProperty(result.prototype, propName, {
                     get() {
                         return this.state[propName];
                     },
