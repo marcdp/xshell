@@ -121,7 +121,7 @@ class XAnchor extends HTMLElement {
             let page = xshell.getPage(this);
             if (this._command) {
                 //command
-                this.dispatchEvent(new CustomEvent("page:command", {detail: {command: this._command, data: this.dataset}, bubbles: true, composed: true}));
+                this.dispatchEvent(new CustomEvent("command", {detail: {command: this._command, data: this.dataset}, bubbles: true, composed: true}));
                 event.preventDefault();
                 event.stopPropagation();
                 return false;

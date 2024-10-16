@@ -74,8 +74,8 @@ class XPageHandler extends HTMLElement  {
             });
             await loader.load(names);          
         }
-        //handle page:command event
-        this.addEventListener("page:command", (event) => {
+        //handle command event
+        this.addEventListener("command", (event) => {
             this.onCommand(event.detail.command, event.detail.data);
             event.preventDefault();
             event.stopPropagation();

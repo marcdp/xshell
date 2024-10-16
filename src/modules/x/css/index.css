@@ -38,6 +38,15 @@
     --box-shadow: 0px 2px 1px -1px rgba(0,0,0,0.2), 0px 1px 1px 0px rgba(0,0,0,0.14), 0px 1px 3px 0px rgba(0,0,0,0.12);
     --border-radius: .2em;
     */
+    /* general */
+    --x-transition-duration:250ms;
+
+    
+    /* x-accordion */
+    --x-accordion-border-radius: .4em;
+    --x-accordion-border: .1em #D0D7DE solid;
+    --x-accordion-shadow: none;
+    --x-accordion-padding: 1.5em;   
 
     /* backgrounds */
     --x-background-page: #FFFFFF;
@@ -46,38 +55,69 @@
     --x-background-xx-gray: #D5D5D5;
     --x-background-xxx-gray: #C5C5C5;
 
-    /* button */
+    /* x-button */
     --x-button-border-radius: .25em;
     
-    /* colors */
+    /* x-card */
+    --x-card-border-radius: .4em;
+    --x-card-border: .1em #D0D7DE solid;
+    --x-card-shadow: none;
+    --x-card-padding: 1.5em;
+
+    /* x-colors */
     --x-color-main:#036AC4;
     --x-color-main-light:#0473CE;
     --x-color-main-x-light:#0481E0;
     
-    /* dialog */
+    /* x-dialog */
     --x-dialog-backdrop: rgba(0,0,0,.4);
     --x-dialog-border-radius: .65em;
     --x-dialog-box-shadow: rgba(0, 0, 0, 0.22) 0px 25.6px 57.6px 0px, rgba(0, 0, 0, 0.18) 0px 4.8px 14.4px 0px;
 
-    /* font */
+    /* x-divider */
+    --x-divider-border: .05em #C8C6C4 solid;
+
+    /* x-font */
     --x-font-family:"Segoe UI",-apple-system, BlinkMacSystemFont, Roboto, "Helvetica Neue", sans-serif;
+    --x-font-size-x-small:10px;
+    --x-font-size-small:12px;
     --x-font-size:14px;
     --x-font-size-subtitle:17px;
-    --font-size-title:21px;
-    --x-font-color: #242424;
+    --x-font-size-title:21px;
+    --x-font-color: #303030;
+    --x-font-color-gray: #666666;
     --x-font-color-inverse: #EEEEEE;
     --x-font-color-disabled: gray;
 
     /* input */
     --x-input-border-radius: .35em;
     
-    /* menu */
-    --x-menu-width: 20em;
+    /* x-menu */
+    --x-menu-width: 22em;
+    --x-menu-background: white;
     --x-menu-border: .1em #D0D7DE solid;
     --x-menu-shadow: rgba(0, 0, 0, 0.11) 0px 12px 25px 0px, rgba(0, 0, 0, 0.09) 0px 2.4px 7px 0px;
     --x-menu-border-radius: .25em;
     --x-menu-item-border-radius: .25em;
     --x-menu-item-tab-selected-border: .25em;
+
+    /* x-notice */
+    --x-notice-border-radius: .25em;
+
+    --x-notice-background-info: #F6F6F6;
+    --x-notice-background-warning: #FFF9F5;
+    --x-notice-background-error: #FDF3F4;
+    --x-notice-background-success: #F1FAF1;
+
+    --x-notice-border-info: .075em #D1D1D1 solid;
+    --x-notice-border-warning: .075em #FDCFB4 solid;;
+    --x-notice-border-error: .075em #EEACB2 solid;;
+    --x-notice-border-success: .075em #9FD89F solid;;
+
+    --x-notice-color-info: #5F5F5F;
+    --x-notice-color-warning: #B94A09;
+    --x-notice-color-error: #AF0E1C;
+    --x-notice-color-success: #0E700E;
 
     /* x-page */
     --x-page-padding-top:2em;

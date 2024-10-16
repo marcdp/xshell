@@ -34,24 +34,81 @@
 <!-- template -->
 <template>
 
-    <x-menu class="menu-bar">
-        <x-menuitem label="label1" icon="x-bell" command="something2"></x-menuitem>
-        <x-menuitem icon="x-bell"></x-menuitem>
-        <x-menuitem label="label3">
-            <x-menuitem label="label3.1" icon="x-settings"></x-menuitem>
-            <x-menuitem label="label3.2"></x-menuitem>
-            <x-menuitem label="label3.3 asdf asdf asdfg asdfasdf asdf MARC" >
-                <x-menuitem label="label3.3.1"></x-menuitem>
-                <x-menuitem label="label3.3.2"></x-menuitem>
-            </x-menuitem>
-        </x-menuitem>
-    </x-menu>
+    <x-commandbar>
+        <x-button class="plain" label="hello"></x-button>
+        <x-button class="plain" label="show"></x-button>
+        <x-button class="plain" label="by"></x-button>
+        <x-button class="plain" label="by" icon="x-bell"></x-button>
+        <x-button class="plain" icon="x-bell"></x-button>
+        <x-divider></x-divider>
+        <x-button class="plain" icon="x-bell" label="More options"></x-button>
+        <x-divider></x-divider>
+        <x-button class="plain" icon="x-settings"></x-button>
+        <x-button class="plain" label="Lorem Ipsum"></x-button>
+        <x-button class="plain" label="Hello world 11">
+            <x-contextmenu class="plain">
+                <x-menuitem class="plain" label="Subopció 1" command="aaaaa"></x-menuitem>
+                <x-menuitem class="plain" label="Subopció 2"></x-menuitem>
+                <x-menuitem class="plain" label="Subopció 3"></x-menuitem>
+                <x-menuitem class="plain" label="label3.3 asdf asdf  asdf MARC" >
+                    <x-menuitem label="label3.3.1"></x-menuitem>
+                    <x-menuitem label="label3.3.2"></x-menuitem>
+                </x-menuitem>
+            </x-contextmenu>
+        </x-button>
+        <x-button class="plain" label="Hello world 22" command="mycommand">
+            <x-contextmenu class="plain">
+                <x-menuitem class="plain" label="Subopció 1" command="aaaaa"></x-menuitem>
+                <x-menuitem class="plain" label="Subopció 2"></x-menuitem>
+                <x-menuitem class="plain" label="Subopció 3"></x-menuitem>
+                <x-menuitem class="plain" label="label3.3 asdf asdf  asdf MARC" >
+                    <x-menuitem label="label3.3.1"></x-menuitem>
+                    <x-menuitem label="label3.3.2"></x-menuitem>
+                </x-menuitem>
+            </x-contextmenu>
+        </x-button>
 
-    <br>
+        <x-button slot="toolbar" class="plain" icon="x-settings"></x-button>
+    </x-commandbar>
+
+    <hr/>
+
+    <x-spinner></x-spinner>
+
+    <x-accordion>
+        <x-accordion-panel label="First panel">
+            
+            <div slot="toolbar">HELL</div>
+
+            This is the content of first panel
+        </x-accordion-panel>
+        <x-accordion-panel label="Second panel">
+            222222222222
+        </x-accordion-panel>
+        <x-accordion-panel label="Third panel">
+            3333333333333  33333333333333
+            Lore <br/>
+            asdfasdf asdf asdf asd
+            Lore <br/>
+            asdfasdf asdf asdf asdLore <br/>
+            asdfasdf asdf asdf asdLore <br/>
+            asdfasdf asdf asdf asdLore <br/>
+            asdfasdf asdf asdf asd
+            ad asd
+             asd asd
+        </x-accordion-panel>
+    </x-accordion>
+    <br/>
+
+    <x-notice type="info" label="This is a label" message="this is a message"></x-notice>
+    <x-notice type="warning" label="This is a label" message="this is a message"></x-notice>
+    <x-notice type="error" label="This is a label" message="this is a message"></x-notice>
+    <x-notice type="success" label="This is a label" message="this is a message"></x-notice>
 
     <x-menu class="menu-plain">
         <x-menuitem label="label1" icon="x-bell" command="something2" checked></x-menuitem>
         <x-menuitem label="label2 asdfasd flajsdfh laskjdhf alskjfh alksjd asf a MARC"></x-menuitem>
+        <x-divider></x-divider>
         <x-menuitem label="label3">
             <x-menuitem label="label3.1" icon="x-settings"></x-menuitem>
             <x-menuitem label="label3.2"></x-menuitem>
@@ -76,6 +133,30 @@
         </x-tab>
     </x-tabs>
  
+    <x-divider></x-divider>
+
+    <x-card>
+        this is the body of the card        
+        <p slot="footer">
+            this is the footer of the card
+        </p>
+    </x-card>
+
+    <hr/>
+    <x-button class="dropdown" label="Hello world 11" command="xxxx">
+        <x-contextmenu class="plain">
+            <x-menuitem class="plain" label="Subopció 1" command="aaaaa"></x-menuitem>
+            <x-menuitem class="plain" label="Subopció 2"></x-menuitem>
+            <x-menuitem class="plain" label="Subopció 3"></x-menuitem>
+            <x-menuitem class="plain" label="Subopció 4"></x-menuitem>
+        </x-contextmenu>
+    </x-button>
+    <x-button label="Hola" _pressed></x-button>
+    <x-button icon="x-settings" label="Hello world 1" message="This is a sub message"></x-button>
+    <x-button class="important" icon="x-settings" label="Hello world 2"></x-button>
+    <x-button class="plain" label="Hello world 3"></x-button>
+    <hr/>
+
     {{ state.counter }}
     <p>
         This is the help page:     
@@ -84,8 +165,8 @@
         <li><x-anchor href="login.html">Help</x-anchor></li>
         <li><x-anchor href="login.html" command="something">Help something</x-anchor></li>
     </ul>       
-    <x-button command="inc">inc</x-button>
-    <x-button command="dec">dec</x-button>
+    <x-button command="inc" label="inc"></x-button>
+    <x-button command="dec" label="dec"></x-button>
 
     <div x-on:click="something">Show dialog</div>
 
