@@ -15,7 +15,7 @@ export default XElement.define("x-page-header", {
         div button {border:none; height:2.5em; border-radius:var(--x-button-border-radius); padding:0; aspect-ratio:1; background:var(--x-background-page); display:flex; align-items:center; justify-content:center}
         div button:hover {cursor: pointer; background:var(--x-background-gray);}
         div button:active {background:var(--x-background-x-gray);}
-        div button:hover x-icon {fill:var(--x-font-color);}
+        div button:hover x-icon {fill:var(--x-text-color);}
         div button x-icon {}
 
         :host(.hide-close) div button {display:none;}

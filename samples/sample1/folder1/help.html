@@ -26,6 +26,13 @@
             } else if (command == "dec") {
                 //dec counter
                 this.state.counter--;
+
+            } else if (command == "show-popover") {
+                //show-popover
+                let button = this.querySelector("x-button:first-child");
+                let popover = this.querySelector("x-popover");
+                popover.show({target:button});
+                
             }
         }
     };
@@ -33,6 +40,48 @@
 
 <!-- template -->
 <template>
+
+    <x-menu style="width:22em">
+        <x-menuitem label="label1" icon="x-bell" command="something2" ></x-menuitem>
+        <x-menuitem label="label2  alskjfh alksjd asf a MARC" command="" checked></x-menuitem>
+        <x-divider></x-divider>
+        <x-menuitem class="childs-inline" label="label3">
+            <x-menuitem label="label3.1" icon="x-settings" command="something2"></x-menuitem>
+            <x-menuitem label="label3.2" href="login.html"></x-menuitem>
+        </x-menuitem>
+        <x-menuitem label="More options"></x-menuitem>
+        <x-menuitem label="label3">
+            <x-menuitem label="label3.1" icon="x-settings"></x-menuitem>
+            <x-menuitem label="label3.2"></x-menuitem>
+        </x-menuitem>
+    </x-menu>
+
+    <hr/>
+
+    <x-wizard>
+        <x-wizard-panel label="First tab" message="Lorem ipsum asldfkjh aslkjfa hlfkja sdf asdf sa">
+            This is the content of first tab
+        </x-wizard-panel>
+        <x-wizard-panel label="Second tab" icon="x-bell" message="ASdasd asd">
+            Second content
+        </x-wizard-panel>
+        <x-wizard-panel label="Third tab">
+            Third content
+        </x-wizard-panel>
+    </x-wizard>
+
+    <x-divider></x-divider>
+
+    <x-button label="Show popover" command="show-popover"></x-button>
+
+    <x-popover>
+        This is the popup content
+    </x-popover>
+
+    <x-badge value="123"></x-badge>
+    <x-badge value="999+"></x-badge>
+
+    <x-badge value="2" class="plain"></x-badge>
 
     <x-commandbar>
         <x-button class="plain" label="hello"></x-button>
@@ -77,9 +126,23 @@
 
     <x-accordion>
         <x-accordion-panel label="First panel">
-            
-            <div slot="toolbar">HELL</div>
-
+            <div slot="toolbar">
+                <x-commandbar>
+                    <x-button class="plain" label="by" icon="x-bell"></x-button>
+                    <x-button class="plain" icon="x-bell"></x-button>
+                    <x-button class="plain" label="Hello world 11">
+                        <x-contextmenu class="plain">
+                            <x-menuitem class="plain" label="Subopció 1" command="aaaaa"></x-menuitem>
+                            <x-menuitem class="plain" label="Subopció 2"></x-menuitem>
+                            <x-menuitem class="plain" label="Subopció 3"></x-menuitem>
+                            <x-menuitem class="plain" label="label3.3 asdf asdf  asdf MARC" >
+                                <x-menuitem label="label3.3.1"></x-menuitem>
+                                <x-menuitem label="label3.3.2"></x-menuitem>
+                            </x-menuitem>
+                        </x-contextmenu>
+                    </x-button>
+                </x-commandbar>
+            </div>
             This is the content of first panel
         </x-accordion-panel>
         <x-accordion-panel label="Second panel">
@@ -105,7 +168,7 @@
     <x-notice type="error" label="This is a label" message="this is a message"></x-notice>
     <x-notice type="success" label="This is a label" message="this is a message"></x-notice>
 
-    <x-menu class="menu-plain">
+    <x-menu class="plain">
         <x-menuitem label="label1" icon="x-bell" command="something2" checked></x-menuitem>
         <x-menuitem label="label2 asdfasd flajsdfh laskjdhf alskjfh alksjd asf a MARC"></x-menuitem>
         <x-divider></x-divider>
@@ -129,7 +192,7 @@
             Second content
         </x-tab>
         <x-tab label="Third tab">
-            Third content
+            <x-page src="/folder1/message.html" loading="lazy"></x-page>
         </x-tab>
     </x-tabs>
  
@@ -143,7 +206,15 @@
     </x-card>
 
     <hr/>
-    <x-button class="dropdown" label="Hello world 11" command="xxxx">
+    <x-button label="Hello world 11" command="xxxx">
+        <x-contextmenu class="plain">
+            <x-menuitem class="plain" label="Subopció 1" command="aaaaa"></x-menuitem>
+            <x-menuitem class="plain" label="Subopció 2"></x-menuitem>
+            <x-menuitem class="plain" label="Subopció 3"></x-menuitem>
+            <x-menuitem class="plain" label="Subopció 4"></x-menuitem>
+        </x-contextmenu>
+    </x-button>
+    <x-button label="Hello world 11" >
         <x-contextmenu class="plain">
             <x-menuitem class="plain" label="Subopció 1" command="aaaaa"></x-menuitem>
             <x-menuitem class="plain" label="Subopció 2"></x-menuitem>
@@ -157,10 +228,15 @@
     <x-button class="plain" label="Hello world 3"></x-button>
     <hr/>
 
+    <x-button class="" label="Hello world 3"></x-button>
+    <x-button class="important" icon="x-settings" label="Hello world 2"></x-button>
+
     {{ state.counter }}
+
     <p>
         This is the help page:     
-    </p>    
+    </p>
+
     <ul>
         <li><x-anchor href="login.html">Help</x-anchor></li>
         <li><x-anchor href="login.html" command="something">Help something</x-anchor></li>

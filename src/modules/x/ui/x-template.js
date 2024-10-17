@@ -383,7 +383,8 @@ class XTemplateInstance {
             let el = document.createElement(vNode.tag);
             for (let attr in vNode.attrs) {
                 let attrValue = vNode.attrs[attr];
-                if (typeof (attrValue) == "boolean") {
+                if (attrValue == null) {
+                } else if (typeof (attrValue) == "boolean") {
                     if (attrValue) {
                         el.setAttribute(attr, "");
                     }
@@ -513,7 +514,6 @@ class XTemplateInstance {
                 //slot
             } else {
                 //diff node
-                if (!parent) debugger;
                 let child = parent.childNodes[vNodeNew.options.index + inew];
                 this._diffDomElement(vNodeOld, vNodeNew, child, level + 1);
             }
@@ -534,6 +534,8 @@ class XTemplateInstance {
                     } else {
                         element.removeAttribute(attr);
                     }
+                } else if (attrValue == null) {
+                    debugger;
                 } else {
                     element.setAttribute(attr, attrValue);
                 }

@@ -12,7 +12,7 @@ export default XElement.define("x-spinner", {
             width: 1em;
             aspect-ratio: 1;
             border-radius: 50%;
-            border: .1em solid var(--x-color-main);
+            border: .1em solid var(--x-color-primary);
             animation:
                 l20-1 0.8s infinite linear alternate,
                 l20-2 1.6s infinite linear;

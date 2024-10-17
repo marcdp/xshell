@@ -32,7 +32,7 @@ export default XElement.define("x-notice", {
             <div class="buttons">
                 <slot></slot>
             </div>
-            <x-button class="plain" x-on:command="close" icon="x-close"></x-button>
+            <x-button class="plain no-hover" x-on:click="close" icon="x-close"></x-button>
         </div>
     `,
     state: {

@@ -4,7 +4,7 @@ import XElement from "../ui/x-element.js";
 export default XElement.define("x-accordion-panel", {
     style: `
         :host {display:block;}
-        .header {display:flex; height:2.5em; align-items:center; padding:0 .5em 0 1em; cursor:pointer;}
+        .header {display:flex; height:2.5em; align-items:center; padding:0 .5em 0 1em; cursor:pointer; user-select: none;}
         .header > x-icon {margin-right:.5em; transition: transform var(--x-transition-duration);}
         .header > span {flex:1}
         .header > .toolbar {margin-right:.5em;}

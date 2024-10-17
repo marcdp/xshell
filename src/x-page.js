@@ -8,7 +8,7 @@ class XPage extends HTMLElement {
     
     //static
     static get observedAttributes() { 
-        return ["src", "type"]; 
+        return ["src", "type", "loading"]; 
     }
 
     //fields
@@ -20,6 +20,8 @@ class XPage extends HTMLElement {
     _result = null;
     _label = "";
     _icon = "";
+    _loading = "";
+    _loadingObserver = null;
 
     //ctor
     constructor() {
@@ -65,10 +67,30 @@ class XPage extends HTMLElement {
     attributeChangedCallback(name, oldValue, newValue) {
         if (name == "src") this.src = newValue;
         if (name == "type") this.type = newValue;
+        if (name == "loading") this.loading = newValue;
     }
     connectedCallback() {
         this._connected = true;
-        if (this._src && this._connected) this.loadPage();
+        if (this.loading == "lazy") {
+            //intersection observer
+            const onIntersection = (entries, observer) => {
+                entries.forEach(entry => {
+                  if (entry.isIntersecting) {
+                    this.loadPage();
+                    observer.disconnect(); // Stop observing once loaded
+                  }
+                });
+            };
+            // set up the IntersectionObserver
+            this._loadingObserver = new IntersectionObserver(onIntersection, {
+                rootMargin: '100px' // start loading just before it comes into view
+            });
+            // start observing the element
+            this._loadingObserver.observe(this);
+
+        } else if (this._src) {
+            this.loadPage();
+        }
     }
     disconnectedCallback() {
         this._connected = false;
@@ -76,8 +98,8 @@ class XPage extends HTMLElement {
 
     //methods
     onCommand(command, args) {  
-        //TODO ...
-        debugger;
+        if (command == "load") {
+        }
     }
     async showPage({url}) {
         await xshell.showPage({url, sender:this});
@@ -99,9 +121,8 @@ class XPage extends HTMLElement {
         this._label = "";
         this._icon = "";
         this._status = "loading";
-        this.classList.add("loading");
         //search
-        let searchParams = new URLSearchParams(this.src.indexOf("?") != -1 ? this.src.substring(this.src.indexOf("?")+1) : "");
+        let searchParams = new URLSearchParams(this.src.indexOf("?") != -1 ? this.src.substring(this.src.indexOf("?") + 1) : "");
         //class
         let className = "";
         if (searchParams.get("x-class")) className = searchParams.get("x-class");
@@ -126,6 +147,14 @@ class XPage extends HTMLElement {
                 dialog.showModal();
             }
         }
+        //loading
+        let loadingComponentName = xshell.config.ui.defaults.pageLoading;
+        await loader.load("component:" + loadingComponentName);
+        let loadingComponent = document.createElement(loadingComponentName);
+        loadingComponent.setAttribute("type", this._type);
+        (dialog || this).appendChild(loadingComponent);
+        //await new Promise(r => setTimeout(r, 1000));
+        //debugger
         //load html page
         let src = this.src;        
         if (src.indexOf("://") == -1) src = xshell.config.navigator.base + src;
@@ -135,7 +164,7 @@ class XPage extends HTMLElement {
         if (!response.ok) {
             //error
             this._status = "error"; 
-            this.classList.remove("loading");
+            loadingComponent.parentNode.removeChild(loadingComponent);
             this._showError(response.status, response.statusText, "", this);
         } else if (contentType.indexOf("text/html")!=-1) {
             //html page
@@ -215,7 +244,9 @@ class XPage extends HTMLElement {
             if (breadcrumb) this.breadcrumb = breadcrumb;
             //set
             this._status = "loaded"; 
-            this.classList.remove("loading");
+            if (loadingComponent.parentNode) {
+                loadingComponent.parentNode.removeChild(loadingComponent);
+            }
             //load
             this._raisePageLoadEvent();
         }
