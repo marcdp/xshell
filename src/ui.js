@@ -8,7 +8,8 @@ class UI {
     _config = {
         defaults:{
             pageHandler: "",
-            errorHandler: ""
+            errorHandler: "",
+            pageLoading:"x-page-loading"
         },
         layouts: {
             app: {

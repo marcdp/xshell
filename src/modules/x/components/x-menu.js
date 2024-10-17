@@ -13,6 +13,15 @@ export default XElement.define("x-menu", {
             border:var(--x-menu-border); 
         }
         
+        :host(.plain){
+            width:unset;
+            padding:0;
+            box-shadow:none;
+            border:none;
+            margin-left:-.4em;
+            margin-right:-.4em;
+            
+        }
         :host(.tabs) {
             display:flex;
             width:unset;

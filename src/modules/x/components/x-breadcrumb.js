@@ -3,7 +3,7 @@ import XElement from "../ui/x-element.js";
 // definition
 export default XElement.define("x-breadcrumb", {
     style: `
-        :host {display:block; border:1px red solid}
+        :host {display:block;}
         ul {margin:0; padding:0}
         li {display:inline}
         li + li:before {content: ' / '}

@@ -132,15 +132,19 @@ class XElement extends HTMLElement {
             }
         }
     }
+    preRender() {}
     render() {
-        if (this._renderTimeoutId) {
         //cancel pending render
-        window.cancelAnimationFrame(this._renderTimeoutId);
+        if (this._renderTimeoutId) {
+            window.cancelAnimationFrame(this._renderTimeoutId);
             this._renderTimeoutId = 0;
         };
         //render
+        this.preRender();
         this._xtemplateInstance.render();
+        this.postRender();
     }
+    postRender(){}
 
 
     //static
@@ -205,7 +209,6 @@ class XElement extends HTMLElement {
                 }
             }
             for(let propName of propNames) {
-                //if (propName == "expanded") debugger;
                 Object.defineProperty(result.prototype, propName, {
                     get() {
                         return this.state[propName];
