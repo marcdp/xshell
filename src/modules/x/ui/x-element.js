@@ -41,7 +41,12 @@ class XElement extends HTMLElement {
         this._xtemplateInstance = this.constructor.prototype.xtemplate.createInstance(
             rawState,
             (command, event) => {
+                //handler
                 self.onCommand(command, event);
+            }, 
+            () => {
+                //invalidate
+                self.invalidate();
             }, 
             shadowRoot
         );

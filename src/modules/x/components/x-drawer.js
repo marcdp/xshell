@@ -35,7 +35,7 @@ export default XElement.define("x-drawer", {
             border-radius: var(--x-drawer-border-radius);
             padding: var(--x-drawer-padding);
             overflow-y:auto;
-            transform:translateX(100%);
+            transform:translateX(110%);
             transition: transform var(--x-transition-duration);
             --desp: 100%;
         }
@@ -101,7 +101,7 @@ export default XElement.define("x-drawer", {
                     this.render();
                     setTimeout(() => {
                         this.state.expanded = false;                    
-                    }, 100);
+                    }, 250);
                 }
                 
             }

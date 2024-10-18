@@ -4,7 +4,7 @@ import XElement from "../ui/x-element.js";
 export default XElement.define("x-tabs", {
     style: `
         :host {bdisplay:block;}
-        x-menu {margin-bottom:1em;}
+        x-menu {margin-bottom:1.5em;}
 
         ::slotted(x-tab) {
             display:none;
