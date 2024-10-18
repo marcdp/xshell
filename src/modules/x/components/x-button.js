@@ -4,16 +4,16 @@ import XElement from "../ui/x-element.js";
 export default XElement.define("x-button", {
     style: `
         :host {position:relative; display:inline-flex;}
-        :host > div {display:flex; }
+        :host > div {display:flex; flex:1;  }
         :host div.button {border: .1em var(--x-background-xx-gray) solid; display:inline-block; padding:.5em .75em .5em .75em; border-radius:var(--x-input-border-radius); user-select: none; display:inline-flex; position:relative; 
-        align-items:baseline;
+            align-items:baseline; flex:1;justify-content:center;
         }
         :host div.button:hover {background:var(--x-background-gray); cursor:pointer; }
         :host div.button:active {background: var(--x-background-x-gray);}
         :host div.button > x-icon {font-size:.9em; align-self:center; }
         :host div.button > x-icon[icon] + div {padding-left:.5em;}
         :host div.button > div {display:flex; flex-direction:column; }
-        :host div.button > div span.label {}
+        :host div.button > div span.label {white-space:nowrap; }
         :host div.button > div span.message {font-size:var(--x-font-size-small); color:var(--x-text-color-gray); }
         :host div.button[has-more] {border-right:0; border-radius:var(--x-input-border-radius) 0 0 var(--x-input-border-radius);}
         :host div.button[expanded] {background:var(--x-background-gray)!important;}
@@ -41,7 +41,7 @@ export default XElement.define("x-button", {
     `,
     template: `
         <div>
-            <div class="button" tabindex="1" x-attr:expanded="(state.expanded && !state.command ? true : false)" x-on:click="command" x-attr:has-more="(state.hasChilds && state.command ? true : false)">
+            <div class="button" tabindex="1" x-attr:expanded="(state.expanded && !state.command ? true : false)" x-on:click="command" x-attr:has-more="(state.hasChilds && state.command ? true : false)" part="button">
                 <x-icon x-if="state.icon" x-attr:icon="state.icon"></x-icon>
                 <div x-if="state.label">
                     <span class="label"   x-html="state.label"></span>

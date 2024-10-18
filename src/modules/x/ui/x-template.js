@@ -55,7 +55,7 @@ class XTemplate {
         });
         code.push("];");
         code = code.join("\n");
-        this._render = new Function("state", "handler", "utils", "renderCount", code);
+        this._render = new Function("state", "handler", "invalidate", "utils", "renderCount", code);
     }
     _compileTemplateToJsRecursive(name, node, index, js, level) {
         let indent = " ".repeat((level + 1) * 4);
@@ -148,15 +148,18 @@ class XTemplate {
                 } else if (attr.name == "x-if") {
                     //...<span x-if="state.value > 0">greather than 0</span>...
                     jsLine[0] = indent + "...((_ifs.c" + level + " = (" + attr.value + ")) ? [";
-                    jsPostLine.push("] : []),");
+                    //jsPostLine.push("] : []),");
+                    jsPostLine.push("] : [utils.createVDOM(\"#comment\", null, null, null, {index: " + index + "}, 'x-if')]),");
                 } else if (attr.name == "x-elseif") {
                     //...<span x-elseif="state.value < 0">less than 0</span>...
                     jsLine[0] = indent + "...(_ifs.c" + level + " ? [] : (_ifs.c" + level + " = (" + attr.value + ")) ? [";
-                    jsPostLine.push("] : []),");
+                    //jsPostLine.push("] : []),");
+                    jsPostLine.push("] : [utils.createVDOM(\"#comment\", null, null, null, {index: " + index + "}, 'x-elseif')]),");
                 } else if (attr.name == "x-else") {
                     //...<span x-else>is 0</span>...
                     jsLine[0] = indent + "...(!_ifs.c" + level + " ? [";
-                    jsPostLine.push("] : []),");
+                    //jsPostLine.push("] : []),");
+                    jsPostLine.push("] : [utils.createVDOM(\"#comment\", null, null, null, {index: " + index + "}, 'x-else')]),");
                 } else if (attr.name == "x-for") {
                     //...<li x-for="item in state.items" x-key="name">{{item.name + '(' + item.count + ') '}}</li>...
                     let keyName = node.getAttribute("x-key");
@@ -203,7 +206,7 @@ class XTemplate {
                             propertyName = "checked";
                         } else if (type == "radio") {
                             propertyName = "checked";
-                            propValue += "=='" + node.getAttribute("value") + "'";
+                            propValue = "function() {return state.value == this.attrs.value}";
                         }
                     } else if (nodeName == "select") {
                     } else if (nodeName == "textarea") {
@@ -226,8 +229,7 @@ class XTemplate {
                     } else if (nodeName == "select") {
                     } else if (nodeName == "textarea") {
                     }
-                    events.push("'" + eventName + "': (event) => { " + propValue + " = event.target." + propertyName + "; handler.invalidate(); }");
-
+                    events.push("'" + eventName + "': (event) => { " + propValue + " = event.target." + propertyName + "; invalidate(); }");
                 } else if (attr.name == "x-once") {
                     //x-once: only render once
                     jsLine[0] = indent + "...((renderCount==0) ? [";
@@ -274,8 +276,8 @@ class XTemplate {
     }
 
     //public methods
-    createInstance(state, handler, element) {
-        return new XTemplateInstance(this, state, handler, element);
+    createInstance(state, handler, invalidate, element) {
+        return new XTemplateInstance(this, state, handler, invalidate, element);
     }
 
 }
@@ -333,18 +335,20 @@ class XTemplateInstance {
     _state = null;
     _element = null;
     _handler = null;
+    _invalidate = null;
 
     //work fields
     _renderCount = 0;
     _vdom = null;
 
     //ctor
-    constructor(xtemplate, state, handler, element) {
+    constructor(xtemplate, state, handler, invalidate, element) {
         this._xtemplate = xtemplate;
         this._state = state;
         this._element = element;
         this._element.adoptedStyleSheets = xtemplate.styleSheets;
         this._handler = handler;
+        this._invalidate = invalidate;
     }
 
     //props
@@ -353,7 +357,7 @@ class XTemplateInstance {
     // methods
     render() {
         //render vdom
-        let vdom = this._xtemplate.render(this._state, this._handler, utils, this._renderCount++);
+        let vdom = this._xtemplate.render(this._state, this._handler, this._invalidate, utils, this._renderCount++);
         //render vdom to dom
         if (this._vdom == null) {
             let index = 0;
@@ -394,6 +398,9 @@ class XTemplateInstance {
             }
             for (let prop in vNode.props) {
                 let propValue = vNode.props[prop];
+                if (typeof(propValue) == "function") {
+                    propValue = propValue.call(vNode);
+                }
                 el[prop] = propValue;
             }
             for (let event in vNode.events) {
@@ -481,12 +488,12 @@ class XTemplateInstance {
             } else if (vNodeOld.options.index < vNodeNew.options.index) {
                 //remove old node
                 let comment = document.createComment("");
-                parent.replaceChild(comment, parent.childNodes[vNodeOld.options.index]);
+                parent.replaceChild(comment, parent.childNodes[vNodeOld.options.index + inew]);
                 inew--;
             } else if (vNodeOld.options.index > vNodeNew.options.index) {
                 //replace node
                 let element = this._createDomElement(vNodeNew);
-                parent.replaceChild(element, parent.childNodes[vNodeNew.options.index]);
+                parent.replaceChild(element, parent.childNodes[vNodeNew.options.index + inew]);
                 iold--;
             } else if (vNodeOld.tag == "#comment" && vNodeOld.options.forType == "key" && vNodeNew.tag == "#comment" && vNodeNew.options.forType == "key") {
                 //for loop by key
@@ -507,9 +514,13 @@ class XTemplateInstance {
                 let newStartIndex = i + inew;
                 let newEndIndex = newStartIndex;
                 while (vNodesNew[newEndIndex].children != 'x-for-end') newEndIndex++;
-                this._diffDomListByPosition(vNodesOld, oldStartIndex, oldEndIndex, vNodesNew, newStartIndex, newEndIndex, parent, level + 1);
+                this._diffDomListByPosition(vNodesOld, oldStartIndex, oldEndIndex, vNodesNew, newStartIndex, newEndIndex, parent, -999, level + 1);
                 iold += oldEndIndex - oldStartIndex;
                 inew += newEndIndex - newStartIndex;
+            } else if (vNodeOld.tag != vNodeNew.tag) {
+                //replace node
+                let element = this._createDomElement(vNodeNew);
+                parent.replaceChild(element, parent.childNodes[vNodeNew.options.index + inew]);
             } else if (vNodeOld.tag == "slot" && vNodeNew.tag == "slot") {
                 //slot
             } else {
@@ -551,6 +562,9 @@ class XTemplateInstance {
         let validProps = [];
         for (let prop in vNodeNew.props) {
             let propValue = vNodeNew.props[prop];
+            if (typeof(propValue)=="function") {
+                propValue = propValue.call(vNodeNew);
+            }
             if (propValue != vNodeOld.props[prop]) {
                 element[prop] = propValue;
             }
@@ -571,24 +585,25 @@ class XTemplateInstance {
             }
         }
     }
-    _diffDomListByPosition(vNodesOld, oldStartIndex, oldEndIndex, vNodesNew, newStartIndex, newEndIndex, parent, level) {
+    _diffDomListByPosition(vNodesOld, oldStartIndex, oldEndIndex, vNodesNew, newStartIndex, newEndIndex, parent, parentBaseIndex, level) {
         //diff by position
         let oldLength = oldEndIndex - 1 - oldStartIndex;
         let newLength = newEndIndex - 1 - newStartIndex;
+        let parentChildrenDesp = 0;
         for (let i = 0; i < newLength; i++) {
             let vNodeOld = vNodesOld[oldStartIndex + 1 + i];
             if (oldStartIndex + 1 + i >= oldEndIndex) vNodeOld = null;
             let vNodeNew = vNodesNew[newStartIndex + 1 + i];
             if (vNodeOld == null) {
                 let element = this._createDomElement(vNodeNew);
-                parent.insertBefore(element, parent.childNodes[newStartIndex + 1 + i]);
+                parent.insertBefore(element, parent.childNodes[newStartIndex + 1 + i + parentChildrenDesp]);
             } else {
-                let element = parent.childNodes[newStartIndex + 1 + i];
+                let element = parent.childNodes[newStartIndex + 1 + i + parentChildrenDesp];
                 this._diffDomElement(vNodeOld, vNodeNew, element, level + 1);
             }        
         }
         while (newLength < oldLength) {
-            let element = parent.childNodes[newStartIndex + 1 + newLength];
+            let element = parent.childNodes[newStartIndex + 1 + newLength + parentChildrenDesp];
             parent.removeChild(element);
             oldLength--;
         }        

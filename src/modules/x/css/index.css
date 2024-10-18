@@ -60,6 +60,7 @@
 
     /* x-button */
     --x-button-border-radius: .25em;
+    --x-button-width-wide: 8em;
     
     /* x-card */
     --x-card-border-radius: .4em;
@@ -89,7 +90,6 @@
     --x-drawer-padding: 1.5em;
     --x-drawer-backdrop: rgba(0,0,0,.2);
     
-
     /* x-font */
     --x-font-family:"Segoe UI",-apple-system, BlinkMacSystemFont, Roboto, "Helvetica Neue", sans-serif;
     --x-font-size-x-small:10px;
@@ -100,7 +100,15 @@
     --x-font-size-title:21px;
 
     /* input */
-    --x-input-border-radius: .35em;
+    --x-input-color: #101010;
+    --x-input-color-placeholder: gray;
+    --x-input-font-family: var(--x-font-family);
+    --x-input-font-size: var(--x-input-font-size);
+    --x-input-background: white;
+    --x-input-border-radius: .25em;
+    --x-input-border: 1px #D1D1D1 solid;
+    --x-input-border-bottom: 1px #575757 solid;
+    --x-input-border-focus: 1px #B3B3B3 solid;
     
     /* x-menu */
     --x-menu-width: 22em;

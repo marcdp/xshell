@@ -8,7 +8,7 @@
         async onCommand(command, args) {
             if (command == "load") {
                 //load
-                this.icon = "x-bell";
+                this.state.counter = args.counter || 0;
                 this.label = "Ajudaaaaaa: " + this.state.counter;
                 
             } else if (command == "something") {
@@ -40,6 +40,71 @@
 
 <!-- template -->
 <template>
+
+
+    <x-card style="max-width:60em;">
+        <x-form>
+            <x-form-header>
+                <h2>This is the title</h2>
+                <p>Lorem Ipsum es simplemente el texto de relleno de las imprentas y archivos de texto. y más recientemente con software de autoedición, como por ejemplo Aldus PageMaker, el cual incluye versiones de Lorem Ipsum.</p>
+            </x-form-header>
+            <x-form-body>
+                <x-tabs>
+                    <x-tab label="Basic">
+                        <x-datafields columns="4">
+                            <x-datafield label="Field 1"    datafield="f1" type="text" required></x-datafield>
+                            <x-datafield label="Text"       datafield="f2" type="text"></x-datafield>
+                            <x-datafield label="Password"   datafield="f3" type="password" columns="2" placeholder="This is a placeholder"></x-datafield>
+                            <x-datafield label="Number 3"   datafield="f4" type="number"></x-datafield>
+                            <x-datafield label="Date"       datafield="f5" type="date"></x-datafield>
+                            <x-datafield label="Datetime"   datafield="f6" type="datetime-local"></x-datafield>
+                            <x-datafield label="Time"       datafield="f7" type="time"></x-datafield>
+                            <x-datafield label="Week"       datafield="f8" type="week"></x-datafield>
+                            <x-datafield label="Month"      datafield="f9" type="month"></x-datafield>
+                            <x-datafield label="Url"        datafield="f10" type="url"></x-datafield>
+                            <x-datafield label="Email"      datafield="f11" type="email"></x-datafield>
+                            <x-datafield label="Tel"        datafield="f12" type="tel"></x-datafield>
+                            <x-datafield label="Checkbox"   datafield="f13" type="checkbox" label-secondary="This is a detail" value=""></x-datafield>
+                            <x-datafield label="Color"      datafield="f14" type="color" value="#FF0000"></x-datafield>
+                            <!--<x-datafield label="Radio"      datafield="f15" type="radio" label-secondary="This is a detail"></x-datafield>-->
+                            <x-datafield label="Range"      datafield="f16" type="range"></x-datafield>
+                            <x-datafield label="File"       datafield="f17" type="file"></x-datafield>
+                            <x-datafield label="Select 2"   datafield="f18" type="select" value="b" domain="a=Anasd asd as|b=Lorem ipsum" required></x-datafield>
+                            <x-datafield label="Radios 2"   datafield="f19" type="radios" value="b" domain="a=Anasd asd as|b=Lorem ipsum"></x-datafield>
+                            <x-datafield label="Checks"     datafield="f20" type="checkboxes" domain="a=aaaa|b=bbbbb|c=Cacasc asd asd as"></x-datafield>
+                            <x-datafield label="Textarea"   datafield="f21" type="textarea"></x-datafield>
+                            <x-datafield label="Picker"     datafield="f21" type="picker"></x-datafield>
+                            <x-datafield label="Field 1"    datafield="f1"  type="text" required></x-datafield>
+                        </x-datafields>
+                    </x-tab>
+                    <x-tab label="Object">
+                        Lorem Ipsum es simplemente el texto de relleno de las imprentas y archivos de texto. y más recientemente con software de autoedición, como por ejemplo Aldus PageMaker, el cual incluye versiones de Lorem Ipsum.
+                    </x-tab>
+                    <x-tab label="List/Array">
+                        ...
+                    </x-tab>
+                    <x-tab label="Advanced">
+                        ......
+                    </x-tab>
+                </x-tabs>
+            </x.form-body>
+            <x-form-footer>
+                <x-button label="Cancel" command="cancel"></x-button>
+                <x-button label="Save"  class="important" command="save"></x-button>
+            </x-form-footer>
+        </x-form>
+    </x-card>
+
+    <datalist id="browsers">
+        <option value="Chrome"></option>
+        <option value="Firefox"></option>
+        <option value="Internet Explorer"></option>
+        <option value="Opera"></option>
+        <option value="Safari"></option>
+        <option value="Microsoft Edge"></option>
+    </datalist>                            
+
+    <br/>
 
     <x-menu style="width:22em">
         <x-menuitem label="label1" icon="x-bell" command="something2" ></x-menuitem>
@@ -241,8 +306,8 @@
         <li><x-anchor href="login.html">Help</x-anchor></li>
         <li><x-anchor href="login.html" command="something">Help something</x-anchor></li>
     </ul>       
-    <x-button command="inc" label="inc"></x-button>
     <x-button command="dec" label="dec"></x-button>
+    <x-button command="inc" label="inc"></x-button>
 
     <div x-on:click="something">Show dialog</div>
 

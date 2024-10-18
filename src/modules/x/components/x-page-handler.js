@@ -85,7 +85,11 @@ class XPageHandler extends HTMLElement  {
     connectedCallback() {
         //template instance
         this._xtemplateInstance = this._xtemplate.createInstance(this._state, (command, args) => {
+            //handler
             this.onCommand(command, args);
+        }, () => {
+            //invalidate
+            debugger;
         }, this);
         //search
         let searchParams = new URLSearchParams(this.src.indexOf("?") != -1 ? this.src.substring(this.src.indexOf("?")+1) : "");

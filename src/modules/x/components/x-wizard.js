@@ -37,6 +37,7 @@ export default XElement.define("x-wizard", {
 
         :host .body {padding:1em;}
         :host .footer {text-align:right;}
+        :host .footer x-button {min-width: var(--x-button-width-wide);}
 
         ::slotted(x-wizard-panel) {
             display:none;
