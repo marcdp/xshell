@@ -4,32 +4,39 @@ import XElement from "../ui/x-element.js";
 // class
 export default XElement.define("x-anchor", {
     style: `
-        :host {}
-        :host(.menuitem) a {text-decoration:none; display:block; flex:1; display:flex;}
+        :host {flex:1; }
+        :host a {display:inline; align-items:center; width:100%;}
+        :host(.menuitem) {}
+        :host(.menuitem) a {display:flex; padding-left:.6em; padding-right:.6em; text-decoration:none;}
     `,
     template: `
-        <a x-attr:href="state.realHref" x-on:click="click">
+        <a  tabindex="1"
+            x-attr:href="state.realHref" 
+            x-on:click="click" 
+            x-on:keydown.enter="click"
+            x-attr:target="state.target"
+            >
             <slot></slot>
         </a>
     `,
     state: {
-        src: "",
-        href: "",
         command: "",
+        href: "",
         realHref: null,
         breadcrumb: false,
         target: "",
-        type: "",
-        for: ""
     },
     settings:{
-        observedAttributes: ["href", "command", "target", "for", "type", "breadcrumb"]
+        observedAttributes: ["href", "command", "target", "breadcrumb"]
     },
     methods: {
         onStateChanged(name) {
             if (name == "href" || name == "breadcrumb") {
                 if (this._connected) this.onCommand("refresh");
             }
+        },
+        focus() {
+            this.shadowRoot.querySelector("a").focus();
         },
         onCommand(command, args) {
             if (command == "load") {
@@ -38,76 +45,54 @@ export default XElement.define("x-anchor", {
 
             } else if (command == "refresh") {
                 //refresh
-                let page = this.page;
-                if (page) {
-                    //let src = this.getSrc();
-                    //src
-                    let src = page.src;
-                    if (this.state.href == "") {
-                        src = "";
-                    } else if (this.href.startsWith("/")) {
-                        src = this.href;
-                    } else {
-                        if (src.indexOf("?")!=-1) src = src.substring(0, src.indexOf("?"));
-                        if (src.indexOf("/")!=-1) {
-                            src = src.substring(0, src.lastIndexOf("/"));
-                        }
-                        src += "/" + this.href;
+                if (this.state.href) {
+                    let xshell = this.xshell;
+                    if (xshell) {
+                        this.state.realHref = xshell.getRealUrl(this.state.href, this.page, {breadcrumb: this.state.breadcrumb, type: this.state.target});
                     }
-                    //breadcrumb
-                    if (this.breadcrumb) {
-                        let breadcrumb = [];
-                        for(let item in page.breadcrumb) {
-                            breadcrumb.push(item);
-                        }
-                        breadcrumb.push({label: page.label + "xxxx", href: page.src});
-                        src += (src.indexOf("?")!=-1 ? "&" : "?") + "x-breadcrumb=" + btoa(JSON.stringify(breadcrumb)).replace(/\+/g,"-").replace(/\//g,"_");
-                    }
-                    this.state.src = src;
-                    //real href
-                    let realHref = null;
-                    if (src == "") {
-                        realHref = null;
-                    } else if (this.state.type == "stack") {
-                        realHref = xshell.getRealUrl(src, page, true);
-                    } else if (this._type == "dialog") {
-                        realHref = xshell.getRealUrl(src, page, true);
-                    } else {
-                        realHref = xshell.getRealUrl(src, page);
-                    }
-                    this.state.realHref = realHref;
-                    if (realHref == null) {
-                        this.render();
-                    }
+                } else {
+                    this.state.realHref = null;
                 }
-
+                
             } else if (command == "click") {
                 //click
-                let event = args;
+                let event = args.event;
                 if (this.state.command) {
                     //command
                     this.dispatchEvent(new CustomEvent("command", {detail: {command: this.state.command, data: this.dataset}, bubbles: true, composed: true}));
                     event.preventDefault();
                     event.stopPropagation();
                     return false;
-                } else if (this.state.for) {
+                } else if (this.state.target) {
                     //target x-page element
-                    var targetPage = this.ownerDocument.getElementById(this.state.for);
-                    if (targetPage) {
-                        targetPage.src = this.state.src;
+                    if (this.state.target == "#stack") {
+                        xshell.showPage({ url: this.state.href, target: "#stack"});
+                        event.preventDefault();
+                        event.stopPropagation();
+                        return false;
+                    } else if (this.state.target == "#dialog") {
+                        xshell.showPage({ url: this.state.href, target: "#dialog"});
+                        event.preventDefault();
+                        event.stopPropagation();
+                        return false;
+                    } else if (this.state.target.startsWith("#")) {
+                        let targetId = this.state.target.substring(1);
+                        var targetPage = this.ownerDocument.getElementById(targetId);
+                        if (targetPage) {
+                            targetPage.src = this.state.href;
+                        }
+                        event.preventDefault();
+                        event.stopPropagation();
+                        return false;
                     }
-                    event.preventDefault();
-                    event.stopPropagation();
-                    return false;
-                } else if (this.page && this.page.type == ""){
-                    //embedded page
-                    this.page.src = this.state.src;
-                    event.preventDefault();
-                    event.stopPropagation();
-                    return false;
-                } else if (this.state.type) {
-                    //main
-                    xshell.showPage({ url: this.state.src, type: this.state.type});
+                } else if (this.state.href && this.page && !this.page.target){
+                    //page
+                    let src = xshell.getRealUrl(this.state.href, this.page, {breadcrumb: this.state.breadcrumb, relative: true});
+                    if (xshell.navigator.pages[0] == this.page) {
+                        xshell.showPage({url: src});
+                    } else {
+                        this.page.src = src;
+                    }
                     event.preventDefault();
                     event.stopPropagation();
                     return false;

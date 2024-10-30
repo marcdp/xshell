@@ -1,5 +1,4 @@
 import loader from "./loader.js";
-import logger from "./logger.js";
 import xshell from "./x-shell.js";
 
 
@@ -13,6 +12,7 @@ class XPage extends HTMLElement {
 
     //fields
     _connected = false;
+    _connectedAt = null;
     _breadcrumb = [];
     _src = "";
     _type = "";
@@ -32,6 +32,11 @@ class XPage extends HTMLElement {
     get src() {return this._src;}
     set src(value) {
         let changed = (this._src != value);
+        if (!value.startsWith("/") && value.indexOf("://") == -1 && this.src) {
+            let aux = this.src;
+            aux = aux.substring(0, aux.lastIndexOf("/"));   
+            value = aux + "/" + value;
+        }
         this._src = value; 
         if (changed){
             this._breadcrumb = [];
@@ -97,25 +102,38 @@ class XPage extends HTMLElement {
     }
 
     //methods
-    onCommand(command, args) {  
+    onCommand(command) {  
         if (command == "load") {
         }
     }
-    async showPage({url}) {
-        await xshell.showPage({url, sender:this});
+    async showPage({url, target}) {
+        await xshell.showPage({url, target, sender:this});
     }
-    async showPageStack({url}) {
-        await xshell.showPageStack({url, sender:this});
-    }
-    async showPageDialog({url}) {
-        return xshell.showPageDialog({url, sender:this});
+    async showDialog({url}) {
+        return xshell.showDialog({url, sender:this});
     }
     close(result) {
         if (result != undefined) this._result = result;
         this._raisePageCloseEvent();
     }
-    async loadPage() {
-        logger.log(`x-page.loadPage('${this.src}')`);        
+    hideAndRemove(){
+        let dialog = this.querySelector(":scope > dialog");
+        if (dialog) {
+            dialog.addEventListener("transitionend", () => {
+                if (this.parentNode){
+                    this.parentNode.removeChild(this);
+                }
+            });
+            dialog.classList.remove("visible");
+        } else {
+            this.parentNode.removeChild(this);
+        }
+    }
+    async loadPage(settings) {
+        console.log(`x-page.loadPage('${this.src}')`);        
+        if (!settings) settings = {
+            useAnimation: (new Date() - xshell.startedAt) > 250
+        };
         //reset
         this._result = null;
         this._label = "";
@@ -143,20 +161,39 @@ class XPage extends HTMLElement {
                         this._raisePageCloseEvent();
                     }
                 });
+                if (!settings.useAnimation) {
+                    dialog.classList.add("visible");
+                }
                 this.appendChild(dialog);
                 dialog.showModal();
             }
         }
         //loading
-        let loadingComponentName = xshell.config.ui.defaults.pageLoading;
+        let loadingComponentName = xshell.config.ui.components.pageLoading;
         await loader.load("component:" + loadingComponentName);
         let loadingComponent = document.createElement(loadingComponentName);
         loadingComponent.setAttribute("type", this._type);
         (dialog || this).appendChild(loadingComponent);
         //await new Promise(r => setTimeout(r, 1000));
         //debugger
+        //animation
+        if (dialog){
+            if (settings.useAnimation) {
+                dialog.classList.add("visible");
+            }
+        }
         //load html page
         let src = this.src;        
+        if (!src.startsWith("/") && src.indexOf("://") == -1) {
+            if (this.parentNode) {
+                let page = this.parentNode.closest("x-page");
+                if (page) {
+                    let aux = page.src;
+                    aux = aux.substring(0, aux.lastIndexOf("/"));   
+                    src = aux + "/" + src;
+                }
+            }
+        }
         if (src.indexOf("://") == -1) src = xshell.config.navigator.base + src;
         let response = await fetch(src);
         let contentType = response.headers.get("Content-Type");
@@ -206,8 +243,12 @@ class XPage extends HTMLElement {
                 container = layoutElement;
             }
             //handler
-            let handler = xshell.config.ui.defaults.pageHandler;
+            let handler = xshell.config.ui.components.pageHandler;
             doc.head.querySelectorAll("meta[name='x-page:handler']").forEach((sender) => { handler = sender.content; });
+            //label
+            if(label) this.label = label;
+            if(icon) this.icon = icon;
+            if (breadcrumb) this.breadcrumb = breadcrumb;
             //init
             if (handler == "") {
                 //init page
@@ -238,23 +279,20 @@ class XPage extends HTMLElement {
                 await instance.init(doc, src);
                 container.appendChild(instance);
             }
-            //init
-            if(label) this.label = label;
-            if(icon) this.icon = icon;
-            if (breadcrumb) this.breadcrumb = breadcrumb;
-            //set
+            //set as loaded
             this._status = "loaded"; 
+            //remove loading
             if (loadingComponent.parentNode) {
                 loadingComponent.parentNode.removeChild(loadingComponent);
             }
-            //load
+            //raise load event
             this._raisePageLoadEvent();
         }
     }    
 
     //private methods
     async _showError(code, message, stacktrace, container) {
-        var name = xshell.config.ui.defaults.errorHandler;
+        var name = xshell.config.ui.components.errorHandler;
         await loader.load("component:" + name);
         let error = document.createElement(name);
         error.setAttribute("code", code);
@@ -280,5 +318,3 @@ customElements.define('x-page', XPage);
 
 //export 
 export default XPage;
-//export { XPageInstance };
-

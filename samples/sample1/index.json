@@ -1,4 +1,5 @@
 {
+    /* app */
     "app": {
         "name":       "sample1",
         "title":      "Sample 1",
@@ -6,6 +7,7 @@
         "copyright":  "",
         "logo":       "./images/logo.svg"
     },
+    /* i18n */
     "i18n": { 
         "culture": "en",
         "strings": {
@@ -13,38 +15,62 @@
             "bye": "adios"
         }
     },
+    /* loader */
     "loader": {
-        // some comments
         "map": [
             {"resource":"icon:material-{name}", "src":"https://material-icons.github.io/material-icons/svg/{name}/outline.svg", "with":{"type":"svg"}}
         ]
-    }, 
-    "logger": {
-        "debug": true
     },
+    /* menus */
     "menus": {
-        "main": [
-            {"label": "File", "icon": "x-file1"},
-            {"label": "Edit", "enabled": false},
-            {"label": "Tools", "childs":[
-                {"label": "Option 1"},
-                {"label": "Option 2"},
-                {"label": "Option 3", "hidden": true}
+        "primary": [
+            {"label": "Login", "href":"/folder1/login.html"},
+            {"label": "Help", "href":"/folder1/help.html"},
+            {"label": "My Services","children":[
+                {"label": "Option 1.1", "href":"/folder1/services.html"},
+                {"label": "Option 1.2", "href":"/folder1/message.html?message=22222"},
+                {"label": "Option 1.3", "children":[
+                    {"label": "Option 1.3.1", "href":"/folder1/message.html?message=1.3.1", "children":[
+                        {"label": "Option"}
+                    ]},
+                    {"label": "Option 1.3.2", "href":"/folder1/message.html?message=1.3.2"},
+                    {"label": "Option 1.3.3", "href":"/folder1/message.html?message=1.3.3"}
+                ]}
+            ]},
+            {"label": "Option 3.2", "href":"/folder1/message.html?message=123123"},
+            {"label": "About", "href":"/about.html"}
+        ],
+        "secondary": [
+            {"label":"", "icon":"x-settings"},
+            {"label":"Hola", "icon":"x-settings"},
+            {"label": "Perico de los Palotes", "children":[
+                {"label":"Lorem ipsum", "icon":"x-settings"},
+                {"label":"Jauokd kagh dg hfka", "icon":"x-settings"},
+                {"label":"Percal kagh"}
             ]}
+        ],
+        "profile": [
+            {"label": "Profile"},
+            {"label": "Settings"},
+            {"label": "-"},
+            {"label": "Logout"}
         ],
         "footer": [
             {"label": "About"},
             {"label": "Copyright"}
         ]
     },
+    /* modules */
     "modules": [
         {"url":"../../src/modules/x/module.json"},
         {"url":"./module.json"}
     ],
+    /* navigator */
     "navigator": {
         "base":  ".",
         "start": "/folder1/login.html"
     },
+    /* user */
     "user": {
         "id": "",
         "username": "",

@@ -5,10 +5,14 @@ export default XElement.define("x-tab", {
     style: `
         :host {display:block;}
     `,
-    state: {
-    },
     template: `
         <slot></slot>
-    `
+    `,
+    state: {
+        label:"",
+    },
+    settings: {
+        observedAttributes: ["label"],
+    },
 });
 

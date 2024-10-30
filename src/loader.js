@@ -1,4 +1,3 @@
-import logger from "./logger.js";
 
 
 // class
@@ -95,7 +94,7 @@ class Loader {
                 return { definition: mapitem, src };
             }
         }
-        logger.error(`loader.resolve('${resource}'): unable to resolve`);
+        console.error(`loader.resolve('${resource}'): unable to resolve`);
         return null;
     }
     resolveSrc(resource) {
@@ -122,7 +121,7 @@ class Loader {
             } else if (!definition.with && window.customElements.get(name)) {
                 this._cache[scheme + ":" + name] = window.customElements.get(name);
             } else if (!cacheItem) {
-                logger.log(`  loader.load('${resource}') ... ${src}`);
+                console.log(`  loader.load('${resource}') ... ${src}`);
                 let promise = (async ()=> {
                     let value = null;
                     //fetch/import

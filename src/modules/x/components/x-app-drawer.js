@@ -1,7 +1,7 @@
 import XElement from "../ui/x-element.js";
 
 // class
-export default XElement.define("x-drawer", {
+export default XElement.define("x-app-drawer", {
     style: `
         :host {
             display:block;

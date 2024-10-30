@@ -1,6 +1,6 @@
+import bus          from "./bus.js";
 import i18n         from "./i18n.js";
 import loader       from "./loader.js";
-import logger       from "./logger.js";
 import ui           from "./ui.js";
 import utils        from "./utils.js";
 
@@ -21,7 +21,6 @@ class XShell extends HTMLElement {
         },
         i18n: i18n.config,
         loader: loader.config,
-        logger: logger.config,
         menus: {},
         modules: [],
         navigator: {
@@ -36,16 +35,18 @@ class XShell extends HTMLElement {
             claims: {}
         }
     };
+    _startedAt = new Date();
 
     //ctor
     constructor() {
         super();
-        logger.log(`x-shell.constructor()`);
+        console.log(`x-shell.constructor()`);
     }
 
     //props
     get config() { return this._config; }
     get navigator() { return this.firstChild; }
+    get startedAt() { return this._startedAt; }
 
 
     //events
@@ -60,7 +61,7 @@ class XShell extends HTMLElement {
         if (typeof(config) == "string") {
             //add config from remote json file
             let url = utils.combineUrls(this.config.navigator.base, config); 
-            logger.log(`x-shell.addConfig('${url}')`);
+            console.log(`x-shell.addConfig('${url}')`);
             let base = url.substring(0, url.lastIndexOf("/"));
             let response = await fetch(url);
             if (response.ok) {
@@ -82,7 +83,7 @@ class XShell extends HTMLElement {
             }
         } else if (typeof(config) == "object") {
             //add config from object
-            logger.log(`x-shell.addConfig('${src || config}')`);
+            console.log(`x-shell.addConfig('${src || config}')`);
             this._config = utils.deepAssign(this._config, config);
         } else {
             //error
@@ -91,13 +92,13 @@ class XShell extends HTMLElement {
     }
     async start() {
         //start
-        logger.log(`x-shell.start()`);
+        console.log(`x-shell.start()`);
         //load modules that has remote urls
         let tasks = [];
         for(let i = 0; i < this.config.modules.length; i++) {
             let module = this.config.modules[i];
             if (module.url) {
-                logger.log(`  fetching module '${module.url}' ...`);
+                console.log(`  fetching module '${module.url}' ...`);
                 tasks.push((async() => {
                     let response = await fetch(module.url);
                     if (!response.ok) {
@@ -129,8 +130,6 @@ class XShell extends HTMLElement {
         await i18n.init(this._config.i18n);
         //init loader
         await loader.init(this._config.loader);
-        //init logger
-        await logger.init(this._config.logger);
         //init uri
         await ui.init(this._config.ui);
         //init navigator
@@ -145,22 +144,19 @@ class XShell extends HTMLElement {
     }
     async ready() {
         //ready
-        logger.log(`x-shell.ready(): `, this._config);
+        console.log(`x-shell.ready(): `, this._config);
     }
     
 
     //public
-    async showPage({url, type, sender}) {
-        await this.navigator.showPage({url, type, sender});
+    async showPage({url, type, sender, target}) {
+        await this.navigator.showPage({url, type, sender, target});
     }
-    async showPageStack({url, sender}) {
-        await this.navigator.showPage({url, type: "stack", sender});
+    async showDialog({url, sender}) {
+        return await this.navigator.showPage({url, target: "#dialog", sender});
     }
-    async showPageDialog({url, sender}) {
-        return await this.navigator.showPage({url, type: "dialog", sender});
-    }
-    getRealUrl(url, page = null, includeCurrentPage = false){
-        return this.navigator.getRealUrl(url, page, includeCurrentPage);
+    getRealUrl(url, page, settings){
+        return this.navigator.getRealUrl(url, page, settings);
     }
     getPage(target) {
         while (target) {

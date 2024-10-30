@@ -3,12 +3,16 @@ import XElement from "../ui/x-element.js";
 // class
 export default XElement.define("x-tabs", {
     style: `
-        :host {bdisplay:block;}
-        x-menu {margin-bottom:1.5em;}
+        :host {display:block; margin-bottom:1.5em;}
+        
+        nav {margin-bottom:1.5em;}
+        nav x-anchor {padding-bottom:.5em; margin-right:1em; cursor:pointer; position:relative; }
+        nav x-anchor:after {content:""; border-radius:.1em; position:absolute; width:calc(100% - .25em); bottom:0; left:0; }
+        nav x-anchor:hover::after {border:.125em var(--x-background-xxx-gray) solid;}
+        nav x-anchor.selected {font-weight:600;}
+        nav x-anchor.selected:after {font-weight:600; border:.125em var(--x-color-primary) solid;}
 
-        ::slotted(x-tab) {
-            display:none;
-        }
+        ::slotted(x-tab) {display:none;}
     `,
     state: {
         selectedIndex: 0,
@@ -16,15 +20,13 @@ export default XElement.define("x-tabs", {
     },
     template: `
         <style x-html="state.style"></style>
-        <x-menu class="tabs">
-            <x-menuitem x-for="(tab,index) in state.tabs" 
-                x-attr:label="tab.label" 
+        <nav>
+            <x-anchor x-for="(tab,index) in state.tabs" 
+                x-text="tab.label" 
                 x-attr:icon="tab.icon" 
-                x-attr:selected="index == state.selectedIndex" 
-                x-attr:class="(index == state.selectedIndex ? 'tab selected' : 'tab')" 
-                x-on:click="clicked">
-            </x-menuitem>
-        </x-menu>
+                x-attr:class="(index == state.selectedIndex ? 'selected' : '')" 
+                x-on:click="clicked"></x-anchor>
+        </nav>        
         <slot x-on:slotchange="refresh"></slot>
     `,
     settings: {
@@ -38,8 +40,9 @@ export default XElement.define("x-tabs", {
 
             } else if (command == "clicked") {
                 //clicked
-                var event = args;
-                this.state.selectedIndex = Array.from(this.shadowRoot.querySelectorAll(":scope x-menu x-menuitem")).indexOf(event.target);
+                let event = args.event;
+                let anchors = Array.from(this.shadowRoot.querySelectorAll("nav x-anchor"));
+                this.state.selectedIndex = anchors.indexOf(event.target);
                 this.onCommand("refresh");
                 event.preventDefault();
                 

@@ -15,7 +15,6 @@ export default XElement.define("x-contextmenu", {
             box-shadow:var(--x-menu-shadow); 
             border:var(--x-menu-border); 
         }
-        :host(.plain) {width:100%;}
     `,
     template: `
         <slot></slot>

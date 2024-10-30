@@ -7,11 +7,10 @@ export default XElement.define("x-accordion-panel", {
         .header {display:flex; height:2.5em; align-items:center; padding:0 .5em 0 1em; cursor:pointer; user-select: none;}
         .header > x-icon {margin-right:.5em; transition: transform var(--x-transition-duration);}
         .header > span {flex:1}
-        .header > .toolbar {margin-right:.5em;}
+        .header > .toolbar {margin-right:1em; }
         .header[expanded] span {font-weight:600;}
-        .header[expanded] x-icon {transform:rotate(-180deg); }
+        .header[expanded] x-icon:last-child {transform:rotate(-180deg); }
         
-
         .body {
             display: grid; 
             grid-template-rows: 0fr;
@@ -44,8 +43,7 @@ export default XElement.define("x-accordion-panel", {
     state: {
         label:"",
         icon:"",
-        expanded: false,
-        height: 0
+        expanded: false
     },
     settings: {
         observedAttributes: ["label", "icon", "expanded"],
@@ -65,8 +63,6 @@ export default XElement.define("x-accordion-panel", {
             } else if (command == "toggle") {
                 //toggle
                 this.state.expanded = !this.state.expanded;
-                //var div = this.shadowRoot.querySelector(".body > div");
-                //this.state.height = div.clientHeight;
                 this.dispatchEvent(new CustomEvent("toggle", {bubbles: true, composed: false}));
             }
         }

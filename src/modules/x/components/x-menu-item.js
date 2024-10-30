@@ -1,33 +1,26 @@
 import XElement from "../ui/x-element.js";
 
 // class
-export default XElement.define("x-menuitem", {
+export default XElement.define("x-menu-item", {
     style: `
         :host {display:flex; position:relative; box-sizing:border-box; flex-direction:column}
         
+        /* default */
         :host x-anchor {display:flex; flex:1; flex-direction:row; align-items:center; cursor:pointer; border-radius:var(--x-menu-item-border-radius); user-select: none;}
         :host x-anchor:hover {background:var(--x-background-gray);}
-        :host x-anchor x-icon {color:var(--x-text-color)!important; text-align:center; width:2.5em; line-height:2em;}
-        :host x-anchor span.label {color:var(--x-text-color)!important; flex:1;  display:block; padding-top:.5em; padding-bottom:.5em;}
-        :host x-anchor span.label:first-child {padding-left:2.5em;}
-        :host x-anchor span.label:last-child {padding-right:1em; }
-        :host x-anchor span.suffix {color:var(--x-text-color-gray)!important; padding-left:1em; padding-right:1em;}
-
+        :host x-anchor x-icon {color:var(--x-text-color)!important; text-align:center;}
+        :host x-anchor span.label {color:var(--x-text-color)!important; flex:1;  display:block; padding-top:.5em; padding-bottom:.5em; white-space:nowrap; }
+        :host x-anchor span.suffix {color:var(--x-text-color-gray)!important; padding-left:1em;}
+        :host x-anchor x-icon.has-childs {width:unset; margin-left:.25em;}
+        :host x-anchor x-icon:first-child {}
+        :host x-anchor x-icon:first-child:last-child {align-self:flex-end;}
+        :host x-anchor x-icon + .label {padding-left:.35em;}
         :host x-anchor[disabled] {pointer-events:none; cursor:default;}
         :host x-anchor[disabled] x-icon {color:var(--x-text-color-disabled)!important;}
         :host x-anchor[disabled] span.label {color:var(--x-text-color-disabled)!important; padding-left:0!important;}
+        :host(.selected) x-anchor {background:var(--x-background-x-gray);}
         
-        :host(.tab) {padding-left:0em; padding-right:0em; margin-right:1em; padding-bottom:.25em;}
-        :host(.tab) x-anchor:hover {outline-bottom:1px red solid; background:none;}
-        :host(.tab) x-anchor span.label {width:unset; padding:0 0 0 0; line-height:2em}
-        :host(.tab.selected) {position:relative; font-weight:600;}
-        :host(.tab) x-anchor::after {content:""; border-radius:.1em; position:absolute; width:100%; bottom:0; left:0;}
-        :host(.tab) x-anchor:hover::after {border:.125em var(--x-background-xxx-gray) solid;}
-        :host(.tab.selected) x-anchor::after {border:.125em var(--x-color-primary) solid;}
-
-        :host(.plain) {}
-        :host(.plain) x-anchor span.label:first-child {padding-left:.5em;}
-
+        /* dropdown */
         div {
             width: var(--x-menu-width);
             position:absolute; 
@@ -64,48 +57,74 @@ export default XElement.define("x-menuitem", {
         icon: "",
         label: "",
         href: "",
-        mode: "",
         suffix: "",
         command: "",
         checked: false,
-        selected: false,
         disabled: false,
         expanded: false,
         hasChilds:false,
-    },
-    settings: {
-        observedAttributes: ["icon", "label", "suffix", "href", "command", "disabled", "checked", "mode"],
+        menuitem: null,
     },
     template: `
-        <x-anchor class="menuitem" x-attr:href="state.href" x-attr:command="state.command" x-attr:disabled="state.disabled" x-attr:expanded="state.expanded">
+        <x-anchor class="menuitem" x-attr:href="state.href" x-attr:command="state.command" x-attr:disabled="state.disabled" x-attr:expanded="state.expanded" >
             <x-icon x-if="state.checked" icon="x-check"></x-icon>
             <x-icon x-if="!state.checked && state.icon" class="icon"x-attr:icon="state.icon"></x-icon>
-            <span   x-if="state.label" class="label" x-attr:part="state.icon ? 'label-with-icon' : 'label'">{{ state.label }}</span>
+            <span   x-if="state.label" class="label">{{ state.label }}</span>
             <span   x-if="state.suffix" class="suffix">{{ state.suffix }}</span>
-            <x-icon x-if="state.hasChilds" class="has-childs" icon="x-keyboard-arrow-right" part="has-childs"></x-icon>
+            <x-icon x-if="state.hasChilds" class="has-childs" icon="x-keyboard-arrow-right"></x-icon>
         </x-anchor>
-        <div x-if="state.hasChilds" x-show="state.expanded" part="div">
+        <div x-if="state.hasChilds" x-show="state.expanded">
             <slot x-on:slotchange="refresh"></slot>
         </div>
     `,
+    settings: {
+        observedAttributes: ["icon", "label", "suffix", "href", "command", "disabled", "checked"],
+    },
     methods: {
+        onStateChanged(name, oldValue, newValue) {
+            if (name == "menuitem"){
+                if (newValue) {
+                    this.state.icon = newValue.icon;
+                    this.state.label = newValue.label;
+                    this.state.href = newValue.href;
+                    this.state.command = newValue.command;
+                    this.state.checked = newValue.checked;
+                    this.state.disabled = newValue.disabled;
+                    this.state.suffix = newValue.suffix;
+                    if (newValue.children) {
+                        this.replaceChildren();
+                        for(let child of newValue.children) {
+                            let item = document.createElement("x-menu-item");
+                            if (child.href) item.setAttribute("href", child.href);
+                            item.menuitem = child;
+                            this.appendChild(item);
+                        }
+                    }
+                } 
+            }
+        },
         onCommand(command){
             if (command == "load") {
                 //load
                 this.addEventListener("mouseenter", ()=>{
-                    if (!this.classList.contains("childs-inline")) {
+                    if (this.classList.contains("childs-inline")) {
+                    } else if (this.classList.contains("dropdown-click")) {
+                    } else {
                         this.state.expanded = true;
                         this.onCommand("refresh");    
                     }
                 });
                 this.addEventListener("mouseleave", ()=>{
-                    if (!this.classList.contains("childs-inline")) {
+                    if (this.classList.contains("childs-inline")) {
+                    } else if (this.classList.contains("dropdown-click")) {
+                    } else {
                         this.state.expanded = false;
                         this.onCommand("refresh");    
                     }
                 });
                 this.addEventListener("click", (event) => {
-                    if (this.classList.contains("childs-inline")) {
+                    this.shadowRoot.querySelector("x-anchor").focus();
+                    if (this.classList.contains("childs-inline") || this.classList.contains("dropdown-click")) {                        
                         this.state.expanded = !this.state.expanded;
                         this.onCommand("refresh");    
                         event.preventDefault();
@@ -117,10 +136,8 @@ export default XElement.define("x-menuitem", {
             } else if (command == "refresh") {
                 //refresh
                 this.state.hasChilds = (this.firstElementChild != null);
-
             }
         }
     }
-
 });
 

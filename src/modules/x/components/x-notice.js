@@ -3,9 +3,9 @@ import XElement from "../ui/x-element.js";
 // class
 export default XElement.define("x-notice", {
     style: `
-        :host {display:block; margin-bottom:.65em;}
+        :host {display:block;}
 
-        :host > div {display:flex; border:var(--x-notice-border); border-radius:var(--x-notice-border-radius);}
+        :host > div {display:flex; border:var(--x-notice-border); border-radius:var(--x-notice-border-radius); margin-bottom:.65em;}
         :host > div div.header {padding:.45em; display:flex; align-items:center;}
         :host > div div.header x-icon {width:2.5em; text-align:center;}
         :host > div div.header span.label {font-weight:600; margin-right:.5em; color:}
@@ -23,7 +23,7 @@ export default XElement.define("x-notice", {
 
     `,
     template: `
-        <div x-attr:class="state.type">
+        <div x-if="state.visible" x-attr:class="state.type" >
             <div class="header">
                 <x-icon x-attr:icon="'x-' + state.type + '-fill'"></x-icon>
                 <span class="label" x-text="state.label"></span>
@@ -39,6 +39,7 @@ export default XElement.define("x-notice", {
         type: "info",
         label:"",
         message: "",
+        visible: true
     },
     settings: {
         observedAttributes: ["type", "label","message"]
@@ -50,7 +51,7 @@ export default XElement.define("x-notice", {
 
             } else if (command == "close") {
                 //close
-                this.parentNode.removeChild(this);
+                this.state.visible = false;
             }
         }
     }
