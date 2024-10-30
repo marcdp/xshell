@@ -2,10 +2,13 @@
 
 <script type="module">
     export default {
+        state:{
+            message: ""
+        },
         async onCommand(command, args) {
             if (command == "load") {
                 //load
-                this.label = "Message page: " + args.message;
+                this.state.message = args.message;
 
             } else if (command == "change-title") {
                 //change title
@@ -13,22 +16,21 @@
 
             } else if (command == "show-page-stack") {
                 //show page stack
-                this.showPageStack({url:"/folder1/message.html?message=hello+world"});
+                this.showPage({url:"/folder1/message.html?message=hello+world", target:"#stack"});
 
             } else if (command == "show-page-dialog") {
                 //show page dialog
-                this.showPageDialog({url:"/folder1/dialog.html"});
+                this.showDialog({url:"/folder1/dialog.html"});
             }
         }
     }
 </script>
 
 <template>
-    This is a message:
+    This is a message: {{ state.message }}
 
     <x-datafield label="Field 1"    datafield="f1" type="text" required></x-datafield>
     
-    <!--
     <ul>
 
         <li><x-anchor href="help.html">Help</x-anchor></li>
@@ -42,5 +44,5 @@
         <x-button command="change-title" label="change-title"></x-button>
 
     </ul>
-    --->
+
 </template>

@@ -20,7 +20,7 @@ export default XElement.define("x-accordion", {
     settings: {
     },
     methods:{
-        onCommand(command, args) {
+        onCommand(command) {
             if (command == "load") {
                 //load
                 this.addEventListener("toggle", (event) => {

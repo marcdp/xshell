@@ -11,9 +11,10 @@
             ]
         },
         "ui": {
-            "defaults":{
+            "components":{
                 "pageHandler":  "x-page-handler",
-                "errorHandler": "x-page-error"
+                "errorHandler": "x-page-error",
+                "pageLoading":  "x-page-loading"
             },
             "layouts": {
                 "app": {

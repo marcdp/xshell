@@ -3,18 +3,21 @@ import XElement from "../ui/x-element.js";
 // definition
 export default XElement.define("x-breadcrumb", {
     style: `
-        :host {display:block;}
-        ul {margin:0; padding:0}
-        li {display:inline}
-        li + li:before {content: ' / '}
+        :host {display:block; margin-bottom:.25em;}
+        ul {margin:0; padding:0; font-size:var(--x-font-size-small); color:var(--x-text-color-x-gray);}
+        ul li {display:inline}
+        ul li a {text-decoration:none; color:var(--x-text-color-x-gray);}
+        ul li a:hover {color:var(--x-color-primary);}
+        ul li.label {color:var(--x-text-color);}
     `,
     template: `
         <nav>
             <ul>
                 <li x-for="item in state.breadcrumb">
                     <a x-attr:href="item.href">{{ item.label }}</a>
+                    <x-icon icon="x-keyboard-arrow-right"><x-icon>
                 </li>
-                <li>
+                <li class="label">
                     {{ state.label }}
                 </li>
             </ul>

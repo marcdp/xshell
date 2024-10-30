@@ -7,9 +7,12 @@ export default XElement.define("x-icon", {
         :host {display:inline-block;}
         :host svg {height:1.25em;width:1.25em; fill:currentcolor; vertical-align:middle;}
     `,
-    template: ``,
+    template: `
+        <span x-children="state.svg"></span>
+    `,
     state: {
-        icon: ""
+        icon: "",
+        svg: null
     },
     settings: {
         observedAttributes: ["icon"]
@@ -18,15 +21,11 @@ export default XElement.define("x-icon", {
         async onStateChanged(name, oldValue, newValue) {
             if (name == "icon") {
                 if (newValue) {
-                    let svg = await loader.load("icon:" + newValue);
-                    this.shadowRoot.replaceChildren();
-                    this.shadowRoot.appendChild(svg.cloneNode(true), this.shadowRoot);
+                    this.state.svg = (await loader.load("icon:" + newValue)).cloneNode(true);
                 } else {
-                    this.shadowRoot.replaceChildren();
+                    this.state.svg = null;
                 }
             }
-        },
-        render() {
         }
     }
 });

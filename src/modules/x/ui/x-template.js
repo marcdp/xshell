@@ -110,6 +110,10 @@ class XTemplate {
                     if (node.childNodes.length) console.error(`Error compiling component ${name}: invalid x-html node: non empty`);
                     options.push("format:\"html\"");
                     text = "\"\" + " + attr.value;
+                } else if (attr.name == "x-children") {
+                    //...<span x-children="state.node"></span>...
+                    options.push("format:\"node\"");
+                    text = attr.value;
                 } else if (attr.name == "x-attr" || attr.name == ":") {
                     //...<span x-attr="state.value"></span>...
                     //...<span :="state.value"></span>...
@@ -193,7 +197,7 @@ class XTemplate {
                     //...<span x-show="state.value > 0">greather than 0</span>...
                     attrs.push("...(" + (attr.value) + " ? null : {style:'display:none'})");
                 } else if (attr.name == "x-model") {
-                    //...<input type="text" x-model="state.name"/>... --> <input type="text" x-prop:value="state.name" x-on:change="state.name = event.target.value"/>
+                    //...<input type="text" x-model="state.name"/>... --> <input type="text" x-prop:value="state.name" x-on:change.stop="state.name = event.target.value"/>
                     //prop
                     let nodeName = node.tagName.toLowerCase();
                     let propertyName = "value";
@@ -206,30 +210,23 @@ class XTemplate {
                             propertyName = "checked";
                         } else if (type == "radio") {
                             propertyName = "checked";
-                            propValue = "function() {return state.value == this.attrs.value}";
+                            propValue = "function() { return state.value == this.attrs.value}";
                         }
                     } else if (nodeName == "select") {
+                        let multiple = node.getAttribute("multiple");
+                        if (multiple) {
+                            propertyName = "selectedOptions";
+                            propValue = "Array.from(event.target.selectedOptions).map(option => option.value)";
+                        }
                     } else if (nodeName == "textarea") {
                     }
                     props.push(propertyName + ":" + propValue);
                     //event
-                    let eventName = "change";
-                    if (nodeName == "input") {
-                        let type = node.getAttribute("type");
-                        if (type == "number") {
-                            propertyName = "valueAsNumber";
-                        } else if (type == "range") {
-                            propertyName = "valueAsNumber";
-                        } else if (type == "checkbox") {
-                            propertyName = "checked";
-                        } else if (type == "radio") {
-                            propValue = attr.value;
-                            propertyName = "value";
-                        }
-                    } else if (nodeName == "select") {
-                    } else if (nodeName == "textarea") {
-                    }
-                    events.push("'" + eventName + "': (event) => { " + propValue + " = event.target." + propertyName + "; invalidate(); }");
+                    events.push(`'change.stop': (event) => { 
+                        ${attr.value} = utils.getInputValue(event.target);
+                        invalidate(); 
+                    }`);
+
                 } else if (attr.name == "x-once") {
                     //x-once: only render once
                     jsLine[0] = indent + "...((renderCount==0) ? [";
@@ -286,6 +283,7 @@ class XTemplate {
 // utils
 const emptyObject = {};
 const emptyArray = [];
+let freeId = 1;
 const utils = new class {
     createVDOM = (tag, attrs, props, events, options, children) => {
         return {
@@ -324,6 +322,41 @@ const utils = new class {
     toDynamicProperty = (key, value) => {
         return { [key]: value };
     };
+    i18n(value, lang) {
+        if (!value) return "";
+        var key = "i18n:" + lang + "=";
+        if (value.startsWith(key)) {
+            let j = value.indexOf("|");
+            return value.substring(key.length, j != -1 ? j : value.length).replaceAll("&#124;","|");
+        } else {
+            let k = value.indexOf("|" + key);
+            if (k != -1) {
+                let j = value.indexOf("|", k + 1);
+                return value.substring(k + key.length + 1, j != -1 ? j : value.length).replaceAll("&#124;","|");
+            }
+        }
+        return "";
+    }
+    getFreeId() {
+        return "id" + freeId++;
+    };
+    getInputValue(target) {
+        let value = target.value;
+        if (target.localName == "input") {
+            if (target.type == "number") {
+                value = target.valueAsNumber; 
+            } else if (target.type == "range") {
+                value = target.valueAsNumber; 
+            } else if (target.type == "checkbox") {
+                value = target.checked; 
+            } else if (target.type == "radio") {
+                value = target.value; 
+            }
+        } else if (target.localName == "select") {
+            value = Array.from(target.selectedOptions).map(option => option.value).join(',')
+        }
+        return value;
+    }
 };
 
 
@@ -401,7 +434,14 @@ class XTemplateInstance {
                 if (typeof(propValue) == "function") {
                     propValue = propValue.call(vNode);
                 }
-                el[prop] = propValue;
+                //if (!el.hasOwnProperty(prop)) {
+                if (el[prop] === undefined) {
+                    //the property does not exist in the element yet
+                    if (!el._propertiesToInitialize) el._propertiesToInitialize = [];
+                    el._propertiesToInitialize.push({name: prop, value: propValue});
+                } else {
+                    el[prop] = propValue;
+                }
             }
             for (let event in vNode.events) {
                 let eventHandler = vNode.events[event];
@@ -445,7 +485,21 @@ class XTemplateInstance {
                     return result;
                 }, options);
             }
-            if (Array.isArray(vNode.children)) {
+            if (vNode.options.format == 'node') {
+                if (Array.isArray(vNode.children)) {
+                    el.replaceChildren();
+                    for(let element of vNode.children) {
+                        el.appendChild(element);
+                    }
+                } else if (vNode.children) {
+                    if (el.firstChild != vNode.children) {
+                        if (el.firstChild) el.replaceChildren();
+                        el.appendChild(vNode.children);
+                    }
+                } else {
+                    el.replaceChildren();
+                }
+            } else if (Array.isArray(vNode.children)) {
                 let index = 0;
                 for (let child of vNode.children) {
                     while (index < child.options.index) {
@@ -525,6 +579,7 @@ class XTemplateInstance {
                 //slot
             } else {
                 //diff node
+                if (!parent) debugger
                 let child = parent.childNodes[vNodeNew.options.index + inew];
                 this._diffDomElement(vNodeOld, vNodeNew, child, level + 1);
             }
@@ -546,7 +601,7 @@ class XTemplateInstance {
                         element.removeAttribute(attr);
                     }
                 } else if (attrValue == null) {
-                    debugger;
+                    element.removeAttribute(attr);
                 } else {
                     element.setAttribute(attr, attrValue);
                 }
@@ -571,7 +626,21 @@ class XTemplateInstance {
             validProps.push(prop);
         }
         //children
-        if (Array.isArray(vNodeNew.children)) {
+        if (vNodeNew.options.format == 'node') {
+            if (Array.isArray(vNodeNew.children)) {
+                element.replaceChildren();
+                for(let childElement of vNodeNew.children) {
+                    element.appendChild(childElement);
+                }
+            } else if (vNodeNew.children) {
+                if (element.firstChild != vNodeNew.children) {
+                    if (element.firstChild) element.replaceChildren();
+                    element.appendChild(vNodeNew.children);
+                }
+            } else {
+                element.replaceChildren();
+            }
+        } else if (Array.isArray(vNodeNew.children)) {
             this._diffDom(vNodeOld.children, vNodeNew.children, element, level + 1);
         } else if (typeof (vNodeNew.children) == "string") {
             if (vNodeOld.children != vNodeNew.children) {
@@ -653,7 +722,6 @@ class XTemplateInstance {
                 parent.insertBefore(parent.childNodes[oldStartIndex + oldIndex + 1], parent.childNodes[oldStartIndex + newIndex + 1]);
                 oldKeys.splice(oldIndex, 1);
                 oldKeys.splice(newIndex, 0, key);
-
                 let old = vNodesOld.splice(oldStartIndex + 1 + oldIndex, 1);
                 vNodesOld.splice(oldStartIndex + 1 + newIndex, 0, old[0]);
             }
@@ -675,3 +743,4 @@ class XTemplateInstance {
 // export
 export default XTemplate;
 
+export {utils};

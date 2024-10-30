@@ -7,7 +7,7 @@ export default await XElement.define("x-page-error", {
         PRE {margin:0; padding:0;}
     `,
     template: `
-        <div x-on:click="aaaa">Error</div> {{ state.code }}: {{ state.message }}
+        Error {{ state.code }}: {{ state.message }}
         <pre x-show="state.stacktrace">
             {{ state.stacktrace }}
         </pre>

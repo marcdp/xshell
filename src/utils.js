@@ -1,4 +1,3 @@
-
 // funcs
 function deepAssign(obj1, obj2) {
     for (let key in obj2) {

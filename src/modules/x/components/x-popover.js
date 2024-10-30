@@ -79,7 +79,7 @@ export default XElement.define("x-popover", {
                 let rectDiv = div.getBoundingClientRect();
                 let rectTarget = target.getBoundingClientRect();
                 let margin = 10;
-                let style = `top:${rectTarget.bottom + margin}px; left:${rectTarget.left + rectTarget.width/2 - rectDiv.width/2}px;`;
+                let style = `top:${this.offsetTop + rectTarget.height + margin}px; left:${target.offsetLeft - rectDiv.width/2 + rectTarget.width/2}px;`;
                 this.state.style = "div {" + style + "}";
                 div.focus();
     

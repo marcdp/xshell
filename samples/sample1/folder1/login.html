@@ -1,6 +1,5 @@
 <!-- metadata -->
-<meta name="x-page:label"   content="My titttttle" >
-<meta name="x-page:icon"    content="x-bell" >
+<meta name="x-page:label"   content="Login" >
 <meta name="x-page:layout"  content="main" >
 
 <!-- script -->
@@ -12,23 +11,27 @@
 
             } else if (command == "show-page-stack") {
                 //show page stack
-                this.showPageStack({url:"/folder1/message.html?message=hello+world"});
+                this.showPage({url:"/folder1/message.html?message=hello+world", target:"#stack"});
 
             } else if (command == "show-page-stack-thin") {
                 //show page stack thin
-                this.showPageStack({url:"/folder1/message.html?message=hello+world&x-class=thin"});
+                this.showPage({url:"/folder1/message.html?message=hello+world&x-class=thin", target:"#stack"});
 
             } else if (command == "show-page-stack-thin-right") {
                 //show page stack thin right
-                this.showPageStack({url:"/folder1/message.html?message=hello+world&x-class=thin,right"});
+                this.showPage({url:"/folder1/message.html?message=hello+world&x-class=thin,right", target:"#stack"});
 
             } else if (command == "show-page-stack-popup") {
                 //show page stack popup
-                this.showPageStack({url:"/folder1/message.html?message=hello+world&x-class=popup"});
+                this.showPage({url:"/folder1/message.html?message=hello+world&x-class=popup", target:"#stack"});
 
             } else if (command == "show-page-dialog") {
                 //show page dialog
-                this.showPageDialog({url:"/folder1/dialog.html"});
+                this.showDialog({url:"/folder1/dialog.html"});
+
+            } else if (command == "render") {
+                //render
+                this.render();
             }
         }
     }
@@ -63,6 +66,9 @@
         <li><x-anchor href="help.html" breadcrumb>Help with breadcrumb</x-anchor></li>
         <li><x-anchor href="help.html?x-label=helllllloooooo" breadcrumb>Help with breadcrumb and label</x-anchor></li>
     
+        
+        <li><x-button command="render" label="Render"></x-button></li>
+
         <li><x-button command="show-page-stack" label="Show page stack"></x-button></li>
         <li><x-button command="show-page-stack-thin" label="Show page stack thin"></x-button></li>
         <li><x-button command="show-page-stack-thin-right" label="Show page stack thin right"></x-button></li>
@@ -81,18 +87,13 @@
         
         <hr/>
         x-anchor to an stack page: 
-        <x-anchor href="help.html" type="stack">Load help file inside stack </x-anchor>
+        <x-anchor href="help.html" target="#stack">Load help file inside stack </x-anchor>
     
         <hr/>
         x-anchor to a dialog page: 
-        <x-anchor href="help.html" type="dialog">Load help file inside dialog </x-anchor>
+        <x-anchor href="help.html" target="#dialog">Load help file inside dialog </x-anchor>
     
-        <hr/>
-        x-anchor to an embedded page: 
-        <x-anchor href="message.html" for="my-page">Load help file inside iframe </x-anchor>
-        <x-page id="my-page">
-            Default content
-        </x-page>
+        
     
     <!--
     
@@ -142,6 +143,13 @@
         
     -->
     </ul>
+
+    <hr/>
+
+    x-anchor to an embedded page: 
+
+    <x-anchor href="message.html" target="#my-page">Load help file inside iframe</x-anchor>
+    <x-page id="my-page" style="border:2px red solid"></x-page>
 
 </template>
 

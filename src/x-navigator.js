@@ -1,4 +1,5 @@
 import xshell from "./x-shell.js";
+import bus from "./bus.js";
 
 // consts
 const HASH_PREFIX = "#!";
@@ -55,27 +56,61 @@ class XNavigator extends HTMLElement {
             document.location.hash = HASH_PREFIX + this.config.start;
         }
     }
-    getRealUrl(src, page = null, includeCurrentPage = false) {
+    getRealUrl(src, page, settings) {
+        if (!settings) settings = {};
+        if (typeof(settings.relative) == "undefined") settings.relative = false;
         let prefix = "";
+        //relative src to page
+        if (src.startsWith(".") || src.indexOf("/") == -1) {
+            let targetPage = page || this.pages[0];
+            if (targetPage) {
+                let pageSrc = targetPage.src;
+                if (pageSrc.indexOf("?")!=-1) pageSrc = pageSrc.substring(0, pageSrc.indexOf("?"));
+                if (pageSrc.indexOf("/")!=-1) pageSrc = pageSrc.substring(0, pageSrc.lastIndexOf("/"));
+                src = pageSrc + "/" + src;
+            }
+        }
+        //breadcrumb
+        if (settings.breadcrumb) {
+            let targetPage = page || this.pages[0];
+            let breadcrumb = [];
+            for(let item in targetPage.breadcrumb) {
+                breadcrumb.push(item);
+            }
+            breadcrumb.push({label: targetPage.label, href: targetPage.src});
+            src += (src.indexOf("?")!=-1 ? "&" : "?") + "x-breadcrumb=" + btoa(JSON.stringify(breadcrumb)).replace(/\+/g,"-").replace(/\//g,"_");
+        }
+        //stack page
         if (page) {
             let pages = this.pages;
             let index = pages.indexOf(page);
-            if (includeCurrentPage) index++;
+            if (settings.type == "stack") index++;
             for(var i = 0; i < index; i++) {
                 prefix += HASH_PREFIX + pages[i].src;
             }
         }
-        return this.config.base + "/" + prefix + HASH_PREFIX + src;
+        //return real url
+        if (settings.relative) {
+            return src;
+        } else {
+            return this.config.base + "/" + prefix + HASH_PREFIX + src;
+        }
     }
-    async showPage({url, type = "", sender = null}) {
+    async showPage({url, sender = null, target = null}) {
         if (url.startsWith(HASH_PREFIX)) url =url.substring(HASH_PREFIX.length);
         //resolve url
-        if (!url.startsWith("/") && sender) {
-            let aux = sender.src;
-            aux = aux.substring(0, aux.lastIndexOf("/") + 1);
-            url = aux + url;
+        if (!url.startsWith("/")) {
+            if (sender) {
+                let aux = sender.src;
+                aux = aux.substring(0, aux.lastIndexOf("/") + 1);
+                url = aux + url;
+            } else {
+                let aux = this.pages[0].src;
+                aux = aux.substring(0, aux.lastIndexOf("/") + 1);
+                url = aux + url;
+            }
         }
-        if (type == "dialog") {
+        if (target == "#dialog") {
             //show dialog
             let resolveFunc = null;
             let page = document.createElement("x-page");
@@ -91,7 +126,7 @@ class XNavigator extends HTMLElement {
             return new Promise((resolve) => {
                 resolveFunc = resolve;
              });
-        } else if (type == "stack") {
+        } else if (target == "#stack") {
             //show stack 
             window.document.location.hash += HASH_PREFIX + url;
         } else {
@@ -131,17 +166,23 @@ class XNavigator extends HTMLElement {
                     });
                 } else {
                     page.setAttribute("type", "main");
+                    //emit event navigation:start
+                    bus.emit("navigation:start", {page});
                 }
                 page.addEventListener("page:change", (event) => {
                     if (this.pages.indexOf(event.target) == 0) {
+                        //main page change
                         var label = event.target.label;
                         if (label) document.title = label + " (" + xshell.config.app.title + ")";
                     }
                 });
                 page.addEventListener("page:load", (event) => {
                     if (this.pages.indexOf(event.target) == 0) {
+                        //main page loaded
                         var label = event.target.label;
                         if (label) document.title = label + " (" + xshell.config.app.title + ")";
+                        //emit event navigation:end
+                        bus.emit("navigation:end", {page: event.target});
                     }
                 });
                 let container = this;
@@ -159,12 +200,20 @@ class XNavigator extends HTMLElement {
             } else if (hashBeforePart && !hashAfterPart) {
                 //remove page
                 let page = this.pages[i + inc];
-                page.parentNode.removeChild(page);
+                if (page.getAttribute("class")=="popup") {
+                    page.parentNode.removeChild(page);
+                } else {
+                    page.hideAndRemove();
+                }
                 inc -= 1;
             } else if (hashBeforePart != hashAfterPart) {
                 //change page
                 let page = this.pages[i];
                 page.src = hashAfterPart;
+                //emit event navigation:start
+                if (i == 0) {
+                    bus.emit("navigation:start", {page});
+                }
             }
         }
         this._hash = hashAfterParts.join(HASH_PREFIX);

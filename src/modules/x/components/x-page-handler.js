@@ -10,6 +10,7 @@ class XPageHandler extends HTMLElement  {
     _state = null;
     _xtemplate = null;
     _xtemplateInstance = null;
+    _renderTimeoutId = 0;
 
     //ctor
     constructor() {
@@ -37,7 +38,7 @@ class XPageHandler extends HTMLElement  {
                 let oldValue = target[prop];
                 target[prop] = newValue;
                 self.stateChanged(prop, oldValue, newValue);
-                self.render();
+                self.invalidate();
                 return true;
             }
         });
@@ -76,7 +77,7 @@ class XPageHandler extends HTMLElement  {
         }
         //handle command event
         this.addEventListener("command", (event) => {
-            this.onCommand(event.detail.command, event.detail.data);
+            this.onCommand(event.detail.command, {event, data:event.detail.data});
             event.preventDefault();
             event.stopPropagation();
             return false;
@@ -89,7 +90,7 @@ class XPageHandler extends HTMLElement  {
             this.onCommand(command, args);
         }, () => {
             //invalidate
-            debugger;
+            this.invalidate();
         }, this);
         //search
         let searchParams = new URLSearchParams(this.src.indexOf("?") != -1 ? this.src.substring(this.src.indexOf("?")+1) : "");
@@ -105,11 +106,8 @@ class XPageHandler extends HTMLElement  {
     showPage(args) {
         return this.page.showPage(args);
     }
-    showPageStack(args) {
-        return this.page.showPageStack(args);
-    }
-    showPageDialog(args) {
-        return this.page.showPageDialog(args);
+    showDialog(args) {
+        return this.page.showDialog(args);
     }
     close(result) {
         return this.page.close(result);
@@ -117,9 +115,20 @@ class XPageHandler extends HTMLElement  {
     stateChanged(prop, oldvalue, newValue) {
     }
     invalidate() {
-        this._xtemplateInstance.invalidate();
+        //invalidate
+        if (!this._renderTimeoutId) {
+            this._renderTimeoutId = window.requestAnimationFrame(() => {
+                this.render();
+            });
+        }
     }
     render() {
+        //cancel pending render
+        if (this._renderTimeoutId) {
+            window.cancelAnimationFrame(this._renderTimeoutId);
+            this._renderTimeoutId = 0;
+        };
+        //render
         this._xtemplateInstance.render();
     }   
 }

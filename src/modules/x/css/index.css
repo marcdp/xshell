@@ -8,36 +8,7 @@
 
 /* vars */
 :root {
-    /*
-    --color-main:#1974CB;
-    --color-main-light:#3D89D1;
-    --color-main-dark:#085CAE;    
-    --color-main-x-dark:#104A85;    
-
-    --color-secondary:#F0506E;
-    --color-secondary-dark:#D0304E;
-    --color-secondary-x-dark:#C0203E;
-    
-    --color-bg:white;
-    --color-bg-dark:#F9F9F9;
-    --color-bg-x-dark:#F0F0F0;
-    --color-bg-xx-dark:#E0E0E0;
-
-    --color-light:#F5F6F7;
-    --color-light-2:#E5E5E5;
-    --color-light-3:#F9F9F9;
-    
-    --color-border:#D0D7DE;
-
-    --color-text:#212121;
-    --color-text-gray:#6B6F76;
-    --color-text-x-gray:#ABAFB6;
-
-    --transition-all:all .2s;
-
-    --box-shadow: 0px 2px 1px -1px rgba(0,0,0,0.2), 0px 1px 1px 0px rgba(0,0,0,0.14), 0px 1px 3px 0px rgba(0,0,0,0.12);
-    --border-radius: .2em;
-    */
+   
     /* general */
     --x-transition-duration:250ms;
 
@@ -53,6 +24,7 @@
 
     /* backgrounds */
     --x-background-page: #FFFFFF;
+    --x-background-alt: #F5f5f5;
     --x-background-gray: #F5F5F5;
     --x-background-x-gray: #F0F0F0;
     --x-background-xx-gray: #D5D5D5;
@@ -72,9 +44,10 @@
     --x-color-primary:#036AC4;
     --x-color-primary-light:#0473CE;
     --x-color-primary-x-light:#0481E0;
+    --x-color-white: white;
+    --x-color-black: black;
     
     /* x-dialog */
-    --x-dialog-backdrop: rgba(0,0,0,.4);
     --x-dialog-border-radius: .65em;
     --x-dialog-shadow: rgba(0, 0, 0, 0.22) 0px 25.6px 57.6px 0px, rgba(0, 0, 0, 0.18) 0px 4.8px 14.4px 0px;
 
@@ -109,9 +82,13 @@
     --x-input-border: 1px #D1D1D1 solid;
     --x-input-border-bottom: 1px #575757 solid;
     --x-input-border-focus: 1px #B3B3B3 solid;
+    --x-input-error-color:#BB2F30;
+    --x-input-padding:.4em;
+    --x-input-label-display: block;
+    --x-input-error-display: block;
     
     /* x-menu */
-    --x-menu-width: 22em;
+    --x-menu-width: 20em;
     --x-menu-background: white;
     --x-menu-border: .1em #D0D7DE solid;
     --x-menu-shadow: rgba(0, 0, 0, 0.11) 0px 12px 25px 0px, rgba(0, 0, 0, 0.09) 0px 2.4px 7px 0px;
@@ -142,9 +119,9 @@
     --x-page-padding-left:2.5em;
     --x-page-padding-right:2.5em;
     --x-page-padding-bottom:2em;
+    --x-page-backdrop: rgba(0,0,0,.2);
 
     --x-page-stack-border-radius: .25em 0 0 .25em;
-    --x-page-stack-backdrop: rgba(0,0,0,.2);
     --x-page-stack-shadow:rgba(0, 0, 0, 0.22) 0px 25.6px 57.6px 0px, rgba(0, 0, 0, 0.18) 0px 4.8px 14.4px 0px;
 
     /* x-page-loading */
@@ -162,45 +139,10 @@
     /* x-text */
     --x-text-color: #303030;
     --x-text-color-gray: #666666;
+    --x-text-color-x-gray: #888888;
     --x-text-color-inverse: #EEEEEE;
     --x-text-color-disabled: gray;
-
-
-    /* shadow */
-
-    /* input 
-    --input-font-size:.8rem;
-    --input-border:.1rem #CECECE solid;
-    --input-border-focus:.08rem #7AACFE solid;
-    --input-box-shadow-focus:0 0 0 .1em #7AACFE;
-    --input-box-shadow-focus-error:0 0 0 .1em var(--color-secondary);
-    */
-
-    /* menuitem 
-    --menuitem-border:.08em #D0D7DE solid;  
-    --menuitem-background: #F6F8FA;
-    --menuitem-background-hover: #EFF1F4;
-    --menuitem-background-active: #ECEFF2;
-    --menuitem-background-selected: #F6F7F8;
-    --menuitem-border-radius: .5em;
-    --menuitem-color: #1f2328;
-    --menuitem-color-selected:#1f2328;
-    --menuitem-font-weight-selected:500;
-    */
-
-    /* input 
-    --input-border:.1em #CECECE solid;
-    --input-padding:.5em;
-    */
-
-    /* hr 
-    --hr-border:.08em #DEE3E8 solid;*/
- 
-    /* panel 
-    --panel-border:.1em #D0D7DE solid;*/
-
- 
-
+    --x-text-color-black: #000000;
 }  
  
 html {
@@ -224,6 +166,11 @@ h6 {font-size:var(--x-font-size); font-weight:normal;}
 
 /* x-page */
 x-page {display:block;}
+x-page > dialog {min-width:20em; min-height:10em;}
+x-page > dialog::backdrop {
+    background: none;
+    transition: background .25s ease;}
+x-page > dialog.visible::backdrop {background:var(--x-page-backdrop);}
 
 /* x-page.dialog */
 x-page[type='dialog'] > dialog {
@@ -233,21 +180,10 @@ x-page[type='dialog'] > dialog {
     outline:none;
     border:none;
     color:var(--x-text-color);
-
-    
-}
-x-page[type='dialog'] > dialog::backdrop {
-    background: var(--x-dialog-backdrop);
-    opacity: 0;
-    animation: dialogBackdropFadeIn .1s linear forwards;
-}
-@keyframes dialogBackdropFadeIn {
-    to {opacity: 1;}
 }
 
 /* x-page.stack */
 x-page {position:relative;}
-x-page > dialog {min-width:20em; min-height:10em;}
 x-page[type='stack']:not(.popup) > dialog {
     top:0; 
     bottom:0; 
@@ -258,29 +194,19 @@ x-page[type='stack']:not(.popup) > dialog {
     border:none; outline:none; border:none; max-height:unset; padding:0; 
     border-radius:var(--x-page-stack-border-radius);
     box-shadow: var(--x-page-stack-shadow);
+    opacity:1;
+    transform:translateX(100%);
+    transition:transform var(--x-transition-duration) ease-out, opacity var(--x-transition-duration) ease-out;
+} 
+x-page[type='stack']:not(.popup) > dialog.visible {
+    transform:translateX(0);
+    opacity:1;    
+    transition:transform var(--x-transition-duration) ease, opacity var(--x-transition-duration) ease;
 }
-x-page[type='stack'] > dialog::backdrop {
-    background: var(--x-page-stack-backdrop);
-    opacity: 0;
-    animation: dialogBackdropFadeIn .1s linear forwards;
-}
-x-page[type='stack'].thin > dialog {
-    width:25em;
-}
-x-page[type='stack'].right > dialog {
-    margin-right:auto;
-    margin-left:0;
-}
-x-page[type='stack'].popup > dialog {
-    padding:0; 
-    box-shadow: var(--x-dialog-shadow);
-    border-radius:var(--x-dialog-border-radius); 
-    outline:none;
-    border:none;
-    color:var(--x-text-color);
-    padding-bottom:2em;
-}
-x-page[type='stack'].popup > dialog::backdrop {background: var(--x-dialog-backdrop);}
+x-page[type='stack'].thin > dialog {width:25em;}
+x-page[type='stack'].right > dialog {margin-right:auto;margin-left:0; transform:translateX(-100%);}
+x-page[type='stack'].popup > dialog {padding:0; box-shadow: var(--x-dialog-shadow);border-radius:var(--x-dialog-border-radius); outline:none;border:none;color:var(--x-text-color);padding-bottom:2em;}
+x-page[type='stack'].popup > dialog::backdrop {background: var(--x-page-backdrop);}
 x-page[type='stack'] + x-page[type='stack'] > dialog {width:78vw; }
 x-page[type='stack'] + x-page[type='stack'] > dialog::backdrop {background:none;}
 x-page[type='stack'] + x-page[type='stack'] + x-page[type='stack'] > dialog {width:76vw;}

@@ -3,7 +3,31 @@
 <script type="module">
     export default {
         state: {
-            counter: 123
+            counter: 123,
+            text: "helo",
+            text_i18n: "i18n:en=hello|i18n:es=hola|i18n:fr=bonjour",
+            text2222:"asd",
+            number:2,
+            range:"9",
+            select:"a",
+            radios:"b",
+            radio:false,
+            checkboxes:"a,c",
+            textarea:"sdfsd",
+            textarea_i18n:"", //"i18n:en=ennn|i18n:es=esss|i18n:fr=frrrr",
+            myObject: {
+                var1: "value1",
+            },
+            myObject2: {
+                var1: "hola",
+                var2: 987
+            },
+            myList: [
+                {id:"value1", label: "value11", counter:12},
+                {id:"value2", label: "value22", counter:99}
+            ],
+            file:"",
+            files:[]
         },
         async onCommand(command, args) {
             if (command == "load") {
@@ -13,7 +37,7 @@
                 
             } else if (command == "something") {
                 //something
-                this.showPageDialog({url: "dialog.html"});
+                this.showDialog({url: "dialog.html"});
 
             } else if (command == "something2") {
                 //something
@@ -27,12 +51,28 @@
                 //dec counter
                 this.state.counter--;
 
+            } else if (command == "add") {
+                //dec counter
+                this.state.myList = [...this.state.myList, {id:"value6", label: ""}];
+                
+            } else if (command == "remove") {
+                //dec counter
+                let id = args.data.id;
+                this.state.myList = this.state.myList.filter(item => item.id != id);
+
             } else if (command == "show-popover") {
                 //show-popover
                 let button = this.querySelector("x-button:first-child");
                 let popover = this.querySelector("x-popover");
                 popover.show({target:button});
                 
+            } else if (command == "submit") {
+                //submit
+                alert("submit");
+
+            } else if (command == "cancel") {
+                //cancel
+                alert("cancel");
             }
         }
     };
@@ -41,84 +81,104 @@
 <!-- template -->
 <template>
 
+    {{ JSON.stringify(state) }}
 
-    <x-card style="max-width:60em;">
-        <x-form>
-            <x-form-header>
-                <h2>This is the title</h2>
-                <p>Lorem Ipsum es simplemente el texto de relleno de las imprentas y archivos de texto. y más recientemente con software de autoedición, como por ejemplo Aldus PageMaker, el cual incluye versiones de Lorem Ipsum.</p>
-            </x-form-header>
-            <x-form-body>
-                <x-tabs>
-                    <x-tab label="Basic">
-                        <x-datafields columns="4">
-                            <x-datafield label="Field 1"    datafield="f1" type="text" required></x-datafield>
-                            <x-datafield label="Text"       datafield="f2" type="text"></x-datafield>
-                            <x-datafield label="Password"   datafield="f3" type="password" columns="2" placeholder="This is a placeholder"></x-datafield>
-                            <x-datafield label="Number 3"   datafield="f4" type="number"></x-datafield>
-                            <x-datafield label="Date"       datafield="f5" type="date"></x-datafield>
-                            <x-datafield label="Datetime"   datafield="f6" type="datetime-local"></x-datafield>
-                            <x-datafield label="Time"       datafield="f7" type="time"></x-datafield>
-                            <x-datafield label="Week"       datafield="f8" type="week"></x-datafield>
-                            <x-datafield label="Month"      datafield="f9" type="month"></x-datafield>
-                            <x-datafield label="Url"        datafield="f10" type="url"></x-datafield>
-                            <x-datafield label="Email"      datafield="f11" type="email"></x-datafield>
-                            <x-datafield label="Tel"        datafield="f12" type="tel"></x-datafield>
-                            <x-datafield label="Checkbox"   datafield="f13" type="checkbox" label-secondary="This is a detail" value=""></x-datafield>
-                            <x-datafield label="Color"      datafield="f14" type="color" value="#FF0000"></x-datafield>
-                            <!--<x-datafield label="Radio"      datafield="f15" type="radio" label-secondary="This is a detail"></x-datafield>-->
-                            <x-datafield label="Range"      datafield="f16" type="range"></x-datafield>
-                            <x-datafield label="File"       datafield="f17" type="file"></x-datafield>
-                            <x-datafield label="Select 2"   datafield="f18" type="select" value="b" domain="a=Anasd asd as|b=Lorem ipsum" required></x-datafield>
-                            <x-datafield label="Radios 2"   datafield="f19" type="radios" value="b" domain="a=Anasd asd as|b=Lorem ipsum"></x-datafield>
-                            <x-datafield label="Checks"     datafield="f20" type="checkboxes" domain="a=aaaa|b=bbbbb|c=Cacasc asd asd as"></x-datafield>
-                            <x-datafield label="Textarea"   datafield="f21" type="textarea"></x-datafield>
-                            <x-datafield label="Picker"     datafield="f21" type="picker"></x-datafield>
-                            <x-datafield label="Field 1"    datafield="f1"  type="text" required></x-datafield>
-                        </x-datafields>
-                    </x-tab>
-                    <x-tab label="Object">
-                        Lorem Ipsum es simplemente el texto de relleno de las imprentas y archivos de texto. y más recientemente con software de autoedición, como por ejemplo Aldus PageMaker, el cual incluye versiones de Lorem Ipsum.
-                    </x-tab>
-                    <x-tab label="List/Array">
-                        ...
-                    </x-tab>
-                    <x-tab label="Advanced">
-                        ......
-                    </x-tab>
-                </x-tabs>
-            </x.form-body>
-            <x-form-footer>
-                <x-button label="Cancel" command="cancel"></x-button>
-                <x-button label="Save"  class="important" command="save"></x-button>
-            </x-form-footer>
+    <x-card style="max-width:80em;">
+        <x-form wizard wizard-direction="vertical">
+            <!-- header -->
+            <h2 slot="header">This is the title</h2>
+            <p  slot="header">
+                Lorem Ipsum es simplemente el texto de relleno de las imprentas y archivos de texto. 
+                y más recientemente con software de autoedición, como por ejemplo Aldus PageMaker, 
+                el cual incluye versiones de Lorem Ipsum.
+            </p>
+            <!-- datafields -->
+            <x-tabs label="First tab" selected-index="2">
+                <x-tab label="Basic">
+                    <x-datafields columns="4" label="Lorem ipsum" message="Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum">
+                        <x-datafield label="Text"       x-model="state.text" type="text" minlength="2" maxlength="4" ></x-datafield>
+                        <x-datafield label="Pattern"    x-model="state.pattern" type="text" pattern="gr(a|e)y"></x-datafield>                            
+                        <x-datafield label="Text i18n"  x-model="state.text_i18n" type="text_i18n" placeholder="Write something" required columns="2" class="vertical"></x-datafield>
+                        <x-datafield label="Password"   x-model="state.password" type="password" columns="2" placeholder="This is a placeholder" ></x-datafield>
+                        <x-datafield label="Number 3"   x-model="state.number" type="number" min="1" max="10" ></x-datafield>
+                        <x-datafield label="Date"       x-model="state.date" type="date"></x-datafield>
+                        <x-datafield label="Datetime"   x-model="state.datetime" type="datetime-local"></x-datafield>
+                        <x-datafield label="Time"       x-model="state.time" type="time"></x-datafield>
+                        <x-datafield label="Week"       x-model="state.week" type="week"></x-datafield>
+                        <x-datafield label="Month"      x-model="state.month" type="month"></x-datafield>
+                        <x-datafield label="Url"        x-model="state.url"  type="url"></x-datafield>
+                        <x-datafield label="Email"      x-model="state.email" type="email"></x-datafield>
+                        <x-datafield label="Tel"        x-model="state.tel" type="tel"></x-datafield>
+                        <x-datafield label="Checkbox"   x-model="state.checkbox" type="checkbox" label-secondary="This is a detail"></x-datafield>
+                        <x-datafield label="Color"      x-model="state.color" type="color"></x-datafield>
+                        <x-datafield label="Range"      x-model="state.range" type="range"></x-datafield>                                                       
+                        <x-datafield label="Select"     x-model="state.select" type="select" domain="a=Anasd asd as|b=Lorem ipsum" ></x-datafield>
+                        <x-datafield label="Radios"     x-model="state.radios" type="radios" domain="a=Anasd asd as|b=Lorem ipsum"></x-datafield>
+                        <x-datafield label="Checkboxes" x-model="state.checkboxes" type="checkboxes" domain="a=aaaa|b=bbbbb|c=Cacasc asd asd as" ></x-datafield>
+                        <x-datafield label="Select 2"   x-model="state.checkboxes" type="select"  domain="a=aaaa|b=bbbbb|c=Cacasc asd asd as" multiple ></x-datafield>
+                        <x-datafield label="Textarea"   x-model="state.textarea" type="textarea"></x-datafield>
+                        <x-datafield label="Text 18n"   x-model="state.textarea_i18n" type="textarea_i18n" class="vertical" required></x-datafield>
+                        <x-datafield label="Var1"       type="">This is the content of a slot ELEMENT</x-datafield>
+                    </x-datafields>
+                </x-tab>
+                <x-tab label="Object">
+                    <x-datafields>
+                        <x-datafield label="myObject.var1"  x-model="state.myObject.var1" type="text"></x-datafield>
+                        <x-datafield label="myObject2" x-model="state.myObject2" type="object" required>
+                            <x-datafields x-if="state.myObject2" columns="4">
+                                <x-datafield label="myObject2.var1" x-model="state.myObject2.var1" type="text" required></x-datafield>
+                                <x-datafield label="myObject2.var2" x-model="state.myObject2.var2" type="number"></x-datafield>
+                            </x-datafields>
+                        </x-datafield>                        
+                    </x-datafields>
+                </x-tab>
+                <x-tab label="List">
+                    <x-datafields>
+                        <x-datafield label="List" x-model="state.myList" type="list" add required minlength="2">
+                            <x-datafields x-for="item in state.myList" x-key="id" columns="3" class="grid" remove move>
+                                <x-datafield label="id"         x-model="item.id" type="text" required style="width:5em"></x-datafield>
+                                <x-datafield label="label"      x-model="item.label" type="text" required style="width:5em"></x-datafield>
+                                <x-datafield label="counter"    x-model="item.counter" type="number" style="flex:1"></x-datafield>
+                            </x-datafields>
+                        </x-datafield>
+                    </x-datafields>
+                </x-tab>
+                <x-tab label="Advanced">
+                    <x-datafields>
+                        <x-datafield label="Picker"     x-model="state.picker" type="picker"></x-datafield>                            
+                        <x-datafield label="File"       x-model="state.file" type="file"></x-datafield>
+                        <x-datafield label="Files"      x-model="state.files" type="file" multiple></x-datafield>
+                    </x-datafields>
+                </x-tab>  
+            </x-tabs>
+            <x-datafields label="Second tab">
+                <x-datafield label="Text"       x-model="state.text2222" type="text" minlength="2" maxlength="4" required></x-datafield>
+            </x-datafields>
+            <x-datafields label="Third tab">
+                Third content
+            </x-datafields>
+            <!-- buttons -->
+            <x-button slot="cancel" label="Cancel" command="cancel"></x-button>
+            <x-button slot="footer" label="Save"   command="submit" class="important"></x-button>
         </x-form>
     </x-card>
-
-    <datalist id="browsers">
-        <option value="Chrome"></option>
-        <option value="Firefox"></option>
-        <option value="Internet Explorer"></option>
-        <option value="Opera"></option>
-        <option value="Safari"></option>
-        <option value="Microsoft Edge"></option>
-    </datalist>                            
+                   
 
     <br/>
 
     <x-menu style="width:22em">
-        <x-menuitem label="label1" icon="x-bell" command="something2" ></x-menuitem>
-        <x-menuitem label="label2  alskjfh alksjd asf a MARC" command="" checked></x-menuitem>
+        <x-menu-item label="label1" icon="x-bell" command="something2" ></x-menu-item>
+        <x-menu-item label="label2  alskjfh alksjd asf a MARC" command="" checked></x-menu-item>
         <x-divider></x-divider>
-        <x-menuitem class="childs-inline" label="label3">
-            <x-menuitem label="label3.1" icon="x-settings" command="something2"></x-menuitem>
-            <x-menuitem label="label3.2" href="login.html"></x-menuitem>
-        </x-menuitem>
-        <x-menuitem label="More options"></x-menuitem>
-        <x-menuitem label="label3">
-            <x-menuitem label="label3.1" icon="x-settings"></x-menuitem>
-            <x-menuitem label="label3.2"></x-menuitem>
-        </x-menuitem>
+        <x-menu-item icon="x-empty" class="childs-inline" label="label3">
+            <x-menu-item label="label3.1" command="something2"></x-menu-item>
+            <x-menu-item label="label3.2" href="login.html"></x-menu-item>
+        </x-menu-item>
+        <x-menu-item icon="x-empty" label="More options"></x-menu-item>
+        <x-menu-item icon="x-empty" label="label3">
+            <x-menu-item label="label3.1"></x-menu-item>
+            <x-menu-item label="label3.2"></x-menu-item>
+        </x-menu-item>
     </x-menu>
 
     <hr/>
@@ -137,18 +197,36 @@
 
     <x-divider></x-divider>
 
-    <x-button label="Show popover" command="show-popover"></x-button>
 
+
+
+
+    <x-button label="Show popover" command="show-popover"></x-button>
     <x-popover>
         This is the popup content
     </x-popover>
+    
+
+
+    <button popovertarget="myPopOver"> Show popoer native</button>
+    <div popover id="myPopOver" style="border:1em red solid">
+        This is my content
+    </div>
+
+
+
+
+
+
+
+    
 
     <x-badge value="123"></x-badge>
     <x-badge value="999+"></x-badge>
 
     <x-badge value="2" class="plain"></x-badge>
 
-    <x-commandbar>
+    <x-toolbar>
         <x-button class="plain" label="hello"></x-button>
         <x-button class="plain" label="show"></x-button>
         <x-button class="plain" label="by"></x-button>
@@ -161,29 +239,29 @@
         <x-button class="plain" label="Lorem Ipsum"></x-button>
         <x-button class="plain" label="Hello world 11">
             <x-contextmenu class="plain">
-                <x-menuitem class="plain" label="Subopció 1" command="aaaaa"></x-menuitem>
-                <x-menuitem class="plain" label="Subopció 2"></x-menuitem>
-                <x-menuitem class="plain" label="Subopció 3"></x-menuitem>
-                <x-menuitem class="plain" label="label3.3 asdf asdf  asdf MARC" >
-                    <x-menuitem label="label3.3.1"></x-menuitem>
-                    <x-menuitem label="label3.3.2"></x-menuitem>
-                </x-menuitem>
+                <x-menu-item class="plain" label="Subopció 1" command="aaaaa"></x-menu-item>
+                <x-menu-item class="plain" label="Subopció 2"></x-menu-item>
+                <x-menu-item class="plain" label="Subopció 3"></x-menu-item>
+                <x-menu-item class="plain" label="label3.3 asdf asdf  asdf MARC" >
+                    <x-menu-item label="label3.3.1"></x-menu-item>
+                    <x-menu-item label="label3.3.2"></x-menu-item>
+                </x-menu-item>
             </x-contextmenu>
         </x-button>
         <x-button class="plain" label="Hello world 22" command="mycommand">
             <x-contextmenu class="plain">
-                <x-menuitem class="plain" label="Subopció 1" command="aaaaa"></x-menuitem>
-                <x-menuitem class="plain" label="Subopció 2"></x-menuitem>
-                <x-menuitem class="plain" label="Subopció 3"></x-menuitem>
-                <x-menuitem class="plain" label="label3.3 asdf asdf  asdf MARC" >
-                    <x-menuitem label="label3.3.1"></x-menuitem>
-                    <x-menuitem label="label3.3.2"></x-menuitem>
-                </x-menuitem>
+                <x-menu-item class="plain" label="Subopció 1" command="aaaaa"></x-menu-item>
+                <x-menu-item class="plain" label="Subopció 2"></x-menu-item>
+                <x-menu-item class="plain" label="Subopció 3"></x-menu-item>
+                <x-menu-item class="plain" label="label3.3 asdf asdf  asdf MARC" >
+                    <x-menu-item label="label3.3.1"></x-menu-item>
+                    <x-menu-item label="label3.3.2"></x-menu-item>
+                </x-menu-item>
             </x-contextmenu>
         </x-button>
 
         <x-button slot="toolbar" class="plain" icon="x-settings"></x-button>
-    </x-commandbar>
+    </x-toolbar>
 
     <hr/>
 
@@ -192,21 +270,21 @@
     <x-accordion>
         <x-accordion-panel label="First panel">
             <div slot="toolbar">
-                <x-commandbar>
-                    <x-button class="plain" label="by" icon="x-bell"></x-button>
-                    <x-button class="plain" icon="x-bell"></x-button>
-                    <x-button class="plain" label="Hello world 11">
+                <x-toolbar>
+                    <x-button class="plain short" label="by" icon="x-bell"></x-button>
+                    <x-button class="plain short" icon="x-bell"></x-button>
+                    <x-button class="plain short" label="Hello world 11">
                         <x-contextmenu class="plain">
-                            <x-menuitem class="plain" label="Subopció 1" command="aaaaa"></x-menuitem>
-                            <x-menuitem class="plain" label="Subopció 2"></x-menuitem>
-                            <x-menuitem class="plain" label="Subopció 3"></x-menuitem>
-                            <x-menuitem class="plain" label="label3.3 asdf asdf  asdf MARC" >
-                                <x-menuitem label="label3.3.1"></x-menuitem>
-                                <x-menuitem label="label3.3.2"></x-menuitem>
-                            </x-menuitem>
+                            <x-menu-item class="plain" label="Subopció 1" command="aaaaa"></x-menu-item>
+                            <x-menu-item class="plain" label="Subopció 2"></x-menu-item>
+                            <x-menu-item class="plain" label="Subopció 3"></x-menu-item>
+                            <x-menu-item class="plain" label="label3.3 asdf asdf  asdf MARC" >
+                                <x-menu-item label="label3.3.1"></x-menu-item>
+                                <x-menu-item label="label3.3.2"></x-menu-item>
+                            </x-menu-item>
                         </x-contextmenu>
                     </x-button>
-                </x-commandbar>
+                </x-toolbar>
             </div>
             This is the content of first panel
         </x-accordion-panel>
@@ -234,17 +312,17 @@
     <x-notice type="success" label="This is a label" message="this is a message"></x-notice>
 
     <x-menu class="plain">
-        <x-menuitem label="label1" icon="x-bell" command="something2" checked></x-menuitem>
-        <x-menuitem label="label2 asdfasd flajsdfh laskjdhf alskjfh alksjd asf a MARC"></x-menuitem>
+        <x-menu-item label="label1" icon="x-bell" command="something2" checked></x-menu-item>
+        <x-menu-item label="label2 asdfasd flajsdfh laskjdhf alskjfh alksjd asf a MARC"></x-menu-item>
         <x-divider></x-divider>
-        <x-menuitem label="label3">
-            <x-menuitem label="label3.1" icon="x-settings"></x-menuitem>
-            <x-menuitem label="label3.2"></x-menuitem>
-            <x-menuitem label="label3.3 asdf asdf asdfg asdfasdf asdf MARC" >
-                <x-menuitem label="label3.3.1"></x-menuitem>
-                <x-menuitem label="label3.3.2"></x-menuitem>
-            </x-menuitem>
-        </x-menuitem>
+        <x-menu-item label="label3">
+            <x-menu-item label="label3.1" icon="x-settings"></x-menu-item>
+            <x-menu-item label="label3.2"></x-menu-item>
+            <x-menu-item label="label3.3 asdf asdf asdfg asdfasdf asdf MARC" >
+                <x-menu-item label="label3.3.1"></x-menu-item>
+                <x-menu-item label="label3.3.2"></x-menu-item>
+            </x-menu-item>
+        </x-menu-item>
     </x-menu>
 
     <br/>
@@ -273,18 +351,18 @@
     <hr/>
     <x-button label="Hello world 11" command="xxxx">
         <x-contextmenu class="plain">
-            <x-menuitem class="plain" label="Subopció 1" command="aaaaa"></x-menuitem>
-            <x-menuitem class="plain" label="Subopció 2"></x-menuitem>
-            <x-menuitem class="plain" label="Subopció 3"></x-menuitem>
-            <x-menuitem class="plain" label="Subopció 4"></x-menuitem>
+            <x-menu-item class="plain" label="Subopció 1" command="aaaaa"></x-menu-item>
+            <x-menu-item class="plain" label="Subopció 2"></x-menu-item>
+            <x-menu-item class="plain" label="Subopció 3"></x-menu-item>
+            <x-menu-item class="plain" label="Subopció 4"></x-menu-item>
         </x-contextmenu>
     </x-button>
     <x-button label="Hello world 11" >
         <x-contextmenu class="plain">
-            <x-menuitem class="plain" label="Subopció 1" command="aaaaa"></x-menuitem>
-            <x-menuitem class="plain" label="Subopció 2"></x-menuitem>
-            <x-menuitem class="plain" label="Subopció 3"></x-menuitem>
-            <x-menuitem class="plain" label="Subopció 4"></x-menuitem>
+            <x-menu-item class="plain" label="Subopció 1" command="aaaaa"></x-menu-item>
+            <x-menu-item class="plain" label="Subopció 2"></x-menu-item>
+            <x-menu-item class="plain" label="Subopció 3"></x-menu-item>
+            <x-menu-item class="plain" label="Subopció 4"></x-menu-item>
         </x-contextmenu>
     </x-button>
     <x-button label="Hola" _pressed></x-button>
@@ -303,8 +381,8 @@
     </p>
 
     <ul>
-        <li><x-anchor href="login.html">Help</x-anchor></li>
-        <li><x-anchor href="login.html" command="something">Help something</x-anchor></li>
+        <li><x-anchor href="login.html">login</x-anchor></li>
+        <li><x-anchor href="login.html" command="something">login command</x-anchor></li>
     </ul>       
     <x-button command="dec" label="dec"></x-button>
     <x-button command="inc" label="inc"></x-button>

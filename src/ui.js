@@ -70,6 +70,58 @@ class UI {
             resolve = resolv;
         });
     }
+    createElementsFromObject(list, settings = {}, level = 0) {
+        let result = [];
+        if (!settings.defaults) settings.defaults = {};
+        if (!settings.defaults.tag) settings.defaults.tag = "x-menu-item";
+        let defaults = settings.defaults;
+        let defaultsByLevel = settings.defaults["level" + level] || {};
+        for(let item of list) {
+            //tag
+            let tag = item.tag || defaultsByLevel.tag || defaults.tag;
+            //create node
+            let keys = [];
+            let node = document.createElement(tag);
+            for(let key in item) {
+                if (key != "tag" && key != "children") {
+                    node.setAttribute(key, item[key]);
+                }
+                keys.push(key);
+            }
+            //defaultsByLevel
+            for(let key in defaultsByLevel.attributes) {
+                let value = defaultsByLevel.attributes[key];
+                if (keys.indexOf(key) == -1){
+                    node.setAttribute(key, value);
+                    keys.push(key);
+                }                
+            }
+            //defaults
+            for(let key in defaults.attributes) {
+                let value = defaults.attributes[key];
+                if (keys.indexOf(key) == -1){
+                    node.setAttribute(key, value);
+                    keys.push(key);
+                }
+            }            
+            //children
+            if (item.children) {
+                let container = node;
+                let childWrapper = defaultsByLevel.childWrapper || defaults.childWrapper;
+                if (childWrapper) {
+                    let aux = document.createElement(childWrapper);
+                    container.appendChild(aux);
+                    container = aux;
+                }
+                for (let subMenuitem of this.createElementsFromObject(item.children, settings, level + 1)){
+                    container.appendChild(subMenuitem);
+                }
+            }
+            //push
+            result.push(node);
+        }
+        return result;
+    }
 
 };
 
