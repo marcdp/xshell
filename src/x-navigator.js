@@ -99,7 +99,8 @@ class XNavigator extends HTMLElement {
     async showPage({url, sender = null, target = null}) {
         if (url.startsWith(HASH_PREFIX)) url =url.substring(HASH_PREFIX.length);
         //resolve url
-        if (!url.startsWith("/")) {
+        if (url.startsWith("page:")) {
+        } else if (!url.startsWith("/")) {
             if (sender) {
                 let aux = sender.src;
                 aux = aux.substring(0, aux.lastIndexOf("/") + 1);

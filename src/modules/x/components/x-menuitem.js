@@ -1,12 +1,12 @@
 import XElement from "../ui/x-element.js";
 
 // class
-export default XElement.define("x-menu-item", {
+export default XElement.define("x-menuitem", {
     style: `
         :host {display:flex; position:relative; box-sizing:border-box; flex-direction:column}
         
         /* default */
-        :host x-anchor {display:flex; flex:1; flex-direction:row; align-items:center; cursor:pointer; border-radius:var(--x-menu-item-border-radius); user-select: none;}
+        :host x-anchor {display:flex; flex:1; flex-direction:row; align-items:center; cursor:pointer; border-radius:var(--x-menuitem-border-radius); user-select: none;}
         :host x-anchor:hover {background:var(--x-background-gray);}
         :host x-anchor x-icon {color:var(--x-text-color)!important; text-align:center;}
         :host x-anchor span.label {color:var(--x-text-color)!important; flex:1;  display:block; padding-top:.5em; padding-bottom:.5em; white-space:nowrap; }
@@ -94,7 +94,7 @@ export default XElement.define("x-menu-item", {
                     if (newValue.children) {
                         this.replaceChildren();
                         for(let child of newValue.children) {
-                            let item = document.createElement("x-menu-item");
+                            let item = document.createElement("x-menuitem");
                             if (child.href) item.setAttribute("href", child.href);
                             item.menuitem = child;
                             this.appendChild(item);

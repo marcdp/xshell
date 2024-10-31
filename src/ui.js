@@ -73,7 +73,7 @@ class UI {
     createElementsFromObject(list, settings = {}, level = 0) {
         let result = [];
         if (!settings.defaults) settings.defaults = {};
-        if (!settings.defaults.tag) settings.defaults.tag = "x-menu-item";
+        if (!settings.defaults.tag) settings.defaults.tag = "x-menuitem";
         let defaults = settings.defaults;
         let defaultsByLevel = settings.defaults["level" + level] || {};
         for(let item of list) {

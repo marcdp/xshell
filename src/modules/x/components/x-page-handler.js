@@ -85,9 +85,9 @@ class XPageHandler extends HTMLElement  {
     }
     connectedCallback() {
         //template instance
-        this._xtemplateInstance = this._xtemplate.createInstance(this._state, (command, args) => {
+        this._xtemplateInstance = this._xtemplate.createInstance(this._state, (command, event) => {
             //handler
-            this.onCommand(command, args);
+            this.onCommand(command, { event});
         }, () => {
             //invalidate
             this.invalidate();

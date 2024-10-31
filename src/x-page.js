@@ -32,7 +32,7 @@ class XPage extends HTMLElement {
     get src() {return this._src;}
     set src(value) {
         let changed = (this._src != value);
-        if (!value.startsWith("/") && value.indexOf("://") == -1 && this.src) {
+        if (!value.startsWith("page:") && !value.startsWith("/") && value.indexOf("://") == -1 && this.src) {
             let aux = this.src;
             aux = aux.substring(0, aux.lastIndexOf("/"));   
             value = aux + "/" + value;
@@ -153,9 +153,7 @@ class XPage extends HTMLElement {
             } else {
                 dialog = document.createElement("dialog");
                 dialog.addEventListener('click', (event) => {
-                    let rect = dialog.getBoundingClientRect();
-                    let isInDialog = (rect.top <= event.clientY && event.clientY <= rect.top + rect.height && rect.left <= event.clientX && event.clientX <= rect.left + rect.width);
-                    if (!isInDialog) {
+                    if (event.target == dialog) {
                         event.preventDefault();
                         event.stopPropagation();
                         this._raisePageCloseEvent();
@@ -184,7 +182,9 @@ class XPage extends HTMLElement {
         }
         //load html page
         let src = this.src;        
-        if (!src.startsWith("/") && src.indexOf("://") == -1) {
+        if (src.startsWith("page:")) {
+            src = loader.resolveSrc(src.split("?")[0]);
+        } else if (!src.startsWith("/") && src.indexOf("://") == -1) {
             if (this.parentNode) {
                 let page = this.parentNode.closest("x-page");
                 if (page) {
@@ -193,8 +193,10 @@ class XPage extends HTMLElement {
                     src = aux + "/" + src;
                 }
             }
+            if (src.indexOf("://") == -1) src = xshell.config.navigator.base + src;
+        } else {
+            if (src.indexOf("://") == -1) src = xshell.config.navigator.base + src;
         }
-        if (src.indexOf("://") == -1) src = xshell.config.navigator.base + src;
         let response = await fetch(src);
         let contentType = response.headers.get("Content-Type");
         let content = await response.text();   

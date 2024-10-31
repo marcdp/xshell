@@ -5,9 +5,10 @@
     "config": {
         "loader": {
             "map": [
-                {"resource": "component:x-{name}",          "src": "./components/x-{name}.js"},
-                {"resource": "layout:x-{name}",             "src": "./layouts/x-{name}.js"},
-                {"resource": "icon:x-{name}",               "src": "./icons/{name}.svg", "with": {"type":"svg"}}
+                {"resource": "component:x-{name}",  "src": "./components/x-{name}.js"},
+                {"resource": "layout:x-{name}",     "src": "./layouts/x-{name}.js"},
+                {"resource": "page:x-{name}",       "src": "./pages/x-{name}.html"},
+                {"resource": "icon:x-{name}",       "src": "./icons/{name}.svg", "with": {"type":"svg"}}
             ]
         },
         "ui": {

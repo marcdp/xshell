@@ -70,6 +70,10 @@
         "base":  ".",
         "start": "/folder1/login.html"
     },
+    /* settings */
+    "settings": {
+        "prefix": "settings-"
+    },
     /* user */
     "user": {
         "id": "",

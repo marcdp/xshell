@@ -27,7 +27,26 @@
                 {id:"value2", label: "value22", counter:99}
             ],
             file:"",
-            files:[]
+            files:[],
+            html: "hello <b>world</b>.",
+            html_i18n: "i18n:en=hello <b>world</b>.|i18n:ca=hola <b>mon</b>.",
+            datatable: {
+                rows:[
+                    {id:1, label:"name1", age:12},
+                    {id:2, label:"name2", age:22},
+                    {id:3, label:"name3", age:32},
+                    {id:4, label:"name4", age:42},
+                    {id:5, label:"name5", age:52},
+                    {id:6, label:"name6", age:62},
+                    {id:7, label:"name7", age:72},
+                    {id:8, label:"name8", age:82},
+                    {id:9, label:"name9", age:92},
+                    {id:10, label:"name10", age:102},
+                ],
+                total: 100,
+                index:0,
+                size:10
+            }
         },
         async onCommand(command, args) {
             if (command == "load") {
@@ -73,6 +92,23 @@
             } else if (command == "cancel") {
                 //cancel
                 alert("cancel");
+
+            } else if (command == "pager-change") {
+                //pager-change
+                let event = args.event;
+                let datatable = {
+                    rows:[],
+                    total: this.state.datatable.total,
+                    index: event.detail.index,
+                    size: event.detail.size
+                };
+                for(let i = 0; i < datatable.size; i++) {
+                    datatable.rows.push(
+                        {id:datatable.index * datatable.size + i + 1, label:"name" + datatable.index * datatable.size + i, age:12},
+                    );
+                }
+                this.state.datatable = datatable;
+                
             }
         }
     };
@@ -83,7 +119,6 @@
 
     {{ JSON.stringify(state) }}
 
-    <x-card style="max-width:80em;">
         <x-form wizard wizard-direction="vertical">
             <!-- header -->
             <h2 slot="header">This is the title</h2>
@@ -93,7 +128,7 @@
                 el cual incluye versiones de Lorem Ipsum.
             </p>
             <!-- datafields -->
-            <x-tabs label="First tab" selected-index="2">
+            <x-tabs label="First tab" selected-index="3">
                 <x-tab label="Basic">
                     <x-datafields columns="4" label="Lorem ipsum" message="Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum">
                         <x-datafield label="Text"       x-model="state.text" type="text" minlength="2" maxlength="4" ></x-datafield>
@@ -143,6 +178,38 @@
                         </x-datafield>
                     </x-datafields>
                 </x-tab>
+                <x-tab label="Html">
+                    <x-datafields>
+                        <x-datafield label="Html editor" x-model="state.html" type="html" required spellcheck="false"></x-datafield>
+                        <x-datafield label="Html editor i18n" x-model="state.html_i18n" type="html_i18n" required></x-datafield>
+                    </x-datafields>
+                </x-tab>  
+                <x-tab label="Datatable">
+                    <x-datafields>
+                        <x-datatable>
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th style="width:5em">Id</th>
+                                        <th>Label</th>
+                                        <th>Age</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr x-for="row in state.datatable.rows">
+                                        <td>
+                                            <x-icon icon="x-bell"></x-icon>
+                                            <x-anchor href="aaa" command="something">{{ row.id }}</x-anchor>
+                                        </td>
+                                        <td>{{ row.label }}</td>
+                                        <td>{{ row.age }}</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                            <x-pager x-attr:total="state.datatable.total" x-attr:index="state.datatable.index" x-attr:size="state.datatable.size" x-on:change="pager-change"></x-pager>
+                        </x-datatable>
+                    </x-datafields>
+                </x-tab>  
                 <x-tab label="Advanced">
                     <x-datafields>
                         <x-datafield label="Picker"     x-model="state.picker" type="picker"></x-datafield>                            
@@ -161,24 +228,22 @@
             <x-button slot="cancel" label="Cancel" command="cancel"></x-button>
             <x-button slot="footer" label="Save"   command="submit" class="important"></x-button>
         </x-form>
-    </x-card>
                    
-
     <br/>
 
     <x-menu style="width:22em">
-        <x-menu-item label="label1" icon="x-bell" command="something2" ></x-menu-item>
-        <x-menu-item label="label2  alskjfh alksjd asf a MARC" command="" checked></x-menu-item>
+        <x-menuitem label="label1" icon="x-bell" command="something2" ></x-menuitem>
+        <x-menuitem label="label2  alskjfh alksjd asf a MARC" command="" checked></x-menuitem>
         <x-divider></x-divider>
-        <x-menu-item icon="x-empty" class="childs-inline" label="label3">
-            <x-menu-item label="label3.1" command="something2"></x-menu-item>
-            <x-menu-item label="label3.2" href="login.html"></x-menu-item>
-        </x-menu-item>
-        <x-menu-item icon="x-empty" label="More options"></x-menu-item>
-        <x-menu-item icon="x-empty" label="label3">
-            <x-menu-item label="label3.1"></x-menu-item>
-            <x-menu-item label="label3.2"></x-menu-item>
-        </x-menu-item>
+        <x-menuitem icon="x-empty" class="childs-inline" label="label3">
+            <x-menuitem label="label3.1" command="something2"></x-menuitem>
+            <x-menuitem label="label3.2" href="login.html"></x-menuitem>
+        </x-menuitem>
+        <x-menuitem icon="x-empty" label="More options"></x-menuitem>
+        <x-menuitem icon="x-empty" label="label3">
+            <x-menuitem label="label3.1"></x-menuitem>
+            <x-menuitem label="label3.2"></x-menuitem>
+        </x-menuitem>
     </x-menu>
 
     <hr/>
@@ -239,24 +304,24 @@
         <x-button class="plain" label="Lorem Ipsum"></x-button>
         <x-button class="plain" label="Hello world 11">
             <x-contextmenu class="plain">
-                <x-menu-item class="plain" label="Subopció 1" command="aaaaa"></x-menu-item>
-                <x-menu-item class="plain" label="Subopció 2"></x-menu-item>
-                <x-menu-item class="plain" label="Subopció 3"></x-menu-item>
-                <x-menu-item class="plain" label="label3.3 asdf asdf  asdf MARC" >
-                    <x-menu-item label="label3.3.1"></x-menu-item>
-                    <x-menu-item label="label3.3.2"></x-menu-item>
-                </x-menu-item>
+                <x-menuitem class="plain" label="Subopció 1" command="aaaaa"></x-menuitem>
+                <x-menuitem class="plain" label="Subopció 2"></x-menuitem>
+                <x-menuitem class="plain" label="Subopció 3"></x-menuitem>
+                <x-menuitem class="plain" label="label3.3 asdf asdf  asdf MARC" >
+                    <x-menuitem label="label3.3.1"></x-menuitem>
+                    <x-menuitem label="label3.3.2"></x-menuitem>
+                </x-menuitem>
             </x-contextmenu>
         </x-button>
         <x-button class="plain" label="Hello world 22" command="mycommand">
             <x-contextmenu class="plain">
-                <x-menu-item class="plain" label="Subopció 1" command="aaaaa"></x-menu-item>
-                <x-menu-item class="plain" label="Subopció 2"></x-menu-item>
-                <x-menu-item class="plain" label="Subopció 3"></x-menu-item>
-                <x-menu-item class="plain" label="label3.3 asdf asdf  asdf MARC" >
-                    <x-menu-item label="label3.3.1"></x-menu-item>
-                    <x-menu-item label="label3.3.2"></x-menu-item>
-                </x-menu-item>
+                <x-menuitem class="plain" label="Subopció 1" command="aaaaa"></x-menuitem>
+                <x-menuitem class="plain" label="Subopció 2"></x-menuitem>
+                <x-menuitem class="plain" label="Subopció 3"></x-menuitem>
+                <x-menuitem class="plain" label="label3.3 asdf asdf  asdf MARC" >
+                    <x-menuitem label="label3.3.1"></x-menuitem>
+                    <x-menuitem label="label3.3.2"></x-menuitem>
+                </x-menuitem>
             </x-contextmenu>
         </x-button>
 
@@ -275,13 +340,13 @@
                     <x-button class="plain short" icon="x-bell"></x-button>
                     <x-button class="plain short" label="Hello world 11">
                         <x-contextmenu class="plain">
-                            <x-menu-item class="plain" label="Subopció 1" command="aaaaa"></x-menu-item>
-                            <x-menu-item class="plain" label="Subopció 2"></x-menu-item>
-                            <x-menu-item class="plain" label="Subopció 3"></x-menu-item>
-                            <x-menu-item class="plain" label="label3.3 asdf asdf  asdf MARC" >
-                                <x-menu-item label="label3.3.1"></x-menu-item>
-                                <x-menu-item label="label3.3.2"></x-menu-item>
-                            </x-menu-item>
+                            <x-menuitem class="plain" label="Subopció 1" command="aaaaa"></x-menuitem>
+                            <x-menuitem class="plain" label="Subopció 2"></x-menuitem>
+                            <x-menuitem class="plain" label="Subopció 3"></x-menuitem>
+                            <x-menuitem class="plain" label="label3.3 asdf asdf  asdf MARC" >
+                                <x-menuitem label="label3.3.1"></x-menuitem>
+                                <x-menuitem label="label3.3.2"></x-menuitem>
+                            </x-menuitem>
                         </x-contextmenu>
                     </x-button>
                 </x-toolbar>
@@ -312,17 +377,17 @@
     <x-notice type="success" label="This is a label" message="this is a message"></x-notice>
 
     <x-menu class="plain">
-        <x-menu-item label="label1" icon="x-bell" command="something2" checked></x-menu-item>
-        <x-menu-item label="label2 asdfasd flajsdfh laskjdhf alskjfh alksjd asf a MARC"></x-menu-item>
+        <x-menuitem label="label1" icon="x-bell" command="something2" checked></x-menuitem>
+        <x-menuitem label="label2 asdfasd flajsdfh laskjdhf alskjfh alksjd asf a MARC"></x-menuitem>
         <x-divider></x-divider>
-        <x-menu-item label="label3">
-            <x-menu-item label="label3.1" icon="x-settings"></x-menu-item>
-            <x-menu-item label="label3.2"></x-menu-item>
-            <x-menu-item label="label3.3 asdf asdf asdfg asdfasdf asdf MARC" >
-                <x-menu-item label="label3.3.1"></x-menu-item>
-                <x-menu-item label="label3.3.2"></x-menu-item>
-            </x-menu-item>
-        </x-menu-item>
+        <x-menuitem label="label3">
+            <x-menuitem label="label3.1" icon="x-settings"></x-menuitem>
+            <x-menuitem label="label3.2"></x-menuitem>
+            <x-menuitem label="label3.3 asdf asdf asdfg asdfasdf asdf MARC" >
+                <x-menuitem label="label3.3.1"></x-menuitem>
+                <x-menuitem label="label3.3.2"></x-menuitem>
+            </x-menuitem>
+        </x-menuitem>
     </x-menu>
 
     <br/>
@@ -351,18 +416,18 @@
     <hr/>
     <x-button label="Hello world 11" command="xxxx">
         <x-contextmenu class="plain">
-            <x-menu-item class="plain" label="Subopció 1" command="aaaaa"></x-menu-item>
-            <x-menu-item class="plain" label="Subopció 2"></x-menu-item>
-            <x-menu-item class="plain" label="Subopció 3"></x-menu-item>
-            <x-menu-item class="plain" label="Subopció 4"></x-menu-item>
+            <x-menuitem class="plain" label="Subopció 1" command="aaaaa"></x-menuitem>
+            <x-menuitem class="plain" label="Subopció 2"></x-menuitem>
+            <x-menuitem class="plain" label="Subopció 3"></x-menuitem>
+            <x-menuitem class="plain" label="Subopció 4"></x-menuitem>
         </x-contextmenu>
     </x-button>
     <x-button label="Hello world 11" >
         <x-contextmenu class="plain">
-            <x-menu-item class="plain" label="Subopció 1" command="aaaaa"></x-menu-item>
-            <x-menu-item class="plain" label="Subopció 2"></x-menu-item>
-            <x-menu-item class="plain" label="Subopció 3"></x-menu-item>
-            <x-menu-item class="plain" label="Subopció 4"></x-menu-item>
+            <x-menuitem class="plain" label="Subopció 1" command="aaaaa"></x-menuitem>
+            <x-menuitem class="plain" label="Subopció 2"></x-menuitem>
+            <x-menuitem class="plain" label="Subopció 3"></x-menuitem>
+            <x-menuitem class="plain" label="Subopció 4"></x-menuitem>
         </x-contextmenu>
     </x-button>
     <x-button label="Hola" _pressed></x-button>
