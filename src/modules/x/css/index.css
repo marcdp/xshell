@@ -93,8 +93,8 @@
     --x-menu-border: .1em #D0D7DE solid;
     --x-menu-shadow: rgba(0, 0, 0, 0.11) 0px 12px 25px 0px, rgba(0, 0, 0, 0.09) 0px 2.4px 7px 0px;
     --x-menu-border-radius: .25em;
-    --x-menu-item-border-radius: .25em;
-    --x-menu-item-tab-selected-border: .25em;
+    --x-menuitem-border-radius: .25em;
+    --x-menuitem-tab-selected-border: .25em;
 
     /* x-notice */
     --x-notice-border-radius: .25em;
@@ -141,7 +141,7 @@
     --x-text-color-gray: #666666;
     --x-text-color-x-gray: #888888;
     --x-text-color-inverse: #EEEEEE;
-    --x-text-color-disabled: gray;
+    --x-text-color-disabled: #AAAAAA;
     --x-text-color-black: #000000;
 }  
  

@@ -37,7 +37,7 @@ export default XElement.define("x-app-bar", {
         </x-toolbar>
     `, 
     settings: {
-        preload: ["component:x-menu-item", "component:x-contextmenu", "component:x-button"]
+        preload: ["component:x-menuitem", "component:x-contextmenu", "component:x-button"]
     },
     state: {
         title: "",

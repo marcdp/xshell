@@ -91,6 +91,8 @@ class XElement extends HTMLElement {
         let oldPropValue = this._state[prop];
         if (typeof(oldPropValue) == "boolean") {
             newValue = (newValue != null);
+        } else if (typeof(oldPropValue) == "number") {
+            newValue = Number(newValue);
         }
         if (oldPropValue != newValue) {
             this._state[prop] = newValue;

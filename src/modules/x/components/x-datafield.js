@@ -1,5 +1,6 @@
 import XElement from "../ui/x-element.js";
 import { utils } from "../ui/x-template.js";
+import i18n from "../../../i18n.js";
 
 // utils
 const urlPattern = /^(https?:\/\/)?(www\.)?([a-zA-Z0-9-]+)\.([a-zA-Z]{2,})(\/[a-zA-Z0-9#-]+\/?)*$/;
@@ -10,8 +11,10 @@ const telPattern = /^(\+?\d{1,3}[-.\s]?)?(\(?\d{3}\)?[-.\s]?)?\d{3}[-.\s]?\d{4,7
 export default XElement.define("x-datafield", {
     style: `
         :host {display:block; position:relative; }
-        :host label {font-weight:600; display:var(--x-input-label-display, none); padding-bottom:.35em;}
+        :host label {display:var(--x-input-label-display, none); padding-bottom:.35em;}
+        :host label span.label {font-weight:600; }
         :host label span.required {color:var(--x-input-error-color);}
+        :host label .anchor {vertical-align:bottom; float:right;}
         :host p {margin:0; font-size:var(--x-font-size-small); padding-top:.25em;}
         ::placeholder {color:var(--x-input-color-placeholder);}        
         :host input,select,textarea {display:block; width:100%; resize: none;}
@@ -75,11 +78,10 @@ export default XElement.define("x-datafield", {
         :host .container div input {margin-right:.5em; width:1em;}
         :host .container div label {display:block; flex:1; color:var(--x-input-color); font-weight:normal; font-size:var(--x-input-font-size);}
 
-        
         :host .object > input {width:unset;}
 
         :host .picker {display:flex; padding:0;}
-        :host .picker span {flex:1; display:block;padding-left:.5em; padding-right:.5em; line-height:2em; color:var(--x-input-color);}
+        :host .picker span {flex:1; display:block;padding-left:.5em; padding-right:.5em; line-height:2.15em; color:var(--x-input-color);}
         :host .picker input {border:none; outline:none; }
         :host .picker input:focus {border:none; outline:none;}
         :host .picker x-button {font-size:.9em;}
@@ -90,6 +92,8 @@ export default XElement.define("x-datafield", {
         :host .list .list-body[empty] {padding:.05em; }
         :host .list .list-buttons {display:flex; justify-content:flex-end;}
 
+        :host .html {padding:0;}
+
         :host label:not(.error) + .input:focus + span.mark {display:block;}
         :host label:not(.error) + .input:focus-within + span.mark {display:block;}
 
@@ -98,8 +102,9 @@ export default XElement.define("x-datafield", {
         `,
     template: `
         <label x-attr:for="state.inputId" x-attr:class="(state.errors.length ? 'error' : '')" >
-            <span x-if="state.label" x-text="state.label"></span>
-            <span x-if="state.required" class="required">*</span>
+            <span class="label" x-if="state.label" x-text="state.label"></span>
+            <span x-if="state.required">*</span>
+            <x-button x-if="state.type.endsWith('_i18n')" class="anchor plain" x-on:click="lang-add" icon="x-add" title="Add translation"></x-button>
         </label>
 
         <div x-if="state.type==''" class="input slot">
@@ -111,27 +116,27 @@ export default XElement.define("x-datafield", {
             x-model="state.value" 
             x-attr:id="state.inputId"
             x-attr:multiple="state.multiple">
-            <option x-if="!state.required && !state.multiple" x-text="state.placeholder" class="placeholder"></option>
-            <option x-for="option in state.domain" x-attr:value="option.value" x-text="option.label" x-attr:selected="(option.value == state.value || (state.multiple && (',' + state.value + ',').indexOf(',' + option.value + ',')!=-1))"></option>
+            <option x-if="!state.multiple" x-text="state.placeholder" class="placeholder"></option>
+            <option x-for="option in state.domain" x-attr:value="option.value" x-text="option.label" x-attr:disabled="option.disabled" x-attr:selected="(option.value == state.value || (state.multiple && (',' + state.value + ',').indexOf(',' + option.value + ',')!=-1))"></option>
         </select>
 
         <div x-elseif="state.type=='radios'" class="input container">
             <div x-for="(option,index) in state.domain">
-                <input type="radio" x-attr:value="option.value" name="radio" x-attr:id="'radio' + index" x-model="state.value"/>
+                <input type="radio" x-attr:value="option.value" name="radio" x-attr:id="'radio' + index" x-model="state.value" x-attr:disabled="option.disabled"/>
                 <label x-text="option.label" x-attr:for="'radio' + index"></label>
             </div>
         </div>
 
         <div x-elseif="state.type=='checkbox'" class="input container">
             <div>
-                <input type="checkbox" x-attr:value="state.value" name="checkbox" id="checkbox" x-model="state.value" />
+                <input type="checkbox" x-attr:value="state.value" name="checkbox" id="checkbox" x-model="state.value"/>
                 <label x-text="state.labelSecondary" for="checkbox"></label>
             </div>
         </div>
 
         <div x-elseif="state.type=='checkboxes'" class="input container">
             <div x-for="(option,index) in state.domain">
-                <input type="checkbox" x-attr:value="option.value" x-attr:id="'radio' + index" name="checkbox" x-attr:checked="(state.value ? state.value.split(',').indexOf(option.value)!=-1 : null)" x-on:change="checkbox-changed"/>
+                <input type="checkbox" x-attr:value="option.value" x-attr:id="'radio' + index" name="checkbox" x-attr:checked="(state.value ? state.value.split(',').indexOf(option.value)!=-1 : null)" x-on:change="checkbox-changed" x-attr:disabled="option.disabled"/>
                 <label x-text="option.label" x-attr:for="'radio' + index"></label>
             </div>
         </div>
@@ -140,6 +145,8 @@ export default XElement.define("x-datafield", {
             class="input" 
             x-model="state.value"
             x-attr:id="state.inputId"
+            x-attr:lang="state.lang" 
+            x-attr:spellcheck="state.spellcheck"
             x-attr:placeholder="state.placeholder" 
             x-attr:minlength="state.minlength"
             x-attr:maxlength="state.maxlength"
@@ -170,10 +177,12 @@ export default XElement.define("x-datafield", {
                     x-attr:maxlength="state.maxlength"
                     x-attr:pattern="state.pattern"
                     x-attr:disabled="state.disabled" 
-                    x-attr:readonly="state.readonly" />
-                <span class="lang" x-html="lang"></span>
+                    x-attr:readonly="state.readonly" 
+                    x-attr:spellcheck="state.spellcheck"
+                />
+                <span class="lang" x-html="lang" x-attr:title="utils.getLangLabel(lang)"></span>
             </div>
-            <span class="mark"></span>
+            <span class="mark"></span>            
         </div>
 
         <div x-elseif="state.type=='textarea_i18n'" class="input i18n">
@@ -189,8 +198,9 @@ export default XElement.define("x-datafield", {
                     x-attr:maxlength="state.maxlength"
                     x-attr:disabled="state.disabled" 
                     x-attr:readonly="state.readonly" 
+                    x-attr:spellcheck="state.spellcheck"
                 ></textarea>
-                <span class="lang" x-html="lang"></span>
+                <span class="lang" x-html="lang" x-attr:title="utils.getLangLabel(lang)"></span>
             </div>
             <span class="mark"></span>
         </div>
@@ -206,6 +216,40 @@ export default XElement.define("x-datafield", {
                 x-attr:required="state.required"
                 x-attr:accept="state.accept"
             />
+        </div>
+
+        <div x-elseif="state.type=='html'" class="input html">
+            <x-html-editor 
+                x-model="state.value" 
+                x-attr:id="state.inputId"
+                x-attr:lang="state.langs[state.langIndex]" 
+                x-attr:disabled="state.disabled" 
+                x-attr:readonly="state.readonly"
+                x-attr:spellcheck="state.spellcheck"
+            ></x-html-editor>
+        </div>
+
+        <div x-elseif="state.type=='html_i18n'" class="input html">
+            <x-html-editor 
+                x-prop:value="utils.i18n(state.value, state.langs[state.langIndex])"
+                x-on:change="text_i18n-changed"
+                x-attr:id="state.inputId"
+                x-attr:lang="state.langs[state.langIndex]" 
+                x-attr:disabled="state.disabled" 
+                x-attr:readonly="state.readonly"
+                x-attr:spellcheck="state.spellcheck"
+            >
+                <span slot="toolbar" style="flex:1" ></span>
+                <x-button 
+                    slot="toolbar" 
+                    x-for="(lang,index) in state.langs"
+                    x-attr:label="lang"
+                    x-on:click="lang-changed"
+                    x-attr:title="utils.getLangLabel(lang)"
+                    x-attr:data-lang="lang"
+                    x-attr:class="'plain ' + (state.langIndex == index ? ' selected' : '') + (state.value.indexOf('i18n:' + lang + '=')==-1 ? ' empty' : '') "></x-button>
+            </x-html-editor>            
+            <span class="mark"></span>
         </div>
 
         <div x-elseif="state.type=='object'" class="input object">
@@ -236,6 +280,8 @@ export default XElement.define("x-datafield", {
             x-model="state.value"
             x-attr:id="state.inputId"
             x-attr:type="state.type" 
+            x-attr:lang="state.lang" 
+            x-attr:spellcheck="state.spellcheck" 
             x-attr:placeholder="state.placeholder" 
             x-attr:disabled="state.disabled"
             x-attr:readonly="state.readonly"
@@ -267,7 +313,7 @@ export default XElement.define("x-datafield", {
         label:"",
         labelSecondary:"",
         message: "",
-        type: "text",
+        type: "",
         placeholder: "",
         disabled: false,
         readonly: false,
@@ -285,14 +331,17 @@ export default XElement.define("x-datafield", {
         value: null,
         valueOriginal: null,
         accept: null,
-        langs: ["en", "es", "fr"],
+        lang: null,
+        spellcheck: "true",
+        langs: [],
+        langIndex: 0,
         errors: [],
         validated: false,
         inputId: "input",
         add: false
     },
     settings:{
-        observedAttributes:["label", "label-secondary", "message", "type", "placeholder", "disabled", "readonly", "required", "min", "max", "minlength", "maxlength", "multiple", "pattern", "step", "autofocus", "autocomplete", "domain", "value", "accept", "add"]
+        observedAttributes:["label", "label-secondary", "message", "type", "placeholder", "disabled", "readonly", "required", "min", "max", "minlength", "maxlength", "multiple", "pattern", "step", "autofocus", "autocomplete", "domain", "value", "accept", "add", "lang", "spellcheck"]
     },
     methods: {
         onStateChanged(name, oldValue, newValue) {
@@ -309,7 +358,7 @@ export default XElement.define("x-datafield", {
                         }
                     }
                     this.state.domain = domain;
-                }
+                } 
             } else if (name == "type" || name == "required" || name == "min" || name == "max" || name == "minlength" || name == "maxlength" || name == "pattern") {
                 //value changed
                 this.onCommand("validate");
@@ -331,14 +380,26 @@ export default XElement.define("x-datafield", {
                 this.state.inputId = utils.getFreeId();
                 if (!this.state.validated) {
                     this.onCommand("validate");
-                }
-                
+                }                
                 this.state.hasChilds = (this.firstElementChild != null);
 
             } else if (command == "slotchange") {
                 //slotchange
                 this.state.hasChilds = (this.firstElementChild != null);
-                
+
+            } else if (command == "lang-add") {
+                //lang-add
+                let lang = await this.page.showDialog({url: "page:x-page-lang-picker?disabled=" + this.state.langs.join(",")});
+                if (lang) {
+                    this.state.langs.push(lang);
+                    this.state.langIndex = this.state.langs.length - 1;
+                }
+
+            } else if (command == "lang-changed") {
+                //lang-changed
+                let lang = args.event.target.dataset.lang;
+                this.state.langIndex = this.state.langs.indexOf(lang);
+
             } else if (command == "object-changed"){
                 //object-changed
                 if (this.state.value) {
@@ -369,6 +430,7 @@ export default XElement.define("x-datafield", {
                 let aux = value.splice(index, 1)[0]; // Remove the item from the array
                 value.splice(newIndex, 0, aux); // Insert it at the new index
                 this.state.value = value;
+                event.stopPropagation();
 
             } else if (command == "list-remove"){
                 // list-remove
@@ -418,6 +480,19 @@ export default XElement.define("x-datafield", {
         },
         validate(detail) {
             let result = [];
+            //langs                    
+            if (this.state.type.endsWith("_i18n")) {
+                let langs = [...i18n.config.mainLangs];
+                if (this.state.value) {
+                    for(let aux of this.state.value.split("|")) {
+                        if (aux.startsWith("i18n:") && aux.length > 7) {
+                            let lang = aux.substring(5, 7);
+                            if (!langs.includes(lang)) langs.push(lang);
+                        }
+                    }
+                }
+                this.state.langs = langs;
+            }
             //errors
             if (this.state.required && !this.state.value) {
                 result.push({type:"error", label: this.label, message:"Required"});
@@ -461,14 +536,15 @@ export default XElement.define("x-datafield", {
                         result.push({type:"error", label: this.label, message:"Invalid phone number"});
                     }
                 }
-            } else if (this.state.type == "text_i18n" || this.state.type == "textarea_i18n") {
+            } else if (this.state.type == "text_i18n" || this.state.type == "textarea_i18n" || this.state.type == "html_i18n") {
                 if (this.state.value) {
-                    let hasValue = false;
+                    let hasMainValue = false;
                     for(let lang of this.state.langs) {
                         let value = utils.i18n(this.state.value, lang);
-                        if (value) hasValue = true;
+                        if (value && lang == this.state.langs[0]) hasMainValue = true;
+
                     }
-                    if (this.state.required && !hasValue) {  
+                    if (this.state.required && !hasMainValue) {  
                         result.push({type:"error", label: this.label, message:"Required"});
                     }
                 }

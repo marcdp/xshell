@@ -1,7 +1,7 @@
 import XElement from "../ui/x-element.js";
 
 // class
-export default XElement.define("x-menu-group", {
+export default XElement.define("x-menugroup", {
     style: `
         :host {}
         :host div {line-height:2em; padding-left:.5em; padding-right:.5em;}

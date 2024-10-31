@@ -17,7 +17,7 @@ export default XElement.define("x-app-menu", {
             x-attr:selected="menuitem.selected"
             x-attr:href="menuitem.href">                
             <x-contextmenu x-if="menuitem.children">
-                <x-menu-item x-for="submenuitem in menuitem.children" x-prop:menuitem="submenuitem"></x-menu-item>
+                <x-menuitem x-for="submenuitem in menuitem.children" x-prop:menuitem="submenuitem"></x-menuitem>
             </x-contextmenu>
         </x-button>
     `, 
@@ -33,7 +33,7 @@ export default XElement.define("x-app-menu", {
             let href = event.page.src;
             let breadcrumb = event.page.breadcrumb;
             if (breadcrumb.length) href = breadcrumb[0].href;
-            let names = ["x-menu-item", "x-button"];
+            let names = ["x-menuitem", "x-button"];
             this.shadowRoot.querySelectorAll(names.join(", ")).forEach((element) => {
                 if (element.href == href) {
                     element.classList.add("selected");

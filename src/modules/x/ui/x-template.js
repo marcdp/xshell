@@ -1,3 +1,4 @@
+import i18n from "../../../i18n.js";
 
 class XTemplate {
 
@@ -80,7 +81,7 @@ class XTemplate {
             //x:text
             let jsLine = [];
             jsLine.push(indent);
-            jsLine.push("utils.createVDOM(\"#text\", null, null, null, {index: " + index + "}, \"\" + " + node.textContent + "),");
+            jsLine.push("utils.createVDOM(\"#text\", null, null, null, {index: " + index + "}, \"\" + (" + node.textContent + ")),");
             js.push(jsLine.join(""));
             incs++;
         } else if (node.localName.startsWith("x:")) {
@@ -337,6 +338,10 @@ const utils = new class {
         }
         return "";
     }
+    getLangLabel(lang) {
+        let value = i18n.config.langs[lang];
+        return (value ? value.label : lang);
+    }
     getFreeId() {
         return "id" + freeId++;
     };
@@ -579,7 +584,7 @@ class XTemplateInstance {
                 //slot
             } else {
                 //diff node
-                if (!parent) debugger
+                //if (!parent) debugger
                 let child = parent.childNodes[vNodeNew.options.index + inew];
                 this._diffDomElement(vNodeOld, vNodeNew, child, level + 1);
             }

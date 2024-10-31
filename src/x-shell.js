@@ -1,6 +1,7 @@
 import bus          from "./bus.js";
 import i18n         from "./i18n.js";
 import loader       from "./loader.js";
+import settings     from "./settings.js";
 import ui           from "./ui.js";
 import utils        from "./utils.js";
 
@@ -19,6 +20,7 @@ class XShell extends HTMLElement {
             copyright:  "",
             logo:       ""
         },
+        bus: bus.config,
         i18n: i18n.config,
         loader: loader.config,
         menus: {},
@@ -27,6 +29,7 @@ class XShell extends HTMLElement {
             base:  document.location.pathname.substring(0, document.location.pathname.lastIndexOf("/")),
             start: "",
         },
+        settings: settings.config,
         ui: ui.config,
         user: {
             id: "",
