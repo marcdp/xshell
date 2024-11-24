@@ -1,0 +1,108 @@
+{
+  "version": 3,
+  "targets": {
+    "net8.0": {
+      "XShell.Mpa/1.0.0": {
+        "type": "project",
+        "framework": ".NETCoreApp,Version=v8.0",
+        "compile": {
+          "bin/placeholder/XShell.Mpa.dll": {}
+        },
+        "runtime": {
+          "bin/placeholder/XShell.Mpa.dll": {}
+        },
+        "frameworkReferences": [
+          "Microsoft.AspNetCore.App"
+        ]
+      }
+    }
+  },
+  "libraries": {
+    "XShell.Mpa/1.0.0": {
+      "type": "project",
+      "path": "../XShell.Mpa/XShell.Mpa.csproj",
+      "msbuildProject": "../XShell.Mpa/XShell.Mpa.csproj"
+    }
+  },
+  "projectFileDependencyGroups": {
+    "net8.0": [
+      "XShell.Mpa >= 1.0.0"
+    ]
+  },
+  "packageFolders": {
+    "C:\\Users\\MarcDelosPoch\\.nuget\\packages\\": {},
+    "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages": {},
+    "C:\\Program Files\\dotnet\\sdk\\NuGetFallbackFolder": {}
+  },
+  "project": {
+    "version": "1.0.0",
+    "restore": {
+      "projectUniqueName": "D:\\Reps\\xshell\\samples\\mpa\\XShell.Mpa.Sample.Module1\\XShell.Mpa.Sample.Module1.csproj",
+      "projectName": "XShell.Mpa.Sample.Module1",
+      "projectPath": "D:\\Reps\\xshell\\samples\\mpa\\XShell.Mpa.Sample.Module1\\XShell.Mpa.Sample.Module1.csproj",
+      "packagesPath": "C:\\Users\\MarcDelosPoch\\.nuget\\packages\\",
+      "outputPath": "D:\\Reps\\xshell\\samples\\mpa\\XShell.Mpa.Sample.Module1\\obj\\",
+      "projectStyle": "PackageReference",
+      "fallbackFolders": [
+        "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages",
+        "C:\\Program Files\\dotnet\\sdk\\NuGetFallbackFolder"
+      ],
+      "configFilePaths": [
+        "C:\\Users\\MarcDelosPoch\\AppData\\Roaming\\NuGet\\NuGet.Config",
+        "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
+        "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
+      ],
+      "originalTargetFrameworks": [
+        "net8.0"
+      ],
+      "sources": {
+        "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
+        "C:\\Program Files\\dotnet\\library-packs": {},
+        "\\\\nas3\\Packages\\nuget": {},
+        "https://api.nuget.org/v3/index.json": {}
+      },
+      "frameworks": {
+        "net8.0": {
+          "targetAlias": "net8.0",
+          "projectReferences": {
+            "D:\\Reps\\xshell\\samples\\mpa\\XShell.Mpa\\XShell.Mpa.csproj": {
+              "projectPath": "D:\\Reps\\xshell\\samples\\mpa\\XShell.Mpa\\XShell.Mpa.csproj"
+            }
+          }
+        }
+      },
+      "warningProperties": {
+        "warnAsError": [
+          "NU1605"
+        ]
+      },
+      "restoreAuditProperties": {
+        "enableAudit": "true",
+        "auditLevel": "low",
+        "auditMode": "direct"
+      }
+    },
+    "frameworks": {
+      "net8.0": {
+        "targetAlias": "net8.0",
+        "imports": [
+          "net461",
+          "net462",
+          "net47",
+          "net471",
+          "net472",
+          "net48",
+          "net481"
+        ],
+        "assetTargetFallback": true,
+        "warn": true,
+        "frameworkReferences": {
+          "Microsoft.NETCore.App": {
+            "privateAssets": "all"
+          }
+        },
+        "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\8.0.403/PortableRuntimeIdentifierGraph.json"
+      }
+    }
+  }
+}

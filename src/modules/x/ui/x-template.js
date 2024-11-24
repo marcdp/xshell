@@ -44,7 +44,14 @@ class XTemplate {
         }
         this._styleSheets = styleSheets;
         //get dependencies
-        this._dependencies = [...new Set(Array.from(template.content.querySelectorAll('*')).filter(el => el.tagName.includes('-')).map(el => el.tagName.toLowerCase()))];
+        this._dependencies = [...new Set(Array.from(template.content.querySelectorAll('*')).filter(el =>{ 
+            if (el.tagName.includes('-')) {
+                if (el.tagName == "X-LAZY" || el.closest("x-lazy") == null) {
+                    return true;
+                }
+            }
+            return false;
+        }).map(el => el.tagName.toLowerCase()))];
         //compiles
         let code = [];
         code.push("let _ifs = {};");
@@ -338,9 +345,8 @@ const utils = new class {
         }
         return "";
     }
-    getLangLabel(lang) {
-        let value = i18n.config.langs[lang];
-        return (value ? value.label : lang);
+    getLang(lang) {
+        return i18n.getLang(lang) ?? { id: lang, label: lang };
     }
     getFreeId() {
         return "id" + freeId++;

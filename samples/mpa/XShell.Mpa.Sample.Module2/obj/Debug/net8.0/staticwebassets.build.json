@@ -1,0 +1,11 @@
+{
+  "Version": 1,
+  "Hash": "p16dG1cpzXUQ+dOsNVsOQQ7Vb2p46yGgK6QgFkj1v3o=",
+  "Source": "XShell.Mpa.Sample.Module2",
+  "BasePath": "_content/XShell.Mpa.Sample.Module2",
+  "Mode": "Default",
+  "ManifestType": "Build",
+  "ReferencedProjectsConfiguration": [],
+  "DiscoveryPatterns": [],
+  "Assets": []
+}

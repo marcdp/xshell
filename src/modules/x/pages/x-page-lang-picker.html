@@ -13,12 +13,11 @@
                 this.label = "Language Picker";
                 let disabled = ('' + args.disabled).split(",");
                 let domain = [];
-                for(let key in i18n.config.langs) {
-                    let item = i18n.config.langs[key];
+                for(let item of i18n.config.langs) {
                     domain.push({
-                        value: key,
-                        disabled: (disabled.indexOf(key) != -1),
-                        label: item.label + " (" + key + ")"
+                        value: item.id,
+                        disabled: (disabled.indexOf(item.id) != -1),
+                        label: item.label + " (" + item.id + ")"
                     });
                 }
                 this.state.domain =domain;
@@ -29,7 +28,6 @@
 
             } else if (command == "cancel") {
                 //cancel
-                debugger;
                 this.close();
             }
         }

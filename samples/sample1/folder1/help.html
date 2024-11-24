@@ -28,8 +28,8 @@
             ],
             file:"",
             files:[],
-            html: "hello <b>world</b>.",
-            html_i18n: "i18n:en=hello <b>world</b>.|i18n:ca=hola <b>mon</b>.",
+            richtext: "hello <b>world</b>.",
+            richtext_i18n: "i18n:en=hello <b>world</b>.|i18n:ca=hola <b>mon</b>.",
             datatable: {
                 rows:[
                     {id:1, label:"name1", age:12},
@@ -46,7 +46,11 @@
                 total: 100,
                 index:0,
                 size:10
-            }
+            },
+            javascript: "let a=123;\nfunction something(){}",
+            css:"body {color:red;}",
+            markdown: "Hello world\n---\n- aaaa\n- bbbb",
+            markdown_i18n: "i18n:en=english text|i18n:es=spanish text"
         },
         async onCommand(command, args) {
             if (command == "load") {
@@ -128,7 +132,7 @@
                 el cual incluye versiones de Lorem Ipsum.
             </p>
             <!-- datafields -->
-            <x-tabs label="First tab" selected-index="3">
+            <x-tabs label="First tab" selected-index="5">
                 <x-tab label="Basic">
                     <x-datafields columns="4" label="Lorem ipsum" message="Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum">
                         <x-datafield label="Text"       x-model="state.text" type="text" minlength="2" maxlength="4" ></x-datafield>
@@ -178,10 +182,10 @@
                         </x-datafield>
                     </x-datafields>
                 </x-tab>
-                <x-tab label="Html">
+                <x-tab label="Richtext">
                     <x-datafields>
-                        <x-datafield label="Html editor" x-model="state.html" type="html" required spellcheck="false"></x-datafield>
-                        <x-datafield label="Html editor i18n" x-model="state.html_i18n" type="html_i18n" required></x-datafield>
+                        <x-datafield label="richtext editor" x-model="state.richtext" type="richtext" required spellcheck="false"></x-datafield>
+                        <x-datafield label="richtext editor i18n" x-model="state.richtext_i18n" type="richtext_i18n" required></x-datafield>
                     </x-datafields>
                 </x-tab>  
                 <x-tab label="Datatable">
@@ -193,6 +197,7 @@
                                         <th style="width:5em">Id</th>
                                         <th>Label</th>
                                         <th>Age</th>
+                                        <th>Random</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -203,6 +208,7 @@
                                         </td>
                                         <td>{{ row.label }}</td>
                                         <td>{{ row.age }}</td>
+                                        <td>{{ row.age * Math.random(123) }}</td>
                                     </tr>
                                 </tbody>
                             </table>
@@ -210,6 +216,21 @@
                         </x-datatable>
                     </x-datafields>
                 </x-tab>  
+                <x-tab label="Code editor(lazy)">
+                    <x-datafields>
+                        <x-datafield label="Javascript" x-model="state.javascript" type="javascript"></x-datafield>
+                        <x-datafield label="Css" x-model="state.css" type="css"></x-datafield>
+                        <x-datafield label="Markdown" x-model="state.markdown" type="markdown" required></x-datafield>
+                        <x-datafield label="Markdown i18n" x-model="state.markdown_i18n" type="markdown_i18n" required></x-datafield>
+                    </x-datafields>
+                </x-tab>  
+                <x-tab label="Markdown">
+                    <x-lazy>
+                        <x-datafield label="html">
+                            <x-markdown x-prop:value="state.markdown"></x-markdown>
+                        </x-datafield>                    
+                    </x-lazy>
+                </x-tab>    
                 <x-tab label="Advanced">
                     <x-datafields>
                         <x-datafield label="Picker"     x-model="state.picker" type="picker"></x-datafield>                            

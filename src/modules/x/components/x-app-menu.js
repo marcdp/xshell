@@ -7,6 +7,9 @@ export default XElement.define("x-app-menu", {
     style: `
         :host {}
         x-button + x-button {margin-left:.25em;}
+        @media only screen and (max-width: 768px) {
+            :host {display:flex; flex-direction:column;}
+        }
     `,
     template: `
         <x-button x-for="menuitem in state.menuitems" 

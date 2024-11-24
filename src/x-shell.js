@@ -61,7 +61,13 @@ class XShell extends HTMLElement {
 
     //methods    
     async addConfig(config, src = null) {
-        if (typeof(config) == "string") {
+        if (typeof(config) == "string" && config.startsWith("#")) {
+            //add config from remote json file
+            console.log(`x-shell.addConfig('${src || config}')`);
+            let json = document.querySelector(config).textContent;
+            config = JSON.parse(utils.stripJsonComments(json));
+            this._config = utils.deepAssign(this._config, config);        
+        } else if (typeof(config) == "string") {
             //add config from remote json file
             let url = utils.combineUrls(this.config.navigator.base, config); 
             console.log(`x-shell.addConfig('${url}')`);

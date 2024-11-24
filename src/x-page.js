@@ -228,7 +228,14 @@ class XPage extends HTMLElement {
             let breadcrumb = [];
             if (searchParams.get("x-breadcrumb")) breadcrumb = JSON.parse(atob(searchParams.get("x-breadcrumb").replace(/_/g,"/").replace(/-/g,"+")));
             //load required components
-            let componentNames = [...new Set(Array.from(doc.querySelectorAll('*')).filter(el => el.tagName.includes('-')).map(el => el.tagName.toLowerCase()))];
+            let componentNames = [...new Set(Array.from(doc.querySelectorAll('*')).filter(el => { 
+                if (el.tagName.includes('-')) {
+                    if (el.tagName == "X-LAZY" || el.closest("x-lazy") == null) {
+                        return true;
+                    }
+                }
+                return false;    
+            }).map(el => el.tagName.toLowerCase()))];
             if (componentNames) {
                 let resourceNames = [];
                 componentNames.forEach((componentName) => {

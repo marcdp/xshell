@@ -11,10 +11,16 @@ const telPattern = /^(\+?\d{1,3}[-.\s]?)?(\(?\d{3}\)?[-.\s]?)?\d{3}[-.\s]?\d{4,7
 export default XElement.define("x-datafield", {
     style: `
         :host {display:block; position:relative; }
-        :host label {display:var(--x-input-label-display, none); padding-bottom:.35em;}
+
+        :host label {display:var(--x-input-label-display, none); padding-bottom:.35em; width:100%;}
         :host label span.label {font-weight:600; }
-        :host label span.required {color:var(--x-input-error-color);}
-        :host label .anchor {vertical-align:bottom; float:right;}
+        :host label span.required {color:var(--x-input-error-color); }
+
+        :host label span.langs {float:right; border:var(--x-input-border); border-radius:var(--x-input-border-radius) var(--x-input-border-radius) 0 0 ; display:inline-flex; border-bottom:none;}
+        :host label span.langs x-button {}
+        :host label span.langs x-button + x-button {border-left:var(--x-input-border);}
+        :host label span.langs .add {}
+        
         :host p {margin:0; font-size:var(--x-font-size-small); padding-top:.25em;}
         ::placeholder {color:var(--x-input-color-placeholder);}        
         :host input,select,textarea {display:block; width:100%; resize: none;}
@@ -31,6 +37,7 @@ export default XElement.define("x-datafield", {
             font-family: var(--x-input-font-family);
             font-size: var(--x-input-font-size);
         }
+        .input.code {padding:0;}
         
         label.error {color:var(--x-input-error-color);}
         label.error + .input {border-color:var(--x-input-error-color); color:var(--x-input-error-color);}
@@ -60,7 +67,7 @@ export default XElement.define("x-datafield", {
             height:1.8em;            
         }
         
-        span.mark {height:3px;box-sizing:border-box;transform: translateY(-3px);border-radius: 0 0 4px 4px;border-bottom:2px var(--x-color-primary) solid;width:100%;position:absolute;display:none;clip-path: inset(calc(100% - 2px) 0px 0px);}
+        span.mark {height:3px;box-sizing:border-box;transform: translateY(-3px);border-radius: 0 0 4px 4px;border-bottom:2px var(--x-color-primary) solid;width:100%;position:absolute;display:none;clip-path: inset(calc(100% - 2px) 0px 0px); z-index:10;}
 
         :host .i18n {padding:0; display:flex;}
         :host .i18n div {display:flex;flex:1; align-items:center; position:relative;}
@@ -84,7 +91,7 @@ export default XElement.define("x-datafield", {
         :host .picker span {flex:1; display:block;padding-left:.5em; padding-right:.5em; line-height:2.15em; color:var(--x-input-color);}
         :host .picker input {border:none; outline:none; }
         :host .picker input:focus {border:none; outline:none;}
-        :host .picker x-button {font-size:.9em;}
+        :host .picker x-button {font-size:.9em; }
         
         :host .list {padding:0}
         :host .list .list-body {display:flex; flex-direction:column; padding:var(--x-input-padding);}
@@ -92,7 +99,7 @@ export default XElement.define("x-datafield", {
         :host .list .list-body[empty] {padding:.05em; }
         :host .list .list-buttons {display:flex; justify-content:flex-end;}
 
-        :host .html {padding:0;}
+        :host .richtext {padding:0;}
 
         :host label:not(.error) + .input:focus + span.mark {display:block;}
         :host label:not(.error) + .input:focus-within + span.mark {display:block;}
@@ -103,8 +110,18 @@ export default XElement.define("x-datafield", {
     template: `
         <label x-attr:for="state.inputId" x-attr:class="(state.errors.length ? 'error' : '')" >
             <span class="label" x-if="state.label" x-text="state.label"></span>
-            <span x-if="state.required">*</span>
-            <x-button x-if="state.type.endsWith('_i18n')" class="anchor plain" x-on:click="lang-add" icon="x-add" title="Add translation"></x-button>
+            <span class="required" x-if="state.required">*</span>
+            <span class="langs" x-if="state.type.endsWith('_i18n')" >
+                <x-button 
+                        slot="toolbar" 
+                        x-for="(lang,index) in state.langs"
+                        x-attr:label="lang"
+                        x-on:click="lang-changed"
+                        x-attr:title="utils.getLang(lang).label"
+                        x-attr:data-lang="lang"
+                        x-attr:class="'plain x-short ' + (state.langIndex == index ? ' selected' : '') + (state.value.indexOf('i18n:' + lang + '=')==-1 ? ' empty' : '') ">
+                </x-button><x-button class="add plain x-short" x-on:click="lang-add" icon="x-add" title="Add translation"></x-button>
+            </span>
         </label>
 
         <div x-if="state.type==''" class="input slot">
@@ -180,7 +197,7 @@ export default XElement.define("x-datafield", {
                     x-attr:readonly="state.readonly" 
                     x-attr:spellcheck="state.spellcheck"
                 />
-                <span class="lang" x-html="lang" x-attr:title="utils.getLangLabel(lang)"></span>
+                <span class="lang" x-html="lang" x-attr:title="utils.getLang(lang).label"></span>
             </div>
             <span class="mark"></span>            
         </div>
@@ -200,7 +217,7 @@ export default XElement.define("x-datafield", {
                     x-attr:readonly="state.readonly" 
                     x-attr:spellcheck="state.spellcheck"
                 ></textarea>
-                <span class="lang" x-html="lang" x-attr:title="utils.getLangLabel(lang)"></span>
+                <span class="lang" x-html="lang" x-attr:title="utils.getLang(lang).label"></span>
             </div>
             <span class="mark"></span>
         </div>
@@ -218,19 +235,19 @@ export default XElement.define("x-datafield", {
             />
         </div>
 
-        <div x-elseif="state.type=='html'" class="input html">
-            <x-html-editor 
+        <div x-elseif="state.type=='richtext'" class="input richtext">
+            <x-richtext
                 x-model="state.value" 
                 x-attr:id="state.inputId"
                 x-attr:lang="state.langs[state.langIndex]" 
                 x-attr:disabled="state.disabled" 
                 x-attr:readonly="state.readonly"
                 x-attr:spellcheck="state.spellcheck"
-            ></x-html-editor>
+            ></x-richtext>
         </div>
 
-        <div x-elseif="state.type=='html_i18n'" class="input html">
-            <x-html-editor 
+        <div x-elseif="state.type=='richtext_i18n'" class="input richtext">
+            <x-richtext
                 x-prop:value="utils.i18n(state.value, state.langs[state.langIndex])"
                 x-on:change="text_i18n-changed"
                 x-attr:id="state.inputId"
@@ -238,18 +255,33 @@ export default XElement.define("x-datafield", {
                 x-attr:disabled="state.disabled" 
                 x-attr:readonly="state.readonly"
                 x-attr:spellcheck="state.spellcheck"
-            >
-                <span slot="toolbar" style="flex:1" ></span>
-                <x-button 
-                    slot="toolbar" 
-                    x-for="(lang,index) in state.langs"
-                    x-attr:label="lang"
-                    x-on:click="lang-changed"
-                    x-attr:title="utils.getLangLabel(lang)"
-                    x-attr:data-lang="lang"
-                    x-attr:class="'plain ' + (state.langIndex == index ? ' selected' : '') + (state.value.indexOf('i18n:' + lang + '=')==-1 ? ' empty' : '') "></x-button>
-            </x-html-editor>            
+            ></x-richtext>            
             <span class="mark"></span>
+        </div>
+
+        <div x-elseif="state.type=='javascript'" class="input code">
+            <x-code-editor x-model="state.value" mode="javascript"></x-code-editor>
+        </div>
+        <div x-elseif="state.type=='css'" class="input code">
+            <x-code-editor x-model="state.value" mode="css"></x-code-editor>
+        </div>
+        <div x-elseif="state.type=='html'" class="input code">
+            <x-code-editor x-model="state.value" mode="html"></x-code-editor>
+        </div>
+        <div x-elseif="state.type=='markdown'" class="input code">
+            <x-code-editor x-model="state.value" mode="markdown"></x-code-editor>
+        </div>
+        <div x-elseif="state.type=='markdown_i18n'" class="input code">
+            <x-code-editor 
+                mode="markdown"
+                x-prop:value="utils.i18n(state.value, state.langs[state.langIndex])"
+                x-on:change="text_i18n-changed"
+                x-attr:id="state.inputId"
+                x-attr:lang="state.langs[state.langIndex]" 
+                x-attr:disabled="state.disabled" 
+                x-attr:readonly="state.readonly"
+                x-attr:spellcheck="state.spellcheck"
+            ></x-code-editor>
         </div>
 
         <div x-elseif="state.type=='object'" class="input object">
@@ -294,7 +326,6 @@ export default XElement.define("x-datafield", {
             x-attr:required="state.required"
             x-attr:step="state.step"
             x-attr:accept="state.accept"
-            x-attr:autofocus="state.autofocus"
             x-attr:autocomplete="state.autocomplete"
         />
 
@@ -371,6 +402,16 @@ export default XElement.define("x-datafield", {
                     this.dispatchEvent(new CustomEvent("datafield:change", {detail: {oldValue, newValue}, bubbles: true, composed: false}));
                 } else {
                     this.state.validated =false;
+                }
+            }
+        },
+        postRender() {
+            if (this.state.autofocus && this._renderCount == 1) {
+                let element = this.shadowRoot.querySelector(".input");
+                if (element && element.focus) {
+                    setTimeout(() => {
+                        element.focus();
+                    }, 25);                    
                 }
             }
         },
@@ -481,8 +522,8 @@ export default XElement.define("x-datafield", {
         validate(detail) {
             let result = [];
             //langs                    
-            if (this.state.type.endsWith("_i18n")) {
-                let langs = [...i18n.config.mainLangs];
+            if (this.state.type.endsWith("_i18n")) { 
+                let langs = i18n.getMainLangs();
                 if (this.state.value) {
                     for(let aux of this.state.value.split("|")) {
                         if (aux.startsWith("i18n:") && aux.length > 7) {
@@ -536,7 +577,7 @@ export default XElement.define("x-datafield", {
                         result.push({type:"error", label: this.label, message:"Invalid phone number"});
                     }
                 }
-            } else if (this.state.type == "text_i18n" || this.state.type == "textarea_i18n" || this.state.type == "html_i18n") {
+            } else if (this.state.type.endsWith("_i18n")) {
                 if (this.state.value) {
                     let hasMainValue = false;
                     for(let lang of this.state.langs) {
