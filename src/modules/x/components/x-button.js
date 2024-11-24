@@ -52,10 +52,11 @@ export default XElement.define("x-button", {
         :host(.anchor) > div {align-items:center; }
         :host(.anchor.plain) .button:hover {color:unset;; }
 
-        :host(.selected) > div a {background:var(--x-background-x-gray);}        
+        :host(.selected) .button {background:var(--x-background-x-gray);}        
 
         :host(.no-hover) .button:hover {background:transparent;}
         :host(.short) .button {padding-top:.3em; padding-bottom:.3em;}
+        :host(.x-short) .button {padding-top:0em; padding-bottom:.1em;}
         :host(.icon-big) .button {padding:.25em .5em;}
         :host(.icon-big) .button x-icon {font-size:1.1em;}
 

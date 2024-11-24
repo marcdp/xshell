@@ -1,0 +1,42 @@
+[
+  {
+    "ContainingType": "XShell.Mpa.Sample.Controllers.Config",
+    "Method": "Get",
+    "RelativePath": "api/config",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "XShell.Mpa.Sample.Controllers.Test",
+    "Method": "Get",
+    "RelativePath": "api/test",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "XShell.Mpa.Sample.Module1.Controllers.ValuesController",
+    "Method": "Get",
+    "RelativePath": "api/test2",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "XShell.Mpa.Sample.Module2.Controllers.ValuesController",
+    "Method": "Get",
+    "RelativePath": "api/test3",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  }
+]

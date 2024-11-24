@@ -1,0 +1,92 @@
+{
+  "Version": 1,
+  "Hash": "ekQuetMvMRTfzeR6G1r/TpxDb/KBfgTZ3X40Yk0vqU4=",
+  "Source": "XShell.Mpa.Sample",
+  "BasePath": "_content/XShell.Mpa.Sample",
+  "Mode": "Default",
+  "ManifestType": "Build",
+  "ReferencedProjectsConfiguration": [
+    {
+      "Identity": "D:\\Reps\\xshell\\samples\\mpa\\XShell.Mpa.Sample.Module1\\XShell.Mpa.Sample.Module1.csproj",
+      "Version": 2,
+      "Source": "XShell.Mpa.Sample.Module1",
+      "GetPublishAssetsTargets": "ComputeReferencedStaticWebAssetsPublishManifest;GetCurrentProjectPublishStaticWebAssetItems",
+      "AdditionalPublishProperties": "Configuration=Debug;Platform=AnyCPU",
+      "AdditionalPublishPropertiesToRemove": "WebPublishProfileFile;TargetFramework;RuntimeIdentifier;SelfContained",
+      "GetBuildAssetsTargets": "GetCurrentProjectBuildStaticWebAssetItems",
+      "AdditionalBuildProperties": "Configuration=Debug;Platform=AnyCPU",
+      "AdditionalBuildPropertiesToRemove": "WebPublishProfileFile;TargetFramework;RuntimeIdentifier;SelfContained"
+    },
+    {
+      "Identity": "D:\\Reps\\xshell\\samples\\mpa\\XShell.Mpa.Sample.Module2\\XShell.Mpa.Sample.Module2.csproj",
+      "Version": 2,
+      "Source": "XShell.Mpa.Sample.Module2",
+      "GetPublishAssetsTargets": "ComputeReferencedStaticWebAssetsPublishManifest;GetCurrentProjectPublishStaticWebAssetItems",
+      "AdditionalPublishProperties": "Configuration=Debug;Platform=AnyCPU",
+      "AdditionalPublishPropertiesToRemove": "WebPublishProfileFile;TargetFramework;RuntimeIdentifier;SelfContained",
+      "GetBuildAssetsTargets": "GetCurrentProjectBuildStaticWebAssetItems",
+      "AdditionalBuildProperties": "Configuration=Debug;Platform=AnyCPU",
+      "AdditionalBuildPropertiesToRemove": "WebPublishProfileFile;TargetFramework;RuntimeIdentifier;SelfContained"
+    },
+    {
+      "Identity": "D:\\Reps\\xshell\\samples\\mpa\\XShell.Mpa\\XShell.Mpa.csproj",
+      "Version": 2,
+      "Source": "XShell.Mpa",
+      "GetPublishAssetsTargets": "ComputeReferencedStaticWebAssetsPublishManifest;GetCurrentProjectPublishStaticWebAssetItems",
+      "AdditionalPublishProperties": "Configuration=Debug;Platform=AnyCPU",
+      "AdditionalPublishPropertiesToRemove": "WebPublishProfileFile;TargetFramework;RuntimeIdentifier;SelfContained",
+      "GetBuildAssetsTargets": "GetCurrentProjectBuildStaticWebAssetItems",
+      "AdditionalBuildProperties": "Configuration=Debug;Platform=AnyCPU",
+      "AdditionalBuildPropertiesToRemove": "WebPublishProfileFile;TargetFramework;RuntimeIdentifier;SelfContained"
+    }
+  ],
+  "DiscoveryPatterns": [
+    {
+      "Name": "XShell.Mpa.Sample\\wwwroot",
+      "Source": "XShell.Mpa.Sample",
+      "ContentRoot": "D:\\Reps\\xshell\\samples\\mpa\\XShell.Mpa.Sample\\wwwroot\\",
+      "BasePath": "_content/XShell.Mpa.Sample",
+      "Pattern": "**"
+    }
+  ],
+  "Assets": [
+    {
+      "Identity": "D:\\Reps\\xshell\\samples\\mpa\\XShell.Mpa.Sample\\obj\\Debug\\net8.0\\scopedcss\\bundle\\XShell.Mpa.Sample.styles.css",
+      "SourceId": "XShell.Mpa.Sample",
+      "SourceType": "Computed",
+      "ContentRoot": "D:\\Reps\\xshell\\samples\\mpa\\XShell.Mpa.Sample\\obj\\Debug\\net8.0\\scopedcss\\bundle\\",
+      "BasePath": "_content/XShell.Mpa.Sample",
+      "RelativePath": "XShell.Mpa.Sample.styles.css",
+      "AssetKind": "All",
+      "AssetMode": "CurrentProject",
+      "AssetRole": "Primary",
+      "AssetMergeBehavior": "",
+      "AssetMergeSource": "",
+      "RelatedAsset": "",
+      "AssetTraitName": "ScopedCss",
+      "AssetTraitValue": "ApplicationBundle",
+      "CopyToOutputDirectory": "Never",
+      "CopyToPublishDirectory": "PreserveNewest",
+      "OriginalItemSpec": "D:\\Reps\\xshell\\samples\\mpa\\XShell.Mpa.Sample\\obj\\Debug\\net8.0\\scopedcss\\bundle\\XShell.Mpa.Sample.styles.css"
+    },
+    {
+      "Identity": "D:\\Reps\\xshell\\samples\\mpa\\XShell.Mpa.Sample\\obj\\Debug\\net8.0\\scopedcss\\projectbundle\\XShell.Mpa.Sample.bundle.scp.css",
+      "SourceId": "XShell.Mpa.Sample",
+      "SourceType": "Computed",
+      "ContentRoot": "D:\\Reps\\xshell\\samples\\mpa\\XShell.Mpa.Sample\\obj\\Debug\\net8.0\\scopedcss\\projectbundle\\",
+      "BasePath": "_content/XShell.Mpa.Sample",
+      "RelativePath": "XShell.Mpa.Sample.bundle.scp.css",
+      "AssetKind": "All",
+      "AssetMode": "Reference",
+      "AssetRole": "Primary",
+      "AssetMergeBehavior": "",
+      "AssetMergeSource": "",
+      "RelatedAsset": "",
+      "AssetTraitName": "ScopedCss",
+      "AssetTraitValue": "ProjectBundle",
+      "CopyToOutputDirectory": "Never",
+      "CopyToPublishDirectory": "PreserveNewest",
+      "OriginalItemSpec": "D:\\Reps\\xshell\\samples\\mpa\\XShell.Mpa.Sample\\obj\\Debug\\net8.0\\scopedcss\\projectbundle\\XShell.Mpa.Sample.bundle.scp.css"
+    }
+  ]
+}

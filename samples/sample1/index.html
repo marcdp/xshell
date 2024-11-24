@@ -19,15 +19,15 @@
 
     <!-- xshell -->
     <script src="/src/x-shell.js" type="module"></script>
-
+    
 </head>
-<body>
+<body> 
     <x-shell src="index.json"></x-shell>   
 </body> 
 </html>
 
-<!--
 
+<!--
 x - auto add styles.css to x-shell
 x - x-icon
 x- loader: avoid parallel loader of the same resource
@@ -193,31 +193,37 @@ x - html_i18n -- > allow add new language
 x - x-datatable
 x - x-pager
 x - x-datafield html_i18n
+x - x-lazy -- > en elx-template ... this._dependencies = ... fer que els components que descendeixin de x-lazy no es carreguin automàticament
+x - crear element x-lazy que carregui el contingut quan es faci visible
+x - x-markdown-editor
+x - x-code-editor -- > x-datafield required
+x - x-markdown
+x - XElement proxy recursive ???: no
+x- x-page-search
 
-- crear element x-lazy que carregui el contingut quan es faci visible
-- x-app-menu -- > show menu via selected property, not manually selecting dom nodes and settings its classes or attributes
+
+
+- sample c# with blazor pages
 
 - responsive design
+- x-app-menu -- > show menu via selected property, not manually selecting dom nodes and settings its classes or attributes
 - sample manual/reference 
-- sample c# with blazor pages
+
+- x-datafield file upload
+- x-datafield image upload + resize
+- x-datafield reference (rpc?)
 
 - publish: npm publish
 - routes alias (/about -- > /pages/folder/about.html)
 
-- x-page-search
-- x-datafield file upload
-- x-datafield image upload + resize
-- x-datafield reference (rpc?)
+
 - x-listview
 - x-treeview
 - x-treelistview
-- x-markdown
-- x-markdown-editor
 
 - pensar sistema per a poder especificar N classes en els templates
 - pensar sistema per a poder aplicar classes amb delay (per a poder fer animacions)
 - circular dependencies between web components
-- XElement proxy recursive ???
 
 x - integrar Fluent UI Web Components
 - integrar vaadin

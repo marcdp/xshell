@@ -36,7 +36,7 @@ export default XElement.define("x-form", {
  
         .footer {display:flex; align-items:end;}
         .footer x-button {min-width: var(--x-button-width-wide);}
-        .footer > div {display:flex; justify-content:flex-end; gap:.25em; padding-top:1em; flex:1;}
+        .footer > div {display:flex; justify-content:flex-end; gap:.25em; margin-left:.25em; padding-top:1em; flex:1;}
         .footer ::slotted(x-button) {min-width: var(--x-button-width-wide);}
 
     `,

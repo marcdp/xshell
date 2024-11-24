@@ -39,7 +39,7 @@ export default XElement.define("x-app-search", {
 
             } else if (command == "search") {
                 //search
-                alert("search")
+                this.xshell.showPage({url: "page:x-page-search", target:"#dialog"});
             }
 
         }

@@ -9,7 +9,7 @@
     },
     /* i18n */
     "i18n": { 
-        "culture": "en",
+        "current": "en",
         "strings": {
             "hello world": "hola mundo",
             "bye": "adios"

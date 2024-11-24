@@ -8,7 +8,8 @@
                 {"resource": "component:x-{name}",  "src": "./components/x-{name}.js"},
                 {"resource": "layout:x-{name}",     "src": "./layouts/x-{name}.js"},
                 {"resource": "page:x-{name}",       "src": "./pages/x-{name}.html"},
-                {"resource": "icon:x-{name}",       "src": "./icons/{name}.svg", "with": {"type":"svg"}}
+                {"resource": "icon:x-{name}",       "src": "./icons/{name}.svg", "with": {"type":"svg"}},
+                {"resource": "component:ace-editor","src": "https://unpkg.com/ace-custom-element@latest/dist/index.min.js"}
             ]
         },
         "ui": {

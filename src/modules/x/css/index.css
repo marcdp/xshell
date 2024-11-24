@@ -21,7 +21,7 @@
     /* x-avatar */
     --x-avatar-background: #E6E6E6;
     --x-avatar-text-color: #616161;
-
+    
     /* backgrounds */
     --x-background-page: #FFFFFF;
     --x-background-alt: #F5f5f5;
@@ -144,7 +144,20 @@
     --x-text-color-disabled: #AAAAAA;
     --x-text-color-black: #000000;
 }  
- 
+
+@media only screen and (max-width: 768px) {
+    :root {
+        --x-page-padding-left:1.5em;
+        --x-page-padding-right:1.5em;
+    }
+    html {
+        overflow-x: hidden;
+    }
+    body {
+        overflow-x: hidden;
+    }
+}
+
 html {
     font-family:var(--x-font-family);
     font-size:var(--x-font-size);

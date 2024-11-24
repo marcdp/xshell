@@ -4,6 +4,10 @@ import XElement from "../ui/x-element.js";
 export default XElement.define("x-layout-page-main", {
     style: `
         :host {display:block;}
+
+        @media only screen and (max-width: 768px) {
+            :host {margin-top:3em;}
+        }
     `,
     template: `
         <x-page-header class="hide-close">

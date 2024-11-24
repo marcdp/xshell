@@ -1,0 +1,39 @@
+{
+  "runtimeTarget": {
+    "name": ".NETCoreApp,Version=v8.0",
+    "signature": ""
+  },
+  "compilationOptions": {},
+  "targets": {
+    ".NETCoreApp,Version=v8.0": {
+      "XShell.Mpa.Sample.Module1/1.0.0": {
+        "dependencies": {
+          "XShell.Mpa": "1.0.0"
+        },
+        "runtime": {
+          "XShell.Mpa.Sample.Module1.dll": {}
+        }
+      },
+      "XShell.Mpa/1.0.0": {
+        "runtime": {
+          "XShell.Mpa.dll": {
+            "assemblyVersion": "1.0.0",
+            "fileVersion": "1.0.0.0"
+          }
+        }
+      }
+    }
+  },
+  "libraries": {
+    "XShell.Mpa.Sample.Module1/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    },
+    "XShell.Mpa/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    }
+  }
+}
