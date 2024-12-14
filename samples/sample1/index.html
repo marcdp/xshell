@@ -1,242 +1,82 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
-
-    <!-- head -->
-    <meta charset="UTF-8">
+    <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="shortcut icon" type="image/x-icon" href="images/favicon.ico" />
-
-    <!-- import map -->
     <script type="importmap">
         {
-            "imports": {
-              "x-shell": "/src/x-shell.js",
-              "x-page": "/src/x-page.js"
-            }
+          "imports": {
+            "shell": "/src/shell.js"
+          }
         }
     </script>
-
-    <!-- xshell -->
-    <script src="/src/x-shell.js" type="module"></script>
-    
+    <script type="module">
+        //import
+        import shell from "shell";
+        //init
+        await shell.init({
+            // app
+            "app.name": "Sample2",
+            "app.label": "Sample2 title",
+            "app.version": "0.1",
+            "app.copyright": "",
+            "app.logo": "./logo.svg",
+            // module x
+            "modules.x.src": "/src/modules/x/module.js",
+            "modules.x.path": "/x",
+            // module 1
+            "modules.module1.src": "./module1/module.js",
+            "modules.module1.path": "/module1",
+            // module 2
+            "modules.module2.src": "./module2/module.js",
+            "modules.module2.path": "/module2",
+            // shell
+            "shell.base": ".",
+            "shell.start": "/module1/pages/page4.html"
+        });
+        //start
+        await shell.start();
+    </script>
 </head>
-<body> 
-    <x-shell src="index.json"></x-shell>   
-</body> 
+<body>
+</body>
 </html>
 
 
 <!--
-x - auto add styles.css to x-shell
-x - x-icon
-x- loader: avoid parallel loader of the same resource
-x - auto create importmap for x-shell ?? NO
-x - x-breadcrumb
-x - we can override the layout used, using a query parameter (ex: ...my-page.html?x-page-layout=xxxxxx)
-x - x-page
-x - load custom page
-x - show detailed errors
-x - show error page
-x - embed page
-x - x-page close
-x - x-page back
-x - posar x-breacrumb a x-layout-default, i fer que funcioni
-x - pass breadcrumb encoded in query string
-x - global layout (like layouts but for the x-shell wrapper), in order to avoid repaint flicks
-x - x-navigator
-x - autoload layouts at ui.start()
-x- layout default -> rename to main
-x- layout default -> use that as the embed + remove embed
-x - side panel with deafult layout
-x - css with defaults styles
-x - beautifulize layouts
-x - allow navigate using anchors inside an embedeed page
-x- loading
-x - XTemplate
-x - loader.load("icon:x-icon")
-x - remove transformations in loader
-x - de moment no faren els web components en HTML (en un futur si)
-x - pensar com utilitzar el XTemplate des d'una x-page, per a renderitzar el HTML
-x - chrome:  show dialog scroll top
-x - XPageInstance --  ui template
-x - no permetre configurar el x-error. Utilitzar aquest, i punt.
-x - x-page: permetre configurar quin tipus de processor/handler utiliza: none, x-element, etc. Per omissió cap handler
-x - <x-shell src="...json"></x-shell>
-x - fer que els moduls siguin fitxers json pasius, i no moduls es6 actius 
-x - loader: url -- > src
-x - loader transform: "to-json"
-x - loader transform: "to-wc"
-x - loader transform: "to-module"
-x - loader: remove "component", "icon", etc
-x - loader {"resource":"coponent:x{name}"}
-x - x-icon : use cloneNode, and not svg innerhtml
-x - html-component
-x - html-component: fer que funcioni les properties
-x - XElement load dependencies automatically
-x - XPageInstance ... ????
-x - XElement.define -- x-button
-x - XElement.define -- x-page-header
-x - page handler: /folder1/ help.html
-x - definition.methods
-x - jsonc
-x - x-menu
-x - icon from https://fonts.google.com/icons?icon.set=Material+Symbols&selected=Material+Symbols+Outlined:check:FILL@0;wght@400;GRAD@0;opsz@24&icon.size=24&icon.color=%23e8eaed&icon.query=check
-x - x-menuitem -> use x-anchor
-x - x-menubar + x-menu + x-menuitem
-x - prefix css variables with x-
-x - x-tabs
-x - x-card 
-x - x-divider
-x - x-notice
-x - x-accordion
-x - x-accordion --  > create slot for x-toolbar
-x - x-spinner
-x - x-button toggle
-x - x-button sublabel -- > show a sublabel under the label
-x - x-contextmenu
-x - x-button menu -- > open a context menu
-x - x-button split -- > show a split button main command + other commands
-x - x-button -- > show context menu
-x - x-commandbar
-x - x-command bar -> show raw button at right
-x - x-button - > hide context menu
-x - show page dialog animation
-x - menugroup
-x - x-badge
-x - x-popover
-x - x-wizard
-x - x-drawer
-x - x-avatar
-x - x-menu > open inline
-x - x-anchor
-x - x-page loading="lazy"  inside x-tab or x-accordion or x-popover
-x - x-drawer: avoid flick when loading
-x - x-drawer: synpliciate animation
-x - x-form
-x - x-datafields {}
-x - x-datafield (text, number, date, boolean, multiple, textarea, html, markdown)
-x - select
-x - textarea
-x - checkboxes
-x - radiobuttons
-x - picker
-x - x-datafield: model bind
-x - error with x-datafield non required -- > the first element causes an error in the x-template rendering VDOM diff - > with a required
-x - x-datafield checkboxes
-x - x-datafield show errors
-x - create user at npmjs
-x - create npm package 
-x - x-button submit - > style
-x - x-datafields style label
-x - x-datafields style message
-x - x-datafield: create path of a datafield (ex: Basic > Text1: Required)
-x - a mesura que es vagin solventant errors: recalcular el coverage
-x - x-form validate errors
-x - x-form show errors at bottom + next to the field
-x - object
-x - lists
-x - x-form wizard: show header
-x - x-form wizard: before next page
-x - x-form wizard: at end show buttons
-x - x-form wizard: show cancel+back button always
-x - x-datafield text_i18n
-x - x-datafield textarea_i18n
-x - show avatar + drop down avatar menu
-x - var renderer = XUI.create(state, template, handler, HTMLElement);
-x - x-element
-x - page: handlers ?? !! no --  > needs an script that returns a class, and thats all
-x - eliminar logger.js
-x - popover location
-x - x-commandbar -- > x-toolbar
-x - x-toolbar
-x - crear funció que converteixi de objecte JSON a html ui
-x - x-app-bar
-x - x-layout-main -- > menu search
-x- x-page: crear propietat que indiqui al diffdom algorithm que no cal continuar amb la comparació a dins d'aquest element
-x - app-search
-x - x-datafield object (set / unset) 
-x - x-datafield number -> to int or float
-x - recursive components
-x - menu -- > fer que es crei automaticament de forma recursiva
-x - al canviar de pàgina: refrescar el menú seleccionar de l x-app-bar - + els submenus desplegables
-x - utils.createElementsFromObject -- > utilitzar el level maxim per a crear els elements, encara que el level que toqui no existeixi
-x - x-datafield radios
-x - x-app-menu: al clicar a un x-anchor amb breadcrumb - la nova pàgina ha de seleccionar el punt de menú "origen" que està en el breadcrumb!
-x - x-datafield: event datafield-changed que faci bubble, per a poder mostrar els errors d'un formulari en temps real, o be llançar l'event on-change adicional
-x - animar stack page
-x - x-anchor href="" -- > obrir en un stack page, dialog page, or embedded page
-x - x-button href="" -- > obrir en un stack page, dialog page, or embedded page
-x - x-datafield list: add 
-x - x-datafields list: remove
-x - x-datafields list: edit
-x - x-datafields display normal
-x - x-datafields display as grid
-x - x-datafields display as grid - > headers
-x - x-datafields list: desp
-x - store user settings locally
-x - x-datafield list ( add / remove)
-x - x-html editor
-x - x-html editor lists ul
-x - x-html editor lists ol
-x - x-html editor indent
-x - x-html editor unindent
-x - x-html editor remove format
-x - x-html editor text strikethrough
-x - x-html editor undo/redo
-x - animate stack
-x - animate dialog
-x - html_i18n
-x - text_i18n -- > allow add new language
-x - textarea_i18n -- > allow add new language
-x - html_i18n -- > allow add new language
-x - x-datatable
-x - x-pager
-x - x-datafield html_i18n
-x - x-lazy -- > en elx-template ... this._dependencies = ... fer que els components que descendeixin de x-lazy no es carreguin automàticament
-x - crear element x-lazy que carregui el contingut quan es faci visible
-x - x-markdown-editor
-x - x-code-editor -- > x-datafield required
-x - x-markdown
-x - XElement proxy recursive ???: no
-x- x-page-search
+x - error
+x - go back -- should close any opened dialog at end
+x - stack -- backdrop
+x - stack -- title + close
+x- dialog -- title + close
+x - breadcrumb
+x - load pages from path like /x/pages/....
+x - path -- move to src
+x- app.getRealUrl -- page.getHref("page1.html", settings)
+x- mpashell -- xshell
+x - loader.page-handler:... -- remove
+x - loader.class:converter-page-handler-html...
+x - loader.class:converter-page-handler-x... 
+x - pensar manera que es puguin carregar diferents handlers de cada modul
+x - handler -- factory? 
+x - store instance of instance at x-page level
 
 
+- handler sfc
+- x components
+- i18n
+- aws console styles
+- responsive
+- allow load pages defined in a .js file
 
-- sample c# with blazor pages
+- pensar sistema de tenir multiples handlers (i que cada modul pugi especificar el handle a utilitzar (html, sfc, etc))
 
-- responsive design
-- x-app-menu -- > show menu via selected property, not manually selecting dom nodes and settings its classes or attributes
-- sample manual/reference 
+- menus pensar manera de tenir N menus, i que cada modul posi les seves coses al menu general o be al seu propi menu
 
-- x-datafield file upload
-- x-datafield image upload + resize
-- x-datafield reference (rpc?)
+- i18n: pensar sistema de que cada modul tingui les seves propies traduccions i utilitzi la seva propia taula de traduccions
 
-- publish: npm publish
-- routes alias (/about -- > /pages/folder/about.html)
+- pensar sistema dealias -- "modules.x.path.alias": "/courses=/module1/pages/courses.html", "/courses/{:id}=/module1/pages/course.html?id={:id}"
 
-
-- x-listview
-- x-treeview
-- x-treelistview
-
-- pensar sistema per a poder especificar N classes en els templates
-- pensar sistema per a poder aplicar classes amb delay (per a poder fer animacions)
-- circular dependencies between web components
-
-x - integrar Fluent UI Web Components
-- integrar vaadin
-x - integrar material components: https://github.com/material-components/material-web/blob/main/docs/quick-start.md
-x- integrar shoelace
-- integrar ionic (https://ionicframework.com/docs/intro/cdn)
-- integrar ui5 components: https://sap.github.io/ui5-webcomponents/components/Button/
-- loader: []
-    "component:sl": [
-        {tag:"link", rel:"stylesheet", href:"https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.17.1/cdn/themes/light.css"},
-        {tag:"script", type:"module", src:"https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.17.1/cdn/shoelace.js"}
-    ]
-  }
-x - lit-element
+- embed page
 
 -->

@@ -1,3 +1,0 @@
-﻿<Project>
-  <Import Project="..\buildMultiTargeting\XShell.Mpa.Sample.Module2.props" />
-</Project>

@@ -1,14 +1,17 @@
 import XElement from "../ui/x-element.js";
-import xshell from "./../../../x-shell.js";
+import config from "./../../../config.js";
 import bus from "../../../bus.js";
 
 // class
 export default XElement.define("x-app-menu", {
     style: `
-        :host {}
-        x-button + x-button {margin-left:.25em;}
+        :host {display:flex; gap:.1em .2em; flex-direction:column;
+            --x-button-justify-content:start;
+            --x-background-x-gray:white;
+        }
+        
         @media only screen and (max-width: 768px) {
-            :host {display:flex; flex-direction:column;}
+            :host {display:flex; flex-direction:column; }
         }
     `,
     template: `
@@ -54,7 +57,7 @@ export default XElement.define("x-app-menu", {
         },
         onStateChanged(name, oldValue, newValue) {
             if (name == "menu") {
-                this.state.menuitems = xshell.config.menus[newValue];
+                this.state.menuitems = mpaShell.config.menus[newValue];
             }
         },
         onCommand(command) {

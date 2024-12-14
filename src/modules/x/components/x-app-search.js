@@ -9,7 +9,6 @@ export default XElement.define("x-app-search", {
             align-items:center; 
             padding-left:.25em; 
             padding-right:.25em;
-            justify-content:end;
         }
         :host div {
             border:var(--x-input-border);
@@ -23,8 +22,9 @@ export default XElement.define("x-app-search", {
             display:flex;
             align-items:center;
             cursor:pointer;
+            width:100%;
         }
-        :host div x-icon {amargin-top:-.25em;a margin-bottom:0; margin-right:.5em;}
+        :host div x-icon {margin-right:.5em;}
     `,
     template: `
         <div tabindex="0" x-on:click="search">
@@ -39,7 +39,7 @@ export default XElement.define("x-app-search", {
 
             } else if (command == "search") {
                 //search
-                this.xshell.showPage({url: "page:x-page-search", target:"#dialog"});
+                this.mpaShell.showPage({url: "page:x-page-search", target:"#dialog"});
             }
 
         }

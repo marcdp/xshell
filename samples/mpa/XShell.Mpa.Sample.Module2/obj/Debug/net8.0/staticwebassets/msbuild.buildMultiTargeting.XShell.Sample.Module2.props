@@ -1,3 +1,0 @@
-﻿<Project>
-  <Import Project="..\build\XShell.Sample.Module2.props" />
-</Project>

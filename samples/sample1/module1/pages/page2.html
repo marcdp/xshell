@@ -1,0 +1,27 @@
+﻿<html>
+<head>
+    <title>This is a Page2 titleee</title>
+</head>
+<body>
+    <script type="module">
+        export default {
+            state: {},
+            async onCommand(command, args) {
+                if (command == "load") {
+                    //load
+                    debugger;
+                }
+            }
+        }
+    </script>
+
+    This is the page <b>2</b>
+
+    <ul>
+        <li><x-anchor href="page1.html">Help 1</x-anchor></li>
+        <li><x-anchor href="page2.html" target="#root">Help 2 at root</x-anchor></li>
+        <li><a href="#" onclick="history.back(); return false;">back</a></li>
+    </ul>    
+
+</body>
+</html>

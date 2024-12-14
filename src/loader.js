@@ -1,18 +1,20 @@
+import config from "./config.js"
 
+// defaults
+const DEFAULTS = {
+    icon: {
+        transform: "svg"
+    },
+}
 
 // class
 class Loader {
 
+
     //vars
-    _config = {
-        preload: [],
-        map:[
-            {"resource": "type:x-element",              "src": "./modules/x/ui/types/from-html.js"},
-            {"resource": "type:x-element",              "src": "./modules/x/ui/types/from-html.js"},
-        ]
-    };
+    _definitions = [];
     _cache = {};
-    _typeConverters = {
+    _transforms = {
         "arrayBuffer": async (response) => {
             return await response.arrayBuffer();
         },
@@ -22,20 +24,20 @@ class Loader {
         "bytes": async (response) => {
             return await response.bytes();
         },
-        "css": async (module) => {
+        "css": async (response) => {
             let css = await module.text();
             let styleSheet = new CSSStyleSheet();
             styleSheet.replaceSync(css);
             return styleSheet;
         },
-        "html": async (module) => {
-            let html = await module.text();
+        "html": async (response) => {
+            let html = await response.text();
             let template = document.createElement("template");
             template.innerHTML = html;
             return template;
         },
-        "json": async (module) => {
-            return await module.json();
+        "json": async (response) => {
+            return await response.json();
         },
         "svg": async (response) => {
             let text = await response.text();
@@ -44,47 +46,56 @@ class Loader {
             return div.firstChild;
         }
     };
-    
+
+
     //ctor
     constructor() {
+        //add config event -> listen for changes
+        config.subscribe("loader", () => {
+            let definitions = [];
+            let keys = config.getSubKeys("loader");            
+            for (let key of keys) {
+                let type = key.split(":")[0];
+                let pattern = key.split(":")[1];
+                let resource = type + ":" + pattern;
+                let src = config.get("loader." + type + ":" + pattern);
+                let defaults = DEFAULTS[type];
+                let transform = config.get("loader." + type + ":" + pattern + ".transform", (defaults && defaults.transform) || "");
+                let regexp = "";
+                let k = 0;
+                let i = resource.indexOf("{"), j = resource.indexOf("}");
+                while (i != -1) {
+                    regexp += resource.substring(k, i);
+                    regexp += "(?<" + resource.substring(i + 1, j) + ">.+)";
+                    k = j + 1;
+                    i = resource.indexOf("{", j), j = resource.indexOf("}", i);
+                }
+                regexp += resource.substring(k);
+                let definition = {
+                    resource,
+                    src,
+                    transform,
+                    regexp: new RegExp(regexp),
+                }
+                definition.regexp = new RegExp(regexp);
+                definitions.push(definition);
+            }
+            this._definitions = definitions;
+        })
     }
+
 
     //props
-    get config() {return this._config;}
+    get config() { return this._config; }
 
-    //methods
-    async init(config) {
-        this._config = config;
-        //sort
-        this._config.map.sort((a,b)=>{
-            return a.resource.localeCompare(b.resource);
-        });
-        // convert expressions like "component:x-{name}" to regular expressions like "component:x-(?<name>.+)"
-        this._config.map.forEach((definition) => {
-            let regexp = "";
-            let resource = definition.resource;
-            let k = 0;
-            let i = resource.indexOf("{"), j = resource.indexOf("}");
-            while (i != -1) {
-                regexp += resource.substring(k, i);
-                regexp += "(?<" + resource.substring(i + 1, j) + ">.+)";
-                k = j + 1;
-                i = resource.indexOf("{", j), j = resource.indexOf("}", i);
-            }
-            regexp += resource.substring(k);
-            definition.regexp = new RegExp(regexp);
-        });
-        //preload
-        await this.load(this._config.preload);
-    }
 
     //methods
     register(resource, value) {
         this._cache[resource] = value;
     }
     resolve(resource) {
-        for(let i = this._config.map.length - 1; i >= 0; i--) {
-            let mapitem = this._config.map[i];
+        for(let i = this._definitions.length - 1; i >= 0; i--) {
+            let mapitem = this._definitions[i];
             let match = resource.match(mapitem.regexp);
             if (match) {
                 let src = mapitem.src;
@@ -103,7 +114,6 @@ class Loader {
         return null;
     }
     async load(resources) {
-        //prepare
         let isString = typeof(resources) == "string";
         if (resources == undefined) return null;
         if (resources == "" ) return null;
@@ -118,30 +128,11 @@ class Loader {
             let cacheItem = this._cache[resource];
             if (cacheItem && cacheItem.then){
                 tasks.push(cacheItem);
-            } else if (!definition.with && window.customElements.get(name)) {
+            } else if (!definition.transform && window.customElements.get(name)) {
                 this._cache[scheme + ":" + name] = window.customElements.get(name);
             } else if (!cacheItem) {
                 console.log(`  loader.load('${resource}') ... ${src}`);
-                let promise = (async ()=> {
-                    let value = null;
-                    //fetch/import
-                    if(definition.with) {
-                        value = await fetch(src);
-                    } else {
-                        value = await import(src);
-                    }
-                    //convert
-                    if (definition.with && definition.with.type) {
-                        let typeConverter = this._typeConverters[definition.with.type];
-                        if (!typeConverter) {
-                            typeConverter = (await this.load("type:" + definition.with.type)).default;
-                            this._typeConverters[definition.with.type] = typeConverter;
-                        }
-                        value = await typeConverter(value, src);
-                    }        
-                    //set            
-                    this.register(resource, value);
-                })();
+                let promise = this.loadDefinition(resource, definition, src);
                 this.register(resource, promise);
                 tasks.push(promise);
             }
@@ -156,8 +147,25 @@ class Loader {
         if (isString) return result[0];
         //return
         return result;
+    }    
+    async loadDefinition(resource, definition, src){
+        let value = null;
+        //fetch/import
+        if(definition.transform) {
+            value = await fetch(src);
+        } else {
+            value = await import(src);
+        }
+        //transform
+        if (definition.transform) {
+            let transform = this._transforms[definition.transform];
+            value = await transform(value, src);
+        } else {
+            value = value.default;
+        }
+        //set
+        this.register(resource, value);
     }
-    
 };
 
 

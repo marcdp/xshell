@@ -1,4 +1,5 @@
-import xshell from "x-shell";
+import shell from "shell";
+import utils from "../../../utils.js";
 import XElement from "../ui/x-element.js";
 
 // class
@@ -10,8 +11,8 @@ export default XElement.define("x-anchor", {
         :host(.menuitem) a {display:flex; padding-left:.6em; padding-right:.6em; text-decoration:none;}
     `,
     template: `
-        <a  tabindex="1"
-            x-attr:href="state.realHref" 
+        <a tabindex="1"
+            x-attr:href="state.hrefReal"
             x-on:click="click" 
             x-on:keydown.enter="click"
             x-attr:target="state.target"
@@ -22,7 +23,7 @@ export default XElement.define("x-anchor", {
     state: {
         command: "",
         href: "",
-        realHref: null,
+        hrefReal: null,
         breadcrumb: false,
         target: "",
     },
@@ -46,12 +47,9 @@ export default XElement.define("x-anchor", {
             } else if (command == "refresh") {
                 //refresh
                 if (this.state.href) {
-                    let xshell = this.xshell;
-                    if (xshell) {
-                        this.state.realHref = xshell.getRealUrl(this.state.href, this.page, {breadcrumb: this.state.breadcrumb, type: this.state.target});
-                    }
+                    this.state.hrefReal = shell.getHref(this.state.href, this.page, { breadcrumb: this.state.breadcrumb, target: this.state.target });
                 } else {
-                    this.state.realHref = null;
+                    this.state.hrefReal = null;
                 }
                 
             } else if (command == "click") {
@@ -64,35 +62,37 @@ export default XElement.define("x-anchor", {
                     event.stopPropagation();
                     return false;
                 } else if (this.state.target) {
-                    //target x-page element
+                    //target 
+                    let src = utils.combineUrls(this.page.src, this.state.href);
                     if (this.state.target == "#stack") {
-                        xshell.showPage({ url: this.state.href, target: "#stack"});
+                        shell.showPage({ src: src, sender: this.page, target: this.state.target });
                         event.preventDefault();
                         event.stopPropagation();
                         return false;
                     } else if (this.state.target == "#dialog") {
-                        xshell.showPage({ url: this.state.href, target: "#dialog"});
+                        shell.showPage({ src: src, sender: this.page, target: this.state.target });
+                        event.preventDefault();
+                        event.stopPropagation();
+                        return false;
+                    } else if (this.state.target == "#root") {
+                        shell.navigate( src );
                         event.preventDefault();
                         event.stopPropagation();
                         return false;
                     } else if (this.state.target.startsWith("#")) {
-                        let targetId = this.state.target.substring(1);
-                        var targetPage = this.ownerDocument.getElementById(targetId);
-                        if (targetPage) {
-                            targetPage.src = this.state.href;
-                        }
+                        var targetPage = this.page.querySelector(this.state.target);
+                        if (targetPage) targetPage.src = src;
                         event.preventDefault();
                         event.stopPropagation();
                         return false;
-                    }
-                } else if (this.state.href && this.page && !this.page.target){
-                    //page
-                    let src = xshell.getRealUrl(this.state.href, this.page, {breadcrumb: this.state.breadcrumb, relative: true});
-                    if (xshell.navigator.pages[0] == this.page) {
-                        xshell.showPage({url: src});
                     } else {
-                        this.page.src = src;
+                        let src = shell.getHref(this.state.href, this.page, { breadcrumb: this.state.breadcrumb });
+                        window.open(src);
                     }
+                } else if (this.state.href){
+                    //page
+                    let src = utils.combineUrls(this.page.src, this.state.href);
+                    this.page.navigate(src);
                     event.preventDefault();
                     event.stopPropagation();
                     return false;

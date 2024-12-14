@@ -4,15 +4,11 @@ class Bus {
 
 
     //vars
-    _config = {};
     _events = {};
 
     //ctor
     constructor() {
     }
-
-    //props
-    get config() {return this._config;}
 
     //methods
     on(event, listener) {
@@ -27,6 +23,7 @@ class Bus {
     }
     // Emit an event asynchronously
     async emit(event, data) {
+        console.log(`bus.emit('${event}', {...})`);
         if (!this._events[event]) return;
         const promises = this._events[event].map(async (listener) => listener(data));
         await Promise.all(promises);

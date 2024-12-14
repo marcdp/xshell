@@ -21,7 +21,8 @@ export default XElement.define("x-icon", {
         async onStateChanged(name, oldValue, newValue) {
             if (name == "icon") {
                 if (newValue) {
-                    this.state.svg = (await loader.load("icon:" + newValue)).cloneNode(true);
+                    let svgElement = await loader.load("icon:" + newValue);
+                    this.state.svg = svgElement.cloneNode(true);  
                 } else {
                     this.state.svg = null;
                 }
