@@ -430,7 +430,7 @@ export default XElement.define("x-datafield", {
 
             } else if (command == "lang-add") {
                 //lang-add
-                let lang = await this.page.showDialog({url: "page:x-page-lang-picker?disabled=" + this.state.langs.join(",")});
+                let lang = await this.page.showDialog({ url: "page:x-page-lang-picker?disabled=" + this.state.langs.join(",")});
                 if (lang) {
                     this.state.langs.push(lang);
                     this.state.langIndex = this.state.langs.length - 1;

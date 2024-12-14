@@ -390,7 +390,7 @@ class XTemplateInstance {
         this._xtemplate = xtemplate;
         this._state = state;
         this._element = element;
-        this._element.adoptedStyleSheets = xtemplate.styleSheets;
+        if (xtemplate.styleSheets.length) this._element.adoptedStyleSheets = xtemplate.styleSheets;
         this._handler = handler;
         this._invalidate = invalidate;
     }
@@ -590,7 +590,7 @@ class XTemplateInstance {
                 //slot
             } else {
                 //diff node
-                //if (!parent) debugger
+                if (!parent) debugger
                 let child = parent.childNodes[vNodeNew.options.index + inew];
                 this._diffDomElement(vNodeOld, vNodeNew, child, level + 1);
             }

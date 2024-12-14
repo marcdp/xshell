@@ -1,0 +1,59 @@
+﻿<html>
+<head>
+    <title>Page 1</title>
+    <meta name="description"    content="This is the description" />
+    <meta name="author"         content="marc" />
+    <meta name="x-page-state"   content='{"var1":"hello world"}' />
+</head>
+<body>
+
+    <script type="module">
+        export default {
+            async onCommand(command, args) {
+                if (command == "load") {
+                    //load
+                    debugger;
+                }
+            }
+        }
+    </script>
+
+    <ul>
+        <li><x-anchor href="page2.html">Help 2</x-anchor></li>
+        <li><x-anchor href="page2.html" target="#dialog">Help in dialog</x-anchor></li>
+        <li><x-anchor href="page2.html" target="#stack">Help in stack</x-anchor></li>
+        <li><x-anchor href="page2.html" target="#mypage">Help insinde x-page</x-anchor></li>
+    </ul>
+
+    <x-page id="mypage"></x-page>
+
+<!--
+    <hr />
+    <ul>
+        <li><x-anchor href="page2.html">Help</x-anchor></li>
+        <li><x-anchor href="page2.html" breadcrumb>Help2 with breadcrumb</x-anchor></li>
+        <li><x-anchor href="page2.html?x-page-label=helllllloooooo" breadcrumb>Help with breadcrumb and label</x-anchor></li>
+
+        <li><x-anchor href="page2.html" target="#dialog">Help with breadcrumb and label in stack</x-anchor></li>
+
+        <li><x-button command="show-page-stack" label="Show page stack"></x-button></li>
+        <li><x-button command="show-page-stack-thin" label="Show page stack thin"></x-button></li>
+        <li><x-button command="show-page-stack-thin-right" label="Show page stack thin right"></x-button></li>
+        <li><x-button command="show-page-stack-popup" label="Show page stack popup"></x-button></li>
+        <li><x-button command="show-page-dialog" data-dddd="2" data-asdas="321" label="Show page dialog"></x-button></li>
+
+        <x-clock></x-clock>
+    </ul>
+
+    <x-form>
+        <x-datafields columns="3">
+            <x-datafield label="hola" type="text" x-model="state.var1"></x-datafield>
+            <x-datafield label="hola" type="date"></x-datafield>
+            <x-datafield label="hola" type="text"></x-datafield>
+        </x-datafields>
+        <x-button icon="x-add" label="add"></x-button>
+    </x-form>
+                -->
+</body>
+</html>
+

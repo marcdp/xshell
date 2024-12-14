@@ -2,15 +2,15 @@ class I18n {
 
     //var
     _config = {
-        current: "en",
-        strings: {
-        },
+        lang: "en",
         langs: [
-            { id: 'en', label: 'English', main:true },
+            { id: 'en', label: 'English'},
+            { id: 'es', label: 'Spanish'},
             { id: 'fr', label: 'French' },
             { id: 'de', label: 'German' },
-            { id: 'es', label: 'Spanish', main:true },
-        ]
+        ],
+        strings: {
+        }
     };
     _cache = {};
     
@@ -19,7 +19,7 @@ class I18n {
     }
 
     //props
-    get config() {return this._config;}
+    get config() { return this._config; }
 
     //methods
     async init(config) { 
@@ -44,37 +44,13 @@ class I18n {
         return result;
     }
     translate(label) {
-        var result = this._config.strings[label];
-        if (!result) result = label;
+        var translations = this._strings[this.config.lang];
+        if (!translations) return label;
+        var result = translations[label];
+        if (!result) return label;
         return result;    
     }
 }
 
-
-// instance
-let instance = new I18n();
-
-
-// function
-function i18n (label) {
-    return instance.translate(label);
-};
-i18n.init = async function(config) {
-    await instance.init(config);
-};
-i18n.getMainLangs = function() {
-    return instance.getMainLangs();
-};
-i18n.getLang = function(id) {
-    return instance.getLang(id);
-};
-Object.defineProperty(i18n, 'config', {
-    get() {
-        return instance.config;
-    },
-});
-
-
-//export
-export default i18n;
-export { I18n };
+// export
+export default new I18n();

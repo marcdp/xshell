@@ -1,0 +1,358 @@
+import config from "./config.js";
+import utils from "./utils.js";
+import bus from "./bus.js";
+import XPage from "./x-page.js";
+
+// constants
+const HASH_PREFIX = "#!";
+
+// class
+class Shell {
+
+
+    //fields
+    _container = null;
+    _modules = {};
+
+
+    //ctor
+    constructor() {
+        console.log(`shell.constructor()`);
+    }
+
+
+    //props
+    get modules() { return this._modules; }
+
+
+    //methods
+    async init(value) {
+        //init
+        let url = "";
+        //defaults
+        config.set({
+            // app
+            "app.name": "",
+            "app.label": "",
+            "app.version": "",
+            "app.copyright": "",
+            "app.logo": "",
+            // page
+            "pages.factory": "",
+            "pages.layout.default": "",
+            "pages.layout.dialog": "",
+            "pages.layout.main": "",
+            "pages.layout.stack": "",
+            "pages.layout.embed": "",
+            // shell
+            "shell.base": "",
+            "shell.start": "",
+            "shell.container": "body",
+            "shell.error": "",
+        }, import.meta.url);
+        //load value
+        if (typeof (value) == "string") {
+            console.log(`shell.init('${value}') ...`);
+            url = value;
+            let response = await fetch(url);
+            if (!response.ok) {
+                console.error(`shell.init(): ${response.status} ${response.statusText}`);
+                return;
+            }
+            value = JSON.parse(utils.stripJsonComments(await response.text()));
+        } else {
+            console.log(`shell.init({...}) ...`);
+            url =document.location.pathname;
+        }
+        config.set(value, url);
+        //load modules
+        let modules = config.getAsObjects("modules");
+        let tasks = [];
+        for (let module of modules) {
+            if (module.loading != "lazy") {
+                tasks.push(this.loadModule(module))
+            }
+        }
+        await Promise.all(tasks);        
+    }
+    async start() {
+        //log
+        console.log(`shell.start()`, config.config);
+        //start date
+        config.set({ "shell.started-at": new Date() });
+        //add event listener
+        window.addEventListener("hashchange", () => {
+            this._navigate(document.location.hash);
+        });
+        //navigate 
+        this._container = document.querySelector(config.get("shell.container", "body"));
+        this._container.appendChild(document.createComment("App pages "));
+        if (document.location.hash) {
+            await this._navigate(document.location.hash);
+        } else {
+            document.location.hash = HASH_PREFIX + config.get("shell.start");
+        }
+    }
+
+
+    // modules
+    async loadModuleBySrc(src) {
+        //load module by src
+        let modules = config.getAsObjects("modules");
+        for (let module of modules) {
+            if (src.startsWith(module.path)) {
+                if (module.status != "loaded") {
+                    return await this.loadModule(module);
+                }
+                return this._modules[module.name];
+            }
+        }
+        return null;
+    }
+    async loadModuleByName(name) {
+        //load module by name        
+        let module = config.getAsObject("modules." + name);
+        if (module.status != "loaded") {
+            return await this.loadModule(module);
+        }
+        return this._modules[module.name];
+    }
+    async loadModule(module) {
+        //load module
+        console.log(`shell.loadModule('${module.src}') ...`);
+        let aModule = await import(module.src)
+        //get instance
+        let instance = aModule.default
+        if (!instance.config) instance.config = {};
+        //get name
+        let name = "";
+        for (let key in instance.config) {
+            if (key.startsWith("modules.")) {
+                name = key.split(".")[1];
+            }
+        }
+        //add config
+        instance.config["modules." + name + ".status"] = "loaded";
+        config.set(instance.config, module.src)
+        delete instance.config;
+        //get depends
+        let depends = config.get("modules." + name + ".depends",[]);
+        for (let depend of depends) {
+            await this.loadModuleByName(depend);
+        }
+        //get styles
+        let tasks = [];
+        let styles = config.get("modules." + name + ".styles", []);
+        for (let style of styles) {
+            tasks.push(this.loadStyleSheet(style));
+        }
+        await Promise.all(tasks);
+        //set
+        instance.path = config.get("modules." + name + ".path", "");
+        instance.src = module.src;
+        instance.name = name;
+        instance.args = module.args || {};
+        this._modules[name] = instance;
+        //mount
+        await instance.mount();
+        //return
+        return instance;
+    }
+
+
+    //styles
+    async loadStyleSheet(src) {
+        //load stylesheet
+        let resolve = null;
+        let link = document.createElement("link");
+        link.setAttribute("rel", "stylesheet");
+        link.setAttribute("href", src);
+        link.addEventListener("load", () => {
+            resolve();
+        });
+        document.head.appendChild(link);
+        return new Promise((resolv) => {
+            resolve = resolv;
+        });
+    }
+
+
+    //pages
+    navigate(src) {
+        //navigate
+        window.document.location.hash = HASH_PREFIX + src;
+    }
+    async showPage({ src, sender, target }) {
+        //show page
+        if (sender) {
+            src = utils.combineUrls(sender.src, src);
+        }
+        if (target == "#dialog") {
+            //show page dialog
+            return await this.showPageDialog({ src, sender });
+        } else if (target == "#stack") {
+            //show page stack
+            this.showPageStack({ src, sender });
+        } else {
+            //show page main
+            window.document.location.hash = HASH_PREFIX + src;
+        }
+    }
+    async showPageStack({ src }) {
+        //show page stack
+        window.document.location.hash += HASH_PREFIX + src;
+    }
+    async showPageDialog({ src, sender }) {
+        //show page dialog
+        if (sender) {
+            src = utils.combineUrls(sender.src, src);
+        }
+        let resolveFunc = null;
+        let page = document.createElement("x-page");
+        page.setAttribute("src", src);
+        page.setAttribute("layout", "dialog");
+        page.addEventListener("page:close", (event) => {
+            resolveFunc(event.target.result);
+            if (event.target.parentNode) {
+                event.target.parentNode.removeChild(event.target);
+            }
+        });
+        this._container.appendChild(page);
+        return new Promise((resolve) => {
+            resolveFunc = resolve;
+        });
+    } 
+    getPages() {
+        return Array.from(this._container.querySelectorAll(":scope > x-page:not([layout='dialog'])"));
+    }
+    getPage(target) {
+        while (target) {
+            if (!target.parentNode) {
+                target = target.host;
+            }
+            if (!target) {
+                //debugger;
+                return null;
+            }
+            if (target.localName == "x-page") return target;
+            target = target.parentNode;
+        }
+        return null;
+    }
+    getHref(src, page, settings) {
+        let pages = this.getPages();
+        if (!settings) settings = {};
+        if (typeof (settings.relative) == "undefined") settings.relative = false;
+        let prefix = "";
+        //resolve src
+        src = utils.combineUrls(page.src, src)
+        //breadcrumb
+        if (settings.breadcrumb) {
+            let breadcrumb = [];
+            for (let item in this.breadcrumb) {
+                breadcrumb.push(item);
+            }
+            breadcrumb.push({ label: page.label, src: page.src });
+            src += (src.indexOf("?") != -1 ? "&" : "?") + "x-breadcrumb=" + btoa(JSON.stringify(breadcrumb)).replace(/\+/g, "-").replace(/\//g, "_");
+        }
+        //stack page
+        let index = pages.indexOf(page);
+        if (settings.target == "#stack") index++;
+        for (var i = 0; i < index; i++) {
+            prefix += HASH_PREFIX + pages[i].src;
+        }
+        //return
+        return config.get("shell.base") + "/" + prefix + HASH_PREFIX + src;
+    }
+    
+
+    //private
+    async _navigate(hash) {
+        //navigate
+        let hashBeforeParts = (this._hash ? this._hash.split(HASH_PREFIX) : []);
+        let hashAfterParts = (hash ? hash.substring(HASH_PREFIX.length).split(HASH_PREFIX) : []);
+        let inc = 0;
+        //close the last dialog
+        let allPages = Array.from(this._container.querySelectorAll(":scope > x-page"));
+        for (let i = allPages.length - 1; i >= 0; i--) {
+            let page = allPages[i];
+            if (page.getAttribute("layout") != "dialog") break
+            this._container.removeChild(page);            
+        }
+        //process hash parts
+        for (let i = 0; i < Math.max(hashBeforeParts.length, hashAfterParts.length); i++) {
+            let hashBeforePart = hashBeforeParts[i];
+            let hashAfterPart = hashAfterParts[i];
+            if (!hashBeforePart && hashAfterPart) {
+                //add page
+                let page = document.createElement("x-page");
+                page.setAttribute("src", hashAfterPart);
+                if (i == 0) {
+                    page.setAttribute("layout", "main");
+                    //emit event navigation:start
+                    bus.emit("navigation:start", { page });
+                } else {
+                    page.setAttribute("layout", "stack");
+                    page.addEventListener("page:close", (event) => {
+                        //page close
+                        let pages = this.getPages();
+                        let hashParts = document.location.hash.substring(HASH_PREFIX.length).split(HASH_PREFIX);
+                        let index = pages.indexOf(event.target);
+                        hashParts = hashParts.filter((_, idx) => idx !== index);
+                        document.location.hash = HASH_PREFIX + hashParts.join(HASH_PREFIX);
+                    });
+                }
+                page.addEventListener("page:change", (event) => {
+                    //page change
+                    let pages = this.getPages();
+                    if (pages.indexOf(event.target) == 0) {
+                        var label = event.target.label;
+                        if (label) document.title = label + " / " + config.get("app.label");
+                    }
+                });
+                page.addEventListener("page:load", (event) => {
+                    //page load
+                    let pages = this.getPages();
+                    if (pages.indexOf(event.target) == 0) {
+                        var label = event.target.label;
+                        if (label) document.title = label + " / " + config.get("app.label");
+                        bus.emit("navigation:end", { page: event.target });
+                    }
+                });
+                page.addEventListener("page:navigate", (event) => {
+                    //page navigation
+                    let pages = this.getPages();
+                    let index = pages.indexOf(event.target);
+                    if (index != -1) {
+                        let hashParts = document.location.hash.substring(HASH_PREFIX.length).split(HASH_PREFIX);
+                        hashParts[index] = event.detail;
+                        document.location.hash = HASH_PREFIX + hashParts.join(HASH_PREFIX);
+                    }
+                });
+                //add page to container
+                this._container.appendChild(page);
+            } else if (hashBeforePart && !hashAfterPart) {
+                //remove page
+                let pages = this.getPages();
+                let page = pages[i + inc];
+                page.parentNode.removeChild(page);                
+                inc -= 1;
+            } else if (hashBeforePart != hashAfterPart) {
+                //change page
+                let pages = this.getPages();
+                let page = pages[i];
+                page.src = hashAfterPart;
+                //emit event navigation:start
+                if (i == 0) {
+                    bus.emit("navigation:start", { page });
+                }
+            }
+        }
+        this._hash = hashAfterParts.join(HASH_PREFIX);
+    }
+    
+}
+
+//export default instance
+export default new Shell();
+

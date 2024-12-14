@@ -1,49 +1,69 @@
 import XElement from "../ui/x-element.js";
-import config from "./../../../config.js";
 
 // class
-export default XElement.define("x-app-drawer", {
+export default XElement.define("x-app-drawer-old", {
     style: `
         :host {
             display:block;
-            position:fixed;
+            position:relative;
             z-index:20;
-            width:var(--x-app-drawer-width);
-            left:0;
-            top:0;
-            bottom:0;
-            background:var(--x-background-gray);
-            padding:1em;
-            box-sizing:border-box;
         }
-        a.logo {display:flex; align-items:center; text-decoration:none; color:var(--x-text-color); padding-left:.65em; padding-right:.5em; margin-bottom:1em;}
-        a.logo {height:2em; object-fit:contain;}
-        a.logo .label {font-weight:600; padding-left:.5em;; }
-
         :host > div {
             display:none;
         }
+        :host > div.expanded {
+            display:block;
+            
+        } 
+        :host > div div.backdrop {
+            position:fixed; left:0; top:0; right:0; bottom:0; 
+            background: rgba(0,0,0,0);
+            transition: background var(--x-transition-duration);
+        }
+        :host > div.animate div.backdrop {
+            background: var(--x-app-drawer-backdrop);
+            
+        }
+        :host > div div.container {
+            position:fixed; 
+            top:0em; 
+            right:0; 
+            width: var(--x-app-drawer-width); 
+            background: var(--x-app-drawer-background);
+            box-sizing: border-box;
+            height: 100%; 
+            box-shadow: var(--x-app-drawer-shadow);
+            border-radius: var(--x-app-drawer-border-radius);
+            padding: var(--x-app-drawer-padding);
+            overflow-y:auto;
+            transform:translateX(110%);
+            transition: transform var(--x-transition-duration);
+            --desp: 100%;
+        }
+        :host > div.animate div.container {
+            transform:translateX(0%);
+        }
+
+        :host(.left) > div div.container {
+            left:0;
+            right:unset;
+            --desp: -100%;
+            border-radius: var(--x-app-drawer-border-radius-inverted);
+        }
+
+        :host div div.container > x-button.close {position:absolute; top:.75em; right:.8em;}
 
     `,
     template: `
-        <a class="logo" x-attr:href="state.url">
-            <img x-attr:src="state.logo"></img>
-            <span class="label" x-text="state.label"></span>
-        </a>
-        <x-app-menu menu="primary"></x-app-menu>
-        <!--
         <div x-attr:class="state.expanded ? 'expanded' + (state.animate ? ' animate' : '') : ''">
             <div class="backdrop" x-on:click="toggle"></div>
             <div class="container">
                 <x-button class="plain close" x-on:click="toggle" icon="x-close"></x-button>
                 <slot></slot>
             </div>
-        </div>-->
+        </div>
     `,    
     state: {
-        label: "",
-        logo: null,
-        url: "#",
         expanded: false,
         animate: false,
     },
@@ -66,10 +86,7 @@ export default XElement.define("x-app-drawer", {
         },
         onCommand(command) {
             if (command == "load") {
-                // load
-                this.state.label = config.get("app.label");
-                this.state.logo = config.get("app.logo");
-                this.state.url = config.get("shell.base");
+                //load
 
             } else if (command == "toggle") {
                 //toggle

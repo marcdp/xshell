@@ -39,6 +39,11 @@ export default XElement.define("x-form", {
         .footer > div {display:flex; justify-content:flex-end; gap:.25em; margin-left:.25em; padding-top:1em; flex:1;}
         .footer ::slotted(x-button) {min-width: var(--x-button-width-wide);}
 
+        @media only screen and (max-width: 768px) {
+            .container[vertical] {display:block;}
+            .container[vertical] > x-wizard-header {margin-right:0; margin-bottom:1em;}
+        }
+
     `,
     template: `
         <style x-html="state.wizardStyle"></style>

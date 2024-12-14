@@ -19,6 +19,9 @@ export default XElement.define("x-page-header", {
         div button x-icon {}
 
         :host(.hide-close) div button {display:none;}
+        @media only screen and (max-width: 768px) {
+            div label {font-size:var(--x-font-size-subtitle);}
+        }
     `,
     template: `
         <div class="breadcrumb">

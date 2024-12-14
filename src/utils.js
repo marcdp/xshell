@@ -1,11 +1,21 @@
 // funcs
+/*
 function deepAssign(obj1, obj2) {
     for (let key in obj2) {
         if (Object.prototype.hasOwnProperty.call(obj2, key)) {
             if (Array.isArray(obj2[key]) && Array.isArray(obj1[key])) {
-                for(let item of obj2[key]){
-                    if (obj1[key].indexOf(item) == -1){
-                        obj1[key].push(item);    
+                for (let item of obj2[key]) {
+                    if (typeof (item) == "object" && item.id) {
+                        let aux = obj1[key].filter(x => x.id == item.id)
+                        if (aux.length) {
+                            deepAssign(aux[0], item);
+                        } else {
+                            obj1[key].push(item);
+                        }
+                    } else {
+                        if (obj1[key].indexOf(item) == -1) {
+                            obj1[key].push(item);
+                        }
                     }
                 }
             } else if (obj2[key] instanceof Object && obj1[key] instanceof Object) {
@@ -17,36 +27,57 @@ function deepAssign(obj1, obj2) {
     }
     return obj1;
 }
-
+*/
 
 // class
 class Utils {
 
+    /*
     static deepAssign(target, ...sources) {
         return deepAssign(target, ...sources);
     }
     static traverse(obj, callback) {
         for (let key in obj) {
             if (Object.prototype.hasOwnProperty.call(obj, key)) {
-                if (obj[key] instanceof Object) {
+                if (Array.isArray(obj[key])) {
+                    callback(obj, key);
+                    for (let item of obj[key]) {
+                        this.traverse(item, callback);
+                    }
+                } else if (obj[key] instanceof Object) {
                     this.traverse(obj[key], callback);
                 } else {
                     callback(obj, key);
                 }
             }
         }
-    }
+    }*/
     static absolutizeUrl(url) {
         if (url.startsWith("/")) url = window.location.origin + url;
         return url;
     }
     static combineUrls(a, b) {
         if (b.indexOf(":") != -1) return b;
-        if (b.startsWith("./")) {
-            if (a.endsWith("/")) a = a.substring(0, a.length - 1);
+        if (b.startsWith("/")) {
+            if (a.indexOf("://") != -1) {
+                let i = a.indexOf("/", a.indexOf("://") + 3);
+                if (i != -1) a = a.substring(0, i);
+                return a + b;
+            }
+            return b;
+        } else if (b.startsWith("./") || b==".") {
+            if (a.endsWith("/")) {
+                a = a.substring(0, a.length - 1);
+            } else if (a.length > 0) {
+                a = a.substring(0, a.lastIndexOf("/"));
+            }
             return a + b.substring(1);
         } else if (b.startsWith("../")) {
-            if (a.endsWith("/")) a = a.substring(0, a.length - 1);
+            if (a.endsWith("/")) {
+                a = a.substring(0, a.length - 1);
+            } else if (a.length > 0) {
+                a = a.substring(0, a.lastIndexOf("/"));
+            }
             let result = a + "/" + b;
             if (result.startsWith("/")) {
                 const normalizedUrl = new URL(result, window.location.origin);
@@ -55,20 +86,19 @@ class Utils {
                 result = (new URL(result)).toString();
             }
             return result;
-        } else if (b.startsWith("/")) {
-            if (a.indexOf("://") != -1) {
-                let i = a.indexOf("/", a.indexOf("://") + 3);
-                if (i != -1) a = a.substring(0, i);
-                return a + b;
-            }
-            return b;
         } else {
-            if (!a.endsWith("/")) a += "/";
+            if (a.endsWith("/")) { 
+                //empty
+            } else if (a.indexOf("/") != -1) {
+                a = a.substring(0, a.lastIndexOf("/") + 1);
+            }
             return a + b;
         }
       }
-      static async importModuleFromJSCode(js, url) {
-        const baseUrl = Utils.absolutizeUrl(url.substring(0, url.lastIndexOf("/")));
+    static async importModuleFromJSCode(js, url) {
+        if (url && url.indexOf("?") != -1) url = url.substring(0, url.indexOf("?"));
+        //const baseUrl = Utils.absolutizeUrl(url.substring(0, url.lastIndexOf("/")));
+        const baseUrl = Utils.absolutizeUrl(url);
         //replace each import relative URL with an absolute URL
         if (js.indexOf("import ") != -1) {
             const importRegex = /(import\s+.*?['"])(\.\/|\.\.\/|\/)([^'"]+)(['"])/g;
@@ -85,6 +115,7 @@ class Utils {
         //return
         return module;
     }
+    /*
     static stripJsonComments(jsonString){
         let result = '';
         let insideString = false;
@@ -119,7 +150,7 @@ class Utils {
                     while (i < jsonString.length && !(jsonString[i] === '*' && jsonString[i + 1] === '/')) {
                         i++;
                     }
-                    i += 2; // Skip past the closing */
+                    i += 2;
                     continue;
                 }
             }
@@ -135,7 +166,7 @@ class Utils {
         }
 
         return result.trim();
-    }
+    }*/
 
 };
 

@@ -1,3 +1,4 @@
+import shell from "shell";
 import XElement from "../ui/x-element.js";
 
 // class
@@ -12,7 +13,8 @@ export default XElement.define("x-button", {
             user-select: none; 
             display:inline-flex; 
             position:relative; 
-            align-items:baseline; flex:1;justify-content:center;
+            align-items:baseline; flex:1;
+            justify-content: var(--x-button-justify-content);
             text-decoration:none;
             color:var(--x-text-color);
         }
@@ -59,7 +61,7 @@ export default XElement.define("x-button", {
         :host(.x-short) .button {padding-top:0em; padding-bottom:.1em;}
         :host(.icon-big) .button {padding:.25em .5em;}
         :host(.icon-big) .button x-icon {font-size:1.1em;}
-
+        
         ::slotted(x-contextmenu) {left:0; top:calc(100% - .1em);}
         div.right ::slotted(x-contextmenu) {left:unset; right:0; top:calc(100% - .1em);}
     `,
@@ -158,10 +160,7 @@ export default XElement.define("x-button", {
                 }
                 // href
                 if (this.state.href) {
-                    let xshell = this.xshell;
-                    if (xshell) {
-                        this.state.realHref = xshell.getRealUrl(this.state.href, this.page, { breadcrumb: this.state.breadcrumb });
-                    }
+                    this.state.realHref = shell.getHref(this.state.href, this.page, { breadcrumb: this.state.breadcrumb });
                 } else {
                     this.state.realHref = null;
                 }
