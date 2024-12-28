@@ -32,26 +32,6 @@ function deepAssign(obj1, obj2) {
 // class
 class Utils {
 
-    /*
-    static deepAssign(target, ...sources) {
-        return deepAssign(target, ...sources);
-    }
-    static traverse(obj, callback) {
-        for (let key in obj) {
-            if (Object.prototype.hasOwnProperty.call(obj, key)) {
-                if (Array.isArray(obj[key])) {
-                    callback(obj, key);
-                    for (let item of obj[key]) {
-                        this.traverse(item, callback);
-                    }
-                } else if (obj[key] instanceof Object) {
-                    this.traverse(obj[key], callback);
-                } else {
-                    callback(obj, key);
-                }
-            }
-        }
-    }*/
     static absolutizeUrl(url) {
         if (url.startsWith("/")) url = window.location.origin + url;
         return url;
@@ -115,58 +95,112 @@ class Utils {
         //return
         return module;
     }
-    /*
-    static stripJsonComments(jsonString){
-        let result = '';
-        let insideString = false;
-        let skipNextChar = false;
-        let i = 0;
-
-        while (i < jsonString.length) {
-            const char = jsonString[i];
-            const nextChar = jsonString[i + 1];
-
-            // Toggle the `insideString` flag when encountering a double-quote not escaped
-            if (char === '"' && !skipNextChar) {
-                insideString = !insideString;
-            }
-
-            // If not inside a string, check for comments
-            if (!insideString) {
-                // Check for single-line comment
-                if (char === '/' && nextChar === '/') {
-                    // Skip until the end of the line
-                    i += 2;
-                    while (i < jsonString.length && jsonString[i] !== '\n') {
-                        i++;
+    static findObjectsPath(obj, keyToFind, valueToFind) {
+        // Base case: if obj is not an object, return null
+        if (typeof obj !== 'object' || obj === null) return null;
+        for (const key in obj) {
+            if (obj.hasOwnProperty(key)) {
+                // If the key matches, return the current object
+                if (key == keyToFind && obj[key] == valueToFind) {
+                    return [obj];
+                }    
+                // Recursively search within child objects
+                if (typeof obj[key] === 'object') {
+                    const result = Utils.findObjectsPath(obj[key], keyToFind, valueToFind);
+                    if (result) {
+                        if (!Array.isArray(obj)) result.unshift(obj);
+                        return result;
                     }
-                    continue;
-                }
-
-                // Check for multi-line comment
-                if (char === '/' && nextChar === '*') {
-                    // Skip until the end of the comment
-                    i += 2;
-                    while (i < jsonString.length && !(jsonString[i] === '*' && jsonString[i + 1] === '/')) {
-                        i++;
-                    }
-                    i += 2;
-                    continue;
                 }
             }
+        }    
+        // If no matching object is found, return null
+        return null;
+    }
+    static probablyPhone() {
+        return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    }
+    static getDeepActiveElement(root = document) {
+        // Get the active element within the given root (document or shadow root)
+        let activeElement = root.activeElement;
+      
+        // If there's no active element, return null
+        if (!activeElement) {
+          return null;
+        }      
+        // If the active element has a shadow root, dive deeper
+        if (activeElement.shadowRoot) {
+          return Utils.getDeepActiveElement(activeElement.shadowRoot);
+        }      
+        // If active element is inside a shadow DOM slot, check its assigned elements
+        if (activeElement.tagName === 'SLOT') {
+          const assignedElements = activeElement.assignedElements({ flatten: true });
+          for (const assignedElement of assignedElements) {
+            if (assignedElement.shadowRoot) {
+              const nestedActive = Utils.getDeepActiveElement(assignedElement.shadowRoot);
+              if (nestedActive) {
+                return nestedActive;
+              }
+            }
+          }
+        }      
+        // Return the active element if it's the deepest focused element
+        return activeElement;
+    }
+    static isDescendantOfElement(ancestor, element) {
+        // Traverse through the ancestors of the element
+        while (element) {
 
-            // Append current character to result
-            result += char;
+            if (element instanceof DocumentFragment) {
+                element = element.host;
+            }
 
-            // Check if this character is an escape character
-            skipNextChar = char === '\\' && !skipNextChar;
-
-            // Move to the next character
-            i++;
+            // Check if the current element is the ancestor
+            if (element === ancestor) {
+                return true;
+            }
+          
+            // Check if the current element is inside a shadow DOM
+            if (element.shadowRoot) {
+                // Check if the ancestor is in the shadow DOM of the element
+                if (element.shadowRoot.host === ancestor) {
+                    return true;
+                }
+            }
+          
+            // Move to the parent node
+            element = element.parentNode;
         }
-
-        return result.trim();
-    }*/
+        
+        return false;
+    }
+    static getElementByIdRecursive(root, id) {
+        // First, check if the current node has the ID we're looking for
+        if (root.id === id) {
+            return root;
+        }
+    
+        // If the node is an element and has a shadow root, check the shadow root
+        if (root.shadowRoot) {
+            let shadowElement = Utils.getElementByIdRecursive(root.shadowRoot, id);
+            if (shadowElement) {
+                return shadowElement;
+            }
+        }
+    
+        // Otherwise, check all child nodes recursively
+        for (let child of root.children) {
+            let childElement = Utils.getElementByIdRecursive(child, id);
+            if (childElement) {
+                return childElement;
+            }
+        }
+    
+        // Return null if no element is found
+        return null;
+    }
+    
+     
 
 };
 

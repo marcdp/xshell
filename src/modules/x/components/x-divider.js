@@ -10,8 +10,6 @@ export default XElement.define("x-divider", {
         :host-context(x-menu.plain) hr {margin-left:.4em; margin-right:.4em;}
         :host-context(x-toolbar) hr {height:2em; margin:0; display:block}
     `,
-    state: {
-    },
     template: `<hr/>`
 });
 

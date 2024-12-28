@@ -21,17 +21,24 @@
             "app.version": "0.1",
             "app.copyright": "",
             "app.logo": "./logo.svg",
+            // module oidc
+            "modules.oidc.src": "/src/modules/oidc/module.js",
             // module x
             "modules.x.src": "/src/modules/x/module.js",
             "modules.x.path": "/x",
+            // module x-man
+            "modules.x-man.src": "/src/modules/x-man/module.js",
+            "modules.x-man.path": "/x-man",
             // module 1
             "modules.module1.src": "./module1/module.js",
             "modules.module1.path": "/module1",
             // module 2
             "modules.module2.src": "./module2/module.js",
             "modules.module2.path": "/module2",
+            "modules.module2.loading": "lazy",
             // shell
             "shell.base": ".",
+            "shell.debug": true,
             "shell.start": "/module1/pages/page4.html"
         });
         //start
@@ -60,23 +67,123 @@ x - loader.class:converter-page-handler-x...
 x - pensar manera que es puguin carregar diferents handlers de cada modul
 x - handler -- factory? 
 x - store instance of instance at x-page level
+x - handler sfc
+x - pensar sistema de tenir multiples handlers (i que cada modul pugi especificar el handle a utilitzar (html, sfc, etc))
+x - menus pensar manera de tenir N menus, i que cada modul posi les seves coses al menu general o be al seu propi menu
+x - no fer this.page.addEventListener ...
+x - load page that has error : we must show the errors to the user
+x - page -> poder afegir l'estat en una capsalera meta
+x - menu esquerra
+x - show all errors when loading page3
+x - select menuitem in x-drawer-menu
+x - layouts -- prefix with x-layout-...
+x - x-layout-main -- show logo
+x - x-layout-* ... pensar si cal utilitzar el shadowDOM
+x - x-drawer-menu -- main title/label
+x - set default label based on title of the menuitem
+x - estils basics layouts (main, stack, embed, dialog, default)
+x - aws console styles
+x - mobile: click on menuitem should close the menu
+x - page.load(): breadcrumb: get module from breadcrumb first url
+x - podria ser una pagina d'un modul visualitzada desde el menú d'un modul original (cal mostrar el menu del modul original)
+x - link with ?breadcrumb=xxxxxx   should work, and show the breadcrumb
+x - stack animation
+x - menuitem -- allow embed page
+x - responsive
+x - components
+x - x-search
+x - x-layout-main -- page max width + centered
+x - x-lazy
+x - x-shell-search  -- > opens a x-search-page
+x - embed page
+x - x-dropdown -- 
+x - do not use commands like state-changed
+x - on module load: send an event to the bus like 'module-loaded' with the module name
+x - bus: use window.... methods to throw events -- Not at the moment
+x - browse modules: each module should have a default page
+x - the modules.html page should list all loaded modules with a link to the start page of each module
+x - the modules.html should be showed in a dropdown manner at the top of the page (or as stack page at left)
+x - each module should have a list of main menuitems
+x - allow config "shell.debug"
+x - each module should have an logo
+x - x-loading -- cicle
+x - loader: should be able to load resources from a url (ex: icon:https://......icon.svg, icon:./icon.svg, icon:icon.svg, ...icon: /x/icons/my-icon.svg)
+x - x-listview
+x - x-listview big icons
+x - modules: show grid of icons with the logo of each module
+x- x-dropdown auto closess!!! why??? -- review utils.isDescendantOfContainer -- it is not working properly, should enter in all shadowRoots
+x - modules.module1.type = "application" | "theme" | "..."
+x - show page at bottom right corner + icon to minimize or expand, call it "#tray"
+x - x-popover -- foucs out -- hide
+x - page: activate/deactivate on dropdown pages
+x - page: activate/deactivate ?? val la pena??? NO
+x - module: activate/deactivate ??? NO
+x - wizard styles like: https://eu-west-1.console.aws.amazon.com/console/applications/create-application?nc2=h_ct&region=eu-west-1&src=header-signin
+x - tabs -- increment font size
+x - top right icon should expand a page floating at the left direction
+x - x-form + x-datafields + x-pager + x-richtext + x-code-editor
+x - button disabled
+x- details (title + body expandable)
+x - x-datafield focus
+x- fieldset 
+x - x-datafield with langs
+x - menu drop down
+x - menu drop down de segon nivell
+x - create module with documentation pages: for x-buttons, for x-icons, x-cards, x-anchor, pages , etc layouts
+x- in debug mode, we should show the "/x/pages/debug" as dropdown ???? This page should have:
+x - loader: allow define nont cacheable???
+x - sfc: use <template> tag in the definition of a page
+x - loader -- page:/x/pages/debug.html
+x - sfc style -- global
+x - mobile drawer menu -- should scroll vertically
+x - observedAttributes: fer que no sigui obligatori especificarlos. Per defecte, tots els state.props de tipus simple (bool, int, float, string, date) poden venir dels attributs
+x - permetre cachejar les pages: --. implicar no utilitzar transform:"response" en el fetch del loader
 
 
-- handler sfc
-- x components
+- page-handler-html
+- page-handler-markdown
+- page-handler-x
+
+- datafield file 
+- datafield files
+- datafield image
+- datafield images
+
+- /x/pages/debug.html -- config
+- /x/pages/debug.html -- modules loaded
+- /x/pages/debug.html -- bus events
+- /x/pages/debug.html -- pages laodedasdasd
+
+- input select un registre d'una taula sortable i varies columnes (ex: https://eu-west-3.console.aws.amazon.com/dynamodbv2/home?region=eu-west-3#dax-cluster-create) d'un datatable?
+
+- treeview
+
+- npm package
+
+- use Auth0 + OpenID Connect (OIDC)
+  - navigation
+  - auto load modules and web components
+  - authentication
+  - user menu
+
+- top menu (like for example in aws console, wher all modules are showed)
+  - idea 3:
+    - each module: "merge:shell.menus.main" = ...  --- loader automatically adds the menuitems (or whatever) to the top menu (to the shell config)
+    - each module: modules.xxx.shell.menus.main = ...  --- loader automatically adds the menuitems (or whatever) to the top menu (to the shell config)
+   
+- menuitems separador + expandable
+
+- search page:
+  - each module listens for "search" command, and returns an async task with the results
+
+- module data ??? think about that
+
+- user data -- store data in sessionStorage? or localStorage? Think about multiple identities for diferent services (like teams) 
+  (one identity for gitlab, other for microsfot, ... other for...) and store cripted data into browser secured are
+
+- allow use of single hash "#section1" in each page (execute command)
+
 - i18n
-- aws console styles
-- responsive
-- allow load pages defined in a .js file
-
-- pensar sistema de tenir multiples handlers (i que cada modul pugi especificar el handle a utilitzar (html, sfc, etc))
-
-- menus pensar manera de tenir N menus, i que cada modul posi les seves coses al menu general o be al seu propi menu
-
 - i18n: pensar sistema de que cada modul tingui les seves propies traduccions i utilitzi la seva propia taula de traduccions
-
-- pensar sistema dealias -- "modules.x.path.alias": "/courses=/module1/pages/courses.html", "/courses/{:id}=/module1/pages/course.html?id={:id}"
-
-- embed page
 
 -->

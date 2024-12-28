@@ -7,20 +7,28 @@ export default XElement.define("x-wizard", {
 
         :host .body {padding:1em;}
         :host .footer {text-align:right;}
-        :host .footer x-button {min-width: var(--x-button-width-wide);}
+        :host .footer x-button {
+            min-width: var(--x-button-width-wide);
+        }
 
         ::slotted(x-wizard-panel) {
             display:none;
         }
-        ::slotted(x-button) {min-width: var(--x-button-width-wide);}
+        ::slotted(x-button) {
+            min-width: var(--x-button-width-wide);
+        }
+
     `,
     state: {
         index: 0,
-        panels: []
+        panels: [],
+        style: ""
     },
     template: `        
 
-        <x-wizard-header x-attr:index="state.index">
+        <style x-html="state.style"></style>
+
+        <x-wizard-header x-attr:index="state.index" x-on:index-set="set">
             <div x-for="panel in state.panels" 
                 x-attr:label="panel.label"
                 x-attr:message="panel.message"
@@ -31,19 +39,23 @@ export default XElement.define("x-wizard", {
         <div class="body">
             <slot x-on:slotchange="refresh"></slot>
         </div>
+
         <div class="footer">
             <x-button x-if="state.index > 0" x-on:click="prev" label="Previous"></x-button>
-            <x-button class="important" x-if="state.index < state.panels.length - 1" x-on:click="next" label="Next"></x-button>
+            <x-button x-if="state.index < state.panels.length - 1" x-on:click="next" label="Next"></x-button>
             <slot name="buttons" x-if="state.index == state.panels.length - 1"></slot>
         </div>
     `,
-    settings: {
-        observedAttributes: [],
-    },
     methods:{
         onCommand(command) {
             if (command == "load") {
                 //load
+                this.onCommand("refresh");
+
+            } else if (command == "set") {
+                //set
+                let index = args.event.detail.index;
+                this.state.index = index;
                 this.onCommand("refresh");
 
             } else if (command == "prev") {

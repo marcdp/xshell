@@ -32,9 +32,9 @@ export default XElement.define("x-avatar", {
             <span class="message" x-text="state.message"></span>
         </div>
     `,
-    settings:{
-        observedAttributes:["initials", "icon", "image", "label", "message", "command"]
-    },
+    //settings:{
+    //    observedAttributes:["initials", "icon", "image", "label", "message", "command"]
+    //},
     state: {
         initials:"", 
         icon:"",

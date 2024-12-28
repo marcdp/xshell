@@ -7,37 +7,30 @@ export default XElement.define("x-menuitem", {
         
         /* default */
         :host x-anchor {display:flex; flex:1; flex-direction:row; align-items:center; cursor:pointer; border-radius:var(--x-menuitem-border-radius); user-select: none;}
-        :host x-anchor:hover {background:var(--x-background-gray);}
-        :host x-anchor x-icon {color:var(--x-text-color)!important; text-align:center;}
-        :host x-anchor span.label {color:var(--x-text-color)!important; flex:1;  display:block; padding-top:.5em; padding-bottom:.5em; white-space:nowrap; }
-        :host x-anchor span.suffix {color:var(--x-text-color-gray)!important; padding-left:1em;}
+        :host x-anchor:hover {background:var(--x-color-background-gray); outline:var(--x-menuitem-border); }
+        :host x-anchor x-icon {color:var(--x-color-text)!important; text-align:center;}
+        :host x-anchor span.label {color:var(--x-color-text)!important; flex:1;  display:block; padding-top:.4em; padding-bottom:.4em; white-space:nowrap; }
+        :host x-anchor span.suffix {color:var(--x-color-text-gray)!important; padding-left:1em;}
         :host x-anchor x-icon.has-childs {width:unset; margin-left:.25em;}
         :host x-anchor x-icon:first-child {}
         :host x-anchor x-icon:first-child:last-child {align-self:flex-end;}
         :host x-anchor x-icon + .label {padding-left:.35em;}
+        :host x-anchor[expanded] {outline:var(--x-menuitem-border)}
         :host x-anchor[disabled] {pointer-events:none; cursor:default;}
-        :host x-anchor[disabled] x-icon {color:var(--x-text-color-disabled)!important;}
-        :host x-anchor[disabled] span.label {color:var(--x-text-color-disabled)!important; padding-left:0!important;}
-        :host(.selected) x-anchor {background:var(--x-background-x-gray);}
+        :host x-anchor[disabled] x-icon {color:var(--x-color-text-disabled)!important;}
+        :host x-anchor[disabled] span.label {color:var(--x-color-text-disabled)!important; padding-left:0!important;}
+        :host(.selected) x-anchor {background:var(--x-color-background-x-gray);}
         
         /* dropdown */
-        div {
-            width: var(--x-menu-width);
+        x-contextmenu {
+            width: var(--x-contextmenu-width);
             position:absolute; 
-            display:flex; 
-            flex-direction:column; 
-            z-index:10; 
-            background:var(--x-background-page);
-
-            border-radius:var(--x-menu-border-radius); 
-            padding:.25em; 
-            box-shadow:var(--x-menu-shadow); 
-            border:var(--x-menu-border);
-            
             left:100%;
-            margin-top:0 em;
+            margin-left:0em;
+            margin-top:-.2em;
         }
 
+        /*
         :host(.childs-inline) x-anchor .has-childs {transform:rotate(90deg); transition: transform var(--x-transition-duration);}
         :host(.childs-inline) x-anchor[expanded] .has-childs {transform:rotate(-90deg)}
         :host(.childs-inline) div {
@@ -51,7 +44,7 @@ export default XElement.define("x-menuitem", {
         }
         :host(.childs-inline.plain) div {
             margin-left:1.5em;
-        }
+        }*/
     `,
     state: {
         icon: "",
@@ -66,24 +59,27 @@ export default XElement.define("x-menuitem", {
         menuitem: null,
     },
     template: `
-        <x-anchor class="menuitem" x-attr:href="state.href" x-attr:command="state.command" x-attr:disabled="state.disabled" x-attr:expanded="state.expanded" >
+        <x-anchor class="menuitem anchor" x-attr:href="state.href" x-attr:command="state.command" x-attr:disabled="state.disabled" x-attr:expanded="state.expanded" >
             <x-icon x-if="state.checked" icon="x-check"></x-icon>
             <x-icon x-if="!state.checked && state.icon" class="icon"x-attr:icon="state.icon"></x-icon>
             <span   x-if="state.label" class="label">{{ state.label }}</span>
             <span   x-if="state.suffix" class="suffix">{{ state.suffix }}</span>
             <x-icon x-if="state.hasChilds" class="has-childs" icon="x-keyboard-arrow-right"></x-icon>
         </x-anchor>
-        <div x-if="state.hasChilds" x-show="state.expanded">
+        <x-contextmenu x-if="state.hasChilds" x-show="state.expanded">
             <slot x-on:slotchange="refresh"></slot>
-        </div>
+        </x-contextmenu>
     `,
-    settings: {
-        observedAttributes: ["icon", "label", "suffix", "href", "command", "disabled", "checked"],
-    },
+    //settings: {
+    //    observedAttributes: ["icon", "label", "suffix", "href", "command", "disabled", "checked"],
+    //},
     methods: {
-        onStateChanged(name, oldValue, newValue) {
-            if (name == "menuitem"){
-                if (newValue) {
+        onCommand(command, args){
+            if (command == "load") {
+                //load
+                this.bindEvent(this.state, "change:menuitem", (event) => {
+                    debugger;
+                    let newValue = args.newValue;
                     this.state.icon = newValue.icon;
                     this.state.label = newValue.label;
                     this.state.href = newValue.href;
@@ -100,12 +96,7 @@ export default XElement.define("x-menuitem", {
                             this.appendChild(item);
                         }
                     }
-                } 
-            }
-        },
-        onCommand(command){
-            if (command == "load") {
-                //load
+                });
                 this.addEventListener("mouseenter", ()=>{
                     if (this.classList.contains("childs-inline")) {
                     } else if (this.classList.contains("dropdown-click")) {

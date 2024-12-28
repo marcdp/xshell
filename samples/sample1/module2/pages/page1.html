@@ -1,20 +1,58 @@
-﻿<meta name="pages.factory"  content="sfc" />
+﻿<meta name="handler"    content="sfc" />
+<meta name="state"      content='{"data1":123}' />
 
 <script type="module">
     export default {
-        state:{
-            data1:132
-        },
         async onCommand(command, args) {
             if (command == "load") {
                 //load
-                debugger
+                
+            } else if (command == "dec") {
+                //dec
+                this.state.data1--;
+
+            } else if (command == "inc") {
+                //inc
+                this.state.data1++;
+
+            } else if (command == "something") {
+                //something
+                this.label = "HOLA";
             }
         }
     }
 </script>
 
-hellol <x-icon icon="x-bell"></x-icon> {{state.data1}}
+<template>
+    hellol <x-icon icon="x-bell"></x-icon> 
 
+    <fieldset style="margin:1em;">
+        <x-button label="dec" command="dec"></x-button>
+        {{state.data1}} ({{ state.data1 % 3 }})
+        <x-button label="inc" x-on:click="inc"></x-button>    
+    </fieldset>
 
+    <x-button label="something" command="something"></x-button>
 
+    <table>
+        <tr>
+            <th>Caption 1</th>
+            <th>Caption 2</th>
+            <th>Caption 3</th>
+            <th>Caption 4</th>
+        </tr>
+        <tr>
+            <td>Value 1</td>
+            <td>Value 2</td>
+            <td>Value 3</td>
+            <td>Value 4</td>
+        </tr>
+        <tr>
+            <td>Value 1</td>
+            <td>Value 2</td>
+            <td>Value 3</td>
+            <td>Value 4</td>
+        </tr>
+    </table>
+    
+</template>

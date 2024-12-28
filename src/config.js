@@ -1,4 +1,28 @@
-import utils from "./utils.js"
+import utils from "./utils.js";
+
+// normalize urls
+function normalizeUrls(key, obj, from, path) {
+    if (typeof(obj) == "string") {
+        if (obj.startsWith("./") || obj.startsWith("../") || obj == ".") {
+            if (key == "href" && path) {
+                //relative to path
+                obj = utils.combineUrls(path + "/", obj);
+            } else if (from) {
+                //relative to from (module url)
+                obj = utils.combineUrls(from, obj);
+            }
+        }
+    } else if (Array.isArray(obj)) {
+        for (let i = 0; i < obj.length; i++) {
+            obj[i] = normalizeUrls(i, obj[i], from, path);
+        }
+    } else if (obj instanceof Object) {
+        for (let subkey in obj) {
+            obj[subkey] = normalizeUrls(subkey, obj[subkey], from, path);
+        }    
+    }
+    return obj;
+}
 
 // class
 class Config {
@@ -15,26 +39,24 @@ class Config {
     get config() { return this._config; }
 
     //methods   
-    subscribe(prefix, callback) {
+    addEventListener(prefix, callback) {
         this._listeners.push({ prefix, callback });
     }
-    set(config, from) {
-        var keys = []
+    removeEventListener(prefix, callback) {
+        let index = 0;
+        for(let listener of this._listeners){
+            if (listener.prefix == prefix && listener.callback == callback){
+                this._listeners.splice(index, 1)
+                break;
+            }
+            index++;
+        }
+    }
+    set(config, from, path) {
+        normalizeUrls("", config, from, path);
+        var keys = [];
         for (let key in config) {
             let value = config[key];
-            if (typeof (value) == "string") {
-                if (value.startsWith("./") || value.startsWith("../") || value == ".") {
-                    if (from) value = utils.combineUrls(from, value);
-                }
-            } else if (Array.isArray(value)) {
-                for (let i = 0; i < value.length; i++) {
-                    if (typeof (value[i]) == "string") {
-                        if (value[i].startsWith("./") || value[i].startsWith("../") || value[i] == ".") {
-                            if (from) value[i] = utils.combineUrls(from, value[i]);
-                        }
-                    }
-                }
-            }
             this._config[key] = value;
             keys.push(key);
         }
@@ -63,7 +85,7 @@ class Config {
         let result = [];
         for (let key in this._config) {
             if (key.startsWith(prefix + ".")) {
-                result.push(key)
+                result.push(key);
             };
         }
         return result;
@@ -74,7 +96,7 @@ class Config {
             if (key.startsWith(prefix + ".")) {
                 let subKey = key.substring(prefix.length + 1).split(".")[0];
                 if (result.indexOf(subKey)==-1) {
-                    result.push(subKey)
+                    result.push(subKey);
                 }
             };
         }

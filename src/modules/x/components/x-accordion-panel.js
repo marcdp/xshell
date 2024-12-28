@@ -5,17 +5,20 @@ export default XElement.define("x-accordion-panel", {
     style: `
         :host {display:block;}
         .header {display:flex; height:2.5em; align-items:center; padding:0 .5em 0 1em; cursor:pointer; user-select: none;}
-        .header > x-icon {margin-right:.5em; transition: transform var(--x-transition-duration);}
-        .header > span {flex:1}
+        .header > x-icon {margin-right:.5em; transition: transform var(--x-transition-duration); }
+        .header > span {flex:1; font-weight:400;}
         .header > .toolbar {margin-right:1em; }
-        .header[expanded] span {font-weight:600;}
+        .header:hover > span {color:var(--x-color-primary)!important;}
+        .header:hover > x-icon {color:var(--x-color-primary)!important;}
+        .header[expanded] span {font-weight:600; color:var(--x-color-primary);}
         .header[expanded] x-icon:last-child {transform:rotate(-180deg); }
         
         .body {
             display: grid; 
             grid-template-rows: 0fr;
             transition: var(--x-transition-duration) grid-template-rows ease;
-            border-bottom:var(--x-accordion-border); border-bottom-width:1px;
+            border-bottom:var(--x-accordion-border); 
+            border-bottom-width:1px;
         }
         .body > div {overflow: hidden;}
         .body > div > div {padding:1em;}
@@ -30,7 +33,7 @@ export default XElement.define("x-accordion-panel", {
             <div class="toolbar">
                 <slot name="toolbar"></slot>
             </div>
-            <x-icon icon="x-keyboard-arrow-down" ></x-icon>
+            <x-icon icon="x-keyboard-arrow-down"></x-icon>
         </div>
         <div class="body" x-attr:expanded="state.expanded">
             <div>
@@ -45,9 +48,9 @@ export default XElement.define("x-accordion-panel", {
         icon:"",
         expanded: false
     },
-    settings: {
-        observedAttributes: ["label", "icon", "expanded"],
-    },
+    //settings: {
+    //    observedAttributes: ["label", "icon", "expanded"],
+    //},
     methods: {
         onCommand(command) {
             if (command == "load") {

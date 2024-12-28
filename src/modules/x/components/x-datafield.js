@@ -11,118 +11,141 @@ const telPattern = /^(\+?\d{1,3}[-.\s]?)?(\(?\d{3}\)?[-.\s]?)?\d{3}[-.\s]?\d{4,7
 export default XElement.define("x-datafield", {
     style: `
         :host {display:block; position:relative; }
-
-        :host label {display:var(--x-input-label-display, none); padding-bottom:.35em; width:100%;}
-        :host label span.label {font-weight:600; }
-        :host label span.required {color:var(--x-input-error-color); }
-
-        :host label span.langs {float:right; border:var(--x-input-border); border-radius:var(--x-input-border-radius) var(--x-input-border-radius) 0 0 ; display:inline-flex; border-bottom:none;}
-        :host label span.langs x-button {}
-        :host label span.langs x-button + x-button {border-left:var(--x-input-border);}
-        :host label span.langs .add {}
-        
-        :host p {margin:0; font-size:var(--x-font-size-small); padding-top:.25em;}
-        ::placeholder {color:var(--x-input-color-placeholder);}        
         :host input,select,textarea {display:block; width:100%; resize: none;}
+        ::placeholder {color:var(--x-datafield-color-placeholder); font-style:italic;}        
+
+        :host label {display:var(--x-datafield-label-display, none); padding-bottom:.5em; width:100%; font-weight:bold;}
+        :host label span.label {font-weight:600; }
+        :host label span.required {}
+
+        :host label span.langs {float:right; display:inline-flex; gap:.15em}
+        :host label span.langs div {display:flex; gap:.15em}
+        :host label span.langs x-button {}
+
+        :host .description {font-size:var(--x-font-size-small); margin-top:-.25em; margin-bottom:.5em; padding:0; }
+        :host .message {font-size:var(--x-font-size-small); margin-top:.5em; margin-bottom:0; padding:0; }
 
         .input {
             width:100%; 
             box-sizing:border-box; 
             border:none;
-            background:var(--x-input-background);
-            border-radius: var(--x-input-border-radius);
-            border: var(--x-input-border); 
-            border-bottom: var(--x-input-border-bottom); 
-            padding:var(--x-input-padding);
-            font-family: var(--x-input-font-family);
-            font-size: var(--x-input-font-size);
-        }
-        .input.code {padding:0;}
-        
-        label.error {color:var(--x-input-error-color);}
-        label.error + .input {border-color:var(--x-input-error-color); color:var(--x-input-error-color);}
-        label.error + .input::placeholder {color:var(--x-input-error-color); opacity:.5;}
-        label.error + .container div label {color:var(--x-input-error-color)}
-        
-        .input:focus {
+            background:var(--x-datafield-background);
+            border-radius: var(--x-datafield-border-radius);
+            border: var(--x-datafield-border); 
+            padding: var(--x-datafield-padding);
+            padding-left: var(--x-datafield-padding-left);
+            font-family: var(--x-datafield-font-family);
+            font-size: var(--x-datafield-font-size);
+            line-height:var(--x-datafield-line-height);
             outline:none;
-            border:var(--x-input-border-focus);
-            border-bottom: var(--x-input-border-bottom); 
         }
+        .input:focus {border-color:var(--x-color-black);}
+        .input:focus-within {border-color:var(--x-color-black);}
+        .input.code {padding:0;}
+        select.input {
+            padding-top:calc(var(--x-datafield-padding) - .1em);
+            padding-bottom:calc(var(--x-datafield-padding) + .1em);
+        }
+        select.input[multiple] {
+            padding-left: var(--x-datafield-padding);
+        }
+        
+        label.error {}
+        label.error ~ .input {border-color:var(--x-datafield-error-color)!important; color:var(--x-datafield-error-color);}
+        label.error ~ .input::placeholder {color:var(--x-datafield-error-color); opacity:.5;}
+        label.error ~ .container div label {color:var(--x-datafield-error-color)}
+        label.error ~ select.input {color:var(--x-color-text);}
+        
+        
         :host > input[type='file'] {
             padding:.35em;
         }
         input[type='range'] {
-            padding:.35em;
+            padding:.35em;            
         }
         input[type='color'] {
             min-height:2.3em;
+            padding-left:var(--x-datafield-padding);
         }
         input, textarea, select {
-            color:var(--x-input-color);
+            color:var(--x-datafield-color);
         }
-        select .placeholder {color:var(--x-input-color-placeholder);}
+        select .placeholder {
+            color:var(--x-datafield-color-placeholder);
+        }
         :host > input[type='checkbox'], :host > input[type='radio'] {
             width:unset;
             height:1.8em;            
         }
-        
-        span.mark {height:3px;box-sizing:border-box;transform: translateY(-3px);border-radius: 0 0 4px 4px;border-bottom:2px var(--x-color-primary) solid;width:100%;position:absolute;display:none;clip-path: inset(calc(100% - 2px) 0px 0px); z-index:10;}
 
         :host .i18n {padding:0; display:flex;}
         :host .i18n div {display:flex;flex:1; align-items:center; position:relative;}
         :host .i18n div input {flex:1; border:none; padding-right:1.5em;}
-        :host .i18n div + div input {border-left:var(--x-input-border); border-radius:0 1em 1em 0;}
-        :host .i18n textarea {border-left:var(--x-input-border); border-radius:0 1em 1em 0; padding-right:1.5em;}
+        :host .i18n div + div input {border-left:var(--x-datafield-border); border-radius:0 1em 1em 0;}
+        :host .i18n textarea {border-left:var(--x-datafield-border); border-radius:0 1em 1em 0; padding-right:1.5em;}
         :host .i18n textarea + span.lang {top:0.65em;}
-        :host .i18n div span.lang {position:absolute; margin-top:.5em; right:.5em; text-transform:uppercase; font-size:var(--x-font-size-x-small); color:var(--x-input-color-placeholder);}
+        :host .i18n div span.lang {position:absolute; right:.5em; text-transform:uppercase; font-size:var(--x-font-size-x-small); color:var(--x-datafield-color-placeholder);}
+
         :host(.vertical) .i18n {flex-direction:column;}
-        :host(.vertical) .i18n .input {border: none; border-top:var(--x-input-border); border-radius:0; background:none;}
+        :host(.vertical) .i18n .input {border: none; border-top:var(--x-datafield-border); border-radius:0; background:none;}
         :host(.vertical) .i18n div:first-child .input {border-top:none;}
         
-        :host .container {padding:.25em; padding-top:.4em; padding-bottom:.1em;}
+        :host .container {padding:.25em; padding-top:.3em; padding-bottom:.3em; }
         :host .container div {display:flex; align-items:start; }
         :host .container div input {margin-right:.5em; width:1em;}
-        :host .container div label {display:block; flex:1; color:var(--x-input-color); font-weight:normal; font-size:var(--x-input-font-size);}
+        :host .container div label {display:block; flex:1; color:var(--x-datafield-color); font-weight:normal; font-size:var(--x-datafield-font-size); padding-bottom:0;}
 
         :host .object > input {width:unset;}
+        :host .object ::slotted(x-datafields:last-child) {margin-bottom:.5em; }
 
         :host .picker {display:flex; padding:0;}
-        :host .picker span {flex:1; display:block;padding-left:.5em; padding-right:.5em; line-height:2.15em; color:var(--x-input-color);}
+        :host .picker span {flex:1; display:block;padding-left:.5em; padding-right:.5em; line-height:2.15em; color:var(--x-datafield-color);}
         :host .picker input {border:none; outline:none; }
         :host .picker input:focus {border:none; outline:none;}
         :host .picker x-button {font-size:.9em; }
         
-        :host .list {padding:0}
-        :host .list .list-body {display:flex; flex-direction:column; padding:var(--x-input-padding);}
+        :host .list {}
+        :host .list .list-body {display:flex; flex-direction:column; apadding:var(--x-datafield-padding);}
         :host .list .list-body ::slotted(x-datafields) {}
         :host .list .list-body[empty] {padding:.05em; }
-        :host .list .list-buttons {display:flex; justify-content:flex-end;}
+        :host .list .list-buttons {display:flex; justify-content:flex-end; height:2.275em;}
 
         :host .richtext {padding:0;}
-
-        :host label:not(.error) + .input:focus + span.mark {display:block;}
-        :host label:not(.error) + .input:focus-within + span.mark {display:block;}
-
-        :host > div.error {font-size:var(--x-font-size-small); color:var(--x-input-error-color); display:flex; padding-top:.25em; align-items: flex-end; display:var(--x-input-error-display, none)}
+        
+        :host > div.error {
+            font-size:var(--x-font-size-small); 
+            color:var(--x-datafield-error-color); 
+            display:flex; 
+            padding-top:.25em; 
+            align-items: 
+            flex-end; 
+            display:var(--x-datafield-error-display, none);
+        }
         :host > div.error x-icon {vertical-align:text-bottom}
+
+        
         `,
     template: `
         <label x-attr:for="state.inputId" x-attr:class="(state.errors.length ? 'error' : '')" >
             <span class="label" x-if="state.label" x-text="state.label"></span>
             <span class="required" x-if="state.required">*</span>
             <span class="langs" x-if="state.type.endsWith('_i18n')" >
-                <x-button 
-                        slot="toolbar" 
-                        x-for="(lang,index) in state.langs"
-                        x-attr:label="lang"
-                        x-on:click="lang-changed"
-                        x-attr:title="utils.getLang(lang).label"
-                        x-attr:data-lang="lang"
-                        x-attr:class="'plain x-short ' + (state.langIndex == index ? ' selected' : '') + (state.value.indexOf('i18n:' + lang + '=')==-1 ? ' empty' : '') ">
-                </x-button><x-button class="add plain x-short" x-on:click="lang-add" icon="x-add" title="Add translation"></x-button>
+                <div x-if="state.type!='text_i18n' && state.type!='textarea_i18n'">
+                    <x-button 
+                            slot="toolbar" 
+                            x-for="(lang,index) in state.langs"
+                            x-attr:label="lang"
+                            x-on:click="lang-changed"
+                            x-attr:title="utils.getLang(lang).label"
+                            x-attr:data-lang="lang"
+                            x-attr:class="'plain ' + (state.langIndex == index ? ' selected' : '') + (state.value.indexOf('i18n:' + lang + '=')==-1 ? ' empty' : '') ">
+                    </x-button>
+                </div>
+                <x-button class="add plain" x-on:click="lang-add" icon="x-add" title="Add translation"></x-button>
             </span>
         </label>
+
+        <p x-if="state.description" class="description" x-text="state.description"></p>
 
         <div x-if="state.type==''" class="input slot">
             <slot>&nbsp;</slot>
@@ -199,7 +222,6 @@ export default XElement.define("x-datafield", {
                 />
                 <span class="lang" x-html="lang" x-attr:title="utils.getLang(lang).label"></span>
             </div>
-            <span class="mark"></span>            
         </div>
 
         <div x-elseif="state.type=='textarea_i18n'" class="input i18n">
@@ -219,7 +241,6 @@ export default XElement.define("x-datafield", {
                 ></textarea>
                 <span class="lang" x-html="lang" x-attr:title="utils.getLang(lang).label"></span>
             </div>
-            <span class="mark"></span>
         </div>
         
         <div x-elseif="state.type=='file'" class="input file">
@@ -256,7 +277,6 @@ export default XElement.define("x-datafield", {
                 x-attr:readonly="state.readonly"
                 x-attr:spellcheck="state.spellcheck"
             ></x-richtext>            
-            <span class="mark"></span>
         </div>
 
         <div x-elseif="state.type=='javascript'" class="input code">
@@ -302,7 +322,7 @@ export default XElement.define("x-datafield", {
                 <slot x-on:slotchange="slotchange"></slot>
             </div>
             <div class="list-buttons">
-                <x-button x-if="state.add" x-on:click="list-add" icon="x-add" class="plain short no-hover"></x-button>
+                <x-button x-if="state.add" x-on:click="list-add" icon="x-add" class="plain"></x-button>
             </div>
         </div>
         
@@ -329,19 +349,18 @@ export default XElement.define("x-datafield", {
             x-attr:autocomplete="state.autocomplete"
         />
 
-        <span class="mark"></span>
-
-        <p x-if="state.message" x-text="state.message"></p>
+        <p class="message" x-if="state.message" x-text="state.message"></p>
 
         <div x-if="state.errors.length" class="error">
             <span x-for="error in state.errors">
-                <x-icon icon="x-error2-fill"></x-icon>
+                <x-icon icon="x-error"></x-icon>
                 <span x-text="error.message"></span>
             </span>
         </div>
     `,
     state: {
         label:"",
+        description:"",
         labelSecondary:"",
         message: "",
         type: "",
@@ -371,10 +390,11 @@ export default XElement.define("x-datafield", {
         inputId: "input",
         add: false
     },
-    settings:{
-        observedAttributes:["label", "label-secondary", "message", "type", "placeholder", "disabled", "readonly", "required", "min", "max", "minlength", "maxlength", "multiple", "pattern", "step", "autofocus", "autocomplete", "domain", "value", "accept", "add", "lang", "spellcheck"]
-    },
+    //settings:{
+    //    observedAttributes:["label", "description", "label-secondary", "message", "type", "placeholder", "disabled", "readonly", "required", "min", "max", "minlength", "maxlength", "multiple", "pattern", "step", "autofocus", "autocomplete", "domain", "value", "accept", "add", "lang", "spellcheck"]
+    //},
     methods: {
+        /*
         onStateChanged(name, oldValue, newValue) {
             if (name == "domain") {
                 //transform domain if required
@@ -405,6 +425,7 @@ export default XElement.define("x-datafield", {
                 }
             }
         },
+        */
         postRender() {
             if (this.state.autofocus && this._renderCount == 1) {
                 let element = this.shadowRoot.querySelector(".input");
@@ -416,9 +437,45 @@ export default XElement.define("x-datafield", {
             }
         },
         async onCommand(command, args) {
-            if (command == "load") {
+            if (command == "init") {
                 // load
                 this.state.inputId = utils.getFreeId();
+                this.bindEvent(this.state, "change", (event) => {
+                    let prop = event.prop;
+                    let newValue = event.newValue;
+                    let oldValue = event.oldValue;
+                    if (prop == "domain") {
+                        //transform domain if required
+                        if (typeof newValue == "string") {
+                            let domain = [];
+                            for(let item of newValue.split("|")){
+                                let i = item.indexOf("=");
+                                if (i!=-1) {
+                                    let itemValue = item.substring(0, i);
+                                    let itemLabel = item.substring(i+1);
+                                    domain.push({value: itemValue, label: itemLabel});
+                                }
+                            }
+                            this.state.domain = domain;
+                        } 
+                    } else if (prop == "type" || prop == "required" || prop == "min" || prop == "max" || prop == "minlength" || prop == "maxlength" || prop == "pattern") {
+                        //value changed
+                        this.onCommand("validate");
+        
+                    } else if (prop == "value") {
+                        //value changed
+                        if (this._connected) {
+                            this.onCommand("validate");
+                            this.dispatchEvent(new CustomEvent("change", {detail: {oldValue, newValue}, bubbles: true, composed: false}));
+                            this.dispatchEvent(new CustomEvent("datafield:change", {detail: {oldValue, newValue}, bubbles: true, composed: false}));
+                        } else {
+                            this.state.validated =false;
+                        }
+                    }                    
+                });
+
+            } else if (command == "load") {
+                //load
                 if (!this.state.validated) {
                     this.onCommand("validate");
                 }                
@@ -430,7 +487,7 @@ export default XElement.define("x-datafield", {
 
             } else if (command == "lang-add") {
                 //lang-add
-                let lang = await this.page.showDialog({ url: "page:x-page-lang-picker?disabled=" + this.state.langs.join(",")});
+                let lang = await this.page.showPageDialog({ src: "/x/pages/lang-picker.html?disabled=" + this.state.langs.join(",")});
                 if (lang) {
                     this.state.langs.push(lang);
                     this.state.langIndex = this.state.langs.length - 1;

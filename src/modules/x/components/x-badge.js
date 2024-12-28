@@ -26,9 +26,9 @@ export default XElement.define("x-badge", {
     template: `
         <span class="message" x-text="state.value" ></span>
     `,
-    settings:{
-        observedAttributes:["value"]
-    },
+    //settings:{
+    //    observedAttributes:["value"]
+    //},
     state: {
         value:""
     }

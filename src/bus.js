@@ -11,13 +11,13 @@ class Bus {
     }
 
     //methods
-    on(event, listener) {
+    addEventListener(event, listener) {
         if (!this._events[event]) {
             this._events[event] = [];
         }
         this._events[event].push(listener);
     }
-    off(event, listener) {
+    removeEventListener(event, listener) {
         if (!this._events[event]) return;
         this._events[event] = this._events[event].filter(l => l !== listener);
     }

@@ -1,0 +1,26 @@
+﻿<meta name="handler"   content="sfc" />
+<meta name="state"     content='{"val":123}' />
+<title>This is a title</title>
+
+<script type="module">
+    export default {
+        async onCommand(command, args) {
+            if (command == "load") {
+                //load
+                this.bindInterval(1000, "timeout")
+
+            } else if (command == "timeout") {
+                //timeout
+                this.state.time = new Date();
+                console.log(this.state.time);
+            }
+        }
+    }
+</script>
+
+<template>
+    The second page!!!! {{ state.time }} --- {{ state.val }}
+    <br>asd
+    <br>asd<br>asd<br>asd<br>asd<br>asd<br>asd<br>asd<br>asd<br>asd<br>asd<br>asd<br>asd<br>asd<br>asd<br>asd<br>asd<br>asd<br>asd<br>asd<br>asd<br>asd<br>asd<br>asd<br>asd<br>asd<br>asd<br>asd
+    <br>asd<br>asd<br>asd<br>asd<br>asd<br>asd<br>asd<br>asd<br>asd<br>asd<br>asd<br>asd<br>asd<br>asd<br>asd<br>asd<br>asd<br>asd<br>asd<br>asd<br>asd<br>asd<br>asd<br>asd<br>asd<br>asd<br>asd
+</template>

@@ -25,6 +25,8 @@ export default XElement.define("x-pager", {
         of
 
         <span class="total" x-text="state.total"></span>
+        
+        &nbsp;
 
         <x-button class="short plain prev" x-on:click="prev" icon="x-keyboard-arrow-left"   x-attr:disabled="state.index == 0"></x-button>
         <x-button class="short plain next" x-on:click="next" icon="x-keyboard-arrow-right"  x-attr:disabled="state.index == Math.floor(state.total/state.size) - 1"></x-button>
@@ -35,9 +37,9 @@ export default XElement.define("x-pager", {
         size: 20,
         label: "records"
     },
-    settings: {
-        observedAttributes: ["total", "index", "size", "label"]
-    },
+    //settings: {
+    //    observedAttributes: ["total", "index", "size", "label"]
+    //},
     methods:{
         onCommand(command, args) {
             if (command === "load") {

@@ -7,7 +7,7 @@ export default XElement.define("x-code-editor", {
     style: `
         :host {display:flex; height:10em; flex-direction:column; align-items:center; justify-content:center;}
         :host x-lazy {width:100%; height:100%;}
-        :host ace-editor {border-radius:var(--x-input-border-radius); flex:1; height:100%;}
+        :host ace-editor {border-radius:var(--x-datafield-border-radius); flex:1; height:100%;}
         :host x-spinner + x-lazy {visibility:hidden; height:0}
     `,
     state: {
@@ -36,9 +36,9 @@ export default XElement.define("x-code-editor", {
             ></ace-editor>
         </x-lazy>
     `,
-    settings:{
-        observedAttributes: ["value", "mode", "theme"]
-    },
+    //settings:{
+    //    observedAttributes: ["value", "mode", "theme"]
+    //},
     methods:{
         preRender() {
             if (this._renderCount > 0) {

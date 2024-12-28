@@ -1,20 +1,22 @@
-﻿<html>
-<head>
-    <title>This is a Page2 titleee</title>
-</head>
-<body>
-    <script type="module">
-        export default {
-            state: {},
-            async onCommand(command, args) {
-                if (command == "load") {
-                    //load
-                    debugger;
-                }
+﻿<title>This is a Page2 titleee</title>
+<meta name="handler"   content="sfc" />
+
+<script type="module">
+    export default {
+        state: {},
+        async onCommand(command, args) {
+            if (command == "load") {
+                //load
+
+            } else if (command == "unload") {
+                //unload
+                
             }
         }
-    </script>
+    }
+</script>
 
+<template>
     This is the page <b>2</b>
 
     <ul>
@@ -23,5 +25,4 @@
         <li><a href="#" onclick="history.back(); return false;">back</a></li>
     </ul>    
 
-</body>
-</html>
+</template>
