@@ -1,27 +1,56 @@
-<html>
-<body>
+<title>Search</title>
 
-    <script type="module">
-        export default {
-            state: {
-                keyword: ""
-            },
-            onCommand(command, args) {
-                if (command == "load") {
-                    //load
-                    this.label = "Search"
-                }
+<script type="module">
+    export default {
+        state: {
+            keyword: ""
+        },
+        onCommand(command, args) {
+            if (command == "load") {
+                //load
+            } else if (command == "close") {
+                //close
+                this.page.dispatchEvent(new CustomEvent("collapse", { composed: true, bubbles: true }));
             }
         }
-    </script>
+    }
+</script>
 
-    Page debug
-
+<template>
     <x-form>
-        <x-datafields>
-            <x-datafield label="" type="text" x-model="state.keyword" autofocus></x-datafield>
-        </x-datafields>
+        <x-tabs>
+            <x-tab label="Configuration">
+                <x-datafields>
+                    <x-datafield 
+                        label="Application name" 
+                        description="Enter a brief description to detail the use cases of this application." 
+                        type="text" 
+                        x-model="state.keyword" 
+                        placeholder="This is the placeholder" 
+                        message="Maximum 150 alphanumeric characters including dashes, periods, and underscores. Name cannot be changed after creation." 
+                        autofocus></x-datafield>
+                    <x-datafield 
+                        label="Application name" 
+                        description="" 
+                        type="text" 
+                        x-model="state.keyword" 
+                        placeholder="This is the placeholder" 
+                        message="Maximum 150 alphanumeric characters including dashes, periods, and underscores. Name cannot be changed after creation." 
+                        autofocus></x-datafield>
+                </x-datafields>
+            </x-tab>
+            <x-tab label="Modules">
+            </x-tab>
+            <x-tab label="Events">
+            </x-tab>
+            <x-tab label="Pages">
+            </x-tab>
+            <x-tab label="Bus">
+            </x-tab>
+            <x-tab label="Other">
+            </x-tab>
+        </x-tabs>
+        <x-button slot="footer" label="Ok" class="submit" command="close"></x-button>
     </x-form>
-
-</body>
-</html>
+    
+</template>

@@ -1,6 +1,8 @@
 import XTemplate from "./x-template.js";
+import createState from "./create-state.js";
 import shell from "./../../../shell.js";
 import loader from "./../../../loader.js";
+import Binds from "./../../../binds.js"
 
 
 // utils
@@ -15,12 +17,15 @@ function camelToKebab(str) {
       .toLowerCase();                      
 }
 
+
 // class
 class XElement extends HTMLElement {
 
     //fields
     _xtemplateInstance = null;
+    _stateUnproxied = null;
     _state = null;
+    _binds = new Binds();
 
     //work fields
     _connected = false;
@@ -35,12 +40,10 @@ class XElement extends HTMLElement {
         //shadowRoot
         let container = (this.settings.useLightDom ? this : this.attachShadow(this.settings.shadowRootOptions));
         //state
-        let rawState = this.constructor.prototype.state();
-        this.state = rawState;
+        this.state = this.constructor.prototype.initState();
         //instance
         let self = this;
         this._xtemplateInstance = this.constructor.prototype.xtemplate.createInstance(
-            this.state,
             (command, event) => {
                 //handler
                 self.onCommand(command, {event});
@@ -51,40 +54,21 @@ class XElement extends HTMLElement {
             }, 
             container
         );
+        //init
+        this.onCommand("init", {});
     }
 
     //props
     get page() {
-        return shell.getPage(this);
-    }
-    get app() {
-        return app;
+        return shell.getPageByElement(this);
     }
     get state() {return this._state;}
     set state(value) {
-        let self = this;
-        this._state = new Proxy(value, {
-            set(target, prop, newValue) {
-                let oldValue = target[prop];
-                let changed = (oldValue != newValue);
-                if (!changed && oldValue && newValue) {
-                    if (Array.isArray(newValue)) {
-                        //dirty check: check if number of elements are the same
-                        changed = (oldValue.length != newValue.length);
-                    } else if (typeof(newValue) == "object") {
-                        //dirty check: check if keyslength  are the same
-                        changed = (Object.keys(oldValue).length != Object.keys(newValue).length);
-                    }
-                }
-                if (changed) {
-                    target[prop] = newValue;
-                    self.stateChanged(prop, oldValue, newValue);
-                    self.invalidate();
-                }
-                return true;
-            }
-        });
+        this._stateUnproxied = value;
+        this._state = createState(value, this);
+        this.invalidate();
     }
+
 
     //events
     attributeChangedCallback(name, oldValue, newValue) {
@@ -114,20 +98,44 @@ class XElement extends HTMLElement {
         this.render();
     }
     disconnectedCallback() {
-        this._connected= false;
+        this._connected = false;
         this.onCommand("unload", {});
+        this._binds.clear();
     }
 
 
-    //methods to override
+    //methods
     onCommand(command, args) {
-        //to override
+        //command
     }
-    onStateChanged(name, oldValue, newValue) {
-        //to override
+    bindEvent(target, event, command) {
+        this._binds.bindEvent(target, event, (event)=> {
+            if (typeof(command) == "string") {
+                this.onCommand(command, {event});
+            } else {
+                command(event);
+            }
+        });
+    }    
+    
+    bindTimeout(timeout, command) {
+        this._binds.bindTimeout(timeout, (event)=> {
+            if (typeof(command) == "string") {
+                this.onCommand(command, {event});
+            } else {
+                command(event);
+            }
+        });
     }
-
-    //methods to not override
+    bindInterval(timeout, command) {
+        this._binds.bindInterval(timeout, (event)=> {
+            if (typeof(command) == "string") {
+                this.onCommand(command, {event});
+            } else {
+                command(event);
+            }
+        });
+    }
     stateChanged(prop, oldValue, newValue) {
         //a state prop changed
         let attr = camelToKebab(prop);
@@ -146,7 +154,6 @@ class XElement extends HTMLElement {
                 }
             }
         }
-        this.onStateChanged(prop, oldValue, newValue);
     }    
     invalidate() {
         //enqueue a render
@@ -158,7 +165,9 @@ class XElement extends HTMLElement {
             }
         }
     }
-    preRender() {}
+    preRender() {
+        //pre render
+    }
     render() {
         //cancel pending render
         if (this._renderTimeoutId) {
@@ -167,17 +176,30 @@ class XElement extends HTMLElement {
         };
         //render
         if (!this.preRender()) {
-            this._xtemplateInstance.render();
+            //this._xtemplateInstance.render(this._stateUnproxied);
+            this._xtemplateInstance.render(this._state);
             this._renderCount++;
         }
         this.postRender();
     }
-    postRender(){}
+    postRender(){
+        //post render
+    }
 
 
     //static
     static async define(name, definition) {
         //settings
+        if (!definition.settings) definition.settings = {};
+        //compute default observedAttributes from state
+        if (!definition.settings.observedAttributes) {
+            var observedAttributes = [];
+            for(let propName in definition.state) {
+                observedAttributes.push(camelToKebab(propName));
+            }                
+            definition.settings.observedAttributes = observedAttributes;
+        }
+        //default settings
         let settings = Object.freeze(Object.assign({
             shadowRootOptions: { mode: "open"},
             observedAttributes: [],
@@ -190,7 +212,9 @@ class XElement extends HTMLElement {
         let result = class extends XElement {
             //satatic
             static definition = definition;
-            static get observedAttributes() { return settings.observedAttributes || []; }
+            static get observedAttributes() { 
+                return settings.observedAttributes || []; 
+            }
             //props
             get settings() { return settings ;}
         };
@@ -218,7 +242,7 @@ class XElement extends HTMLElement {
         let stateAsJson = JSON.stringify({});
         if (!definition.state) definition.state = {};
         stateAsJson = JSON.stringify(definition.state);
-        result.prototype.state = () => {
+        result.prototype.initState = () => {
             return JSON.parse(stateAsJson);
         };
         //methods

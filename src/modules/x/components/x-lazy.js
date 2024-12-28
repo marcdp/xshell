@@ -15,7 +15,7 @@ export default XElement.define("x-lazy", {
         activated: false,
     },
     methods:{
-        async onCommand(command, args){
+        async onCommand(command){
             if (command === "load"){
                 //load
                 //intersection observer

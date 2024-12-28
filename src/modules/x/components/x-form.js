@@ -28,14 +28,22 @@ export default XElement.define("x-form", {
         .wizard-header li[visited] span.icon {background:var(--x-color-primary); color:white;}
         .wizard-header li[selected] span.label {font-weight:600; }
 
-        .errors {margin-top:1em;padding:1em;color:var(--x-input-error-color);border: var(--x-input-border); border-color:var(--x-input-error-color);border-radius:var(--x-input-border-radius);}
+        .errors {margin-top:1em;padding:1em;color:var(--x-datafield-error-color);border: var(--x-datafield-border); border-color:var(--x-datafield-error-color);border-radius:var(--x-datafield-border-radius);}
         .errors div {font-size: var(--x-font-size-small);}
         .errors ul {list-style:none; margin:0; padding:0; margin-top:1em;}
         .errors ul li {}
         .errors ul li x-icon {margin-right:.2em; vertical-align:text-bottom;}
  
-        .footer {display:flex; align-items:end;}
-        .footer x-button {min-width: var(--x-button-width-wide);}
+        .footer-separator {
+            display:var(--x-form-footer-hr-display, none);
+            margin-left:var(--x-form-footer-hr-margin-left);
+            margin-right:var(--x-form-footer-hr-margin-right);
+            transform:translateY(1em);
+            border-bottom: var(--x-form-border);
+        }
+
+        .footer {display:flex; align-items:end; margin-top:1em; }
+        .footer x-button {min-width: var(--x-button-width-wide); aflex:1; }
         .footer > div {display:flex; justify-content:flex-end; gap:.25em; margin-left:.25em; padding-top:1em; flex:1;}
         .footer ::slotted(x-button) {min-width: var(--x-button-width-wide);}
 
@@ -53,7 +61,8 @@ export default XElement.define("x-form", {
         </div>
 
         <div class="container" x-attr:vertical="state.wizardDirection == 'vertical' ? true : false">
-            <x-wizard-header x-if="state.wizard" x-attr:index="state.wizardIndex" x-attr:class="state.wizardDirection">
+
+            <x-wizard-header x-if="state.wizard" x-attr:index="state.wizardIndex" x-attr:class="state.wizardDirection" x-on:index-set="wizard-set">
                 <div x-for="wizardPanel in state.wizardPanels" 
                     x-attr:label="wizardPanel.label"
                     x-attr:message="wizardPanel.message"
@@ -71,7 +80,7 @@ export default XElement.define("x-form", {
                         Solve error before continue:
                         <ul>
                             <li x-for="error in state.errors">
-                                <x-icon icon="x-error2-fill"></x-icon>
+                                <x-icon icon="x-error"></x-icon>
                                 [<span x-html="error.path"></span>]
                                 <b><span x-html="error.label"></span>:</b>
                                 <span x-html="error.message"></span>
@@ -80,11 +89,13 @@ export default XElement.define("x-form", {
                     </div>
                 </div>
 
+                <div class="footer-separator"></div>
+                
                 <div class="footer">
                     <slot name="cancel"></slot>
                     <div x-if="state.wizard">
                         <x-button x-if="state.wizardIndex > 0" label="Prev" x-on:click="wizard-prev"></x-button>
-                        <x-button x-if="state.wizardIndex < state.wizardPanels.length - 1" label="Next" x-on:click="wizard-next" class="important"></x-button>
+                        <x-button x-if="state.wizardIndex < state.wizardPanels.length - 1" label="Next" x-on:click="wizard-next"></x-button>
                         <slot x-else name="footer"></slot>
                     </div>
                     <div x-else>
@@ -104,15 +115,15 @@ export default XElement.define("x-form", {
         validated: false,
         errors: []
     },
-    settings:{
-        observedAttributes: ["wizard", "wizard-index", "wizard-direction"]
-    },
+    //settings:{
+    //    observedAttributes: ["wizard", "wizard-index", "wizard-direction"]
+    //},
     methods:{
         validate() {
             this.onCommand("validate");
             return this.state.errors;
         },
-        onCommand(command){
+        onCommand(command, args){
             if (command === "load") {
                 //load
                 this.shadowRoot.addEventListener("command", (event) => {
@@ -128,6 +139,12 @@ export default XElement.define("x-form", {
                 });
                 this.onCommand("refresh");
 
+            } else if (command == "wizard-set") {
+                //wizard-set
+                let index = args.event.detail.index;
+                this.state.wizardIndex = index;
+                this.onCommand("refresh");
+                
             } else if (command == "wizard-prev") {
                 //wizard-prev
                 this.state.errors = [];

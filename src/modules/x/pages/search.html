@@ -1,25 +1,21 @@
-<html>
-<body>
+<title>Search</title>
 
-    <script type="module">
-        export default {
-            state: {
-                keyword: ""
-            },
-            onCommand(command, args) {
-                if (command == "load") {
-                    //load
-                    this.label = "Search"
-                }
+<script type="module">
+    export default {
+        state: {
+            keyword: ""
+        },
+        onCommand(command, args) {
+            if (command == "load") {
+                //load
+                this.label = "Search"
             }
         }
-    </script>
+    }
+</script>
 
-    <x-form>
-        <x-datafields>
-            <x-datafield label="" type="text" x-model="state.keyword" autofocus></x-datafield>
-        </x-datafields>
-    </x-form>
+<template>
+    this is search page
+    <x-button></x-button>   
+</template>
 
-</body>
-</html>

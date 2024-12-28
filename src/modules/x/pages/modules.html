@@ -1,0 +1,74 @@
+
+<script type="module">
+    import config from "../../../config.js"
+    import shell from "../../../shell.js";
+    import utils from "../../../utils.js";
+    import bus from "../../../bus.js";
+
+    //export
+    export default {
+        state: {
+            modules: [],
+            selected: ""
+        },
+        async onCommand(command, args) {
+            if (command == "load") {
+                //load
+                await this.onCommand("refresh");
+                //listen
+                this.bindEvent(bus, "navigation-end", (event)=>{
+                    this.state.selected = event.module;
+                });
+
+            } else if (command == "refresh") {
+                //refresh
+                await shell.loadModules();
+                let module = shell.getModuleBySrc(shell.getPage().src)
+                let modules = config.getAsObjects("modules");
+                for(let module of modules) {
+                    if (module.type == "application") {
+                        let menu = config.get("modules." + module.name + ".menus.main", "");
+                        if (menu) {
+                            let defaultMenuitems = utils.findObjectsPath(menu, "default", true)
+                            if (defaultMenuitems) {
+                                let defaultMenuitem = defaultMenuitems[defaultMenuitems.length - 1];
+                                this.state.modules.push({
+                                    name: module.name,
+                                    label: module.label,
+                                    description: module.description || "",
+                                    href: defaultMenuitem.href,
+                                    logo: module.logo || "x-module"                                    
+                                });
+                            }
+                        }
+                    }
+                };
+                this.state.selected = module.name;
+                
+            } else if (command == "activate") {
+                    console.log("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA")
+            } else if (command == "deactivate") {
+                console.log("DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD")                
+            }
+        }
+    }
+</script>
+
+<template>
+    <p>
+        Please select the aplication to use:
+    </p>
+    
+    <x-listview view="icons">
+        <x-listview-item 
+            x-for="module in state.modules"
+            x-attr:class="(state.selected == module.name ? 'selected' : '')"
+            x-attr:label="module.label"
+            x-attr:description="module.description"
+            x-attr:icon="module.logo"
+            x-attr:href="module.href"
+            target="#root"
+        ></x-listview-item>
+    </x-listview>       
+    
+</template>

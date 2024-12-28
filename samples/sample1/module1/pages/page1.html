@@ -3,7 +3,7 @@
     <title>Page 1</title>
     <meta name="description"    content="This is the description" />
     <meta name="author"         content="marc" />
-    <meta name="x-page-state"   content='{"var1":"hello world"}' />
+    <meta name="handler"    content="sfc" />
 </head>
 <body>
 
@@ -12,48 +12,172 @@
             async onCommand(command, args) {
                 if (command == "load") {
                     //load
-                    debugger;
+
+                } else if (command == "show-popover") {
+                    //show-popover
+                    let button = args.event.target;
+                    let popover = this.page.querySelector("x-popover");
+                    popover.show({ target: button });
                 }
+
             }
         }
     </script>
 
-    <ul>
-        <li><x-anchor href="page2.html">Help 2</x-anchor></li>
-        <li><x-anchor href="page2.html" target="#dialog">Help in dialog</x-anchor></li>
-        <li><x-anchor href="page2.html" target="#stack">Help in stack</x-anchor></li>
-        <li><x-anchor href="page2.html" target="#mypage">Help insinde x-page</x-anchor></li>
-    </ul>
+    <template>
+        Use Amazon S3 Block public access settings to control the settings that allow public access to your data.
+        
+        <ul>
+            <li><x-anchor href="page2.html">Help 2</x-anchor></li>
+            <li><x-anchor href="page2.html" target="#dialog">Help in dialog</x-anchor></li>
+            <li><x-anchor href="page2.html" target="#stack">Help in stack</x-anchor></li>
+            <li><x-anchor href="/module2/pages/page2.html" breadcrumb>Help with breadcrumb</x-anchor></li>
+            <li><x-anchor href="page2.html?label=helllllloooooo" breadcrumb>Help with breadcrumb and label</x-anchor></li>
+            <li><x-anchor href="page2.html" target="#mypage">Help insinde x-page</x-anchor></li>
+            <li><x-anchor href="page2.html" target="#tray">Help insinde tray</x-anchor></li>
+        </ul>
 
-    <x-page id="mypage"></x-page>
+        <x-toolbar>
+            <x-button disabled label="hello"></x-button>
+            <x-button class="submit" disabled label="hello"></x-button>
+            <x-button class="cancel" disabled label="hello"></x-button>
+            <x-button class="anchor" disabled label="hello"></x-button>        
+            <x-button class="submit" label="Hello world 22" command="mycommand">
+                <x-contextmenu class="">
+                    <x-menuitem class="" label="Subopció 1" command="aaaaa"></x-menuitem>
+                    <x-menuitem class="" label="Subopció 2"></x-menuitem>
+                    <x-menuitem class="" label="Subopció 3"></x-menuitem>
+                    <x-menuitem class="" label="label3.3 asdf asdf  asdf MARC">
+                        <x-menuitem label="label3.3.1"></x-menuitem>
+                        <x-menuitem label="label3.3.2"></x-menuitem>
+                    </x-menuitem>
+                </x-contextmenu>
+            </x-button>
+        </x-toolbar>
 
-<!--
-    <hr />
-    <ul>
-        <li><x-anchor href="page2.html">Help</x-anchor></li>
-        <li><x-anchor href="page2.html" breadcrumb>Help2 with breadcrumb</x-anchor></li>
-        <li><x-anchor href="page2.html?x-page-label=helllllloooooo" breadcrumb>Help with breadcrumb and label</x-anchor></li>
+        <x-card>
+            <details>
+                <summary>Details</summary>
+                Something small enough to escape casual notice.
+            </details>    
+        </x-card>
 
-        <li><x-anchor href="page2.html" target="#dialog">Help with breadcrumb and label in stack</x-anchor></li>
+        <x-toolbar>
+            <x-button disabled label="hello"></x-button>
+            <x-button class="" label="show"></x-button>
+            <x-button class="" label="by"></x-button>
+            <x-button class="" label="by" icon="x-bell"></x-button>
+            <x-button class="" icon="x-bell"></x-button>
+            <x-divider></x-divider>
+            <x-button class="" icon="x-bell" label="More options"></x-button>
+            <x-divider></x-divider>
+            <x-button class="" icon="x-settings"></x-button>
+            <x-button class="" label="Lorem Ipsum"></x-button>
+            <x-button class="" label="Hello world 11">
+                <x-contextmenu class="">
+                    <x-menuitem class="" label="Subopció 1" command="aaaaa"></x-menuitem>
+                    <x-menuitem class="" label="Subopció 2"></x-menuitem>
+                    <x-menuitem class="" label="Subopció 3"></x-menuitem>
+                    <x-menuitem class="" label="label3.3 asdf asdf  asdf MARC">
+                        <x-menuitem label="label3.3.1"></x-menuitem>
+                        <x-menuitem label="label3.3.2"></x-menuitem>
+                    </x-menuitem>
+                </x-contextmenu>
+            </x-button>
+            <x-button class="" label="Hello world 22" command="mycommand">
+                <x-contextmenu class="">
+                    <x-menuitem class="" label="Subopció 1" command="aaaaa"></x-menuitem>
+                    <x-menuitem class="" label="Subopció 2"></x-menuitem>
+                    <x-menuitem class="" label="Subopció 3"></x-menuitem>
+                    <x-menuitem class="" label="label3.3 asdf asdf  asdf MARC">
+                        <x-menuitem label="label3.3.1"></x-menuitem>
+                        <x-menuitem label="label3.3.2"></x-menuitem>
+                    </x-menuitem>
+                </x-contextmenu>
+            </x-button>
 
-        <li><x-button command="show-page-stack" label="Show page stack"></x-button></li>
-        <li><x-button command="show-page-stack-thin" label="Show page stack thin"></x-button></li>
-        <li><x-button command="show-page-stack-thin-right" label="Show page stack thin right"></x-button></li>
-        <li><x-button command="show-page-stack-popup" label="Show page stack popup"></x-button></li>
-        <li><x-button command="show-page-dialog" data-dddd="2" data-asdas="321" label="Show page dialog"></x-button></li>
+            <x-button slot="toolbar" class="" icon="x-settings"></x-button>
+        </x-toolbar>
+
+        <x-page id="mypage"></x-page>
 
         <x-clock></x-clock>
-    </ul>
 
-    <x-form>
-        <x-datafields columns="3">
-            <x-datafield label="hola" type="text" x-model="state.var1"></x-datafield>
-            <x-datafield label="hola" type="date"></x-datafield>
-            <x-datafield label="hola" type="text"></x-datafield>
-        </x-datafields>
-        <x-button icon="x-add" label="add"></x-button>
-    </x-form>
-                -->
-</body>
-</html>
+        <x-accordion>
+            <x-accordion-panel label="Item 1">
+                <p>Content 1</p>
+            </x-accordion-panel>
+            <x-accordion-panel label="Item 2">
+                <p>Content 2</p>
+            </x-accordion-panel>
+            <x-accordion-panel label="Item 3">
+                <p>Content 3</p>
+            </x-accordion-panel>
+        </x-accordion>
 
+        <x-notice type="info" label="This is a label" message=""></x-notice>
+        <x-notice type="warning" label="This is a label" message="this is a message"></x-notice>
+        <x-notice type="error" label="This is a label" message="this is a message"></x-notice>
+        <x-notice type="success" label="This is a label" message="this is a message"></x-notice>
+
+        <x-badge value="123"></x-badge>
+        <x-badge value="999+"></x-badge>
+
+        <x-badge value="2" class="plain"></x-badge>
+
+        <x-avatar initials="MD" label="Lucas" message="ASdas dsa das das"></x-avatar>
+
+        <x-card>
+            Lorem ipsum
+        </x-card>
+
+        <x-tabs selected-index="1">
+            <x-tab label="First tab">
+                This is the content of first tab
+            </x-tab>
+            <x-tab label="Second tab">
+                Second content
+            </x-tab>
+            <x-tab label="Third tab">
+                <x-page src="/module2/pages/page2.html" loading="lazy"></x-page>
+            </x-tab>
+        </x-tabs>
+    
+
+        <x-dropdown class="input-dropdown">
+            <div><input /></div>
+            <span slot="dropdown">This is the popup content ot the drop down</span>
+        </x-dropdown>
+
+        <x-dropdown class="popover">
+            <x-button label="mybutton"></x-button>
+            <span slot="dropdown">This is the popup content</span>
+        </x-dropdown>
+        
+
+        <x-spinner></x-spinner>
+
+        <x-wizard>
+            <x-wizard-panel label="First tab" message="Lorem ipsum asldfkjh aslkjfa hlfkja sdf asdf sa">
+                This is the content of first tab
+            </x-wizard-panel>
+            <x-wizard-panel label="Second tab" icon="x-bell" message="ASdasd asd">
+                Second content
+            </x-wizard-panel>
+            <x-wizard-panel label="Third tab">
+                Third content            
+            </x-wizard-panel>
+        </x-wizard>
+
+
+    <!--
+        <x-form>
+            <x-datafields columns="3">
+                <x-datafield label="hola" type="text" x-model="state.var1"></x-datafield>
+                <x-datafield label="hola" type="date"></x-datafield>
+                <x-datafield label="hola" type="text"></x-datafield>
+            </x-datafields>
+            <x-button icon="x-add" label="add"></x-button>
+        </x-form>
+    -->
+</template>

@@ -17,22 +17,18 @@ export default XElement.define("x-accordion", {
     template: `
         <slot></slot>
     `,
-    settings: {
-    },
     methods:{
         onCommand(command) {
             if (command == "load") {
                 //load
                 this.addEventListener("toggle", (event) => {
-                    if (true) {
-                        let target = event.target;
-                        if (target.expanded) {
-                            this.querySelectorAll(":scope > x-accordion-panel").forEach((panel, index) => {
-                                if (panel != target) {
-                                    panel.onCommand("collapse");
-                                }
-                            });
-                        }
+                    let target = event.target;
+                    if (target.expanded) {
+                        this.querySelectorAll(":scope > x-accordion-panel").forEach((panel) => {
+                            if (panel != target) {
+                                panel.onCommand("collapse");
+                            }
+                        });
                     }
                     event.stopPropagation();
                     event.preventDefault();

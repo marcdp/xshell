@@ -1,7 +1,7 @@
 import config from "./config.js";
 import utils from "./utils.js";
 import bus from "./bus.js";
-import XPage from "./x-page.js";
+import Page from "./page.js";
 
 // constants
 const HASH_PREFIX = "#!";
@@ -38,7 +38,7 @@ class Shell {
             "app.copyright": "",
             "app.logo": "",
             // page
-            "pages.factory": "",
+            "pages.handler": "",
             "pages.layout.default": "",
             "pages.layout.dialog": "",
             "pages.layout.main": "",
@@ -46,9 +46,18 @@ class Shell {
             "pages.layout.embed": "",
             // shell
             "shell.base": "",
+            "shell.debug": false,
             "shell.start": "",
             "shell.container": "body",
             "shell.error": "",
+            "shell.menus.main": {
+                label:"",
+                children:[  
+                    { "label": "Home", "href": "#home", },
+                    { "label": "Home2", "href": "#home2" }
+                ]
+            },
+            "shell.lazy": ""
         }, import.meta.url);
         //load value
         if (typeof (value) == "string") {
@@ -70,7 +79,7 @@ class Shell {
         let tasks = [];
         for (let module of modules) {
             if (module.loading != "lazy") {
-                tasks.push(this.loadModule(module))
+                tasks.push(this.loadModule(module));
             }
         }
         await Promise.all(tasks);        
@@ -79,7 +88,7 @@ class Shell {
         //log
         console.log(`shell.start()`, config.config);
         //start date
-        config.set({ "shell.started-at": new Date() });
+        config.set({ "shell.started-at": performance.now() });
         //add event listener
         window.addEventListener("hashchange", () => {
             this._navigate(document.location.hash);
@@ -92,15 +101,26 @@ class Shell {
         } else {
             document.location.hash = HASH_PREFIX + config.get("shell.start");
         }
+        
     }
 
 
     // modules
+    getModuleBySrc(src) {
+        //get module by src
+        let modules = config.getAsObjects("modules");
+        for (let module of modules) {
+            if (src.startsWith(module.path + "/")) {
+                return this._modules[module.name];
+            }
+        }
+        return null;
+    }
     async loadModuleBySrc(src) {
         //load module by src
         let modules = config.getAsObjects("modules");
         for (let module of modules) {
-            if (src.startsWith(module.path)) {
+            if (src.startsWith(module.path + "/")) {
                 if (module.status != "loaded") {
                     return await this.loadModule(module);
                 }
@@ -117,12 +137,25 @@ class Shell {
         }
         return this._modules[module.name];
     }
+    async loadModules() {
+        let modules = config.getAsObjects("modules");
+        let tasks = [];
+        for (let module of modules) {
+            if (module.status != "loaded") {
+                tasks.push(this.loadModule(module));
+            }
+        }
+        await Promise.all(tasks);
+    }
     async loadModule(module) {
         //load module
         console.log(`shell.loadModule('${module.src}') ...`);
-        let aModule = await import(module.src)
+        //emit bus emit
+        bus.emit("module-load-start", { name: module });
+        //import
+        let aModule = await import(module.src);
         //get instance
-        let instance = aModule.default
+        let instance = aModule.default;
         if (!instance.config) instance.config = {};
         //get name
         let name = "";
@@ -133,7 +166,7 @@ class Shell {
         }
         //add config
         instance.config["modules." + name + ".status"] = "loaded";
-        config.set(instance.config, module.src)
+        config.set(instance.config, module.src, module.path);
         delete instance.config;
         //get depends
         let depends = config.get("modules." + name + ".depends",[]);
@@ -151,10 +184,13 @@ class Shell {
         instance.path = config.get("modules." + name + ".path", "");
         instance.src = module.src;
         instance.name = name;
-        instance.args = module.args || {};
         this._modules[name] = instance;
         //mount
-        await instance.mount();
+        await instance.onCommand("load", module.args);
+        //emit bus emit
+        bus.emit("module-load-end", { name: module, module: instance });
+        // log
+        console.log(`shell.moduleLoaded()`, instance);
         //return
         return instance;
     }
@@ -211,7 +247,7 @@ class Shell {
         let page = document.createElement("x-page");
         page.setAttribute("src", src);
         page.setAttribute("layout", "dialog");
-        page.addEventListener("page:close", (event) => {
+        page.addEventListener("close", (event) => {
             resolveFunc(event.target.result);
             if (event.target.parentNode) {
                 event.target.parentNode.removeChild(event.target);
@@ -221,11 +257,14 @@ class Shell {
         return new Promise((resolve) => {
             resolveFunc = resolve;
         });
-    } 
+    }
+    getPage() {
+        return this.getPages()[0];
+    }
     getPages() {
         return Array.from(this._container.querySelectorAll(":scope > x-page:not([layout='dialog'])"));
     }
-    getPage(target) {
+    getPageByElement(target) {
         while (target) {
             if (!target.parentNode) {
                 target = target.host;
@@ -244,16 +283,13 @@ class Shell {
         if (!settings) settings = {};
         if (typeof (settings.relative) == "undefined") settings.relative = false;
         let prefix = "";
+        //absolute
+        if (src.indexOf("://") != -1) return src;
         //resolve src
-        src = utils.combineUrls(page.src, src)
+        src = utils.combineUrls(page.src, src);
         //breadcrumb
         if (settings.breadcrumb) {
-            let breadcrumb = [];
-            for (let item in this.breadcrumb) {
-                breadcrumb.push(item);
-            }
-            breadcrumb.push({ label: page.label, src: page.src });
-            src += (src.indexOf("?") != -1 ? "&" : "?") + "x-breadcrumb=" + btoa(JSON.stringify(breadcrumb)).replace(/\+/g, "-").replace(/\//g, "_");
+            src += (src.indexOf("?") != -1 ? "&" : "?") + "breadcrumb=" + btoa(JSON.stringify(page.breadcrumb)).replace(/\+/g, "-").replace(/\//g, "_");
         }
         //stack page
         let index = pages.indexOf(page);
@@ -276,7 +312,7 @@ class Shell {
         let allPages = Array.from(this._container.querySelectorAll(":scope > x-page"));
         for (let i = allPages.length - 1; i >= 0; i--) {
             let page = allPages[i];
-            if (page.getAttribute("layout") != "dialog") break
+            if (page.getAttribute("layout") != "dialog") break;
             this._container.removeChild(page);            
         }
         //process hash parts
@@ -289,11 +325,11 @@ class Shell {
                 page.setAttribute("src", hashAfterPart);
                 if (i == 0) {
                     page.setAttribute("layout", "main");
-                    //emit event navigation:start
-                    bus.emit("navigation:start", { page });
+                    //emit event navigation-start
+                    bus.emit("navigation-start", { page });
                 } else {
                     page.setAttribute("layout", "stack");
-                    page.addEventListener("page:close", (event) => {
+                    page.addEventListener("close", (event) => {
                         //page close
                         let pages = this.getPages();
                         let hashParts = document.location.hash.substring(HASH_PREFIX.length).split(HASH_PREFIX);
@@ -302,7 +338,7 @@ class Shell {
                         document.location.hash = HASH_PREFIX + hashParts.join(HASH_PREFIX);
                     });
                 }
-                page.addEventListener("page:change", (event) => {
+                page.addEventListener("change", (event) => {
                     //page change
                     let pages = this.getPages();
                     if (pages.indexOf(event.target) == 0) {
@@ -310,16 +346,17 @@ class Shell {
                         if (label) document.title = label + " / " + config.get("app.label");
                     }
                 });
-                page.addEventListener("page:load", (event) => {
+                page.addEventListener("load", (event) => {
                     //page load
                     let pages = this.getPages();
                     if (pages.indexOf(event.target) == 0) {
                         var label = event.target.label;
                         if (label) document.title = label + " / " + config.get("app.label");
-                        bus.emit("navigation:end", { page: event.target });
+                        bus.emit("navigation-end", { src:event.target.src, page: event.target, module: page.module });
+                        console.log(`page.ready()`);
                     }
                 });
-                page.addEventListener("page:navigate", (event) => {
+                page.addEventListener("navigate", (event) => {
                     //page navigation
                     let pages = this.getPages();
                     let index = pages.indexOf(event.target);
@@ -335,16 +372,16 @@ class Shell {
                 //remove page
                 let pages = this.getPages();
                 let page = pages[i + inc];
-                page.parentNode.removeChild(page);                
+                page.removePage();
                 inc -= 1;
             } else if (hashBeforePart != hashAfterPart) {
                 //change page
                 let pages = this.getPages();
                 let page = pages[i];
                 page.src = hashAfterPart;
-                //emit event navigation:start
+                //emit event navigation-start
                 if (i == 0) {
-                    bus.emit("navigation:start", { page });
+                    bus.emit("navigation-start", { page });
                 }
             }
         }

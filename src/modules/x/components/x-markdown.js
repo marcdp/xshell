@@ -13,9 +13,9 @@ export default XElement.define("x-markdown", {
         value:"",
         html:""
     },
-    settings: {
-        observedAttributes: ["value"],
-    },
+    //settings: {
+    //    observedAttributes: ["value"],
+    //},
     methods:{
         onStateChanged(name, oldValue, newValue){
             if (name == "value") {
@@ -23,8 +23,11 @@ export default XElement.define("x-markdown", {
             }
         },
         onCommand(name, args){
-            if(name === "load"){
+            if(name === "init"){
                 //load
+                this.state.addEventListener("change:value", (event) => {
+                    this.html = marked.parse(event.newValue);
+                });
                 
             }
         }

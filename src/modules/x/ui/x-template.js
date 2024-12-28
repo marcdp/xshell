@@ -231,10 +231,10 @@ class XTemplate {
                     props.push(propertyName + ":" + propValue);
                     //event
                     events.push(`'change.stop': (event) => { 
-                        ${attr.value} = utils.getInputValue(event.target);
+                        let value = utils.getInputValue(event.target);
+                        ${attr.value} = value;
                         invalidate(); 
                     }`);
-
                 } else if (attr.name == "x-once") {
                     //x-once: only render once
                     jsLine[0] = indent + "...((renderCount==0) ? [";
@@ -281,8 +281,8 @@ class XTemplate {
     }
 
     //public methods
-    createInstance(state, handler, invalidate, element) {
-        return new XTemplateInstance(this, state, handler, invalidate, element);
+    createInstance(handler, invalidate, element) {
+        return new XTemplateInstance(this, handler, invalidate, element);
     }
 
 }
@@ -376,7 +376,6 @@ class XTemplateInstance {
 
     //fields
     _xtemplate = null;
-    _state = null;
     _element = null;
     _handler = null;
     _invalidate = null;
@@ -386,35 +385,33 @@ class XTemplateInstance {
     _vdom = null;
 
     //ctor
-    constructor(xtemplate, state, handler, invalidate, element) {
+    constructor(xtemplate, handler, invalidate, element) {
         this._xtemplate = xtemplate;
-        this._state = state;
         this._element = element;
         if (xtemplate.styleSheets.length) this._element.adoptedStyleSheets = xtemplate.styleSheets;
         this._handler = handler;
         this._invalidate = invalidate;
     }
 
-    //props
-    get state() {return this._state;}
-
     // methods
-    render() {
+    render(state) {
         //render vdom
-        let vdom = this._xtemplate.render(this._state, this._handler, this._invalidate, utils, this._renderCount++);
+        let vdom = this._xtemplate.render(state, this._handler, this._invalidate, utils, this._renderCount++);
         //render vdom to dom
         if (this._vdom == null) {
             let index = 0;
+            let documentFragment = document.createDocumentFragment();
             for (let vNode of vdom) {
                 while (index < vNode.options.index) {
                     let comment = document.createComment("");
-                    this._element.appendChild(comment);
+                    documentFragment.appendChild(comment);
                     index++;
                 }
                 let element = this._createDomElement(vNode);
-                this._element.appendChild(element);
+                documentFragment.appendChild(element);
                 index++;
             }
+            this._element.appendChild(documentFragment);
             this._vdom = vdom;
         } else {
             this._diffDom(this._vdom, vdom, this._element, 0);
@@ -487,7 +484,7 @@ class XTemplateInstance {
                         if (options.left && event.key != "ArrowLeft") return false;
                         if (options.right && event.key != "ArrowRight") return false;
                     }
-                    //invoke
+                    //invoke                    
                     let result = eventHandler.call(this, event, ...args);
                     //stop, prevent
                     if (options.stop) event.stopPropagation();

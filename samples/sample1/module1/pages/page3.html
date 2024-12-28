@@ -1,131 +1,121 @@
-<html>
-<head>
-    <meta name="x-page-label" content="This is a Page3" />
-</head>
-<body>
+<meta name="handler"   content="sfc" />
+<title>This is page 3</title>
 
-    <!-- script -->
-    <script type="module">
-        export default {
-            state: {
-                counter: 123,
-                text: "helo",
-                text_i18n: "i18n:en=hello|i18n:es=hola|i18n:fr=bonjour",
-                text2222: "asd",
-                number: 2,
-                range: "9",
-                select: "a",
-                radios: "b",
-                radio: false,
-                checkboxes: "a,c",
-                textarea: "sdfsd",
-                textarea_i18n: "i18n:en=ennn|i18n:es=esss|i18n:fr=frrrr",
-                myObject: {
-                    var1: "value1",
-                },
-                myObject2: {
-                    var1: "hola",
-                    var2: 987
-                },
-                myList: [
-                    { id: "value1", label: "value11", counter: 12 },
-                    { id: "value2", label: "value22", counter: 99 }
-                ],
-                file: "",
-                files: [],
-                richtext: "hello <b>world</b>.",
-                richtext_i18n: "i18n:en=hello <b>world</b>.|i18n:ca=hola <b>mon</b>.",
-                datatable: {
-                    rows: [
-                        { id: 1, label: "name1", age: 12 },
-                        { id: 2, label: "name2", age: 22 },
-                        { id: 3, label: "name3", age: 32 },
-                        { id: 4, label: "name4", age: 42 },
-                        { id: 5, label: "name5", age: 52 },
-                        { id: 6, label: "name6", age: 62 },
-                        { id: 7, label: "name7", age: 72 },
-                        { id: 8, label: "name8", age: 82 },
-                        { id: 9, label: "name9", age: 92 },
-                        { id: 10, label: "name10", age: 102 },
-                    ],
-                    total: 100,
-                    index: 0,
-                    size: 10
-                },
-                javascript: "let a=123;\nfunction something(){}",
-                css: "body {color:red;}",
-                markdown: "Hello world\n---\n- aaaa\n- bbbb",
-                markdown_i18n: "i18n:en=english text|i18n:es=spanish text"
+<!-- script -->
+<script type="module">
+    export default {
+        state: {
+            counter: 123,
+            text: "helo",
+            text_i18n: "i18n:en=hello|i18n:es=hola|i18n:fr=bonjour",
+            text2222: "asd",
+            number: 2,
+            range: "9",
+            select: "a",
+            radios: "b",
+            radio: false,
+            checkboxes: "a,c",
+            textarea: "sdfsd",
+            textarea_i18n: "i18n:en=ennn|i18n:es=esss|i18n:fr=frrrr",
+            myObject: {
+                var1: "value1",
             },
-            async onCommand(command, args) {
-                if (command == "load") {
-                    //load
-                    this.state.counter = args.counter || 0;
+            myObject2: {
+                var1: "hola",
+                var2: 987
+            },
+            myList: [
+                { id: "value1", label: "value11", counter: 12 },
+                { id: "value2", label: "value22", counter: 99 }
+            ],
+            file: "",
+            files: [],
+            richtext: "hello <b>world</b>.",
+            richtext_i18n: "i18n:en=hello <b>world</b>.|i18n:ca=hola <b>mon</b>.",
+            datatable: {
+                rows: [
+                    { id: 1, label: "name1", age: 12 },
+                    { id: 2, label: "name2", age: 22 },
+                    { id: 3, label: "name3", age: 32 },
+                    { id: 4, label: "name4", age: 42 },
+                    { id: 5, label: "name5", age: 52 },
+                    { id: 6, label: "name6", age: 62 },
+                    { id: 7, label: "name7", age: 72 },
+                    { id: 8, label: "name8", age: 82 },
+                    { id: 9, label: "name9", age: 92 },
+                    { id: 10, label: "name10", age: 102 },
+                ],
+                total: 100,
+                index: 0,
+                size: 10
+            },
+            javascript: "let a=123;\nfunction something(){}",
+            css: "body {color:red;}",
+            markdown: "Hello world\n---\n- aaaa\n- bbbb",
+            markdown_i18n: "i18n:en=english text|i18n:es=spanish text"
+        },
+        async onCommand(command, args) {
+            if (command == "load") {
+                //load
+                this.state.counter = args.counter || 0;
 
-                } else if (command == "something") {
-                    //something
-                    this.showDialog({ url: "dialog.html" });
+            } else if (command == "something") {
+                //something
+                this.showDialog({ url: "dialog.html" });
 
-                } else if (command == "something2") {
-                    //something
-                    alert("something 2 clicked");
+            } else if (command == "something2") {
+                //something
+                alert("something 2 clicked");
 
-                } else if (command == "inc") {
-                    //inc counter
-                    this.state.counter++;
+            } else if (command == "inc") {
+                //inc counter
+                this.state.counter++;
 
-                } else if (command == "dec") {
-                    //dec counter
-                    this.state.counter--;
+            } else if (command == "dec") {
+                //dec counter
+                this.state.counter--;
 
-                } else if (command == "add") {
-                    //dec counter
-                    this.state.myList = [...this.state.myList, { id: "value6", label: "" }];
+            } else if (command == "add") {
+                //dec counter
+                this.state.myList = [...this.state.myList, { id: "value6", label: "" }];
 
-                } else if (command == "remove") {
-                    //dec counter
-                    let id = args.data.id;
-                    this.state.myList = this.state.myList.filter(item => item.id != id);
+            } else if (command == "remove") {
+                //dec counter
+                let id = args.data.id;
+                this.state.myList = this.state.myList.filter(item => item.id != id);
 
-                } else if (command == "show-popover") {
-                    //show-popover
-                    let button = this.querySelector("x-button:first-child");
-                    let popover = this.querySelector("x-popover");
-                    popover.show({ target: button });
+            } else if (command == "submit") {
+                //submit
+                alert("submit");
 
-                } else if (command == "submit") {
-                    //submit
-                    alert("submit");
+            } else if (command == "cancel") {
+                //cancel
+                alert("cancel");
 
-                } else if (command == "cancel") {
-                    //cancel
-                    alert("cancel");
-
-                } else if (command == "pager-change") {
-                    //pager-change
-                    let event = args.event;
-                    let datatable = {
-                        rows: [],
-                        total: this.state.datatable.total,
-                        index: event.detail.index,
-                        size: event.detail.size
-                    };
-                    for (let i = 0; i < datatable.size; i++) {
-                        datatable.rows.push(
-                            { id: datatable.index * datatable.size + i + 1, label: "name" + datatable.index * datatable.size + i, age: 12 },
-                        );
-                    }
-                    this.state.datatable = datatable;
-
+            } else if (command == "pager-change") {
+                //pager-change
+                let event = args.event;
+                let datatable = {
+                    rows: [],
+                    total: this.state.datatable.total,
+                    index: event.detail.index,
+                    size: event.detail.size
+                };
+                for (let i = 0; i < datatable.size; i++) {
+                    datatable.rows.push(
+                        { id: datatable.index * datatable.size + i + 1, label: "name" + datatable.index * datatable.size + i, age: 12 },
+                    );
                 }
+                this.state.datatable = datatable;
+
             }
-        };
-    </script>
+        }
+    };
+</script>
 
-    <!--
+<template>
     {{ JSON.stringify(state) }}
-    -->
-
+    
     <x-form wizard wizard-direction="vertical">
         <!-- header -->
         <h2 slot="header">This is the title</h2>
@@ -135,7 +125,7 @@
             el cual incluye versiones de Lorem Ipsum.
         </p>
         <!-- datafields -->
-        <x-tabs label="First tab" selected-index="5">
+        <x-tabs label="First tab" message="Step 1" selected-index="0">
             <x-tab label="Basic">
                 <x-datafields columns="4" label="Lorem ipsum" message="Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum">
                     <x-datafield label="Text" x-model="state.text" type="text" minlength="2" maxlength="4"></x-datafield>
@@ -242,20 +232,33 @@
                 </x-datafields>
             </x-tab>
         </x-tabs>
-        <x-datafields label="Second tab">
+        <x-datafields label="Second tab" message="Step 2">
             <x-datafield label="Text" x-model="state.text2222" type="text" minlength="2" maxlength="4" required></x-datafield>
         </x-datafields>
-        <x-datafields label="Third tab">
+        <x-datafields label="Third tab" message="Step 3">
             Third content
         </x-datafields>
         <!-- buttons -->
-        <x-button slot="cancel" label="Cancel" command="cancel"></x-button>
-        <x-button slot="footer" label="Save" command="submit" class="important"></x-button>
+        <x-button slot="cancel" label="Cancel" icon="x-bell" command="cancel" class="cancel"></x-button>
+        <x-button slot="footer" label="Save" command="submit" class="submit"></x-button>
     </x-form>
 
     <br />
 
-    <x-menu style="width:22em">
+    <fieldset>
+        <legend>Choose your favorite monster</legend>
+    
+        <input type="radio" id="kraken" name="monster" value="K" />
+        <label for="kraken">Kraken</label><br />
+    
+        <input type="radio" id="sasquatch" name="monster" value="S" />
+        <label for="sasquatch">Sasquatch</label><br />
+    
+        <input type="radio" id="mothman" name="monster" value="M" />
+        <label for="mothman">Mothman</label>
+      </fieldset>
+
+    <div>
         <x-menuitem label="label1" icon="x-bell" command="something2"></x-menuitem>
         <x-menuitem label="label2  alskjfh alksjd asf a MARC" command="" checked></x-menuitem>
         <x-divider></x-divider>
@@ -268,7 +271,7 @@
             <x-menuitem label="label3.1"></x-menuitem>
             <x-menuitem label="label3.2"></x-menuitem>
         </x-menuitem>
-    </x-menu>
+    </div>
 
     <hr />
 
@@ -290,26 +293,6 @@
 
 
 
-    <x-button label="Show popover" command="show-popover"></x-button>
-    <x-popover>
-        This is the popup content
-    </x-popover>
-
-
-
-    <button popovertarget="myPopOver"> Show popoer native</button>
-    <div popover id="myPopOver" style="border:1em red solid">
-        This is my content
-    </div>
-
-
-
-
-
-
-
-
-
     <x-badge value="123"></x-badge>
     <x-badge value="999+"></x-badge>
 
@@ -324,7 +307,7 @@
         <x-divider></x-divider>
         <x-button class="plain" icon="x-bell" label="More options"></x-button>
         <x-divider></x-divider>
-        <x-button class="plain" icon="x-settings"></x-button>
+        <x-button class="round" icon="x-settings"></x-button>
         <x-button class="plain" label="Lorem Ipsum"></x-button>
         <x-button class="plain" label="Hello world 11">
             <x-contextmenu class="plain">
@@ -400,7 +383,7 @@
     <x-notice type="error" label="This is a label" message="this is a message"></x-notice>
     <x-notice type="success" label="This is a label" message="this is a message"></x-notice>
 
-    <x-menu class="plain">
+    <div class="plain">
         <x-menuitem label="label1" icon="x-bell" command="something2" checked></x-menuitem>
         <x-menuitem label="label2 asdfasd flajsdfh laskjdhf alskjfh alksjd asf a MARC"></x-menuitem>
         <x-divider></x-divider>
@@ -412,7 +395,7 @@
                 <x-menuitem label="label3.3.2"></x-menuitem>
             </x-menuitem>
         </x-menuitem>
-    </x-menu>
+    </div>
 
     <br />
 
@@ -456,12 +439,12 @@
     </x-button>
     <x-button label="Hola" _pressed></x-button>
     <x-button icon="x-settings" label="Hello world 1" message="This is a sub message"></x-button>
-    <x-button class="important" icon="x-settings" label="Hello world 2"></x-button>
+    <x-button class="submit" icon="x-settings" label="Hello world 2"></x-button>
     <x-button class="plain" label="Hello world 3"></x-button>
     <hr />
 
     <x-button class="" label="Hello world 3"></x-button>
-    <x-button class="important" icon="x-settings" label="Hello world 2"></x-button>
+    <x-button class="submit" icon="x-settings" label="Hello world 2"></x-button>
 
     {{ state.counter }}
 
@@ -481,5 +464,4 @@
     <x-clock></x-clock>
 
 
-</body>
-</html>
+</template>
