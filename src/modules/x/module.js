@@ -9,7 +9,8 @@ export default {
         "modules.x.version": "1.0.0.0",
         "modules.x.depends": [],
         "modules.x.styles": ["./css/styles.css"],
-        "modules.x.logo": "",
+        "modules.x.icon": "",
+        "modules.x.page-handler": "sfc",
         "modules.x.type": "library",
         "modules.x.menus.main": {
             "label": "Module X",
@@ -21,8 +22,7 @@ export default {
                 { "label": "Search", "href": "/x/pages/search.html" },
                 { "label": "Google", "href": "http://www.google.com/", "target":"_blank"},
             ]
-        },        
-        "modules.x.pages.handler": "sfc",
+        },
 
         //loader
         "loader.component:x-{name}": "./components/x-{name}.js",
@@ -30,8 +30,7 @@ export default {
         "loader.icon:x-{name}": "./icons/{name}.svg",
         "loader.layout:x-layout-{name}": "./layouts/x-layout-{name}.js",
         "loader.page:/x/pages/{path}": "./pages/{path}",
-
-        "loader.class:page-instance-{name}": "./ui/page-instance-{name}.js",
+        "loader.page-handler:sfc": "./ui/page-instance-sfc.js",   
 
         // pages
         "pages.layout.default": "x-layout-default",

@@ -79,42 +79,7 @@ export default XElement.define("x-button", {
             top:calc(100% + .1em); 
         }
         
-        
-
-
-
-
-        
-        /*
-
-        
-        :host(.plain) .button {border-color:transparent; }
-        :host(.plain) .button:hover {background: var(--x-color-background-gray);}
-        :host(.plain) .button:active {background: var(--x-color-background-x-gray)}
-        :host(.plain) div.more {border:none;}
-
-        :host(.anchor) .button {border:none; border-color:transparent; padding:0;}
-        :host(.anchor) .button:hover {background: unset; color:var(--x-color-primary); }
-        :host(.anchor) .button:active {background: unset; }
-        :host(.anchor) .button[expanded] {background:none!important;}
-        :host(.anchor) .button > x-icon[icon] + div {padding-left:.25em}
-        :host(.anchor) div.more {border:none;}
-        :host(.anchor) div.more[expanded] {background:unset;}
-        :host(.anchor) > div {align-items:center; }
-        :host(.anchor.plain) .button:hover {color:unset;}
-        :host(.anchor.icon-x2) x-icon {font-size:1.65em}
-
-        :host(.selected) .button {background:var(--x-color-background-x-gray);}        
-
-        :host(.no-hover) .button:hover {background:transparent;}
-        :host(.short) .button {padding-top:.3em; padding-bottom:.3em;}
-        :host(.x-short) .button {padding-top:0em; padding-bottom:.1em;}
-        
-        
-        
-
-        */
-       :host(.icon-big) .button {padding:.25em .5em;}
+        :host(.icon-big) .button {padding:.25em .5em;}
         :host(.icon-big) .button x-icon {font-size:1.1em;}
     `,
     template: `
@@ -147,9 +112,6 @@ export default XElement.define("x-button", {
         expanded:false,
         childsClass:"",
     },
-    //settings: {
-    //    observedAttributes: ["icon", "label", "message", "command", "href", "breadcrumb"]
-    //},
     methods:{
         onDocumentClick() {
             this.onCommand("collapse");
@@ -165,6 +127,13 @@ export default XElement.define("x-button", {
                 // load
                 this.onCommand("refresh");
                 this.onDocumentClick = this.onDocumentClick.bind(this);
+                //this.shadowRoot.addEventListener("focusout", (event) => {
+                //    let relatedTarget = event.relatedTarget
+                //    if (relatedTarget == null || !utils.isDescendantOfElement(this, relatedTarget)){
+                //        debugger;
+                //        this.onCommand("collapse");
+                //    }
+                //});
 
             } else if (command == "command") {
                 // command
@@ -217,7 +186,6 @@ export default XElement.define("x-button", {
                 } else {
                     this.state.realHref = null;
                 }
-                
             }
         }
     }

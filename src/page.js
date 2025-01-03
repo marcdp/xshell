@@ -154,6 +154,10 @@ class Page extends HTMLElement {
         if (!module) throw new Error(`Module not found for page '${this.src}'`);
         //fetch page
         let response = await loader.load("page:" + this.src);
+
+        // at this point, we mjst have text/html
+        // the developer should configure the required transformer, to convert any contenttype to html
+        
         let text = await response.text();   
         let shellErrorName = config.get("shell.error") || "div";
         let shellLazyName = config.get("shell.lazy");
@@ -221,18 +225,18 @@ class Page extends HTMLElement {
         let label = doc.title;
         doc.head.querySelectorAll("meta[name='label']").forEach((sender) => { label = sender.content; });
         if (!label && menuitems) label = menuitem.label;
-        if (searchParams.get("label")) label = searchParams.get("label");
+        if (searchParams.get("page-label")) label = searchParams.get("page-label");
         this.label = label;
         //icon
         let icon = "";
-        doc.head.querySelectorAll("meta[name='icon']").forEach((sender) => { icon = sender.content; });
+        doc.head.querySelectorAll("meta[name='page-icon']").forEach((sender) => { icon = sender.content; });
         if (!icon && menuitem) icon = menuitem.icon;
-        if (searchParams.get("icon")) icon = searchParams.get("icon");
+        if (searchParams.get("page-icon")) icon = searchParams.get("page-icon");
         this.icon = icon;
         //breadcrumb
         let breadcrumb = [];
-        if (searchParams.get("breadcrumb")) {
-            breadcrumb = JSON.parse(atob(searchParams.get("breadcrumb").replace(/_/g, "/").replace(/-/g, "+")));
+        if (searchParams.get("page-breadcrumb")) {
+            breadcrumb = JSON.parse(atob(searchParams.get("page-breadcrumb").replace(/_/g, "/").replace(/-/g, "+")));
             breadcrumb.push({ label: label, href: this.src });
         } else if (menuitems) {
             for(let i = 0; i <menuitems.length; i++) {
@@ -243,14 +247,14 @@ class Page extends HTMLElement {
         this.breadcrumb = breadcrumb;        
         //handler
         let instance = null;
-        let handler = config.get("modules." + module.name + ".pages.handler", config.get("pages.handler", ""));
-        doc.querySelectorAll("meta[name='handler']").forEach((sender) => { handler = sender.content; });
-        if (searchParams.get("handler")) handler = searchParams.get("handler");
+        let handler = config.get("modules." + module.name + ".page-handler", config.get("page-handler", ""));
+        doc.querySelectorAll("meta[name='page-handler']").forEach((sender) => { handler = sender.content; });
+        if (searchParams.get("page-handler")) handler = searchParams.get("page-handler");
         if (this.status == "error") handler = "";
         if (handler == "") {
             instance = new PageInstance();
         } else {
-            let classs = await loader.load("class:page-instance-" + handler);
+            let classs = await loader.load("page-handler:" + handler);
             instance = new classs();
         }
         //destroy previous instance
@@ -281,7 +285,7 @@ class Page extends HTMLElement {
         //navigate to
         if (!settings) settings = {};
         if (settings.breadcrumb){
-            src += (src.indexOf("?") != -1 ? "&" : "?") + "breadcrumb=" + btoa(JSON.stringify(this.breadcrumb)).replace(/\+/g, "-").replace(/\//g, "_");
+            src += (src.indexOf("?") != -1 ? "&" : "?") + "page-breadcrumb=" + btoa(JSON.stringify(this.breadcrumb)).replace(/\+/g, "-").replace(/\//g, "_");
         }
         if (this.layout == "main" || this.layout == "stack") {
             this.dispatchEvent(new CustomEvent("navigate", {detail: src}));

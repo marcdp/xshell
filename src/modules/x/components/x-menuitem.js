@@ -26,25 +26,27 @@ export default XElement.define("x-menuitem", {
             width: var(--x-contextmenu-width);
             position:absolute; 
             left:100%;
+            box-sizing:border-box;
+            
             margin-left:0em;
             margin-top:-.2em;
         }
+        x-contextmenu.right {
+            left:calc(-100% - .9em);
+        }
 
-        /*
-        :host(.childs-inline) x-anchor .has-childs {transform:rotate(90deg); transition: transform var(--x-transition-duration);}
-        :host(.childs-inline) x-anchor[expanded] .has-childs {transform:rotate(-90deg)}
-        :host(.childs-inline) div {
+        /* inline */
+        :host(.inline) x-anchor .has-childs {transform:rotate(90deg); transition: transform var(--x-transition-duration);}
+        :host(.inline) x-anchor[expanded] .has-childs {transform:rotate(-90deg)}
+        :host(.inline) x-contextmenu {
             position:unset;
             border:none;
             background:none;
             padding:0;
             width:unset;
             box-shadow:none;
-            margin-left:2.5em;
+            padding-left:2.5em;
         }
-        :host(.childs-inline.plain) div {
-            margin-left:1.5em;
-        }*/
     `,
     state: {
         icon: "",
@@ -57,6 +59,7 @@ export default XElement.define("x-menuitem", {
         expanded: false,
         hasChilds:false,
         menuitem: null,
+        childsRight: true
     },
     template: `
         <x-anchor class="menuitem anchor" x-attr:href="state.href" x-attr:command="state.command" x-attr:disabled="state.disabled" x-attr:expanded="state.expanded" >
@@ -66,13 +69,10 @@ export default XElement.define("x-menuitem", {
             <span   x-if="state.suffix" class="suffix">{{ state.suffix }}</span>
             <x-icon x-if="state.hasChilds" class="has-childs" icon="x-keyboard-arrow-right"></x-icon>
         </x-anchor>
-        <x-contextmenu x-if="state.hasChilds" x-show="state.expanded">
+        <x-contextmenu x-attr:class="(state.childsRight ? 'right' : '')" x-if="state.hasChilds" x-show="state.expanded">
             <slot x-on:slotchange="refresh"></slot>
         </x-contextmenu>
     `,
-    //settings: {
-    //    observedAttributes: ["icon", "label", "suffix", "href", "command", "disabled", "checked"],
-    //},
     methods: {
         onCommand(command, args){
             if (command == "load") {
@@ -98,16 +98,14 @@ export default XElement.define("x-menuitem", {
                     }
                 });
                 this.addEventListener("mouseenter", ()=>{
-                    if (this.classList.contains("childs-inline")) {
-                    } else if (this.classList.contains("dropdown-click")) {
+                    if (this.classList.contains("inline")) {
                     } else {
                         this.state.expanded = true;
                         this.onCommand("refresh");    
                     }
                 });
                 this.addEventListener("mouseleave", ()=>{
-                    if (this.classList.contains("childs-inline")) {
-                    } else if (this.classList.contains("dropdown-click")) {
+                    if (this.classList.contains("inline")) {
                     } else {
                         this.state.expanded = false;
                         this.onCommand("refresh");    
@@ -115,7 +113,7 @@ export default XElement.define("x-menuitem", {
                 });
                 this.addEventListener("click", (event) => {
                     this.shadowRoot.querySelector("x-anchor").focus();
-                    if (this.classList.contains("childs-inline") || this.classList.contains("dropdown-click")) {                        
+                    if (this.classList.contains("inline")) {                        
                         this.state.expanded = !this.state.expanded;
                         this.onCommand("refresh");    
                         event.preventDefault();
@@ -126,6 +124,13 @@ export default XElement.define("x-menuitem", {
 
             } else if (command == "refresh") {
                 //refresh
+                let contextMenu = this.shadowRoot.querySelector("x-contextmenu");
+                if (contextMenu) {
+                    let rect = this.shadowRoot.querySelector("x-contextmenu").getBoundingClientRect();
+                    let right = rect.left + rect.width;
+                    console.log(rect.right + " --- " + window.innerWidth)
+                    this.state.childsRight = right > window.innerWidth;
+                }
                 this.state.hasChilds = (this.firstElementChild != null);
             }
         }

@@ -9,8 +9,8 @@ export default {
         "modules.x-man.version": "1.0.0.0",
         "modules.x-man.depends": [],
         "modules.x-man.styles": [],
-        "modules.x-man.logo": "",
-        "modules.x-man.pages.handler": "sfc",
+        "modules.x-man.icon": "",
+        "modules.x-man.page-handler": "sfc",
         "modules.x-man.type": "application",
         "modules.x-man.menus.main": {
             "label": "XShell Manual",
@@ -60,7 +60,10 @@ export default {
         },  
         
         // loader
-        "loader.page:/x-man/{path}": "./{path}"
+        "loader.page:/x-man/{path}": "./{path}",
+
+        "loader.page:/x-man/{path}md": "./{path}md?loader-transform=markdown",
+
     },
     // methods
     onCommand() {

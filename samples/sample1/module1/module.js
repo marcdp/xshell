@@ -5,11 +5,12 @@
         //module
         "modules.module1.name": "module1",
         "modules.module1.label": "Module 1 title",
-        "modules.module1.logo": "module1-add",
+        "modules.module1.icon": "module1-add",
         "modules.module1.version": "0.1",
         "modules.module1.type": "application",
         "modules.module1.depends": [],
         "modules.module1.styles": ["./css/styles.css"],
+        "modules.module1.page-handler": "",      
         "modules.module1.menus.main": {
             "label": "Amazon S3",
             "href": "./pages/page0.html",
@@ -33,7 +34,7 @@
 
         "loader.component:module1-{name}": "./components/{name}.js",        
         
-        "loader.page:/module1/{path}": "./{path}"
+        "loader.page:/module1/{path}": "./{path}",
     },
     //methods
     onCommand(command, args) {

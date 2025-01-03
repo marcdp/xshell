@@ -13,15 +13,7 @@ export default XElement.define("x-markdown", {
         value:"",
         html:""
     },
-    //settings: {
-    //    observedAttributes: ["value"],
-    //},
     methods:{
-        onStateChanged(name, oldValue, newValue){
-            if (name == "value") {
-                this.html = marked.parse(newValue);
-            }
-        },
         onCommand(name, args){
             if(name === "init"){
                 //load

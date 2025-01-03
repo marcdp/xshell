@@ -3,7 +3,7 @@
     <title>Page 1</title>
     <meta name="description"    content="This is the description" />
     <meta name="author"         content="marc" />
-    <meta name="handler"    content="sfc" />
+    <meta name="page-handler"   content="sfc" />
 </head>
 <body>
 
@@ -12,14 +12,10 @@
             async onCommand(command, args) {
                 if (command == "load") {
                     //load
-
-                } else if (command == "show-popover") {
-                    //show-popover
-                    let button = args.event.target;
-                    let popover = this.page.querySelector("x-popover");
-                    popover.show({ target: button });
+                } else if (command == "aaaaa") {
+                    //aaaaa
+                    alert("aaaaa")
                 }
-
             }
         }
     </script>
@@ -32,7 +28,7 @@
             <li><x-anchor href="page2.html" target="#dialog">Help in dialog</x-anchor></li>
             <li><x-anchor href="page2.html" target="#stack">Help in stack</x-anchor></li>
             <li><x-anchor href="/module2/pages/page2.html" breadcrumb>Help with breadcrumb</x-anchor></li>
-            <li><x-anchor href="page2.html?label=helllllloooooo" breadcrumb>Help with breadcrumb and label</x-anchor></li>
+            <li><x-anchor href="page2.html?page-label=helllllloooooo" breadcrumb>Help with breadcrumb and label</x-anchor></li>
             <li><x-anchor href="page2.html" target="#mypage">Help insinde x-page</x-anchor></li>
             <li><x-anchor href="page2.html" target="#tray">Help insinde tray</x-anchor></li>
         </ul>

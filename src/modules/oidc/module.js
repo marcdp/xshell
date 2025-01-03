@@ -9,8 +9,8 @@ export default {
         "modules.oidc.version": "1.0.0.0",
         "modules.oidc.depends": [],
         "modules.oidc.styles": [],
-        "modules.oidc.logo": "",
-        "modules.oidc.pages.handler": "",
+        "modules.oidc.icon": "",
+        "modules.oidc.page-handler": "",
         "modules.oidc.type": "library",
 
         // loader
