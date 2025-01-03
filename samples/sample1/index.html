@@ -138,11 +138,14 @@ x - sfc style -- global
 x - mobile drawer menu -- should scroll vertically
 x - observedAttributes: fer que no sigui obligatori especificarlos. Per defecte, tots els state.props de tipus simple (bool, int, float, string, date) poden venir dels attributs
 x - permetre cachejar les pages: --. implicar no utilitzar transform:"response" en el fetch del loader
+x - menuitems separador + expandable
 
 
-- page-handler-html
-- page-handler-markdown
-- page-handler-x
+
+
+
+
+
 
 - datafield file 
 - datafield files
@@ -171,7 +174,6 @@ x - permetre cachejar les pages: --. implicar no utilitzar transform:"response" 
     - each module: "merge:shell.menus.main" = ...  --- loader automatically adds the menuitems (or whatever) to the top menu (to the shell config)
     - each module: modules.xxx.shell.menus.main = ...  --- loader automatically adds the menuitems (or whatever) to the top menu (to the shell config)
    
-- menuitems separador + expandable
 
 - search page:
   - each module listens for "search" command, and returns an async task with the results

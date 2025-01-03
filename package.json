@@ -6,8 +6,6 @@
   "scripts": {
     "lint": "eslint .",
     "start": "http-server -c-1 --port 8080 ",
-
-    
     "build2": "esbuild src/**/*.js --minify --outdir=dist --format=esm --sourcemap && cpx \"src/**/*.{json,css,svg,jpg,png}\" dist",
     "serve": "esbuild src/**/*.js --outdir=./src/x-shell --servedir=.",
     "serve2": "esbuild src/**/*.js --servedir=www --outdir=www/js --bundle",

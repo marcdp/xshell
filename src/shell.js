@@ -38,7 +38,6 @@ class Shell {
             "app.copyright": "",
             "app.logo": "",
             // page
-            "pages.handler": "",
             "pages.layout.default": "",
             "pages.layout.dialog": "",
             "pages.layout.main": "",
@@ -150,8 +149,6 @@ class Shell {
     async loadModule(module) {
         //load module
         console.log(`shell.loadModule('${module.src}') ...`);
-        //emit bus emit
-        bus.emit("module-load-start", { name: module });
         //import
         let aModule = await import(module.src);
         //get instance
@@ -162,6 +159,19 @@ class Shell {
         for (let key in instance.config) {
             if (key.startsWith("modules.")) {
                 name = key.split(".")[1];
+                break;
+            }
+        }
+        if (!name) throw new Error(`Unable to load module: name not found; ${name}`);
+        for(let key of ["label","icon","version","type","depends","styles","page-handler"]) {
+            let configKey = "modules." + name + "." + key;
+            if (typeof(instance.config[configKey]) == "undefined") {
+                throw Error(`Unable to load module: config key not found; ${configKey}`);
+            }
+        }
+        for (let key in instance.config) {
+            if (key.startsWith("modules.") && !key.startsWith("modules." + name + ".")) {
+                throw Error(`Unable to load module: misconfigured module config key in module '${name}'; ${key}`);
             }
         }
         //add config
@@ -188,7 +198,7 @@ class Shell {
         //mount
         await instance.onCommand("load", module.args);
         //emit bus emit
-        bus.emit("module-load-end", { name: module, module: instance });
+        bus.emit("module-load", { name: module, module: instance });
         // log
         console.log(`shell.moduleLoaded()`, instance);
         //return
@@ -289,7 +299,7 @@ class Shell {
         src = utils.combineUrls(page.src, src);
         //breadcrumb
         if (settings.breadcrumb) {
-            src += (src.indexOf("?") != -1 ? "&" : "?") + "breadcrumb=" + btoa(JSON.stringify(page.breadcrumb)).replace(/\+/g, "-").replace(/\//g, "_");
+            src += (src.indexOf("?") != -1 ? "&" : "?") + "page-breadcrumb=" + btoa(JSON.stringify(page.breadcrumb)).replace(/\+/g, "-").replace(/\//g, "_");
         }
         //stack page
         let index = pages.indexOf(page);

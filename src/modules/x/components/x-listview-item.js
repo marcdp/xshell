@@ -34,7 +34,7 @@ export default XElement.define("x-listview-item", {
     `,
     template: `
         <div x-attr:class="state.view">
-            <x-anchor tabindex="0" x-attr:href="state.href" x-attr:target="state.target" class="plain" x-attr:title="state.description">
+            <x-anchor _tabindex="0" x-attr:href="state.href" x-attr:target="state.target" class="plain" x-attr:title="state.description">
                 <x-icon class="size-ax2" x-attr:icon="state.icon"></x-icon>
                 <span class="label" x-text="state.label"></span>
                 <span class="description" x-text="state.description"></span>

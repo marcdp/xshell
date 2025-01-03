@@ -1,16 +1,20 @@
 import Binds from "./binds.js";
 
+
 // class
 class PageInstance {
+
 
     //vars
     _src = null;
     _page = null;
     _binds = new Binds();
 
+
     //ctor
     constructor() {
     }
+
 
     //props
     get page() { return this._page; }
@@ -25,6 +29,7 @@ class PageInstance {
 
     get result() { return this.page.result; }
     set result(value) { this.page.result = value; }
+
 
     //mehods
     async init(doc, src, container) {
@@ -65,6 +70,7 @@ class PageInstance {
         await this.onCommand("unload");
     }
 
+
     //bind methods
     bindEvent(target, event, command) {
         this._binds.bindEvent(target, event, (event)=> {
@@ -92,6 +98,10 @@ class PageInstance {
                 command(event);
             }
         });
+    }
+
+    //rpc methods
+    async rpc(mehod, args) {
     }
     
 }

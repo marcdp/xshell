@@ -56,7 +56,7 @@ class PageInstanceSfc extends PageInstance {
             //style.parentNode.removeChild(style);
         });
         //state
-        let metaState = doc.querySelector("meta[name='state']");
+        let metaState = doc.querySelector("meta[name='page-state']");
         if (metaState) {
             let jsonState = metaState.content
             this.state = JSON.parse(jsonState);

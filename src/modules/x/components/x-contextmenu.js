@@ -15,7 +15,6 @@ export default XElement.define("x-contextmenu", {
             padding: var(--x-contextmenu-padding); 
             box-shadow:var(--x-contextmenu-shadow); 
             border:var(--x-contextmenu-border); 
-            
         }
     `,
     template: `

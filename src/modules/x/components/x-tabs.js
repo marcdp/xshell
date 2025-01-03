@@ -39,6 +39,7 @@ export default XElement.define("x-tabs", {
         <style x-html="state.style"></style>
         <nav>
             <x-anchor x-for="(tab,index) in state.tabs" 
+                x-attr:tabindex="index"
                 x-text="tab.label" 
                 x-attr:icon="tab.icon" 
                 x-attr:class="(index == state.selectedIndex ? 'selected' : '')" 
