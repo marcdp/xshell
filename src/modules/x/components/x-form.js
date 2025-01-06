@@ -7,12 +7,13 @@ export default XElement.define("x-form", {
 
         .header {}
 
+        :host .header ::slotted(h2) {margin-top:0;}
+
         .container[vertical] {display:flex;}
         .container[vertical] > x-wizard-header {flex:0; margin-right:2em;}
         .container[vertical] > div {flex:1; width:100%;}
         :host([wizard]) .body ::slotted(*) {display:none;}
-        
-        
+                
         .wizard-header {display:flex; margin:0; padding:0; justify-content:center}
         .wizard-header li {list-style:none; display:block; align-items:center; width:10em; text-align:center; padding:.5em; position:relative;}
         .wizard-header li > span {display:block; z-index:1; position:relative}
@@ -54,13 +55,16 @@ export default XElement.define("x-form", {
 
     `,
     template: `
-        <style x-html="state.wizardStyle"></style>
+        <style x-if="state.wizardStyle" x-html="state.wizardStyle"></style>
         
         <div class="header">
             <slot name="header"></slot>
         </div>
 
-        <div class="container" x-attr:vertical="state.wizardDirection == 'vertical' ? true : false">
+        <div x-if="state.loading" class="loading">
+            <x-notice type="working" x-attr:label="state.loadingLabel" x-attr:message="state.loadingMessage" ></x-notice>
+        </div>
+        <div x-else class="container" x-attr:vertical="state.wizardDirection == 'vertical' ? true : false">
 
             <x-wizard-header x-if="state.wizard" x-attr:index="state.wizardIndex" x-attr:class="state.wizardDirection" x-on:index-set="wizard-set">
                 <div x-for="wizardPanel in state.wizardPanels" 
@@ -113,15 +117,24 @@ export default XElement.define("x-form", {
         wizardIndex: 0, 
         wizardPanels: [],
         validated: false,
-        errors: []
+        errors: [],
+        loading: false,
+        loadingLabel: "Working",
+        loadingMessage: "Please wait...",
+        wizardStyle: ""
     },
-    //settings:{
-    //    observedAttributes: ["wizard", "wizard-index", "wizard-direction"]
-    //},
     methods:{
         validate() {
             this.onCommand("validate");
             return this.state.errors;
+        },
+        showLoading({label, message}) {
+            this.state.loading = true;
+            if (label) this.state.loadingLabel = label;
+            if (message) this.state.loadingMessage = message;
+        },
+        hideLoading() {
+            this.state.loading = false;
         },
         onCommand(command, args){
             if (command === "load") {

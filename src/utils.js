@@ -37,6 +37,7 @@ class Utils {
         return url;
     }
     static combineUrls(a, b) {
+        if (a.indexOf("?") != -1) a = a.substring(0, a.indexOf("?"));
         if (b.indexOf(":") != -1) return b;
         if (b.startsWith("/")) {
             if (a.indexOf("://") != -1) {
@@ -199,7 +200,56 @@ class Utils {
         // Return null if no element is found
         return null;
     }
-    
+    static findFocusableElement(element) {
+        const focusableSelectors = [
+            'a[href]', 
+            'button:not([disabled])', 
+            'textarea:not([disabled])', 
+            'input:not([disabled])', 
+            'select:not([disabled])', 
+            '[tabindex]:not([tabindex="-1"])'
+        ];
+
+        // Helper to determine if an element is focusable
+        const isFocusable = (el) => el.matches && el.matches(focusableSelectors.join(','));
+
+        // Check if the current element is focusable
+        if (isFocusable(element)) {
+            return element;
+        }
+
+        // Traverse light DOM children
+        const children = element.children;
+        for (let i = 0; i < children.length; i++) {
+            const child = children[i];
+
+            // Check shadow root if the element has it
+            if (child.shadowRoot) {
+                // Handle shadow DOM
+                const focusableInShadow = Utils.findFocusableElement(child.shadowRoot);
+                if (focusableInShadow) return focusableInShadow;
+
+                // Check for slots and their assigned nodes
+                const slots = child.shadowRoot.querySelectorAll('slot');
+                for (let slot of slots) {
+                    const assignedNodes = slot.assignedNodes({ flatten: true });
+                    for (let node of assignedNodes) {
+                        if (node.nodeType === Node.ELEMENT_NODE) {
+                            const focusableInSlot = Utils.findFocusableElement(node);
+                            if (focusableInSlot) return focusableInSlot;
+                        }
+                    }
+                }
+            }
+
+            // Handle light DOM children
+            const focusableInLight = Utils.findFocusableElement(child);
+            if (focusableInLight) return focusableInLight;
+        }
+
+        // If no focusable element is found, return null
+        return null;
+    }
      
 
 };

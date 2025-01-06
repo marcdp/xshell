@@ -38,7 +38,8 @@ class Config {
     //props
     get config() { return this._config; }
 
-    //methods   
+    //methods
+    /*
     addEventListener(prefix, callback) {
         this._listeners.push({ prefix, callback });
     }
@@ -46,12 +47,13 @@ class Config {
         let index = 0;
         for(let listener of this._listeners){
             if (listener.prefix == prefix && listener.callback == callback){
-                this._listeners.splice(index, 1)
+                this._listeners.splice(index, 1);
                 break;
             }
             index++;
         }
     }
+        */
     set(config, from, path) {
         normalizeUrls("", config, from, path);
         var keys = [];

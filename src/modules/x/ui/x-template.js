@@ -63,7 +63,7 @@ class XTemplate {
         });
         code.push("];");
         code = code.join("\n");
-        this._render = new Function("state", "handler", "invalidate", "utils", "renderCount", code);
+        this._render = new Function("state", "handler", "invalidate", "utils", "i18n", "renderCount", code);
     }
     _compileTemplateToJsRecursive(name, node, index, js, level) {
         let indent = " ".repeat((level + 1) * 4);
@@ -330,7 +330,9 @@ const utils = new class {
     toDynamicProperty = (key, value) => {
         return { [key]: value };
     };
+    /*
     i18n(value, lang) {
+        debugger
         if (!value) return "";
         var key = "i18n:" + lang + "=";
         if (value.startsWith(key)) {
@@ -347,7 +349,7 @@ const utils = new class {
     }
     getLang(lang) {
         return i18n.getLang(lang) ?? { id: lang, label: lang };
-    }
+    }*/
     getFreeId() {
         return "id" + freeId++;
     };
@@ -396,7 +398,7 @@ class XTemplateInstance {
     // methods
     render(state) {
         //render vdom
-        let vdom = this._xtemplate.render(state, this._handler, this._invalidate, utils, this._renderCount++);
+        let vdom = this._xtemplate.render(state, this._handler, this._invalidate, utils, i18n, this._renderCount++);
         //render vdom to dom
         if (this._vdom == null) {
             let index = 0;

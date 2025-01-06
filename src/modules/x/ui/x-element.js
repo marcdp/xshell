@@ -1,8 +1,8 @@
 import XTemplate from "./x-template.js";
 import createState from "./create-state.js";
 import shell from "./../../../shell.js";
-import loader from "./../../../loader.js";
-import Binds from "./../../../binds.js"
+import {loader} from "../../../shell.js";
+import Binds from "./../../../binds.js";
 
 
 // utils
@@ -67,6 +67,16 @@ class XElement extends HTMLElement {
         this._stateUnproxied = value;
         this._state = createState(value, this);
         this.invalidate();
+    }    
+    get refs() {
+        if (!this._refs) {
+            this._refs = new Proxy(this.shadowRoot, {
+                get: (target, prop) => {
+                  return target.querySelector(`[ref="${prop}"]`);
+                }
+            });
+        }
+        return this._refs;
     }
 
 

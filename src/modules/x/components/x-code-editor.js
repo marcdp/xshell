@@ -26,6 +26,7 @@ export default XElement.define("x-code-editor", {
                 value-update-mode="start"
 
                 x-on:blur="change"
+                x-on:input="input"
                 x-on:ready="ready"
                 x-prop:value="state.value" 
                 
@@ -52,7 +53,7 @@ export default XElement.define("x-code-editor", {
                 return true;
             }
         },
-        onCommand(command, args){
+        onCommand(command){
             if (command == "load") {
                 //load
 
@@ -60,8 +61,18 @@ export default XElement.define("x-code-editor", {
                 //ready
                 this.state.ready = true;
 
+            } else if(command == "input") {
+                //input
+                console.log("input");
+                clearTimeout(this._inputTimeoutId);
+                this._inputTimeoutId = setTimeout(()=>{
+                    this.onCommand("change");
+                }, 500);
+                
             } else if(command == "change") {
                 //change
+                console.log("change");
+                clearTimeout(this._inputTimeoutId);
                 let target = this.shadowRoot.querySelector(".editor");
                 let oldValue = this.state.value;
                 let newValue = target.value ?? "";

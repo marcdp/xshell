@@ -77,8 +77,8 @@ export default XElement.define("x-menuitem", {
         onCommand(command, args){
             if (command == "load") {
                 //load
+                /* ???????????
                 this.bindEvent(this.state, "change:menuitem", (event) => {
-                    debugger;
                     let newValue = args.newValue;
                     this.state.icon = newValue.icon;
                     this.state.label = newValue.label;
@@ -96,7 +96,7 @@ export default XElement.define("x-menuitem", {
                             this.appendChild(item);
                         }
                     }
-                });
+                });*/
                 this.addEventListener("mouseenter", ()=>{
                     if (this.classList.contains("inline")) {
                     } else {
@@ -124,14 +124,12 @@ export default XElement.define("x-menuitem", {
 
             } else if (command == "refresh") {
                 //refresh
-                let contextMenu = this.shadowRoot.querySelector("x-contextmenu");
-                if (contextMenu) {
-                    let rect = this.shadowRoot.querySelector("x-contextmenu").getBoundingClientRect();
-                    let right = rect.left + rect.width;
-                    console.log(rect.right + " --- " + window.innerWidth)
+                this.state.hasChilds = (this.firstElementChild != null);
+                if (this.state.hasChilds) {
+                    let rect = this.getBoundingClientRect();
+                    let right = rect.left + rect.width * 2.5;
                     this.state.childsRight = right > window.innerWidth;
                 }
-                this.state.hasChilds = (this.firstElementChild != null);
             }
         }
     }

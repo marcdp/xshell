@@ -6,8 +6,8 @@ class PageInstance {
 
 
     //vars
-    _src = null;
     _page = null;
+    _refs = null;
     _binds = new Binds();
 
 
@@ -20,6 +20,7 @@ class PageInstance {
     get page() { return this._page; }
 
     get src() { return this.page.src; }
+    get srcAbsolute() { return this.page.srcAbsolute; }
 
     get label() { return this.page.label; }
     set label(value) { this.page.label = value; }
@@ -30,10 +31,19 @@ class PageInstance {
     get result() { return this.page.result; }
     set result(value) { this.page.result = value; }
 
+    get refs() {
+        if (!this._refs) {
+            this._refs = new Proxy(this._page, {
+                get: (target, prop) => {
+                  return target.querySelector(`[ref="${prop}"]`);
+                }
+            });
+        }
+        return this._refs;
+    }
 
     //mehods
-    async init(doc, src, container) {
-        this._src = src;
+    async init(doc, container) {
         this._page = container;
         //create
         let documentFragment = document.createDocumentFragment();
@@ -62,10 +72,16 @@ class PageInstance {
     }
     async onCommand(command, args) {
     }
+    error({code, message, src, stack}) {
+        this.page.error(code, message, src, stack);
+    }
+    replace(src) {
+        this.page.replace(src);
+    }
     close(result) {
         return this.page.close(result);
     }
-    async  unload() {
+    async unload() {
         this._binds.clear();
         await this.onCommand("unload");
     }

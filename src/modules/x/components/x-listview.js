@@ -25,9 +25,6 @@ export default XElement.define("x-listview", {
     state: {
         view: "list",
     },
-    //settings: {
-    //    observedAttributes: ["view"]
-    //},
     methods: {
         async onCommand(command) {
             if (command == "load") {

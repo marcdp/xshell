@@ -1,7 +1,4 @@
-import config from "../../../config.js";
-import bus from "../../../bus.js";
-import shell from "../../../shell.js";
-import utils from "../../../utils.js";
+import shell, { config, bus, utils } from "../../../shell.js";
 import XElement from "../../x/ui/x-element.js";
 
 
@@ -10,8 +7,9 @@ export default XElement.define("x-layout-main", {
     style:`
         :host {
             display:block;
+            min-height:100vh;
         }
-        x-loading-bar {
+        x-loading {
             position:fixed; top:0; left:0; right:0; 
             z-index:5;
         }
@@ -62,6 +60,7 @@ export default XElement.define("x-layout-main", {
         .header .search x-icon {transform:translate(.75em,.3em); position:absolute; color: var(--x-datafield-color-placeholder); position:0;}
         .header .search-button {display:none;}
 
+
         /* breadcrumb */
         .breadcrumb {position:sticky; top:0; user-select: none; flex:1;}
         
@@ -103,8 +102,9 @@ export default XElement.define("x-layout-main", {
 
         /* main */
         .body main {
+            position:relative;
             box-sizing:border-box;
-            padding: var(--x-layout-main-page-padding-vertical) var(--x-layout-main-page-padding-horizontal) var(--x-layout-main-page-padding-vertical) var(--x-layout-main-page-padding-horizontal);
+            padding: var(--x-layout-main-page-padding-vertical) var(--x-layout-main-page-padding-horizontal) var(--x-layout-main-page-padding-vertical) var(--x-layout-main-page-padding-horizontal);            
         }
         .body main h1 {
             margin-top:0;
@@ -113,19 +113,19 @@ export default XElement.define("x-layout-main", {
             font-weight:700;
         }        
 
-
         /* desktop */
         @media (min-width: 769px) {
             
-            .body .menu x-button[icon='x-close'] {
-                display:none;
-            }
             .body {
                 display:flex;
                 transition:margin var(--x-transition-duration);
+                --x-fill-height: calc(100vh - 6.2em);
             }
             .body.toggled {
                 margin-left: calc(var(--x-layout-main-drawer-width) * -1);	
+            }
+            .body .menu x-button[icon='x-close'] {
+                display:none;
             }
             .body .divider {
                 border-left: var(--x-layout-main-border);
@@ -136,9 +136,8 @@ export default XElement.define("x-layout-main", {
             .body.toggled .divider {
                 transform: translateX(calc(var(--x-layout-main-drawer-width) * -1));	
             }
-            .body main {
-                flex:1;
-                
+            .body main { 
+                flex:1;                
             }
             .body main > div {
                 max-width:100em;
@@ -151,24 +150,29 @@ export default XElement.define("x-layout-main", {
         @media (max-width: 768px) {
 
             .header.shell {
-                padding-left:.25em                
+                padding-left:.25em;
+                padding-right:.75em;
             }
             .header .logo img {width:4em;}
-            .header .search {display:none}
-            .header .search-button {display:block; float:right;}
-            
+
+            .header .search input {width:unset; flex:1;}
+            .header .spacer  {display:none}
+            .header .input-dropdown {flex:1;}
 
             .breadcrumb x-icon.toggle {background:none; color:var(--x-color-text)}
             .breadcrumb x-icon.toggle:hover {background:var(--x-color-xxxxx-gray); }
             .breadcrumb x-icon.toggle:active {background:var(--x-color-xxxx-gray)}
 
-            .breadcrumb ul {overflow:hidden; white-space: nowrap;}
+            .breadcrumb ul {overflow:hidden; white-space: nowrap; flex:1;}
             .breadcrumb ul li:first-child {flex-shrink:0;}
             .breadcrumb ul li {flex-shrink:1;}
             .breadcrumb x-anchor {display:inline;overflow:hidden; text-overflow: ellipsis;}
             .breadcrumb x-icon.separator {margin-left:0; margin-right:-.35em;}
             .breadcrumb ul li:last-child { flex-shrink:1; overflow:hidden;}
 
+            .body {
+                --x-fill-height: calc(100vh - 6.2em);
+            }
             .body .menu {
                 width: 100vw;
                 background:var(--x-color-white);
@@ -201,7 +205,7 @@ export default XElement.define("x-layout-main", {
             }
     `,
     template: `
-        <x-loading-bar x-if="state.status=='loading'"></x-loading-bar>
+        <x-loading x-if="state.status=='loading'"></x-loading>        
 
         <!-- shell header -->
         <nav class="header shell">
@@ -210,24 +214,19 @@ export default XElement.define("x-layout-main", {
             </a>
             
             <x-dropdown class="modules popover">
-                <x-icon tabindex="0" icon="x-apps" class="size-x2"></x-icon>
+                <x-icon tabindex="1" icon="x-apps" class="size-x2"></x-icon>
                 <x-page slot="dropdown" src="/x/pages/modules.html" loading="lazy"></x-page>
             </x-dropdown>
 
             <x-dropdown class="input-dropdown">
                 <div class="search">
-                    <input type="text" placeholder="Search">
+                    <input type="text" placeholder="Search" x-model="state.keyword" x-on:input="search" ref="search">
                     <x-icon icon="x-search"></x-icon>
                 </div>
                 <x-page slot="dropdown" src="/x/pages/search.html" loading="lazy"></x-page>
             </x-dropdown>
 
             <div class="spacer"></div>
-
-            <x-anchor class="search-button plain" href="/x/pages/search.html" target="#stack">
-                <x-icon class="size-x2" icon="x-search"></x-icon>
-            </x-anchor>
-
 
         </nav>
 
@@ -246,7 +245,7 @@ export default XElement.define("x-layout-main", {
             <div class="spacer"></div>
 
             <x-dropdown class="modules popover left" collapse-on-click>
-                <x-icon tabindex="0" icon="x-debug" class="size-x2"></x-icon>
+                <x-icon tabindex="1" icon="x-debug" class="size-x2"></x-icon>
                 <x-page slot="dropdown" src="/x/pages/debug.html" loading="lazy"></x-page>
             </x-dropdown>
         </nav>
@@ -279,11 +278,9 @@ export default XElement.define("x-layout-main", {
         menu:       null,
         toggled:    false,
         breadcrumb: [],
-        label:      ""
+        label:      "",
+        keyword:    ""
     },
-    //settings: {
-    //    observedAttributes: ["status"]
-    //},
     methods: {
         async onCommand(command, args) {
             if (command == "load") {
@@ -294,9 +291,11 @@ export default XElement.define("x-layout-main", {
                             this.state.toggled = false;
                         }
                     }
+                    this.state.keyword = "";
+                    bus.emit("search", { keyword: "" });
                 });
                 this.bindEvent(bus, "navigation-end", (event) => {
-                    let href = event.src;
+                    let href = event.page.src;
                     if (this.state.ul){
                         let a = this.state.ul.querySelector(`x-anchor[href='${href}']`);
                         a.classList.add("selected");
@@ -306,8 +305,15 @@ export default XElement.define("x-layout-main", {
 
             } else if (command == "refresh") {
                 //refresh
+                let src = this.page.srcPage || this.page.src;
+                let module = shell.getModuleBySrc(src);
                 let breadcrumb = this.page.breadcrumb;
-                if (breadcrumb && breadcrumb.length){
+                if (!module) {
+                    //no module defined 
+                    this.state.menu = null;
+                    this.state.breadcrumb = [];
+                    this.state.label = this.page.label;
+                } else if (breadcrumb && breadcrumb.length){
                     //get module
                     let href = "";
                     for(let menuitem of breadcrumb){
@@ -316,7 +322,7 @@ export default XElement.define("x-layout-main", {
                             break;
                         }
                     }
-                    let module = await shell.loadModuleBySrc(href);
+                    module = await shell.loadModuleBySrc(href);
                     //show menu
                     let menu = config.get(`modules.${module.name}.menus.main`);
                     this.state.menu = menu;
@@ -325,11 +331,10 @@ export default XElement.define("x-layout-main", {
                     this.state.label = this.page.label;
                 } else {
                     //get module
-                    let menu = config.get(`modules.${this.page.module}.menus.main`);
+                    let menu = config.get(`modules.${module.name}.menus.main`);
                     this.state.menu = menu;
                     //breadcrumb
-                    let page = this.page;
-                    let menuitems = utils.findObjectsPath(menu, 'href', page.src);
+                    let menuitems = utils.findObjectsPath(menu, 'href', src);
                     if (menuitems) {
                         this.state.breadcrumb = menuitems;
                         this.state.label = menuitems[menuitems.length -1].label;
@@ -349,6 +354,11 @@ export default XElement.define("x-layout-main", {
                 //toggle-menu
                 this.state.toggled = !this.state.toggled;
 
+            } else if (command == "search") {
+                //search
+                let input = this.refs.search;
+                let keyword = input.value.trim();
+                bus.emit("search", { keyword });
             }
             
         }

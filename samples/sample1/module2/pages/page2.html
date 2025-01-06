@@ -1,9 +1,11 @@
 ﻿<meta name="page-handler"   content="sfc" />
-<meta name="page-state"     content='{"val":123}' />
 <title>This is a title</title>
 
 <script type="module">
     export default {
+        state: {
+            value: new Date()
+        },
         async onCommand(command, args) {
             if (command == "load") {
                 //load
@@ -11,16 +13,12 @@
 
             } else if (command == "timeout") {
                 //timeout
-                this.state.time = new Date();
-                console.log(this.state.time);
+                this.state.value = new Date();
             }
         }
     }
 </script>
 
 <template>
-    The second page!!!! {{ state.time }} --- {{ state.val }}
-    <br>asd
-    <br>asd<br>asd<br>asd<br>asd<br>asd<br>asd<br>asd<br>asd<br>asd<br>asd<br>asd<br>asd<br>asd<br>asd<br>asd<br>asd<br>asd<br>asd<br>asd<br>asd<br>asd<br>asd<br>asd<br>asd<br>asd<br>asd<br>asd
-    <br>asd<br>asd<br>asd<br>asd<br>asd<br>asd<br>asd<br>asd<br>asd<br>asd<br>asd<br>asd<br>asd<br>asd<br>asd<br>asd<br>asd<br>asd<br>asd<br>asd<br>asd<br>asd<br>asd<br>asd<br>asd<br>asd<br>asd
+    The second page!!!!, time is <x-datetime x-prop:datetime="state.value" ></x-datetime>
 </template>

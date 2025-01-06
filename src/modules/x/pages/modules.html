@@ -1,9 +1,6 @@
 
 <script type="module">
-    import config from "../../../config.js"
-    import shell from "../../../shell.js";
-    import utils from "../../../utils.js";
-    import bus from "../../../bus.js";
+    import shell, { bus, config,utils} from "../../../shell.js";
 
     //export
     export default {
@@ -16,8 +13,9 @@
                 //load
                 await this.onCommand("refresh");
                 //listen
-                this.bindEvent(bus, "navigation-end", (event)=>{
-                    this.state.selected = event.module;
+                this.bindEvent(bus, "navigation-end", (event) => {
+                    let module = shell.getModuleBySrc(event.page.src)
+                    this.state.selected = module.name;
                 });
 
             } else if (command == "refresh") {
@@ -25,30 +23,25 @@
                 await shell.loadModules();
                 let module = shell.getModuleBySrc(shell.getPage().src)
                 let modules = config.getAsObjects("modules");
-                for(let module of modules) {
-                    if (module.type == "application") {
-                        let menu = config.get("modules." + module.name + ".menus.main", "");
+                for(let target of modules) {
+                    if (target.type == "application") {
+                        let menu = config.get("modules." + target.name + ".menus.main", "");
                         if (menu) {
                             let defaultMenuitems = utils.findObjectsPath(menu, "default", true)
                             if (defaultMenuitems) {
                                 let defaultMenuitem = defaultMenuitems[defaultMenuitems.length - 1];
                                 this.state.modules.push({
-                                    name: module.name,
-                                    label: module.label,
-                                    description: module.description || "",
+                                    name: target.name,
+                                    label: target.label,
+                                    description: target.description || "",
                                     href: defaultMenuitem.href,
-                                    logo: module.logo || "x-module"                                    
+                                    logo: target.logo || "x-module"                                    
                                 });
                             }
                         }
                     }
                 };
-                this.state.selected = module.name;
-                
-            } else if (command == "activate") {
-                    console.log("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA")
-            } else if (command == "deactivate") {
-                console.log("DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD")                
+                this.state.selected = (module ? module.name : "");
             }
         }
     }
@@ -62,7 +55,6 @@
     <x-listview view="icons">
         <x-listview-item 
             x-for="module in state.modules"
-            x-attr:tabindex="index"
             x-attr:class="(state.selected == module.name ? 'selected' : '')"
             x-attr:label="module.label"
             x-attr:description="module.description"

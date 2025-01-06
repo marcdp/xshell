@@ -6,11 +6,11 @@ export default XElement.define("x-accordion-panel", {
         :host {display:block;}
         .header {display:flex; height:2.5em; align-items:center; padding:0 .5em 0 1em; cursor:pointer; user-select: none;}
         .header > x-icon {margin-right:.5em; transition: transform var(--x-transition-duration); }
-        .header > span {flex:1; font-weight:400;}
+        .header > span {flex:1; font-weight:600;}
         .header > .toolbar {margin-right:1em; }
-        .header:hover > span {color:var(--x-color-primary)!important;}
+        .header:hover > span {color:var(--x-color-primary)!important; }
         .header:hover > x-icon {color:var(--x-color-primary)!important;}
-        .header[expanded] span {font-weight:600; color:var(--x-color-primary);}
+        .header[expanded] span {color:var(--x-color-primary);}
         .header[expanded] x-icon:last-child {transform:rotate(-180deg); }
         
         .body {

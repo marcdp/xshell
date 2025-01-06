@@ -1,5 +1,5 @@
 import XElement from "../ui/x-element.js";
-import loader from "../../../loader.js";
+import {loader} from "../../../shell.js";
 
 // class
 export default XElement.define("x-lazy", {

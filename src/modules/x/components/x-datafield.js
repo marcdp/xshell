@@ -136,7 +136,7 @@ export default XElement.define("x-datafield", {
                             x-for="(lang,index) in state.langs"
                             x-attr:label="lang"
                             x-on:click="lang-changed"
-                            x-attr:title="utils.getLang(lang).label"
+                            x-attr:title="i18n.getLangLabel(lang)"
                             x-attr:data-lang="lang"
                             x-attr:class="'plain ' + (state.langIndex == index ? ' selected' : '') + (state.value.indexOf('i18n:' + lang + '=')==-1 ? ' empty' : '') ">
                     </x-button>
@@ -208,7 +208,7 @@ export default XElement.define("x-datafield", {
                 <input 
                     type="text" 
                     class="input"
-                    x-prop:value="utils.i18n(state.value, lang)"
+                    x-prop:value="i18n.formatText(state.value, lang)"
                     x-on:change="text_i18n-changed"
                     x-attr:id="state.inputId + (index == 0 ? '' : index)"
                     x-attr:lang="lang" 
@@ -220,7 +220,7 @@ export default XElement.define("x-datafield", {
                     x-attr:readonly="state.readonly" 
                     x-attr:spellcheck="state.spellcheck"
                 />
-                <span class="lang" x-html="lang" x-attr:title="utils.getLang(lang).label"></span>
+                <span class="lang" x-html="lang" x-attr:title="i18n.getLangLabel(lang)"></span>
             </div>
         </div>
 
@@ -228,7 +228,7 @@ export default XElement.define("x-datafield", {
             <div x-for="(lang,index) in state.langs">
                 <textarea 
                     class="input" 
-                    x-prop:value="utils.i18n(state.value, lang)"
+                    x-prop:value="i18n.formatText(state.value, lang)"
                     x-on:change="text_i18n-changed"
                     x-attr:id="state.inputId + (index == 0 ? '' : index)"
                     x-attr:lang="lang" 
@@ -239,7 +239,7 @@ export default XElement.define("x-datafield", {
                     x-attr:readonly="state.readonly" 
                     x-attr:spellcheck="state.spellcheck"
                 ></textarea>
-                <span class="lang" x-html="lang" x-attr:title="utils.getLang(lang).label"></span>
+                <span class="lang" x-html="lang" x-attr:title="i18n.getLangLabel(lang)"></span>
             </div>
         </div>
         
@@ -269,7 +269,7 @@ export default XElement.define("x-datafield", {
 
         <div x-elseif="state.type=='richtext_i18n'" class="input richtext">
             <x-richtext
-                x-prop:value="utils.i18n(state.value, state.langs[state.langIndex])"
+                x-prop:value="i18n.formatText(state.value, state.langs[state.langIndex])"
                 x-on:change="text_i18n-changed"
                 x-attr:id="state.inputId"
                 x-attr:lang="state.langs[state.langIndex]" 
@@ -294,7 +294,7 @@ export default XElement.define("x-datafield", {
         <div x-elseif="state.type=='markdown_i18n'" class="input code">
             <x-code-editor 
                 mode="markdown"
-                x-prop:value="utils.i18n(state.value, state.langs[state.langIndex])"
+                x-prop:value="i18n.formatText(state.value, state.langs[state.langIndex])"
                 x-on:change="text_i18n-changed"
                 x-attr:id="state.inputId"
                 x-attr:lang="state.langs[state.langIndex]" 
@@ -390,42 +390,7 @@ export default XElement.define("x-datafield", {
         inputId: "input",
         add: false
     },
-    //settings:{
-    //    observedAttributes:["label", "description", "label-secondary", "message", "type", "placeholder", "disabled", "readonly", "required", "min", "max", "minlength", "maxlength", "multiple", "pattern", "step", "autofocus", "autocomplete", "domain", "value", "accept", "add", "lang", "spellcheck"]
-    //},
     methods: {
-        /*
-        onStateChanged(name, oldValue, newValue) {
-            if (name == "domain") {
-                //transform domain if required
-                if (typeof newValue == "string") {
-                    let domain = [];
-                    for(let item of newValue.split("|")){
-                        let i = item.indexOf("=");
-                        if (i!=-1) {
-                            let itemValue = item.substring(0, i);
-                            let itemLabel = item.substring(i+1);
-                            domain.push({value: itemValue, label: itemLabel});
-                        }
-                    }
-                    this.state.domain = domain;
-                } 
-            } else if (name == "type" || name == "required" || name == "min" || name == "max" || name == "minlength" || name == "maxlength" || name == "pattern") {
-                //value changed
-                this.onCommand("validate");
-
-            } else if (name == "value") {
-                //value changed
-                if (this._connected) {
-                    this.onCommand("validate");
-                    this.dispatchEvent(new CustomEvent("change", {detail: {oldValue, newValue}, bubbles: true, composed: false}));
-                    this.dispatchEvent(new CustomEvent("datafield:change", {detail: {oldValue, newValue}, bubbles: true, composed: false}));
-                } else {
-                    this.state.validated =false;
-                }
-            }
-        },
-        */
         postRender() {
             if (this.state.autofocus && this._renderCount == 1) {
                 let element = this.shadowRoot.querySelector(".input");
@@ -638,7 +603,7 @@ export default XElement.define("x-datafield", {
                 if (this.state.value) {
                     let hasMainValue = false;
                     for(let lang of this.state.langs) {
-                        let value = utils.i18n(this.state.value, lang);
+                        let value = i18n.formatText(this.state.value, lang);
                         if (value && lang == this.state.langs[0]) hasMainValue = true;
 
                     }

@@ -37,7 +37,10 @@
         "loader.page:/module1/{path}": "./{path}",
     },
     //methods
-    onCommand(command, args) {
-        console.log(command + " " + args);
+    onCommand(command) {
+        if (command == "load") {
+            //load
+
+        }
     }
 };

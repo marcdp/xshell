@@ -3,6 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="shortcut icon" href="./favicon.ico">
     <script type="importmap">
         {
           "imports": {
@@ -139,23 +140,63 @@ x - mobile drawer menu -- should scroll vertically
 x - observedAttributes: fer que no sigui obligatori especificarlos. Per defecte, tots els state.props de tipus simple (bool, int, float, string, date) poden venir dels attributs
 x - permetre cachejar les pages: --. implicar no utilitzar transform:"response" en el fetch del loader
 x - menuitems separador + expandable
+x - refs -- NO
+x - x-dropdown remove double click
+x - x-button - remove document click
+x - favicon
+x - dropdown page padding
+x - nested embedde pages padding
+x - x-template -- remove shortcuts for setting attributes, properties and events --- NO
+x - showWorking
+x - refs
+x - x-json
+x - loader: should throw exception if error
+x - shell.loadModule -- use reject if error loading
+x - x-search
+x - search: show modules of the search results
+x - x-desktop
+x - x-mobile
+x - search page: module listens for "search" command, and returns an async task with the results NO
+x - show page md -- show in light dom
+x - x-markdown -- auto load components
+x - playground page -- fill all space!!!
+x - search page: load all modules and perform an async "search" command in all of them NO
+x - x-playground - auto refresh
+x - x-html with colors
+x - show error loading unexisting web component
+x - x-datetime
+x - page.js -- page.srcAbsolute
+x - import {bus} from "./../../shell.js";
+x - load page of unexisting module should show an error message
+x - error.html ? add "page" argument, add "module" argument
+x - load page of unexisting module should hide the breadcrumb, and left menu
+x - remove all uses of navigation-end.module
+x - remove all uses of page.module use the page.src or page.srcPage to obtain the module
+x - set loader config from outside
+x - loader-handler: fetch, import, ..
+x - eliminar loader.transforms -- fer ho tot amb els loader-handlers (ex: loader-handler=svg)
+x - loader-handler page-markdown -- ha de crear un html, amb <x-markdown src="..."></x-markdown>
+x - loader-handler page-pdf
+x - page.replace(src)
+x - tabs hash
 
 
 
+- page.hash hierarchycal
 
+- x-splitter
 
+- docs
 
-
+- /x/pages/debug.html -- config
+- /x/pages/debug.html -- modules loaded
+- /x/pages/debug.html -- bus events
+- /x/pages/debug.html -- pages loaded
 
 - datafield file 
 - datafield files
 - datafield image
 - datafield images
-
-- /x/pages/debug.html -- config
-- /x/pages/debug.html -- modules loaded
-- /x/pages/debug.html -- bus events
-- /x/pages/debug.html -- pages laodedasdasd
 
 - input select un registre d'una taula sortable i varies columnes (ex: https://eu-west-3.console.aws.amazon.com/dynamodbv2/home?region=eu-west-3#dax-cluster-create) d'un datatable?
 
@@ -173,19 +214,10 @@ x - menuitems separador + expandable
   - idea 3:
     - each module: "merge:shell.menus.main" = ...  --- loader automatically adds the menuitems (or whatever) to the top menu (to the shell config)
     - each module: modules.xxx.shell.menus.main = ...  --- loader automatically adds the menuitems (or whatever) to the top menu (to the shell config)
-   
-
-- search page:
-  - each module listens for "search" command, and returns an async task with the results
 
 - module data ??? think about that
 
-- user data -- store data in sessionStorage? or localStorage? Think about multiple identities for diferent services (like teams) 
-  (one identity for gitlab, other for microsfot, ... other for...) and store cripted data into browser secured are
-
-- allow use of single hash "#section1" in each page (execute command)
-
-- i18n
 - i18n: pensar sistema de que cada modul tingui les seves propies traduccions i utilitzi la seva propia taula de traduccions
+
 
 -->

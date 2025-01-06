@@ -9,6 +9,28 @@ class I18n {
             { id: 'fr', label: 'French' },
             { id: 'de', label: 'German' },
         ],
+        datetime: { 
+            options: {
+                year: 'numeric', 
+                month: '2-digit', 
+                day: '2-digit', 
+                hour: '2-digit', 
+                minute: '2-digit', 
+                second: '2-digit' 
+            },
+            formats: {
+                time: {
+                    timeStyle: "short",
+                },
+                date: {
+                    dateStyle: "short",
+                },
+                datetime: {
+                    timeStyle: "short",
+                    dateStyle: "short",
+                }
+            }
+        },
         strings: {
         }
     };
@@ -43,6 +65,10 @@ class I18n {
         }
         return result;
     }
+    getLangLabel(id) {
+        let lang = this.getLang(id);
+        return lang ? lang.label : id;
+    }
     translate(label) {
         var translations = this._strings[this.config.lang];
         if (!translations) return label;
@@ -50,6 +76,33 @@ class I18n {
         if (!result) return label;
         return result;    
     }
+    formatText(value, lang) {
+        if (!value) return "";
+        var key = "i18n:" + (lang || this.config.lang) + "=";
+        if (value.startsWith(key)) {
+            let j = value.indexOf("|");
+            return value.substring(key.length, j != -1 ? j : value.length).replaceAll("&#124;","|");
+        } else {
+            let k = value.indexOf("|" + key);
+            if (k != -1) {
+                let j = value.indexOf("|", k + 1);
+                return value.substring(k + key.length + 1, j != -1 ? j : value.length).replaceAll("&#124;","|");
+            }
+        }
+        return "";   
+    }
+    formatDateTime(datetime, format, opts) {
+        if (typeof(datetime) == "string") datetime = new Date(datetime);
+        let lang = this.config.lang;
+        let options = opts || {};
+        if (format) {
+            options = Object.assign(options, this._config.datetime.formats[format]);
+        } else {
+            options = Object.assign(options, this._config.datetime.options);
+        }
+        let dateTimeFormat = new Intl.DateTimeFormat(lang, options);
+        return dateTimeFormat.format(datetime);
+    }   
 }
 
 // export
