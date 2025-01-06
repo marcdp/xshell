@@ -1,7 +1,5 @@
 import XElement from "../ui/x-element.js";
-import bus from "../../../bus.js";
-import utils from "../../../utils.js";
-import shell from "../../../shell.js";
+import { bus, utils } from "../../../shell.js";
 
 // class
 export default XElement.define("x-drawer-menu", {
@@ -38,60 +36,58 @@ export default XElement.define("x-drawer-menu", {
         onCommand(command) {
             if (command == "init") {
                 //init
-                this.bindEvent(this.state, "change", (event) => {
-                    if (event.prop == "menu") {
-                        let ul = document.createElement("UL");
-                        let menu = this.state.menu;
-                        if (menu) {
-                            var createRecursive = function(menuitem) {
-                                let li = document.createElement("LI");
-                                if (menuitem.label == "-") {
-                                    li.className = "divider";
-                                } else if (menuitem.tag) {
-                                    let element = document.createElement(menuitem.tag);
-                                    for (let key in menuitem) {
-                                        if (key != "tag") {
-                                            element[key] = menuitem[key];
-                                        }
-                                    }
-                                    li.appendChild(element);
-                                } else {
-                                    let a = document.createElement("x-anchor");
-                                    let label = document.createElement("span");
-                                    label.innerHTML = menuitem.label;
-                                    a.setAttribute("href", menuitem.href);
-                                    if (menuitem.target) a.setAttribute("target", menuitem.target);
-                                    a.appendChild(label);
-                                    if (menuitem.target && !menuitem.target.startsWith("#")) {
-                                        let icon = document.createElement("x-icon");
-                                        icon.className = "new";
-                                        icon.setAttribute("icon", "x-open_in_new");   
-                                        a.appendChild(icon);
-                                    }
-                                    a.className = "plain";
-                                    li.appendChild(a);
-                                    if (menuitem.children) {
-                                        let ul = document.createElement("UL");
-                                        for (let subMenuitem of menuitem.children) {
-                                            ul.appendChild(createRecursive(subMenuitem));
-                                        }
-                                        li.appendChild(ul);
+                this.bindEvent(this.state, "change:menu", () => {
+                    let ul = document.createElement("UL");
+                    let menu = this.state.menu;
+                    if (menu) {
+                        var createRecursive = function(menuitem) {
+                            let li = document.createElement("LI");
+                            if (menuitem.label == "-") {
+                                li.className = "divider";
+                            } else if (menuitem.tag) {
+                                let element = document.createElement(menuitem.tag);
+                                for (let key in menuitem) {
+                                    if (key != "tag") {
+                                        element[key] = menuitem[key];
                                     }
                                 }
-                                return li;
-                            };
-                            ul.appendChild(createRecursive(menu));
-                        }
-                        this.state.ul = ul;
+                                li.appendChild(element);
+                            } else {
+                                let a = document.createElement("x-anchor");
+                                let label = document.createElement("span");
+                                label.innerHTML = menuitem.label;
+                                a.setAttribute("href", menuitem.href);
+                                if (menuitem.target) a.setAttribute("target", menuitem.target);
+                                a.appendChild(label);
+                                if (menuitem.target && !menuitem.target.startsWith("#")) {
+                                    let icon = document.createElement("x-icon");
+                                    icon.className = "new";
+                                    icon.setAttribute("icon", "x-open_in_new");   
+                                    a.appendChild(icon);
+                                }
+                                a.className = "plain";
+                                li.appendChild(a);
+                                if (menuitem.children) {
+                                    let ul = document.createElement("UL");
+                                    for (let subMenuitem of menuitem.children) {
+                                        ul.appendChild(createRecursive(subMenuitem));
+                                    }
+                                    li.appendChild(ul);
+                                }
+                            }
+                            return li;
+                        };
+                        ul.appendChild(createRecursive(menu));
                     }
+                    this.state.ul = ul;
                     this.onCommand("refresh");
                 });
                 this.bindEvent(bus, "navigation-end", "refresh");
 
             } else if (command == "refresh") {
                 //refresh
-                //let href = shell.getPage().src;
                 let href = this.page.src;
+                if (this.page.srcPage) href = this.page.srcPage;
                 if (this.state.ul) {
                     //disable
                     this.state.ul.querySelectorAll(`x-anchor.selected`).forEach( (element)=> { element.classList.remove("selected");});
@@ -99,7 +95,13 @@ export default XElement.define("x-drawer-menu", {
                     let menu = this.state.menu;
                     let menuitems = utils.findObjectsPath(menu, 'href', href);
                     if (!menuitems) {
-                        //search in page breadcrumb for a menu item
+                        //search if menu contains a menuitem without the hashpart
+                        if (href.indexOf("#") != -1) { 
+                             menuitems = utils.findObjectsPath(menu, 'href', href.split("#")[0]);
+                        }
+                    }
+                    if (!menuitems) {
+                        //search in page breadcrumb for a menu item with that href
                         for(let i = this.page.breadcrumb.length - 1; i>=0 ;  i--) {
                             let menuitem = this.page.breadcrumb[i];
                             menuitems = utils.findObjectsPath(menu, 'href', menuitem.href);

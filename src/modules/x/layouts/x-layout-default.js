@@ -9,13 +9,10 @@ export default XElement.define("x-layout-default", {
         }
     `,
     template: `
-        <x-loading-bar x-if="state.status=='loading'"></x-loading-bar>
+        <x-loading x-if="state.status=='loading'"></x-loading>
         <slot></slot>
     `,
     state: {
         status: ""
-    },
-    //settings: {
-    //    observedAttributes: ["status"]
-    //}
+    },    
 });

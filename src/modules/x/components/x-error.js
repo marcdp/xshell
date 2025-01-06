@@ -1,5 +1,6 @@
 import XElement from "../ui/x-element.js";
 
+/*
 // definition
 export default await XElement.define("x-error", {
     style: `
@@ -19,3 +20,4 @@ export default await XElement.define("x-error", {
     //    observedAttributes: ["code", "message"]
     //}
 });
+*/

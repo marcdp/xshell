@@ -20,6 +20,8 @@ class Page extends HTMLElement {
     _connected = false;
     _breadcrumb = [];
     _src = "";
+    _srcPage = "";
+    _srcAbsolute = "";
     _layout = "";
     _status = "";
     _result = null;
@@ -63,6 +65,10 @@ class Page extends HTMLElement {
             if (this._src && this._connected) this.load();
         }
     }
+    get srcPage() {return this._srcPage;}
+    get srcAbsolute() {
+        return loader.resolveSrc("page:" + this.src);
+    }
 
     get status() {return this._status;}
     
@@ -96,7 +102,7 @@ class Page extends HTMLElement {
         }
     }
 
-
+    
     //events
     attributeChangedCallback(name, oldValue, newValue) {
         if (name == "src") this.src = newValue;
@@ -136,71 +142,69 @@ class Page extends HTMLElement {
     //methods    
     async load() {
         console.log(`page.load('${this.src}') ************************************`);
+        let src = this.src;
         //reset
         this._result = null;
         this._label = "";
         this._icon = "";
         this._status = "loading";
-        //search params
-        let searchParams = new URLSearchParams(this.src.indexOf("?") != -1 ? this.src.substring(this.src.indexOf("?") + 1) : "");
         //set layout as loading (if exists)
         let layoutElement = this.shadowRoot.firstChild;
         if (layoutElement) {
             layoutElement.setAttribute("status", "loading");
         }
         //load module 
-        let module = await shell.loadModuleBySrc(this.src);
-        this.setAttribute("module", module ? module.name : "");
-        if (!module) throw new Error(`Module not found for page '${this.src}'`);
+        let module = await shell.loadModuleBySrc(src);
+        this.setAttribute("module", (module ? module.name : ""));
+        if (!module) {
+            this.error({ 
+                code: 404, 
+                message: "Module not registered for page path: " + src, 
+                src: src
+            });
+            return;
+        }        
         //fetch page
-        let response = await loader.load("page:" + this.src);
-
-        // at this point, we mjst have text/html
-        // the developer should configure the required transformer, to convert any contenttype to html
-        
-        let text = await response.text();   
-        let shellErrorName = config.get("shell.error") || "div";
-        let shellLazyName = config.get("shell.lazy");
-        if (shellErrorName.indexOf("-") != -1) await loader.load("component:" + shellErrorName);
-        if (!response.ok) {
-            //error
-            this._status = "error"; 
-            if (!text) {
-                text = `<${shellErrorName} code="${response.status}">${response.statusText}: ${this.src}</${shellErrorName}>`;
-            }
-        } else {
-            //load referenced components in the page
-            let docWithoutTemplate = (new DOMParser()).parseFromString(text.replace("<template>","<div>").replace("</template>","</div>"), "text/html");
-            let componentNames = [...new Set(Array.from(docWithoutTemplate.querySelectorAll('*')).filter(el => {
-                if (el.tagName.includes('-')) if (shellLazyName && (el.localName == shellLazyName || el.closest(shellLazyName) == null)) return true;
-                return false;
-            }).map(el => el.tagName.toLowerCase()))];
-            if (componentNames.length) {
-                let resourceNames = [];
-                componentNames.forEach((componentName) => resourceNames.push("component:" + componentName));
-                try {
-                    await loader.load(resourceNames);
-                } catch (e) {
-                    this._status = "error";
-                    let errorTexts = [];
-                    if (e.errors) {
-                        for(let error of e.errors) {
-                            errorTexts.push(`<${shellErrorName} code="0">${error}</${shellErrorName}>`);
-                        }
-                    } else {
-                        errorTexts.push(`<${shellErrorName} code="0">${e.message}</${shellErrorName}>`);
-                    }
-                    if (errorTexts.length) {
-                        text = errorTexts.join("");
-                    }
-                }
-            }
+        let html = null;
+        try {
+            html = await loader.load("page:" + src);
+        } catch(e) {
+            this.error({ 
+                code: 404, 
+                message: "Error loading page: " + e.message, 
+                src: src, 
+                stack: e.stack
+            });
+            return;
         }
-        //parse html
-        let html = text;
-        if (html.indexOf("<html") == -1) html = "<html><body>" + html + "</body></html>";
         let parser = new DOMParser();
-        let doc = parser.parseFromString(html, "text/html");
+        let doc = parser.parseFromString(html, "text/html");    
+        //load referenced components in the page
+        let shellLazyName = config.get("shell.lazy");
+        let docWithoutTemplate = (new DOMParser()).parseFromString(html.replace("<template>","<div>").replace("</template>","</div>"), "text/html");
+        let componentNames = [...new Set(Array.from(docWithoutTemplate.querySelectorAll('*')).filter(el => {
+            if (el.tagName.includes('-')) if (shellLazyName && (el.localName == shellLazyName || el.closest(shellLazyName) == null)) return true;
+            return false;
+        }).map(el => "component:" + el.tagName.toLowerCase()))];
+        if (componentNames.length) {
+            try {
+                await loader.load(componentNames);
+            } catch (e) {
+                this._status = "error";
+                let errorTexts = [];
+                if (e.errors) {
+                    for(let error of e.errors) errorTexts.push(error);
+                } else {
+                    errorTexts.push(e.message);
+                }
+                this.error({ 
+                    code:0, 
+                    message: errorTexts.join(""), 
+                    src: src
+                });
+                return;
+            }
+        }        
         //layout
         let layoutName = this._layout;
         doc.head.querySelectorAll("meta[name='layout']").forEach((sender) => { layoutName = sender.content || layoutName; });
@@ -217,27 +221,43 @@ class Page extends HTMLElement {
         //    if (document.body.querySelectorAll(":scope > page").length > 1) {
         //        await new Promise(r => setTimeout(r, 1000));                
         //    }
+        //search params
+        let searchParams = new URLSearchParams(src.indexOf("?") != -1 ? src.substring(src.indexOf("?") + 1) : "");
+        //page-src
+        let srcPage = "";
+        if (searchParams.get("page-src")) {
+            srcPage = searchParams.get("page-src");
+            searchParams.delete("page-src");
+        }
+        this._srcPage = srcPage;
         //menuitem
-        let menu = config.get("modules." + module.name + ".menus.main", {});
-        let menuitems = utils.findObjectsPath(menu, 'href', this.src);
+        let menu = (module ? config.get("modules." + module.name + ".menus.main", {}) : "");
+        let menuitems = utils.findObjectsPath(menu, 'href', src);
         let menuitem = (menuitems ? menuitems[menuitems.length-1] : null);  
         //label
         let label = doc.title;
         doc.head.querySelectorAll("meta[name='label']").forEach((sender) => { label = sender.content; });
         if (!label && menuitems) label = menuitem.label;
-        if (searchParams.get("page-label")) label = searchParams.get("page-label");
+        if (searchParams.get("page-label")) {
+            label = searchParams.get("page-label");
+            searchParams.delete("page-label");
+        }
         this.label = label;
         //icon
         let icon = "";
         doc.head.querySelectorAll("meta[name='page-icon']").forEach((sender) => { icon = sender.content; });
         if (!icon && menuitem) icon = menuitem.icon;
-        if (searchParams.get("page-icon")) icon = searchParams.get("page-icon");
+        if (searchParams.get("page-icon")) {
+            icon = searchParams.get("page-icon");
+            searchParams.delete("page-icon");
+        }
         this.icon = icon;
         //breadcrumb
         let breadcrumb = [];
         if (searchParams.get("page-breadcrumb")) {
             breadcrumb = JSON.parse(atob(searchParams.get("page-breadcrumb").replace(/_/g, "/").replace(/-/g, "+")));
-            breadcrumb.push({ label: label, href: this.src });
+            breadcrumb.push({ label: label, href: src });
+            searchParams.delete("page-breadcrumb");
         } else if (menuitems) {
             for(let i = 0; i <menuitems.length; i++) {
                 let menuitem = menuitems[i];
@@ -247,10 +267,13 @@ class Page extends HTMLElement {
         this.breadcrumb = breadcrumb;        
         //handler
         let instance = null;
-        let handler = config.get("modules." + module.name + ".page-handler", config.get("page-handler", ""));
+        let handler = (module ? config.get("modules." + module.name + ".page-handler", config.get("page-handler", "")) : "");
         doc.querySelectorAll("meta[name='page-handler']").forEach((sender) => { handler = sender.content; });
-        if (searchParams.get("page-handler")) handler = searchParams.get("page-handler");
-        if (this.status == "error") handler = "";
+        if (searchParams.get("page-handler")) {
+            handler = searchParams.get("page-handler");
+            searchParams.delete("page-handler");
+        }
+        //if (this.status == "error") handler = "";
         if (handler == "") {
             instance = new PageInstance();
         } else {
@@ -261,8 +284,7 @@ class Page extends HTMLElement {
         await this.unload();
         //init new instance
         this._instance = instance;
-        let srcAbsolute = utils.combineUrls(module.src, "." + this.src.substring(module.path.length));
-        await this._instance.init(doc, srcAbsolute, this);
+        await this._instance.init(doc, this);
         //set as loaded
         if (this._status == "loading") {
             this._status = "loaded"; 
@@ -273,6 +295,37 @@ class Page extends HTMLElement {
         await this._instance.load();
         //raise load event
         this.dispatchEvent(new CustomEvent("load"));
+    }
+    error({code, message, src, stack}) {
+        //error
+        let url = config.get("shell.error");
+        if (url.indexOf("?") == -1) url += "?";
+        url += "code=" + encodeURI(code);
+        url += "&message=" + encodeURI(message);
+        url += "&src=" + encodeURI(src);
+        url += "&page-src=" + encodeURI(src);
+        if (stack) url += "&stack=" + encodeURI(stack);
+        this.src = url;
+        
+    }
+    replace(src) {
+        //replace
+        let value = this.src;
+        if (src.startsWith("?")) {
+            let aux = value.indexOf("?");
+            if (aux != -1) value = value.substring(0, aux);
+            value += (src != "?" ? src : "");
+        } else if (src.startsWith("#")) {
+            let aux = value.indexOf("#");
+            if (aux != -1) value = value.substring(0, aux);
+            value += (src != "#" ? src : "");
+        } else {
+            value = src;
+        }
+        if (this._src != value) {
+            this._src = value;
+            this.dispatchEvent(new CustomEvent("replace", {detail: {src: this._src}}));
+        }
     }
     async unload() {
         //unload

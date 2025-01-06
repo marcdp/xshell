@@ -1,7 +1,7 @@
 import XElement from "../ui/x-element.js";
 
 // definition
-export default await XElement.define("x-loading-bar", {
+export default await XElement.define("x-loading", {
     style: `
         :host {
             display:block;
@@ -10,10 +10,10 @@ export default await XElement.define("x-loading-bar", {
         }
         :host div {
             content:"";
-            border-top:var(--x-loading-bar-height) var(--x-loading-bar-color) solid;
+            border-top:var(--x-loading-height) var(--x-loading-color) solid;
             border-radius:.1em;
-            animation: progressBar var(--x-loading-bar-duration) ease-in-out; 
-            animation-delay: var(--x-loading-bar-delay);   
+            animation: progressBar var(--x-loading-duration) ease-in-out; 
+            animation-delay: var(--x-loading-delay);   
             animation-fill-mode: both; 
             animation-iteration-count: infinite;
             position:absolute;

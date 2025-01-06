@@ -10,9 +10,7 @@ export default XElement.define("x-tab", {
     `,
     state: {
         label:"",
-    },
-    //settings: {
-    //    observedAttributes: ["label"],
-    //},
+        hash:""
+    }
 });
 

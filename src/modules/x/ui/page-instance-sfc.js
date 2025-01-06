@@ -1,15 +1,13 @@
 import XTemplate from "./x-template.js";
 import createState from "./create-state.js";
-import utils from "../../../utils.js";
-import loader from "../../../loader.js";
-import PageInstance  from "../../../page-instance.js";
+import { utils, PageInstance } from "../../../shell.js";
+
 
 
 class PageInstanceSfc extends PageInstance {
 
 
     //vars
-    _stateUnproxied = null;
     _state = null;
     _xtemplate = null;
     _xtemplateInstance = null;
@@ -26,14 +24,12 @@ class PageInstanceSfc extends PageInstance {
         return this._state; 
     }
     set state(value) {
-        this._stateUnproxied = value;
         this._state = createState(value, this);
         this.invalidate();
     }
 
     //methds
-    async init(doc, src, container) {
-        this._src = src;
+    async init(doc, container) {
         this._page = container;
         //clear container   
         let documentFragment = document.createDocumentFragment();
@@ -42,7 +38,7 @@ class PageInstanceSfc extends PageInstance {
         let module = null;
         if (script) {
             let moduleText = script.textContent;
-            module = await utils.importModuleFromJSCode(moduleText, src);
+            module = await utils.importModuleFromJSCode(moduleText, this.srcAbsolute);
             if (module.default) {
                 for (var key in module.default) {
                     this[key] = module.default[key];
@@ -58,15 +54,11 @@ class PageInstanceSfc extends PageInstance {
         //state
         let metaState = doc.querySelector("meta[name='page-state']");
         if (metaState) {
-            let jsonState = metaState.content
+            let jsonState = metaState.content;
             this.state = JSON.parse(jsonState);
         } else {
             this.state = (module && module.default && module.default.state) || {};
         }
-        //remove meta
-        //doc.querySelectorAll("meta").forEach((meta) => {
-        //    meta.parentNode.removeChild(meta);  
-        //});
         //template
         let template = "";
         let templateElement = doc.querySelector("template");
@@ -92,11 +84,11 @@ class PageInstanceSfc extends PageInstance {
     }
     async load() {
         //load
-        let src = this._src;
+        let src = this.src;
         let searchParams = new URLSearchParams(src.indexOf("?") != -1 ? src.substring(src.indexOf("?") + 1) : "");
         let loadArgs = {};
         for (const [key, value] of searchParams.entries()) {
-            if (!key.startsWith("x-")) loadArgs[key] = value;
+            loadArgs[key] = value;
         }
         await this.onCommand("load", loadArgs);
         //render
@@ -120,7 +112,7 @@ class PageInstanceSfc extends PageInstance {
             this._renderTimeoutId = 0;
         };
         //render
-        this._xtemplateInstance.render(this._stateUnproxied);
+        this._xtemplateInstance.render(this._state);
     }
 }
 

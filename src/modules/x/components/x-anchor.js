@@ -37,9 +37,6 @@ export default XElement.define("x-anchor", {
         rel: null,
         target: null
     },
-    //settings:{
-    //    observedAttributes: ["href", "command", "target", "breadcrumb", "rel"]
-    //},
     methods: {
         focus() {
             this.shadowRoot.querySelector("a").focus();
@@ -102,6 +99,12 @@ export default XElement.define("x-anchor", {
                         let src = shell.getHref(this.state.href, this.page, { breadcrumb: this.state.breadcrumb });
                         window.open(src);
                     }
+                //} else if (this.state.href == "#") {
+                    //do nothing
+                    //event.preventDefault();
+                    //event.stopPropagation();
+                    //return false;
+
                 } else if (this.state.href){
                     //page
                     let src = utils.combineUrls(this.page.src, this.state.href);

@@ -17,44 +17,48 @@ export default {
             "href": "./pages/index.html",
             "default": true,
             "children": [
-                {"label": "Test", href:"./pages/test.md"},
-                {"label": "Shell", href:"./pages/shell/index.html", children:[
+                {"label": "Test MARKDOWN", href:"./pages/test.md"},
+                {"label": "Test PDF", href:"./pages/test.pdf"},
+                {"label": "Shell", href:"./pages/shell/index.md", children:[
                     
                 ]},
-                {"label": "Layouts", href:"./pages/layouts/index.html", children:[
+                {"label": "Layouts", href:"./pages/layouts/index.md", children:[
                     
                 ]},
-                {"label": "Pages", href:"./pages/pages/index.html", children:[
-                    {"label": "Stack", href:"./pages/pages/stack.html"},
-                    {"label": "Dialog", href:"./pages/pages/dialog.html"},
-                    {"label": "Target", href:"./pages/pages/target.html"},
+                {"label": "Pages", href:"./pages/pages/index.md", children:[
+                    {"label": "Stack", href:"./pages/pages/stack.md"},
+                    {"label": "Dialog", href:"./pages/pages/dialog.md"},
+                    {"label": "Target", href:"./pages/pages/target.md"},
                 ]},
-                {"label": "Loader", href:"./pages/loader/index.html", children: [
+                {"label": "Loader", href:"./pages/loader/index.md", children: [
 
                 ]},
-                {"label": "Bus", href:"./pages/bus/index.html", children:[
-                    
+                {"label": "Bus", href:"./pages/bus/index.md", children:[
                 ]},
-                {"label": "Components", href:"./pages/components/index.html", children:[
-                    {"label": "Buttons", href:"./pages/components/buttons.html"},
-                    {"label": "Accordion", href:"./pages/components/accordion.html"},
-                    {"label": "Anchor", href:"./pages/components/anchor.html"},
-                    {"label": "Cards", href:"./pages/components/cards.html"},
-                    {"label": "Dropdown", href:"./pages/components/dropdown.html"},
-                    {"label": "Avatar", href:"./pages/components/avatar.html"},
-                    {"label": "Clock", href:"./pages/components/clock.html"},
-                    {"label": "Divider", href:"./pages/components/divider.html"},
-                    {"label": "Lazy", href:"./pages/components/lazy.html"},
-                    {"label": "Listview", href:"./pages/components/listview.html"},
-                    {"label": "Menu", href:"./pages/components/menu.html"},
-                    {"label": "Forms and datafields", href:"./pages/components/forms.html", children:[
-                        {"label": "Datafields", href:"./pages/components/datafields.html"},
-                        {"label": "Datatable", href:"./pages/components/datatable.html"},
+                {"label": "I18n", children:[
+                    {"label": "Translations", href:"./pages/i18n/translations.md"},
+                    {"label": "Datetime", href:"./pages/i18n/datetime.md"},
+                ]},
+                {"label": "Components", href:"./pages/components/index.md", children:[
+                    {"label": "Buttons", href:"./pages/components/buttons.md"},
+                    {"label": "Accordion", href:"./pages/components/accordion.md"},
+                    {"label": "Anchor", href:"./pages/components/anchor.md"},
+                    {"label": "Cards", href:"./pages/components/cards.md"},
+                    {"label": "Dropdown", href:"./pages/components/dropdown.md"},
+                    {"label": "Avatar", href:"./pages/components/avatar.md"},
+                    {"label": "Clock", href:"./pages/components/clock.md"},
+                    {"label": "Divider", href:"./pages/components/divider.md"},
+                    {"label": "Lazy", href:"./pages/components/lazy.md"},
+                    {"label": "Listview", href:"./pages/components/listview.md"},
+                    {"label": "Menu", href:"./pages/components/menu.md"},
+                    {"label": "Forms and datafields", href:"./pages/components/forms.md", children:[
+                        {"label": "Datafields", href:"./pages/components/datafields.md"},
+                        {"label": "Datatable", href:"./pages/components/datatable.md"},
                     ]},
-                    {"label": "Spinner", href:"./pages/components/spinner.html"},
-                    {"label": "Tabs", href:"./pages/components/tabs.html"},
-                    {"label": "Toolbar", href:"./pages/components/toolbar.html"},
-                    {"label": "Wizard", href:"./pages/components/wizard.html"},
+                    {"label": "Spinner", href:"./pages/components/spinner.md"},
+                    {"label": "Tabs", href:"./pages/components/tabs.md"},
+                    {"label": "Toolbar", href:"./pages/components/toolbar.md"},
+                    {"label": "Wizard", href:"./pages/components/wizard.md"},
                 ]},
             ]
         },  
@@ -62,7 +66,12 @@ export default {
         // loader
         "loader.page:/x-man/{path}": "./{path}",
 
-        "loader.page:/x-man/{path}md": "./{path}md?loader-transform=markdown",
+        // register
+        "loader.page:/x-man/{path}.md": "./{path}.md?loader-handler=fetch-page-markdown",  
+        "loader.file:/x-man/{path}.md": "./{path}.md",  
+
+        "loader.page:/x-man/pages/test.pdf": "https://pdfobject.com/pdf/sample.pdf?loader-handler=fetch-page-pdf",  
+        
 
     },
     // methods

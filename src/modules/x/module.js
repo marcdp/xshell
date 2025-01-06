@@ -19,6 +19,7 @@ export default {
                 { "label": "Debug", "href": "/x/pages/debug.html" },
                 { "label": "Modules", "href": "/x/pages/modules.html" },
                 { "label": "Language picker", "href": "/x/pages/lang-picker.html" },
+                { "label": "Playground", "href": "/x/pages/playground.html" },
                 { "label": "Search", "href": "/x/pages/search.html" },
                 { "label": "Google", "href": "http://www.google.com/", "target":"_blank"},
             ]
@@ -40,7 +41,7 @@ export default {
         "pages.layout.embed": "x-layout-embed",
 
         // shell
-        "shell.error": "x-error",
+        "shell.error": "/x/pages/error.html",
         "shell.lazy": "x-lazy"
 
     },

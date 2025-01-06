@@ -30,7 +30,7 @@
             ],
             file: "",
             files: [],
-            richtext: "hello <b>world</b>.",
+            richtext: "hello <b>world</b>.&amp;<p style='color:red;'>Lorem ipsum</p>mes text",
             richtext_i18n: "i18n:en=hello <b>world</b>.|i18n:ca=hola <b>mon</b>.",
             datatable: {
                 rows: [
@@ -86,7 +86,7 @@
 
             } else if (command == "submit") {
                 //submit
-                alert("submit");
+                this.refs.form1.showLoading("lorem ipsum");
 
             } else if (command == "cancel") {
                 //cancel
@@ -114,8 +114,10 @@
 </script>
 
 <template>
-    {{ JSON.stringify(state) }}
-    
+
+    <x-json x-attr:value="JSON.stringify(state)"></x-json>
+    <x-html x-attr:value="state.richtext"></x-html>
+
     <x-form wizard wizard-direction="vertical">
         <!-- header -->
         <h2 slot="header">This is the title</h2>
@@ -125,8 +127,8 @@
             el cual incluye versiones de Lorem Ipsum.
         </p>
         <!-- datafields -->
-        <x-tabs label="First tab" message="Step 1" selected-index="0">
-            <x-tab label="Basic">
+        <x-tabs label="First tab" message="Step 1" selected-index="1">
+            <x-tab label="Basic" hash="basic">
                 <x-datafields columns="4" label="Lorem ipsum" message="Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum">
                     <x-datafield label="Text" x-model="state.text" type="text" minlength="2" maxlength="4"></x-datafield>
                     <x-datafield label="Pattern" x-model="state.pattern" type="text" pattern="gr(a|e)y"></x-datafield>
@@ -153,7 +155,7 @@
                     <x-datafield label="Var1" type="">This is the content of a slot ELEMENT</x-datafield>
                 </x-datafields>
             </x-tab>
-            <x-tab label="Object">
+            <x-tab label="Object" hash="object">
                 <x-datafields>
                     <x-datafield label="myObject.var1" x-model="state.myObject.var1" type="text"></x-datafield>
                     <x-datafield label="myObject2" x-model="state.myObject2" type="object" required>
@@ -164,7 +166,7 @@
                     </x-datafield>
                 </x-datafields>
             </x-tab>
-            <x-tab label="List">
+            <x-tab label="List" hash="list">
                 <x-datafields>
                     <x-datafield label="List" x-model="state.myList" type="list" add required minlength="2">
                         <x-datafields x-for="item in state.myList" x-key="id" columns="3" class="grid" remove move>
@@ -175,13 +177,13 @@
                     </x-datafield>
                 </x-datafields>
             </x-tab>
-            <x-tab label="Richtext">
+            <x-tab label="Richtext" hash="richtext">
                 <x-datafields>
                     <x-datafield label="richtext editor" x-model="state.richtext" type="richtext" required spellcheck="false"></x-datafield>
                     <x-datafield label="richtext editor i18n" x-model="state.richtext_i18n" type="richtext_i18n" required></x-datafield>
                 </x-datafields>
             </x-tab>
-            <x-tab label="Datatable">
+            <x-tab label="Datatable" hash="datatable">
                 <x-datafields>
                     <x-datatable>
                         <table>
@@ -209,7 +211,7 @@
                     </x-datatable>
                 </x-datafields>
             </x-tab>
-            <x-tab label="Code editor(lazy)">
+            <x-tab label="Code editor(lazy)" hash="code-editor">
                 <x-datafields>
                     <x-datafield label="Javascript" x-model="state.javascript" type="javascript"></x-datafield>
                     <x-datafield label="Css" x-model="state.css" type="css"></x-datafield>
@@ -217,14 +219,14 @@
                     <x-datafield label="Markdown i18n" x-model="state.markdown_i18n" type="markdown_i18n" required></x-datafield>
                 </x-datafields>
             </x-tab>
-            <x-tab label="Markdown">
+            <x-tab label="Markdown" hash="markdown">
                 <x-lazy>
                     <x-datafield label="html">
                         <x-markdown x-prop:value="state.markdown"></x-markdown>
                     </x-datafield>
                 </x-lazy>
             </x-tab>
-            <x-tab label="Advanced">
+            <x-tab label="Advanced" hash="advanced">
                 <x-datafields>
                     <x-datafield label="Picker" x-model="state.picker" type="picker"></x-datafield>
                     <x-datafield label="File" x-model="state.file" type="file"></x-datafield>
@@ -244,6 +246,30 @@
     </x-form>
 
     <br />
+
+    
+    <x-card>
+        <x-form ref="form1">
+            <!-- header -->
+            <h2 slot="header">This is the title</h2>
+            <p slot="header">
+                Lorem Ipsum es simplemente el texto de relleno de las imprentas y archivos de texto.
+                y más recientemente con software de autoedición, como por ejemplo Aldus PageMaker2,   
+                el cual incluye versiones de Lorem Ipsum.
+            </p>
+            <!-- datafields -->
+            <x-datafields label="Second tab" message="Step 2">
+                <x-datafield label="Text" x-model="state.text2222" type="text" minlength="2" maxlength="4" required></x-datafield>
+            </x-datafields>
+            <x-datafields label="Third tab" message="Step 3">
+                Third content
+            </x-datafields>
+            <!-- buttons -->
+            <x-button slot="footer" label="Save" command="submit" class="submit"></x-button>
+        </x-form>
+    </x-card>
+
+
 
     <fieldset>
         <legend>Choose your favorite monster</legend>
@@ -407,7 +433,7 @@
             Second content
         </x-tab>
         <x-tab label="Third tab">
-            <x-page src="/folder1/message.html" loading="lazy"></x-page>
+            <x-page src="/folder1/messadsfge.html" loading="lazy"></x-page>
         </x-tab>
     </x-tabs>
 

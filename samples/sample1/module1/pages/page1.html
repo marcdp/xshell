@@ -12,9 +12,14 @@
             async onCommand(command, args) {
                 if (command == "load") {
                     //load
+
                 } else if (command == "aaaaa") {
                     //aaaaa
                     alert("aaaaa")
+
+                } else if (command == "show-working") {
+                    //show-working
+                    this.showWorking(true);
                 }
             }
         }
@@ -23,6 +28,8 @@
     <template>
         Use Amazon S3 Block public access settings to control the settings that allow public access to your data.
         
+        <x-datetime datetime="2025-01-04T10:48:39.847Z" format="time"></x-datetime>
+
         <ul>
             <li><x-anchor href="page2.html">Help 2</x-anchor></li>
             <li><x-anchor href="page2.html" target="#dialog">Help in dialog</x-anchor></li>
@@ -60,7 +67,7 @@
 
         <x-toolbar>
             <x-button disabled label="hello"></x-button>
-            <x-button class="" label="show"></x-button>
+            <x-button class="" label="show working" command="show-working"></x-button>
             <x-button class="" label="by"></x-button>
             <x-button class="" label="by" icon="x-bell"></x-button>
             <x-button class="" icon="x-bell"></x-button>
@@ -75,7 +82,7 @@
                     <x-menuitem class="" label="Subopció 2"></x-menuitem>
                     <x-menuitem class="" label="Subopció 3"></x-menuitem>
                     <x-menuitem class="" label="label3.3 asdf asdf  asdf MARC">
-                        <x-menuitem label="label3.3.1"></x-menuitem>
+                        <x-menuitem label="label3.3.1" command="aaaaa"></x-menuitem>
                         <x-menuitem label="label3.3.2"></x-menuitem>
                     </x-menuitem>
                 </x-contextmenu>
@@ -86,7 +93,7 @@
                     <x-menuitem class="" label="Subopció 2"></x-menuitem>
                     <x-menuitem class="" label="Subopció 3"></x-menuitem>
                     <x-menuitem class="" label="label3.3 asdf asdf  asdf MARC">
-                        <x-menuitem label="label3.3.1"></x-menuitem>
+                        <x-menuitem label="label3.3.1" command="aaaaa"></x-menuitem>
                         <x-menuitem label="label3.3.2"></x-menuitem>
                     </x-menuitem>
                 </x-contextmenu>

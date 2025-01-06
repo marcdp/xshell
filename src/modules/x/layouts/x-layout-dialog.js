@@ -13,7 +13,7 @@ export default XElement.define("x-layout-dialog", {
             box-shadow:var(--x-layout-dialog-shadow);
             box-sizing:border-box;
         }
-        x-loading-bar {position:absolute; width:100%; margin-top:-0.5em;}
+        x-loading {position:absolute; width:100%; margin-top:-0.5em;}
         .container { position:relative;}
         .header {display:flex; align-items:baseline; padding-bottom:1em;}
         .header h2 {margin:0; flex:1; font-size: var(--x-font-size-subtitle); margin-right:1em}
@@ -37,7 +37,7 @@ export default XElement.define("x-layout-dialog", {
     template: `
         <dialog x-on:cancel="query-close">
             <div class="container">
-                <x-loading-bar x-if="state.status=='loading'"></x-loading-bar>
+                <x-loading x-if="state.status=='loading'"></x-loading>
                 <div class="header">
                     <h2>{{ state.label }}&nbsp;</h2>
                     <x-button class="anchor" icon="x-close" x-on:click="query-close"></x-button>

@@ -1,10 +1,10 @@
 import XElement from "../../x/ui/x-element.js";
-import config from "../../../config.js";
+import { config } from "../../../shell.js";
 
 // class
 export default XElement.define("x-layout-stack", {
     style:`
-        x-loading-bar {
+        x-loading {
             position:fixed; top:0; left:0; right:0; 
             z-index:5;
         }
@@ -69,7 +69,7 @@ export default XElement.define("x-layout-stack", {
     template: `
         <div class="backdrop" x-on:click="query-close"></div>
         <div x-attr:class="'panel ' + (state.expanded ? 'expanded' : '')" x-on:transitionend="transition-end">
-            <x-loading-bar x-if="state.status=='loading'"></x-loading-bar>
+            <x-loading x-if="state.status=='loading'"></x-loading>
             <div class="header">
                 <h2>{{ state.label }}&nbsp;</h2>
                 <x-button class="anchor" icon="x-close" x-on:click="query-close"></x-button>

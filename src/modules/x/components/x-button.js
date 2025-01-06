@@ -23,7 +23,7 @@ export default XElement.define("x-button", {
         }
         :host .button:hover {border-color:var(--x-color-text); color:var(--x-color-text); background:var(--x-button-background-hover); cursor:pointer; }
         :host .button:active {background:var(--x-button-background-active);}
-        :host .button > x-icon.icon {transform:translateY(-.1em); padding-left:.15em; }
+        :host .button > x-icon.icon {transform:translateY(-.1em); apadding-left:.15em; }
         :host .button > x-icon.icon[icon] + div {padding-left:.15em;}
         :host .button > x-icon.down {transform:translateY(-.1em); padding-left:.15em; margin-right:-.25em; }
         :host .button[expanded] > x-icon.down {transform:translateY(.1em) rotate(-180deg) ; }
@@ -92,7 +92,7 @@ export default XElement.define("x-button", {
                 </div>
                 <x-icon class="down" x-if="state.childs && !state.command" icon="x-arrow-down-fill"></x-icon>
             </a>
-            <div class="more" tabindex="2" x-if="state.childs && state.command" x-on:click="expand" x-attr:expanded="state.expanded" x-on:keydown.enter="expand">
+            <div class="more" tabindex="2" x-if="state.childs && state.command" x-on:click="expand" x-attr:expanded="state.expanded" x-on:keydown.enter="toggle">
                 <x-icon class="independent" icon="x-arrow-down-fill"></x-icon>
             </div>
         </div>
@@ -113,27 +113,14 @@ export default XElement.define("x-button", {
         childsClass:"",
     },
     methods:{
-        onDocumentClick() {
-            this.onCommand("collapse");
-        },
         onCommand(command, args) {
             if (command == "init") {
                 //init
-                this.state.addEventListener("change", (event) => {
-                    if (event.prop = "href") this.onCommand("refresh");
-                });
+                this.bindEvent(this.state, "change:href", "refresh");
 
             } else if (command == "load") {
                 // load
                 this.onCommand("refresh");
-                this.onDocumentClick = this.onDocumentClick.bind(this);
-                //this.shadowRoot.addEventListener("focusout", (event) => {
-                //    let relatedTarget = event.relatedTarget
-                //    if (relatedTarget == null || !utils.isDescendantOfElement(this, relatedTarget)){
-                //        debugger;
-                //        this.onCommand("collapse");
-                //    }
-                //});
 
             } else if (command == "command") {
                 // command
@@ -161,15 +148,27 @@ export default XElement.define("x-button", {
             } else if (command == "expand") {
                 // expand
                 this.state.expanded = true;
-                // bind event
+                // bind event               
+                if (!this.onDocumentClick) {
+                    this.onDocumentClick = function() { this.onCommand("collapse"); }.bind(this);
+                }
                 document.addEventListener("click", this.onDocumentClick, true);
 
             } else if (command == "collapse") {
                 // collapse
                 this.state.expanded = false;
                 // unbind event
-                document.removeEventListener("click", this.onDocumentClick);
-                
+                document.removeEventListener("click", this.onDocumentClic, true);
+                delete this.onDocumentClick;
+
+            } else if (command == "toggle") {
+                //toggle
+                if (this.state.expanded) {
+                    this.onCommand("collapse");
+                } else {
+                    this.onCommand("expand");
+                }
+ 
             } else if (command == "refresh") {
                 // refresh
                 this.state.childs = (this.firstElementChild != null);

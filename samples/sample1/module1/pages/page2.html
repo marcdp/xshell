@@ -8,9 +8,13 @@
             if (command == "load") {
                 //load
 
-            } else if (command == "unload") {
-                //unload
-                
+            } else if (command == "something1") {
+                //something
+                this.replace("?aaa=123&b=342")
+
+            } else if (command == "something2") {
+                //something
+                this.replace("?")
             }
         }
     }
@@ -24,5 +28,9 @@
         <li><x-anchor href="page2.html" target="#root">Help 2 at root</x-anchor></li>
         <li><a href="#" onclick="history.back(); return false;">back</a></li>
     </ul>    
+    <hr/>
+
+    <x-button command="something1" label="Something"></x-button>
+    <x-button command="something2" label="Something"></x-button>
 
 </template>

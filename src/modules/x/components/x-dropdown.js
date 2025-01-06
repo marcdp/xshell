@@ -1,6 +1,5 @@
 import XElement from "../ui/x-element.js";
-import utils from "../../../utils.js";
-import bus from "../../../bus.js";
+import { bus, utils } from "../../../shell.js";
 
 // class
 export default XElement.define("x-dropdown", {
@@ -19,6 +18,7 @@ export default XElement.define("x-dropdown", {
             border-radius:var(--x-dropdown-border-radius);
             box-shadow:var(--x-dropdown-shadow);
             min-height:1em;
+            padding: var(--x-dropdown-padding-vertical) var(--x-dropdown-padding-horizontal) var(--x-dropdown-padding-vertical) var(--x-dropdown-padding-horizontal);            
         }
         :host .body.expanded {
             display:block;
@@ -63,7 +63,7 @@ export default XElement.define("x-dropdown", {
             
         /* input-dropdown */
         :host(.input-dropdown) .header.expanded {
-            --x-datafield-border-radius: .75em .75em 0 0;
+            --x-datafield-border-radius: .5em .5em 0 0;
         }
         :host(.input-dropdown) .body {
             width:100%;
@@ -72,10 +72,10 @@ export default XElement.define("x-dropdown", {
         }
     `,
     template: `
-        <div _tabindex="0" x-attr:class="'header ' + (state.expanded ? 'expanded' : '')" x-on:click="click" x-on:focusin="expand">
+        <div x-attr:class="'header ' + (state.expanded ? 'expanded' : '')" x-on:focusin="focus-head" x-on:mousedown.stop="mousedown-head" x-on:click="click-head" x-on:keydown.enter="click-head">
             <slot></slot>
         </div>
-        <div x-attr:class="'body ' + (state.expanded ? 'expanded' : '')" x-on:collapse.stop="collapse">
+        <div x-attr:class="'body ' + (state.expanded ? 'expanded' : '')" x-on:collapse.stop="collapse" x-on:mousedown.stop="mousedown-body" x-on:click="click-body">
             <span class="helper"></span>
             <span class="helper2"></span>
             <slot name="dropdown"></slot>
@@ -83,52 +83,73 @@ export default XElement.define("x-dropdown", {
     `,
     state:{
         expanded: false, 
-        expandedAt: null,
         collapseOnClick: false
     },
-    //settings:{
-    //    observedAttributes:["collapse-on-click"]
-    //},
     methods: {
-        onCommand(command, args) {
+        onCommand(command) {
             if (command == "load") {
                 //load
                 this.shadowRoot.addEventListener("focusout", (event) => {
-                    let relatedTarget = event.relatedTarget
-                    if (relatedTarget == null || !utils.isDescendantOfElement(this, relatedTarget)){
-                        if (!this.state.collapseOnClick) {
-                            this.onCommand("collapse");
-                        }
+                    if (!this.state.collapseOnClick) {
+                        //if new focused element is a descendant of this element, does nothing
+                        let relatedTarget = event.relatedTarget;
+                        if (utils.isDescendantOfElement(this, relatedTarget)) return;
+                        //if last mousedown was less than 10ms ago, does nothing
+                        let diff = performance.now() - this._mousedownBodyAt;
+                        if (isNaN(diff) || diff > 10) this.onCommand("collapse");
                     }
                 });
                 this.bindEvent(bus, "navigation-start", () => {
+                    //if navigation occurred, collapse
                     if (this.state.expanded) {
                         if (!this.state.collapseOnClick) {
                             this.onCommand("collapse");
                         }
                     }
                 });
-
-            } else if (command == "click") {
-                //click
-                let activeElement = utils.getDeepActiveElement();
-                if (utils.isDescendantOfElement(this, activeElement)){
-                    this.shadowRoot.querySelector(".header").focus();
+                
+            } else if (command == "focus-head") {
+                //focus-head
+                if (!this.state.collapseOnClick) {
+                    this.onCommand("expand");
                 }
-                //if collapseOnClick
+
+            } else if (command == "mousedown-head") {
+                //mousedown (remember mousedown time)
+                this._mousedownHeadAt = performance.now();
+
+            } else if (command == "click-head") {
+                //click-head
                 if (this.state.collapseOnClick) {
                     if (this.state.expanded) {
-                        let diff = performance.now() - this.state.expandedAt;
-                        if (diff > 250) this.onCommand("collapse");
+                        let diff = performance.now() - this._expandedAt;
+                        if (diff > 200) {
+                            this.onCommand("collapse");
+                        }
                     } else {
-                        this.onCommand("expand");
+                        this.onCommand("expand");    
                     }
+                } else {
+                    this.onCommand("expand");
+                }
+
+            } else if (command == "mousedown-body") {
+                //mousedown (remember mousedown time)
+                this._mousedownBodyAt = performance.now();
+
+            } else if (command == "click-body") {
+                //click-body
+                let a = utils.findFocusableElement(this);
+                let activeElement = utils.getDeepActiveElement();
+                if (a != null && activeElement && activeElement.localName == "body") {
+                    //if click in body, focus on first focusable element
+                    a.focus();
                 }
 
             } else if (command == "expand") {
                 //expand
                 if (!this.state.expanded) {
-                    this.state.expandedAt = performance.now();
+                    this._expandedAt = performance.now();
                     this.state.expanded = true;
                 }
 
@@ -136,7 +157,6 @@ export default XElement.define("x-dropdown", {
                 //collapse
                 if (this.state.expanded) {
                     this.state.expanded = false;
-                    this.state.expandedAt = null;
                 }
             }
         }

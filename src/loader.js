@@ -1,30 +1,3 @@
-import config from "./config.js";
-
-// defaults
-const DEFAULTS = {
-    icon: {
-        transform: "svg",
-        method: "fetch",
-        cache: true
-    },
-    page: {
-        transform: "response",
-        method: "fetch",
-        cache: false
-    },
-    layout: {
-        method: "import"
-    },
-    component: {
-        method: "import"
-    },
-    "page-handler": {
-        method: "import"
-    },
-    transform: {
-        method: "import"
-    },
-};
 
 // LoaderException
 class LoaderException extends Error {
@@ -36,76 +9,64 @@ class LoaderException extends Error {
     }
 }
 
-// Transforms
-let Transforms = {
-    //"arrayBuffer": async (response) => {
-    //    //return as arrayBuffer
-    //    return await response.arrayBuffer();
-    //},
-    //"blob": async (response) => {
-    //    //return as blob
-    //    return await response.blob();
-    //},
-    //"bytes": async (response) => {
-    //    //return as bytes
-    //    return await response.bytes();
-    //},
-    "css": async (response) => {
-        //return as styleSheet
-        debugger
-        let css = await response.text();
-        let styleSheet = new CSSStyleSheet();
-        styleSheet.replaceSync(css);
-        return styleSheet;
+// Defaults
+const DEFAULTS = {
+    "layout": {
+        handler: "import"
     },
-    //"template": async (response) => {
-    //    //return as template
-    //    let html = await response.text();
-    //    let template = document.createElement("template");
-    //    template.innerHTML = html;
-    //    return template;
-    //},
-    "text": async (response) => {
-        //return as string
-        return await response.text();
+    "component": {
+        handler: "import"
     },
-    //"json": async (response) => {
-    //    //return as object
-    //    return await response.json();
-    //},
-    "svg": async (response) => {
-        //return as SVG element
+    "page-handler": {
+        handler: "import"
+    },
+    "icon": {
+        handler: "fetch-svg",
+        cache: true
+    },
+    "page": {
+        handler: "fetch-page",
+        cache: true
+    },
+    "file": {
+        handler: "fetch"
+    }
+};
+
+// Handlers
+let Handlers = {
+    "fetch": async (resource, definition, src) => {
+        let response = await fetch(src);
+        return response;
+    },
+    "import": async (resource, definition, src) => {
+        let module = await import(src);
+        return module.default;
+    },
+    "fetch-svg": async (resource, definition, src) => {
+        let response = await fetch(src);
+        if (!response.ok) throw new Error(`Error ${response.status}: ${response.statusText}: ${src}`);
         let text = await response.text();
         let div = document.createElement("div");
         div.innerHTML = text;
-        return div.firstChild;
+        let svg = div.firstChild;
+        return svg;
     },
-    "markdown": async (response) => {
-        let markdown = await response.text();
-        return {
-            ok: response.ok,
-            status: response.status,
-            statusText: response.statusText,
-            contentType: "text/html",
-            headers: response.headers,
-            data: `<meta name="page-handler" content=""/><x-markdown value="${markdown.replaceAll('"', '&quot;')}"></x-markdown>`,
-            text() { return this.data; }, 
-        };
+    "fetch-page": async (resource, definition, src) => {
+        let response = await fetch(src);
+        if (!response.ok) throw new Error(`Error ${response.status}: ${response.statusText}: ${src}`);
+        let html = await response.text();
+        if (html.indexOf("<html")==-1) html = `<!DOCTYPE html><html><head></head><body>${html}</body></html>`;
+        return html;
     },
-    "response": async (response) => {
-        //return response
-        return {
-            ok: response.ok,
-            status: response.status,
-            statusText: response.statusText,
-            contentType: response.headers.get("content-type"),
-            headers: response.headers,
-            data: await response.text(),
-            text() { return this.data; },
-        };
+    "fetch-page-markdown": async (resource, definition, src) => {        
+        let path = "file:" + resource.substring(resource.indexOf(":") + 1);
+        return `<!DOCTYPE html><html><head></head><body><meta name='page-handler' content=''><x-markdown src="${path}" ></x-markdown></body></html>`;
     },
+    "fetch-page-pdf": async (resource, definition, src) => {        
+        return `<!DOCTYPE html><html><head></head><body><meta name='page-handler' content=''><x-fill><iframe src="${src}" style="border:none;flex:1"></iframe></x-fill></body></html>`;
+    }
 };
-
 
 // class
 class Loader {
@@ -118,63 +79,49 @@ class Loader {
 
     //ctor
     constructor() {
-        //add config event -> listen for changes
-        config.addEventListener("loader", () => {
-            let definitions = [];
-            let keys = config.getSubKeys("loader");            
-            for (let key of keys) {
-                let type = key.split(":")[0];
-                let pattern = key.split(":")[1];
-                let resource = type + ":" + pattern;
-                let src = config.get("loader." + type + ":" + pattern);
-                let srcPath = (src.indexOf("?") != -1 ? src.substring(0, src.indexOf("?")) : src)
-                let searchParams = new URLSearchParams(src.indexOf("?") != -1 ? src.substring(src.indexOf("?") + 1) : "");
-                let defaults = DEFAULTS[type] || {};
-                let transform = defaults.transform;
-                let method = defaults.method || "fetch";
-                let cache = (typeof(defaults.cache) == "undefined" ? true : defaults.cache);
-                for(let key of searchParams.keys()) {
-                    if (key.startsWith("loader-")) {
-                        if (key == "loader-method") method = searchParams.get(key);
-                        if (key == "loader-transform") transform = searchParams.get(key);
-                        if (key == "loader-cache") cache = (searchParams.get(key) == "true");
-                        searchParams.delete(key);
-                    }
-                }
-                src = srcPath + (searchParams.keys().length ? searchParams.toString() : "");
-                //regexp
-                let regexp = "";
-                let k = 0;
-                let i = resource.indexOf("{"), j = resource.indexOf("}");
-                while (i != -1) {
-                    regexp += resource.substring(k, i);
-                    regexp += "(?<" + resource.substring(i + 1, j) + ">.+)";
-                    k = j + 1;
-                    i = resource.indexOf("{", j), j = resource.indexOf("}", i);
-                }
-                regexp += resource.substring(k);
-                //add definition
-                let definition = {
-                    resource,
-                    src,
-                    method,
-                    transform,
-                    regexp: new RegExp(regexp),
-                    cache
-                };
-                definition.regexp = new RegExp(regexp);
-                definitions.push(definition);
-            }
-            this._definitions = definitions;
-        });
     }
 
 
-    //props
-    get config() { return this._config; }
-
-
     //methods
+    addDefinition(key, src) {
+        let type = key.split(":")[0];
+        let pattern = key.split(":")[1];
+        let resource = type + ":" + pattern;
+        let srcPath = (src.indexOf("?") != -1 ? src.substring(0, src.indexOf("?")) : src)
+        let searchParams = new URLSearchParams(src.indexOf("?") != -1 ? src.substring(src.indexOf("?") + 1) : "");
+        let defaults = DEFAULTS[type] || {};
+        let handler = defaults.handler || "fetch";
+        let cache = (typeof(defaults.cache) == "undefined" ? false : defaults.cache);
+        for(let key of searchParams.keys()) {
+            if (key.startsWith("loader-")) {
+                if (key == "loader-handler") handler = searchParams.get(key);
+                if (key == "loader-cache") cache = (searchParams.get(key) == "true");
+                searchParams.delete(key);
+            }
+        }
+        src = srcPath + (searchParams.keys().length ? searchParams.toString() : "");
+        //regexp
+        let regexp = "^";
+        let k = 0;
+        let i = resource.indexOf("{"), j = resource.indexOf("}");
+        while (i != -1) {
+            regexp += resource.substring(k, i);
+            regexp += "(?<" + resource.substring(i + 1, j) + ">.+)";
+            k = j + 1;
+            i = resource.indexOf("{", j), j = resource.indexOf("}", i);
+        }
+        regexp += resource.substring(k);
+        //add definition
+        let definition = {
+            resource,
+            src,
+            handler,
+            cache,
+            regexp: new RegExp(regexp)
+        };
+        definition.regexp = new RegExp(regexp);
+        this._definitions.push(definition);
+    }
     register(resource, value) {
         this._cache[resource] = value;
     }
@@ -219,7 +166,7 @@ class Loader {
                 } else {
                     result.push(cacheItem);
                 }
-            } else if (!definition.transform && window.customElements.get(name)) {
+            } else if (window.customElements.get(name)) {
                 let customElement = window.customElements.get(name);
                 this._cache[scheme + ":" + name] = customElement;
                 result.push(customElement);
@@ -248,38 +195,25 @@ class Loader {
                 }
             }
         }
-        // throw exception if required
-        if (errors.length) {
-            debugger;
-            throw new LoaderException("Error loading resources", errors);
+        //throw exception if errors
+        if (isString) {
+            if (errors.length) {
+                throw errors[0];
+            }
+            result = result[0];
+        } else {
+            if (errors.length) throw new LoaderException("Error loading resources", errors);
         }
-        //if single result
-        if (isString) return result[0];
         //return
         return result;
     }    
     async loadDefinition(resource, definition, src){
         let value = null;
-        //fetch/import
-        if (definition.method == "fetch") {
-            value = await fetch(src);
-        } else {
-            value = await import(src);
-        }
-        //if(definition.transform) {
-        //    value = await fetch(src);
-        //} else {
-        //    value = await import(src);
-        //}
-        //transform
-        if (definition.transform) {
-            let transform = Transforms[definition.transform];
-            if (!transform) transform = await this.load("transform:" + definition.transform);
-            if (!transform) throw new LoaderException("Unknown transform: " + definition.transform, { resource, definition, src });
-            value = await transform(value, src, this);
-        } else {
-            value = value.default;
-        }
+        //handler
+        let handler = Handlers[definition.handler];
+        if (!handler) handler = await this.load("handler:" + definition.handler);
+        if (!handler) throw new LoaderException("Unknown handler: " + definition.handler, { resource, definition, src });
+        value = await handler(resource, definition, src);
         //set
         if (definition.cache) {
             this.register(resource, value);

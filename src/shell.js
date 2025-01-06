@@ -1,7 +1,9 @@
 import config from "./config.js";
 import utils from "./utils.js";
 import bus from "./bus.js";
+import loader from "./loader.js";
 import Page from "./page.js";
+import PageInstance from "./page-instance.js";
 
 // constants
 const HASH_PREFIX = "#!";
@@ -13,7 +15,7 @@ class Shell {
     //fields
     _container = null;
     _modules = {};
-
+    _modulesLoading = {};
 
     //ctor
     constructor() {
@@ -48,7 +50,6 @@ class Shell {
             "shell.debug": false,
             "shell.start": "",
             "shell.container": "body",
-            "shell.error": "",
             "shell.menus.main": {
                 label:"",
                 children:[  
@@ -56,6 +57,7 @@ class Shell {
                     { "label": "Home2", "href": "#home2" }
                 ]
             },
+            "shell.error": "",
             "shell.lazy": ""
         }, import.meta.url);
         //load value
@@ -147,10 +149,27 @@ class Shell {
         await Promise.all(tasks);
     }
     async loadModule(module) {
-        //load module
+        //block multiple paralel loadings
+        let loadModuleTaskResolve = null;
+        let loadModuleTaskReject = null;
+        let loadModuleTask = this._modulesLoading[module.src];
+        if (loadModuleTask) return await loadModuleTask;
+        loadModuleTask = new Promise((resolve, reject) => {
+            loadModuleTaskResolve = resolve;
+            loadModuleTaskReject = reject;
+        });
+        this._modulesLoading[module.src] = loadModuleTask;
+        //log
         console.log(`shell.loadModule('${module.src}') ...`);
         //import
-        let aModule = await import(module.src);
+        let aModule = null;
+        try {
+            aModule = await import(module.src);
+        } catch (e) {
+            console.error(`error loading module '${module.src}': ${e.message}`);
+            loadModuleTaskReject(e);
+            return;
+        }
         //get instance
         let instance = aModule.default;
         if (!instance.config) instance.config = {};
@@ -162,7 +181,9 @@ class Shell {
                 break;
             }
         }
-        if (!name) throw new Error(`Unable to load module: name not found; ${name}`);
+        if (!name) {
+            throw new Error(`Unable to load module: name not found; ${name}`);
+        }
         for(let key of ["label","icon","version","type","depends","styles","page-handler"]) {
             let configKey = "modules." + name + "." + key;
             if (typeof(instance.config[configKey]) == "undefined") {
@@ -177,6 +198,12 @@ class Shell {
         //add config
         instance.config["modules." + name + ".status"] = "loaded";
         config.set(instance.config, module.src, module.path);
+        for(let key in instance.config) {
+            if (key.startsWith("loader.")) {
+                let value = instance.config[key];
+                loader.addDefinition(key.substring(key.indexOf(".") + 1), value);
+            }
+        }
         delete instance.config;
         //get depends
         let depends = config.get("modules." + name + ".depends",[]);
@@ -194,11 +221,16 @@ class Shell {
         instance.path = config.get("modules." + name + ".path", "");
         instance.src = module.src;
         instance.name = name;
+        instance.label = config.get("modules." + name + ".label", "");
+        if (this._modules[name]) throw Error(`Unable to load module: already loaded '${name}'`);
         this._modules[name] = instance;
         //mount
         await instance.onCommand("load", module.args);
-        //emit bus emit
+        //bus event
         bus.emit("module-load", { name: module, module: instance });
+        //resolve
+        loadModuleTaskResolve(instance);
+        delete this._modulesLoading[module.src];
         // log
         console.log(`shell.moduleLoaded()`, instance);
         //return
@@ -356,13 +388,21 @@ class Shell {
                         if (label) document.title = label + " / " + config.get("app.label");
                     }
                 });
+                page.addEventListener("replace", (event) => {
+                    //page replace
+                    let pages = this.getPages();
+                    let hashParts = document.location.hash.substring(HASH_PREFIX.length).split(HASH_PREFIX);
+                    let index = pages.indexOf(event.target);
+                    hashParts[index] = event.target.src;
+                    history.replaceState(null, "", HASH_PREFIX + hashParts.join(HASH_PREFIX));
+                });
                 page.addEventListener("load", (event) => {
                     //page load
                     let pages = this.getPages();
                     if (pages.indexOf(event.target) == 0) {
                         var label = event.target.label;
                         if (label) document.title = label + " / " + config.get("app.label");
-                        bus.emit("navigation-end", { src:event.target.src, page: event.target, module: page.module });
+                        bus.emit("navigation-end", { page: event.target });
                         console.log(`page.ready()`);
                     }
                 });
@@ -402,4 +442,4 @@ class Shell {
 
 //export default instance
 export default new Shell();
-
+export { config, bus, utils, loader, Page, PageInstance};

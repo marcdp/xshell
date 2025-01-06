@@ -64,8 +64,8 @@
     --x-layout-default-page-padding-vertical: 0em;
     --x-layout-default-page-padding-horizontal: 0em;
 
-    --x-layout-embed-page-padding-vertical: 1em;
-    --x-layout-embed-page-padding-horizontal: 1em;
+    --x-layout-embed-page-padding-vertical: 0em;
+    --x-layout-embed-page-padding-horizontal: 0em;
 
     --x-layout-main-border: 1px #B4B4BB solid;
     --x-layout-main-drawer-width: 20em;
@@ -86,11 +86,11 @@
     --x-layout-dialog-page-padding-vertical: 1em;
     --x-layout-dialog-page-padding-horizontal: 1.5em;
 
-    /* x-loading-bar */
-    --x-loading-bar-color: var(--x-color-primary);
-    --x-loading-bar-height: .25em;
-    --x-loading-bar-duration: 4s;
-    --x-loading-bar-delay: .250ms;
+    /* x-loading */
+    --x-loading-color: var(--x-color-primary);
+    --x-loading-height: .25em;
+    --x-loading-duration: 4s;
+    --x-loading-delay: .250ms;
         
 }  
 
@@ -135,7 +135,9 @@ fieldset {
 }
 fieldset legend {font-weight:600; padding-left:.5em; padding-right:.5em;}
 
-x-page[layout='stack'] + x-page[layout='stack'] {--x-layout-stack-width: 78vw; --x-page-backdrop:none;}
+
+
+x-page[layout='stack'] + x-page[layout='stack'] {--x-layout-stack-width: 78vw; --x-layout-stack-backdrop:none;}
 x-page[layout='stack'] + x-page[layout='stack'] + x-page[layout='stack'] {--x-layout-stack-width: 76vw;}
 
 :root {
@@ -158,7 +160,6 @@ x-page[layout='stack'] + x-page[layout='stack'] + x-page[layout='stack'] {--x-la
     --x-button-background-hover: #F0FBFF;
     --x-button-background-active: #D1F1FF;
     
-
     /* x-card */
     --x-card-border-radius: .75em;
     --x-card-border: 1px #B4B4BB solid;
@@ -193,7 +194,8 @@ x-page[layout='stack'] + x-page[layout='stack'] + x-page[layout='stack'] {--x-la
     --x-dropdown-border-color: #B4B4BB;
     --x-dropdown-border: .15em #B4B4BB solid;
     --x-dropdown-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-    --x-dropdown-padding: .75em;
+    --x-dropdown-padding-vertical: 1em;
+    --x-dropdown-padding-horizontal: 1em;
 
     /* x-form  */
     --x-form-border: 1px #B4B4BB solid;
@@ -217,16 +219,19 @@ x-page[layout='stack'] + x-page[layout='stack'] + x-page[layout='stack'] {--x-la
     --x-notice-background-warning: #FFFBF0;
     --x-notice-background-error: #FFF5F5;
     --x-notice-background-success: #F5FFF5;
+    --x-notice-background-working: #fafafa;
 
     --x-notice-border-info: .15em #006CE0 solid;
     --x-notice-border-warning: .15em #E06C00 solid;;
     --x-notice-border-error: .15em #DB0000 solid;;
     --x-notice-border-success: .15em #00DB00 solid;;
+    --x-notice-border-working: .15em #B4B4BB solid;;
 
     --x-notice-color-info: #006CE0;
     --x-notice-color-warning: #B94A09;
     --x-notice-color-error: #AF0E1C;
     --x-notice-color-success: #0EAF1C;
+    --x-notice-color-working: #999999;
 
     /* x-popover */
     --x-popover-background: white;
@@ -235,4 +240,6 @@ x-page[layout='stack'] + x-page[layout='stack'] + x-page[layout='stack'] {--x-la
     --x-popover-shadow:0 4px 15px rgba(0, 0, 0, 0.1);
     --x-popover-padding: .75em;
 
+    /* splitter */
+    --x-splitter-background: #dddddd;
 }
