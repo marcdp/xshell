@@ -123,7 +123,7 @@ export default XElement.define("x-form", {
         loadingMessage: "Please wait...",
         wizardStyle: ""
     },
-    methods:{
+    methods: {
         validate() {
             this.onCommand("validate");
             return this.state.errors;

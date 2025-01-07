@@ -101,6 +101,12 @@ export default XElement.define("x-drawer-menu", {
                         }
                     }
                     if (!menuitems) {
+                        //search if menu contains a menuitem without the hashpart
+                        if (href.indexOf("?") != -1) { 
+                             menuitems = utils.findObjectsPath(menu, 'href', href.split("?")[0]);
+                        }
+                    }
+                    if (!menuitems) {
                         //search in page breadcrumb for a menu item with that href
                         for(let i = this.page.breadcrumb.length - 1; i>=0 ;  i--) {
                             let menuitem = this.page.breadcrumb[i];
