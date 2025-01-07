@@ -179,10 +179,11 @@ x - loader-handler page-markdown -- ha de crear un html, amb <x-markdown src="..
 x - loader-handler page-pdf
 x - page.replace(src)
 x - tabs hash
+x - page.hash hierarchycal NO
 
 
+- if menu has single page, then we should hide the menu
 
-- page.hash hierarchycal
 
 - x-splitter
 
@@ -192,6 +193,15 @@ x - tabs hash
 - /x/pages/debug.html -- modules loaded
 - /x/pages/debug.html -- bus events
 - /x/pages/debug.html -- pages loaded
+
+
+- use Auth0 + OpenID Connect (OIDC)
+  - navigation
+  - auto load modules and web components
+  - authentication
+  - user menu
+
+  
 
 - datafield file 
 - datafield files
@@ -204,11 +214,6 @@ x - tabs hash
 
 - npm package
 
-- use Auth0 + OpenID Connect (OIDC)
-  - navigation
-  - auto load modules and web components
-  - authentication
-  - user menu
 
 - top menu (like for example in aws console, wher all modules are showed)
   - idea 3:

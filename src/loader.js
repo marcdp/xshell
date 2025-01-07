@@ -26,7 +26,7 @@ const DEFAULTS = {
     },
     "page": {
         handler: "fetch-page",
-        cache: true
+        cache: false
     },
     "file": {
         handler: "fetch"
