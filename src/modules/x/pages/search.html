@@ -11,7 +11,7 @@
         async onCommand(command, args) {
             if (command == "load") {
                 //load
-                this.bindEvent(bus, "search", (event) => {
+                this.bindEvent(shell, "search", (event) => {
                     this.state.keyword = event.keyword
                 });                
                 //when keyword changes, do search
@@ -32,13 +32,14 @@
                 let category_ant = null;
                 if (keyword.length > 2) {
                     var searchRecursive = function(module, menuitem) {
-                        if (menuitem.label.toLowerCase().indexOf(keyword) >= 0) {
+                        if (menuitem.label.toLowerCase().indexOf(keyword) >= 0 && menuitem.href) {
                             results.push({
                                 label: menuitem.label,
                                 description: menuitem.description,
                                 category: (category_ant != module.label ? module.label : ""),
                                 logo: menuitem.logo || "x-page",
-                                href: menuitem.href
+                                href: menuitem.href,
+                                target: menuitem.target || "#root"
                             });
                             category_ant = module.label
                         }
@@ -68,9 +69,6 @@
     <x-datafields>
 
         <div x-if="state.results.length > 0">
-            <div>
-                <b>{{ state.results.length }}</b> results found for <b>{{state.keyword}}</b><br/><br/>
-            </div>
             <x-listview x-if="state.results.length > 0" view="list" title="Search results">
                 <x-listview-item 
                     x-for="result in state.results"
@@ -78,10 +76,14 @@
                     x-attr:description="result.description"
                     x-attr:icon="result.logo"
                     x-attr:href="result.href"
+                    x-attr:target="result.target"
                     x-attr:category="result.category"                    
-                    target="#root"
                 ></x-listview-item>
             </x-listview>       
+            <div>
+                <br>
+                <b>{{ state.results.length }}</b> results found for <b>{{state.keyword}}</b>
+            </div>
         </div>
 
         <div x-else>

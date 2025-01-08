@@ -39,21 +39,26 @@ class Config {
     get config() { return this._config; }
 
     //methods
-    /*
-    addEventListener(prefix, callback) {
-        this._listeners.push({ prefix, callback });
+    dispatchEvent(name, args) {
+        for(let listener of this._listeners){
+            if (listener.name == name){
+                listener.callback(args);
+            }
+        }
     }
-    removeEventListener(prefix, callback) {
+    addEventListener(name, callback) {
+        this._listeners.push({ name, callback });
+    }
+    removeEventListener(name, callback) {
         let index = 0;
         for(let listener of this._listeners){
-            if (listener.prefix == prefix && listener.callback == callback){
+            if (listener.name == name && listener.callback == callback){
                 this._listeners.splice(index, 1);
                 break;
             }
             index++;
         }
     }
-        */
     set(config, from, path) {
         normalizeUrls("", config, from, path);
         var keys = [];
@@ -62,18 +67,7 @@ class Config {
             this._config[key] = value;
             keys.push(key);
         }
-        for (let listener of this._listeners) {
-            let found = false;
-            for (let key of keys) {
-                if (key.startsWith(listener.prefix + ".")) {
-                    found = true;
-                    break;
-                }
-            }
-            if (found) {
-                listener.callback();
-            }
-        }
+        this.dispatchEvent("change");
     }
     get(key, defaultValue) {
         let result = this._config[key];

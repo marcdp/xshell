@@ -1,26 +1,24 @@
 import XElement from "../ui/x-element.js";
-import { bus, utils } from "../../../shell.js";
+import shell, { utils } from "../../../shell.js";
 
 // class
-export default XElement.define("x-drawer-menu", {
+export default XElement.define("x-menu", {
     style: `
-        :host {
-            display:flex; 
-            flex-direction:column; 
-        }   
-        nav li {list-style:none; }
-        nav li x-anchor {display:block; margin-bottom:.7em;}
-        nav li.divider {border-top:var(--x-layout-main-border); margin-top:1.5em; margin-bottom:1.5em; display:block;}
+        ul.menu {margin:0; padding:0;}
+        li.menuitem {list-style:none; }
+        li.menuitem > x-anchor {display:block; margin-bottom:.7em;}
+        li.divider {border-top:var(--x-layout-main-border); margin-top:1.5em; margin-bottom:1.5em; display:block;}
 
-        nav > ul {margin:0; padding:0;}
-        nav > ul > li { }
-        nav > ul > li > ul {margin:0; padding:0;}
-        nav > ul > li > x-anchor {font-size:var(--x-font-size-subtitle); font-weight:bold!important; display:block; margin-bottom:1.15em; }
-        nav > ul > li > ul > li ul {padding-left:1.75em;}
+        :host > nav > ul.menu > li.menuitem > x-anchor {font-size:var(--x-font-size-subtitle); font-weight:bold!important; display:block; margin-bottom:1.15em; }
+        :host > nav > ul.menu > li.menuitem > ul > li ul {padding-left:1.75em;}
 
         x-icon.new {padding-left:.25em; transform: translateY(-.1em);}
         x-anchor.selected {font-weight:600; }     
 
+        :host(.horizontal) ul.menu {display:flex; align-items:center;}
+        :host(.horizontal) li.menuitem {display:flex; align-items:center;}
+        :host(.horizontal) li.menuitem > x-anchor {margin-bottom:0; padding-left:.5em; padding-right:.5em;}
+        :host(.horizontal) nav > ul.menu > li.menuitem > x-anchor {margin:0!important; font-weight:normal!important; font-size:var(--x-font-size); }
     `,
     template: `
         <nav x-if="state.menu" x-children="state.ul"></nav>
@@ -30,7 +28,7 @@ export default XElement.define("x-drawer-menu", {
         ul: null
     },
     settings:{
-        preload: ["component:x-anchor"]
+        preload: ["component:x-anchor", "component:x-icon"]
     },
     methods: {
         onCommand(command) {
@@ -38,10 +36,12 @@ export default XElement.define("x-drawer-menu", {
                 //init
                 this.bindEvent(this.state, "change:menu", () => {
                     let ul = document.createElement("UL");
+                    ul.className = "menu";
                     let menu = this.state.menu;
                     if (menu) {
                         var createRecursive = function(menuitem) {
                             let li = document.createElement("LI");
+                            li.className = "menuitem";
                             if (menuitem.label == "-") {
                                 li.className = "divider";
                             } else if (menuitem.tag) {
@@ -56,8 +56,14 @@ export default XElement.define("x-drawer-menu", {
                                 let a = document.createElement("x-anchor");
                                 let label = document.createElement("span");
                                 label.innerHTML = menuitem.label;
-                                a.setAttribute("href", menuitem.href);
+                                if (menuitem.href) a.setAttribute("href", menuitem.href);
                                 if (menuitem.target) a.setAttribute("target", menuitem.target);
+                                if (menuitem.icon) {
+                                    let icon  = document.createElement("x-icon");
+                                    icon.icon = menuitem.icon;
+                                    if (!menuitem.label) icon.className = "size-x2";
+                                    a.appendChild(icon);
+                                }
                                 a.appendChild(label);
                                 if (menuitem.target && !menuitem.target.startsWith("#")) {
                                     let icon = document.createElement("x-icon");
@@ -66,9 +72,23 @@ export default XElement.define("x-drawer-menu", {
                                     a.appendChild(icon);
                                 }
                                 a.className = "plain";
-                                li.appendChild(a);
+                                if (menuitem.dropdown){
+                                    let dropdown = document.createElement("x-dropdown");
+                                    dropdown.appendChild(a.firstChild);
+                                    dropdown.className = "modules popover left";
+                                    dropdown.setAttribute("collapse-on-click", "");
+                                    let page = document.createElement("x-page");
+                                    page.setAttribute("slot", "dropdown");   
+                                    page.setAttribute("src", menuitem.href);
+                                    page.setAttribute("loading", "lazy");
+                                    dropdown.appendChild(page);
+                                    li.appendChild(dropdown);
+                                } else {
+                                    li.appendChild(a);
+                                }
                                 if (menuitem.children) {
                                     let ul = document.createElement("UL");
+                                    ul.className = "menu";
                                     for (let subMenuitem of menuitem.children) {
                                         ul.appendChild(createRecursive(subMenuitem));
                                     }
@@ -82,7 +102,7 @@ export default XElement.define("x-drawer-menu", {
                     this.state.ul = ul;
                     this.onCommand("refresh");
                 });
-                this.bindEvent(bus, "navigation-end", "refresh");
+                this.bindEvent(shell, "navigation-end", "refresh");
 
             } else if (command == "refresh") {
                 //refresh

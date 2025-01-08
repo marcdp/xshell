@@ -6,44 +6,48 @@ export default XElement.define("x-listview-item", {
         :host {}
 
         /* list */
-        .list {display:block;}
-        .list x-anchor {display:flex;} 
-        .list x-anchor x-icon {margin-right:.25em;transform:translateY(-.1em);}
-        .list x-anchor::part(a) { display:flex; align-items:center; }
-        .list .description {color:var(--x-color-text-gray);}
-        .list .description:empty {display:none;}
-        .list .description::before {content:"("; padding-left:.25em;}
-        .list .description::after {content:")";}
-        .list .category {font-weight:600; padding-left: 1.5em; padding-top:.25em;}
-        :host(.selected) .list {font-weight:600;}
-        :host(.selected) .list x-anchor::part(a) {color:var(--x-color-primary);}
+        x-anchor.list {display:flex;} 
+        x-anchor.list x-icon {margin-right:.25em;transform:translateY(-.1em);}
+        x-anchor.list::part(a) { display:flex; align-items:center; }
+        x-anchor.list .description {color:var(--x-color-text-gray);}
+        x-anchor.list .description:empty {display:none;}
+        x-anchor.list .description::before {content:"("; padding-left:.25em;}
+        x-anchor.list .description::after {content:")";}
+        :host(.selected) x-anchor.list {font-weight:600;}
+        :host(.selected) x-anchor.list x-anchor::part(a) {color:var(--x-color-primary);}
+        .category {font-weight:600; padding-left: 1.5em; padding-top:.25em; width:100%;}
+        
 
         /* icons */
-        .icons {}
-        .icons x-anchor {display:flex; width:6em; height:6em; border-radius:.5em;}  
-        .icons x-anchor x-icon {font-size:2em; amargin-bottom:.15em;}
-        .icons x-anchor::part(a) { display:flex; flex-direction:column; align-items:center; padding-left:.5em; padding-right:.5em; box-sizing:border-box; }
-       
-        .icons x-anchor:focus { outline:.15em solid var(--x-color-text)!important;}
-        .icons x-anchor::part(a):focus {outline:anone; }
+        x-anchor.icons {display:flex; width:6em; height:6em; border-radius:.5em;}  
+        x-anchor.icons x-icon {font-size:2em; amargin-bottom:.15em;}
+        x-anchor.icons::part(a) { display:flex; flex-direction:column; align-items:center; padding-left:.5em; padding-right:.5em; box-sizing:border-box; }
+        x-anchor.icons :focus { outline:.15em solid var(--x-color-text)!important;}
+        x-anchor.icons::part(a):focus {outline:anone; }
+        x-anchor.icons .label { text-align:center;}
+        x-anchor.icons .description {display:none}
 
-        .icons .label { text-align:center;}
-        .icons .description {display:none}
-        :host(.selected) .icons {font-weight:600;}
-        :host(.selected) .icons x-anchor {outline:.15em solid var(--x-color-primary);}
-        :host(.selected) .icons x-anchor::part(a) {color:var(--x-color-primary);}
+        :host(.selected) x-anchor.icons {font-weight:600; outline:.15em solid var(--x-color-primary);}
+        :host(.selected) x-anchor.icons::part(a) {color:var(--x-color-primary);}
+
+        /* details */
+        x-anchor.details {display:table-cell; padding-right:.5em;} 
+        x-anchor.details x-icon {display:inline-block;transform:translateY(-.1em);}
+        ::slotted(*) {display:table-cell; padding:.1em; padding-right:.5em;}
+        
     `,
     template: `
-        <div x-attr:class="state.view">
-            <div x-if="state.category" class="category">
-                {{state.category}}
-            </div>
-            <x-anchor _tabindex="0" x-attr:href="state.href" x-attr:target="state.target" class="plain" x-attr:title="state.description">
-                <x-icon class="size-ax2" x-attr:icon="state.icon"></x-icon>
-                <span class="label" x-text="state.label"></span>
-                <span class="description" x-text="state.description"></span>
-            </x-anchor>
+        <div x-if="state.category" class="category">
+            {{state.category}}
         </div>
+        <x-anchor x-attr:href="state.href ? state.href : false" x-attr:target="state.target" x-attr:class="'plain ' + state.view" x-attr:title="state.description">
+            <x-icon class='new' x-if="state.target!='#root'" icon="x-open_in_new"></x-icon>
+            <x-icon x-else x-attr:icon="state.icon"></x-icon>
+            <span class="label" x-text="state.label"></span>
+            <span class="description" x-text="state.description"></span>
+            
+        </x-anchor>
+        <slot></slot>
     `,
     state: {
         icon: "",

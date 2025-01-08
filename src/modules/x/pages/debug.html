@@ -18,39 +18,20 @@
 
 <template>
     <x-form>
-        <x-tabs>
+        <x-tabs selected-index="0">
             <x-tab label="Configuration">
-                <x-datafields>
-                    <x-datafield 
-                        label="Application name" 
-                        description="Enter a brief description to detail the use cases of this application." 
-                        type="text" 
-                        x-model="state.keyword" 
-                        placeholder="This is the placeholder" 
-                        message="Maximum 150 alphanumeric characters including dashes, periods, and underscores. Name cannot be changed after creation." 
-                        autofocus></x-datafield>
-                    <x-datafield 
-                        label="Application name" 
-                        description="" 
-                        type="text" 
-                        x-model="state.keyword" 
-                        placeholder="This is the placeholder" 
-                        message="Maximum 150 alphanumeric characters including dashes, periods, and underscores. Name cannot be changed after creation." 
-                        autofocus></x-datafield>
-                </x-datafields>
+                <x-page src="/x/pages/debug-config.html" loading="lazy"></x-page>
             </x-tab>
             <x-tab label="Modules">
+                <x-page src="/x/pages/debug-modules.html" loading="lazy"></x-page>
             </x-tab>
-            <x-tab label="Events">
+            <x-tab label="Loader">
+                <x-page src="/x/pages/debug-loader.html" loading="lazy"></x-page>
             </x-tab>
             <x-tab label="Pages">
-            </x-tab>
-            <x-tab label="Bus">
-            </x-tab>
-            <x-tab label="Other">
+                <x-page src="/x/pages/debug-pages.html" loading="lazy"></x-page>
             </x-tab>
         </x-tabs>
         <x-button slot="footer" label="Ok" class="submit" command="close"></x-button>
-    </x-form>
-    
+    </x-form>    
 </template>

@@ -1,5 +1,5 @@
 import XElement from "../ui/x-element.js";
-import { bus, utils } from "../../../shell.js";
+import shell, { utils } from "../../../shell.js";
 
 // class
 export default XElement.define("x-dropdown", {
@@ -17,8 +17,14 @@ export default XElement.define("x-dropdown", {
             border:var(--x-dropdown-border);
             border-radius:var(--x-dropdown-border-radius);
             box-shadow:var(--x-dropdown-shadow);
+        }
+        .body > div {
             min-height:1em;
             padding: var(--x-dropdown-padding-vertical) var(--x-dropdown-padding-horizontal) var(--x-dropdown-padding-vertical) var(--x-dropdown-padding-horizontal);            
+            max-height:75vh; 
+            overflow:auto;
+            scrollbar-width: var(--x-scrollbar-width);
+            scrollbar-gutter: var(--x-scrollbar-gutter);
         }
         :host .body.expanded {
             display:block;
@@ -29,7 +35,8 @@ export default XElement.define("x-dropdown", {
         :host(.popover) .body {            
             margin-top:1em;
             margin-left:-2em;
-            min-width: clamp(21.15em, 100%, 200%);
+            min-width: clamp(22em, 100%, 200%);
+            __max-width: 50vw;
         }
         :host(.popover) .body .helper {
             display: inline-block;
@@ -78,7 +85,9 @@ export default XElement.define("x-dropdown", {
         <div x-attr:class="'body ' + (state.expanded ? 'expanded' : '')" x-on:collapse.stop="collapse" x-on:mousedown.stop="mousedown-body" x-on:click="click-body">
             <span class="helper"></span>
             <span class="helper2"></span>
-            <slot name="dropdown"></slot>
+            <div>
+                <slot name="dropdown"></slot>
+            </div>
         </div>
     `,
     state:{
@@ -99,7 +108,7 @@ export default XElement.define("x-dropdown", {
                         if (isNaN(diff) || diff > 10) this.onCommand("collapse");
                     }
                 });
-                this.bindEvent(bus, "navigation-start", () => {
+                this.bindEvent(shell, "navigation-start", () => {
                     //if navigation occurred, collapse
                     if (this.state.expanded) {
                         if (!this.state.collapseOnClick) {

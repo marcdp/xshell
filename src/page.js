@@ -4,8 +4,6 @@ import config from "./config.js";
 import utils from "./utils.js";
 import PageInstance from "./page-instance.js";
 
- 
-
 // class
 class Page extends HTMLElement {
 
@@ -204,10 +202,16 @@ class Page extends HTMLElement {
                 });
                 return;
             }
-        }        
+        }                
+        //search params
+        let searchParams = new URLSearchParams(src.indexOf("?") != -1 ? src.substring(src.indexOf("?") + 1).split("#")[0] : "");
         //layout
         let layoutName = this._layout;
-        doc.head.querySelectorAll("meta[name='layout']").forEach((sender) => { layoutName = sender.content || layoutName; });
+        doc.head.querySelectorAll("meta[name='page-layout']").forEach((sender) => { layoutName = sender.content || layoutName; });
+        if (searchParams.get("page-layout")) {
+            layoutName = searchParams.get("page-layout");
+            searchParams.delete("page-layout");
+        }
         let layout = config.get("pages.layout." + (layoutName || "embed"));
         await loader.load("layout:" + layout);
         if (layoutElement == null || layoutElement.localName != layout) {
@@ -221,8 +225,6 @@ class Page extends HTMLElement {
         //    if (document.body.querySelectorAll(":scope > page").length > 1) {
         //        await new Promise(r => setTimeout(r, 1000));                
         //    }
-        //search params
-        let searchParams = new URLSearchParams(src.indexOf("?") != -1 ? src.substring(src.indexOf("?") + 1) : "");
         //page-src
         let srcPage = "";
         if (searchParams.get("page-src")) {
@@ -236,7 +238,7 @@ class Page extends HTMLElement {
         let menuitem = (menuitems ? menuitems[menuitems.length-1] : null);  
         //label
         let label = doc.title;
-        doc.head.querySelectorAll("meta[name='label']").forEach((sender) => { label = sender.content; });
+        doc.head.querySelectorAll("meta[name='page-label']").forEach((sender) => { label = sender.content; });
         if (!label && menuitems) label = menuitem.label;
         if (searchParams.get("page-label")) {
             label = searchParams.get("page-label");
@@ -292,9 +294,11 @@ class Page extends HTMLElement {
         //remove loading
         if (layoutElement) layoutElement.removeAttribute("status");
         //call load on instance
-        await this._instance.load();
+        await this._instance.load();        
         //raise load event
         this.dispatchEvent(new CustomEvent("load"));
+        //bus event
+        //bus.emit("page-load", { page: instance });
     }
     error({code, message, src, stack}) {
         //error

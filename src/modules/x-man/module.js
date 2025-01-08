@@ -14,11 +14,9 @@ export default {
         "modules.x-man.type": "application",
         "modules.x-man.menus.main": {
             "label": "XShell Manual",
-            "href": "./pages/index.html",
+            "href": "./pages/index.md",
             "default": true,
             "children": [
-                {"label": "Test MARKDOWN", href:"./pages/test.md"},
-                {"label": "Test PDF", href:"./pages/test.pdf"},
                 {"label": "Shell", href:"./pages/shell/index.md", children:[
                     
                 ]},
@@ -26,8 +24,10 @@ export default {
                     
                 ]},
                 {"label": "Pages", href:"./pages/pages/index.md", children:[
+                    {"label": "Main", href:"./pages/pages/main.md"},
                     {"label": "Stack", href:"./pages/pages/stack.md"},
                     {"label": "Dialog", href:"./pages/pages/dialog.md"},
+                    {"label": "Embed", href:"./pages/pages/embed.md"},
                     {"label": "Target", href:"./pages/pages/target.md"},
                 ]},
                 {"label": "Loader", href:"./pages/loader/index.md", children: [

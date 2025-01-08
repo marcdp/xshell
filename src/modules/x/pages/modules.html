@@ -13,7 +13,7 @@
                 //load
                 await this.onCommand("refresh");
                 //listen
-                this.bindEvent(bus, "navigation-end", (event) => {
+                this.bindEvent(shell, "navigation-end", (event) => {
                     let module = shell.getModuleBySrc(event.page.src)
                     this.state.selected = module.name;
                 });
