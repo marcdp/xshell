@@ -208,6 +208,7 @@ class XTemplate {
                     //...<input type="text" x-model="state.name"/>... --> <input type="text" x-prop:value="state.name" x-on:change.stop="state.name = event.target.value"/>
                     //prop
                     let nodeName = node.tagName.toLowerCase();
+                    let eventName = "change";
                     let propertyName = "value";
                     let propValue = attr.value;
                     if (nodeName == "input") {
@@ -230,7 +231,7 @@ class XTemplate {
                     }
                     props.push(propertyName + ":" + propValue);
                     //event
-                    events.push(`'change.stop': (event) => { 
+                    events.push(`'${eventName}.stop': (event) => { 
                         let value = utils.getInputValue(event.target);
                         ${attr.value} = value;
                         invalidate(); 

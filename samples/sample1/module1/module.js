@@ -28,12 +28,18 @@
                 { "label": "Page 8", "href": "./pages/page8.html" }                
             ]
         },
+        "modules.module1.menus.tools": {
+            "label": "",
+            "children": [
+                { "label": "My things", "href": "./pages/page1.html", "aicon":"x-bell" },
+                { "label": "Your things", "href": "./pages/page2.html"  },
+                //{ "label": "", "href": "./pages/page2.html", "icon":"x-debug", "dropdown": true }
+            ]
+        },
 
         //loader
         "loader.icon:module1-{name}": "./icons/{name}.svg",
-
-        "loader.component:module1-{name}": "./components/{name}.js",        
-        
+        "loader.component:module1-{name}": "./components/{name}.js",                
         "loader.page:/module1/{path}": "./{path}",
     },
     //methods

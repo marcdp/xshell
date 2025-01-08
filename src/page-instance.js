@@ -9,6 +9,7 @@ class PageInstance {
     _page = null;
     _refs = null;
     _binds = new Binds();
+    _status = "init";
 
 
     //ctor
@@ -68,7 +69,10 @@ class PageInstance {
         container.appendChild(documentFragment);
     }
     async load() {
+        //call load command
         await this.onCommand("load");
+        //set status
+        this._status = "loaded";
     }
     async onCommand(command, args) {
     }
@@ -84,6 +88,7 @@ class PageInstance {
     async unload() {
         this._binds.clear();
         await this.onCommand("unload");
+        this._status = "unloaded";
     }
 
 

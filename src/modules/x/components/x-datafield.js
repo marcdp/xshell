@@ -111,6 +111,11 @@ export default XElement.define("x-datafield", {
         :host .list .list-buttons {display:flex; justify-content:flex-end; height:2.275em;}
 
         :host .richtext {padding:0;}
+
+        :host .search {}
+        :host .search x-icon {position:absolute; left:.5em; top:.35em; color:var(--x-datafield-color-placeholder); }
+        :host .search:focus-within x-icon {color:var(--x-color-text);}
+        :host .search input {padding-left:2em; }
         
         :host > div.error {
             font-size:var(--x-font-size-small); 
@@ -126,7 +131,7 @@ export default XElement.define("x-datafield", {
         
         `,
     template: `
-        <label x-attr:for="state.inputId" x-attr:class="(state.errors.length ? 'error' : '')" >
+        <label x-if="state.label" x-attr:for="state.inputId" x-attr:class="(state.errors.length ? 'error' : '')" >
             <span class="label" x-if="state.label" x-text="state.label"></span>
             <span class="required" x-if="state.required">*</span>
             <span class="langs" x-if="state.type.endsWith('_i18n')" >
@@ -324,6 +329,21 @@ export default XElement.define("x-datafield", {
             <div class="list-buttons">
                 <x-button x-if="state.add" x-on:click="list-add" icon="x-add" class="plain"></x-button>
             </div>
+        </div>
+        
+        <div class="search" x-elseif="state.type=='search'">
+            <x-icon icon="x-search"></x-icon>
+            <input 
+                class="input"                
+                autocomplete="on"
+                x-on:input="search-input"
+                x-attr:value="state.value"
+                x-attr:id="state.inputId"
+                x-attr:type="state.type" 
+                x-attr:placeholder="state.placeholder" 
+                x-attr:disabled="state.disabled"
+                x-attr:readonly="state.readonly"
+            />
         </div>
         
         <input 
@@ -530,6 +550,10 @@ export default XElement.define("x-datafield", {
                     }
                 }
                 this.state.value = parts.join("|");
+
+            } else if (command == "search-input") {
+                //search-input
+                this.state.value = args.event.target.value;
 
             } else if (command == "pick") {
                 // pick

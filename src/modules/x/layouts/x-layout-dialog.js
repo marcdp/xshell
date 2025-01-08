@@ -5,7 +5,7 @@ export default XElement.define("x-layout-dialog", {
     style:`
         dialog {
             max-width:90vw;
-            min-width:20vw;
+            min-width:25vw;
             min-height:7em;
             padding:var(--x-layout-dialog-page-padding-vertical) var(--x-layout-dialog-page-padding-horizontal) var(--x-layout-dialog-page-padding-vertical) var(--x-layout-dialog-page-padding-horizontal);
             border:var(--x-layout-dialog-border);

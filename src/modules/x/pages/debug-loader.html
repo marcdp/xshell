@@ -1,0 +1,47 @@
+
+<title>Loader</title>
+
+<script type="module">
+    import shell, { bus, config, utils, loader } from "../../../shell.js";
+
+    //export
+    export default {
+        state: {
+            items: []
+        },
+        async onCommand(command, args) {
+            if (command == "load") {
+                //load
+                this.bindEvent(loader, "load", (event)=>{
+                    this.state.items.push({
+                        resource: event.detail.resource,
+                        src: event.detail.src,
+                        duration: parseInt(event.detail.duration),
+                        status: event.detail.status
+                    });
+                    this.invalidate();
+                });
+                
+            } else if (command == "clear") {
+                //clear
+                this.state.items = [];
+            }
+        }
+    }
+</script>
+
+<template>
+    
+    <x-listview view="details">
+        <div slot="column">Resource</div>
+        <div slot="column">Source</div>
+        <div slot="column">Duration</div>
+        <div slot="column">Status</div>
+        <x-listview-item x-for="item in state.items" x-attr:label="item.resource" icon="x-file">            
+            <a x-attr:href="item.src" target="_blank" x-text="item.src"></a>
+            <div>{{ item.duration }} ms</div>
+            <div>{{ item.status }}</div>
+        </x-listview-item>
+    </x-listview>       
+    
+</template>

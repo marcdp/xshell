@@ -2,6 +2,8 @@ import config from "./config.js";
 import utils from "./utils.js";
 import bus from "./bus.js";
 import loader from "./loader.js";
+import binds from "./binds.js";
+import i18n from "./i18n.js";
 import Page from "./page.js";
 import PageInstance from "./page-instance.js";
 
@@ -16,6 +18,7 @@ class Shell {
     _container = null;
     _modules = {};
     _modulesLoading = {};
+    _listeners = [];
 
     //ctor
     constructor() {
@@ -50,13 +53,6 @@ class Shell {
             "shell.debug": false,
             "shell.start": "",
             "shell.container": "body",
-            "shell.menus.main": {
-                label:"",
-                children:[  
-                    { "label": "Home", "href": "#home", },
-                    { "label": "Home2", "href": "#home2" }
-                ]
-            },
             "shell.error": "",
             "shell.lazy": ""
         }, import.meta.url);
@@ -105,6 +101,27 @@ class Shell {
         
     }
 
+    //events
+    dispatchEvent(name, args) {
+        for(let listener of this._listeners){
+            if (listener.name == name){
+                listener.callback(args);
+            }
+        }
+    }
+    addEventListener(name, callback) {
+        this._listeners.push({ name, callback });
+    }
+    removeEventListener(name, callback) {
+        let index = 0;
+        for(let listener of this._listeners){
+            if (listener.name == name && listener.callback == callback){
+                this._listeners.splice(index, 1);
+                break;
+            }
+            index++;
+        }
+    }
 
     // modules
     getModuleBySrc(src) {
@@ -226,11 +243,11 @@ class Shell {
         this._modules[name] = instance;
         //mount
         await instance.onCommand("load", module.args);
-        //bus event
-        bus.emit("module-load", { name: module, module: instance });
         //resolve
         loadModuleTaskResolve(instance);
         delete this._modulesLoading[module.src];
+        //dispatch event
+        this.dispatchEvent("module-load", { detail: {name: module, module: instance }});
         // log
         console.log(`shell.moduleLoaded()`, instance);
         //return
@@ -342,6 +359,9 @@ class Shell {
         //return
         return config.get("shell.base") + "/" + prefix + HASH_PREFIX + src;
     }
+    search(keyword){
+        this.dispatchEvent("search", { keyword });
+    }
     
 
     //private
@@ -368,7 +388,7 @@ class Shell {
                 if (i == 0) {
                     page.setAttribute("layout", "main");
                     //emit event navigation-start
-                    bus.emit("navigation-start", { page });
+                    this.dispatchEvent("navigation-start", { page });
                 } else {
                     page.setAttribute("layout", "stack");
                     page.addEventListener("close", (event) => {
@@ -402,7 +422,7 @@ class Shell {
                     if (pages.indexOf(event.target) == 0) {
                         var label = event.target.label;
                         if (label) document.title = label + " / " + config.get("app.label");
-                        bus.emit("navigation-end", { page: event.target });
+                        this.dispatchEvent("navigation-end", { page: event.target });
                         console.log(`page.ready()`);
                     }
                 });
@@ -431,7 +451,7 @@ class Shell {
                 page.src = hashAfterPart;
                 //emit event navigation-start
                 if (i == 0) {
-                    bus.emit("navigation-start", { page });
+                    this.dispatchEvent("navigation-start", { page });
                 }
             }
         }
@@ -440,6 +460,12 @@ class Shell {
     
 }
 
+//creates a new instance
+let shell = new Shell();
+window.shell = shell;
+
 //export default instance
-export default new Shell();
-export { config, bus, utils, loader, Page, PageInstance};
+export default shell;
+
+//export other objects and classes
+export { config, bus, utils, loader, i18n, binds, Page, PageInstance};

@@ -18,6 +18,8 @@ export default XElement.define("x-anchor", {
         :host(.plain.selected) a:hover {color:var(--x-color-primary-dark);}
         :host(.disabled) { pointer-events: none}
 
+        :host(:not([href]):not([command])) a:hover {color:inherit}
+
     `,
     template: `
         <a 
@@ -72,32 +74,34 @@ export default XElement.define("x-anchor", {
                     return false;
                 } else if (this.state.target) {
                     //target 
-                    let src = utils.combineUrls(this.page.src, this.state.href);
-                    if (this.state.target == "#stack") {
-                        shell.showPage({ src: src, sender: this.page, target: this.state.target, breadcrumb: this.state.breadcrumb });
-                        event.preventDefault();
-                        event.stopPropagation();
-                        return false;
-                    } else if (this.state.target == "#dialog") {
-                        shell.showPage({ src: src, sender: this.page, target: this.state.target, breadcrumb: this.state.breadcrumb });
-                        event.preventDefault();
-                        event.stopPropagation();
-                        return false;
-                    } else if (this.state.target == "#root") {
-                        shell.navigate( src );
-                        event.preventDefault();
-                        event.stopPropagation();
-                        return false;
-                    } else if (this.state.target.startsWith("#")) {
-                        let targetPage = this.page.querySelector(this.state.target);
-                        if (!targetPage) targetPage = utils.getElementByIdRecursive(document, this.state.target.substring(1));
-                        if (targetPage) targetPage.src = src;
-                        event.preventDefault();
-                        event.stopPropagation();
-                        return false;
-                    } else {
-                        let src = shell.getHref(this.state.href, this.page, { breadcrumb: this.state.breadcrumb });
-                        window.open(src);
+                    if (this.state.href) {
+                        let src = utils.combineUrls(this.page.src, this.state.href);
+                        if (this.state.target == "#stack") {
+                            shell.showPage({ src: src, sender: this.page, target: this.state.target, breadcrumb: this.state.breadcrumb });
+                            event.preventDefault();
+                            event.stopPropagation();
+                            return false;
+                        } else if (this.state.target == "#dialog") {
+                            shell.showPage({ src: src, sender: this.page, target: this.state.target, breadcrumb: this.state.breadcrumb });
+                            event.preventDefault();
+                            event.stopPropagation();
+                            return false;
+                        } else if (this.state.target == "#root") {
+                            shell.navigate( src );
+                            event.preventDefault();
+                            event.stopPropagation();
+                            return false;
+                        } else if (this.state.target.startsWith("#")) {
+                            let targetPage = this.page.querySelector(this.state.target);
+                            if (!targetPage) targetPage = utils.getElementByIdRecursive(document, this.state.target.substring(1));
+                            if (targetPage) targetPage.src = src;
+                            event.preventDefault();
+                            event.stopPropagation();
+                            return false;
+                        } else {
+                            let src = shell.getHref(this.state.href, this.page, { breadcrumb: this.state.breadcrumb });
+                            window.open(src);
+                        }
                     }
                 //} else if (this.state.href == "#") {
                     //do nothing

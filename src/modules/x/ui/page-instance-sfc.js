@@ -12,6 +12,7 @@ class PageInstanceSfc extends PageInstance {
     _xtemplate = null;
     _xtemplateInstance = null;
     _renderTimeoutId = 0;
+    _
 
 
     //ctor
@@ -91,6 +92,8 @@ class PageInstanceSfc extends PageInstance {
             loadArgs[key] = value;
         }
         await this.onCommand("load", loadArgs);
+        //set status
+        this._status = "loaded";
         //render
         this.render();
     }
@@ -112,7 +115,9 @@ class PageInstanceSfc extends PageInstance {
             this._renderTimeoutId = 0;
         };
         //render
-        this._xtemplateInstance.render(this._state);
+        if (this._status != "unloaded") {
+            this._xtemplateInstance.render(this._state);
+        }
     }
 }
 

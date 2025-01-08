@@ -8,8 +8,6 @@
     html {font-size:14px; margin:0; padding:0; box-sizing:border-box}*,*:before,*:after{box-sizing:border-box}
 }
 
-
-
 /* vars */
 :root {
    
@@ -91,6 +89,10 @@
     --x-loading-height: .25em;
     --x-loading-duration: 4s;
     --x-loading-delay: .250ms;
+
+    /* scrollbar */
+    --x-scrollbar-width: thin;
+    --x-scrollbar-gutter: stable;
         
 }  
 
@@ -113,7 +115,11 @@ html {
     font-family:var(--x-font-family);
     font-size:var(--x-font-size);
     color:var(--x-color-text);   
-    scrollbar-width: thin;
+    scrollbar-width: var(--x-scrollbar-width);
+    scrollbar-gutter: var(--x-scrollbar-gutter);
+}
+html:has(body > x-page[layout='stack']) {
+    overflow-y: hidden;
 }
 :not(:defined) {
     visibility: hidden;
@@ -134,6 +140,8 @@ fieldset {
     padding: var(--x-card-padding);
 }
 fieldset legend {font-weight:600; padding-left:.5em; padding-right:.5em;}
+b {font-weight: 600;}
+
 
 
 
@@ -243,3 +251,4 @@ x-page[layout='stack'] + x-page[layout='stack'] + x-page[layout='stack'] {--x-la
     /* splitter */
     --x-splitter-background: #dddddd;
 }
+

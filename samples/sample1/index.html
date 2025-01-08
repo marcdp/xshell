@@ -4,6 +4,16 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="shortcut icon" href="./favicon.ico">
+
+    <!--
+    <link rel="preload" href="/src/modules/x/components/x-anchor.js"  as="script"/>
+    <link rel="preload" href="/src/modules/x/components/x-button.js"  as="script"/>
+    <link rel="preload" href="/src/modules/x/components/x-loading.js"  as="script"/>
+    <link rel="preload" href="/src/modules/x/layouts/x-layout-dialog.js"  as="script"/>
+    <link rel="preload" href="/src/modules/x/ui/x-element.js"  as="script"/>
+    <link rel="preload" href="/src/modules/x/ui/page-instance-sfc.js"  as="script"/>
+    -->
+
     <script type="importmap">
         {
           "imports": {
@@ -22,6 +32,10 @@
             "app.version": "0.1",
             "app.copyright": "",
             "app.logo": "./logo.svg",
+            // shell
+            "shell.base": ".",
+            "shell.debug": true,
+            "shell.start": "/module1/pages/page4.html",
             // module oidc
             "modules.oidc.src": "/src/modules/oidc/module.js",
             // module x
@@ -37,10 +51,6 @@
             "modules.module2.src": "./module2/module.js",
             "modules.module2.path": "/module2",
             "modules.module2.loading": "lazy",
-            // shell
-            "shell.base": ".",
-            "shell.debug": true,
-            "shell.start": "/module1/pages/page4.html"
         });
         //start
         await shell.start();
@@ -180,20 +190,23 @@ x - loader-handler page-pdf
 x - page.replace(src)
 x - tabs hash
 x - page.hash hierarchycal NO
+x - if menu has single page, then we should hide the menu??? NO
+x - each module can show custom menu tools -- use @scope to style right menu items
+x - when stack is showed, add  overflow:hidden to body
+x - /x/pages/debug-modules.html -- modules loaded -- listview with columns: status, path, description, icon, etc
+x - /x/pages/debug-modules.html: auto refresh, when module loaded
+x - /x/pages/debug-config.html -- config -- show config as table key value
+x - shell.dispatchEvent("navigation-start")
+x - shell.dispatchEvent("navigation-end")
+x - shell.dispatchEvent("search", {})
+x - /x/pages/debug-loader.html -- pages loaded -- show listsview
 
 
-- if menu has single page, then we should hide the menu
-
-
-- x-splitter
+- /x/pages/debug-pages.html -- pages loaded -- show listsview
 
 - docs
 
-- /x/pages/debug.html -- config
-- /x/pages/debug.html -- modules loaded
-- /x/pages/debug.html -- bus events
-- /x/pages/debug.html -- pages loaded
-
+- x-splitter
 
 - use Auth0 + OpenID Connect (OIDC)
   - navigation

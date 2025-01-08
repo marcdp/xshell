@@ -1,4 +1,4 @@
-import shell, { config, bus, utils } from "../../../shell.js";
+import shell, { config, utils } from "../../../shell.js";
 import XElement from "../../x/ui/x-element.js";
 
 
@@ -28,9 +28,9 @@ export default XElement.define("x-layout-main", {
         .header .logo img {display:block; width:3em; height:1.9em; object-fit:contain; border-right:var(--x-layout-main-border);}
         .header .spacer {flex:1}
         
-        .header.shell {z-index:2;}
+        .header.shell {z-index:6;}
 
-        .header.breadcrumb {z-index:1;}
+        .header.breadcrumb {z-index:5; padding-right:1.75em;}
 
         /* modules */
         .modules {color:var(--x-color-text); margin-left:.75em; margin-right:.5em; display:block;}
@@ -38,28 +38,10 @@ export default XElement.define("x-layout-main", {
         .modules:active > x-icon {color:var(--x-color-primary-dark);}
 
         /* search */
-        .header .search {
-            display:flex;
-        }
-        .header .search input {
-            border: var(--x-datafield-border); 
-            width:30em; 
-            line-height:1.725em; 
-            border-radius:var(--x-datafield-border-radius); 
-            padding-left:2.25em; 
-            cursor:pointer; 
-            font-size:var(--x-datafield-font-size);
-            font-family:var(--x-datafield-font-family);
-            color:var(--x-datafield-color);
-            position:1;
-        }
-        .header .search input::placeholder {
-            color: var(--x-datafield-color-placeholder);
-        }
-        .header .search input:focus + x-icon {color:var(--x-color-text)}
+        .header .search {display:flex;}
+        .header .search x-datafield {width:30em;}
         .header .search x-icon {transform:translate(.75em,.3em); position:absolute; color: var(--x-datafield-color-placeholder); position:0;}
         .header .search-button {display:none;}
-
 
         /* breadcrumb */
         .breadcrumb {position:sticky; top:0; user-select: none; flex:1;}
@@ -155,7 +137,7 @@ export default XElement.define("x-layout-main", {
             }
             .header .logo img {width:4em;}
 
-            .header .search input {width:unset; flex:1;}
+            .header .search x-datafield {width:unset; flex:1;}
             .header .spacer  {display:none}
             .header .input-dropdown {flex:1;}
 
@@ -220,13 +202,17 @@ export default XElement.define("x-layout-main", {
 
             <x-dropdown class="input-dropdown">
                 <div class="search">
-                    <input type="text" placeholder="Search" x-model="state.keyword" x-on:input="search" ref="search">
-                    <x-icon icon="x-search"></x-icon>
+                    <x-datafield type="search" placeholder="Search" x-model="state.keyword" ></x-datafield>
                 </div>
                 <x-page slot="dropdown" src="/x/pages/search.html" loading="lazy"></x-page>
             </x-dropdown>
 
             <div class="spacer"></div>
+
+            <x-dropdown x-if="state.shellDebug" class="modules popover left" collapse-on-click>
+                <x-icon tabindex="1" icon="x-debug" class="size-x2"></x-icon>
+                <x-page slot="dropdown" src="/x/pages/debug.html" loading="lazy"></x-page>
+            </x-dropdown>
 
         </nav>
 
@@ -244,10 +230,7 @@ export default XElement.define("x-layout-main", {
 
             <div class="spacer"></div>
 
-            <x-dropdown class="modules popover left" collapse-on-click>
-                <x-icon tabindex="1" icon="x-debug" class="size-x2"></x-icon>
-                <x-page slot="dropdown" src="/x/pages/debug.html" loading="lazy"></x-page>
-            </x-dropdown>
+            <x-menu x-prop:menu="state.menuTools" class="horizontal"></x-menu>
         </nav>
 
         <!-- body -->
@@ -256,13 +239,13 @@ export default XElement.define("x-layout-main", {
                 <div>
                     <x-button class="anchor" icon="x-keyboard-arrow-left" x-on:click="toggle-menu"></x-button>
                     <x-button class="anchor" icon="x-close" x-on:click="toggle-menu"></x-button>
-                    <x-drawer-menu x-prop:menu="state.menu"></x-drawer-menu>
+                    <x-menu x-prop:menu="state.menu"></x-menu>
                 </div>
             </nav>
             <div class="divider"></div>
             <main>           
                 <div>     
-                    <h1>{{ state.label }}</h1>
+                    <h1 x-if="state.label">{{ state.label }}</h1>
                     <slot></slot>
                 </div>
             </main>
@@ -274,33 +257,33 @@ export default XElement.define("x-layout-main", {
         appLogo:    config.get("app.logo"),
         appLabel:   config.get("app.label"),
         shellBase:  config.get("shell.base"),
-        shellMenu:  config.get("shell.menus.main"),
         menu:       null,
+        menuTools:  null,
         toggled:    false,
         breadcrumb: [],
         label:      "",
-        keyword:    ""
+        keyword:    "",
+        shellDebug: config.get("shell.debug")
     },
     methods: {
-        async onCommand(command, args) {
+        async onCommand(command) {
             if (command == "load") {
                 //load
-                this.bindEvent(bus, "navigation-start", () => {
+                this.bindEvent(shell, "navigation-start", () => {
                     if (utils.probablyPhone()){
                         if (this.state.toggled) {
                             this.state.toggled = false;
                         }
                     }
-                    this.state.keyword = "";
-                    bus.emit("search", { keyword: "" });
                 });
-                this.bindEvent(bus, "navigation-end", (event) => {
+                this.bindEvent(shell, "navigation-end", (event) => {
                     let href = event.page.src;
                     if (this.state.ul){
                         let a = this.state.ul.querySelector(`x-anchor[href='${href}']`);
                         a.classList.add("selected");
                     }
                 });
+                this.bindEvent(this.state, "change:keyword", "search");
                 this.bindEvent(this.page, "load", "refresh");
 
             } else if (command == "refresh") {
@@ -326,13 +309,20 @@ export default XElement.define("x-layout-main", {
                     //show menu
                     let menu = config.get(`modules.${module.name}.menus.main`);
                     this.state.menu = menu;
+                    //show menu tools
+                    let menuTools = config.get(`modules.${module.name}.menus.tools`);
+                    this.state.menuTools = menuTools;
                     //show breadcrumb
                     this.state.breadcrumb = breadcrumb;
+                    //show label
                     this.state.label = this.page.label;
                 } else {
-                    //get module
+                    //show menu
                     let menu = config.get(`modules.${module.name}.menus.main`);
                     this.state.menu = menu;
+                    //show menu tools
+                    let menuTools = config.get(`modules.${module.name}.menus.tools`);
+                    this.state.menuTools = menuTools;
                     //breadcrumb
                     let menuitems = utils.findObjectsPath(menu, 'href', src);
                     if (menuitems) {
@@ -356,9 +346,7 @@ export default XElement.define("x-layout-main", {
 
             } else if (command == "search") {
                 //search
-                let input = this.refs.search;
-                let keyword = input.value.trim();
-                bus.emit("search", { keyword });
+                shell.search(this.state.keyword.trim());
             }
             
         }

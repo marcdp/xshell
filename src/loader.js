@@ -12,13 +12,18 @@ class LoaderException extends Error {
 // Defaults
 const DEFAULTS = {
     "layout": {
-        handler: "import"
+        handler: "import",
+        webComponent: true,
+        cache: true
     },
     "component": {
-        handler: "import"
+        handler: "import",
+        webComponent: true,
+        cache: true
     },
     "page-handler": {
-        handler: "import"
+        handler: "import",
+        cache: true
     },
     "icon": {
         handler: "fetch-svg",
@@ -75,6 +80,7 @@ class Loader {
     //vars
     _definitions = [];
     _cache = {};
+    _listeners = [];
     
 
     //ctor
@@ -83,6 +89,26 @@ class Loader {
 
 
     //methods
+    dispatchEvent(name, args) {
+        for(let listener of this._listeners){
+            if (listener.name == name){
+                listener.callback(args);
+            }
+        }
+    }
+    addEventListener(name, callback) {
+        this._listeners.push({ name, callback });
+    }
+    removeEventListener(name, callback) {
+        let index = 0;
+        for(let listener of this._listeners){
+            if (listener.name == name && listener.callback == callback){
+                this._listeners.splice(index, 1);
+                break;
+            }
+            index++;
+        }
+    }
     addDefinition(key, src) {
         let type = key.split(":")[0];
         let pattern = key.split(":")[1];
@@ -91,6 +117,7 @@ class Loader {
         let searchParams = new URLSearchParams(src.indexOf("?") != -1 ? src.substring(src.indexOf("?") + 1) : "");
         let defaults = DEFAULTS[type] || {};
         let handler = defaults.handler || "fetch";
+        let webComponent = (typeof(defaults.webComponent) == "undefined" ? false : defaults.webComponent);
         let cache = (typeof(defaults.cache) == "undefined" ? false : defaults.cache);
         for(let key of searchParams.keys()) {
             if (key.startsWith("loader-")) {
@@ -117,6 +144,7 @@ class Loader {
             src,
             handler,
             cache,
+            webComponent,
             regexp: new RegExp(regexp)
         };
         definition.regexp = new RegExp(regexp);
@@ -166,7 +194,7 @@ class Loader {
                 } else {
                     result.push(cacheItem);
                 }
-            } else if (window.customElements.get(name)) {
+            } else if (definition.webComponent && window.customElements.get(name)) {
                 let customElement = window.customElements.get(name);
                 this._cache[scheme + ":" + name] = customElement;
                 result.push(customElement);
@@ -178,8 +206,7 @@ class Loader {
                 }
                 tasks.push(promise);
                 result.push(null);
-            }
-            
+            }            
         }
         //wait until all resources have been settled
         const taskResults = await Promise.allSettled(tasks);
@@ -209,6 +236,7 @@ class Loader {
     }    
     async loadDefinition(resource, definition, src){
         let value = null;
+        let before = performance.now();
         //handler
         let handler = Handlers[definition.handler];
         if (!handler) handler = await this.load("handler:" + definition.handler);
@@ -218,6 +246,10 @@ class Loader {
         if (definition.cache) {
             this.register(resource, value);
         }
+        //event
+        let after = performance.now();
+        let duration = after - before;
+        this.dispatchEvent("load", {detail:{resource, definition, src, value, duration, status:200}});
         //return
         return value;
     }
