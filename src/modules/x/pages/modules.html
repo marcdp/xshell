@@ -55,7 +55,7 @@
     <x-listview view="icons">
         <x-listview-item 
             x-for="module in state.modules"
-            x-attr:class="(state.selected == module.name ? 'selected' : '')"
+            x-class:selected="(state.selected == module.name)"
             x-attr:label="module.label"
             x-attr:description="module.description"
             x-attr:icon="module.logo"

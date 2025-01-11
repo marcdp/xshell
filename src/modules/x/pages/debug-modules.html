@@ -20,6 +20,7 @@
                 //refresh
                 let modules = [];
                 for(let target of config.getAsObjects("modules")) {
+                    let module = shell.modules[target.name];
                     modules.push({
                         name: target.name,
                         label: target.label || target.name || "",
@@ -28,6 +29,8 @@
                         path: target.path || "",
                         type: target.type || "",
                         src: target.src || "",
+                        loadTime: (module && module.stats ? module.stats.loadTime : -1),
+                        loadSize: (module && module.stats ? module.stats.loadSize : -1),
                         version: target.version || "",
                         status: target.status || "",
                     });
@@ -47,6 +50,8 @@
         <div slot="column">Source</div>
         <div slot="column">Version</div>
         <div slot="column">Type</div>
+        <div slot="column">Load T.</div>
+        <div slot="column">Size</div>
         <div slot="column">Status</div>
         <x-listview-item 
             x-for="module in state.modules"
@@ -60,7 +65,10 @@
             <div>{{ module.src }}</div>
             <div>{{ module.version }}</div>
             <div>{{ module.type }}</div>
+            <div><x-time-ms x-prop:value="module.loadTime"></x-time-ms></div>
+            <div><x-file-size x-prop:value="module.loadSize"></x-file-size></div>
             <div>{{ module.status }}</div>
+            
         </x-listview-item>
     </x-listview>       
     

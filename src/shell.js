@@ -19,6 +19,11 @@ class Shell {
     _modules = {};
     _modulesLoading = {};
     _listeners = [];
+    _stats = {
+        loadBegin: performance.now(),
+        loadEnd: null,
+        loadTime: NaN
+    };
 
     //ctor
     constructor() {
@@ -28,6 +33,7 @@ class Shell {
 
     //props
     get modules() { return this._modules; }
+    get stats() { return this._stats; }
 
 
     //methods
@@ -54,7 +60,9 @@ class Shell {
             "shell.start": "",
             "shell.container": "body",
             "shell.error": "",
-            "shell.lazy": ""
+            "shell.lazy": "",
+            "shell.version": "0.9.0",
+            "shell.url": import.meta.url
         }, import.meta.url);
         //load value
         if (typeof (value) == "string") {
@@ -84,8 +92,6 @@ class Shell {
     async start() {
         //log
         console.log(`shell.start()`, config.config);
-        //start date
-        config.set({ "shell.started-at": performance.now() });
         //add event listener
         window.addEventListener("hashchange", () => {
             this._navigate(document.location.hash);
@@ -98,7 +104,9 @@ class Shell {
         } else {
             document.location.hash = HASH_PREFIX + config.get("shell.start");
         }
-        
+        //performance
+        this._stats.loadEnd = performance.now();
+        this._stats.loadTime = parseInt(this._stats.loadEnd - this._stats.loadBegin);
     }
 
     //events
@@ -178,6 +186,10 @@ class Shell {
         this._modulesLoading[module.src] = loadModuleTask;
         //log
         console.log(`shell.loadModule('${module.src}') ...`);
+        //stats
+        let stats = { 
+            loadBegin: performance.now() 
+        };
         //import
         let aModule = null;
         try {
@@ -246,6 +258,11 @@ class Shell {
         //resolve
         loadModuleTaskResolve(instance);
         delete this._modulesLoading[module.src];
+        //stats
+        stats.loadEnd = performance.now();
+        stats.loadTime = parseInt(stats.loadEnd - stats.loadBegin);
+        stats.loadSize = 0;
+        instance.stats = stats;
         //dispatch event
         this.dispatchEvent("module-load", { detail: {name: module, module: instance }});
         // log

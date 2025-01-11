@@ -40,36 +40,45 @@ const DEFAULTS = {
 
 // Handlers
 let Handlers = {
-    "fetch": async (resource, definition, src) => {
-        let response = await fetch(src);
-        return response;
-    },
-    "import": async (resource, definition, src) => {
-        let module = await import(src);
-        return module.default;
-    },
-    "fetch-svg": async (resource, definition, src) => {
+    "fetch": async (resource, definition, src, stats) => {
         let response = await fetch(src);
         if (!response.ok) throw new Error(`Error ${response.status}: ${response.statusText}: ${src}`);
+        stats.loadSize = parseInt(response.headers.get("content-length"));
+        return response;
+    },
+    "import": async (resource, definition, src, stats) => {
+        let module = await import(src);
+        stats.loadSize = -1;
+        return module.default;
+    },
+    "fetch-svg": async (resource, definition, src, stats) => {
+        let response = await fetch(src);
+        if (!response.ok) throw new Error(`Error ${response.status}: ${response.statusText}: ${src}`);
+        stats.loadSize = parseInt(response.headers.get("content-length"));
         let text = await response.text();
         let div = document.createElement("div");
         div.innerHTML = text;
         let svg = div.firstChild;
         return svg;
     },
-    "fetch-page": async (resource, definition, src) => {
+    "fetch-page": async (resource, definition, src, stats) => {
         let response = await fetch(src);
         if (!response.ok) throw new Error(`Error ${response.status}: ${response.statusText}: ${src}`);
+        stats.loadSize = parseInt(response.headers.get("content-length"));
         let html = await response.text();
         if (html.indexOf("<html")==-1) html = `<!DOCTYPE html><html><head></head><body>${html}</body></html>`;
         return html;
     },
-    "fetch-page-markdown": async (resource, definition, src) => {        
+    "fetch-page-markdown": async (resource, definition, src, stats) => {        
         let path = "file:" + resource.substring(resource.indexOf(":") + 1);
-        return `<!DOCTYPE html><html><head></head><body><meta name='page-handler' content=''><x-markdown src="${path}" ></x-markdown></body></html>`;
+        let result = `<!DOCTYPE html><html><head></head><body><meta name='page-handler' content=''><x-markdown src="${path}" ></x-markdown></body></html>`
+        stats.loadSize = result.length;
+        return result;
     },
-    "fetch-page-pdf": async (resource, definition, src) => {        
-        return `<!DOCTYPE html><html><head></head><body><meta name='page-handler' content=''><x-fill><iframe src="${src}" style="border:none;flex:1"></iframe></x-fill></body></html>`;
+    "fetch-page-pdf": async (resource, definition, src, stats) => {        
+        let result = `<!DOCTYPE html><html><head></head><body><meta name='page-handler' content=''><x-fill><iframe src="${src}" style="border:none;flex:1"></iframe></x-fill></body></html>`;
+        stats.loadSize = result.length;
+        return result;
     }
 };
 
@@ -150,9 +159,6 @@ class Loader {
         definition.regexp = new RegExp(regexp);
         this._definitions.push(definition);
     }
-    register(resource, value) {
-        this._cache[resource] = value;
-    }
     resolve(resource) {        
         for(let i = this._definitions.length - 1; i >= 0; i--) {
             let mapitem = this._definitions[i];
@@ -173,36 +179,42 @@ class Loader {
         if (result) return result.src;
         return null;
     }
-    async load(resources) {
+    async load(resources, stats) {
         let isString = typeof(resources) == "string";
         if (resources == undefined) return null;
         if (resources == "" ) return null;
         if (resources == [""] ) return null;;
         if (typeof(resources) == "string") resources = [resources];
+        if (!stats) stats = {};
+        stats.loadBegin = performance.now();
+        stats.loadSize = 0;
         //load resources
         let result = [];
         let tasks = [];
         for(let resource of resources) {            
-            let scheme = resource.substring(0, resource.indexOf(":"));
+            //let scheme = resource.substring(0, resource.indexOf(":"));
             let name = resource.substring(resource.indexOf(":") + 1);
             let { definition, src } = this.resolve(resource);
             let cacheItem = this._cache[resource];
             if (cacheItem) {
-                if (cacheItem.then) {
-                    tasks.push(cacheItem);
+                if (cacheItem.promise) {
+                    tasks.push(cacheItem.promise);
                     result.push(null);
                 } else {
-                    result.push(cacheItem);
+                    stats.loadSize += cacheItem.stats.loadSize;
+                    result.push(cacheItem.value);
                 }
             } else if (definition.webComponent && window.customElements.get(name)) {
-                let customElement = window.customElements.get(name);
-                this._cache[scheme + ":" + name] = customElement;
-                result.push(customElement);
+                result.push(window.customElements.get(name));
             } else {
                 console.log(`loader.load('${resource}') ... ${src}`);
-                let promise = this.loadDefinition(resource, definition, src);
+                let promise = this.loadFromDefinition(resource, definition, src);
                 if (definition.cache) {
-                    this.register(resource, promise);
+                    this._cache[resource] = {
+                        stats: null,
+                        value: null,
+                        promise
+                    };
                 }
                 tasks.push(promise);
                 result.push(null);
@@ -216,12 +228,17 @@ class Loader {
             let taskResult = taskResults[i];
             if (taskResult != null) {
                 if (taskResult.status === 'fulfilled') {
-                    result[i] = taskResult.value;
+                    let loadFromDefinitionResult = taskResult.value;
+                    result[i] = loadFromDefinitionResult.value;
+                    stats.loadSize += loadFromDefinitionResult.stats.loadSize;
                 } else if (taskResult.status === 'rejected') {
                     errors.push(taskResult.reason);
                 }
             }
         }
+        //stats
+        stats.loadEnd = performance.now();
+        stats.loadTime = parseInt(stats.loadEnd - stats.loadBegin);
         //throw exception if errors
         if (isString) {
             if (errors.length) {
@@ -234,24 +251,36 @@ class Loader {
         //return
         return result;
     }    
-    async loadDefinition(resource, definition, src){
+    async loadFromDefinition(resource, definition, src){
         let value = null;
-        let before = performance.now();
+        //stats
+        let stats = {
+            loadBegin: performance.now(),
+            loadEnd: null,
+            loadTime: NaN,
+            loadSize: 0
+        };
         //handler
         let handler = Handlers[definition.handler];
         if (!handler) handler = await this.load("handler:" + definition.handler);
         if (!handler) throw new LoaderException("Unknown handler: " + definition.handler, { resource, definition, src });
-        value = await handler(resource, definition, src);
-        //set
+        value = await handler(resource, definition, src, stats);
+        //stats
+        stats.loadEnd = performance.now();
+        stats.loadTime = parseInt(stats.loadEnd - stats.loadBegin);
+        //result
+        let result = {
+            stats, 
+            value
+        };
+        //cache
         if (definition.cache) {
-            this.register(resource, value);
+            this._cache[resource] = result;
         }
         //event
-        let after = performance.now();
-        let duration = after - before;
-        this.dispatchEvent("load", {detail:{resource, definition, src, value, duration, status:200}});
+        this.dispatchEvent("load", {detail:{resource, definition, src, value, stats, status: "loaded"}});
         //return
-        return value;
+        return result;
     }
 };
 

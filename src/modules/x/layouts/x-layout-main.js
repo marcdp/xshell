@@ -43,6 +43,9 @@ export default XElement.define("x-layout-main", {
         .header .search x-icon {transform:translate(.75em,.3em); position:absolute; color: var(--x-datafield-color-placeholder); position:0;}
         .header .search-button {display:none;}
 
+        /* debug */
+        .debug x-page {display:block; width:60em;}
+
         /* breadcrumb */
         .breadcrumb {position:sticky; top:0; user-select: none; flex:1;}
         
@@ -97,6 +100,7 @@ export default XElement.define("x-layout-main", {
 
         /* desktop */
         @media (min-width: 769px) {
+            
             
             .body {
                 display:flex;
@@ -209,7 +213,7 @@ export default XElement.define("x-layout-main", {
 
             <div class="spacer"></div>
 
-            <x-dropdown x-if="state.shellDebug" class="modules popover left" collapse-on-click>
+            <x-dropdown x-if="state.shellDebug" class="debug popover left" collapse-on-click>
                 <x-icon tabindex="1" icon="x-debug" class="size-x2"></x-icon>
                 <x-page slot="dropdown" src="/x/pages/debug.html" loading="lazy"></x-page>
             </x-dropdown>
@@ -220,10 +224,10 @@ export default XElement.define("x-layout-main", {
         <nav class="header breadcrumb">
             <ul x-if="state.menu">
                 <li>
-                    <x-icon icon="x-menu" x-on:click="toggle-menu" x-attr:class="(state.toggled ? 'toggle toggled' : 'toggle')"></x-icon>
+                    <x-icon icon="x-menu" x-on:click="toggle-menu" class="toggle" x-class:toggled="state.toggled"></x-icon>
                 </li>
                 <li x-for="item in state.breadcrumb">
-                    <x-anchor x-attr:href="item.href" x-attr:class="'plain ' + (item!=state.breadcrumb[state.breadcrumb.length-1] ? 'selected' : 'gray')">{{ item.label }}</x-anchor>
+                    <x-anchor x-attr:href="item.href" class="plain" x-class:selected="(item!=state.breadcrumb[state.breadcrumb.length-1])" x-class:gray="item==state.breadcrumb[state.breadcrumb.length-1]">{{ item.label }}</x-anchor>
                     <x-icon icon="x-keyboard-arrow-right" class="separator"><x-icon>                    
                 </li>
             </ul>
@@ -234,7 +238,7 @@ export default XElement.define("x-layout-main", {
         </nav>
 
         <!-- body -->
-        <div x-attr:class="(state.toggled ? 'body toggled' : 'body')">
+        <div class="body" x-class:toggled="state.toggled">
             <nav class="menu">
                 <div>
                     <x-button class="anchor" icon="x-keyboard-arrow-left" x-on:click="toggle-menu"></x-button>

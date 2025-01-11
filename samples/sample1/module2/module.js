@@ -15,7 +15,8 @@
             "label": "Amazon S5555",
             "children": [
                 { "label": "page 1", "href": "./pages/page1.html", children:[
-                    { "label": "Page 2", "href": "./pages/page2.html", default:true }
+                    { "label": "Page 2", "href": "./pages/page23.html?asdf"},
+                    { "label": "Page 2.2", "href": "./pages/page2.html", default:true }
                 ] },                
             ]
         },   

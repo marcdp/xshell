@@ -79,10 +79,10 @@ export default XElement.define("x-dropdown", {
         }
     `,
     template: `
-        <div x-attr:class="'header ' + (state.expanded ? 'expanded' : '')" x-on:focusin="focus-head" x-on:mousedown.stop="mousedown-head" x-on:click="click-head" x-on:keydown.enter="click-head">
+        <div class="header" x-class:expanded="state.expanded" x-on:focusin="focus-head" x-on:mousedown.stop="mousedown-head" x-on:click="click-head" x-on:keydown.enter="click-head">
             <slot></slot>
         </div>
-        <div x-attr:class="'body ' + (state.expanded ? 'expanded' : '')" x-on:collapse.stop="collapse" x-on:mousedown.stop="mousedown-body" x-on:click="click-body">
+        <div class="body" x-class:expanded="state.expanded" x-on:collapse.stop="collapse" x-on:mousedown.stop="mousedown-body" x-on:click="click-body">
             <span class="helper"></span>
             <span class="helper2"></span>
             <div>

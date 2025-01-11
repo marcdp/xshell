@@ -9,7 +9,7 @@ class PageInstance {
     _page = null;
     _refs = null;
     _binds = new Binds();
-    _status = "init";
+    _status = "";
 
 
     //ctor

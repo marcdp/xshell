@@ -1,5 +1,5 @@
 import XElement from "../../x/ui/x-element.js";
-import { config } from "../../../shell.js";
+import shell from "../../../shell.js";
 
 // class
 export default XElement.define("x-layout-stack", {
@@ -15,7 +15,7 @@ export default XElement.define("x-layout-stack", {
             left:0;
             right: 0;
             bottom:0;
-            z-index:5;
+            z-index:7;
         }
         div.panel {
             background:white;
@@ -68,7 +68,7 @@ export default XElement.define("x-layout-stack", {
     `,
     template: `
         <div class="backdrop" x-on:click="query-close"></div>
-        <div x-attr:class="'panel ' + (state.expanded ? 'expanded' : '')" x-on:transitionend="transition-end">
+        <div class="panel" x-class:expanded="state.expanded" x-on:transitionend="transition-end">
             <x-loading x-if="state.status=='loading'"></x-loading>
             <div class="header">
                 <h2>{{ state.label }}&nbsp;</h2>
@@ -95,8 +95,7 @@ export default XElement.define("x-layout-stack", {
                 this.onCommand("refresh");
                 this.shadowRoot.addEventListener("transitionEnd", ()=>this.onCommand("transition-end"));
                 this.render();
-                const aaa = config.get("shell.started-at");
-                const secondsSinceLoad = ((performance.now() - aaa) / 1000).toFixed(2);
+                const secondsSinceLoad = ((performance.now() - shell.loadTime) / 1000).toFixed(2);
                 if (secondsSinceLoad < .5) {
                     this.state.expanded = true;    
                 } else {

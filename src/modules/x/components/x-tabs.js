@@ -43,7 +43,8 @@ export default XElement.define("x-tabs", {
                 x-attr:tabindex="index+1"
                 x-text="tab.label" 
                 x-attr:icon="tab.icon" 
-                x-attr:class="'plain ' + (index == state.selectedIndex ? 'selected' : '')" 
+                x-class:plain="true"
+                x-class:selected="index == state.selectedIndex"
                 x-on:click="click"
                 x-on:keydown.enter="click"
                 ></x-anchor>
@@ -69,7 +70,11 @@ export default XElement.define("x-tabs", {
                 });
                 //hash
                 var hash = (this.page.src + "#").split("#")[1];
-                if (hash) this.state.selectedHash = hash;
+                if (!hash) hash= this.state.selectedHash;
+                if (hash) {
+                    this.state.selectedHash = "";
+                    this.state.selectedHash = hash;
+                }
 
             } else if (command == "click") {
                 //click

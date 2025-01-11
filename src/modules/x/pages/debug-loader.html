@@ -16,7 +16,8 @@
                     this.state.items.push({
                         resource: event.detail.resource,
                         src: event.detail.src,
-                        duration: parseInt(event.detail.duration),
+                        loadTime: event.detail.stats.loadTime,
+                        loadSize: event.detail.stats.loadSize,
                         status: event.detail.status
                     });
                     this.invalidate();
@@ -35,11 +36,13 @@
     <x-listview view="details">
         <div slot="column">Resource</div>
         <div slot="column">Source</div>
-        <div slot="column">Duration</div>
+        <div slot="column">Load T.</div>
+        <div slot="column">Size</div>
         <div slot="column">Status</div>
         <x-listview-item x-for="item in state.items" x-attr:label="item.resource" icon="x-file">            
             <a x-attr:href="item.src" target="_blank" x-text="item.src"></a>
-            <div>{{ item.duration }} ms</div>
+            <div><x-time-ms x-prop:value="item.loadTime"></x-time-ms></div>
+            <div><x-file-size x-prop:value="item.loadSize"></x-file-size></div>
             <div>{{ item.status }}</div>
         </x-listview-item>
     </x-listview>       
