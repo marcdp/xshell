@@ -96,7 +96,7 @@ export default XElement.define("x-button", {
                 <x-icon class="independent" icon="x-arrow-down-fill"></x-icon>
             </div>
         </div>
-        <div x-attr:class="state.childsClass" x-if="state.childs" x-show="state.expanded" x-attr:expanded="state.expanded">
+        <div x-class:right="state.forceRight" x-if="state.childs" x-show="state.expanded" x-attr:expanded="state.expanded">
             <slot x-on:slotchange="refresh"></slot>
         </div>
     `,
@@ -110,7 +110,7 @@ export default XElement.define("x-button", {
         breadcrumb: false,
         childs:false,
         expanded:false,
-        childsClass:"",
+        forceRight:"",
     },
     methods:{
         onCommand(command, args) {
@@ -176,7 +176,7 @@ export default XElement.define("x-button", {
                 if (this.state.childs) {
                     let rect = this.getBoundingClientRect();
                     if (window.innerWidth - rect.right < 100) {
-                        this.state.childsClass = "right";
+                        this.state.forceRight = true;
                     }
                 }
                 // href

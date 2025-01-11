@@ -69,7 +69,7 @@ export default XElement.define("x-menuitem", {
             <span   x-if="state.suffix" class="suffix">{{ state.suffix }}</span>
             <x-icon x-if="state.hasChilds" class="has-childs" icon="x-keyboard-arrow-right"></x-icon>
         </x-anchor>
-        <x-contextmenu x-attr:class="(state.childsRight ? 'right' : '')" x-if="state.hasChilds" x-show="state.expanded">
+        <x-contextmenu x-class:right="state.childsRight" x-if="state.hasChilds" x-show="state.expanded">
             <slot x-on:slotchange="refresh"></slot>
         </x-contextmenu>
     `,

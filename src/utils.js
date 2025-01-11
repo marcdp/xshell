@@ -1,33 +1,3 @@
-// funcs
-/*
-function deepAssign(obj1, obj2) {
-    for (let key in obj2) {
-        if (Object.prototype.hasOwnProperty.call(obj2, key)) {
-            if (Array.isArray(obj2[key]) && Array.isArray(obj1[key])) {
-                for (let item of obj2[key]) {
-                    if (typeof (item) == "object" && item.id) {
-                        let aux = obj1[key].filter(x => x.id == item.id)
-                        if (aux.length) {
-                            deepAssign(aux[0], item);
-                        } else {
-                            obj1[key].push(item);
-                        }
-                    } else {
-                        if (obj1[key].indexOf(item) == -1) {
-                            obj1[key].push(item);
-                        }
-                    }
-                }
-            } else if (obj2[key] instanceof Object && obj1[key] instanceof Object) {
-                obj1[key] = deepAssign(obj1[key], obj2[key]);
-            } else {
-                obj1[key] = obj2[key];
-            }
-        }
-    }
-    return obj1;
-}
-*/
 
 // class
 class Utils {
@@ -250,6 +220,30 @@ class Utils {
         // If no focusable element is found, return null
         return null;
     }
+    static getAllElementsOfType(root, tagName) {
+        const result = [];
+        const tagNameUpper = tagName.toUpperCase(); // Normalize tagName for comparison
+      
+        function traverse(node) {
+          if (node.nodeType === Node.ELEMENT_NODE) {
+            // Check if the node matches the tagName
+            if (node.tagName === tagNameUpper) {
+              result.push(node);
+            }
+      
+            // Traverse child nodes in the light DOM
+            node.childNodes.forEach(traverse);
+      
+            // If the node has a shadow root, traverse the shadow DOM
+            if (node.shadowRoot) {
+              traverse(node.shadowRoot);
+            }
+          }
+        }
+      
+        traverse(root);
+        return result;
+      }
      
 
 };

@@ -131,7 +131,7 @@ export default XElement.define("x-datafield", {
         
         `,
     template: `
-        <label x-if="state.label" x-attr:for="state.inputId" x-attr:class="(state.errors.length ? 'error' : '')" >
+        <label x-if="state.label" x-attr:for="state.inputId" x-class:error="state.errors.length">
             <span class="label" x-if="state.label" x-text="state.label"></span>
             <span class="required" x-if="state.required">*</span>
             <span class="langs" x-if="state.type.endsWith('_i18n')" >
@@ -143,7 +143,10 @@ export default XElement.define("x-datafield", {
                             x-on:click="lang-changed"
                             x-attr:title="i18n.getLangLabel(lang)"
                             x-attr:data-lang="lang"
-                            x-attr:class="'plain ' + (state.langIndex == index ? ' selected' : '') + (state.value.indexOf('i18n:' + lang + '=')==-1 ? ' empty' : '') ">
+                            x-class:plain="true"
+                            x-class:selected="state.langIndex == index"
+                            x-class:empty="state.value.indexOf('i18n:' + lang + '=')==-1"
+                            >
                     </x-button>
                 </div>
                 <x-button class="add plain" x-on:click="lang-add" icon="x-add" title="Add translation"></x-button>

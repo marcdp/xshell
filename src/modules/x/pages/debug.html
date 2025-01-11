@@ -1,4 +1,4 @@
-<title>Search</title>
+<title>Debug</title>
 
 <script type="module">
     export default {
@@ -18,7 +18,10 @@
 
 <template>
     <x-form>
-        <x-tabs selected-index="0">
+        <x-tabs selected-hash="pages">
+            <x-tab label="Shell">
+                <x-page src="/x/pages/debug-shell.html" loading="lazy"></x-page>
+            </x-tab>
             <x-tab label="Configuration">
                 <x-page src="/x/pages/debug-config.html" loading="lazy"></x-page>
             </x-tab>
@@ -28,7 +31,7 @@
             <x-tab label="Loader">
                 <x-page src="/x/pages/debug-loader.html" loading="lazy"></x-page>
             </x-tab>
-            <x-tab label="Pages">
+            <x-tab label="Pages" hash="pages">
                 <x-page src="/x/pages/debug-pages.html" loading="lazy"></x-page>
             </x-tab>
         </x-tabs>

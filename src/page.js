@@ -2,6 +2,7 @@ import shell from "./shell.js";
 import loader from "./loader.js";
 import config from "./config.js";
 import utils from "./utils.js";
+import bus from "./bus.js";
 import PageInstance from "./page-instance.js";
 
 // class
@@ -22,6 +23,7 @@ class Page extends HTMLElement {
     _srcAbsolute = "";
     _layout = "";
     _status = "";
+    _statusPage = "";
     _result = null;
     _label = "";
     _icon = "";
@@ -29,7 +31,8 @@ class Page extends HTMLElement {
     _loadingObserver = null;
     _module = null;
     _instance = null;
-
+    _stats = null;
+    
 
     //ctor
     constructor() {
@@ -69,6 +72,7 @@ class Page extends HTMLElement {
     }
 
     get status() {return this._status;}
+    get statusPage() {return this._statusPage;}
     
     get breadcrumb() {return this._breadcrumb;}
     set breadcrumb(value) {this._breadcrumb = value;}
@@ -99,6 +103,8 @@ class Page extends HTMLElement {
             this.dispatchEvent(new CustomEvent("change"));
         }
     }
+
+    get stats() {return this._stats;}
 
     
     //events
@@ -146,6 +152,7 @@ class Page extends HTMLElement {
         this._label = "";
         this._icon = "";
         this._status = "loading";
+        this._statusPage = "";
         //set layout as loading (if exists)
         let layoutElement = this.shadowRoot.firstChild;
         if (layoutElement) {
@@ -159,13 +166,22 @@ class Page extends HTMLElement {
                 code: 404, 
                 message: "Module not registered for page path: " + src, 
                 src: src
-            });
+            });            
             return;
         }        
+        //stats
+        let stats = {
+            loadBegin: performance.now(),
+            loadEnd: null,
+            loadTime: NaN,
+            loadSize: 0
+        };
         //fetch page
         let html = null;
         try {
-            html = await loader.load("page:" + src);
+            let loaderStats = {};
+            html = await loader.load("page:" + src, loaderStats);
+            stats.loadSize = loaderStats.loadSize;        
         } catch(e) {
             this.error({ 
                 code: 404, 
@@ -188,7 +204,6 @@ class Page extends HTMLElement {
             try {
                 await loader.load(componentNames);
             } catch (e) {
-                this._status = "error";
                 let errorTexts = [];
                 if (e.errors) {
                     for(let error of e.errors) errorTexts.push(error);
@@ -212,7 +227,8 @@ class Page extends HTMLElement {
             layoutName = searchParams.get("page-layout");
             searchParams.delete("page-layout");
         }
-        let layout = config.get("pages.layout." + (layoutName || "embed"));
+        if (!layoutName) layoutName = "embed";
+        let layout = config.get("pages.layout." + layoutName);
         await loader.load("layout:" + layout);
         if (layoutElement == null || layoutElement.localName != layout) {
             if (layoutElement) layoutElement.remove();
@@ -221,6 +237,7 @@ class Page extends HTMLElement {
             this.shadowRoot.appendChild(layoutElement);
             layoutElement.setAttribute("status", "loading");
         }        
+        this._layout = layoutName;
         //delay
         //    if (document.body.querySelectorAll(":scope > page").length > 1) {
         //        await new Promise(r => setTimeout(r, 1000));                
@@ -293,12 +310,18 @@ class Page extends HTMLElement {
         }
         //remove loading
         if (layoutElement) layoutElement.removeAttribute("status");
+        //stats
+        stats.loadEnd = performance.now();
+        stats.loadTime = parseInt(stats.loadEnd - stats.loadBegin);
+        this._stats = stats;
+        //load status
+        this._loadStatus = 200;
         //call load on instance
         await this._instance.load();        
         //raise load event
         this.dispatchEvent(new CustomEvent("load"));
         //bus event
-        //bus.emit("page-load", { page: instance });
+        bus.emit("page-load", { page: instance });
     }
     error({code, message, src, stack}) {
         //error
@@ -310,7 +333,7 @@ class Page extends HTMLElement {
         url += "&page-src=" + encodeURI(src);
         if (stack) url += "&stack=" + encodeURI(stack);
         this.src = url;
-        
+        this._statusPage = "error";
     }
     replace(src) {
         //replace

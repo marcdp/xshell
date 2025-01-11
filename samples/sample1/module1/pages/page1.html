@@ -9,25 +9,33 @@
 
     <script type="module">
         export default {
+            state:{
+                val1: true,
+                val2: false,
+                val3: true
+            },
             async onCommand(command, args) {
                 if (command == "load") {
                     //load
 
                 } else if (command == "aaaaa") {
                     //aaaaa
-                    alert("aaaaa")
+                    this.state.val1 = !this.state.val1;
+                    this.state.val2 = !this.state.val2;
 
                 } else if (command == "show-working") {
                     //show-working
                     this.showWorking(true);
                 }
-            }
+            }        
         }
     </script>
 
     <template>
         Use Amazon S3 Block public access settings to control the settings that allow public access to your data.
         
+        <div class="pepe" x-class:cccc1="state.val1" x-class:cccc2="state.val2" x-class:cccc3="state.val3">aaa</div>
+
         <x-datetime datetime="2025-01-04T10:48:39.847Z" format="time"></x-datetime>
 
         <ul>

@@ -200,9 +200,43 @@ x - shell.dispatchEvent("navigation-start")
 x - shell.dispatchEvent("navigation-end")
 x - shell.dispatchEvent("search", {})
 x - /x/pages/debug-loader.html -- pages loaded -- show listsview
+x - x-treeview -- use counter to mark even/odd rows
+x - /x/pages/debug-pages.html -- pages loaded -- show listsview
+x - x-treeview - with of columns
+x - x-treeview - pensar algun databind recursiu
+x - x-treeview: pensar databind per les columnes
+x - pages: error pages: status= error
+x - pages: load time
+x - modules: load time
+x - remove shell started-at
+x - pages: size
+x - debug-pages -- show stats.size
+x - shell: load time
+x - loader.load("", stats)
+x - /x/pages/debug-pages --- show load errors in red
+x - /x/pages/debug-pages --- show odd/even rows in different colors
+x - x-file-size -- to format file sizes
+x - x-time-ms -- to format time in ms
+x - /x/pages/debug-loader --- show load errors in red
+x - x-recursive -- node container ??
+x - x-attr:class="{xxx:xx, b:bbbb}" -- should add class xxxxxxxx if value true
+x - x-class:xxxxxxxx="state.enabled" -- should add class xxxxxxxx if value true
+x - x-menu selected
+x - x-menu with ul
 
 
-- /x/pages/debug-pages.html -- pages loaded -- show listsview
+
+- do not use config["modules.x.status"] = "loaded" !!!! config should be readonly !!! is not state!!!!
+
+- /x/pages/debug-modules --- use x-treeview
+- /x/pages/debug-loader --- use x-treeview
+
+- pages: click -- navigate to page
+
+- think what to do with with x-listview in details mode (use x-treeview? or use the same technique as x-treeview)
+
+
+- menu -- render recursive
 
 - docs
 

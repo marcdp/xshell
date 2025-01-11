@@ -7,41 +7,75 @@
     //export
     export default {
         state: {
-            items: []
+            children: []
         },
         async onCommand(command, args) {
             if (command == "load") {
                 //load
-                this.bindEvent(loader, "load", (event)=>{
-                    this.state.items.push({
-                        resource: event.detail.resource,
-                        src: event.detail.src,
-                        duration: parseInt(event.detail.duration),
-                        status: event.detail.status
-                    });
-                    this.invalidate();
-                });
-                
-            } else if (command == "clear") {
-                //clear
-                this.state.items = [];
+                this.bindEvent(bus, "page-load", "refresh");
+                //refresh
+                this.onCommand("refresh");
+
+            } else if (command == "refresh") {
+                //refresh
+                let traverse = (node, parent) => {
+                    if (node.nodeType === Node.ELEMENT_NODE || node.nodeType === Node.DOCUMENT_FRAGMENT_NODE) {
+                        if (node.localName === "x-page") {
+                            let item = {
+                                src: node.srcPage || node.src,
+                                label: node.label,
+                                icon: node.icon,
+                                layout: node.layout, 
+                                loading: node.loading || '', 
+                                status: node.statusPage || node.status,
+                                module: (node.srcPage || node.src ? shell.getModuleBySrc(node.srcPage || node.src)?.name || '' : ''),
+                                loadTime: (node.stats && node.stats.loadTime ? node.stats.loadTime : -1),
+                                loadSize: (node.stats && node.stats.loadSize ? node.stats.loadSize : -1),
+                                children:[],
+                            }
+                            parent.children.push(item)
+                            parent = item;
+                        }
+                        for (let child of node.childNodes) {
+                            traverse(child, parent);
+                        }
+                        if (node.shadowRoot) {
+                            traverse(node.shadowRoot, parent);
+                        }
+                    }
+                }
+                let root = {children:[]}
+                traverse(document.body, root)
+                //set children
+                this.state.children = root.children;
             }
         }
     }
 </script>
 
 <template>
-    
-    <x-listview view="details">
-        <div slot="column">Resource</div>
-        <div slot="column">Source</div>
-        <div slot="column">Duration</div>
-        <div slot="column">Status</div>
-        <x-listview-item x-for="item in state.items" x-attr:label="item.resource" icon="x-file">            
-            <a x-attr:href="item.src" target="_blank" x-text="item.src"></a>
-            <div>{{ item.duration }} ms</div>
-            <div>{{ item.status }}</div>
-        </x-listview-item>
-    </x-listview>       
-    
+    <x-treeview>
+        <x-treeview-head>
+            <x-treeview-column label="Page" width="30%"></x-treeview-column>
+            <x-treeview-column label="Layout" width="8%"></x-treeview-column>
+            <x-treeview-column label="Module" width="8%"></x-treeview-column>
+            <x-treeview-column label="Loading" width="8%"></x-treeview-column>
+            <x-treeview-column label="Path" width="20%"></x-treeview-column>
+            <x-treeview-column label="Load T." width="8%"></x-treeview-column>
+            <x-treeview-column label="Size" width="10%"></x-treeview-column>
+            <x-treeview-column label="Status" width="8%"></x-treeview-column>
+        </x-treeview-head>
+        <x-treeview-body>
+            <x-treeview-item x-recursive="item in state.children" x-attr:label="item.label" expanded x-class:error="item.status=='error'">
+                <div slot="column">{{item.layout}}</div>
+                <div slot="column">{{item.module}}</div>
+                <div slot="column">{{item.loading}}</div>
+                <div slot="column" x-attr:title="item.src">{{item.src}}</div>
+                <div slot="column"><x-time-ms x-prop:value="item.loadTime"></x-time-ms></div>
+                <div slot="column"><x-file-size x-prop:value="item.loadSize"></x-file-size></div>
+                <div slot="column">{{item.status}}</div>
+            </x-treeview-item>
+        </x-treeview-body>
+    </x-treeview>   
+
 </template>

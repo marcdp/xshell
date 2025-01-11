@@ -53,19 +53,24 @@ class XTemplate {
             return false;
         }).map(el => el.tagName.toLowerCase()))];
         //compiles
+        let funcs = [];
         let code = [];
         code.push("let _ifs = {};");
         code.push("return [");
         let name = "x-something";
         let index = 0;
         template.content.childNodes.forEach((subNode) => {
-            index += this._compileTemplateToJsRecursive(name, subNode, index, code, 0);
+            index += this._compileTemplateToJsRecursive(name, subNode, index, code, funcs, 0);
         });
         code.push("];");
+        for(let i = funcs.length-1; i>=0 ; i--) {
+            code.unshift("let _func" + i + " = " + funcs[i] + ";");
+            
+        }
         code = code.join("\n");
         this._render = new Function("state", "handler", "invalidate", "utils", "i18n", "renderCount", code);
     }
-    _compileTemplateToJsRecursive(name, node, index, js, level) {
+    _compileTemplateToJsRecursive(name, node, index, js, funcs, level) {
         let indent = " ".repeat((level + 1) * 4);
         let incs = 0;
         if (node.nodeType == Node.TEXT_NODE) {
@@ -105,8 +110,25 @@ class XTemplate {
             let props = [];
             let events = [];
             let options = [];
+            let classList = [];
             let text = "";
+            let childsToAppend = "";
             options.push("index:" + index);
+            //add class="..." as x-class.xxx="true"
+            for (let i = 0; i < node.attributes.length; i++) {
+                let attr = node.attributes[i];
+                if (attr.name.startsWith("x-class:")) {
+                    let className = node.getAttribute("class");
+                    if (className) {
+                        for (let aux of className.split(" ")) {
+                            classList.push("'" + aux + "'");
+                        }
+                    }
+                    node.removeAttribute("class");
+                    break;
+                }
+            }
+            //process each attribute
             for (let i = 0; i < node.attributes.length; i++) {
                 let attr = node.attributes[i];
                 if (attr.name == "x-text") {
@@ -199,11 +221,66 @@ class XTemplate {
                     options.push("\"key\":" + itemName + "." + keyName);
                     //creates a comment end node that indicates the end of the for loop
                     jsPost.push(indent + "utils.createVDOM(\"#comment\", null, null, null, {index: " + index + ", forType:'" + forType + "'}, 'x-for-end'),");
+                    
                 } else if (attr.name == "x-key") {
                     //used in x-for
+
+                } else if (attr.name == "x-recursive") {
+                    //...<li x-recursive="item in state.items" x-key="name">{{item.name + '(' + item.count + ') '}}</li>...
+                    let keyName = node.getAttribute("x-key");
+                    let forType = "";
+                    if (keyName) {
+                        forType = "key";
+                    } else {
+                        forType = "position";
+                    }
+                    //get vars
+                    let parts = attr.value.split(" in ");
+                    if (parts.length != 2) console.error(`Error compiling template: invalid x-for attribute detected: ${attr.value}`);
+                    let itemName = parts[0].trim();
+                    let indexName = "index";
+                    let indexAbsoluteName = "indexAbsolute";
+                    let indentName = "indent";
+                    if (itemName.startsWith("(") && itemName.endsWith(")")) {
+                        let arr = itemName.substring(1, itemName.length - 1).split(",");
+                        itemName = arr[0].trim();
+                        indexName = arr[1].trim();
+                        if (arr[2]) indexAbsoluteName = arr[2].trim();
+                    }
+                    let listName = parts[1].trim();
+                    //creates function to render recursive
+                    js.push(indent + "...(func = (_items, " + indexAbsoluteName + ", " + indentName + ", wrapper) => { let _itemsArray = utils.toArray(_items) || []; let _result = [");
+                    indent += "    ";
+                    level += 1;
+
+                    //creates a comment virtual node that indicates the start of the for loop, and the type of the loop
+                    js.push(indent + "utils.createVDOM(\"#comment\", null, null, null, {index: " + (index-1) + ", forType:'" + forType + "'}, 'x-for-start'),");
+                    //add loop
+                    jsLine[0] = indent + "...(_itemsArray.map((" + itemName + ", " + indexName + ") => { let _result = ";
+                    //jsPostLine.push(";})),");
+                    jsPostLine.push("; " + indexAbsoluteName + "++; return _result;})),");
+                    if (keyName) options.push("\"key\":" + itemName + "." + keyName);
+                    //creates a comment end node that indicates the end of the for loop
+                    jsPost.push(indent + "utils.createVDOM(\"#comment\", null, null, null, {index: " + (index-1) + ", forType:'" + forType + "'}, 'x-for-end'),");
+                    
+                    //finishes the recursive function
+                    jsPost.push("\n" + indent.substring(4) + "]; if (wrapper) _result = [utils.createVDOM(wrapper, null, null, null, {index:1}, _result)]; return _result;})(" + listName + ", 0, 0),");
+                    //call the recursive function
+                    let wrapper = node.getAttribute("x-recursive-wrapper") || "";
+                    childsToAppend = "func(" + itemName + ".children, " + indexAbsoluteName + " + 1, " + indentName + " + 1, '" + wrapper + "')";
+                    
+                } else if (attr.name == "x-recursive-wrapper") {
+                    //used in x-recursive
+
                 } else if (attr.name == "x-show") {
                     //...<span x-show="state.value > 0">greather than 0</span>...
                     attrs.push("...(" + (attr.value) + " ? null : {style:'display:none'})");
+
+                } else if (attr.name.startsWith("x-class:")) {
+                    //...<span x-class:my-class="state.value > 0">greather than 0</span>...
+                    let attrName = (attr.name.startsWith(":") ? attr.name.substring(1) : attr.name.substr(attr.name.indexOf(':') + 1));
+                    classList.push("(" + (attr.value) + " ? '" + attrName + "' : null)");
+
                 } else if (attr.name == "x-model") {
                     //...<input type="text" x-model="state.name"/>... --> <input type="text" x-prop:value="state.name" x-on:change.stop="state.name = event.target.value"/>
                     //prop
@@ -227,7 +304,6 @@ class XTemplate {
                             propertyName = "selectedOptions";
                             propValue = "Array.from(event.target.selectedOptions).map(option => option.value)";
                         }
-                    } else if (nodeName == "textarea") {
                     }
                     props.push(propertyName + ":" + propValue);
                     //event
@@ -240,21 +316,33 @@ class XTemplate {
                     //x-once: only render once
                     jsLine[0] = indent + "...((renderCount==0) ? [";
                     jsPostLine.push("] : [utils.createVDOM('" + node.tagName.toLowerCase() + "', null, null, null, {once:true})]),");
+
                 } else if (attr.name == "x-pre") {
                     //v-pre: skip childs
                     options.push("format:\"html\"");
                     text = JSON.stringify(node.innerHTML).replaceAll("<x:text>", "{{").replaceAll("</x:text>", "}}");
+
                 } else if (attr.name.startsWith("x-")) {
                     //error
                     console.error(`Error compiling template: invalid template attribute detected: ${attr.name}`);
+
                 } else {
                     attrs.push("'" + attr.name + "':" + JSON.stringify(attr.value));
                 }
             }
+            //if clasList contains some className, the adds it to the attrs
+            if (classList.length > 0) {
+                attrs.push("...{class:[" + classList.join(",") + "].filter(c => c).join(' ')}");
+            }
+            //attrs
             jsLine.push(", " + (attrs.length ? '{' + attrs.join(',') + '}' : "null"));
+            //props
             jsLine.push(", " + (props.length ? '{' + props.join(',') + '}' : "null"));
+            //events
             jsLine.push(", " + (events.length ? '{' + events.join(',') + '}' : "null"));
+            //options
             jsLine.push(", " + (options.length ? '{' + options.join(',') + '}' : "null"));
+            //chidren
             if (text) {
                 jsLine.push(", " + text + "");
                 jsLine.push(")," + (jsPostLine.length ? jsPostLine.join('') : ''));
@@ -263,9 +351,12 @@ class XTemplate {
                 jsLine.push(", [");
                 js.push(jsLine.join(''));
                 node.childNodes.forEach((subNode, subIndex) => {
-                    this._compileTemplateToJsRecursive(name, subNode, subIndex, js, level + 1);
+                    this._compileTemplateToJsRecursive(name, subNode, subIndex, js, funcs, level + 1);
                 });
-                js.push(indent + "])," + (jsPostLine.length ? jsPostLine.join('') : ''));
+                js.push(indent + "]");
+                if (childsToAppend) js.push(", " + childsToAppend);
+                js.push(")");
+                js.push((jsPostLine.length ? jsPostLine.join('') : ','));
             } else {
                 jsLine.push(")," + (jsPostLine.length ? jsPostLine.join('') : ''));
                 js.push(jsLine.join(''));
@@ -294,7 +385,14 @@ const emptyObject = {};
 const emptyArray = [];
 let freeId = 1;
 const utils = new class {
-    createVDOM = (tag, attrs, props, events, options, children) => {
+    createVDOM = (tag, attrs, props, events, options, children, moreChildren) => {
+        if (children && children.length && moreChildren) {
+            let lastIndex = children[children.length - 1].options.index;
+            for(let child of moreChildren) {
+                child.options.index += lastIndex;
+                children.push(child);
+            }
+        };
         return {
             tag: tag,
             attrs: attrs ?? emptyObject,
@@ -331,26 +429,6 @@ const utils = new class {
     toDynamicProperty = (key, value) => {
         return { [key]: value };
     };
-    /*
-    i18n(value, lang) {
-        debugger
-        if (!value) return "";
-        var key = "i18n:" + lang + "=";
-        if (value.startsWith(key)) {
-            let j = value.indexOf("|");
-            return value.substring(key.length, j != -1 ? j : value.length).replaceAll("&#124;","|");
-        } else {
-            let k = value.indexOf("|" + key);
-            if (k != -1) {
-                let j = value.indexOf("|", k + 1);
-                return value.substring(k + key.length + 1, j != -1 ? j : value.length).replaceAll("&#124;","|");
-            }
-        }
-        return "";
-    }
-    getLang(lang) {
-        return i18n.getLang(lang) ?? { id: lang, label: lang };
-    }*/
     getFreeId() {
         return "id" + freeId++;
     };
@@ -422,7 +500,7 @@ class XTemplateInstance {
         }
     }
     _createDomElement(vNode) {
-        //create element from vdom node
+        //create element from vdom node        
         if (vNode.tag == "#text") {
             return document.createTextNode(vNode.children);
         } else if (vNode.tag == "#comment") {
@@ -436,6 +514,12 @@ class XTemplateInstance {
                     if (attrValue) {
                         el.setAttribute(attr, "");
                     }
+                } else if (typeof (attrValue) == "object") {
+                    let aux = [];
+                    for(let key in attrValue) {
+                        if (attrValue[key]) aux.push(key);
+                    }
+                    el.setAttribute(attr, aux.join(" "));
                 } else {
                     el.setAttribute(attr, attrValue);
                 }
@@ -529,7 +613,7 @@ class XTemplateInstance {
                     el.textContent = vNode.children;
                 }
             }
-            //if (config.debug) el.setAttribute("x-index", vNode.options.index);
+            if (true) el.setAttribute("x-index", vNode.options.index);
             return el;
         }
     }
@@ -611,6 +695,12 @@ class XTemplateInstance {
                     } else {
                         element.removeAttribute(attr);
                     }
+                } else if (typeof (attrValue) == "object") {
+                    let aux = [];
+                    for(let key in attrValue) {
+                        if (attrValue[key]) aux.push(key);
+                    }
+                    element.setAttribute(attr, aux.join(" "));
                 } else if (attrValue == null) {
                     element.removeAttribute(attr);
                 } else {

@@ -40,9 +40,8 @@ export default XElement.define("x-listview-item", {
         <div x-if="state.category" class="category">
             {{state.category}}
         </div>
-        <x-anchor x-attr:href="state.href ? state.href : false" x-attr:target="state.target" x-attr:class="'plain ' + state.view" x-attr:title="state.description">
-            <x-icon class='new' x-if="state.target!='#root'" icon="x-open_in_new"></x-icon>
-            <x-icon x-else x-attr:icon="state.icon"></x-icon>
+        <x-anchor x-attr:href="state.href" x-attr:target="state.target" x-attr:class="'plain ' + state.view" x-attr:title="state.description">
+            <x-icon x-else x-attr:icon="state.icon || 'x-file'"></x-icon>
             <span class="label" x-text="state.label"></span>
             <span class="description" x-text="state.description"></span>
             
