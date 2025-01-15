@@ -18,14 +18,14 @@
 
 <template>
     <x-form>
-        <x-tabs selected-hash="pages">
+        <x-tabs selected-hash="modules">
             <x-tab label="Shell">
                 <x-page src="/x/pages/debug-shell.html" loading="lazy"></x-page>
             </x-tab>
-            <x-tab label="Configuration">
+            <x-tab label="Configuration" hash="config">
                 <x-page src="/x/pages/debug-config.html" loading="lazy"></x-page>
             </x-tab>
-            <x-tab label="Modules">
+            <x-tab label="Modules" hash="modules">
                 <x-page src="/x/pages/debug-modules.html" loading="lazy"></x-page>
             </x-tab>
             <x-tab label="Loader">

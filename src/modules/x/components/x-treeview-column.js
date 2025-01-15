@@ -5,7 +5,7 @@ export default XElement.define("x-treeview-column", {
     style: `
         :host {
             display:block; 
-            width:var(--x-treeview-column-width);
+            width: var(--x-treeview-column-width);
             box-sizing:border-box;
         }
     `,
@@ -14,14 +14,6 @@ export default XElement.define("x-treeview-column", {
     `,
     state: {
         label: ""        
-    },
-    methods: {
-        async onCommand(command) {
-            if (command == "load") {
-                //load               
-
-            }
-        }
     }
 });
 
