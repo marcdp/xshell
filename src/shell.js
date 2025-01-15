@@ -147,10 +147,9 @@ class Shell {
         let modules = config.getAsObjects("modules");
         for (let module of modules) {
             if (src.startsWith(module.path + "/")) {
-                if (module.status != "loaded") {
-                    return await this.loadModule(module);
-                }
-                return this._modules[module.name];
+                if (this._modules[module.name]) return this._modules[module.name];
+                if (this._modulesLoading[module.src]) return await this._modulesLoading[module.src];
+                return await this.loadModule(module);
             }
         }
         return null;
@@ -158,16 +157,18 @@ class Shell {
     async loadModuleByName(name) {
         //load module by name        
         let module = config.getAsObject("modules." + name);
-        if (module.status != "loaded") {
-            return await this.loadModule(module);
-        }
-        return this._modules[module.name];
+        if (this._modules[module.name]) return this._modules[module.name];
+        if (this._modulesLoading[module.src]) return await this._modulesLoading[module.src];
+        return await this.loadModule(module);
     }
     async loadModules() {
         let modules = config.getAsObjects("modules");
         let tasks = [];
         for (let module of modules) {
-            if (module.status != "loaded") {
+            if (this._modules[module.name]) {
+            } else if (this._modulesLoading[module.src]) {
+                tasks.push(this._modulesLoading[module.src]);
+            } else {
                 tasks.push(this.loadModule(module));
             }
         }
@@ -225,7 +226,6 @@ class Shell {
             }
         }
         //add config
-        instance.config["modules." + name + ".status"] = "loaded";
         config.set(instance.config, module.src, module.path);
         for(let key in instance.config) {
             if (key.startsWith("loader.")) {
@@ -261,7 +261,7 @@ class Shell {
         //stats
         stats.loadEnd = performance.now();
         stats.loadTime = parseInt(stats.loadEnd - stats.loadBegin);
-        stats.loadSize = 0;
+        stats.loadSize = -1;
         instance.stats = stats;
         //dispatch event
         this.dispatchEvent("module-load", { detail: {name: module, module: instance }});

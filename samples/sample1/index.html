@@ -223,20 +223,22 @@ x - x-attr:class="{xxx:xx, b:bbbb}" -- should add class xxxxxxxx if value true
 x - x-class:xxxxxxxx="state.enabled" -- should add class xxxxxxxx if value true
 x - x-menu selected
 x - x-menu with ul
+x - menu -- render recursive
+x - do not use config["modules.x.status"] = "loaded" !!!! config should be readonly !!! is not state!!!!
+x - treeview
+x - top menu (like for example in aws console, wher all modules are showed)
 
 
-
-- do not use config["modules.x.status"] = "loaded" !!!! config should be readonly !!! is not state!!!!
+- x-listview -- create x-listview-body, x-listview-head, x-listview-column, x-listview-row
+- x-listview -- use :part to style elements
+- x-listview -- selected 
+- x-listview -- arrows selection
 
 - /x/pages/debug-modules --- use x-treeview
 - /x/pages/debug-loader --- use x-treeview
-
-- pages: click -- navigate to page
-
-- think what to do with with x-listview in details mode (use x-treeview? or use the same technique as x-treeview)
-
-
-- menu -- render recursive
+- /x/pages/debug-pages: click -- navigate to page
+- /x/pages/debug-pages: click in an icon -- open source file in new tab
+- /x/pages/debug-components.html --- show list of web components (size, load time, etc, source file)
 
 - docs
 
@@ -248,8 +250,6 @@ x - x-menu with ul
   - authentication
   - user menu
 
-  
-
 - datafield file 
 - datafield files
 - datafield image
@@ -257,15 +257,10 @@ x - x-menu with ul
 
 - input select un registre d'una taula sortable i varies columnes (ex: https://eu-west-3.console.aws.amazon.com/dynamodbv2/home?region=eu-west-3#dax-cluster-create) d'un datatable?
 
-- treeview
 
 - npm package
 
 
-- top menu (like for example in aws console, wher all modules are showed)
-  - idea 3:
-    - each module: "merge:shell.menus.main" = ...  --- loader automatically adds the menuitems (or whatever) to the top menu (to the shell config)
-    - each module: modules.xxx.shell.menus.main = ...  --- loader automatically adds the menuitems (or whatever) to the top menu (to the shell config)
 
 - module data ??? think about that
 

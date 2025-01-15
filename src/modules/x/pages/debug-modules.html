@@ -7,7 +7,8 @@
     //export
     export default {
         state: {
-            modules: []
+            modules: [],
+            view:"details"
         },
         async onCommand(command, args) {
             if (command == "load") {
@@ -15,6 +16,10 @@
                 this.bindEvent(shell, "module-load", "refresh");
                 //refresh
                 await this.onCommand("refresh");
+
+            } else if (command == "view") {
+                //view
+                this.state.view = args.event.target.dataset.view
 
             } else if (command == "refresh") {
                 //refresh
@@ -42,8 +47,12 @@
 </script>
 
 <template>
-    
-    <x-listview view="details">
+
+    <x-button label="list" command="view" data-view="list"></x-button>
+    <x-button label="icons" command="view" data-view="icons"></x-button>
+    <x-button label="details" command="view" data-view="details"></x-button>
+
+    <x-listview x-attr:view="state.view">
         <div slot="column">Name</div>
         <div slot="column">Label</div>
         <div slot="column">Path</div>
@@ -65,8 +74,8 @@
             <div>{{ module.src }}</div>
             <div>{{ module.version }}</div>
             <div>{{ module.type }}</div>
-            <div><x-time-ms x-prop:value="module.loadTime"></x-time-ms></div>
-            <div><x-file-size x-prop:value="module.loadSize"></x-file-size></div>
+            <x-time-ms x-prop:value="module.loadTime"></x-time-ms>
+            <x-file-size x-prop:value="module.loadSize"></x-file-size>
             <div>{{ module.status }}</div>
             
         </x-listview-item>
