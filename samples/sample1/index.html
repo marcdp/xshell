@@ -4,57 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="shortcut icon" href="./favicon.ico">
-
-    <!--
-    <link rel="preload" href="/src/modules/x/components/x-anchor.js"  as="script"/>
-    <link rel="preload" href="/src/modules/x/components/x-button.js"  as="script"/>
-    <link rel="preload" href="/src/modules/x/components/x-loading.js"  as="script"/>
-    <link rel="preload" href="/src/modules/x/layouts/x-layout-dialog.js"  as="script"/>
-    <link rel="preload" href="/src/modules/x/ui/x-element.js"  as="script"/>
-    <link rel="preload" href="/src/modules/x/ui/page-instance-sfc.js"  as="script"/>
-    -->
-
-    <script type="importmap">
-        {
-          "imports": {
-            "shell": "/src/shell.js"
-          }
-        }
-    </script>
-    <script type="module">
-        //import
-        import shell from "shell";
-        //init
-        await shell.init({
-            // app
-            "app.name": "Sample2",
-            "app.label": "Sample2 title",
-            "app.version": "0.1",
-            "app.copyright": "",
-            "app.logo": "./logo.svg",
-            // shell
-            "shell.base": ".",
-            "shell.debug": true,
-            "shell.start": "/module1/pages/page4.html",
-            // module oidc
-            "modules.oidc.src": "/src/modules/oidc/module.js",
-            // module x
-            "modules.x.src": "/src/modules/x/module.js",
-            "modules.x.path": "/x",
-            // module x-man
-            "modules.x-man.src": "/src/modules/x-man/module.js",
-            "modules.x-man.path": "/x-man",
-            // module 1
-            "modules.module1.src": "./module1/module.js",
-            "modules.module1.path": "/module1",
-            // module 2
-            "modules.module2.src": "./module2/module.js",
-            "modules.module2.path": "/module2",
-            "modules.module2.loading": "lazy",
-        });
-        //start
-        await shell.start();
-    </script>
+    <script src="/src/bootstrap.js" data-config="./index.jsonc" data-sw="./sw.js" data-mode="development"></script>
 </head>
 <body>
 </body>
@@ -227,7 +177,19 @@ x - menu -- render recursive
 x - do not use config["modules.x.status"] = "loaded" !!!! config should be readonly !!! is not state!!!!
 x - treeview
 x - top menu (like for example in aws console, wher all modules are showed)
+x - service worker actiu sempre
+x - modules should not modify "loaders.icon.." -> bootstrap should do it
 
+- loader -> resolver
+- modules -> import map
+- if development -> service worker should not cache anything. Only transform
+
+- fer que cada modul declari els seu "importmap", y que el bootstrap.js crei el importmap global amb tots els imports de tots els moduls (ex: "xhell", "x-shell/", ...)
+
+- service worker fetch with versioning
+- service worker from ZIP file
+
+- module.js -> files with onCommand
 
 - x-listview -- create x-listview-body, x-listview-head, x-listview-column, x-listview-row
 - x-listview -- use :part to style elements

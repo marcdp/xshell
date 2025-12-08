@@ -1,0 +1,18 @@
+﻿{
+    // app
+    "app.name": "Sample2",
+    "app.label": "Sample2 title",
+    "app.version": "0.1",
+    "app.copyright": "",
+    "app.logo": "url:./logo.svg",
+    // module x
+    "modules.x.src": "url:/src/x/module.jsonc",
+    // module 1
+    "modules.module111.src": "url:./module1/module.jsonc",
+    // module 2
+    "modules.module2.src": "url:./module2/module.jsonc",
+    // xshell
+    "xshell.base": ".",
+    "xshell.debug": true,
+    "xshell.start": "/module111/pages/page4.html"
+}

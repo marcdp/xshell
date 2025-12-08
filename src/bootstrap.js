@@ -1,0 +1,250 @@
+
+// consts
+const mode = document.currentScript.dataset.mode ?? "production";
+const configUrl = document.currentScript.dataset.config;
+const swUrl = document.currentScript.dataset.sw;
+const appUrl = document.location.origin + document.location.pathname;
+const appUrlDir = appUrl.substring(0, appUrl.lastIndexOf("/") + 1)  ;
+const bootstrapUrl = new URL(document.currentScript.src);
+const bootstrapUrlDir = bootstrapUrl.href.substring(0, bootstrapUrl.href.lastIndexOf("/") + 1);
+
+
+// utils
+function stripJsonComments(s) {
+    let o="",i=0,n=s.length;for(;i<n;){let c=s[i];if(c=='"'||c=="'"){let q=c;o+=c;i++;while(i<n){if(s[i]=="\\"){o+=s[i++]+s[i++];}else if(s[i]==q){o+=s[i++];break;}else{o+=s[i++];}}continue;}if(c=='/'&&s[i+1]=='/'){i+=2;while(i<n&&s[i]!="\n"&&s[i]!="\r")i++;continue;}if(c=='/'&&s[i+1]=='*'){i+=2;while(i<n&&!(s[i]=='*'&&s[i+1]=='/'))i++;i+=2;continue;}o+=c;i++;};
+    return o;
+}
+function combineUrls(a, b) {
+    if (a.indexOf("?") != -1) a = a.substring(0, a.indexOf("?"));
+    if (b.indexOf(":") != -1) return b;
+    if (b.startsWith("/")) {
+        if (a.indexOf("://") != -1) {
+            let i = a.indexOf("/", a.indexOf("://") + 3);
+            if (i != -1) a = a.substring(0, i);
+            return a + b;
+        }
+        return b;
+    } else if (b.startsWith("./") || b==".") {
+        if (a.endsWith("/")) {
+            a = a.substring(0, a.length - 1);
+        } else if (a.length > 0) {
+            a = a.substring(0, a.lastIndexOf("/"));
+        }
+        return a + b.substring(1);
+    } else if (b.startsWith("../")) {
+        if (a.endsWith("/")) {
+            a = a.substring(0, a.length - 1);
+        } else if (a.length > 0) {
+            a = a.substring(0, a.lastIndexOf("/"));
+        }
+        let result = a + "/" + b;
+        if (result.startsWith("/")) {
+            const normalizedUrl = new URL(result, window.location.origin);
+            result = normalizedUrl.pathname;
+        } else {
+            result = (new URL(result)).toString();
+        }
+        return result;
+    } else {
+        if (a.endsWith("/")) { 
+            //empty
+        } else if (a.indexOf("/") != -1) {
+            a = a.substring(0, a.lastIndexOf("/") + 1);
+        }
+        return a + b;
+    }
+}
+function replaceUrlPrefix(key, obj, baseUrl) {
+    if (typeof(obj) == "string") {
+        if (obj.startsWith("url:")) {
+            obj = obj.substring(4).trim();
+            if (obj.startsWith("/") || obj.startsWith("./") || obj.startsWith("../") || obj == ".") {
+                obj = combineUrls(baseUrl, obj);
+            }
+        }
+    } else if (Array.isArray(obj)) {
+        for (let i = 0; i < obj.length; i++) {
+            obj[i] = replaceUrlPrefix(i, obj[i], baseUrl);
+        }
+    } else if (obj instanceof Object) {
+        for (let subkey in obj) {
+            obj[subkey] = replaceUrlPrefix(subkey, obj[subkey], baseUrl);
+        }
+    }
+    return obj;
+}
+function normalizeModuleUrls(key, obj, path) {
+    if (typeof(obj) == "string") {
+        if (obj.startsWith("./") || obj.startsWith("../") || obj == ".") {
+            //relative to virtual path
+            obj = combineUrls(path + "/", obj);
+            if (obj.startsWith(document.location.origin)) obj = obj.substring(document.location.origin.length);
+        }
+    } else if (Array.isArray(obj)) {
+        for (let i = 0; i < obj.length; i++) {
+            obj[i] = normalizeModuleUrls(i, obj[i], path);
+        }
+    } else if (obj instanceof Object) {
+        for (let subkey in obj) {
+            obj[subkey] = normalizeModuleUrls(subkey, obj[subkey], path);
+        }
+    }
+    return obj;
+}
+
+// bootstrap methods
+async function loadXShellConfig(config) {
+    // load app config
+    console.log("bootstrap: loading xshell config ...");
+    const url = combineUrls(bootstrapUrlDir, "xshell/xshell.json");
+    const json = stripJsonComments(await (await fetch(url)).text());
+    const xshellConfig = JSON.parse(json);
+    replaceUrlPrefix("", xshellConfig, bootstrapUrlDir);
+    for(var key in xshellConfig) {
+        config[key] = xshellConfig[key];
+    }
+    return config;
+}
+async function loadAppConfig(config) {
+    // load app config
+    console.log("bootstrap: loading app config ...");
+    const url = new URL(configUrl, document.baseURI).href;
+    const json = stripJsonComments(await (await fetch(url)).text());
+    const appConfig = JSON.parse(json);
+    replaceUrlPrefix("", appConfig, appUrlDir);
+    for(var key in appConfig) {
+        config[key] = appConfig[key];
+    }
+    return config;
+}
+async function loadModulesConfig(config) {
+    // load modules config
+    let names = [];
+    for(let key in config) {
+        if (key.startsWith("modules.")) {
+            let name = key.split(".")[1];
+            if (!names.includes(name)) {
+                names.push(name);
+            }
+        }
+    }
+    // load each module config
+    let loadModuleTasks = [];
+    for(let name of names) {
+        const moduleSrc = config[`modules.${name}.src`];
+        console.log("bootstrap: loading module config ...", name + " (" + moduleSrc + ")");
+        loadModuleTasks.push(fetch(moduleSrc));
+    }
+    let results = await Promise.all(loadModuleTasks);
+    // parse each module config
+    for(let result of results) {
+        let name = names[results.indexOf(result)];
+        //let filename = result.url.substring(result.url.lastIndexOf("/"));
+        //let url = result.url.substring(0, result.url.lastIndexOf("/") + 1);
+        console.log("bootstrap: parsing module config ...", result.url);
+        if (!result.ok) throw new Error(`Failed to load module: ${result.url}`);
+        let json = await result.text();
+        let moduleConfig = JSON.parse(stripJsonComments(json));
+        // defaults
+        moduleConfig[`name`] = `${name}`;
+        moduleConfig[`path`] = `/${name}`;
+        moduleConfig[`icon`] = moduleConfig[`icon`] || "x-file";
+        moduleConfig[`label`] = moduleConfig[`label`] || "";
+        moduleConfig[`version`] = moduleConfig[`version`] || "";
+        moduleConfig[`depends`] = moduleConfig[`depends`] || [];
+        moduleConfig[`styles`] = moduleConfig[`styles`] || [];
+        moduleConfig[`page-handler`] = moduleConfig[`page-handler`] || "sfc";
+        // add default module loaders
+        moduleConfig[`loader.icon:${name}-{name}`] = "./icons/{name}.svg";
+        moduleConfig[`loader.component:${name}-{name}`] = `./components/${name}-{name}.js`;
+        moduleConfig[`loader.page:/${name}/pages/{path}`] = "./pages/{path}";
+        moduleConfig[`loader.layout:${name}-layout-{name}`] = `./layouts/${name}-layout-{name}.js`;
+        // normalize urls
+        normalizeModuleUrls("", moduleConfig, "/" + name);
+        // merge module config into app config
+        for(let key in moduleConfig) {
+            let value = moduleConfig[key];
+            if (key.startsWith("global.")){
+                key = key.substring(key.indexOf(".")+1);
+                config[key] = value;
+            } else {
+                config["modules." + name + "." + key] = value;
+            }
+        }
+        // add resolvers
+        config[`resolver.icon:${name}-{name}`] = `/${name}/icons/{name}.svg`;
+        config[`resolver.component:${name}-{name}`] = `/${name}/components/${name}-{name}.js`;
+        config[`resolver.page:/${name}/pages/{path}`] = `/${name}/pages/{path}`;
+        config[`resolver.layout:${name}-layout-{name}`] = `/${name}/layouts/${name}-layout-{name}.js`;
+    }
+    // log
+    console.log("bootstrap: config", config);
+    // return
+    return config;
+}
+async function installServiceWorker(config) {
+    console.log("bootstrap: installing service worker ...");
+    const bootstrapUrlRaw = bootstrapUrl.toString();
+    const realSwUrl = bootstrapUrlRaw.substring(0, bootstrapUrlRaw.lastIndexOf("/")) + "/xshell/sw.js";
+    if (navigator.serviceWorker.controller) {
+        navigator.serviceWorker.getRegistration().then(reg => {
+            if (reg) reg.update();
+        });
+    }
+    const reg = await navigator.serviceWorker.register(swUrl + "?" + encodeURIComponent(realSwUrl), {
+        scope: document.location.pathname
+    });
+    await navigator.serviceWorker.ready;
+    console.log("bootstrap: service worker ready");
+    // creates rules to send to service worker
+    let xshellVersion = config["xshell.version"];
+    let rules = [];
+    rules.push({ src: combineUrls(appUrl, "xshell"), dst: combineUrls(bootstrapUrlDir, "xshell"), version: xshellVersion, name:"xshell", exceptions:[combineUrls(bootstrapUrlDir, "xshell/xshell.json")]});
+    for(var key in config) {
+        if (key.startsWith("modules.") && key.endsWith(".src")) {
+            const moduleName = key.split(".")[1];
+            const moduleSrc = config[key];
+            const moduleSrcDir = moduleSrc.substring(0, moduleSrc.lastIndexOf("/"));
+            const moduleVersion = config[`modules.${moduleName}.version`];
+            rules.push({ src: combineUrls(appUrl, moduleName), dst: moduleSrcDir, version: moduleVersion, name: moduleName, exceptions: [moduleSrc]});
+        }
+    }
+    // send config to service worker
+    reg.active.postMessage({ type: "init", payload: {
+        mode: mode,
+        rules: rules
+    } });
+}
+async function loadXShell() {
+    console.log("bootstrap: loading xshell ...");
+    return (await import("xshell")).default;
+}
+async function bootstrap() {
+    let config = {};
+    // load xshell config
+    config = await loadXShellConfig(config);
+    // load app config
+    config = await loadAppConfig(config);
+    // load modules config
+    config = await loadModulesConfig(config);
+    // installServiceWorker
+    await installServiceWorker(config);
+    // create importmap
+    const im = document.createElement("script");
+    im.type = "importmap";
+    im.textContent = JSON.stringify({
+        imports: {
+            "xshell": bootstrapUrlDir.replace(document.location.origin, "") + "xshell/xshell.js",
+            "x-element": bootstrapUrlDir.replace(document.location.origin, "") + "x/ui/x-element.js"            
+        }
+    }, null, 2);
+    document.head.appendChild(im);
+    // load xshell
+    let xshell = await loadXShell();
+    // init xshell
+    await xshell.init(config);
+}
+
+// exec bootstrap
+bootstrap();
+
