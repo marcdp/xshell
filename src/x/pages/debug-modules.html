@@ -1,0 +1,84 @@
+
+<title>Modules</title>
+
+<script type="module">
+    import xshell, { bus, config, utils} from "xshell";
+
+    //export
+    export default {
+        state: {
+            modules: [],
+            view:"details"
+        },
+        async onCommand(command, args) {
+            if (command == "load") {
+                //load
+                this.bindEvent(xshell, "module-load", "refresh");
+                //refresh
+                await this.onCommand("refresh");
+
+            } else if (command == "view") {
+                //view
+                this.state.view = args.event.target.dataset.view
+
+            } else if (command == "refresh") {
+                //refresh
+                let modules = [];
+                for(let target of config.getAsObjects("modules")) {
+                    let module = xshell.modules[target.name];
+                    modules.push({
+                        name: target.name,
+                        label: target.label || target.name || "",
+                        description: target.description || "",
+                        logo: target.logo || "x-module",
+                        path: target.path || "",
+                        type: target.type || "",
+                        src: target.src || "",
+                        loadTime: (module && module.stats ? module.stats.loadTime : -1),
+                        loadSize: (module && module.stats ? module.stats.loadSize : -1),
+                        version: target.version || "",
+                        status: target.status || "",
+                    });
+                };
+                this.state.modules = modules;
+            }
+        }
+    }
+</script>
+
+<template>
+
+    <x-button label="list" command="view" data-view="list"></x-button>
+    <x-button label="icons" command="view" data-view="icons"></x-button>
+    <x-button label="details" command="view" data-view="details"></x-button>
+
+    <x-listview x-attr:view="state.view">
+        <div slot="column">Name</div>
+        <div slot="column">Label</div>
+        <div slot="column">Path</div>
+        <div slot="column">Source</div>
+        <div slot="column">Version</div>
+        <div slot="column">Type</div>
+        <div slot="column">Load T.</div>
+        <div slot="column">Size</div>
+        <div slot="column">Status</div>
+        <x-listview-item 
+            x-for="module in state.modules"
+            x-attr:label="module.name"
+            x-attr:description="module.description"
+            x-attr:icon="module.logo"
+            target="#root"
+        >
+            <div>{{ module.label }}</div>
+            <div>{{ module.path }}</div>
+            <div>{{ module.src }}</div>
+            <div>{{ module.version }}</div>
+            <div>{{ module.type }}</div>
+            <x-time-ms x-prop:value="module.loadTime"></x-time-ms>
+            <x-file-size x-prop:value="module.loadSize"></x-file-size>
+            <div>{{ module.status }}</div>
+            
+        </x-listview-item>
+    </x-listview>       
+    
+</template>

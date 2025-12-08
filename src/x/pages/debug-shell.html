@@ -1,0 +1,53 @@
+
+<title>Shell</title>
+
+<script type="module">
+    import xshell, { bus, config, utils} from "xshell";
+
+    //export
+    export default {
+        state: {
+            data: null,
+            key: "",
+            value: "",
+        },
+        async onCommand(command, args) {
+            if (command == "load") {
+                //load
+                this.bindEvent(config, "change", "refresh");
+                this.bindEvent(this.state, "change:key", "refresh");
+                this.bindEvent(this.state, "change:value", "refresh");
+                //refresh
+                await this.onCommand("refresh");
+
+            } else if (command == "refresh") {
+                //refresh
+                let data = {};
+                data.stats = JSON.stringify(xshell.stats);
+                this.state.data = data;
+                
+            }
+        }
+    }
+</script>
+
+<template>
+    
+    <x-form>
+        <table style="width:100%;">
+            <tr>
+                <th style="width:15%">Key</th>
+                <th>Value</th>
+            </tr>
+            <tr x-for="item in state.data">
+                <td style="vertical-align:top; white-space: nowrap;">
+                    <b>{{ item }}</b>
+                </td>
+                <td>
+                    <x-json x-model="state.data[item]"></x-json>
+                </td>
+            </tr>
+        </table>
+    </x-form>
+    
+</template>

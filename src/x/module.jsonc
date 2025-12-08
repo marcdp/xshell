@@ -1,0 +1,40 @@
+
+{
+    // module
+    "name": "x",
+    "label": "X module",
+    "version": "1.0.0.0",
+    "depends": [],
+    "styles": ["./css/styles.css"],
+    "icon": "",
+    "page-handler": "sfc",
+    "type": "library",
+    "menus.main": {
+        "label": "Module X",
+        "href":"",
+        "children": [
+            { "label": "Debug", "href": "/x/pages/debug.html" },
+            { "label": "Modules", "href": "/x/pages/modules.html" },
+            { "label": "Language picker", "href": "/x/pages/lang-picker.html" },
+            { "label": "Playground", "href": "/x/pages/playground.html" },
+            { "label": "Search", "href": "/x/pages/search.html" },
+            { "label": "Google", "href": "http://www.google.com/", "target":"_blank"}
+        ]
+    },
+
+    // loader
+    "loader.component:ace-editor": "https://unpkg.com/ace-custom-element@latest/dist/index.min.js",
+    "loader.page-handler:sfc": "./ui/page-instance-sfc.js",   
+    
+    // global pages
+    "global.pages.layout.default": "x-layout-default",
+    "global.pages.layout.dialog": "x-layout-dialog",
+    "global.pages.layout.main": "x-layout-main",
+    "global.pages.layout.stack": "x-layout-stack",
+    "global.pages.layout.embed": "x-layout-embed",
+
+    // global xshell
+    "global.xshell.error": "/x/pages/error.html",
+    "global.xshell.lazy": "x-lazy"
+
+}
