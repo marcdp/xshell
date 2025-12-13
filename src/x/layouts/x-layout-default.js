@@ -1,4 +1,4 @@
-import XElement from "../../x/ui/x-element.js";
+import XElement from "x-element";
 
 // class
 export default XElement.define("x-layout-default", {

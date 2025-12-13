@@ -1,10 +1,11 @@
 import XTemplate from "./x-template.js";
 import createState from "./create-state.js";
-import { utils, PageInstance } from "xshell";
+import utils from "../utils.js";
+import Page from "../page.js";
 
+debugger;
 
-
-class PageInstanceSfc extends PageInstance {
+class PageSfc extends Page {
 
 
     //vars
@@ -12,7 +13,7 @@ class PageInstanceSfc extends PageInstance {
     _xtemplate = null;
     _xtemplateInstance = null;
     _renderTimeoutId = 0;
-    _
+    
 
 
     //ctor
@@ -122,4 +123,4 @@ class PageInstanceSfc extends PageInstance {
 }
 
 // export class
-export default PageInstanceSfc;
+export default PageSfc;

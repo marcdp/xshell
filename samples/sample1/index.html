@@ -179,12 +179,22 @@ x - treeview
 x - top menu (like for example in aws console, wher all modules are showed)
 x - service worker actiu sempre
 x - modules should not modify "loaders.icon.." -> bootstrap should do it
+x - loader -> resolver
+x - modules -> import map
+x - if development -> service worker should not cache anything. Only transform
+x - fer que cada modul declari els seu "importmap", y que el bootstrap.js crei el importmap global amb tots els imports de tots els moduls (ex: "xhell", "x-shell/", ...)
+x - page-instance -> page.js
 
-- loader -> resolver
-- modules -> import map
-- if development -> service worker should not cache anything. Only transform
 
-- fer que cada modul declari els seu "importmap", y que el bootstrap.js crei el importmap global amb tots els imports de tots els moduls (ex: "xhell", "x-shell/", ...)
+- page-handler.js -- > se le passa una URL y retorna el HTML (com a string o com a document fragment)
+  - cada paga handler deberia tener un metodo "canHandle(url) -> boolean" y "handle(url) -> page (or subclass)"
+  - page-handler-md.js
+  - page-handler-html.js
+  - page-handler-txt.js
+  - page-handler-sfc -- > page-handler-x.js
+
+
+- module -> "handler": "/module.js" (handler que ha de retornar un objecte amb metodes "onCommand")
 
 - service worker fetch with versioning
 - service worker from ZIP file

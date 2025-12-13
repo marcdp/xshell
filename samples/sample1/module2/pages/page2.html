@@ -1,24 +1,20 @@
-﻿<meta name="page-handler"   content="sfc" />
-<title>This is a title</title>
+﻿<title>This is a titleeeee</title>
 
 <script type="module">
-    export default {
-        state: {
-            value: new Date()
-        },
-        async onCommand(command, args) {
+    import ctx from "xshell/page-context"    
+
+    ctx.controller({
+        async onCommand(command, params, page) {
             if (command == "load") {
                 //load
-                this.bindInterval(1000, "timeout")
+                page.bindInterval(1000, "timeout")
 
             } else if (command == "timeout") {
                 //timeout
-                this.state.value = new Date();
+                console.log("aaaaa")
             }
         }
-    }
+    });
 </script>
 
-<template>
-    The second page!!!!, time is <x-datetime x-prop:datetime="state.value" ></x-datetime>
-</template>
+The second page!!!!

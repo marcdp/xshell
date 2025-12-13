@@ -1,19 +1,21 @@
 ﻿{
-    //app
+    // module
     "name": "module2",
     "label": "Module 2",
     "icon": "",
     "version": "0.1",
     "depends": [],  
     "styles": [],
-    "page-handler": "",      
     "type": "application",      
+    "start": "/pages/page2.html",
+
+    // menu
     "menus.main": {
         "label": "Amazon S5555",
         "children": [
-            { "label": "page 1", "href": "./pages/page1.html", "children":[
-                { "label": "Page 2", "href": "./pages/page23.html?asdf"},
-                { "label": "Page 2.2", "href": "./pages/page2.html", "default":true }
+            { "label": "page 1", "href": "/pages/page1.html", "children":[
+                { "label": "Page 2", "href": "/pages/page2.html?var1=111&var2=2222#fragmentA"},
+                { "label": "Page 2.2", "href": "/pages/page2.html"}
             ]
         }]
     }

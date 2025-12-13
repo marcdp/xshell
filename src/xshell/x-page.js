@@ -1,9 +1,11 @@
 import xshell from "./xshell.js";
 import loader from "./loader.js";
+import resolver from "./resolver.js";
 import config from "./config.js";
 import utils from "./utils.js";
 import bus from "./bus.js";
-import PageInstance from "./page-instance.js";
+import Page from "./page.js";
+import pageRegistry from "./page-registry.js";
 
 // class
 class XPage extends HTMLElement {
@@ -30,8 +32,7 @@ class XPage extends HTMLElement {
     _loading = "";
     _loadingObserver = null;
     _module = null;
-    _instance = null;
-    _stats = null;
+    _page = null;
     
 
     //ctor
@@ -67,9 +68,7 @@ class XPage extends HTMLElement {
         }
     }
     get srcPage() {return this._srcPage;}
-    get srcAbsolute() {
-        return loader.resolveSrc("page:" + this.src);
-    }
+    get srcAbsolute() {return resolver.resolveUrl("page:" + this.src);}
 
     get status() {return this._status;}
     get statusPage() {return this._statusPage;}
@@ -105,9 +104,6 @@ class XPage extends HTMLElement {
         }
     }
 
-    get stats() {return this._stats;}
-
-    
     //events
     attributeChangedCallback(name, oldValue, newValue) {
         if (name == "src") this.src = newValue;
@@ -138,7 +134,7 @@ class XPage extends HTMLElement {
         }
     }
     disconnectedCallback() {
-        //destroy previous instance
+        //destroy previous page
         this.unload();
         this._connected = false;
     }
@@ -146,7 +142,133 @@ class XPage extends HTMLElement {
 
     //methods    
     async load() {
-        console.log(`xpage.load('${this.src}') ************************************`);
+        console.log(`xpage: load '${this.src} ...`);
+        let src = this.src;
+        if (src.indexOf("error") != -1) {
+            debugger;
+            return;
+        }
+        //reset
+        this._result = null;
+        this._label = "";
+        this._icon = "";
+        this._status = "loading";
+        this._statusPage = "";
+        //set layout as loading (if exists)
+        let layoutElement = this.shadowRoot.firstChild;
+        if (layoutElement) {
+            layoutElement.setAttribute("status", "loading");
+        }
+        //load module 
+        let moduleName = await xshell.resolveModuleName(src);
+        this.setAttribute("module", moduleName ?? "");
+        if (!moduleName) {
+            this.error({ code: 404, message: "Module not registered for page path: " + src, src: src});            
+            return;
+        }        
+        //fetch page
+        let page = null;
+        try {
+            page = await loader.load("page:" + src);
+        } catch(e) {
+            this.error({ 
+                code: 404, 
+                message: "Error loading page: " + e.message, 
+                src: src, 
+                stack: e.stack
+            });
+            return;
+        }                 
+        //search params
+        let searchParams = new URLSearchParams(src.indexOf("?") != -1 ? src.substring(src.indexOf("?") + 1).split("#")[0] : "");
+        //layout
+        let layoutName = this._layout;
+        if (searchParams.get("page-layout")) {
+            layoutName = searchParams.get("page-layout");
+            searchParams.delete("page-layout");
+        }
+        //doc.head.querySelectorAll("meta[name='page-layout']").forEach((sender) => { layoutName = sender.content || layoutName; });
+        if (!layoutName) layoutName = "embed";
+        let layout = config.get("page.layout." + layoutName);
+        await loader.load("layout:" + layout);
+        if (layoutElement == null || layoutElement.localName != layout) {
+            if (layoutElement) layoutElement.remove();
+            layoutElement = document.createElement(layout);
+            layoutElement.innerHTML = "<slot></slot>";
+            this.shadowRoot.appendChild(layoutElement);
+            layoutElement.setAttribute("status", "loading");
+        }        
+        this._layout = layoutName;
+        //delay
+        //    if (document.body.querySelectorAll(":scope > page").length > 1) {
+        //        await new Promise(r => setTimeout(r, 1000));                
+        //    }
+        //page-src
+        let srcPage = "";
+        if (searchParams.get("page-src")) {
+            srcPage = searchParams.get("page-src");
+            searchParams.delete("page-src");
+        }
+        this._srcPage = srcPage;
+        //menuitem
+        let menu = config.get("modules." + moduleName + ".menus.main", {});
+        let menuitems = utils.findObjectsPath(menu, 'href', src.split("#")[0]);
+        let menuitem = (menuitems ? menuitems[menuitems.length-1] : null);  
+        //label
+        let label = page.title;
+        //doc.head.querySelectorAll("meta[name='page-label']").forEach((sender) => { label = sender.content; });
+        if (!label && menuitems) label = menuitem.label;
+        if (searchParams.get("page-label")) {
+            label = searchParams.get("page-label");
+            searchParams.delete("page-label");
+        }
+        this.label = label;
+        //icon
+        let icon = "";
+        //doc.head.querySelectorAll("meta[name='page-icon']").forEach((sender) => { icon = sender.content; });
+        if (!icon && menuitem) icon = menuitem.icon;
+        if (searchParams.get("page-icon")) {
+            icon = searchParams.get("page-icon");
+            searchParams.delete("page-icon");
+        }
+        this.icon = icon;
+        //breadcrumb
+        let breadcrumb = [];
+        if (searchParams.get("page-breadcrumb")) {
+            breadcrumb = JSON.parse(atob(searchParams.get("page-breadcrumb").replace(/_/g, "/").replace(/-/g, "+")));
+            breadcrumb.push({ label: label, href: src });
+            searchParams.delete("page-breadcrumb");
+        } else if (menuitems) {
+            for(let i = 0; i <menuitems.length; i++) {
+                let menuitem = menuitems[i];
+                breadcrumb.push({ label: menuitem.label, href: menuitem.href });
+            }
+        }
+        this.breadcrumb = breadcrumb;        
+        //destroy previous page
+        await this.unload();
+        //init new page
+        this._page = page;
+        //await this._page.init(doc, this);
+        await this._page.init(this);
+        //set as loaded
+        if (this._status == "loading") {
+            this._status = "loaded"; 
+        }
+        //remove loading
+        if (layoutElement) layoutElement.removeAttribute("status");
+        //load status
+        this._loadStatus = 200;
+        // call load on page
+        await this._page.load();        
+        //raise load event
+        this.dispatchEvent(new CustomEvent("load"));
+        //bus event
+        bus.emit("page-load", { page: page });
+    }
+    /*
+    async loadOld() {
+        console.log(`xpage: load '${this.src}' ...`);
         let src = this.src;
         if (src.indexOf("error") != -1) {
             debugger;
@@ -174,19 +296,10 @@ class XPage extends HTMLElement {
             });            
             return;
         }        
-        //stats
-        let stats = {
-            loadBegin: performance.now(),
-            loadEnd: null,
-            loadTime: NaN,
-            loadSize: 0
-        };
         //fetch page
         let html = null;
         try {
-            let loaderStats = {};
-            html = await loader.load("page:" + src, loaderStats);
-            stats.loadSize = loaderStats.loadSize;        
+            html = await loader.load("page:" + src);
         } catch(e) {
             this.error({ 
                 code: 404, 
@@ -233,7 +346,7 @@ class XPage extends HTMLElement {
             searchParams.delete("page-layout");
         }
         if (!layoutName) layoutName = "embed";
-        let layout = config.get("pages.layout." + layoutName);
+        let layout = config.get("page.layout." + layoutName);
         await loader.load("layout:" + layout);
         if (layoutElement == null || layoutElement.localName != layout) {
             if (layoutElement) layoutElement.remove();
@@ -290,7 +403,7 @@ class XPage extends HTMLElement {
         }
         this.breadcrumb = breadcrumb;        
         //handler
-        let instance = null;
+        let page = null;
         let handler = config.get("modules." + moduleName + ".page-handler", config.get("page-handler", ""));
         doc.querySelectorAll("meta[name='page-handler']").forEach((sender) => { handler = sender.content; });
         if (searchParams.get("page-handler")) {
@@ -298,35 +411,31 @@ class XPage extends HTMLElement {
             searchParams.delete("page-handler");
         }
         if (handler == "") {
-            instance = new PageInstance();
+            page = new Page();
         } else {
             let classs = await loader.load("page-handler:" + handler);
-            instance = new classs();
+            page = new classs();
         }
-        //destroy previous instance
+        //destroy previous page
         await this.unload();
-        //init new instance
-        this._instance = instance;
-        await this._instance.init(doc, this);
+        //init new page
+        this._page = page;
+        await this._page.init(doc, this);
         //set as loaded
         if (this._status == "loading") {
             this._status = "loaded"; 
         }
         //remove loading
         if (layoutElement) layoutElement.removeAttribute("status");
-        //stats
-        stats.loadEnd = performance.now();
-        stats.loadTime = parseInt(stats.loadEnd - stats.loadBegin);
-        this._stats = stats;
         //load status
         this._loadStatus = 200;
-        //call load on instance
-        await this._instance.load();        
+        //call load on page
+        await this._page.load();        
         //raise load event
         this.dispatchEvent(new CustomEvent("load"));
         //bus event
-        bus.emit("page-load", { page: instance });
-    }
+        bus.emit("page-load", { page: page });
+    }*/
     error({code, message, src, stack}) {
         //error
         let url = config.get("xshell.error");
@@ -363,9 +472,9 @@ class XPage extends HTMLElement {
     }
     async unload() {
         //unload
-        if (this._instance) {
-            console.log(`xpage.unload('${this._instance.src}')`);
-            await this._instance.unload();
+        if (this._page) {
+            console.log(`xpage.: unload '${this._page.src}' ...`);
+            await this._page.unload();
         }
     }
     navigate(src, settings) {
@@ -416,8 +525,8 @@ class XPage extends HTMLElement {
     }
     async onCommand(command, args) {
         //command
-        if (this._instance && this._instance.onCommand) {
-            await this._instance.onCommand(command, args);
+        if (this._page && this._page.onCommand) {
+            await this._page.onCommand(command, args);
         }
     }
 

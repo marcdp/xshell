@@ -7,14 +7,15 @@ import i18n from "./i18n.js";
 import resolver from "./resolver.js";
 import settings from "./settings.js";
 import XPage from "./x-page.js";
-import PageInstance from "./page-instance.js";
+import Page from "./page.js";
+import PageRegistry from "./page-registry.js";
+
 
 // constants
 const HASH_PREFIX = "#!";
 
 // class
 class XShell {
-
 
     //fields
     _container = null;
@@ -29,7 +30,7 @@ class XShell {
 
     //ctor
     constructor() {
-        console.log(`xshell.constructor()`);
+        console.log(`xshell: constructor`);
     }
 
 
@@ -44,30 +45,10 @@ class XShell {
         let url = "";
         // defaults
         config.set({
-            // app
-            "app.name": "",
-            "app.label": "",
-            "app.version": "",
-            "app.copyright": "",
-            "app.logo": "",
-            // page
-            "pages.layout.default": "",
-            "pages.layout.dialog": "",
-            "pages.layout.main": "",
-            "pages.layout.stack": "",
-            "pages.layout.embed": "",
-            // xshell
-            "xshell.base": "",
-            "xshell.debug": false,
-            "xshell.start": "",
-            "xshell.container": "body",
-            "xshell.error": "",
-            "xshell.lazy": "",
-            "xshell.version": "0.9.0",
             "xshell.url": import.meta.url
         }, import.meta.url);
         // load value
-        console.log(`xshell.init()`);
+        console.log(`xshell: init ...`);
         url = document.location.pathname;
         config.set(value, url);
         // config resolver
@@ -75,50 +56,43 @@ class XShell {
             resolver.addDefinition(key.substring(key.indexOf(".") + 1), config.get(key));
         }
         // init modules
-        let modules = config.getAsObjects("modules");
         let tasks = [];
-        for (let module of modules) {
+        for (let module of config.getAsObjects("modules")) {
             // load stylesheets
             let styles = config.get("modules." + module.name + ".styles", []);
             for (let style of styles) {
-                let realStyleUrl = resolver.virtualToRealUrl(style);
-                tasks.push(this.loadStyleSheet(realStyleUrl));
+                let styleUrl = resolver.resolveUrl(style);
+                tasks.push(this.loadStyleSheet(styleUrl));
             }
             await Promise.all(tasks);
             // init module
             let instance = {
                 name: module.name,
+                path: "/" + module.name,
                 handler: function(){}
             };
             this._modules.push(instance);
         }
         await Promise.all(tasks);        
-        // add loader definitions
-        for(let key of config.getKeys("loader")) {
-            loader.addDefinition(key.substring(key.indexOf(".") + 1), config.get(key));
-        }
-        for (let module of modules) {
-            for(let key of config.getKeys(`modules.${module.name}.loader`)) {
-                loader.addDefinition(key.substring(key.lastIndexOf(".") + 1), config.get(key));
-            }
-        }
         // dispatch module-load
         for (let instance of this._modules) {
             this.dispatchEvent("module-load", { detail: {name: instance.name, module: instance }});
         }
         // log
-        console.log(`xshell.initialized()`);
+        console.log(`xshell: initialized`);
         // add event listener
         window.addEventListener("hashchange", () => {
             this._navigate(document.location.hash);
         });
-        // navigate 
+        // navigate to start
         this._container = document.querySelector(config.get("xshell.container", "body"));
         this._container.appendChild(document.createComment("App pages"));
         if (document.location.hash) {
             await this._navigate(document.location.hash);
         } else {
-            document.location.hash = HASH_PREFIX + config.get("xshell.start");
+            let startModule = config.get("xshell.start");
+            let startPage = config.get("modules." + startModule + ".start", "");
+            document.location.hash = HASH_PREFIX + startPage;
         }
         // performance
         this._stats.loadEnd = performance.now();
@@ -150,8 +124,7 @@ class XShell {
     // modules
     resolveModuleName(src) {
         //get module name by src
-        let modules = config.getAsObjects("modules");
-        for (let module of modules) {
+        for (let module of this._modules) {
             if (src.startsWith(module.path + "/")) {
                 return module.name;
             }
@@ -327,7 +300,7 @@ class XShell {
                         var label = event.target.label;
                         if (label) document.title = label + " / " + config.get("app.label");
                         this.dispatchEvent("navigation-end", { page: event.target });
-                        console.log(`page.ready()`);
+                        console.log(`page: ready`);
                     }
                 });
                 page.addEventListener("navigate", (event) => {
@@ -372,4 +345,4 @@ window.xshell = xshell;
 export default xshell;
 
 //export other objects and classes
-export { config, bus, utils, loader, i18n, resolver, settings, Binds, XPage, PageInstance};
+export { config, bus, utils, loader, i18n, resolver, settings, Binds, XPage, Page, PageRegistry };

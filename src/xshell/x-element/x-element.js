@@ -1,6 +1,6 @@
-import XTemplate from "./x-template.js";
+import XTemplate, {utils} from "./x-template.js";
 import createState from "./create-state.js";
-import xshell, {loader, Binds}  from "xshell";
+import xshell, {loader, Binds}  from "../xshell.js";
 
 
 // utils
@@ -294,3 +294,5 @@ class XElement extends HTMLElement {
 
 //export
 export default XElement;
+
+export {utils};
