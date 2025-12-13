@@ -1,58 +1,51 @@
-﻿<meta name="page-handler"    content="sfc" />
-<meta name="page-state"      content='{"data1":123}' />
+﻿<!-- meta -->
+<title>Sample Page 1</title>
+<meta name="description" content="This page shows the dashboard">
+<meta name="author" content="mdp">
+<meta name="xshell.page.layout" content="main">
 
+
+<!-- controller -->
 <script type="module">
-    export default {
-        async onCommand(command, args) {
-            if (command == "load") {
-                //load
-                
-            } else if (command == "dec") {
-                //dec
-                this.state.data1--;
-
-            } else if (command == "inc") {
-                //inc
-                this.state.data1++;
-
-            } else if (command == "something") {
-                //something
-                this.label = "HOLA";
+    import ctx from "xshell/page-context"    
+    ctx.controller({
+        onCommand(cmd, params, page) {
+            if (cmd === "load"){
+                // load
+                page.rpc("log", ["page1 loaded"]);
             }
         }
-    }
+    });
 </script>
 
-<template>
-    hellol <x-icon icon="x-bell"></x-icon> 
 
-    <fieldset sstyle="margin:1em;">
-        <x-button label="dec" command="dec"></x-button>
-        {{state.data1}} ({{ state.data1 % 3 }})
-        <x-button label="inc" x-on:click="inc"></x-button>    
-    </fieldset>
+<!-- ui -->
+<img src="/imgs/colibri.jpg" style="width:200px;height:150px;"/>
+<img src="https://www.lavanguardia.com/files/image_990_484/uploads/2025/12/12/693c4e9b702ed.jpeg" style="width:200px;height:150px;"/>
+This is the page 1
 
-    <x-button label="something" command="something"></x-button>
+hellol <x-icon icon="x-bell"></x-icon> 
 
-    <table>
-        <tr>
-            <th>Caption 1</th>
-            <th>Caption 2</th>
-            <th>Caption 3</th>
-            <th>Caption 4</th>
-        </tr>
-        <tr>
-            <td>Value 1</td>
-            <td>Value 2</td>
-            <td>Value 3</td>
-            <td>Value 4</td>
-        </tr>
-        <tr>
-            <td>Value 1</td>
-            <td>Value 2</td>
-            <td>Value 3</td>
-            <td>Value 4</td>
-        </tr>
-    </table>
-    
-</template>
+<x-clock></x-clock>
+
+<table>
+    <tr>
+        <th>Caption 1</th>
+        <th>Caption 2</th>
+        <th>Caption 3</th>
+        <th>Caption 4</th>
+    </tr>
+    <tr>
+        <td>Value 1</td>
+        <td>Value 2</td>
+        <td>Value 3</td>
+        <td>Value 4</td>
+    </tr>
+    <tr>
+        <td>Value 1</td>
+        <td>Value 2</td>
+        <td>Value 3</td>
+        <td>Value 4</td>
+    </tr>
+</table>
+

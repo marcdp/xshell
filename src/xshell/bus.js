@@ -23,7 +23,7 @@ class Bus {
     }
     // Emit an event asynchronously
     async emit(event, data) {
-        console.log(`bus.emit('${event}', {...})`);
+        console.log(`bus: emit event'${event}' ...`);
         if (!this._events[event]) return;
         const promises = this._events[event].map(async (listener) => listener(data));
         await Promise.all(promises);

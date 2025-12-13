@@ -1,5 +1,6 @@
 import utils from "./utils.js";
 
+
 // normalize urls
 function normalizeUrls(key, obj, from, path) {
     if (typeof(obj) == "string") {

@@ -14,6 +14,7 @@
         async onCommand(command, args) {
             if (command == "load") {
                 //load
+                debugger;
                 this.bindEvent(config, "change", "refresh");
                 this.bindEvent(this.state, "change:key", "refresh");
                 this.bindEvent(this.state, "change:value", "refresh");

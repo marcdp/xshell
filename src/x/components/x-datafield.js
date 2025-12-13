@@ -1,5 +1,4 @@
-import XElement from "x-element";
-import { utils } from "../ui/x-template.js";
+import XElement, {utils} from "x-element";
 import {i18n} from "xshell";
 
 // utils

@@ -1,4 +1,3 @@
-
 // func
 function createState(value, self) {
     let result = new Proxy(value, {

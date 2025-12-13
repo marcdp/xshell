@@ -1,6 +1,9 @@
 import {loader} from "xshell";
 import XElement from "x-element";
 
+// cache
+const svgCache = new Map(); // key: url, value: Promise<SVGElement>
+
 // class
 export default XElement.define("x-icon", {
     style: `
@@ -22,14 +25,36 @@ export default XElement.define("x-icon", {
                 //init
                 this.bindEvent(this.state, "change:icon", async () => {
                     if (this.state.icon) {
-                        let svgElement = await loader.load("icon:" + this.state.icon);
-                        this.state.svg = svgElement.cloneNode(true);  
+                        this.state.svg = await loader.load("icon:" + this.state.icon);
                     } else {
                         this.state.svg = null;
                     }
                 });
             }
-        }
+        }/*
+        async _loadSVG(name) {
+            if (svgCache.has(name)) {
+                return svgCache.get(name);
+            }
+            //resolve
+            let url = resolver.resolveUrl("icon:" + name);
+            // promise
+            const promise = (async () => {
+                const res = await fetch(url);
+                const text = await res.text();
+                const doc = new DOMParser().parseFromString(text, "image/svg+xml");
+                const el = doc.documentElement;
+                // Ensure it's an <svg>
+                if (el.nodeName.toLowerCase() !== "svg") {
+                    throw new Error(`URL ${url} did not return a valid SVG`);
+                }
+                return el;
+            })();
+            // set cache
+            svgCache.set(name, promise);
+            // return
+            return  promise;
+        }*/
     }
 });
 

@@ -29,38 +29,56 @@ class Resolver {
             i = resource.indexOf("{", j), j = resource.indexOf("}", i);
         }
         regexp += resource.substring(k);
+        // attributes
+        let attributes= {};
+        if (src.includes(";")) {
+            let parts = src.split(";");
+            src = parts[0].trim();
+            for(let a = 1; a < parts.length; a++) {
+                let attr = parts[a].trim();
+                if (attr.includes("=")){
+                    let attrName = attr.split("=")[0].trim();
+                    let attrValue = attr.split("=")[1].trim();
+                    if (attrValue=="true") attrValue = true;
+                    if (attrValue=="false") attrValue = false;
+                    attributes[attrName] = attrValue;
+                }
+            }
+        }
         //add definition
         let definition = {
             resource,
             src,
-            regexp: new RegExp(regexp)
+            regexp: new RegExp(regexp), 
+            ...attributes
         };
-        definition.regexp = new RegExp(regexp);
         this._definitions.push(definition);
     }
-    resolveDefinition(resource) {        
-        for(let i = this._definitions.length - 1; i >= 0; i--) {
-            let mapitem = this._definitions[i];
-            let match = resource.match(mapitem.regexp);
+    resolve(resource) {        
+        //for(let i = this._definitions.length - 1; i >= 0; i--) {
+        for(let i = 0; i < this._definitions.length ; i++) {
+            let definition = this._definitions[i];
+            let match = resource.match(definition.regexp);
             if (match) {
-                let src = mapitem.src;
+                let src = definition.src;
                 for(var key in match.groups) {
                     src = src.replaceAll("{" + key + "}", match.groups[key]);
                 }
-                return { definition: mapitem, src };
+                return { 
+                    definition: definition, 
+                    src: (document.location.pathname + src).replaceAll("//", "/")
+                };
             }
         }
         console.error(`resolver.resolveDefinition('${resource}'): unable to resolve`);
         return null;
     }
-    resolve(resource) {
-        let result = this.resolveDefinition(resource);
+    resolveUrl(resource) {
+        if (resource.startsWith("http://") || resource.startsWith("https://") || resource.startsWith("//")) return resource;
+        if (resource.startsWith("/")) return (document.location.pathname + resource).replaceAll("//", "/");
+        let result = this.resolve(resource);
         if (result) return result.src;
         return null;
-    }
-    virtualToRealUrl(url) {
-        let result = document.location.pathname + url;
-        return result.replaceAll("//", "/");
     }
 };
 

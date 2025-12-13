@@ -243,8 +243,96 @@ class Utils {
       
         traverse(root);
         return result;
-      }
-     
+    }
+    
+
+    // generate id
+    static _counters = new Map();
+    static generateId(prefix) {
+        const current = Utils._counters.get(prefix) ?? 0;
+        const nextValue = current + 1;
+        Utils._counters.set(prefix, nextValue);
+        return prefix + nextValue;
+    };
+
+    // rewrite document resource URLs
+    static rewriteDocumentUrls(doc, rewriteFn) {
+        // rules
+        const rules = [
+            { selector: "img", attr: "src" },
+            { selector: "img", attr: "srcset" },
+            { selector: "source", attr: "src" },
+            { selector: "source", attr: "srcset" },
+            { selector: "link", attr: "href" },
+            { selector: "script", attr: "src" },
+            { selector: "iframe", attr: "src" },
+            { selector: "video", attr: "src" },
+            { selector: "video", attr: "poster" },
+            { selector: "audio", attr: "src" },
+            { selector: "embed", attr: "src" },
+            { selector: "object", attr: "data" },
+            { selector: "object", attr: "archive" },
+            { selector: "input[type=image]", attr: "src" },
+            { selector: "track", attr: "src" },
+            { selector: "area", attr: "href" },
+            { selector: "form", attr: "action" },
+            { selector: "button[formaction]", attr: "formaction" },
+            { selector: "a", attr: "href" },
+        ];
+        // simple attribute rewrites
+        for (const { selector, attr } of rules) {
+            doc.querySelectorAll(selector).forEach(el => {
+                const oldUrl = el.getAttribute(attr);
+                if (!oldUrl) return;
+                const newUrl = rewriteFn(oldUrl);
+                if (newUrl !== oldUrl) el.setAttribute(attr, newUrl);
+            });
+        }
+        // inline css styles
+        doc.querySelectorAll("[style]").forEach(el => {
+            const oldStyle = el.getAttribute("style");
+            if (!oldStyle) return;
+            const newStyle = oldStyle.replace(/url\(([^)]+)\)/g, (match, url) => {
+                // strip quotes
+                const clean = url.trim().replace(/^['"]|['"]$/g, "");
+                return `url("${rewriteFn(clean)}")`;
+            });
+            el.setAttribute("style", newStyle);
+        });
+        // CSS inside <style> tags
+        doc.querySelectorAll("style").forEach(style => {
+            let css = style.textContent;
+            css = css.replace(/url\(([^)]+)\)/g, (match, url) => {
+                const clean = url.trim().replace(/^['"]|['"]$/g, "");
+                return `url("${rewriteFn(clean)}")`;
+            });
+            style.textContent = css;
+        });
+        // scripts imports
+        const scripts = doc.querySelectorAll('script[type="module"]');
+        for (const script of scripts) {
+            if (!script.src) {
+                const original = script.textContent;
+                // regex to detect static imports
+                const rewritten = original.replace(
+                    /import\s+([^'"]*)['"]([^'"]+)['"]/g,
+                    (match, bindings, importPath) => {
+                        // resolve url
+                        return `import ${bindings}"${rewriteFn(importPath)}"`;
+                    }
+                );
+                // create a new script because textContent would reset execution
+                const newScript = document.createElement('script');
+                newScript.type = 'module';
+                newScript.textContent = rewritten;
+                // replace content
+                script.replaceWith(newScript);
+            }
+        }
+        // return
+        return doc;
+    }
+
 
 };
 

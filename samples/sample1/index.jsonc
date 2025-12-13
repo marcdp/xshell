@@ -1,12 +1,13 @@
 ﻿{
     // app
-    "app.name": "Sample2",
-    "app.label": "Sample2 title",
+    "app.name": "sameple-app",
+    "app.label": "Sample app",
     "app.version": "0.1",
     "app.copyright": "",
     "app.logo": "url:./logo.svg",
     // module x
     "modules.x.src": "url:/src/x/module.jsonc",
+    "modules.x-man.src": "url:/src/x-man/module.jsonc",
     // module 1
     "modules.module111.src": "url:./module1/module.jsonc",
     // module 2
@@ -14,5 +15,5 @@
     // xshell
     "xshell.base": ".",
     "xshell.debug": true,
-    "xshell.start": "/module111/pages/page4.html"
+    "xshell.start": "module111"
 }

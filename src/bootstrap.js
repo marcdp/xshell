@@ -10,10 +10,7 @@ const bootstrapUrlDir = bootstrapUrl.href.substring(0, bootstrapUrl.href.lastInd
 
 
 // utils
-function stripJsonComments(s) {
-    let o="",i=0,n=s.length;for(;i<n;){let c=s[i];if(c=='"'||c=="'"){let q=c;o+=c;i++;while(i<n){if(s[i]=="\\"){o+=s[i++]+s[i++];}else if(s[i]==q){o+=s[i++];break;}else{o+=s[i++];}}continue;}if(c=='/'&&s[i+1]=='/'){i+=2;while(i<n&&s[i]!="\n"&&s[i]!="\r")i++;continue;}if(c=='/'&&s[i+1]=='*'){i+=2;while(i<n&&!(s[i]=='*'&&s[i+1]=='/'))i++;i+=2;continue;}o+=c;i++;};
-    return o;
-}
+function stripJsonComments(s) {let o="",i=0,n=s.length;for(;i<n;){let c=s[i];if(c=='"'||c=="'"){let q=c;o+=c;i++;while(i<n){if(s[i]=="\\"){o+=s[i++]+s[i++];}else if(s[i]==q){o+=s[i++];break;}else{o+=s[i++];}}continue;}if(c=='/'&&s[i+1]=='/'){i+=2;while(i<n&&s[i]!="\n"&&s[i]!="\r")i++;continue;}if(c=='/'&&s[i+1]=='*'){i+=2;while(i<n&&!(s[i]=='*'&&s[i+1]=='/'))i++;i+=2;continue;}o+=c;i++;};return o;}
 function combineUrls(a, b) {
     if (a.indexOf("?") != -1) a = a.substring(0, a.indexOf("?"));
     if (b.indexOf(":") != -1) return b;
@@ -54,39 +51,30 @@ function combineUrls(a, b) {
         return a + b;
     }
 }
-function replaceUrlPrefix(key, obj, baseUrl) {
+function normalizeUrls(key, obj, path) {
     if (typeof(obj) == "string") {
         if (obj.startsWith("url:")) {
+            // url: are urls relative to internet, or origin
             obj = obj.substring(4).trim();
             if (obj.startsWith("/") || obj.startsWith("./") || obj.startsWith("../") || obj == ".") {
-                obj = combineUrls(baseUrl, obj);
+                obj = combineUrls(path, obj);
             }
-        }
-    } else if (Array.isArray(obj)) {
-        for (let i = 0; i < obj.length; i++) {
-            obj[i] = replaceUrlPrefix(i, obj[i], baseUrl);
-        }
-    } else if (obj instanceof Object) {
-        for (let subkey in obj) {
-            obj[subkey] = replaceUrlPrefix(subkey, obj[subkey], baseUrl);
-        }
-    }
-    return obj;
-}
-function normalizeModuleUrls(key, obj, path) {
-    if (typeof(obj) == "string") {
-        if (obj.startsWith("./") || obj.startsWith("../") || obj == ".") {
-            //relative to virtual path
+        } else if (obj.startsWith("/")) {
+            // relative to path (module root or xshell root)
+            obj = path + obj;
+            if (obj.startsWith(document.location.origin)) obj = obj.substring(document.location.origin.length);
+        } else if (obj.startsWith("./") || obj.startsWith("../") || obj == ".") {
+            // relative to path (module root or xshell root)
             obj = combineUrls(path + "/", obj);
             if (obj.startsWith(document.location.origin)) obj = obj.substring(document.location.origin.length);
         }
     } else if (Array.isArray(obj)) {
         for (let i = 0; i < obj.length; i++) {
-            obj[i] = normalizeModuleUrls(i, obj[i], path);
+            obj[i] = normalizeUrls(i, obj[i], path);
         }
     } else if (obj instanceof Object) {
         for (let subkey in obj) {
-            obj[subkey] = normalizeModuleUrls(subkey, obj[subkey], path);
+            obj[subkey] = normalizeUrls(subkey, obj[subkey], path);
         }
     }
     return obj;
@@ -96,11 +84,11 @@ function normalizeModuleUrls(key, obj, path) {
 async function loadXShellConfig(config) {
     // load app config
     console.log("bootstrap: loading xshell config ...");
-    const url = combineUrls(bootstrapUrlDir, "xshell/xshell.json");
+    const url = combineUrls(bootstrapUrlDir, "xshell/xshell.jsonc");
     const json = stripJsonComments(await (await fetch(url)).text());
     const xshellConfig = JSON.parse(json);
-    replaceUrlPrefix("", xshellConfig, bootstrapUrlDir);
-    for(var key in xshellConfig) {
+    normalizeUrls("", xshellConfig, "/xshell");
+    for(let key in xshellConfig) {
         config[key] = xshellConfig[key];
     }
     return config;
@@ -111,7 +99,7 @@ async function loadAppConfig(config) {
     const url = new URL(configUrl, document.baseURI).href;
     const json = stripJsonComments(await (await fetch(url)).text());
     const appConfig = JSON.parse(json);
-    replaceUrlPrefix("", appConfig, appUrlDir);
+    normalizeUrls("", appConfig, appUrlDir);
     for(var key in appConfig) {
         config[key] = appConfig[key];
     }
@@ -139,43 +127,35 @@ async function loadModulesConfig(config) {
     // parse each module config
     for(let result of results) {
         let name = names[results.indexOf(result)];
-        //let filename = result.url.substring(result.url.lastIndexOf("/"));
-        //let url = result.url.substring(0, result.url.lastIndexOf("/") + 1);
         console.log("bootstrap: parsing module config ...", result.url);
         if (!result.ok) throw new Error(`Failed to load module: ${result.url}`);
         let json = await result.text();
         let moduleConfig = JSON.parse(stripJsonComments(json));
         // defaults
         moduleConfig[`name`] = `${name}`;
-        moduleConfig[`path`] = `/${name}`;
         moduleConfig[`icon`] = moduleConfig[`icon`] || "x-file";
         moduleConfig[`label`] = moduleConfig[`label`] || "";
         moduleConfig[`version`] = moduleConfig[`version`] || "";
         moduleConfig[`depends`] = moduleConfig[`depends`] || [];
         moduleConfig[`styles`] = moduleConfig[`styles`] || [];
-        moduleConfig[`page-handler`] = moduleConfig[`page-handler`] || "sfc";
-        // add default module loaders
-        moduleConfig[`loader.icon:${name}-{name}`] = "./icons/{name}.svg";
-        moduleConfig[`loader.component:${name}-{name}`] = `./components/${name}-{name}.js`;
-        moduleConfig[`loader.page:/${name}/pages/{path}`] = "./pages/{path}";
-        moduleConfig[`loader.layout:${name}-layout-{name}`] = `./layouts/${name}-layout-{name}.js`;
         // normalize urls
-        normalizeModuleUrls("", moduleConfig, "/" + name);
+        normalizeUrls("", moduleConfig, "/" + name);
         // merge module config into app config
         for(let key in moduleConfig) {
             let value = moduleConfig[key];
             if (key.startsWith("global.")){
-                key = key.substring(key.indexOf(".")+1);
-                config[key] = value;
+                key = key.substring(key.indexOf(".")+1).replaceAll("{module}", name);
+                config[key] = value.replaceAll("{module}", name);
             } else {
                 config["modules." + name + "." + key] = value;
             }
         }
         // add resolvers
-        config[`resolver.icon:${name}-{name}`] = `/${name}/icons/{name}.svg`;
-        config[`resolver.component:${name}-{name}`] = `/${name}/components/${name}-{name}.js`;
-        config[`resolver.page:/${name}/pages/{path}`] = `/${name}/pages/{path}`;
-        config[`resolver.layout:${name}-layout-{name}`] = `/${name}/layouts/${name}-layout-{name}.js`;
+        config[`resolver.icon:${name}-{name}`] = `/${name}/icons/{name}.svg; handler=xshell/handler-icon; cache=true;`;
+        config[`resolver.component:${name}-{name}`] = `/${name}/components/${name}-{name}.js; handler=xshell/handler-import; cache=true;`;
+        config[`resolver.layout:${name}-layout-{name}`] = `/${name}/layouts/${name}-layout-{name}.js; handler=xshell/handler-import; cache=true;`;
+        config[`resolver.page:/${name}/pages/{path}.html`] = `/${name}/pages/{path}.html; handler=xshell/handler-html; cache=true;`;        
+        config[`resolver.page:/${name}/pages/{path}.md`] = `/${name}/pages/{path}.md; handler=xshell/handler-md; cache=true;`;        
     }
     // log
     console.log("bootstrap: config", config);
@@ -195,7 +175,7 @@ async function installServiceWorker(config) {
         scope: document.location.pathname
     });
     await navigator.serviceWorker.ready;
-    console.log("bootstrap: service worker ready");
+    console.log("bootstrap: service worker installed");
     // creates rules to send to service worker
     let xshellVersion = config["xshell.version"];
     let rules = [];
@@ -214,6 +194,15 @@ async function installServiceWorker(config) {
         mode: mode,
         rules: rules
     } });
+    // wait for ready message from service worker
+    return new Promise(resolve => {
+        navigator.serviceWorker.addEventListener("message", e => {
+            if (e.data?.type === "ready") {
+                console.log("bootstrap: service worker ready");
+                resolve();
+            }
+        });
+    });
 }
 async function loadXShell() {
     console.log("bootstrap: loading xshell ...");
@@ -230,15 +219,18 @@ async function bootstrap() {
     // installServiceWorker
     await installServiceWorker(config);
     // create importmap
-    const im = document.createElement("script");
-    im.type = "importmap";
-    im.textContent = JSON.stringify({
-        imports: {
-            "xshell": bootstrapUrlDir.replace(document.location.origin, "") + "xshell/xshell.js",
-            "x-element": bootstrapUrlDir.replace(document.location.origin, "") + "x/ui/x-element.js"            
+    let imports = {};
+    for (let key in config) {
+        if (key.startsWith("resolver.import:")) {
+            let importName = key.substring(key.indexOf(":") + 1);
+            let importSrc = config[key];
+            imports[importName] = (importSrc.indexOf(":")!=-1 ? importSrc : appUrlDir + importSrc.substring(1));
         }
-    }, null, 2);
-    document.head.appendChild(im);
+    }
+    const importMap = document.createElement("script");
+    importMap.type = "importmap";
+    importMap.textContent = JSON.stringify({ imports }, null, 2);
+    document.head.appendChild(importMap);
     // load xshell
     let xshell = await loadXShell();
     // init xshell

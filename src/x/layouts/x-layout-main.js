@@ -1,5 +1,5 @@
 import xshell, { config, utils, settings } from "xshell";
-import XElement from "../../x/ui/x-element.js";
+import XElement from "x-element";
 
 
 // class

@@ -1,4 +1,4 @@
-import XElement from "../../x/ui/x-element.js";
+import XElement from "x-element";
 import xshell from "xshell";
 
 // class
