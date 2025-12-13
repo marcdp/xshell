@@ -5,9 +5,9 @@ const configUrl = document.currentScript.dataset.config;
 const swUrl = document.currentScript.dataset.sw;
 const appUrl = document.location.origin + document.location.pathname;
 const appUrlDir = appUrl.substring(0, appUrl.lastIndexOf("/") + 1)  ;
+const appUrlBase = appUrlDir.substring(0, appUrlDir.length - 1 - (document.location.pathname.endsWith("/") ? 1 : document.location.pathname.split("/").pop().length));
 const bootstrapUrl = new URL(document.currentScript.src);
 const bootstrapUrlDir = bootstrapUrl.href.substring(0, bootstrapUrl.href.lastIndexOf("/") + 1);
-
 
 // utils
 function stripJsonComments(s) {let o="",i=0,n=s.length;for(;i<n;){let c=s[i];if(c=='"'||c=="'"){let q=c;o+=c;i++;while(i<n){if(s[i]=="\\"){o+=s[i++]+s[i++];}else if(s[i]==q){o+=s[i++];break;}else{o+=s[i++];}}continue;}if(c=='/'&&s[i+1]=='/'){i+=2;while(i<n&&s[i]!="\n"&&s[i]!="\r")i++;continue;}if(c=='/'&&s[i+1]=='*'){i+=2;while(i<n&&!(s[i]=='*'&&s[i+1]=='/'))i++;i+=2;continue;}o+=c;i++;};return o;}
@@ -103,6 +103,7 @@ async function loadAppConfig(config) {
     for(var key in appConfig) {
         config[key] = appConfig[key];
     }
+    config["app.base"] = appUrlBase;
     return config;
 }
 async function loadModulesConfig(config) {
@@ -154,8 +155,8 @@ async function loadModulesConfig(config) {
         config[`resolver.icon:${name}-{name}`] = `/${name}/icons/{name}.svg; handler=xshell/handler-icon; cache=true;`;
         config[`resolver.component:${name}-{name}`] = `/${name}/components/${name}-{name}.js; handler=xshell/handler-import; cache=true;`;
         config[`resolver.layout:${name}-layout-{name}`] = `/${name}/layouts/${name}-layout-{name}.js; handler=xshell/handler-import; cache=true;`;
-        config[`resolver.page:/${name}/pages/{path}.html`] = `/${name}/pages/{path}.html; handler=xshell/handler-html; cache=true;`;        
-        config[`resolver.page:/${name}/pages/{path}.md`] = `/${name}/pages/{path}.md; handler=xshell/handler-md; cache=true;`;        
+        config[`resolver.page:/${name}/pages/{path}.html`] = `/${name}/pages/{path}.html; handler=xshell/handler-html; cache=true;`;                
+        config[`resolver.module:/${name}/{path}.js`] = `/${name}/{path}.js; handler=xshell/handler-import; cache=true;`;
     }
     // log
     console.log("bootstrap: config", config);

@@ -13,7 +13,6 @@
     // module 2
     "modules.module2.src": "url:./module2/module.jsonc",
     // xshell
-    "xshell.base": ".",
     "xshell.debug": true,
     "xshell.start": "module111"
 }

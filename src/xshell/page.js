@@ -18,8 +18,6 @@ class Page {
 
     //ctor
     constructor() {
-        // register page
-        
     }
 
 
@@ -91,8 +89,10 @@ class Page {
         // unload
         this._binds.clear();
         await this.onCommand("unload");
+        this._refs = null;
         this._status = "unloaded";
         pageRegistry.unregisterPage(this);
+        this._host = null;
     }
 
 
@@ -126,7 +126,7 @@ class Page {
     }
 
     // rpc methods
-    async rpc(mehod, args) {
+    async rpc(method, args) {
     }
 
     // set page controller (called by page-context, if exists script in page)
@@ -136,6 +136,8 @@ class Page {
             controller = type;
             type = "html";
         }
+        // todo: perform some things based on type (what exactly ?) -> to think about it: in a future, we should be able to have different types of controllers
+        // ...
         // create controller
         this._controller = controller;
     }

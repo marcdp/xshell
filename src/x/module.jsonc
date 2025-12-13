@@ -24,7 +24,9 @@
 
     // resolver
     //"loader.component:ace-editor": "https://unpkg.com/ace-custom-element@latest/dist/index.min.js",
-    
+    "global.resolver.import:marked":"/vendor/marked/marked.esm.js",
+    "global.resolver.import:xshell/handler-md": "/handlers/handler-md.js",    
+    "global.resolver.page:{path}.md": "{path}.md; handler=xshell/handler-md; cache=true;",
 
     // global pages
     "global.page.layout.default": "x-layout-default",

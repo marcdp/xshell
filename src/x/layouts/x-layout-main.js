@@ -196,7 +196,7 @@ export default XElement.define("x-layout-main", {
         <!-- shell header -->
         <nav class="header shell">
 
-            <a class="logo" x-attr:href="state.shellBase" x-if="state.logo">
+            <a class="logo" x-attr:href="state.appBase" x-if="state.logo">
                 <img x-attr:src="state.appLogo" x-attr:title="state.appLabel">
             </a>
             
@@ -261,7 +261,7 @@ export default XElement.define("x-layout-main", {
         status: "",
         appLogo:    config.get("app.logo"),
         appLabel:   config.get("app.label"),
-        shellBase:  config.get("xshell.base"),
+        appBase:  config.get("app.base"),
         menu:       null,
         menuTools:  null,
         toggled:    false,
