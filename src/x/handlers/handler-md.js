@@ -20,12 +20,11 @@ class HandlerMd extends Page {
 
 
     //methods
-    async init(container) {
-        this._container = container;
+    async init(host) {
+        await super.init(host);        
         // convert
         let marked = await import("marked");
-        let html = marked.parse(this._markdown);
-        
+        let html = marked.parse(this._markdown);        
         // rewrite resource urls
         let document = (new DOMParser()).parseFromString(html, "text/html");
         utils.rewriteDocumentUrls(document, (url) => {
@@ -61,9 +60,10 @@ class HandlerMd extends Page {
                 return;
             }
         }            
-        //add to container in one shot
-        container.replaceChildren();
-        container.appendChild(...document.body.childNodes);
+        //add to host in one shot
+        host.replaceChildren();
+        //host.appendChild(...document.body.childNodes);
+        host.innerHTML = document.body.innerHTML;   
     }
     
 }

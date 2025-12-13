@@ -20,11 +20,6 @@ class XShell {
     //fields
     _container = null;
     _listeners = [];
-    _stats = {
-        loadBegin: performance.now(),
-        loadEnd: null,
-        loadTime: NaN
-    };
     _modules = [];
 
 
@@ -36,17 +31,12 @@ class XShell {
 
     //props
     get modules() { return this._modules; }
-    get stats() { return this._stats; }
 
 
     //methods
     async init(value) {
         // init
         let url = "";
-        // defaults
-        config.set({
-            "xshell.url": import.meta.url
-        }, import.meta.url);
         // load value
         console.log(`xshell: init ...`);
         url = document.location.pathname;
@@ -64,26 +54,37 @@ class XShell {
                 let styleUrl = resolver.resolveUrl(style);
                 tasks.push(this.loadStyleSheet(styleUrl));
             }
-            await Promise.all(tasks);
             // init module
             let instance = {
                 name: module.name,
                 path: "/" + module.name,
-                handler: function(){}
+                controller: {
+                    onCommand: function() {}
+                }
             };
+            if (module.handler) {
+                tasks.push((async() => {
+                    instance.controller = await loader.load("module:" + module.handler);
+                })());
+            }
             this._modules.push(instance);
         }
-        await Promise.all(tasks);        
-        // dispatch module-load
-        for (let instance of this._modules) {
-            this.dispatchEvent("module-load", { detail: {name: instance.name, module: instance }});
-        }
-        // log
-        console.log(`xshell: initialized`);
+        await Promise.all(tasks);
         // add event listener
         window.addEventListener("hashchange", () => {
             this._navigate(document.location.hash);
         });
+        // dispatch module-load
+        tasks = [];
+        for (let instance of this._modules) {
+            tasks.push(instance.controller.onCommand("load", { 
+                name: instance.name,
+                path: instance.path
+            }));
+        }
+        await Promise.all(tasks);        
+        // log
+        console.log(`xshell: initialized`);
         // navigate to start
         this._container = document.querySelector(config.get("xshell.container", "body"));
         this._container.appendChild(document.createComment("App pages"));
@@ -94,9 +95,6 @@ class XShell {
             let startPage = config.get("modules." + startModule + ".start", "");
             document.location.hash = HASH_PREFIX + startPage;
         }
-        // performance
-        this._stats.loadEnd = performance.now();
-        this._stats.loadTime = parseInt(this._stats.loadEnd - this._stats.loadBegin);
     }
 
     //events
@@ -234,7 +232,7 @@ class XShell {
             prefix += HASH_PREFIX + pages[i].src;
         }
         //return
-        return config.get("xshell.base") + "/" + prefix + HASH_PREFIX + src;
+        return config.get("app.base") + "/" + prefix + HASH_PREFIX + src;
     }
     search(keyword) {
         this.dispatchEvent("search", { keyword });

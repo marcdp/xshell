@@ -6,18 +6,15 @@
     "page.layout.main": "",
     "page.layout.stack": "",
     "page.layout.embed": "",
-    // resolver
-    "resolver.import:marked":"https://cdn.jsdelivr.net/npm/marked/lib/marked.esm.js",
+    // resolver    
     "resolver.component:x-page": "/x-page.js; handler=xshell/handler-import; cache=true;",
     "resolver.import:x-element": "/x-element/x-element.js",
     "resolver.import:xshell": "/xshell.js",
     "resolver.import:xshell/page-context": "/page-context.js",
     "resolver.import:xshell/handler-icon": "/handlers/handler-icon.js",
     "resolver.import:xshell/handler-import": "/handlers/handler-import.js",
-    "resolver.import:xshell/handler-html": "/handlers/handler-html.js",
-    "resolver.import:xshell/handler-md": "/handlers/handler-md.js",    
+    "resolver.import:xshell/handler-html": "/handlers/handler-html.js",    
     // xshell
-    "xshell.base": ".",
     "xshell.build": "2025-12-06",
     "xshell.container": "body",
     "xshell.debug": false,

@@ -65,7 +65,7 @@ class PageHtml extends Page {
         utils.rewriteDocumentUrls(document, (url) => {
             if (url=="xshell/page-context") {
                 waitForControllerRegistration = true;
-                return config.get("xshell.base") + `xshell/page-context.js?__xshell__replace__PAGE_ID=${this.id}`;
+                return config.get("app.base") + `xshell/page-context.js?__xshell__replace__PAGE_ID=${this.id}`;
             }
             if (url.indexOf(":") != -1) return url;
             if (url.startsWith("/")) return resolver.resolveUrl(this._moduleUrl + url);
