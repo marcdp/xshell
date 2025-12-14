@@ -1,4 +1,4 @@
-import {i18n} from "../xshell.js";
+import {i18n} from "xshell";
 
 class XTemplate {
 

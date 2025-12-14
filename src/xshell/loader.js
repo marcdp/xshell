@@ -1,4 +1,5 @@
 import resolver from "./resolver.js";
+import config from "./config.js";
 
 // LoaderException
 class LoaderException extends Error {
@@ -10,8 +11,8 @@ class LoaderException extends Error {
     }
 }
 
-// handlers
-const handlers = {
+// loaders
+const loaders = {
 };
 
 // class
@@ -43,11 +44,13 @@ class Loader {
             }
             var {definition, src} = definitionObject;
             // get or load handler
-            let handler = handlers[definition.handler];
-            if (!handler) {
-                let handlerToUse = (await import (definition.handler)).default;
-                handlers[definition.handler] = handlerToUse;
-                handler = handlerToUse;
+            let loader = loaders[definition.loader];
+            if (!loader) {
+                let appBase = config.get("app.base");
+                let loaderUrl = (definition.loader.startsWith("/") ? appBase : "") + definition.loader;
+                let loaderToUse = (await import(loaderUrl)).default;
+                loaders[definition.loader] = loaderToUse;
+                loader = loaderToUse;
             }
             // check cache
             let cacheItem = this._cache[resource];
@@ -58,12 +61,12 @@ class Loader {
                 } else {
                     result.push(cacheItem.value);
                 }
-            } else if (handler == handlers.component && window.customElements.get(name)) {
+            } else if (loader == loaders.component && window.customElements.get(name)) {
                 result.push(window.customElements.get(name));
             } else {
                 // load
                 console.log(`loader: load '${resource}' from ${src} ...`);
-                let promise = handler.load(src, name, definition);
+                let promise = loader.load(src, name, definition);
                 if (definition.cache) {
                     this._cache[resource] = {
                         value: null,

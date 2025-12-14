@@ -31,7 +31,7 @@ class PageHtml extends Page {
     async init(host) {
         await super.init(host);        
         // parse document
-        let document = (new DOMParser()).parseFromString(this._html, "text/html");
+        let document = (new DOMParser()).parseFromString("<html><body>" + this._html + "</body></html>", "text/html");
         // load required web components
         let shellLazyName = config.get("xshell.lazy");
         let componentNames = [...new Set(Array.from(document.querySelectorAll('*')).filter(el => {
@@ -42,6 +42,18 @@ class PageHtml extends Page {
             }
             return false;
         }).map(el => "component:" + el.tagName.toLowerCase()))];
+        document.querySelectorAll('template').forEach(templateEl => {
+            var componentNamesInTemplates = [...new Set(Array.from(templateEl.content.querySelectorAll('*')).filter(el => {
+                if (el.tagName.includes('-')) {
+                    if (shellLazyName && (el.localName == shellLazyName || el.closest(shellLazyName) == null)) {
+                        return true;
+                    }
+                }
+                return false;
+            }).map(el => "component:" + el.tagName.toLowerCase()))];
+            componentNames = Array.from(new Set([...componentNames, ...componentNamesInTemplates]));
+        });
+        // load used components
         if (componentNames.length) {
             try {
                 await loader.load(componentNames);
@@ -63,12 +75,15 @@ class PageHtml extends Page {
         // rewrite resource urls            
         var waitForControllerRegistration = false;
         utils.rewriteDocumentUrls(document, (url) => {
-            if (url=="xshell/page-context") {
+            if (url=="xshell/page-current") {
                 waitForControllerRegistration = true;
-                return config.get("app.base") + `xshell/page-context.js?__xshell__replace__PAGE_ID=${this.id}`;
+                return config.get("app.base") + `/xshell/page-current.js?__xshell__replace__PAGE_ID=${this.id}`;
             }
             if (url.indexOf(":") != -1) return url;
             if (url.startsWith("/")) return resolver.resolveUrl(this._moduleUrl + url);
+            if (resolver.has("import:" + url)) {
+                return resolver.resolveUrl("import:" + url);
+            }
             return utils.combineUrls(this._src, url);
         });      
         // create and append scripts
@@ -79,8 +94,7 @@ class PageHtml extends Page {
                 for (let j = 0; j < script.attributes.length; j++) {
                     newScript.setAttribute(script.attributes[j].name, script.attributes[j].value);
                 }
-                script.textContent += "\n//# sourceURL=" + this._src;
-                newScript.textContent = script.textContent;
+                newScript.textContent = script.textContent.trim() + `\n    //# sourceURL=${this._src}`;
                 host.appendChild(newScript);
             }
             scripts.push(script);
@@ -95,6 +109,8 @@ class PageHtml extends Page {
         while (host.childNodes.length > scripts.length) {
             host.removeChild(host.firstChild);    
         }
+        // init command
+        this.onCommand("init");
         // create html fragment
         let documentFragment = document.createDocumentFragment();
         for(let i = 0; i < document.body.childNodes.length; i++) {
@@ -105,8 +121,6 @@ class PageHtml extends Page {
         };
         // add to host in one shot
         host.appendChild(documentFragment);
-        // mark initialized
-        this._initialized = true;
     }
 }
 

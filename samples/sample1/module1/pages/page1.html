@@ -7,7 +7,9 @@
 <body>
 
     <script type="module">
-        export default {
+        import page from "xshell/page-current";
+        import XController from "x-controller";
+        page.useController(new XController( {
             state:{
                 val1: true,
                 val2: false,
@@ -27,9 +29,10 @@
                     this.showWorking(true);
                 }
             }        
-        }
+        }));
     </script>
 
+        
     <template>
         Use Amazon S3 Block public access settings to control the settings that allow public access to your data.
         

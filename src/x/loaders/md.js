@@ -60,10 +60,20 @@ class HandlerMd extends Page {
                 return;
             }
         }            
-        //add to host in one shot
+        // add to host in one shot
         host.replaceChildren();
+        // create html fragment
+        let documentFragment = document.createDocumentFragment();
+        for(let i = 0; i < document.body.childNodes.length; i++) {
+            let node = document.body.childNodes[i];
+            if (node.localName != "script") {
+                documentFragment.appendChild(node.cloneNode(true));
+            }
+        };
+        // add to host in one shot
+        host.appendChild(documentFragment);
         //host.appendChild(...document.body.childNodes);
-        host.innerHTML = document.body.innerHTML;   
+        //host.innerHTML = document.body.innerHTML;   
     }
     
 }

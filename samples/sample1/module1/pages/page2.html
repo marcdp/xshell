@@ -1,9 +1,10 @@
 ﻿<title>This is a Page2 titleee</title>
 
 <script type="module">
-    export default {
+    import page from "xshell/page-current";
+    import XController from "x-controller";
+    page.useController(new XController( {
         state: {
-
         },
         async onCommand(command, args) {
             if (command == "load") {
@@ -18,7 +19,7 @@
                 this.replace("?")
             }
         }
-    }
+    }));
 </script>
 
 <template>

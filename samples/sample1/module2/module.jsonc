@@ -15,7 +15,8 @@
         "children": [
             { "label": "page 1", "href": "/pages/page1.html", "children":[
                 { "label": "Page 2", "href": "/pages/page2.html?var1=111&var2=2222#fragmentA"},
-                { "label": "Page 2.2", "href": "/pages/page2.html"}
+                { "label": "Page 2.2", "href": "/pages/page2.html"},
+                { "label": "Page 3", "href": "/pages/page3.html"}
             ]
         }]
     }

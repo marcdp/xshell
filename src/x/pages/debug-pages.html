@@ -3,16 +3,16 @@
 
 <script type="module">
     import xshell, { bus, config, utils, loader } from "xshell";
-
-    //export
-    export default {
+    import page from "xshell/page-current";
+    import XController from "x-controller";
+    page.useController(new XController({
         state: {
             children: []
         },
         async onCommand(command, args) {
             if (command == "load") {
                 //load
-                this.bindEvent(bus, "page-load", "refresh");
+                page.bindEvent(bus, "page-load", "refresh");
                 //refresh
                 this.onCommand("refresh");
 
@@ -50,7 +50,7 @@
                 this.state.children = root.children;
             }
         }
-    }
+    }));
 </script>
 
 <template>

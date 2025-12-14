@@ -1,17 +1,17 @@
-﻿<!-- meta -->
-<title>Sample Page 1</title>
+﻿<title>Sample Page 1</title>
 <meta name="description" content="This page shows the dashboard">
 <meta name="author" content="mdp">
 <meta name="xshell.page.layout" content="main">
 
 
-<!-- controller -->
 <script type="module">
-    import ctx from "xshell/page-context"    
-    ctx.controller({
-        onCommand(cmd, params, page) {
+    import page from "xshell/page-current";
+    // controller
+    page.useController({
+        onCommand(cmd, params) {
             if (cmd === "load"){
                 // load
+                debugger;
                 page.rpc("log", ["page1 loaded"]);
             }
         }
@@ -19,7 +19,8 @@
 </script>
 
 
-<!-- ui -->
+<x-json value="123"></x-json>
+
 <img src="/imgs/colibri.jpg" style="width:200px;height:150px;"/>
 <img src="https://www.lavanguardia.com/files/image_990_484/uploads/2025/12/12/693c4e9b702ed.jpeg" style="width:200px;height:150px;"/>
 This is the page 1

@@ -3,9 +3,9 @@
 
 <script type="module">
     import xshell, { bus, config, utils} from "xshell";
-
-    //export
-    export default {
+    import page from "xshell/page-current";
+    import XController from "x-controller";
+    page.useController(new XController({
         state: {
             modules: [],
             view:"details"
@@ -13,7 +13,7 @@
         async onCommand(command, args) {
             if (command == "load") {
                 //load
-                this.bindEvent(xshell, "module-load", "refresh");
+                page.bindEvent(xshell, "module-load", "refresh");
                 //refresh
                 await this.onCommand("refresh");
 
@@ -43,7 +43,7 @@
                 this.state.modules = modules;
             }
         }
-    }
+    }));
 </script>
 
 <template>
