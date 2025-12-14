@@ -3,9 +3,9 @@
 
 <script type="module">
     import xshell, { bus, config, utils} from "xshell";
-
-    //export
-    export default {
+    import page from "xshell/page-current";
+    import XController from "x-controller";
+    page.useController(new XController({
         state: {
             data: null,
             key: "",
@@ -14,9 +14,9 @@
         async onCommand(command, args) {
             if (command == "load") {
                 //load
-                this.bindEvent(config, "change", "refresh");
-                this.bindEvent(this.state, "change:key", "refresh");
-                this.bindEvent(this.state, "change:value", "refresh");
+                page.bindEvent(config, "change", "refresh");
+                page.bindEvent(this.state, "change:key", "refresh");
+                page.bindEvent(this.state, "change:value", "refresh");
                 //refresh
                 await this.onCommand("refresh");
 
@@ -35,7 +35,7 @@
                 this.state.data = data;                
             }
         }
-    }
+    }));
 </script>
 
 <template>

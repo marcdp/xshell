@@ -1,6 +1,6 @@
 import XTemplate, {utils} from "./x-template.js";
 import createState from "./create-state.js";
-import xshell, {loader, Binds}  from "../xshell.js";
+import xshell, {loader, Binds}  from "xshell";
 
 
 // utils

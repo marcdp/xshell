@@ -5,7 +5,7 @@ const configUrl = document.currentScript.dataset.config;
 const swUrl = document.currentScript.dataset.sw;
 const appUrl = document.location.origin + document.location.pathname;
 const appUrlDir = appUrl.substring(0, appUrl.lastIndexOf("/") + 1)  ;
-const appUrlBase = appUrlDir.substring(0, appUrlDir.length - 1 - (document.location.pathname.endsWith("/") ? 1 : document.location.pathname.split("/").pop().length));
+const appUrlBase = appUrlDir.substring(0, appUrlDir.length - 1);
 const bootstrapUrl = new URL(document.currentScript.src);
 const bootstrapUrlDir = bootstrapUrl.href.substring(0, bootstrapUrl.href.lastIndexOf("/") + 1);
 
@@ -67,6 +67,17 @@ function normalizeUrls(key, obj, path) {
             // relative to path (module root or xshell root)
             obj = combineUrls(path + "/", obj);
             if (obj.startsWith(document.location.origin)) obj = obj.substring(document.location.origin.length);
+        }
+        if (obj.indexOf("=/") != -1) {
+            // parse multiple urls in single string (ex: /path/to/resource; loader=/path/to another/resouces; cache=true;)
+            let parts = obj.split(";");
+            for (let i = 1; i < parts.length; i++) {
+                if (parts[i].indexOf("=/") != -1) {
+                    let subparts = parts[i].split("=");
+                    parts[i] = subparts[0] + "=" + normalizeUrls("", subparts[1].trim(), path);
+                }
+            }
+            obj = parts.join(";");
         }
     } else if (Array.isArray(obj)) {
         for (let i = 0; i < obj.length; i++) {
@@ -152,11 +163,11 @@ async function loadModulesConfig(config) {
             }
         }
         // add resolvers
-        config[`resolver.icon:${name}-{name}`] = `/${name}/icons/{name}.svg; handler=xshell/handler-icon; cache=true;`;
-        config[`resolver.component:${name}-{name}`] = `/${name}/components/${name}-{name}.js; handler=xshell/handler-import; cache=true;`;
-        config[`resolver.layout:${name}-layout-{name}`] = `/${name}/layouts/${name}-layout-{name}.js; handler=xshell/handler-import; cache=true;`;
-        config[`resolver.page:/${name}/pages/{path}.html`] = `/${name}/pages/{path}.html; handler=xshell/handler-html; cache=true;`;                
-        config[`resolver.module:/${name}/{path}.js`] = `/${name}/{path}.js; handler=xshell/handler-import; cache=true;`;
+        config[`resolver.icon:${name}-{name}`] = `/${name}/icons/{name}.svg; loader=/xshell/loaders/icon.js; cache=true;`;
+        config[`resolver.component:${name}-{name}`] = `/${name}/components/${name}-{name}.js; loader=/xshell/loaders/import.js; cache=true;`;
+        config[`resolver.layout:${name}-layout-{name}`] = `/${name}/layouts/${name}-layout-{name}.js; loader=/xshell/loaders/import.js; cache=true;`;
+        config[`resolver.page:/${name}/{path}.html`] = `/${name}/{path}.html; loader=/xshell/loaders/html.js; cache=true;`;                
+        config[`resolver.module:/${name}/{path}.js`] = `/${name}/{path}.js; loader=/xshell/loaders/import.js; cache=true;`;
     }
     // log
     console.log("bootstrap: config", config);

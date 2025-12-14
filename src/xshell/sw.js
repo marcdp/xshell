@@ -28,7 +28,7 @@ self.addEventListener("fetch", event => {
 
 // methods
 async function handleRequest(request) {
-
+    
     // if request is outside scope, just fetch
     if (!request.url.startsWith(self.registration.scope)) {
         return fetch(request, { cache: "no-store" });

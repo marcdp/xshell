@@ -10,6 +10,8 @@
     "modules.x-man.src": "url:/src/x-man/module.jsonc",
     // module 1
     "modules.module111.src": "url:./module1/module.jsonc",
+    "modules.module111.params.var1": "11111",
+    "modules.module111.params.var2": "2222",
     // module 2
     "modules.module2.src": "url:./module2/module.jsonc",
     // xshell

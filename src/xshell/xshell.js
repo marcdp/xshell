@@ -8,7 +8,6 @@ import resolver from "./resolver.js";
 import settings from "./settings.js";
 import XPage from "./x-page.js";
 import Page from "./page.js";
-import PageRegistry from "./page-registry.js";
 
 
 // constants
@@ -79,7 +78,8 @@ class XShell {
         for (let instance of this._modules) {
             tasks.push(instance.controller.onCommand("load", { 
                 name: instance.name,
-                path: instance.path
+                path: instance.path,
+                ... config.getAsObject("modules." + instance.name + ".params")
             }));
         }
         await Promise.all(tasks);        
@@ -343,4 +343,4 @@ window.xshell = xshell;
 export default xshell;
 
 //export other objects and classes
-export { config, bus, utils, loader, i18n, resolver, settings, Binds, XPage, Page, PageRegistry };
+export { config, bus, utils, loader, i18n, resolver, settings, Binds, XPage, Page };

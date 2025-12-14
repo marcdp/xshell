@@ -2,8 +2,10 @@
 
 <script type="module">
     import xshell, { bus, config } from "xshell";
-    
-    export default {
+    import page from "xshell/page-current";
+    import XController from "x-controller";
+
+    page.useController(new XController({
         state: {
             keyword: "",
             results:[]
@@ -11,11 +13,11 @@
         async onCommand(command, args) {
             if (command == "load") {
                 //load
-                this.bindEvent(xshell, "search", (event) => {
+                page.bindEvent(xshell, "search", (event) => {
                     this.state.keyword = event.keyword
                 });                
                 //when keyword changes, do search
-                this.bindEvent(this.state, "change:keyword", "search");
+                page.bindEvent(this.state, "change:keyword", "search");
 
             } else if (command == "search-input") {
                 //search-input
@@ -57,7 +59,7 @@
                 this.state.results = results;
             }
         }
-    }
+    }));
 </script>
 
 

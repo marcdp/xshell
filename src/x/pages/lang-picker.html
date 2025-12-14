@@ -2,8 +2,9 @@
 
 <script type="module">
     import {i18n} from "xshell";
-    
-    export default {
+    import page from "xshell/page-current";
+    import XController from "x-controller";
+    page.useController(new XController({
         state: {
             value: null,
             domain: []
@@ -32,7 +33,7 @@
                 this.close();
             }
         }
-    }
+    }));
 </script>
 
 <template>

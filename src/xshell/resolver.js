@@ -54,6 +54,16 @@ class Resolver {
         };
         this._definitions.push(definition);
     }
+    has(resource) {        
+        for(let i = 0; i < this._definitions.length ; i++) {
+            let definition = this._definitions[i];
+            let match = resource.match(definition.regexp);
+            if (match) {
+                return true;
+            }
+        }
+        return false;
+    }
     resolve(resource) {        
         //for(let i = this._definitions.length - 1; i >= 0; i--) {
         for(let i = 0; i < this._definitions.length ; i++) {

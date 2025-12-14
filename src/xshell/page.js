@@ -55,6 +55,10 @@ class Page {
         this._host = host;
         pageRegistry.registerPage(this);
     }
+    async mount() {
+        // mount
+        await this.onCommand("mount");
+    }
     async load() {
         // call load command
         const url = new URL(this.src, document.baseURI);
@@ -84,6 +88,10 @@ class Page {
     close(result) {
         // close
         return this._host.close(result);
+    }
+    async unmount() {
+        // unmount
+        await this.onCommand("unmount");
     }
     async unload() {
         // unload
@@ -129,17 +137,10 @@ class Page {
     async rpc(method, args) {
     }
 
-    // set page controller (called by page-context, if exists script in page)
-    async setController(type, controller){
-        // validations
-        if (typeof type === "object") {
-            controller = type;
-            type = "html";
-        }
-        // todo: perform some things based on type (what exactly ?) -> to think about it: in a future, we should be able to have different types of controllers
-        // ...
-        // create controller
+    // set page controller (called by page from script in page)
+    useController(controller) {
         this._controller = controller;
+        pageRegistry.setPageReady(this.id);
     }
 
    
