@@ -1,0 +1,57 @@
+
+<script type="module">
+    import {i18n} from "xshell";
+    import page from "xshell/page-current";
+    import XController from "x-controller";
+    page.useController(new XController({
+        state: {
+            value: null,
+            domain: []
+        },
+        async onCommand(command, params) {
+            if (command == "load") {
+                //load
+                page.label = "Language Picker";
+                let disabled = ('' + params.query.disabled).split(",");
+                let domain = [];
+                for (let item of i18n.config.langs) {
+                    domain.push({
+                        value: item.id,
+                        disabled: (disabled.indexOf(item.id) != -1),
+                        label: item.label + " (" + item.id + ")"
+                    });
+                }
+                this.state.domain = domain;
+
+            } else if (command == "submit") {
+                //load
+                page.close(this.state.value);
+
+            } else if (command == "cancel") {
+                //cancel
+                page.close();
+            }
+        }
+    }));
+</script>
+
+<template>
+    <x-form>
+        <!-- header -->
+        <!-- body -->
+        <x-datafields>
+            <x-datafield label="Language"
+                            _description="Select language"
+                            placeholder="Select language"
+                            required
+                            type="select"
+                            x-model="state.value"
+                            x-prop:domain="state.domain">
+            </x-datafield>
+        </x-datafields>
+        <!-- buttons -->
+        <x-button slot="footer" label="Cancel" command="cancel" class="cancel"></x-button>
+        <x-button slot="footer" label="Select" command="submit" class="submit"></x-button>
+    </x-form>
+
+</template>

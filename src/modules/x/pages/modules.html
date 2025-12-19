@@ -1,0 +1,66 @@
+
+<script type="module">
+    import xshell, { bus, config, utils} from "xshell";
+    import page from "xshell/page-current";
+    import XController from "x-controller";
+    page.useController(new XController({
+        state: {
+            modules: [],
+            selected: ""
+        },
+        async onCommand(command, args) {
+            if (command == "load") {
+                //load
+                await this.onCommand("refresh");
+                //listen
+                page.bindEvent(xshell, "navigation-end", (event) => {
+                    this.state.selected = xshell.resolveModuleName(event.page.src);
+                });
+
+            } else if (command == "refresh") {
+                //refresh
+                let moduleName = xshell.resolveModuleName(xshell.getPage().src)
+                let modules = config.getAsObjects("modules");
+                for(let target of modules) {
+                    if (target.type == "application") {
+                        let menu = config.get("modules." + target.name + ".menus.main", "");
+                        if (menu) {
+                            let aux = target.start;
+                            let defaultMenuitems = utils.findObjectsPath(menu, "href", target.start)
+                            if (defaultMenuitems) {
+                                let defaultMenuitem = defaultMenuitems[defaultMenuitems.length - 1];
+                                this.state.modules.push({
+                                    name: target.name,
+                                    label: target.label,
+                                    description: target.description || "",
+                                    href: defaultMenuitem.href,
+                                    logo: target.logo || "x-module"                                    
+                                });
+                            }
+                        }
+                    }
+                };
+                this.state.selected = moduleName ?? "";
+            }
+        }
+    }));
+</script>
+
+<template>
+    <p>
+        Please select the aplication to use:
+    </p>
+    
+    <x-listview view="icons">
+        <x-listview-item 
+            x-for="module in state.modules"
+            x-class:selected="(state.selected == module.name)"
+            x-attr:label="module.label"
+            x-attr:description="module.description"
+            x-attr:icon="module.logo"
+            x-attr:href="module.href"
+            target="#root"
+        ></x-listview-item>
+    </x-listview>       
+    
+</template>

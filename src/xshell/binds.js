@@ -13,8 +13,11 @@ class Binds {
 
     //methods
     bindEvent(element, event, listener) {
-        element.addEventListener(event, listener);
-        this._eventListeners.push({ element, event, listener });
+        if (typeof(event) == "string") event = [event];
+        for (let ev of event) {
+            element.addEventListener(ev, listener);
+            this._eventListeners.push({ element, ev, listener });
+        }   
     }
     bindTimeout(timeout, listener) {
         this._timeouts.push({ timeout, timeoutId: setTimeout(listener, timeout), listener });

@@ -284,7 +284,7 @@ class Utils {
             doc.querySelectorAll(selector).forEach(el => {
                 const oldUrl = el.getAttribute(attr);
                 if (!oldUrl) return;
-                const newUrl = rewriteFn(oldUrl);
+                const newUrl = rewriteFn(el.localName, attr, oldUrl);
                 if (newUrl !== oldUrl) el.setAttribute(attr, newUrl);
             });
         }
@@ -295,7 +295,7 @@ class Utils {
             const newStyle = oldStyle.replace(/url\(([^)]+)\)/g, (match, url) => {
                 // strip quotes
                 const clean = url.trim().replace(/^['"]|['"]$/g, "");
-                return `url("${rewriteFn(clean)}")`;
+                return `url("${rewriteFn(el.localName, "style", clean)}")`;
             });
             el.setAttribute("style", newStyle);
         });
@@ -304,7 +304,7 @@ class Utils {
             let css = style.textContent;
             css = css.replace(/url\(([^)]+)\)/g, (match, url) => {
                 const clean = url.trim().replace(/^['"]|['"]$/g, "");
-                return `url("${rewriteFn(clean)}")`;
+                return `url("${rewriteFn("style", "textContent", clean)}")`;
             });
             style.textContent = css;
         });
@@ -318,7 +318,7 @@ class Utils {
                     /import\s+([^'"]*)['"]([^'"]+)['"]/g,
                     (match, bindings, importPath) => {
                         // resolve url
-                        return `import ${bindings}"${rewriteFn(importPath)}"`;
+                        return `import ${bindings}"${rewriteFn("script", "textContent", importPath)}"`;
                     }
                 );
                 // create a new script because textContent would reset execution
