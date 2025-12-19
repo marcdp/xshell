@@ -7,7 +7,7 @@
     "page.layout.stack": "",
     "page.layout.embed": "",
     // resolver    
-    "resolver.component:x-page": "/x-page.js; loader=/loaders/import.js; cache=true;",
+    "resolver.component:x-page": "/x-page.js; loader=import; cache=true;",
     "resolver.import:xshell": "/xshell.js",
     // xshell
     "xshell.build": "2025-12-06",

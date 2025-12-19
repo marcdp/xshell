@@ -74,9 +74,12 @@ class Resolver {
                 for(var key in match.groups) {
                     src = src.replaceAll("{" + key + "}", match.groups[key]);
                 }
+                if (src.indexOf(":")==-1) {
+                    src = (document.location.pathname + src).replaceAll("//", "/");
+                }
                 return { 
                     definition: definition, 
-                    src: (document.location.pathname + src).replaceAll("//", "/")
+                    src: src
                 };
             }
         }

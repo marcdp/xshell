@@ -74,11 +74,12 @@ class PageHtml extends Page {
         }     
         // rewrite resource urls            
         var waitForControllerRegistration = false;
-        utils.rewriteDocumentUrls(document, (url) => {
+        utils.rewriteDocumentUrls(document, (localName, attr, url) => {
             if (url=="xshell/page-current") {
                 waitForControllerRegistration = true;
                 return config.get("app.base") + `/xshell/page-current.js?__xshell__replace__PAGE_ID=${this.id}`;
             }
+            //if (url=="/pages/page5.html") debugger;
             if (url.indexOf(":") != -1) return url;
             if (url.startsWith("/")) return resolver.resolveUrl(this._moduleUrl + url);
             if (resolver.has("import:" + url)) {
@@ -94,7 +95,7 @@ class PageHtml extends Page {
                 for (let j = 0; j < script.attributes.length; j++) {
                     newScript.setAttribute(script.attributes[j].name, script.attributes[j].value);
                 }
-                newScript.textContent = script.textContent.trim() + `\n    //# sourceURL=${this._src}`;
+                newScript.textContent = script.textContent.trimEnd() + `\n    //# sourceURL=${this._src}`;
                 host.appendChild(newScript);
             }
             scripts.push(script);
@@ -130,6 +131,9 @@ export default {
     load: async (src, virtual_src) => {
         // fetch html
         let response = await fetch(src);
+        if (response.ok == false) {
+            throw new Error(`Failed to load page '${src}': ${response.status} ${response.statusText}`);
+        }
         let html = await response.text();        
         // create page
         let page = new PageHtml(html, src, virtual_src);

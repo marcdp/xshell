@@ -56,6 +56,7 @@ class XShell {
             // init module
             let instance = {
                 name: module.name,
+                label: module.label || module.name,
                 path: "/" + module.name,
                 controller: {
                     onCommand: function() {}
@@ -122,6 +123,7 @@ class XShell {
     // modules
     resolveModuleName(src) {
         //get module name by src
+        if (!src) debugger;
         for (let module of this._modules) {
             if (src.startsWith(module.path + "/")) {
                 return module.name;

@@ -1,0 +1,68 @@
+
+<title>Loader</title>
+
+<script type="module">
+    import xshell, { bus, config, utils, loader } from "xshell";
+    import page from "xshell/page-current";
+    import XController from "x-controller";
+    page.useController(new XController({
+        state: {
+            registry: []
+        },
+        async onCommand(command, args) {
+            if (command == "load") {
+                // setup registry of already loaded resources
+                this.state.registry = [...loader.registry];
+                //this.cache = {};
+                //for (let item of this.state.registry) {
+                //    this.cache[item.resource] = item;
+                //}
+                // listen to loader events
+                page.bindEvent(bus, "loader:resource:fetch", (event)=>{
+                    this.state.registry.push({
+                        resource: event.detail.resource,
+                        src: event.detail.src,
+                        status: "pending"
+                    });
+                    this.invalidate();
+                });
+                page.bindEvent(bus, "loader:resource:loaded", (event)=>{
+                    for (let item of this.state.registry) {
+                        if (item.resource == event.detail.resource) {
+                            item.status = "loaded";
+                            break;
+                        }
+                    }
+                    this.invalidate();
+                });
+                page.bindEvent(bus, "loader:resource:error", (event)=>{
+                    for (let item of this.state.registry) {
+                        if (item.resource == event.detail.resource) {
+                            item.status = "error";
+                            break;
+                        }
+                    }
+                    this.invalidate();
+                });
+            }
+        }
+    }));
+</script>
+
+<template>
+    
+    <x-listview view="details">
+        <div slot="column">Resource<x-clock></x-clock></div>
+        <div slot="column">Source</div>
+        <div slot="column">Load T.</div>
+        <div slot="column">Size</div>
+        <div slot="column">Status</div>
+        <x-listview-item x-for="item in state.registry" x-attr:label="item.resource" icon="x-file">            
+            <a x-attr:href="item.src" target="_blank" x-text="item.src"></a>
+            <div><x-time-ms x-prop:value="item.loadTime"></x-time-ms></div>
+            <div><x-file-size x-prop:value="item.loadSize"></x-file-size></div>
+            <div>{{ item.status }}</div>
+        </x-listview-item>
+    </x-listview>       
+    
+</template>

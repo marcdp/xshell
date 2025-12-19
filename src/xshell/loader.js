@@ -1,5 +1,6 @@
 import resolver from "./resolver.js";
 import config from "./config.js";
+import bus from "./bus.js";
 
 // LoaderException
 class LoaderException extends Error {
@@ -20,9 +21,19 @@ class Loader {
 
     //vars
     _cache = {};
+    _registry = [];
 
     //ctor
     constructor() {
+    }
+
+    //props
+    get registry() { 
+        let result = [];
+        for(let item of this._registry){
+            result.push({ resource: item.resource, src: item.src, status: item.status });
+        }
+        return Object.freeze(result);
     }
 
     //methods
@@ -42,12 +53,19 @@ class Loader {
             if (!definitionObject) {
                 throw new LoaderException(`Resource not found: ${resource}`);
             }
-            var {definition, src} = definitionObject;
+            let {definition, src} = definitionObject;
             // get or load handler
             let loader = loaders[definition.loader];
             if (!loader) {
                 let appBase = config.get("app.base");
-                let loaderUrl = (definition.loader.startsWith("/") ? appBase : "") + definition.loader;
+                let loaderUrl = definition.loader;
+                if (loaderUrl.indexOf(":")!=-1) {
+                    loaderUrl = definition.loader;
+                } else if (loaderUrl.indexOf("/")!=-1) {
+                    loaderUrl = appBase + definition.loader;
+                } else {
+                    loaderUrl = appBase + "/xshell/loaders/" + definition.loader + ".js";
+                }
                 let loaderToUse = (await import(loaderUrl)).default;
                 loaders[definition.loader] = loaderToUse;
                 loader = loaderToUse;
@@ -66,7 +84,21 @@ class Loader {
             } else {
                 // load
                 console.log(`loader: load '${resource}' from ${src} ...`);
-                let promise = loader.load(src, name, definition);
+                let promise = (async () => {
+                    let value = null;
+                    let registryItem = {resource, definition, src, status: "pending"};
+                    this._registry.push(registryItem);
+                    await bus.emit("loader:resource:fetch", {resource, src});
+                    try {
+                        value = await loader.load(src, name, definition);
+                        registryItem.status = "loaded";
+                        await bus.emit("loader:resource:loaded", {resource, src});
+                    } catch (e) {
+                        registryItem.status = "error";
+                        await bus.emit("loader:resource:error", {resource, src});
+                    }                    
+                    return value;
+                })();
                 if (definition.cache) {
                     this._cache[resource] = {
                         value: null,
@@ -109,6 +141,11 @@ class Loader {
         //return
         return result;
     }    
+
+    // private methods
+    _dispatchEvent(name, detail) {
+
+    }
 };
 
 
