@@ -1,20 +1,20 @@
 
 <script type="module">
-    import xshell, { bus, config, utils} from "xshell";
-    import page from "xshell/page-current";
+    import xshell, { bus, config, utils, usePageController} from "xshell";
     import XController from "x-controller";
-    page.useController(new XController({
+    
+    usePageController(new XController({
         state: {
             modules: [],
             selected: ""
         },
-        async onCommand(command, args) {
+        async onCommand(command, args, page) {
             if (command == "load") {
                 //load
                 await this.onCommand("refresh");
                 //listen
-                page.bindEvent(xshell, "navigation-end", (event) => {
-                    this.state.selected = xshell.resolveModuleName(event.page.src);
+                page.bindEvent(bus, "xshell:navigation:end", (event) => {
+                    this.state.selected = xshell.resolveModuleName(event.detail.src);
                 });
 
             } else if (command == "refresh") {

@@ -1,4 +1,4 @@
-import xshell, { config, utils, settings } from "xshell";
+import xshell, { bus, config, utils, settings } from "xshell";
 import XElement from "x-element";
 
 
@@ -44,7 +44,7 @@ export default XElement.define("x-layout-main", {
         .header .search-button {display:none;}
 
         /* debug */
-        .debug x-page {display:block; min-width:80em;}
+        .debug x-page {display:block; }
 
         /* breadcrumb */
         .breadcrumb {position:sticky; top:0; user-select: none; flex:1;}
@@ -100,7 +100,6 @@ export default XElement.define("x-layout-main", {
 
         /* desktop */
         @media (min-width: 769px) {
-            
             
             .body {
                 display:flex;
@@ -275,15 +274,15 @@ export default XElement.define("x-layout-main", {
             if (command == "load") {
                 //load
                 this.state.toggled = settings.getItem("x-layout-main.toggled", false);
-                this.bindEvent(xshell, "navigation-start", () => {
+                this.bindEvent(bus, "xshell:navigation:start", () => {
                     if (utils.probablyPhone()){
                         if (this.state.toggled) {
                             this.state.toggled = false;
                         }
                     }
                 });
-                this.bindEvent(xshell, "navigation-end", (event) => {
-                    let href = event.page.src;
+                this.bindEvent(bus, "xshell:navigation:end", (event) => {
+                    let href = event.detail.src;
                     if (this.state.ul){
                         let a = this.state.ul.querySelector(`x-anchor[href='${href}']`);
                         a.classList.add("selected");
@@ -353,7 +352,7 @@ export default XElement.define("x-layout-main", {
 
             } else if (command == "search") {
                 //search
-                xshell.search(this.state.keyword.trim());
+                bus.emit("xshell:search", { keyword: this.state.keyword.trim() });
             }
             
         }

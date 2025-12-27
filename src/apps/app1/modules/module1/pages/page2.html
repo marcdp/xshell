@@ -1,12 +1,12 @@
 ﻿<title>This is a Page2 titleee</title>
 
 <script type="module">
-    import page from "xshell/page-current";
+    import { usePageController } from "xshell";
     import XController from "x-controller";
-    page.useController(new XController( {
+    usePageController(new XController( {
         state: {
         },
-        async onCommand(command, args) {
+        async onCommand(command, args, page) {
             if (command == "load") {
                 //load
 

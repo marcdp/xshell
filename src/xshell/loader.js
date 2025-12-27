@@ -96,6 +96,7 @@ class Loader {
                     } catch (e) {
                         registryItem.status = "error";
                         await bus.emit("loader:resource:error", {resource, src});
+                        throw e;
                     }                    
                     return value;
                 })();
@@ -120,6 +121,8 @@ class Loader {
                     let value = taskResult.value;
                     if (value.cloneNode) {
                         value = value.cloneNode(true);
+                    } else if (value.clone) {
+                        value = value.clone();
                     }
                     result[i] = value;
                 } else if (taskResult.status === 'rejected') {

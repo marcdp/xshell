@@ -1,4 +1,5 @@
 import utils from "./utils.js";
+import bus from "./bus.js";
 
 
 // normalize urls
@@ -40,26 +41,6 @@ class Config {
     get config() { return this._config; }
 
     //methods
-    dispatchEvent(name, args) {
-        for(let listener of this._listeners){
-            if (listener.name == name){
-                listener.callback(args);
-            }
-        }
-    }
-    addEventListener(name, callback) {
-        this._listeners.push({ name, callback });
-    }
-    removeEventListener(name, callback) {
-        let index = 0;
-        for(let listener of this._listeners){
-            if (listener.name == name && listener.callback == callback){
-                this._listeners.splice(index, 1);
-                break;
-            }
-            index++;
-        }
-    }
     set(config, from, path) {
         normalizeUrls("", config, from, path);
         var keys = [];
@@ -68,7 +49,7 @@ class Config {
             this._config[key] = value;
             keys.push(key);
         }
-        this.dispatchEvent("change");
+        bus.emit("config:change");
     }
     has(key) {
         let result = this._config[key];
@@ -79,7 +60,6 @@ class Config {
         let result = this._config[key];
         if (typeof (result) != "undefined") return result;
         if (typeof (defaultValue) == "undefined") {
-            debugger;
             console.warn(`config.get('${key}') configuration key is undefined`);
         }
         return defaultValue;

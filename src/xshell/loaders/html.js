@@ -53,6 +53,10 @@ class PageHtml extends Page {
             }).map(el => "component:" + el.tagName.toLowerCase()))];
             componentNames = Array.from(new Set([...componentNames, ...componentNamesInTemplates]));
         });
+        // title
+        if (document.title) {
+            this.label = document.title
+        }
         // load used components
         if (componentNames.length) {
             try {
@@ -75,11 +79,7 @@ class PageHtml extends Page {
         // rewrite resource urls            
         var waitForControllerRegistration = false;
         utils.rewriteDocumentUrls(document, (localName, attr, url) => {
-            if (url=="xshell/page-current") {
-                waitForControllerRegistration = true;
-                return config.get("app.base") + `/xshell/page-current.js?__xshell__replace__PAGE_ID=${this.id}`;
-            }
-            //if (url=="/pages/page5.html") debugger;
+            if (url.startsWith("xshell/")) return url;
             if (url.indexOf(":") != -1) return url;
             if (url.startsWith("/")) return resolver.resolveUrl(this._moduleUrl + url);
             if (resolver.has("import:" + url)) {
@@ -95,12 +95,13 @@ class PageHtml extends Page {
                 for (let j = 0; j < script.attributes.length; j++) {
                     newScript.setAttribute(script.attributes[j].name, script.attributes[j].value);
                 }
-                newScript.textContent = script.textContent.trimEnd() + `\n    //# sourceURL=${this._src}`;
+                newScript.textContent = "window.__XSHELL__PAGE_ID = '" + this.id + "';\n" + script.textContent.trimEnd() + `\n    //# sourceURL=${this._src}`;
                 host.appendChild(newScript);
+                waitForControllerRegistration = true;
             }
             scripts.push(script);
         }
-        // await for scripts to be ready ready
+        // await for scripts to be ready
         if (waitForControllerRegistration) {
             await pageRegistry.waitForPageReady(this.id);
         } else {
@@ -122,6 +123,10 @@ class PageHtml extends Page {
         };
         // add to host in one shot
         host.appendChild(documentFragment);
+    }
+    clone() {
+        let result = new PageHtml(this._html, this._src, this._virtual_src);
+        return result;
     }
 }
 

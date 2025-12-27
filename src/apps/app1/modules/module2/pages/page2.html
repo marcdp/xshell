@@ -1,9 +1,9 @@
 ﻿<title>This is a titleeeee</title>
 
 <script type="module">
-    import page from "xshell/page-current";
-    // controller
-    page.useController({
+    import {usePageController} from "xshell";
+
+    usePageController({
         async onCommand(command, params, page) {
             if (command == "load") {
                 //load
@@ -11,7 +11,6 @@
 
             } else if (command == "timeout") {
                 //timeout
-                console.log("aaaaa")
             }
         }
     });

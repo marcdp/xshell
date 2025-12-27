@@ -14,12 +14,14 @@ export default XElement.define("x-listview", {
         .icons > div .columns {display:none;}
 
         /* details */
-        .details {overflow-x:auto; }
-        .details > div {display:table; width:100%; white-space: nowrap}
+        .details {}
+        .details > div {display:table; width:100%; white-space: nowrap; }
         .details > div ::slotted(*) {display:table-row;}
-        .details > div ::slotted(*:not([name]):nth-child(odd)) {background: var(--x-color-background-alt)} 
-        .details > div .columns {display:table-row; }
-        .details > div .columns ::slotted(*) {display:table-cell; background: none!important;}
+        
+        .details > div ::slotted(*:not([name]):nth-child(even)) {background: var(--x-color-background-alt)} 
+        .details > div .columns {display:table-row; position:sticky; top:0; background: var(--x-color-background-page);}
+        .details > div .columns ::slotted(*) {display:table-cell; background: none!important; color:gray; padding-right:.25em;}
+        .details > div .columns ::slotted(*:first-child) {padding-left:1.4em; }
 
     `,
     template: `
@@ -34,6 +36,7 @@ export default XElement.define("x-listview", {
     `,
     state: {
         view: "list",
+        autoScroll: false
     },
     methods: {
         async onCommand(command) {
@@ -44,9 +47,14 @@ export default XElement.define("x-listview", {
             } else if (command == "refresh") {
                 //slotchange
                 let view = this.state.view;
+                let lastElement = null;
                 this.shadowRoot.querySelector("slot:not([name])").assignedElements().forEach((item) => {
                     item.view = view;
+                    lastElement = item;
                 });
+                if (lastElement && this.state.autoScroll && this.checkVisibility()) {
+                    lastElement.scrollIntoView({ block: "end", behavior: "smooth" });
+                }
             }
         }
     }

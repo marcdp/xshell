@@ -2,9 +2,9 @@
 
 <!-- script -->
 <script type="module">
-    import page from "xshell/page-current";
+    import { usePageController } from "xshell";
     import XController from "x-controller";
-    page.useController(new XController( {
+    usePageController(new XController( {
         state: {
             counter: 123,
             text: "helo",
@@ -55,7 +55,7 @@
             markdown: "Hello world\n---\n- aaaa\n- bbbb",
             markdown_i18n: "i18n:en=english text|i18n:es=spanish text"
         },
-        async onCommand(command, args) {
+        async onCommand(command, args, page) {
             if (command == "load") {
                 //load
                 this.state.counter = args.counter || 0;

@@ -1,20 +1,17 @@
-
-<title>Config</title>
-
 <script type="module">
-    import xshell, { bus, config, utils} from "xshell";
-    import page from "xshell/page-current";
+    import xshell, { bus, config, usePageController, utils} from "xshell";
     import XController from "x-controller";
-    page.useController(new XController({
+
+    usePageController(new XController({
         state: {
             data: null,
             key: "",
             value: "",
         },
-        async onCommand(command, args) {
+        async onCommand(command, args, page) {
             if (command == "load") {
                 //load
-                page.bindEvent(config, "change", "refresh");
+                page.bindEvent(bus, "config:change", "refresh");
                 page.bindEvent(this.state, "change:key", "refresh");
                 page.bindEvent(this.state, "change:value", "refresh");
                 //refresh
@@ -39,25 +36,17 @@
 </script>
 
 <template>
-    <x-form>
-        <table style="width:100%;">
-            <tr>
-                <th style="width:33%">Key</th>
-                <th>Value</th>
-            </tr>
-            <tr style="position:sticky; top:0;">
-                <td><x-datafield type="search" x-model="state.key" placeholder="filter..."></x-datafield></td>
-                <td><x-datafield type="search" x-model="state.value" placeholder="filter..."></x-datafield></td>
-            </tr>
-            <tr x-for="item in state.data">
-                <td style="vertical-align:top; white-space: nowrap;">
-                    <b>{{ item }}</b>
-                </td>
-                <td>
-                    <x-json x-prop:value="state.data[item]"></x-json>
-                </td>
-            </tr>
-        </table>
-    </x-form>
-    
+
+    <x-listview view="details">
+        <div slot="column" style="width:20em;">
+            <x-datafield type="search" x-model="state.key" placeholder="Key"></x-datafield>
+        </div>
+        <div slot="column">
+            <x-datafield type="search" x-model="state.value" placeholder="Value"></x-datafield>
+        </div>
+        <x-listview-item x-for="item in state.data" x-attr:label="item" icon="x-settings">
+            <x-json x-prop:value="state.data[item]"></x-json>
+        </x-listview-item>
+    </x-listview>    
+
 </template>

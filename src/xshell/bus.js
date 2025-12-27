@@ -21,17 +21,25 @@ class Bus {
         if (!this._events[event]) return;
         this._events[event] = this._events[event].filter(l => l !== listener);
     }
-    // Emit an event asynchronously
     async emit(event, detail) {
-        console.log(`bus: emit event'${event}' ...`);
-        if (!this._events[event]) return;
         let data = {
             type: event,
             ts: Date.now(),
             detail: detail
         }
-        const promises = this._events[event].map(async (listener) => listener(data));
-        await Promise.all(promises);
+        //console.log(`bus: emit event: '${JSON.stringify(data)}' ...`);
+        // invoke
+        if (this._events[event]) {
+            for(let listener of this._events[event]){
+                listener(data);
+            }
+        };
+        // broadcast
+        if (this._events["*"]) {
+            for(let listener of this._events["*"]){
+                listener(data);
+            }
+        }
     }
 
 };
