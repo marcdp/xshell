@@ -1,15 +1,14 @@
 <title>Test</title>
 
 <script type="module">
-    import xshell, { bus, config } from "xshell";
-    import page from "xshell/page-current";
+    import xshell, { bus, config, usePageController } from "xshell";
     import XController from "x-controller";
 
-    page.useController(new XController({
+    usePageController(new XController({
         state: {
             children:[]
         },
-        async onCommand(command, args) {
+        async onCommand(command, args, page) {
             if (command == "load") {
                 //load
                 this.state.children = [

@@ -1,28 +1,71 @@
-// vars
-let config = {
-    mode: "",
-    rules: []
-};
+// state
+let state = null;
+
+
+// db
+const DB_NAME = "xshell-sw";
+const DB_VERSION = 1;
+const STORE_NAME = "state";
+function openDB() {
+    return new Promise((resolve, reject) => {
+        const req = indexedDB.open(DB_NAME, DB_VERSION);
+        req.onupgradeneeded = () => {
+            const db = req.result;
+            if (!db.objectStoreNames.contains(STORE_NAME)) {
+                db.createObjectStore(STORE_NAME);
+            }
+        };
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+    });
+}
+async function saveDBState(key, value) {
+    const db = await openDB();
+    return new Promise((resolve, reject) => {
+        const tx = db.transaction(STORE_NAME, "readwrite");
+        tx.objectStore(STORE_NAME).put(value, key);
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error);
+    });
+}
+async function loadDBState(key) {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_NAME, "readonly");
+    const req = tx.objectStore(STORE_NAME).get(key);
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
 
 
 // events
 self.addEventListener("install", () => {
+    self.skipWaiting(); // move from waiting -> active asap
     console.log("sw: installing ...");
 });
-self.addEventListener("activate", () => {
+self.addEventListener("activate", (event) => {
+    event.waitUntil(self.clients.claim()); // start controlling open pages
     console.log("sw: activated");
 });
 self.addEventListener("message", async (event) => {
     console.log("sw: received message:", event.data);
     if (event.data.type == "init") {
-        config = event.data.payload;
-        for(const client of await self.clients.matchAll()) {
-            client.postMessage({type: "ready"});
-        }    
+        // init
+        state = event.data.payload;
+        // save state
+        await saveDBState("state", state);
+        // reply to sender port
+        event.ports?.[0]?.postMessage({ type: "ready" });
     }
 });
 self.addEventListener("fetch", event => {
-    event.respondWith(handleRequest(event.request));
+    event.respondWith((async () => {
+        if (!state) {
+            state = await loadDBState("state") || { rules: [] };
+        }
+        return handleRequest(event.request);
+    })());
 });
 
 
@@ -31,17 +74,18 @@ async function handleRequest(request) {
     
     // if request is outside scope, just fetch
     if (!request.url.startsWith(self.registration.scope)) {
+        //console.log("url is: " + request.url)
         return fetch(request, { cache: "no-store" });
     }    
 
     // if no rules, just fetch
-    if (config.rules.length == 0) {
+    if (!state || state.rules.length == 0) {
         return fetch(request, { cache: "no-store" });
     }
 
     // determine the rule to use
     let rule = null;
-    for(let targetRule of config.rules) {
+    for(let targetRule of state.rules) {
         if (request.url.startsWith(targetRule.src)) {
             // check exceptions
             let isException = false;
@@ -66,7 +110,7 @@ async function handleRequest(request) {
 
     // check cache
     //const cache = await caches.open(rule.src + ".v" + rule.version);
-    //if (config.mode == "production") {
+    //if (state.mode == "production") {
     //    const cached = await cache.match(request);
     //    if (cached) {
     //        return cached;
@@ -126,7 +170,7 @@ async function handleRequest(request) {
     const body = response.body;
 
     // add to cache
-    //if (config.mode == "production" && response.ok && response.type === "basic") {
+    //if (state.mode == "production" && response.ok && response.type === "basic") {
     //    try {
     //        cache.put(request, response.clone());
     //    } catch (cacheErr) {

@@ -5,10 +5,11 @@
 
 
 <script type="module">
-    import page from "xshell/page-current";
-    page.useController({
-        onCommand(cmd, params) {
-            if (cmd === "load"){
+    import { usePageController } from "xshell";
+    
+    usePageController({
+        onCommand(cmd, params, page) {
+            if (cmd === "load") {
                 // load
                 page.rpc("log", ["page1 loaded"]);
             }

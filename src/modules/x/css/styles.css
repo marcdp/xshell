@@ -132,6 +132,8 @@ h4 {font-size:var(--x-font-size); font-weight:700;}
 h5 {font-size:var(--x-font-size); font-weight:600;}
 h6 {font-size:var(--x-font-size); font-weight:normal;}
 
+table th {text-align: left;}
+
 details > summary {font-size:var(--x-font-size-subtitle); font-weight:600; cursor: pointer;}
 details[open]::details-content {margin-top:1em;}
 
@@ -142,9 +144,6 @@ fieldset {
 }
 fieldset legend {font-weight:600; padding-left:.5em; padding-right:.5em;}
 b {font-weight: 600;}
-
-
-
 
 x-page[layout='stack'] + x-page[layout='stack'] {--x-layout-stack-width: 78vw; --x-layout-stack-backdrop:none;}
 x-page[layout='stack'] + x-page[layout='stack'] + x-page[layout='stack'] {--x-layout-stack-width: 76vw;}

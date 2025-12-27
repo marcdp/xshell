@@ -7,15 +7,16 @@
 <body>
 
     <script type="module">
-        import page from "xshell/page-current";
+        import { usePageController } from "xshell";
         import XController from "x-controller";
-        page.useController(new XController( {
+
+        usePageController(new XController( {
             state:{
                 val1: true,
                 val2: false,
                 val3: true
             },
-            async onCommand(command, args) {
+            async onCommand(command, args, page) {
                 if (command == "load") {
                     //load
 
@@ -44,7 +45,7 @@
             <li><x-anchor href="page2.html" target="#dialog">Help in dialog</x-anchor></li>
             <li><x-anchor href="page2.html" target="#stack">Help in stack</x-anchor></li>
             <li><x-anchor href="/module2/pages/page2.html" breadcrumb>Help with breadcrumb</x-anchor></li>
-            <li><x-anchor href="page2.html?page-label=helllllloooooo" breadcrumb>Help with breadcrumb and label</x-anchor></li>
+            <li><x-anchor href="page2.html?xshell-page-label=helllllloooooo" breadcrumb>Help with breadcrumb and label</x-anchor></li>
             <li><x-anchor href="page2.html" target="#mypage">Help insinde x-page</x-anchor></li>
             <li><x-anchor href="page2.html" target="#tray">Help insinde tray</x-anchor></li>
         </ul>

@@ -140,11 +140,10 @@ class XPage extends HTMLElement {
 
     //methods    
     async load() {
-        console.log(`xpage: load '${this.src} ...`);
+        console.log(`x-page: load '${this.src} ...`);
         let src = this.src;
         if (src.indexOf("error") != -1) {
-            debugger;
-            return;
+            //return;
         }
         //reset
         this._result = null;
@@ -181,9 +180,9 @@ class XPage extends HTMLElement {
         let searchParams = new URLSearchParams(src.indexOf("?") != -1 ? src.substring(src.indexOf("?") + 1).split("#")[0] : "");
         //layout
         let layoutName = this._layout;
-        if (searchParams.get("page-layout")) {
-            layoutName = searchParams.get("page-layout");
-            searchParams.delete("page-layout");
+        if (searchParams.get("xshell-page-layout")) {
+            layoutName = searchParams.get("xshell-page-layout");
+            searchParams.delete("xshell-page-layout");
         }
         if (!layoutName) layoutName = "embed";
         let layout = config.get("page.layout." + layoutName);
@@ -200,11 +199,11 @@ class XPage extends HTMLElement {
         //    if (document.body.querySelectorAll(":scope > page").length > 1) {
         //        await new Promise(r => setTimeout(r, 1000));                
         //    }
-        //page-src
+        //xshell-page-src
         let srcPage = "";
-        if (searchParams.get("page-src")) {
-            srcPage = searchParams.get("page-src");
-            searchParams.delete("page-src");
+        if (searchParams.get("xshell-page-src")) {
+            srcPage = searchParams.get("xshell-page-src");
+            searchParams.delete("xshell-page-src");
         }
         this._srcPage = srcPage;
         //menuitem
@@ -213,26 +212,28 @@ class XPage extends HTMLElement {
         let menuitem = (menuitems ? menuitems[menuitems.length-1] : null);  
         //label
         let label = page.title;
+        let labelForced = null;
         if (!label && menuitems) label = menuitem.label;
-        if (searchParams.get("page-label")) {
-            label = searchParams.get("page-label");
-            searchParams.delete("page-label");
+        if (searchParams.get("xshell-page-label")) {
+            label = searchParams.get("xshell-page-label");
+            labelForced = label;
+            searchParams.delete("xshell-page-label");
         }
         this.label = label;
         //icon
         let icon = "";
         if (!icon && menuitem) icon = menuitem.icon;
-        if (searchParams.get("page-icon")) {
-            icon = searchParams.get("page-icon");
-            searchParams.delete("page-icon");
+        if (searchParams.get("xshell-page-icon")) {
+            icon = searchParams.get("xshell-page-icon");
+            searchParams.delete("xshell-page-icon");
         }
         this.icon = icon;
         //breadcrumb
         let breadcrumb = [];
-        if (searchParams.get("page-breadcrumb")) {
-            breadcrumb = JSON.parse(atob(searchParams.get("page-breadcrumb").replace(/_/g, "/").replace(/-/g, "+")));
+        if (searchParams.get("xshell-page-breadcrumb")) {
+            breadcrumb = JSON.parse(atob(searchParams.get("xshell-page-breadcrumb").replace(/_/g, "/").replace(/-/g, "+")));
             breadcrumb.push({ label: label, href: src });
-            searchParams.delete("page-breadcrumb");
+            searchParams.delete("xshell-page-breadcrumb");
         } else if (menuitems) {
             for(let i = 0; i <menuitems.length; i++) {
                 let menuitem = menuitems[i];
@@ -248,6 +249,10 @@ class XPage extends HTMLElement {
         this._page = page;
         // init new page
         await this._page.init(this);
+        // label forced
+        if (labelForced) {
+            this.label = labelForced;
+        }
         // mount new page
         await this._page.mount();
         // set as loaded
@@ -263,17 +268,18 @@ class XPage extends HTMLElement {
         //raise load event
         this.dispatchEvent(new CustomEvent("load"));
         //bus event
-        bus.emit("page-load", { page: page });
+        bus.emit("xshell:page:load", { src: page.src, id: page.id });
     }
     error({code, message, src, stack}) {
         //error
         let url = config.get("xshell.error");
         if (url.indexOf("?") == -1) url += "?";
-        url += "code=" + encodeURI(code);
-        url += "&message=" + encodeURI(message);
-        url += "&src=" + encodeURI(src);
-        url += "&page-src=" + encodeURI(src);
-        if (stack) url += "&stack=" + encodeURI(stack);
+        url += "code=" + encodeURIComponent(code);
+        url += "&message=" + encodeURIComponent(message);
+        url += "&src=" + encodeURIComponent(src);
+        url += "&xshell-page-src=" + encodeURIComponent(src);
+        console.error("x-page: error loading page: " + message + " (code: " + code + ", src: " + src + ")");
+        if (stack) url += "&stack=" + encodeURIComponent(stack);
         this.src = url;
         this._statusPage = "error";
     }
@@ -302,14 +308,14 @@ class XPage extends HTMLElement {
     async unmount() {
         //unmount
         if (this._page) {
-            console.log(`xpage.: unmount '${this._page.src}' ...`);
+            console.log(`x-page.: unmount '${this._page.src}' ...`);
             await this._page.unmount();
         }
     }
     async unload() {
         //unload
         if (this._page) {
-            console.log(`xpage.: unload '${this._page.src}' ...`);
+            console.log(`x-page.: unload '${this._page.src}' ...`);
             await this._page.unload();
         }
     }
@@ -317,7 +323,7 @@ class XPage extends HTMLElement {
         //navigate to
         if (!settings) settings = {};
         if (settings.breadcrumb) {
-            src += (src.indexOf("?") != -1 ? "&" : "?") + "page-breadcrumb=" + btoa(JSON.stringify(this.breadcrumb)).replace(/\+/g, "-").replace(/\//g, "_");
+            src += (src.indexOf("?") != -1 ? "&" : "?") + "xshell-page-breadcrumb=" + btoa(JSON.stringify(this.breadcrumb)).replace(/\+/g, "-").replace(/\//g, "_");
         }
         if (this.layout == "main" || this.layout == "stack") {
             this.dispatchEvent(new CustomEvent("navigate", {detail: src}));

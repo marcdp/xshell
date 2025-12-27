@@ -1,5 +1,5 @@
 import XElement from "x-element";
-import xshell from "xshell";
+import xshell, { bus } from "xshell";
 
 // class
 export default XElement.define("x-menu", {
@@ -51,12 +51,13 @@ export default XElement.define("x-menu", {
         onCommand(command) {
             if (command == "init") {
                 //init
-                this.bindEvent(xshell, "navigation-end", "refresh");
+                this.bindEvent(bus, "xshell:navigation:end", "refresh");
 
             } else if (command == "refresh") {
                 //refresh
                 let href = this.page.src;
                 if (this.page.srcPage) href = this.page.srcPage;
+                if (href.indexOf("#")!=-1) href = href.substr(0, href.indexOf("#"));
                 this.state.selected = href;
             }
         }

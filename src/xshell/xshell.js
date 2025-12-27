@@ -4,6 +4,8 @@ import bus from "./bus.js";
 import loader from "./loader.js";
 import Binds from "./binds.js";
 import i18n from "./i18n.js";
+import navigation from "./navigation.js";
+import pageRegistry from "./page-registry.js";
 import resolver from "./resolver.js";
 import settings from "./settings.js";
 import XPage from "./x-page.js";
@@ -18,7 +20,6 @@ class XShell {
 
     //fields
     _container = null;
-    _listeners = [];
     _modules = [];
 
 
@@ -95,28 +96,6 @@ class XShell {
             let startModule = config.get("xshell.start");
             let startPage = config.get("modules." + startModule + ".start", "");
             document.location.hash = HASH_PREFIX + startPage;
-        }
-    }
-
-    //events
-    dispatchEvent(name, args) {
-        for(let listener of this._listeners){
-            if (listener.name == name){
-                listener.callback(args);
-            }
-        }
-    }
-    addEventListener(name, callback) {
-        this._listeners.push({ name, callback });
-    }
-    removeEventListener(name, callback) {
-        let index = 0;
-        for(let listener of this._listeners){
-            if (listener.name == name && listener.callback == callback){
-                this._listeners.splice(index, 1);
-                break;
-            }
-            index++;
         }
     }
 
@@ -225,7 +204,7 @@ class XShell {
         src = utils.combineUrls(page.src, src);
         //breadcrumb
         if (settings.breadcrumb) {
-            src += (src.indexOf("?") != -1 ? "&" : "?") + "page-breadcrumb=" + btoa(JSON.stringify(page.breadcrumb)).replace(/\+/g, "-").replace(/\//g, "_");
+            src += (src.indexOf("?") != -1 ? "&" : "?") + "xshell-page-breadcrumb=" + btoa(JSON.stringify(page.breadcrumb)).replace(/\+/g, "-").replace(/\//g, "_");
         }
         //stack page
         let index = pages.indexOf(page);
@@ -235,9 +214,6 @@ class XShell {
         }
         //return
         return config.get("app.base") + "/" + prefix + HASH_PREFIX + src;
-    }
-    search(keyword) {
-        this.dispatchEvent("search", { keyword });
     }
     
 
@@ -265,7 +241,7 @@ class XShell {
                 if (i == 0) {
                     page.setAttribute("layout", "main");
                     //emit event navigation-start
-                    this.dispatchEvent("navigation-start", { page });
+                    bus.emit("xshell:navigation:start", { src: page.src });
                 } else {
                     page.setAttribute("layout", "stack");
                     page.addEventListener("close", (event) => {
@@ -299,8 +275,7 @@ class XShell {
                     if (pages.indexOf(event.target) == 0) {
                         var label = event.target.label;
                         if (label) document.title = label + " / " + config.get("app.label");
-                        this.dispatchEvent("navigation-end", { page: event.target });
-                        console.log(`page: ready`);
+                        bus.emit("xshell:navigation:end", { src: event.target.src });
                     }
                 });
                 page.addEventListener("navigate", (event) => {
@@ -328,7 +303,7 @@ class XShell {
                 page.src = hashAfterPart;
                 //emit event navigation-start
                 if (i == 0) {
-                    this.dispatchEvent("navigation-start", { page });
+                    bus.emit("xshell:navigation:start", { src: page.src });
                 }
             }
         }
@@ -337,12 +312,20 @@ class XShell {
     
 }
 
-//creates a new instance
+// usePageController
+function usePageController(controller) {
+    const page = pageRegistry.getPage(window.__XSHELL__PAGE_ID);
+    page.controller = controller;
+    pageRegistry.setPageReady(page.id);
+} 
+
+
+// creates a new instance
 let xshell = new XShell();
 window.xshell = xshell;
 
-//export default instance
+// export default instance
 export default xshell;
 
-//export other objects and classes
-export { config, bus, utils, loader, i18n, resolver, settings, Binds, XPage, Page };
+// export other objects and classes
+export { config, bus, i18n, navigation, loader, resolver, settings, usePageController, utils, Binds, XPage, Page };

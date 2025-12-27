@@ -39,6 +39,9 @@ class Page {
     get result() { return this._host.result; }
     set result(value) { this._host.result = value; }
 
+    get controller() { return this._controller; }
+    set controller(value) { this._controller = value; }
+
     get refs() {
         if (!this._refs) {
             this._refs = new Proxy(this._host, {
@@ -57,7 +60,7 @@ class Page {
     }
     async mount() {
         // mount
-        await this.onCommand("mount");
+        await this.onCommand("mount", {}, this);
     }
     async load() {
         // call load command
@@ -67,11 +70,11 @@ class Page {
             path: url.pathname,
             hash: url.hash
         };
-        await this.onCommand("load", params);
+        await this.onCommand("load", params, this);
         // set status
         this._status = "loaded";
     }
-    async onCommand(command, params = {}) {
+    async onCommand(command, params = {}, page) {
         // on command
         if (this._controller && this._controller.onCommand) {
             await this._controller.onCommand(command, params, this);
@@ -91,12 +94,12 @@ class Page {
     }
     async unmount() {
         // unmount
-        await this.onCommand("unmount");
+        await this.onCommand("unmount", {}, this);
     }
     async unload() {
         // unload
         this._binds.clear();
-        await this.onCommand("unload");
+        await this.onCommand("unload", {}, this);
         this._refs = null;
         this._status = "unloaded";
         pageRegistry.unregisterPage(this);
@@ -108,7 +111,7 @@ class Page {
     bindEvent(target, event, command) {
         this._binds.bindEvent(target, event, (event)=> {
             if (typeof(command) == "string") {
-                this.onCommand(command, {event});
+                this.onCommand(command, {event}, this);
             } else {
                 command(event);
             }
@@ -117,7 +120,7 @@ class Page {
     bindTimeout(timeout, command) {
         this._binds.bindTimeout(timeout, (event)=> {
             if (typeof(command) == "string") {
-                this.onCommand(command, {event});
+                this.onCommand(command, {event}, this);
             } else {
                 command(event);
             }
@@ -126,7 +129,7 @@ class Page {
     bindInterval(timeout, command) {
         this._binds.bindInterval(timeout, (event)=> {
             if (typeof(command) == "string") {
-                this.onCommand(command, {event});
+                this.onCommand(command, {event}, this);
             } else {
                 command(event);
             }
@@ -136,13 +139,6 @@ class Page {
     // rpc methods
     async rpc(method, args) {
     }
-
-    // set page controller (called by page from script in page)
-    useController(controller) {
-        this._controller = controller;
-        pageRegistry.setPageReady(this.id);
-    }
-
    
 }
 

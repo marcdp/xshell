@@ -9,7 +9,7 @@ const appUrl = document.location.origin + document.location.pathname;
 const appUrlDir = appUrl.substring(0, appUrl.lastIndexOf("/") + 1)  ;
 const appUrlBase = appUrlDir.substring(0, appUrlDir.length - 1);
 const bootstrapUrl = new URL(document.currentScript.src);
-const bootstrapUrlDir = bootstrapUrl.href.substring(0, bootstrapUrl.href.lastIndexOf("/") + 1);
+const bootstrapUrlDir = bootstrapUrl.href.substring(0, bootstrapUrl.href.lastIndexOf("/") );
 
 // utils
 function stripJsonComments(s) {let o="",i=0,n=s.length;for(;i<n;){let c=s[i];if(c=='"'||c=="'"){let q=c;o+=c;i++;while(i<n){if(s[i]=="\\"){o+=s[i++]+s[i++];}else if(s[i]==q){o+=s[i++];break;}else{o+=s[i++];}}continue;}if(c=='/'&&s[i+1]=='/'){i+=2;while(i<n&&s[i]!="\n"&&s[i]!="\r")i++;continue;}if(c=='/'&&s[i+1]=='*'){i+=2;while(i<n&&!(s[i]=='*'&&s[i+1]=='/'))i++;i+=2;continue;}o+=c;i++;};return o;}
@@ -58,7 +58,7 @@ function normalizeUrls(key, obj, path) {
 async function loadXShellConfig(config) {
     // load app config
     console.log("bootstrap: loading xshell config ...");
-    const url = combineUrls(bootstrapUrlDir, "xshell.jsonc");
+    const url = bootstrapUrlDir + "/xshell.jsonc";
     const json = stripJsonComments(await (await fetch(url)).text());
     const xshellConfig = JSON.parse(json);
     config["xshell.src"] = url;
@@ -103,7 +103,6 @@ async function loadModulesConfig(config) {
     // parse each module config
     for(let result of results) {
         let name = names[results.indexOf(result)];
-        console.log("bootstrap: parsing module config ...", result.url);
         if (!result.ok) throw new Error(`Failed to load module: ${result.url}`);
         let json = await result.text();
         let moduleConfig = JSON.parse(stripJsonComments(json));
@@ -139,23 +138,17 @@ async function loadModulesConfig(config) {
     return config;
 }
 async function installServiceWorker(config) {
+    // install service worker
     console.log("bootstrap: installing service worker ...");
     const bootstrapUrlRaw = bootstrapUrl.toString();
     const realSwUrl = bootstrapUrlRaw.substring(0, bootstrapUrlRaw.lastIndexOf("/")) + "/sw.js";
-    if (navigator.serviceWorker.controller) {
-        navigator.serviceWorker.getRegistration().then(reg => {
-            if (reg) reg.update();
-        });
-    }
     const reg = await navigator.serviceWorker.register(swUrl + "?" + encodeURIComponent(realSwUrl), {
         scope: document.location.pathname
     });
-    await navigator.serviceWorker.ready;
-    console.log("bootstrap: service worker installed");
     // creates rules to send to service worker
     let xshellVersion = config["xshell.version"];
     let rules = [];
-    rules.push({ src: combineUrls(appUrl, "xshell"), dst: bootstrapUrlDir, version: xshellVersion, name:"xshell", exceptions:[combineUrls(bootstrapUrlDir, "xshell.json")]});
+    rules.push({ src: combineUrls(appUrl, "xshell"), dst: bootstrapUrlDir, version: xshellVersion, name:"xshell", exceptions:[bootstrapUrlDir + "/xshell.jsonc"]});
     for(var key in config) {
         if (key.startsWith("modules.") && key.endsWith(".src")) {
             const moduleName = key.split(".")[1];
@@ -165,21 +158,38 @@ async function installServiceWorker(config) {
             rules.push({ src: combineUrls(appUrl, moduleName), dst: moduleSrcDir, version: moduleVersion, name: moduleName, exceptions: [moduleSrc]});
         }
     }
-    // send config to service worker
-    reg.active.postMessage({ type: "init", payload: {
-        rules: rules
-    } });
-    // wait for ready message from service worker
-    return new Promise(resolve => {
-        navigator.serviceWorker.addEventListener("message", e => {
-            if (e.data?.type === "ready") {
-                console.log("bootstrap: service worker ready");
-                resolve();
-            }
-        });
+    // wait for ready
+    console.log("bootstrap: waiting for ready ...");
+    await navigator.serviceWorker.ready;
+    // ensure page is controlled by service worker
+    if (!navigator.serviceWorker.controller) {
+        console.log("bootstrap: page is not controlled ... forcing reload");
+        location.reload();
+        return false;
+    }
+    // send init message to service
+    console.log("bootstrap: send init message to service worker ...");
+    await new Promise((resolve, reject) => {
+        const channel = new MessageChannel();
+        channel.port1.onmessage = (event) => {
+            resolve(event.data);
+            channel.port1.close();
+        };
+        // safety timeout
+        setTimeout(() => {
+            reject(new Error("Service Worker did not reply in time"));
+            channel.port1.close();
+        }, 5000);
+        // send init + transfer reply port
+        reg.active.postMessage({ type: "init", payload: {rules: rules} }, [channel.port2]);
     });
+    //
+    console.log("bootstrap: service worker ready to receive requests");
+    // return
+    return true;
 }
 async function loadXShell() {
+    // load/import XShell
     console.log("bootstrap: loading xshell ...");
     return (await import("xshell")).default;
 }
@@ -192,7 +202,9 @@ async function bootstrap() {
     // load modules config
     config = await loadModulesConfig(config);
     // installServiceWorker
-    await installServiceWorker(config);
+    if (!await installServiceWorker(config)){
+        return;
+    }
     // create importmap
     let imports = {};
     for (let key in config) {

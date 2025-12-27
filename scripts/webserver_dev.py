@@ -1,6 +1,7 @@
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 
 class NoCacheHTTPRequestHandler(SimpleHTTPRequestHandler):
+    protocol_version = "HTTP/1.1"
     def __init__(self, *args, directory=None, **kwargs):
         # Set custom directory (do NOT change working directory)
         super().__init__(*args, directory=directory, **kwargs)

@@ -96,13 +96,26 @@ class I18n {
         if (typeof(datetime) == "string") datetime = new Date(datetime);
         let lang = this.config.lang;
         let options = opts || {};
-        if (format) {
+        if (format == "iso") {
+            if (typeof(datetime) == "number") datetime = new Date(datetime);
+            let result = 
+                datetime.getUTCFullYear() + "-" +
+                String(datetime.getUTCMonth() + 1).padStart(2, "0") + "-" +
+                String(datetime.getUTCDate()).padStart(2, "0") + "T" +
+                String(datetime.getUTCHours()).padStart(2, "0") + ":" +
+                String(datetime.getUTCMinutes()).padStart(2, "0") + ":" +
+                String(datetime.getUTCSeconds()).padStart(2, "0") + "." +
+                String(datetime.getUTCMilliseconds()).padStart(3, "0") + "Z";
+            return result;
+        } else if (format) {
             options = Object.assign(options, this._config.datetime.formats[format]);
+            let dateTimeFormat = new Intl.DateTimeFormat(lang, options);
+            return dateTimeFormat.format(datetime);
         } else {
             options = Object.assign(options, this._config.datetime.options);
-        }
-        let dateTimeFormat = new Intl.DateTimeFormat(lang, options);
-        return dateTimeFormat.format(datetime);
+            let dateTimeFormat = new Intl.DateTimeFormat(lang, options);
+            return dateTimeFormat.format(datetime);
+        }        
     }   
 }
 

@@ -1,5 +1,5 @@
 import XElement from "x-element";
-import xshell, { utils } from "xshell";
+import xshell, { utils, bus } from "xshell";
 
 // class
 export default XElement.define("x-dropdown", {
@@ -21,7 +21,7 @@ export default XElement.define("x-dropdown", {
         .body > div {
             min-height:1em;
             padding: var(--x-dropdown-padding-vertical) var(--x-dropdown-padding-horizontal) var(--x-dropdown-padding-vertical) var(--x-dropdown-padding-horizontal);            
-            max-height:75vh; 
+            max-height:calc(100vh - 7em);
             overflow:auto;
             scrollbar-width: var(--x-scrollbar-width);
             scrollbar-gutter: var(--x-scrollbar-gutter);
@@ -107,7 +107,7 @@ export default XElement.define("x-dropdown", {
                         if (isNaN(diff) || diff > 10) this.onCommand("collapse");
                     }
                 });
-                this.bindEvent(xshell, "navigation-start", () => {
+                this.bindEvent(bus, "xshell:navigation:start", () => {
                     //if navigation occurred, collapse
                     if (this.state.expanded) {
                         if (!this.state.collapseOnClick) {

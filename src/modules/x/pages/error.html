@@ -1,17 +1,17 @@
 <title>Error</title>
 
 <script type="module">
-    import xshell from "xshell";
-    import page from "xshell/page-current";
+    import xshel, { usePageController } from "xshell";
     import XController from "x-controller";
-    page.useController(new XController({
+    
+    usePageController(new XController({
         state: {
             code: 0,
             message: "",
             stack: "",
             src: "",
         },
-        onCommand(command, params) {
+        onCommand(command, params, page) {
             if (command == "load") {
                 //load
                 this.state.code = parseInt("0" + params.query.code) || "400";

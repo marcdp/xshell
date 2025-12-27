@@ -32,7 +32,7 @@ export default XElement.define("x-listview-item", {
 
         /* details */
         x-anchor.details {display:table-cell; padding-right:.5em;} 
-        x-anchor.details x-icon {display:inline-block;transform:translateY(-.1em);}
+        x-anchor.details x-icon {vertical-align:bottom; }
         ::slotted(*) {display:table-cell; padding:.1em; padding-right:.5em;}
         
     `,
