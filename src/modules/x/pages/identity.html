@@ -1,0 +1,50 @@
+<script type="module">
+    import xshell, { identity, usePageController } from "xshell";
+    import XController from "x-controller";
+
+    usePageController(new XController({
+        state: {
+            id: identity.id,
+            name: identity.name,
+            roles: identity.roles,
+            claims: Object.entries(identity.claims).map(([key, value]) => ({ key: key, value: value }))
+        },
+        async onCommand(command, args, page) {
+            if (command == "load") {
+                // load
+            } else if (command == "logout") {
+                // logout
+                const result = (await xshell.dialog.showDialog({src:"/x/pages/dialog-confirm.html", context: {
+                    title: "Logout",
+                    message: "Are you sure you want to logout?"
+                }}));
+                if (result.confirmed == true) {
+                    xshell.auth.logout();
+                }
+            }
+        }
+    }));
+</script>
+
+
+<template>
+
+    <x-form>
+        <x-datafields>
+            <x-datafield label="ID"     type="text" x-model="state.id" readonly></x-datafield>
+            <x-datafield label="Name"   type="text" x-model="state.name" readonly></x-datafield>
+            <x-datafield label="Roles"  type="text" x-model="state.roles.join(', ')" readonly></x-datafield>
+            <x-datafield label="Claims" type="list" readonly>
+                <table>
+                    <tr x-for="item in state.claims" x-key="id">
+                        <td>{{ item.key }}:</td>
+                        <td>{{ item.value }}</td>
+                    </tr>
+                </table>
+            </x-datafield>
+        </x-datafields>
+        <x-button command="logout" label="Logout" clas="submit" slot="footer"></x-button>    
+    </x-form>
+
+</template>
+

@@ -7,6 +7,7 @@
     "app.logo": "url:./logo.svg",
     // module x
     "modules.x.src": "url:/modules/x/module.jsonc",
+    "modules.x-debugger.src": "url:/modules/x-debugger/module.jsonc",
     "modules.x-man.src": "url:/modules/x-man/module.jsonc",
     // module 1
     "modules.module111.src": "url:./modules/module1/module.jsonc",
@@ -16,5 +17,11 @@
     "modules.module2.src": "url:./modules/module2/module.jsonc",
     // xshell
     "xshell.debug": true,
-    "xshell.start": "module111"
+    "xshell.start": "module111",
+    // xshell identity    
+    "xshell.identity.provider": "config",
+    "xshell.identity.params.id": "123",
+    "xshell.identity.params.name": "login1",
+    "xshell.identity.params.roles": ["role1","role2"],
+    "xshell.identity.params.claims": {"xxxxxxxxxxx":"yyyyyyyyyyyyyy","aaaaaaaaaa":"bbbbbbbbbbbbb","cccccccccc":"ddddddddddd"}
 }

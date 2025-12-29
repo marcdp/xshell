@@ -1,4 +1,6 @@
-class I18n {
+
+//class
+export default class I18n {
 
     //var
     _config = {
@@ -118,6 +120,3 @@ class I18n {
         }        
     }   
 }
-
-// export
-export default new I18n();

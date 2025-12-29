@@ -328,7 +328,7 @@ export default XElement.define("x-datafield", {
             <div class="list-body" x-on:edit="list-edit" x-on:remove="list-remove" x-on:move="list-move" x-attr:empty="!state.hasChilds">
                 <slot x-on:slotchange="slotchange"></slot>
             </div>
-            <div class="list-buttons">
+            <div class="list-buttons" x-if="state.add">
                 <x-button x-if="state.add" x-on:click="list-add" icon="x-add" class="plain"></x-button>
             </div>
         </div>
@@ -474,7 +474,7 @@ export default XElement.define("x-datafield", {
 
             } else if (command == "lang-add") {
                 //lang-add
-                let lang = await this.page.showPageDialog({ src: "/x/pages/lang-picker.html?disabled=" + this.state.langs.join(",")});
+                let lang = await this.page.showDialog({ src: "/x/pages/lang-picker.html?disabled=" + this.state.langs.join(",")});
                 if (lang) {
                     this.state.langs.push(lang);
                     this.state.langIndex = this.state.langs.length - 1;

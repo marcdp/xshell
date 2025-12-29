@@ -1,6 +1,4 @@
 import utils from "./utils.js";
-import bus from "./bus.js";
-
 
 // normalize urls
 function normalizeUrls(key, obj, from, path) {
@@ -27,14 +25,16 @@ function normalizeUrls(key, obj, from, path) {
 }
 
 // class
-class Config {
+export default class Config {
 
     //vars
     _config = {};
     _listeners = [];
     
     //ctor
-    constructor() {
+    constructor({debug, bus}) {
+        this._debug = debug;
+        this._bus = bus;
     }
 
     //props
@@ -49,7 +49,7 @@ class Config {
             this._config[key] = value;
             keys.push(key);
         }
-        bus.emit("config:change");
+        this._bus.emit("config:change");
     }
     has(key) {
         let result = this._config[key];
@@ -60,7 +60,7 @@ class Config {
         let result = this._config[key];
         if (typeof (result) != "undefined") return result;
         if (typeof (defaultValue) == "undefined") {
-            console.warn(`config.get('${key}') configuration key is undefined`);
+            this._debug.warn(`config.get('${key}') configuration key is undefined`);
         }
         return defaultValue;
     }
@@ -115,5 +115,3 @@ class Config {
 };
 
 
-//export
-export default new Config();

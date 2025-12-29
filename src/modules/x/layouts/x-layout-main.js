@@ -1,4 +1,4 @@
-import xshell, { bus, config, utils, settings } from "xshell";
+import xshell, { bus, config, identity, utils, settings } from "xshell";
 import XElement from "x-element";
 
 
@@ -27,6 +27,7 @@ export default XElement.define("x-layout-main", {
         .header .logo {display:block; }
         .header .logo img {display:block; width:3em; height:1.9em; object-fit:contain; border-right:var(--x-layout-main-border);}
         .header .spacer {flex:1}
+        .header x-dropdown {margin-left:.5em; }
         
         .header.shell {z-index:6; padding-left:.65em;}
 
@@ -42,9 +43,6 @@ export default XElement.define("x-layout-main", {
         .header .search x-datafield {width:30em;}
         .header .search x-icon {transform:translate(.75em,.3em); position:absolute; color: var(--x-datafield-color-placeholder); position:0;}
         .header .search-button {display:none;}
-
-        /* debug */
-        .debug x-page {display:block; }
 
         /* breadcrumb */
         .breadcrumb {position:sticky; top:0; user-select: none; flex:1;}
@@ -213,10 +211,17 @@ export default XElement.define("x-layout-main", {
 
             <div class="spacer"></div>
 
+            <x-dropdown class="popover left" collapse-on-click>
+                <x-button x-attr:label="state.userInitials" x-attr:title="state.userName" class="round light"></x-button>
+                <x-page slot="dropdown" src="/x/pages/identity.html" loading="lazy"></x-page>
+            </x-dropdown>
+
+            <!--
             <x-dropdown x-if="state.shellDebug" class="debug popover left" collapse-on-click>
                 <x-icon tabindex="1" icon="x-debug" class="size-x2"></x-icon>
                 <x-page slot="dropdown" src="/x/pages/debug.html" loading="lazy"></x-page>
             </x-dropdown>
+            -->
 
         </nav>
 
@@ -260,7 +265,9 @@ export default XElement.define("x-layout-main", {
         status: "",
         appLogo:    config.get("app.logo"),
         appLabel:   config.get("app.label"),
-        appBase:  config.get("app.base"),
+        appBase:    config.get("app.base"),
+        userName:   identity.name,
+        userInitials: (() => { let w = identity.name.trim().split(/\s+/); return (w.length > 1 ? w[0][0] + w.at(-1)[0] : w[0].slice(0,2)); })().toUpperCase(),
         menu:       null,
         menuTools:  null,
         toggled:    false,

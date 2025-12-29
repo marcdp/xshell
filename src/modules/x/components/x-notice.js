@@ -8,7 +8,7 @@ export default XElement.define("x-notice", {
         :host > div {display:flex; border:var(--x-notice-border); border-radius:var(--x-notice-border-radius); margin-top:.5em; margin-bottom:.5em; align-items:start;}
 
         :host > div div.header {padding:.75em; display:flex; align-items:baseline;}
-        :host > div div.header x-icon {width:2.5em; text-align:center;transform:translateY(-.15em);}
+        :host > div div.header x-icon {width:2.5em; text-align:center;transform:translateY(-.3em);}
         :host > div div.header .label {font-weight:600; margin-right:.5em; color:}
         :host > div div.header .message {flex:1;}
         

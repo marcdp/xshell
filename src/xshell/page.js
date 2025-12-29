@@ -67,6 +67,7 @@ class Page {
         const url = new URL(this.src, document.baseURI);
         const params = {
             query: Object.fromEntries(url.searchParams.entries()),
+            context: this._host.context,
             path: url.pathname,
             hash: url.hash
         };

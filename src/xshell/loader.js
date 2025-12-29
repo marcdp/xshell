@@ -1,6 +1,3 @@
-import resolver from "./resolver.js";
-import config from "./config.js";
-import bus from "./bus.js";
 
 // LoaderException
 class LoaderException extends Error {
@@ -17,14 +14,23 @@ const loaders = {
 };
 
 // class
-class Loader {
+export default class Loader {
 
     //vars
+    _bus = null;
+    _config = null;
+    _debug = null;
+    _resolver = null;
+
     _cache = {};
     _registry = [];
 
     //ctor
-    constructor() {
+    constructor( {bus, config, debug, resolver} ) {
+        this._bus = bus;
+        this._config = config;
+        this._debug = debug;
+        this._resolver = resolver;
     }
 
     //props
@@ -49,7 +55,7 @@ class Loader {
         for(let resource of resources) {            
             // resolve definition
             let name = resource.split(":")[1];
-            let definitionObject = resolver.resolve(resource);
+            let definitionObject = this._resolver.resolve(resource);
             if (!definitionObject) {
                 throw new LoaderException(`Resource not found: ${resource}`);
             }
@@ -57,7 +63,7 @@ class Loader {
             // get or load handler
             let loader = loaders[definition.loader];
             if (!loader) {
-                let appBase = config.get("app.base");
+                let appBase = this._config.get("app.base");
                 let loaderUrl = definition.loader;
                 if (loaderUrl.indexOf(":")!=-1) {
                     loaderUrl = definition.loader;
@@ -83,19 +89,19 @@ class Loader {
                 result.push(window.customElements.get(name));
             } else {
                 // load
-                console.log(`loader: load '${resource}' from ${src} ...`);
+                this._debug.log(`loader: load '${resource}' from ${src} ...`);
                 let promise = (async () => {
                     let value = null;
                     let registryItem = {resource, definition, src, status: "pending"};
                     this._registry.push(registryItem);
-                    await bus.emit("loader:resource:fetch", {resource, src});
+                    await this._bus.emit("loader:resource:fetch", {resource, src});
                     try {
                         value = await loader.load(src, name, definition);
                         registryItem.status = "loaded";
-                        await bus.emit("loader:resource:loaded", {resource, src});
+                        await this._bus.emit("loader:resource:loaded", {resource, src});
                     } catch (e) {
                         registryItem.status = "error";
-                        await bus.emit("loader:resource:error", {resource, src});
+                        await this._bus.emit("loader:resource:error", {resource, src});
                         throw e;
                     }                    
                     return value;
@@ -151,6 +157,3 @@ class Loader {
     }
 };
 
-
-//export
-export default new Loader();

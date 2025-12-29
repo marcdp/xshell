@@ -67,6 +67,11 @@ export default XElement.define("x-button", {
         :host(.anchor[disabled]) .button {color:var(--x-color-xxx-gray)}
         
         :host(.round) .button {padding-left:0; padding-right:0; width:100%; width:2.5em; justify-content: center;}
+
+        :host(.light) .button {background:var(--x-color-background-gray); border-color:var(--x-color-background-gray); color:var(--x-color-text); }
+        :host(.light) .button > div span.label {font-weight:500;}
+        :host(.light) .button:hover {background:var(--x-color-background-x-gray); border-color:var(--x-color-background-x-gray); }
+        :host(.light) .button:active {background:var(--x-color-background-xx-gray); border-color:var(--x-color-background-xx-gray); }
         
         :host(.plain) .button {border-radius: var(--x-datafield-border-radius);border: var(--x-datafield-border); padding:0 0 0 0; line-height:unset;width:100%; width:2em; color:gray;align-items:center;justify-content: center; }
         :host(.plain) .button > div span.label {font-weight: normal; color:var(--x-color-gray);}

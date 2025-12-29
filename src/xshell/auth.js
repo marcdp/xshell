@@ -1,0 +1,34 @@
+import { identityInit } from "./identity.js";
+
+// default
+export default class Auth {
+    
+    // vars
+    _config = null;
+    _loader = null;
+
+    // ctor
+    constructor({config, loader}) {
+        this._config = config;
+        this._loader = loader;
+    }
+
+    // methods
+    async login() {
+        let identityConfig = this._config.getAsObject("xshell.identity");
+        let identityConfigParams = this._config.getAsObject("xshell.identity.params") || {};
+        let identityProvider = await this._loader.load("idp:" + identityConfig.provider);
+        let identityResolveResult = await identityProvider.resolve(identityConfigParams);
+        if (identityResolveResult.status == "authenticated") {
+            identityInit(identityResolveResult.identity);
+        } else {
+            debugger;
+        }
+    }
+    async logout() {
+        let identityConfig = this._config.getAsObject("xshell.identity");
+        let identityProvider = await this._loader.load("idp:" + identityConfig.provider);
+        await identityProvider.logout();
+    }   
+}
+

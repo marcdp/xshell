@@ -1,4 +1,5 @@
-class Navigation {
+// class
+export default class Navigation {
 
     //var
     _mode = "hash"; //hash|path
@@ -15,6 +16,3 @@ class Navigation {
     get routerPrefix() { return this._routerPrefix; }
     
 }
-
-// export
-export default new Navigation();

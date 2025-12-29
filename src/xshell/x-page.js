@@ -1,4 +1,5 @@
 import xshell from "./xshell.js";
+import debug from "./debug.js";
 import loader from "./loader.js";
 import resolver from "./resolver.js";
 import config from "./config.js";
@@ -31,6 +32,7 @@ class XPage extends HTMLElement {
     _loadingObserver = null;
     _module = null;
     _page = null;
+    _context = null;
     
 
     //ctor
@@ -82,6 +84,9 @@ class XPage extends HTMLElement {
 
     get module() { return this._module; }
     set module(value) { this._module = value; }
+
+    get context() { return this._context; }
+    set context(value) { this._context = value; }
 
     get label() {return this._label;}
     set label(value) {
@@ -140,7 +145,7 @@ class XPage extends HTMLElement {
 
     //methods    
     async load() {
-        console.log(`x-page: load '${this.src} ...`);
+        debug.log(`x-page: load '${this.src} ...`);
         let src = this.src;
         if (src.indexOf("error") != -1) {
             //return;
@@ -278,7 +283,7 @@ class XPage extends HTMLElement {
         url += "&message=" + encodeURIComponent(message);
         url += "&src=" + encodeURIComponent(src);
         url += "&xshell-page-src=" + encodeURIComponent(src);
-        console.error("x-page: error loading page: " + message + " (code: " + code + ", src: " + src + ")");
+        debug.error("x-page: error loading page: " + message + " (code: " + code + ", src: " + src + ")");
         if (stack) url += "&stack=" + encodeURIComponent(stack);
         this.src = url;
         this._statusPage = "error";
@@ -308,14 +313,14 @@ class XPage extends HTMLElement {
     async unmount() {
         //unmount
         if (this._page) {
-            console.log(`x-page.: unmount '${this._page.src}' ...`);
+            debug.log(`x-page.: unmount '${this._page.src}' ...`);
             await this._page.unmount();
         }
     }
     async unload() {
         //unload
         if (this._page) {
-            console.log(`x-page.: unload '${this._page.src}' ...`);
+            debug.log(`x-page.: unload '${this._page.src}' ...`);
             await this._page.unload();
         }
     }
@@ -341,7 +346,7 @@ class XPage extends HTMLElement {
     }
     async showPageDialog({ src, sender }) {        
         //show page dialog
-        return await xshell.showPageDialog( {src, sender });
+        return await xshell.dialog.showDialog( {src, sender });
     }
     async queryClose() {
         let allowClose = true;

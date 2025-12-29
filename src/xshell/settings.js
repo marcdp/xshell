@@ -1,6 +1,6 @@
 
 // class
-class Settings {
+export default class Settings {
 
     //ctor
     constructor() {
@@ -18,11 +18,8 @@ class Settings {
             value = JSON.parse(value);  
         }
         return value;
-    }
-    
+    }    
 
 };
 
 
-//export
-export default new Settings();

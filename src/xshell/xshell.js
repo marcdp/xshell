@@ -1,13 +1,19 @@
-import config from "./config.js";
-import utils from "./utils.js";
-import bus from "./bus.js";
-import loader from "./loader.js";
+import Auth from "./auth.js";
 import Binds from "./binds.js";
-import i18n from "./i18n.js";
-import navigation from "./navigation.js";
-import pageRegistry from "./page-registry.js";
-import resolver from "./resolver.js";
-import settings from "./settings.js";
+import Bus from "./bus.js";
+import Config from "./config.js";
+import Debug from "./debug.js";
+import Dialog from "./dialog.js";
+import I18n from "./i18n.js";
+import Loader from "./loader.js";
+import Navigation from "./navigation.js";
+import PageRegistry from "./page-registry.js";
+import Resolver from "./resolver.js";
+import Settings from "./settings.js";
+
+
+import utils from "./utils.js";
+import identity from "./identity.js";
 import XPage from "./x-page.js";
 import Page from "./page.js";
 
@@ -19,39 +25,71 @@ const HASH_PREFIX = "#!";
 class XShell {
 
     //fields
+    _auth = null;
+    _bus = null;
+    _config = null;
     _container = null;
+    _debug = null;
+    _i18n = null;
+    _loader = null;
     _modules = [];
+    _navigation = null;
+    _pageRegistry = null;
+    _resolver = null;
+    _settings = null;
 
 
     //ctor
     constructor() {
-        console.log(`xshell: constructor`);
     }
 
 
     //props
+    get auth() { return this._auth; }
+    get bus() { return this._bus; }
+    get config() { return this._config; }
+    get container() { return this._container; }
+    get debug() { return this._debug; }
+    get dialog() { return this._dialog; }
+    get i18n() { return this._i18n; }
+    get loader() { return this._loader; }
     get modules() { return this._modules; }
+    get navigation() { return this._navigation; }
+    get pageRegistry() { return this._pageRegistry; }
+    get resolver() { return this._resolver; }
+    get settings() { return this._settings; }
 
 
     //methods
     async init(value) {
         // init
-        let url = "";
+        this._bus = new Bus();
+        this._debug = new Debug();
+        this._dialog = new Dialog();
+        this._config = new Config({ debug: this._debug, bus: this._bus });
+        this._resolver = new Resolver( { debug: this._debug } );
+        this._loader = new Loader({ bus: this._bus, config: this._config, debug: this._debug, resolver: this._resolver });
+        this._auth = new Auth({ config: this._config, loader: this._loader });
+        this._i18n = new I18n();
+        this._navigation = new Navigation();
+        this._settings = new Settings();
         // load value
-        console.log(`xshell: init ...`);
-        url = document.location.pathname;
-        config.set(value, url);
+        this._debug.log(`xshell: init ...`);
+        let url = document.location.pathname;
+        this._config.set(value, url);
         // config resolver
-        for(let key of config.getKeys("resolver")) {
-            resolver.addDefinition(key.substring(key.indexOf(".") + 1), config.get(key));
+        for(let key of this._config.getKeys("resolver")) {
+            this._resolver.addDefinition(key.substring(key.indexOf(".") + 1), this._config.get(key));
         }
+        // login
+        await this.auth.login(this._config);
         // init modules
         let tasks = [];
-        for (let module of config.getAsObjects("modules")) {
+        for (let module of this._config.getAsObjects("modules")) {
             // load stylesheets
-            let styles = config.get("modules." + module.name + ".styles", []);
+            let styles = this._config.get("modules." + module.name + ".styles", []);
             for (let style of styles) {
-                let styleUrl = resolver.resolveUrl(style);
+                let styleUrl = this._resolver.resolveUrl(style);
                 tasks.push(this.loadStyleSheet(styleUrl));
             }
             // init module
@@ -65,13 +103,13 @@ class XShell {
             };
             if (module.handler) {
                 tasks.push((async() => {
-                    instance.controller = await loader.load("module:" + module.handler);
+                    instance.controller = await this._loader.load("module:" + module.handler);
                 })());
             }
             this._modules.push(instance);
         }
         await Promise.all(tasks);
-        // add event listener
+        // add event listener hashchange
         window.addEventListener("hashchange", () => {
             this._navigate(document.location.hash);
         });
@@ -81,20 +119,20 @@ class XShell {
             tasks.push(instance.controller.onCommand("load", { 
                 name: instance.name,
                 path: instance.path,
-                ... config.getAsObject("modules." + instance.name + ".params")
+                ... this._config.getAsObject("modules." + instance.name + ".params")
             }));
         }
         await Promise.all(tasks);        
         // log
-        console.log(`xshell: initialized`);
+        this._debug.log(`xshell: initialized`);
         // navigate to start
-        this._container = document.querySelector(config.get("xshell.container", "body"));
+        this._container = document.querySelector(this._config.get("xshell.container", "body"));
         this._container.appendChild(document.createComment("App pages"));
         if (document.location.hash) {
             await this._navigate(document.location.hash);
         } else {
-            let startModule = config.get("xshell.start");
-            let startPage = config.get("modules." + startModule + ".start", "");
+            let startModule = this._config.get("xshell.start");
+            let startPage = this._config.get("modules." + startModule + ".start", "");
             document.location.hash = HASH_PREFIX + startPage;
         }
     }
@@ -128,7 +166,6 @@ class XShell {
         });
     }
 
-
     //pages
     navigate(src) {
         //navigate
@@ -141,7 +178,7 @@ class XShell {
         }
         if (target == "#dialog") {
             //show page dialog
-            return await this.showPageDialog({ src, sender });
+            return await this.dialog.showDialog({ src, sender });
         } else if (target == "#stack") {
             //show page stack
             this.showPageStack({ src, sender });
@@ -154,7 +191,7 @@ class XShell {
         //show page stack
         window.document.location.hash += HASH_PREFIX + src;
     }
-    async showPageDialog({ src, sender }) {
+    /*async showPageDialog({ src, context, sender }) {
         //show page dialog
         if (sender) {
             src = utils.combineUrls(sender.src, src);
@@ -163,6 +200,7 @@ class XShell {
         let page = document.createElement("x-page");
         page.setAttribute("src", src);
         page.setAttribute("layout", "dialog");
+        page.context = context || {};
         page.addEventListener("close", (event) => {
             resolveFunc(event.target.result);
             if (event.target.parentNode) {
@@ -173,7 +211,7 @@ class XShell {
         return new Promise((resolve) => {
             resolveFunc = resolve;
         });
-    }
+    }*/
     getPage() {
         return this.getPages()[0];
     }
@@ -213,7 +251,7 @@ class XShell {
             prefix += HASH_PREFIX + pages[i].src;
         }
         //return
-        return config.get("app.base") + "/" + prefix + HASH_PREFIX + src;
+        return this.config.get("app.base") + "/" + prefix + HASH_PREFIX + src;
     }
     
 
@@ -241,7 +279,7 @@ class XShell {
                 if (i == 0) {
                     page.setAttribute("layout", "main");
                     //emit event navigation-start
-                    bus.emit("xshell:navigation:start", { src: page.src });
+                    this._bus.emit("xshell:navigation:start", { src: page.src });
                 } else {
                     page.setAttribute("layout", "stack");
                     page.addEventListener("close", (event) => {
@@ -258,7 +296,7 @@ class XShell {
                     let pages = this.getPages();
                     if (pages.indexOf(event.target) == 0) {
                         var label = event.target.label;
-                        if (label) document.title = label + " / " + config.get("app.label");
+                        if (label) document.title = label + " / " + this._config.get("app.label");
                     }
                 });
                 page.addEventListener("replace", (event) => {
@@ -274,8 +312,8 @@ class XShell {
                     let pages = this.getPages();
                     if (pages.indexOf(event.target) == 0) {
                         var label = event.target.label;
-                        if (label) document.title = label + " / " + config.get("app.label");
-                        bus.emit("xshell:navigation:end", { src: event.target.src });
+                        if (label) document.title = label + " / " + this._config.get("app.label");
+                        this._bus.emit("xshell:navigation:end", { src: event.target.src });
                     }
                 });
                 page.addEventListener("navigate", (event) => {
@@ -303,7 +341,7 @@ class XShell {
                 page.src = hashAfterPart;
                 //emit event navigation-start
                 if (i == 0) {
-                    bus.emit("xshell:navigation:start", { src: page.src });
+                    this._bus.emit("xshell:navigation:start", { src: page.src });
                 }
             }
         }
@@ -314,6 +352,7 @@ class XShell {
 
 // usePageController
 function usePageController(controller) {
+    debugger
     const page = pageRegistry.getPage(window.__XSHELL__PAGE_ID);
     page.controller = controller;
     pageRegistry.setPageReady(page.id);
@@ -328,4 +367,4 @@ window.xshell = xshell;
 export default xshell;
 
 // export other objects and classes
-export { config, bus, i18n, navigation, loader, resolver, settings, usePageController, utils, Binds, XPage, Page };
+export { identity, usePageController };
