@@ -1,15 +1,16 @@
-import utils from "./utils.js";
 
 // class
-class Resolver {
+export default class Resolver {
 
 
     //vars
+    _debug = null;
     _definitions = [];
     
 
     //ctor
-    constructor() {
+    constructor( {debug}) {
+        this._debug = debug;
     }
 
 
@@ -83,7 +84,7 @@ class Resolver {
                 };
             }
         }
-        console.error(`resolver.resolveDefinition('${resource}'): unable to resolve`);
+        this._debug.error(`resolver.resolveDefinition('${resource}'): unable to resolve`);
         return null;
     }
     resolveUrl(resource) {
@@ -94,7 +95,3 @@ class Resolver {
         return null;
     }
 };
-
-
-//export
-export default new Resolver();

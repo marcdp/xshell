@@ -1,0 +1,25 @@
+
+{
+    // module
+    "name": "x-debug",
+    "label": "X Debugger Module",
+    "version": "1.0.0",
+    "depends": [],
+    "styles": [],
+    "icon": "",
+    "type": "library",
+    "start": "/pages/shell.html",
+    "menus.main": {
+        "label": "X-Debugger",
+        "href":"",
+        "children": [
+            { "label": "Shell", "href": "/pages/shell.html" },
+            { "label": "Configuration", "href": "/pages/config.html" },
+            { "label": "Modules", "href": "/pages/modules.html" },
+            { "label": "Loader", "href": "/pages/loader.html" },
+            { "label": "Log", "href": "/pages/log.html" },
+            { "label": "Pages", "href": "/pages/pages.html" },
+            { "label": "Bus", "href": "/pages/bus.html" }
+        ]
+    }
+}

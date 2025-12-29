@@ -188,7 +188,7 @@ async function installServiceWorker(config) {
     // return
     return true;
 }
-async function loadXShell() {
+async function loadXShell(config) {
     // load/import XShell
     console.log("bootstrap: loading xshell ...");
     return (await import("xshell")).default;
@@ -219,7 +219,7 @@ async function bootstrap() {
     importMap.textContent = JSON.stringify({ imports }, null, 2);
     document.head.appendChild(importMap);
     // load xshell
-    let xshell = await loadXShell();
+    let xshell = await loadXShell(config);
     // init xshell
     await xshell.init(config);
 }

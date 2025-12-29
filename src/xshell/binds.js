@@ -1,6 +1,6 @@
 
 // class
-class Binds {
+export default class Binds {
 
     //vars
     _eventListeners =  [];
@@ -40,7 +40,3 @@ class Binds {
         this._intervals = [];
     }
 }
-
-
-//export 
-export default Binds;

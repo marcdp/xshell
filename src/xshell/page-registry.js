@@ -1,5 +1,5 @@
 // class
-class PageRegistry {
+export default class PageRegistry {
 
     // vars
     _pages = new Map();
@@ -46,5 +46,3 @@ class PageRegistry {
 
 }
 
-// export
-export default new PageRegistry();

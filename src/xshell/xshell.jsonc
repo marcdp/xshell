@@ -8,7 +8,8 @@
     "page.layout.embed": "",
     // resolver    
     "resolver.component:x-page": "/x-page.js; loader=import; cache=true;",
-    "resolver.import:xshell": "/xshell.js",
+    "resolver.import:xshell": "/xshell.js",  
+    "resolver.idp:{name}": "/idp/{name}.js; loader=import;",
     // xshell
     "xshell.build": "2025-12-06",
     "xshell.container": "body",
@@ -16,7 +17,7 @@
     "xshell.error": "",
     "xshell.lazy": "",
     "xshell.start": "",
-    "xshell.version": "0.9.0"
-
+    "xshell.version": "0.9.0",
+    "xshell.identity.provider": "anonymous"
 }
             
