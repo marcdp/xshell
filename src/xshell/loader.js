@@ -2,6 +2,7 @@
 // LoaderException
 class LoaderException extends Error {
     constructor(message, details) {
+        debugger;
         super(message); // Call the parent constructor (Error)
         this.name = this.constructor.name; // Set the error name
         this.errors = details; // Custom property for additional info
@@ -72,7 +73,7 @@ export default class Loader {
                 } else {
                     loaderUrl = appBase + "/xshell/loaders/" + definition.loader + ".js";
                 }
-                let loaderToUse = (await import(loaderUrl)).default;
+                let loaderToUse = new (await import(loaderUrl)).default();
                 loaders[definition.loader] = loaderToUse;
                 loader = loaderToUse;
             }

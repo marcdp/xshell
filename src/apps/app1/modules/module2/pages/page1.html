@@ -5,9 +5,9 @@
 
 
 <script type="module">
-    import { usePageController } from "xshell";
+    import xshell from "xshell";
     
-    usePageController({
+    xshell.pages.createController({
         onCommand(cmd, params, page) {
             if (cmd === "load") {
                 // load

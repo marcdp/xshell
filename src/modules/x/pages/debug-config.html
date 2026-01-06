@@ -1,8 +1,8 @@
 <script type="module">
-    import xshell, { bus, config, usePageController, utils} from "xshell";
+    import xshell from "xshell";
     import XController from "x-controller";
 
-    usePageController(new XController({
+    xshell.pages.createController(new XController({
         state: {
             data: null,
             key: "",
@@ -11,7 +11,7 @@
         async onCommand(command, args, page) {
             if (command == "load") {
                 //load
-                page.bindEvent(bus, "config:change", "refresh");
+                page.bindEvent(xshell.bus, "config:change", "refresh");
                 page.bindEvent(this.state, "change:key", "refresh");
                 page.bindEvent(this.state, "change:value", "refresh");
                 //refresh
@@ -20,8 +20,8 @@
             } else if (command == "refresh") {
                 //refresh
                 let data = {};
-                for(let key of Object.keys(config.config).sort()) {
-                    let value = config.config[key];
+                for(let key of Object.keys(xshell.config.config).sort()) {
+                    let value = xshell.config.config[key];
                     let valid = true;
                     if (this.state.key && key.indexOf(this.state.key) == -1 ) valid = false;
                     if (this.state.value && ("" + value).indexOf(this.state.value) == -1 ) valid = false;

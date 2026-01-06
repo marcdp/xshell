@@ -1,9 +1,9 @@
 
 <script type="module">
-    import { i18n, usePageController } from "xshell";
+    import xshell from "xshell";
     import XController from "x-controller";
     
-    usePageController(new XController({
+    xshell.pages.createController(new XController({
         state: {
             value: null,
             domain: []
@@ -14,7 +14,7 @@
                 page.label = "Language Picker";
                 let disabled = ('' + params.query.disabled).split(",");
                 let domain = [];
-                for (let item of i18n.config.langs) {
+                for (let item of xshell.i18n.config.langs) {
                     domain.push({
                         value: item.id,
                         disabled: (disabled.indexOf(item.id) != -1),

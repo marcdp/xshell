@@ -1,4 +1,4 @@
-import xshell, {utils} from "xshell";
+import xshell, {Utils} from "xshell";
 import XElement from "x-element";
 
 // class
@@ -57,7 +57,7 @@ export default XElement.define("x-anchor", {
             } else if (command == "refresh") {
                 //refresh
                 if (this.page && this.state.href) {
-                    this.state.hrefReal = xshell.getHref(this.state.href, this.page, { breadcrumb: this.state.breadcrumb, target: this.state.target });
+                    this.state.hrefReal = xshell.navigation.getHref(this.state.href, this.page, { breadcrumb: this.state.breadcrumb, target: this.state.target });
                 } else {
                     this.state.hrefReal = null;
                 }                
@@ -74,25 +74,25 @@ export default XElement.define("x-anchor", {
                 } else if (this.state.target) {
                     //target 
                     if (this.state.href) {
-                        let src = utils.combineUrls(this.page.src, this.state.href);
+                        let src = Utils.combineUrls(this.page.src, this.state.href);
                         if (this.state.target == "#stack") {
-                            xshell.showPage({ src: src, sender: this.page, target: this.state.target, breadcrumb: this.state.breadcrumb });
+                            xshell.navigation.showPage({ src: src, sender: this.page, target: this.state.target, breadcrumb: this.state.breadcrumb });
                             event.preventDefault();
                             event.stopPropagation();
                             return false;
                         } else if (this.state.target == "#dialog") {
-                            xshell.showPage({ src: src, sender: this.page, target: this.state.target, breadcrumb: this.state.breadcrumb });
+                            xshell.navigation.showPage({ src: src, sender: this.page, target: this.state.target, breadcrumb: this.state.breadcrumb });
                             event.preventDefault();
                             event.stopPropagation();
                             return false;
                         } else if (this.state.target == "#root") {
-                            xshell.navigate( src );
+                            xshell.navigation.navigate( src );
                             event.preventDefault();
                             event.stopPropagation();
                             return false;
                         } else if (this.state.target.startsWith("#")) {
                             let targetPage = this.page.querySelector(this.state.target);
-                            if (!targetPage) targetPage = utils.getElementByIdRecursive(document, this.state.target.substring(1));
+                            if (!targetPage) targetPage = Utils.getElementByIdRecursive(document, this.state.target.substring(1));
                             if (targetPage) targetPage.src = src;
                             event.preventDefault();
                             event.stopPropagation();
@@ -111,9 +111,9 @@ export default XElement.define("x-anchor", {
 
                 } else if (this.state.href){
                     //page
-                    let src = utils.combineUrls(this.page.src, this.state.href);
+                    let src = Utils.combineUrls(this.page.src, this.state.href);
                     if (src.startsWith("/")) {
-                        this.page.navigate(src, {breadcrumb: this.state.breadcrumb});
+                        xshell.navigation.navigate(src, {breadcrumb: this.state.breadcrumb});
                     } else {
                         document.location = src;
                     }

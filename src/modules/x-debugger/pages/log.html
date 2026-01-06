@@ -1,8 +1,8 @@
 <script type="module">
-    import xshell, { bus, config, utils, loader, usePageController } from "xshell";
+    import xshell from "xshell";
     import XController from "x-controller";
     
-    usePageController(new XController({
+    xshell.pages.createController(new XController({
         state: {
             registry: [],
             query_resource: "",
@@ -22,15 +22,15 @@
                         show: true,
                     });
                 }
-                for(let loaderRegistryItem of loader.registry) {
+                for(let loaderRegistryItem of xshell.loader.registry) {
                     register(loaderRegistryItem);
                 }
                 // listen to loader events
-                page.bindEvent(bus, "loader:resource:fetch", (event)=>{
+                page.bindEvent(xshell.bus, "loader:resource:fetch", (event)=>{
                     register(event.detail)
                     this.onCommand("refresh");
                 });
-                page.bindEvent(bus, "loader:resource:loaded", (event)=>{
+                page.bindEvent(xshell.bus, "loader:resource:loaded", (event)=>{
                     for (let item of this.state.registry) {
                         if (item.resource == event.detail.resource) {
                             item.status = "loaded";
@@ -39,7 +39,7 @@
                     }
                     this.onCommand("refresh");
                 });
-                page.bindEvent(bus, "loader:resource:error", (event)=>{
+                page.bindEvent(xshell.bus, "loader:resource:error", (event)=>{
                     for (let item of this.state.registry) {
                         if (item.resource == event.detail.resource) {
                             item.status = "error";

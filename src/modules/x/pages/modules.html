@@ -1,9 +1,9 @@
 
 <script type="module">
-    import xshell, { bus, config, utils, usePageController} from "xshell";
+    import xshell, { Utils } from "xshell";
     import XController from "x-controller";
     
-    usePageController(new XController({
+    xshell.pages.createController(new XController({
         state: {
             modules: [],
             selected: ""
@@ -13,20 +13,20 @@
                 //load
                 await this.onCommand("refresh");
                 //listen
-                page.bindEvent(bus, "xshell:navigation:end", (event) => {
-                    this.state.selected = xshell.resolveModuleName(event.detail.src);
+                page.bindEvent(xshell.bus, "xshell:navigation:end", (event) => {
+                    this.state.selected = xshell.modules.resolveModuleName(event.detail.src);
                 });
 
             } else if (command == "refresh") {
                 //refresh
-                let moduleName = xshell.resolveModuleName(xshell.getPage().src)
-                let modules = config.getAsObjects("modules");
+                let moduleName = xshell.modules.resolveModuleName(xshell.navigation.getPage().src)
+                let modules = xshell.config.getAsObjects("modules");
                 for(let target of modules) {
                     if (target.type == "application") {
-                        let menu = config.get("modules." + target.name + ".menus.main", "");
+                        let menu = xshell.config.get("modules." + target.name + ".menus.main", "");
                         if (menu) {
                             let aux = target.start;
-                            let defaultMenuitems = utils.findObjectsPath(menu, "href", target.start)
+                            let defaultMenuitems = Utils.findObjectsPath(menu, "href", target.start)
                             if (defaultMenuitems) {
                                 let defaultMenuitem = defaultMenuitems[defaultMenuitems.length - 1];
                                 this.state.modules.push({

@@ -3,8 +3,6 @@
 export default class Debug {
 
 
-    //vars
-
     //ctor
     constructor() {
     }

@@ -1,20 +1,20 @@
 <script type="module">
-    import xshell, { identity, usePageController } from "xshell";
+    import xshell from "xshell";
     import XController from "x-controller";
 
-    usePageController(new XController({
+    xshell.pages.createController(new XController({
         state: {
-            id: identity.id,
-            name: identity.name,
-            roles: identity.roles,
-            claims: Object.entries(identity.claims).map(([key, value]) => ({ key: key, value: value }))
+            id: xshell.identity.id,
+            name: xshell.identity.name,
+            roles: xshell.identity.roles,
+            claims: Object.entries(xshell.identity.claims).map(([key, value]) => ({ key: key, value: value }))
         },
         async onCommand(command, args, page) {
             if (command == "load") {
                 // load
             } else if (command == "logout") {
                 // logout
-                const result = (await xshell.dialog.showDialog({src:"/x/pages/dialog-confirm.html", context: {
+                const result = (await xshell.navigation.showDialog({src:"/x/pages/dialog-confirm.html", context: {
                     title: "Logout",
                     message: "Are you sure you want to logout?"
                 }}));

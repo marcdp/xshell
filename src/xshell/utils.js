@@ -1,6 +1,6 @@
 
 // class
-class Utils {
+export default class Utils {
 
     static absolutizeUrl(url) {
         if (url.startsWith("/")) url = window.location.origin + url;
@@ -336,6 +336,3 @@ class Utils {
 
 };
 
-
-//export
-export default Utils;

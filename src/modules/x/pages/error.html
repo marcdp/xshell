@@ -1,10 +1,10 @@
 <title>Error</title>
 
 <script type="module">
-    import xshel, { usePageController } from "xshell";
+    import xshel from "xshell";
     import XController from "x-controller";
     
-    usePageController(new XController({
+    xshell.pages.createController(new XController({
         state: {
             code: 0,
             message: "",
@@ -17,7 +17,7 @@
                 this.state.code = parseInt("0" + params.query.code) || "400";
                 this.state.message = params.query.message || "Unknown error";
                 this.state.stack = params.query.stack || "";
-                this.state.module = xshell.resolveModuleName(params.query.src),
+                this.state.module = xshell.modules.resolveModuleName(params.query.src),
                 this.state.src = params.query.src || "";
             }
         }

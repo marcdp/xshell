@@ -1,5 +1,5 @@
 import XElement from "x-element";
-import xshell, { utils, bus } from "xshell";
+import xshell, { Utils } from "xshell";
 
 // class
 export default XElement.define("x-dropdown", {
@@ -101,13 +101,13 @@ export default XElement.define("x-dropdown", {
                     if (!this.state.collapseOnClick) {
                         //if new focused element is a descendant of this element, does nothing
                         let relatedTarget = event.relatedTarget;
-                        if (utils.isDescendantOfElement(this, relatedTarget)) return;
+                        if (Utils.isDescendantOfElement(this, relatedTarget)) return;
                         //if last mousedown was less than 10ms ago, does nothing
                         let diff = performance.now() - this._mousedownBodyAt;
                         if (isNaN(diff) || diff > 10) this.onCommand("collapse");
                     }
                 });
-                this.bindEvent(bus, "xshell:navigation:start", () => {
+                this.bindEvent(xshell.bus, "xshell:navigation:start", () => {
                     //if navigation occurred, collapse
                     if (this.state.expanded) {
                         if (!this.state.collapseOnClick) {
@@ -147,8 +147,8 @@ export default XElement.define("x-dropdown", {
 
             } else if (command == "click-body") {
                 //click-body
-                let a = utils.findFocusableElement(this);
-                let activeElement = utils.getDeepActiveElement();
+                let a = Utils.findFocusableElement(this);
+                let activeElement = Utils.getDeepActiveElement();
                 if (a != null && activeElement && activeElement.localName == "body") {
                     //if click in body, focus on first focusable element
                     a.focus();

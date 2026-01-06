@@ -1,5 +1,5 @@
 import XElement from "x-element";
-import xshell, { bus } from "xshell";
+import xshell from "xshell";
 
 // class
 export default XElement.define("x-menu", {
@@ -51,7 +51,7 @@ export default XElement.define("x-menu", {
         onCommand(command) {
             if (command == "init") {
                 //init
-                this.bindEvent(bus, "xshell:navigation:end", "refresh");
+                this.bindEvent(xshell.bus, "xshell:navigation:end", "refresh");
 
             } else if (command == "refresh") {
                 //refresh

@@ -1,6 +1,6 @@
 import XTemplate, {utils} from "./x-template.js";
 import createState from "./create-state.js";
-import xshell, {loader, Binds}  from "xshell";
+import xshell, { Binds }  from "xshell";
 
 
 // utils
@@ -58,7 +58,7 @@ class XElement extends HTMLElement {
 
     //props
     get page() {
-        return xshell.getPageByElement(this);
+        return xshell.navigation.getPageByElement(this);
     }
     get state() {return this._state;}
     set state(value) {
@@ -245,7 +245,7 @@ class XElement extends HTMLElement {
         if (settings.preload && settings.preload.length) {
             names.push(...settings.preload);
         }
-        await loader.load(names);
+        await xshell.loader.load(names);
         //state
         let stateAsJson = JSON.stringify({});
         if (!definition.state) definition.state = {};

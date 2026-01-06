@@ -1,5 +1,5 @@
 import XElement, {utils} from "x-element";
-import {i18n} from "xshell";
+import xshell from "xshell";
 
 // utils
 const urlPattern = /^(https?:\/\/)?(www\.)?([a-zA-Z0-9-]+)\.([a-zA-Z]{2,})(\/[a-zA-Z0-9#-]+\/?)*$/;
@@ -474,7 +474,7 @@ export default XElement.define("x-datafield", {
 
             } else if (command == "lang-add") {
                 //lang-add
-                let lang = await this.page.showDialog({ src: "/x/pages/lang-picker.html?disabled=" + this.state.langs.join(",")});
+                let lang = await xshell.navigation.showDialog({ src: "/x/pages/lang-picker.html?disabled=" + this.state.langs.join(",")});
                 if (lang) {
                     this.state.langs.push(lang);
                     this.state.langIndex = this.state.langs.length - 1;
@@ -571,7 +571,7 @@ export default XElement.define("x-datafield", {
             let result = [];
             //langs                    
             if (this.state.type.endsWith("_i18n")) { 
-                let langs = i18n.getMainLangs();
+                let langs = xshell.i18n.getMainLangs();
                 if (this.state.value) {
                     for(let aux of this.state.value.split("|")) {
                         if (aux.startsWith("i18n:") && aux.length > 7) {
@@ -629,7 +629,7 @@ export default XElement.define("x-datafield", {
                 if (this.state.value) {
                     let hasMainValue = false;
                     for(let lang of this.state.langs) {
-                        let value = i18n.formatText(this.state.value, lang);
+                        let value = xshell.i18n.formatText(this.state.value, lang);
                         if (value && lang == this.state.langs[0]) hasMainValue = true;
 
                     }
