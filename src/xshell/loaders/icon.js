@@ -1,6 +1,6 @@
 //export 
-export default {
-    load: async (src) => {
+export default class LoaderIcon {
+    async load (src) {
         // fetch svg and creates an SVGElement
         let response = await fetch(src);
         if (!response.ok) throw new Error(`Error ${response.status}: ${response.statusText}: ${src}`);

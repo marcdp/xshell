@@ -1,14 +1,14 @@
 import Binds from "./binds.js";
-import utils from "./utils.js";
-import pageRegistry from "./page-registry.js";
+import Utils from "./utils.js";
+import xshell from "./xshell.js";
 
 
 // class
-class Page {
+export default class Page {
 
 
     //vars
-    _id = utils.generateId("page");
+    _id = Utils.generateId("page");
     _host = null;
     _refs = null;
     _binds = new Binds();
@@ -56,7 +56,7 @@ class Page {
     //mehods
     async init(host) {
         this._host = host;
-        pageRegistry.registerPage(this);
+        xshell.pages.registerPage(this);
     }
     async mount() {
         // mount
@@ -103,7 +103,7 @@ class Page {
         await this.onCommand("unload", {}, this);
         this._refs = null;
         this._status = "unloaded";
-        pageRegistry.unregisterPage(this);
+        xshell.pages.unregisterPage(this);
         this._host = null;
     }
 
@@ -142,6 +142,3 @@ class Page {
     }
    
 }
-
-//export 
-export default Page;

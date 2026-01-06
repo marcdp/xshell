@@ -1,10 +1,10 @@
 <title>Test</title>
 
 <script type="module">
-    import xshell, { bus, config, usePageController } from "xshell";
+    import xshell from "xshell";
     import XController from "x-controller";
 
-    usePageController(new XController({
+    xshell.pages.createController(new XController({
         state: {
             message: ""
         },

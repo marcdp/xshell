@@ -1,9 +1,9 @@
 ﻿<title>This is a titleeeee</title>
 
 <script type="module">
-    import {usePageController} from "xshell";
+    import xshell from "xshell";
 
-    usePageController({
+    xshell.pages.createController({
         async onCommand(command, params, page) {
             if (command == "load") {
                 //load

@@ -1,4 +1,4 @@
-import {i18n} from "xshell";
+import xshell from "xshell";
 
 class XTemplate {
 
@@ -477,7 +477,7 @@ class XTemplateInstance {
     // methods
     render(state) {
         //render vdom
-        let vdom = this._xtemplate.render(state, this._handler, this._invalidate, utils, i18n, this._renderCount++);
+        let vdom = this._xtemplate.render(state, this._handler, this._invalidate, utils, xshell.i18n, this._renderCount++);
         //render vdom to dom
         if (this._vdom == null) {
             let index = 0;

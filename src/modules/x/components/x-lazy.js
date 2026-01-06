@@ -1,5 +1,5 @@
 import XElement from "x-element";
-import {loader} from "xshell";
+import xshell from "xshell";
 
 // class
 export default XElement.define("x-lazy", {
@@ -44,7 +44,7 @@ export default XElement.define("x-lazy", {
                     }
                     return false;    
                 }).map(el => "component:" + el.tagName.toLowerCase()))];
-                await loader.load(dependencies);
+                await xshell.loader.load(dependencies);
                 this.state.activated = true;
 
             }

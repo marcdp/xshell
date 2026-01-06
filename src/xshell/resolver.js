@@ -9,8 +9,12 @@ export default class Resolver {
     
 
     //ctor
-    constructor( {debug}) {
+    constructor( {debug, config}) {
         this._debug = debug;
+        for(let key of config.getKeys("resolver")) {
+            this.addDefinition(key.substring(key.indexOf(".") + 1), config.get(key));
+        }
+
     }
 
 

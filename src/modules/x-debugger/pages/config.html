@@ -1,8 +1,8 @@
 <script type="module">
-    import xshell, { bus, config, usePageController, utils} from "xshell";
+    import xshell, { bus, config } from "xshell";
     import XController from "x-controller";
 
-    usePageController(new XController({
+    xshell.pages.createController(new XController({
         state: {
             data: null,
             key: "",

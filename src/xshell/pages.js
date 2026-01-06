@@ -1,5 +1,5 @@
 // class
-export default class PageRegistry {
+export default class Pages {
 
     // vars
     _pages = new Map();
@@ -21,6 +21,11 @@ export default class PageRegistry {
     }
     unregisterPage(page) {
         this._pages.delete(page.id);
+    }
+    createController(controller) {
+        const page = this.getPage(window.__XSHELL__PAGE_ID);
+        page.controller = controller;
+        this.setPageReady(page.id);
     }
 
     // methods

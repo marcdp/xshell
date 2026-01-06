@@ -1,4 +1,4 @@
-import {Page, config, loader, utils, resolver} from "xshell";
+import xshell, {Page, Utils} from "xshell";
 
 // class
 class HandlerMd extends Page {
@@ -27,13 +27,13 @@ class HandlerMd extends Page {
         let html = marked.parse(this._markdown);        
         // rewrite resource urls
         let document = (new DOMParser()).parseFromString(html, "text/html");
-        utils.rewriteDocumentUrls(document, (localName, attr, url) => {
+        Utils.rewriteDocumentUrls(document, (localName, attr, url) => {
             if (url.indexOf(":") != -1) return url;
-            if (url.startsWith("/")) return resolver.resolveUrl(this._moduleUrl + url);
-            return utils.combineUrls(this._src, url);
+            if (url.startsWith("/")) return xshell.resolver.resolveUrl(this._moduleUrl + url);
+            return Utils.combineUrls(this._src, url);
         });            
         // load required web components
-        let shellLazyName = config.get("xshell.lazy");
+        let shellLazyName = xshell.config.get("xshell.lazy");
         let componentNames = [...new Set(Array.from(document.querySelectorAll('*')).filter(el => {
             if (el.tagName.includes('-')) {
                 if (shellLazyName && (el.localName == shellLazyName || el.closest(shellLazyName) == null)) {
@@ -44,7 +44,7 @@ class HandlerMd extends Page {
         }).map(el => "component:" + el.tagName.toLowerCase()))];
         if (componentNames.length) {
             try {
-                await loader.load(componentNames);
+                await xshell.loader.load(componentNames);
             } catch (e) {
                 let errorTexts = [];
                 if (e.errors) {
@@ -75,13 +75,12 @@ class HandlerMd extends Page {
         //host.appendChild(...document.body.childNodes);
         //host.innerHTML = document.body.innerHTML;   
     }
-    
 }
 
 
 //export 
-export default {
-    load: async (src, virtual_src) => {
+export default class LoaderMd {
+    async load(src, virtual_src) {
         // fetch markdown
         let response = await fetch(src);
         let markdown = await response.text();

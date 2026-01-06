@@ -1,4 +1,4 @@
-import xshell, { bus, config, identity, utils, settings } from "xshell";
+import xshell, { Utils } from "xshell";
 import XElement from "x-element";
 
 
@@ -263,32 +263,32 @@ export default XElement.define("x-layout-main", {
     `,
     state: {
         status: "",
-        appLogo:    config.get("app.logo"),
-        appLabel:   config.get("app.label"),
-        appBase:    config.get("app.base"),
-        userName:   identity.name,
-        userInitials: (() => { let w = identity.name.trim().split(/\s+/); return (w.length > 1 ? w[0][0] + w.at(-1)[0] : w[0].slice(0,2)); })().toUpperCase(),
+        appLogo:    xshell.config.get("app.logo"),
+        appLabel:   xshell.config.get("app.label"),
+        appBase:    xshell.config.get("app.base"),
+        userName:   xshell.identity.name,
+        userInitials: (() => { let w = xshell.identity.name.trim().split(/\s+/); return (w.length > 1 ? w[0][0] + w.at(-1)[0] : w[0].slice(0,2)); })().toUpperCase(),
         menu:       null,
         menuTools:  null,
         toggled:    false,
         breadcrumb: [],
         label:      "",
         keyword:    "",
-        shellDebug: config.get("xshell.debug")
+        shellDebug: xshell.config.get("xshell.debug")
     },
     methods: {
         async onCommand(command) {
             if (command == "load") {
                 //load
-                this.state.toggled = settings.getItem("x-layout-main.toggled", false);
-                this.bindEvent(bus, "xshell:navigation:start", () => {
-                    if (utils.probablyPhone()){
+                this.state.toggled = xshell.settings.getItem("x-layout-main.toggled", false);
+                this.bindEvent(xshell.bus, "xshell:navigation:start", () => {
+                    if (Utils.probablyPhone()){
                         if (this.state.toggled) {
                             this.state.toggled = false;
                         }
                     }
                 });
-                this.bindEvent(bus, "xshell:navigation:end", (event) => {
+                this.bindEvent(xshell.bus, "xshell:navigation:end", (event) => {
                     let href = event.detail.src;
                     if (this.state.ul){
                         let a = this.state.ul.querySelector(`x-anchor[href='${href}']`);
@@ -301,7 +301,7 @@ export default XElement.define("x-layout-main", {
             } else if (command == "refresh") {
                 //refresh
                 let src = this.page.srcPage || this.page.src;
-                let module = xshell.resolveModuleName(src);
+                let module = xshell.modules.resolveModuleName(src);
                 let breadcrumb = this.page.breadcrumb;
                 if (!module) {
                     //no module defined 
@@ -317,12 +317,12 @@ export default XElement.define("x-layout-main", {
                             break;
                         }
                     }
-                    module = xshell.resolveModuleName(href);
+                    module = xshell.modules.resolveModuleName(href);
                     //show menu
-                    let menu = config.get(`modules.${module}.menus.main`);
+                    let menu = xshell.config.get(`modules.${module}.menus.main`);
                     this.state.menu = menu;
                     //show menu tools
-                    let menuTools = (config.has(`modules.${module}.menus.tools`) ? config.get(`modules.${module}.menus.tools`) : null);
+                    let menuTools = (xshell.config.has(`modules.${module}.menus.tools`) ? xshell.config.get(`modules.${module}.menus.tools`) : null);
                     this.state.menuTools = menuTools;
                     //show breadcrumb
                     this.state.breadcrumb = breadcrumb;
@@ -330,13 +330,13 @@ export default XElement.define("x-layout-main", {
                     this.state.label = this.page.label;
                 } else {
                     //show menu
-                    let menu = config.get(`modules.${module}.menus.main`);
+                    let menu = xshell.config.get(`modules.${module}.menus.main`);
                     this.state.menu = menu;
                     //show menu tools
-                    let menuTools = (config.has(`modules.${module}.menus.tools`) ? config.get(`modules.${module}.menus.tools`) : null);
+                    let menuTools = (xshell.config.has(`modules.${module}.menus.tools`) ? xshell.config.get(`modules.${module}.menus.tools`) : null);
                     this.state.menuTools = menuTools;
                     //breadcrumb
-                    let menuitems = utils.findObjectsPath(menu, 'href', src);
+                    let menuitems = Utils.findObjectsPath(menu, 'href', src);
                     if (menuitems) {
                         this.state.breadcrumb = menuitems;
                         this.state.label = menuitems[menuitems.length -1].label;
@@ -355,11 +355,11 @@ export default XElement.define("x-layout-main", {
             } else if (command == "toggle-menu") {
                 //toggle-menu
                 this.state.toggled = !this.state.toggled;
-                settings.setItem("x-layout-main.toggled", this.state.toggled);
+                xshell.settings.setItem("x-layout-main.toggled", this.state.toggled);
 
             } else if (command == "search") {
                 //search
-                bus.emit("xshell:search", { keyword: this.state.keyword.trim() });
+                xshell.bus.emit("xshell:search", { keyword: this.state.keyword.trim() });
             }
             
         }

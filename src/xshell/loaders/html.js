@@ -1,9 +1,6 @@
 import Page from "../page.js";
-import config from "../config.js";
-import loader from "../loader.js";
-import utils from "../utils.js";
-import resolver from "../resolver.js";
-import pageRegistry from "../page-registry.js";
+import xshell from "../xshell.js";
+import Utils from "../utils.js";
 
 
 // class
@@ -33,7 +30,7 @@ class PageHtml extends Page {
         // parse document
         let document = (new DOMParser()).parseFromString("<html><body>" + this._html + "</body></html>", "text/html");
         // load required web components
-        let shellLazyName = config.get("xshell.lazy");
+        let shellLazyName = xshell.config.get("xshell.lazy");
         let componentNames = [...new Set(Array.from(document.querySelectorAll('*')).filter(el => {
             if (el.tagName.includes('-')) {
                 if (shellLazyName && (el.localName == shellLazyName || el.closest(shellLazyName) == null)) {
@@ -60,7 +57,7 @@ class PageHtml extends Page {
         // load used components
         if (componentNames.length) {
             try {
-                await loader.load(componentNames);
+                await xshell.loader.load(componentNames);
             } catch (e) {
                 let errorTexts = [];
                 if (e.errors) {
@@ -78,14 +75,14 @@ class PageHtml extends Page {
         }     
         // rewrite resource urls            
         var waitForControllerRegistration = false;
-        utils.rewriteDocumentUrls(document, (localName, attr, url) => {
+        Utils.rewriteDocumentUrls(document, (localName, attr, url) => {
             if (url.startsWith("xshell/")) return url;
             if (url.indexOf(":") != -1) return url;
-            if (url.startsWith("/")) return resolver.resolveUrl(this._moduleUrl + url);
-            if (resolver.has("import:" + url)) {
-                return resolver.resolveUrl("import:" + url);
+            if (url.startsWith("/")) return xshell.resolver.resolveUrl(this._moduleUrl + url);
+            if (xshell.resolver.has("import:" + url)) {
+                return xshell.resolver.resolveUrl("import:" + url);
             }
-            return utils.combineUrls(this._src, url);
+            return Utils.combineUrls(this._src, url);
         });      
         // create and append scripts
         let scripts = [];
@@ -103,9 +100,9 @@ class PageHtml extends Page {
         }
         // await for scripts to be ready
         if (waitForControllerRegistration) {
-            await pageRegistry.waitForPageReady(this.id);
+            await xshell.pages.waitForPageReady(this.id);
         } else {
-            pageRegistry.setPageReady(this.id);
+            xshell.pages.setPageReady(this.id);
         }
         // remove old nodes except scripts
         while (host.childNodes.length > scripts.length) {
@@ -132,8 +129,8 @@ class PageHtml extends Page {
 
 
 //export 
-export default {
-    load: async (src, virtual_src) => {
+export default class LoaderHtml {
+    async load(src, virtual_src) {
         // fetch html
         let response = await fetch(src);
         if (response.ok == false) {

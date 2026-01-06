@@ -1,10 +1,10 @@
 <title>Search</title>
 
 <script type="module">
-    import xshell, { bus, config, usePageController } from "xshell";
+    import xshell from "xshell";
     import XController from "x-controller";
 
-    usePageController(new XController({
+    xshell.pages.createController(new XController({
         state: {
             keyword: "",
             results:[]
@@ -12,7 +12,7 @@
         async onCommand(command, args, page) {
             if (command == "load") {
                 //load
-                page.bindEvent(bus, "xshell:search", (event) => {
+                page.bindEvent(xshell.bus, "xshell:search", (event) => {
                     this.state.keyword = event.detail.keyword
                 });                
                 //when keyword changes, do search
@@ -43,8 +43,8 @@
                         }
                     }
                     for(let module of xshell.modules) {
-                        for(let menu_name of config.getSubKeys("modules." + module.name + ".menus")){
-                            let menu = config.get("modules." + module.name + ".menus." + menu_name);
+                        for(let menu_name of xshell.config.getSubKeys("modules." + module.name + ".menus")){
+                            let menu = xshell.config.get("modules." + module.name + ".menus." + menu_name);
                             searchRecursive(module, menu);
                         }
                     }

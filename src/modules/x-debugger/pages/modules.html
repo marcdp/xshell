@@ -1,9 +1,9 @@
  
 <script type="module">
-    import xshell, { bus, config, utils, usePageController } from "xshell";
+    import xshell from "xshell";
     import XController from "x-controller";
 
-    usePageController(new XController({
+    xshell.pages.createController(new XController({
         state: {
             modules: [],
             name: "",
@@ -33,7 +33,7 @@
             } else if (command == "refresh") {
                 //refresh
                 let modules = [];
-                for(let target of config.getAsObjects("modules")) {
+                for(let target of xshell.config.getAsObjects("modules")) {
                     let module = xshell.modules[target.name];
                     let valid = true;
                     if (this.state.name && target.name.indexOf(this.state.name) == -1 ) valid = false;

@@ -1,5 +1,5 @@
 import XElement from "x-element";
-import {loader} from "xshell";
+import xshell from "xshell";
 import {marked} from "marked";
 
 // class
@@ -45,13 +45,13 @@ export default XElement.define("x-markdown", {
                     //load components
                     let docWithoutTemplate = (new DOMParser()).parseFromString(html.replace("<template>","<div>").replace("</template>","</div>"), "text/html");
                     let componentNames = [...new Set(Array.from(docWithoutTemplate.querySelectorAll('*')).filter(el => {return (el.tagName.includes('-'))}).map(el => "component:" + el.tagName.toLowerCase()))];
-                    await loader.load(componentNames);
+                    await xshell.loader.load(componentNames);
                     //set html
                     this.innerHTML = html;
                 });
                 this.state.addEventListener("change:src", async (event) => {
                     let src = event.newValue;
-                    let response = await loader.load(src);
+                    let response = await xshell.loader.load(src);
                     if (!response.ok) {
                         this.page.error({ code: 404, message:`Error ${response.status}: ${response.statusText}: ${src}`, src: this.page.src});
                         return;

@@ -1,4 +1,5 @@
-export default {
+// export
+export default class IdpAnonymous {
     async resolve() {
         // always return anonymous identity
         return {
@@ -10,7 +11,7 @@ export default {
                 claims: {}
             })
         };
-    },
+    }
     logout() {
         // reload document
         location.reload();

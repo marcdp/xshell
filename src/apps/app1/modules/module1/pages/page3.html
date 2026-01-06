@@ -2,9 +2,9 @@
 
 <!-- script -->
 <script type="module">
-    import { usePageController } from "xshell";
+    import xshell from "xshell";
     import XController from "x-controller";
-    usePageController(new XController( {
+    xshell.pages.createController(new XController( {
         state: {
             counter: 123,
             text: "helo",
@@ -62,7 +62,7 @@
 
             } else if (command == "something") {
                 //something
-                this.showDialog({ url: "dialog.html" });
+                xshell.navigation.showDialog({ src: "dialog.html" });
 
             } else if (command == "something2") {
                 //something

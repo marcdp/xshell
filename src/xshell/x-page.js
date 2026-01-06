@@ -1,10 +1,6 @@
 import xshell from "./xshell.js";
-import debug from "./debug.js";
-import loader from "./loader.js";
-import resolver from "./resolver.js";
-import config from "./config.js";
-import utils from "./utils.js";
-import bus from "./bus.js";
+import Utils from "./utils.js";
+
 
 // class
 class XPage extends HTMLElement {
@@ -68,7 +64,7 @@ class XPage extends HTMLElement {
         }
     }
     get srcPage() {return this._srcPage;}
-    get srcAbsolute() {return resolver.resolveUrl("page:" + this.src);}
+    get srcAbsolute() {return xshell.resolver.resolveUrl("page:" + this.src);}
 
     get status() {return this._status;}
     get statusPage() {return this._statusPage;}
@@ -145,7 +141,7 @@ class XPage extends HTMLElement {
 
     //methods    
     async load() {
-        debug.log(`x-page: load '${this.src} ...`);
+        xshell.debug.log(`x-page: load '${this.src} ...`);
         let src = this.src;
         if (src.indexOf("error") != -1) {
             //return;
@@ -162,7 +158,7 @@ class XPage extends HTMLElement {
             layoutElement.setAttribute("status", "loading");
         }
         //load module 
-        let moduleName = await xshell.resolveModuleName(src);
+        let moduleName = await xshell.modules.resolveModuleName(src);
         this.setAttribute("module", moduleName ?? "");
         if (!moduleName) {
             this.error({ code: 404, message: "Module not registered for page path: " + src, src: src});            
@@ -171,7 +167,7 @@ class XPage extends HTMLElement {
         //fetch page
         let page = null;
         try {
-            page = await loader.load("page:" + src);
+            page = await xshell.loader.load("page:" + src);
         } catch(e) {
             this.error({ 
                 code: 404, 
@@ -190,8 +186,8 @@ class XPage extends HTMLElement {
             searchParams.delete("xshell-page-layout");
         }
         if (!layoutName) layoutName = "embed";
-        let layout = config.get("page.layout." + layoutName);
-        await loader.load("layout:" + layout);
+        let layout = xshell.config.get("page.layout." + layoutName);
+        await xshell.loader.load("layout:" + layout);
         if (layoutElement == null || layoutElement.localName != layout) {
             if (layoutElement) layoutElement.remove();
             layoutElement = document.createElement(layout);
@@ -212,8 +208,8 @@ class XPage extends HTMLElement {
         }
         this._srcPage = srcPage;
         //menuitem
-        let menu = config.get("modules." + moduleName + ".menus.main", {});
-        let menuitems = utils.findObjectsPath(menu, 'href', src.split("#")[0]);
+        let menu = xshell.config.get("modules." + moduleName + ".menus.main", {});
+        let menuitems = Utils.findObjectsPath(menu, 'href', src.split("#")[0]);
         let menuitem = (menuitems ? menuitems[menuitems.length-1] : null);  
         //label
         let label = page.title;
@@ -273,17 +269,17 @@ class XPage extends HTMLElement {
         //raise load event
         this.dispatchEvent(new CustomEvent("load"));
         //bus event
-        bus.emit("xshell:page:load", { src: page.src, id: page.id });
+        xshell.bus.emit("xshell:page:load", { src: page.src, id: page.id });
     }
     error({code, message, src, stack}) {
         //error
-        let url = config.get("xshell.error");
+        let url = xshell.config.get("xshell.error");
         if (url.indexOf("?") == -1) url += "?";
         url += "code=" + encodeURIComponent(code);
         url += "&message=" + encodeURIComponent(message);
         url += "&src=" + encodeURIComponent(src);
         url += "&xshell-page-src=" + encodeURIComponent(src);
-        debug.error("x-page: error loading page: " + message + " (code: " + code + ", src: " + src + ")");
+        xshell.debug.error("x-page: error loading page: " + message + " (code: " + code + ", src: " + src + ")");
         if (stack) url += "&stack=" + encodeURIComponent(stack);
         this.src = url;
         this._statusPage = "error";
@@ -313,17 +309,18 @@ class XPage extends HTMLElement {
     async unmount() {
         //unmount
         if (this._page) {
-            debug.log(`x-page.: unmount '${this._page.src}' ...`);
+            xshell.debug.log(`x-page.: unmount '${this._page.src}' ...`);
             await this._page.unmount();
         }
     }
     async unload() {
         //unload
         if (this._page) {
-            debug.log(`x-page.: unload '${this._page.src}' ...`);
+            xshell.debug.log(`x-page.: unload '${this._page.src}' ...`);
             await this._page.unload();
         }
     }
+    /*
     navigate(src, settings) {
         //navigate to
         if (!settings) settings = {};
@@ -338,16 +335,16 @@ class XPage extends HTMLElement {
     }
     async showPage({ src, sender, target }) {       
         //show page stack
-        xshell.showPage( { src, sender, target });
+        xshell.navigation.showPage( { src, sender, target });
     }
-    async showPageStack({ src }) {
+    async showStackedPage({ src }) {
         //show page stack
-        xshell.showPageStack( { src });
+        xshell.navigation.showStackedPage( { src });
     }
-    async showPageDialog({ src, sender }) {        
+    async showDialog({ src, sender }) {        
         //show page dialog
         return await xshell.dialog.showDialog( {src, sender });
-    }
+    }*/
     async queryClose() {
         let allowClose = true;
         // ... query close page (ask page for permissions to close) ...

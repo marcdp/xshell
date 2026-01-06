@@ -1,4 +1,4 @@
-import utils from "./utils.js";
+import Utils from "./utils.js";
 
 // normalize urls
 function normalizeUrls(key, obj, from, path) {
@@ -6,10 +6,10 @@ function normalizeUrls(key, obj, from, path) {
         if (obj.startsWith("./") || obj.startsWith("../") || obj == ".") {
             if (key == "href" && path) {
                 //relative to path
-                obj = utils.combineUrls(path + "/", obj);
+                obj = Utils.combineUrls(path + "/", obj);
             } else if (from) {
                 //relative to from (module url)
-                obj = utils.combineUrls(from, obj);
+                obj = Utils.combineUrls(from, obj);
             }
         }
     } else if (Array.isArray(obj)) {
