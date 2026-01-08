@@ -13,6 +13,7 @@
     "menus.main": {
         "label": "XShell Manual",
         "href": "/pages/index.md",
+        "group": "x-man",
         "children": [
             {"label": "Shell", "href":"/pages/shell/index.md", "children":[                
             ]},

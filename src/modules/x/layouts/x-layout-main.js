@@ -58,6 +58,7 @@ export default XElement.define("x-layout-main", {
         .breadcrumb x-icon.separator {color:var(--x-color-text-x-gray); margin-left:.35em; width:1em;}
         .breadcrumb ul {margin:0; padding:0; display: flex; align-items:center; box-sizing: border-box;}
         .breadcrumb ul li {list-style:none; margin-right:.5em; display:flex; }
+        .breadcrumb ul li.empty {display:none;}
         .breadcrumb ul li x-anchor {position:relative; font-weight:500; }
         .breadcrumb ul li x-anchor.selected:after {content:""; border-bottom:.1em var(--x-color-primary) solid; bottom:.1em; left:0; right:0; position:absolute;}
         
@@ -227,11 +228,11 @@ export default XElement.define("x-layout-main", {
 
         <!-- breadcrumb -->
         <nav class="header breadcrumb">
-            <ul x-if="state.menu">
+            <ul x-if="state.menuMain">
                 <li>
                     <x-icon icon="x-menu" x-on:click="toggle-menu" class="toggle" x-class:toggled="state.toggled"></x-icon>
                 </li>
-                <li x-for="item in state.breadcrumb">
+                <li x-for="item in state.breadcrumb" x-class:empty="!item.label">
                     <x-anchor x-attr:href="item.href" class="plain" x-class:selected="(item!=state.breadcrumb[state.breadcrumb.length-1])" x-class:gray="item==state.breadcrumb[state.breadcrumb.length-1]">{{ item.label }}</x-anchor>
                     <x-icon icon="x-keyboard-arrow-right" class="separator"><x-icon>                    
                 </li>
@@ -248,7 +249,7 @@ export default XElement.define("x-layout-main", {
                 <div>
                     <x-button class="anchor" icon="x-keyboard-arrow-left" x-on:click="toggle-menu"></x-button>
                     <x-button class="anchor" icon="x-close" x-on:click="toggle-menu"></x-button>
-                    <x-menu x-prop:menu="state.menu"></x-menu>
+                    <x-menu x-prop:menu="state.menuMain"></x-menu>
                 </div>
             </nav>
             <div class="divider"></div>
@@ -266,9 +267,9 @@ export default XElement.define("x-layout-main", {
         appLogo:    xshell.config.get("app.logo"),
         appLabel:   xshell.config.get("app.label"),
         appBase:    xshell.config.get("app.base"),
-        userName:   xshell.identity.name,
-        userInitials: (() => { let w = xshell.identity.name.trim().split(/\s+/); return (w.length > 1 ? w[0][0] + w.at(-1)[0] : w[0].slice(0,2)); })().toUpperCase(),
-        menu:       null,
+        userName:   "",
+        userInitials: "",
+        menuMain:   null,
         menuTools:  null,
         toggled:    false,
         breadcrumb: [],
@@ -281,6 +282,9 @@ export default XElement.define("x-layout-main", {
             if (command == "load") {
                 //load
                 this.state.toggled = xshell.settings.getItem("x-layout-main.toggled", false);
+                this.state.userName = xshell.identity.name;
+                this.state.userInitials =  (() => { let w = xshell.identity.name.trim().split(/\s+/); return (w.length > 1 ? w[0][0] + w.at(-1)[0] : w[0].slice(0,2)); })().toUpperCase();
+                // auto close menu on navigation start (mobile)
                 this.bindEvent(xshell.bus, "xshell:navigation:start", () => {
                     if (Utils.probablyPhone()){
                         if (this.state.toggled) {
@@ -288,15 +292,11 @@ export default XElement.define("x-layout-main", {
                         }
                     }
                 });
-                this.bindEvent(xshell.bus, "xshell:navigation:end", (event) => {
-                    let href = event.detail.src;
-                    if (this.state.ul){
-                        let a = this.state.ul.querySelector(`x-anchor[href='${href}']`);
-                        a.classList.add("selected");
-                    }
-                });
-                this.bindEvent(this.state, "change:keyword", "search");
+                // bind refresh
+                this.bindEvent(xshell.bus, "xshell:menus:changed", "refresh")
                 this.bindEvent(this.page, "load", "refresh");
+                // bind search
+                this.bindEvent(this.state, "change:keyword", "search");
 
             } else if (command == "refresh") {
                 //refresh
@@ -305,7 +305,7 @@ export default XElement.define("x-layout-main", {
                 let breadcrumb = this.page.breadcrumb;
                 if (!module) {
                     //no module defined 
-                    this.state.menu = null;
+                    this.state.menuMain = null;
                     this.state.breadcrumb = [];
                     this.state.label = this.page.label;
                 } else if (breadcrumb && breadcrumb.length){
@@ -318,33 +318,31 @@ export default XElement.define("x-layout-main", {
                         }
                     }
                     module = xshell.modules.resolveModuleName(href);
-                    //show menu
-                    let menu = xshell.config.get(`modules.${module}.menus.main`);
-                    this.state.menu = menu;
-                    //show menu tools
-                    let menuTools = (xshell.config.has(`modules.${module}.menus.tools`) ? xshell.config.get(`modules.${module}.menus.tools`) : null);
-                    this.state.menuTools = menuTools;
+                    //show menu main and tools
+                    this.state.menuMain = xshell.menus.get("main");
+                    this.state.menuTools = xshell.menus.get("tools");
                     //show breadcrumb
                     this.state.breadcrumb = breadcrumb;
                     //show label
                     this.state.label = this.page.label;
-                } else {
-                    //show menu
-                    let menu = xshell.config.get(`modules.${module}.menus.main`);
-                    this.state.menu = menu;
-                    //show menu tools
-                    let menuTools = (xshell.config.has(`modules.${module}.menus.tools`) ? xshell.config.get(`modules.${module}.menus.tools`) : null);
-                    this.state.menuTools = menuTools;
+                } else { 
+                    // not found breadcrumb in page
+                    // show menu main and tools
+                    this.state.menuMain = xshell.menus.get("main");
+                    this.state.menuTools = xshell.menus.get("tools");
                     //breadcrumb
-                    let menuitems = Utils.findObjectsPath(menu, 'href', src);
-                    if (menuitems) {
-                        this.state.breadcrumb = menuitems;
-                        this.state.label = menuitems[menuitems.length -1].label;
-                    } else {
-                        this.state.breadcrumb = [
-                            { label: menu.label, href: menu.href}
-                        ];
-                        this.state.label = this.page.label;
+                    if (this.state.menuMain) {
+                        let menuitems = Utils.findObjectsPath(this.state.menuMain, 'href', src);
+                        if (menuitems) {
+                            this.state.breadcrumb = menuitems;
+                            this.state.label = menuitems[menuitems.length -1].label;
+                        } else {
+                            this.state.breadcrumb = [
+                                { label: this.state.menuMain.label, href: this.state.menuMain.href},
+                                { label: this.page.label }
+                            ];
+                            this.state.label = this.page.label;
+                        }
                     }
                 }
 

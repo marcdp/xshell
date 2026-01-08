@@ -83,6 +83,9 @@ export default class LoaderMd {
     async load(src, virtual_src) {
         // fetch markdown
         let response = await fetch(src);
+        if (response.status != 200) {
+            throw new Error(`Failed to load markdown source: ${src} (status: ${response.status})`);
+        }
         let markdown = await response.text();
         // create page
         let page = new HandlerMd(markdown, src, virtual_src);

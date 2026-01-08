@@ -44,6 +44,7 @@ export default XElement.define("x-pager", {
         onCommand(command, args) {
             if (command === "load") {
                 //load
+                
 
             } else if (command == "prev") {
                 //prev

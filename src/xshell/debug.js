@@ -4,7 +4,7 @@ export default class Debug {
 
 
     //ctor
-    constructor() {
+    constructor( ) {
     }
 
     //methods
@@ -18,6 +18,7 @@ export default class Debug {
         this.emit("log:error", { message: message, ...params });
     }
     emit(event, detail) {
+        console.log(" .... ", event, detail);
     }
 
 };

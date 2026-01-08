@@ -10,6 +10,7 @@ export default class Navigation {
     _bus = null;
     _config = null;
     _container = null;
+
     _mode = "hash"; //hash|path
     _assetsPrefix = "/assets";
     _routerPrefix = "/";
@@ -25,6 +26,10 @@ export default class Navigation {
     get mode() { return this._mode; }
     get assetsPrefix() { return this._assetsPrefix; }
     get routerPrefix() { return this._routerPrefix; }
+    get src() { 
+        let page = this.getPage();
+        return (page ? page.src : null);
+    }
     
     // init
     async init(){
@@ -124,7 +129,7 @@ export default class Navigation {
                 event.target.parentNode.removeChild(event.target);
             }
         });
-        xshell.container.appendChild(page);
+        this._container.appendChild(page);
         return new Promise((resolve) => {
             resolveFunc = resolve;
         });

@@ -137,8 +137,6 @@ export default class Page {
         });
     }
 
-    // rpc methods
-    async rpc(method, args) {
-    }
+    
    
 }

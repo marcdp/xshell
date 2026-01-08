@@ -95,14 +95,15 @@ export default class Loader {
                     let value = null;
                     let registryItem = {resource, definition, src, status: "pending"};
                     this._registry.push(registryItem);
-                    await this._bus.emit("loader:resource:fetch", {resource, src});
+                    
+                    await this._bus.emit("xshell:loader:resource:fetch", {resource, src});
                     try {
                         value = await loader.load(src, name, definition);
                         registryItem.status = "loaded";
-                        await this._bus.emit("loader:resource:loaded", {resource, src});
+                        await this._bus.emit("xshell:loader:resource:loaded", {resource, src});
                     } catch (e) {
                         registryItem.status = "error";
-                        await this._bus.emit("loader:resource:error", {resource, src});
+                        await this._bus.emit("xshell:loader:resource:error", {resource, src});
                         throw e;
                     }                    
                     return value;

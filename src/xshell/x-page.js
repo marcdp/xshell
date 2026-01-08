@@ -309,42 +309,15 @@ class XPage extends HTMLElement {
     async unmount() {
         //unmount
         if (this._page) {
-            xshell.debug.log(`x-page.: unmount '${this._page.src}' ...`);
             await this._page.unmount();
         }
     }
     async unload() {
         //unload
         if (this._page) {
-            xshell.debug.log(`x-page.: unload '${this._page.src}' ...`);
             await this._page.unload();
         }
     }
-    /*
-    navigate(src, settings) {
-        //navigate to
-        if (!settings) settings = {};
-        if (settings.breadcrumb) {
-            src += (src.indexOf("?") != -1 ? "&" : "?") + "xshell-page-breadcrumb=" + btoa(JSON.stringify(this.breadcrumb)).replace(/\+/g, "-").replace(/\//g, "_");
-        }
-        if (this.layout == "main" || this.layout == "stack") {
-            this.dispatchEvent(new CustomEvent("navigate", {detail: src}));
-        } else {
-            this.src = src;
-        }
-    }
-    async showPage({ src, sender, target }) {       
-        //show page stack
-        xshell.navigation.showPage( { src, sender, target });
-    }
-    async showStackedPage({ src }) {
-        //show page stack
-        xshell.navigation.showStackedPage( { src });
-    }
-    async showDialog({ src, sender }) {        
-        //show page dialog
-        return await xshell.dialog.showDialog( {src, sender });
-    }*/
     async queryClose() {
         let allowClose = true;
         // ... query close page (ask page for permissions to close) ...
