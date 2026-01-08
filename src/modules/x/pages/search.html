@@ -42,7 +42,7 @@
                             }
                         }
                     }
-                    for(let module of xshell.modules) {
+                    for(let module of xshell.modules.getModules()) {
                         for(let menu_name of xshell.config.getSubKeys("modules." + module.name + ".menus")){
                             let menu = xshell.config.get("modules." + module.name + ".menus." + menu_name);
                             searchRecursive(module, menu);

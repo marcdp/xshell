@@ -34,14 +34,14 @@ export default XElement.define("x-dropdown", {
         /* popover */
         :host(.popover) .body {            
             margin-top:1em;
-            margin-left:-1em;
+            margin-left:-.5em;
             min-width: clamp(22em, 100%, 200%);
         }
         :host(.popover) .body .helper {
             display: inline-block;
             position:absolute;
             z-index:10;
-            left: 1em;
+            left: .75em;
             top:-.9em;
             width: 0;
             height: 0;
@@ -51,7 +51,7 @@ export default XElement.define("x-dropdown", {
         }                  
         :host(.popover) .body .helper2 {
             display: inline-block;
-            left: 1em;
+            left: .75em;
             position:absolute;
             z-index:10;
             top:-.8em;

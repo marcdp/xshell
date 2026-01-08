@@ -234,36 +234,46 @@ x - show identity in default layout
 x - dialog -> passar el state a la pagina del dialog
 x - x-page -> pasarli d'alguna manera el state (por property)
 x - implement navigation.js
+x - xshell.tabs
+x - xshell.menu -- > composite menus (everybodu should use this service to create menus)
+x - modules -> menuas defined in modules participates to main menus
+x - bus asincrono
+x - menus -> sources
+x - Debug bus: debug.emit("log:info:..., eventa fins que la sessio de debug llegira
+
 
 - xshell.storage
 - xshell.settings -> storage
-- xshell.tabs
-- module x-idp-basic -> ask for login and password
-- path navigation
-- Debug bus: debug.emit("log:info:..., eventa fins que la sessio de debug llegira
-- El xshell ha de tenirbun canal de control(addeventlistener de missatges del sw)
 
+- path navigation
+
+
+- El xshell ha de tenirbun canal de control(addeventlistener de missatges del sw)
 
 - sw: avoid pass url of real service worker in query string- > security error!!
 
+- module x-idp-basic -> ask for login and password
 
-- modules -> menuas defined in modules participates to main menus
+- x-debugger module
 
 - rewrite normal anchor urls?
 - rewrite x-anchor urls?
 
 - record resources load time + size
 - show resources load time + size in debug pages + modules
-- hash navigation + path navigation flag (xshell.navigation.mode = "hash" | "path") -> use a web server different thatn http-server
+- hash navigation + path navigation flag (xshell.navigation.mode = "hash" | "path") 
 - zip packages modules
-- bus asincrono
 - deep links ?
+
+- menus: badges + icons
+- menus: evaluate ACL (when ....)
 
 
 FASE 2
 - xshell.api
 - xshell.permissions
 - xshell.fs
+- xshell.jobs
 
 
 - x-listview -- create x-listview-body, x-listview-head, x-listview-column, x-listview-row

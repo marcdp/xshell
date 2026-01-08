@@ -1,56 +1,24 @@
-import Utils from "./utils.js";
-
-// normalize urls
-function normalizeUrls(key, obj, from, path) {
-    if (typeof(obj) == "string") {
-        if (obj.startsWith("./") || obj.startsWith("../") || obj == ".") {
-            if (key == "href" && path) {
-                //relative to path
-                obj = Utils.combineUrls(path + "/", obj);
-            } else if (from) {
-                //relative to from (module url)
-                obj = Utils.combineUrls(from, obj);
-            }
-        }
-    } else if (Array.isArray(obj)) {
-        for (let i = 0; i < obj.length; i++) {
-            obj[i] = normalizeUrls(i, obj[i], from, path);
-        }
-    } else if (obj instanceof Object) {
-        for (let subkey in obj) {
-            obj[subkey] = normalizeUrls(subkey, obj[subkey], from, path);
-        }    
-    }
-    return obj;
-}
 
 // class
 export default class Config {
 
     //vars
     _config = {};
-    _listeners = [];
     
     //ctor
-    constructor({debug, bus}) {
+    constructor({ debug, bus, value }) {
         this._debug = debug;
         this._bus = bus;
+        for (let key in value) {
+            this._config[key] = value[key];
+        }
+        Object.freeze(this._config);
     }
 
     //props
     get config() { return this._config; }
 
     //methods
-    set(config, from, path) {
-        normalizeUrls("", config, from, path);
-        var keys = [];
-        for (let key in config) {
-            let value = config[key];
-            this._config[key] = value;
-            keys.push(key);
-        }
-        this._bus.emit("config:change");
-    }
     has(key) {
         let result = this._config[key];
         if (typeof (result) != "undefined") return true;

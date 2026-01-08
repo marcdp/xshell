@@ -12,6 +12,7 @@
     "menus.main": {
         "label": "Module X",
         "href":"",
+        "group": "x",
         "children": [
             { "label": "Debug", "href": "/pages/debug.html" },
             { "label": "Modules", "href": "/pages/modules.html" },
@@ -23,11 +24,7 @@
     },
     
     // resolver
-    //"loader.component:ace-editor": "https://unpkg.com/ace-custom-element@latest/dist/index.min.js",
     "global.resolver.component:ace-editor":"https://unpkg.com/ace-custom-element@latest/dist/index.min.js; loader=import;",
-    //"global.resolver.import:ace-editor":"https://unpkg.com/ace-custom-element@latest/dist/index.min.js",
-    //"global.resolver.import:ace-editor":"/vendor/ace-custom-element/index.min.js",
-
     "global.resolver.import:marked":"/vendor/marked/marked.esm.js",
     "global.resolver.page:{path}.md": "{path}.md; loader=/loaders/md.js; cache=true;",
     "global.resolver.import:x-element": "/controllers/x-element.js",

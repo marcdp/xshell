@@ -40,7 +40,8 @@ export default class Modules {
             };
             if (module.handler) {
                 tasks.push((async() => {
-                    instance.controller = await this._loader.load("module:" + module.handler);
+                    let moduleClass = await this._loader.load("module:" + module.handler);
+                    instance.controller = new moduleClass();
                 })());
             }
             this._modules.push(instance);
@@ -69,6 +70,18 @@ export default class Modules {
             }
         }
         return null;
+    }
+    getModule(name) {
+        //get module by name
+        for (let module of this._modules) {
+            if (module.name == name) {
+                return module;
+            }
+        }
+    }
+    getModules() {
+        //get all modules
+        return this._modules;
     }
 
     //styles

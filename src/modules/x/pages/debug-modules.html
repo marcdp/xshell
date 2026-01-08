@@ -36,7 +36,7 @@
                 //refresh
                 let modules = [];
                 for(let target of xshell.config.getAsObjects("modules")) {
-                    let module = xshell.modules[target.name];
+                    let module = xshell.modules.getModule(target.name);
                     let valid = true;
                     if (this.state.name && target.name.indexOf(this.state.name) == -1 ) valid = false;
                     if (this.state.label && (target.label || "").indexOf(this.state.label) == -1 ) valid = false;

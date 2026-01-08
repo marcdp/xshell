@@ -14,7 +14,6 @@ export default class Resolver {
         for(let key of config.getKeys("resolver")) {
             this.addDefinition(key.substring(key.indexOf(".") + 1), config.get(key));
         }
-
     }
 
 
@@ -33,7 +32,7 @@ export default class Resolver {
             k = j + 1;
             i = resource.indexOf("{", j), j = resource.indexOf("}", i);
         }
-        regexp += resource.substring(k);
+        regexp += resource.substring(k) + "$";
         // attributes
         let attributes= {};
         if (src.includes(";")) {
@@ -70,7 +69,8 @@ export default class Resolver {
         return false;
     }
     resolve(resource) {        
-        //for(let i = this._definitions.length - 1; i >= 0; i--) {
+        if (resource.indexOf("#") != -1) resource = resource.split("#")[0];
+        if (resource.indexOf("?") != -1) resource = resource.split("?")[0];
         for(let i = 0; i < this._definitions.length ; i++) {
             let definition = this._definitions[i];
             let match = resource.match(definition.regexp);
