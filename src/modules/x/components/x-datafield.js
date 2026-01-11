@@ -478,6 +478,7 @@ export default XElement.define("x-datafield", {
                 if (lang) {
                     this.state.langs.push(lang);
                     this.state.langIndex = this.state.langs.length - 1;
+                    this.invalidate();
                 }
 
             } else if (command == "lang-changed") {
@@ -551,6 +552,9 @@ export default XElement.define("x-datafield", {
                         if (partValue.length) parts.push("i18n:" + targetLang + "=" + partValue.replaceAll("|", "&#124;"));
                     }
                 }
+                if (parts.length == 0) {
+                    parts.push("i18n:" + xshell.i18n.getDefaultLang() + "=");
+                }
                 this.state.value = parts.join("|");
 
             } else if (command == "search-input") {
@@ -581,6 +585,7 @@ export default XElement.define("x-datafield", {
                     }
                 }
                 this.state.langs = langs;
+                if (this.state.langIndex >= langs.length) this.state.langIndex = 0;
             }
             //errors
             if (this.state.required && !this.state.value) {

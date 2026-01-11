@@ -22,6 +22,7 @@ export default class Modules {
     async init() {
         let tasks = [];
         this._modules = [];
+        const assetsPrefix = this._config.get("xshell.assetsPrefix");
         for (let module of this._config.getAsObjects("modules")) {
             // load stylesheets
             let styles = this._config.get("modules." + module.name + ".styles", []);
@@ -33,7 +34,7 @@ export default class Modules {
             let instance = {
                 name: module.name,
                 label: module.label || module.name,
-                path: "/" + module.name,
+                path: "/" + assetsPrefix + "/" + module.name,
                 controller: {
                     onCommand: function() {}
                 }

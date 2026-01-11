@@ -4,14 +4,12 @@
     "label": "Module 1 title",
     "icon": "module1-add",
     "version": "0.1.5",
-    "type": "application",
     "handler": "./module.js",
     "depends": [],
     "styles": ["/css/styles.css"],
-    "start": "/pages/page0.html",
 
     // menu
-    "menus.main": {
+    "menus.main.main": [{
         "label": "Amazon S3",
         "href": "/pages/page0.html",
         "children": [
@@ -27,13 +25,12 @@
             { "label": "Page 8", "href": "/pages/page8.html" },
             { "label": "Page Not found", "href": "/pages/page-not-found.html" }                
         ]
-    },
-    "menus.tools": {
-        "label": "",
-        "children": [
-            { "label": "My things", "href": "/pages/page1.html", "aicon":"x-bell" },
-            { "label": "Your things", "href": "/pages/page2.html"  }
-            //{ "label": "", "href": "/pages/page2.html", "icon":"x-debug", "dropdown": true }
-        ]
-    }
+    }],
+    "menus.tools": [
+        { "label": "My things", "href": "/pages/page1.html", "aicon":"x-bell" },
+        { "label": "Your things", "href": "/pages/page2.html"  }
+    ],
+
+    // global areas
+    "global.xshell.areas.main.home": "/pages/page0.html"
 }

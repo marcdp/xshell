@@ -22,7 +22,7 @@ export default XElement.define("x-dropdown", {
             min-height:1em;
             padding: var(--x-dropdown-padding-vertical) var(--x-dropdown-padding-horizontal) var(--x-dropdown-padding-vertical) var(--x-dropdown-padding-horizontal);            
             max-height:calc(100vh - 7em);
-            overflow:auto;
+            __overflow:auto;
             scrollbar-width: var(--x-scrollbar-width);
             scrollbar-gutter: var(--x-scrollbar-gutter);
         }

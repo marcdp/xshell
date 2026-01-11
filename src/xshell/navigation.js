@@ -7,16 +7,17 @@ const HASH_PREFIX = "#!";
 export default class Navigation {
 
     // vars
+    _areas = null;
     _bus = null;
     _config = null;
     _container = null;
 
     _mode = "hash"; //hash|path
-    _assetsPrefix = "/assets";
     _routerPrefix = "/";
     
     // ctor
-    constructor( { bus, config, container} ) {
+    constructor( { areas, bus, config, container} ) {
+        this._areas = areas;
         this._bus = bus;
         this._config = config;
         this._container = container;
@@ -24,7 +25,6 @@ export default class Navigation {
 
     // props
     get mode() { return this._mode; }
-    get assetsPrefix() { return this._assetsPrefix; }
     get routerPrefix() { return this._routerPrefix; }
     get src() { 
         let page = this.getPage();
@@ -32,7 +32,7 @@ export default class Navigation {
     }
     
     // init
-    async init(){
+    async init() {
         // add event listener hashchange
         window.addEventListener("hashchange", () => {
             this._navigate(document.location.hash);
@@ -41,9 +41,8 @@ export default class Navigation {
         if (document.location.hash) {
             await this._navigate(document.location.hash);
         } else {
-            let startModule = this._config.get("xshell.start");
-            let startPage = this._config.get("modules." + startModule + ".start", "");
-            document.location.hash = HASH_PREFIX + startPage;
+            let defaultArea = this._areas.getDefaultArea();
+            document.location.hash = HASH_PREFIX + defaultArea.home;
         }
     }
 

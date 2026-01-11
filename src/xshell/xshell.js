@@ -1,4 +1,5 @@
 import Api from "./api.js";
+import Areas from "./areas.js";
 import Auth from "./auth.js";
 import Binds from "./binds.js";
 import Bus from "./bus.js";
@@ -25,11 +26,13 @@ class XShell {
 
     //fields
     _api = null;
+    _areas = null;
     _auth = null;
     _bus = null;
     _config = null;
     _container = null;
     _debug = null;
+    _dialog = null;
     _i18n = null;
     _identity = null;
     _loader = null;
@@ -50,6 +53,7 @@ class XShell {
 
     //props
     get api() { return this._api; }
+    get areas() { return this._areas; }
     get auth() { return this._auth; }
     get bus() { return this._bus; }
     get config() { return this._config; }
@@ -77,13 +81,14 @@ class XShell {
         this._dialog = new Dialog();
         this._config = new Config({ debug: this._debug, bus: this._bus, value: value });
         this._api = new Api( { config: this._config} );
+        this._areas = new Areas( { bus: this._bus, config: this._config } );
         this._container = document.body;
         this._resolver = new Resolver( { debug: this._debug, config: this._config } );
         this._loader = new Loader({ bus: this._bus, config: this._config, debug: this._debug, resolver: this._resolver });
         this._auth = new Auth({ config: this._config, loader: this._loader });
         this._i18n = new I18n();
         this._modules = new Modules( { bus: this._bud, config: this._config, loader: this._loader, resolver: this._resolver } );
-        this._navigation = new Navigation( { bus: this._bus, config: this._config, container: this._container });
+        this._navigation = new Navigation( { areas: this._areas, bus: this._bus, config: this._config, container: this._container });
         this._settings = new Settings();
         this._storage = new Storage( {config: this.config } );
         this._pages = new Pages();

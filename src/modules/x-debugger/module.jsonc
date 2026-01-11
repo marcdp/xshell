@@ -7,13 +7,16 @@
     "depends": [],
     "styles": [],
     "icon": "",
-    "type": "library",
-    "handler": "/module.js",
-    "start": "/pages/index.html",
-    "menus.main": {
+    "handler": "/module.js",    
+
+    // menus
+    "menus.main.debugger": [{
         "label": "X-Debugger",
         "href": "/pages/index.html",
-        "group": "x-debugger",
         "childrenSource": "x-debugger:tabs-menuitems"
-    }
+    }],
+
+    // global areas
+    "global.xshell.areas.debugger.label": "X-Debugger",
+    "global.xshell.areas.debugger.home": "/pages/index.html"
 }

@@ -1,0 +1,21 @@
+{
+    //module
+    "name": "x-auth",
+    "label": "XAuth",
+    "version": "0.9.0",
+    "depends": [],
+    "styles": [],
+    "icon": "",
+
+    // menus
+    "menus.profile": [
+        {"label": "Logout A", "href":"/pages/logout1.html", "children": [
+            {"label": "Sublogout A1", "href":"/pages/logout2.html"},
+            {"label": "Sublogout A2", "href":"/pages/logout3.html"}
+        ]},
+        {"label": "Logout B", "href":"/pages/logout4.html"},
+        {"label": "-"},
+        {"label": "Logout C", "href":"/pages/logout5.html"}
+    ]
+
+}

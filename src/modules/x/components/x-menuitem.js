@@ -20,6 +20,7 @@ export default XElement.define("x-menuitem", {
         :host x-anchor[disabled] x-icon {color:var(--x-color-text-disabled)!important;}
         :host x-anchor[disabled] span.label {color:var(--x-color-text-disabled)!important; padding-left:0!important;}
         :host(.selected) x-anchor {background:var(--x-color-background-x-gray);}
+        :host HR {border-top:var(--x-layout-main-border);; margin-top:.5em; margin-bottom:.5em; display:block; box-sizing: border-box; width:100%;}
         
         /* dropdown */
         x-contextmenu {
@@ -32,7 +33,7 @@ export default XElement.define("x-menuitem", {
             margin-top:-.2em;
         }
         x-contextmenu.right {
-            left:calc(-100% - .9em);
+            left:calc(-100% + .5em);
         }
 
         /* inline */
@@ -62,7 +63,8 @@ export default XElement.define("x-menuitem", {
         childsRight: true
     },
     template: `
-        <x-anchor class="menuitem anchor" x-attr:href="state.href" x-attr:command="state.command" x-attr:disabled="state.disabled" x-attr:expanded="state.expanded" >
+        <hr x-if="state.label=='-'" />
+        <x-anchor x-else class="menuitem anchor" x-attr:href="state.href" x-attr:command="state.command" x-attr:disabled="state.disabled" x-attr:expanded="state.expanded" >
             <x-icon x-if="state.checked" icon="x-check"></x-icon>
             <x-icon x-if="!state.checked && state.icon" class="icon"x-attr:icon="state.icon"></x-icon>
             <span   x-if="state.label" class="label">{{ state.label }}</span>
@@ -77,26 +79,6 @@ export default XElement.define("x-menuitem", {
         onCommand(command, args){
             if (command == "load") {
                 //load
-                /* ???????????
-                this.bindEvent(this.state, "change:menuitem", (event) => {
-                    let newValue = args.newValue;
-                    this.state.icon = newValue.icon;
-                    this.state.label = newValue.label;
-                    this.state.href = newValue.href;
-                    this.state.command = newValue.command;
-                    this.state.checked = newValue.checked;
-                    this.state.disabled = newValue.disabled;
-                    this.state.suffix = newValue.suffix;
-                    if (newValue.children) {
-                        this.replaceChildren();
-                        for(let child of newValue.children) {
-                            let item = document.createElement("x-menuitem");
-                            if (child.href) item.setAttribute("href", child.href);
-                            item.menuitem = child;
-                            this.appendChild(item);
-                        }
-                    }
-                });*/
                 this.addEventListener("mouseenter", ()=>{
                     if (this.classList.contains("inline")) {
                     } else {
