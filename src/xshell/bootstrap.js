@@ -2,9 +2,6 @@
 const meta = name => document.head.querySelector(`meta[name="${name}"]`)?.content;
 const configUrl = meta("xshell.app_config_url");
 const swUrl = meta("xshell.sw_url");
-
-//const configUrl = document.currentScript.dataset.config;
-//const swUrl = document.currentScript.dataset.sw;
 const appUrl = document.location.origin + document.location.pathname;
 const appUrlDir = appUrl.substring(0, appUrl.lastIndexOf("/") + 1)  ;
 const appUrlBase = appUrlDir.substring(0, appUrlDir.length - 1);
@@ -61,8 +58,9 @@ async function loadXShellConfig(config) {
     const url = bootstrapUrlDir + "/xshell.jsonc";
     const json = stripJsonComments(await (await fetch(url)).text());
     const xshellConfig = JSON.parse(json);
+    const assetsPrefix = xshellConfig["xshell.assetsPrefix"];
     config["xshell.src"] = url;
-    normalizeUrls("", xshellConfig, "/xshell");
+    normalizeUrls("", xshellConfig, "/" + assetsPrefix + "/xshell");
     for(let key in xshellConfig) {
         config[key] = xshellConfig[key];
     }
@@ -82,6 +80,7 @@ async function loadAppConfig(config) {
     return config;
 }
 async function loadModulesConfig(config) {
+    const assetsPrefix = config["xshell.assetsPrefix"];
     // load modules config
     let names = [];
     for(let key in config) {
@@ -114,23 +113,26 @@ async function loadModulesConfig(config) {
         moduleConfig[`depends`] = moduleConfig[`depends`] || [];
         moduleConfig[`styles`] = moduleConfig[`styles`] || [];
         // normalize urls
-        normalizeUrls("", moduleConfig, "/" + name);
+        normalizeUrls("", moduleConfig, "/" + assetsPrefix + "/" + name);
         // merge module config into app config
         for(let key in moduleConfig) {
             let value = moduleConfig[key];
             if (key.startsWith("global.")){
                 key = key.substring(key.indexOf(".")+1).replaceAll("{module}", name);
+                if (key.indexOf(":/")!=-1) {
+                    debugger;
+                }
                 config[key] = value.replaceAll("{module}", name);
             } else {
                 config["modules." + name + "." + key] = value;
             }
         }
         // add resolvers
-        config[`resolver.icon:${name}-{name}`] = `/${name}/icons/{name}.svg; loader=icon; cache=true;`;
-        config[`resolver.component:${name}-{name}`] = `/${name}/components/${name}-{name}.js; loader=import; cache=true;`;
-        config[`resolver.layout:${name}-layout-{name}`] = `/${name}/layouts/${name}-layout-{name}.js; loader=import; cache=true;`;
-        config[`resolver.page:/${name}/{path}.html`] = `/${name}/{path}.html; loader=html; cache=true;`;                
-        config[`resolver.module:/${name}/{path}.js`] = `/${name}/{path}.js; loader=import; cache=true;`;
+        config[`resolver.icon:${name}-{name}`] = `/${assetsPrefix}/${name}/icons/{name}.svg; loader=icon; cache=true;`;
+        config[`resolver.component:${name}-{name}`] = `/${assetsPrefix}/${name}/components/${name}-{name}.js; loader=import; cache=true;`;
+        config[`resolver.layout:${name}-layout-{name}`] = `/${assetsPrefix}/${name}/layouts/${name}-layout-{name}.js; loader=import; cache=true;`;
+        config[`resolver.page:/${assetsPrefix}/${name}/{path}.html`] = `/${assetsPrefix}/${name}/{path}.html; loader=html; cache=true;`;                
+        config[`resolver.module:/${assetsPrefix}/${name}/{path}.js`] = `/${assetsPrefix}/${name}/{path}.js; loader=import; cache=true;`;
     }
     // log
     console.log("bootstrap: config", config);
@@ -146,16 +148,17 @@ async function installServiceWorker(config) {
         scope: document.location.pathname
     });
     // creates rules to send to service worker
-    let xshellVersion = config["xshell.version"];
+    const xshellVersion = config["xshell.version"];
+    const assetsPrefix = config["xshell.assetsPrefix"];
     let rules = [];
-    rules.push({ src: combineUrls(appUrl, "xshell"), dst: bootstrapUrlDir, version: xshellVersion, name:"xshell", exceptions:[bootstrapUrlDir + "/xshell.jsonc"]});
+    rules.push({ src: combineUrls(appUrl, assetsPrefix + "/xshell"), dst: bootstrapUrlDir, version: xshellVersion, name:"xshell", exceptions:[bootstrapUrlDir + "/xshell.jsonc"]});
     for(var key in config) {
         if (key.startsWith("modules.") && key.endsWith(".src")) {
             const moduleName = key.split(".")[1];
             const moduleSrc = config[key];
             const moduleSrcDir = moduleSrc.substring(0, moduleSrc.lastIndexOf("/"));
             const moduleVersion = config[`modules.${moduleName}.version`];
-            rules.push({ src: combineUrls(appUrl, moduleName), dst: moduleSrcDir, version: moduleVersion, name: moduleName, exceptions: [moduleSrc]});
+            rules.push({ src: combineUrls(appUrl, assetsPrefix + "/" + moduleName), dst: moduleSrcDir, version: moduleVersion, name: moduleName, exceptions: [moduleSrc]});
         }
     }
     // wait for ready

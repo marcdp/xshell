@@ -31,12 +31,12 @@ export default XElement.define("x-layout-main", {
         
         .header.shell {z-index:6; padding-left:.65em;}
 
-        .header.breadcrumb {z-index:5; padding-right:1.75em;}
+        .header.breadcrumb {z-index:5; padding-right:1.5em;}
 
-        /* modules */
-        .modules {color:var(--x-color-text); margin-left:.75em; margin-right:.5em; display:block;}
-        .modules:hover > x-icon {color:var(--x-color-primary);}
-        .modules:active > x-icon {color:var(--x-color-primary-dark);}
+        /* areas */
+        .areas {color:var(--x-color-text); margin-left:.75em; margin-right:.5em; display:block;}
+        .areas:hover > x-icon {color:var(--x-color-primary);}
+        .areas:active > x-icon {color:var(--x-color-primary-dark);}
 
         /* search */
         .header .search {display:flex;}
@@ -194,35 +194,29 @@ export default XElement.define("x-layout-main", {
         <!-- shell header -->
         <nav class="header shell">
 
-            <a class="logo" x-attr:href="state.appBase" x-if="state.logo">
-                <img x-attr:src="state.appLogo" x-attr:title="state.appLabel">
+            <a class="logo" x-attr:href="state.appBase" x-if="state.appIcon">
+                <img x-attr:src="state.appIcon" x-attr:title="state.appLabel">
             </a>
             
-            <x-dropdown class="modules popover">
+            <x-dropdown class="areas popover">
                 <x-icon tabindex="1" icon="x-apps" class="size-x2"></x-icon>
-                <x-page slot="dropdown" src="/x/pages/modules.html" loading="lazy"></x-page>
+                <x-page slot="dropdown" src="/pages/areas.html" loading="lazy"></x-page>
             </x-dropdown>
 
             <x-dropdown class="input-dropdown">
                 <div class="search">
                     <x-datafield type="search" placeholder="Search" x-model="state.keyword" ></x-datafield>
                 </div>
-                <x-page slot="dropdown" src="/x/pages/search.html" loading="lazy"></x-page>
+                <x-page slot="dropdown" src="/pages/search.html" loading="lazy"></x-page>
             </x-dropdown>
 
             <div class="spacer"></div>
 
             <x-dropdown class="popover left" collapse-on-click>
                 <x-button x-attr:label="state.userInitials" x-attr:title="state.userName" class="round light"></x-button>
-                <x-page slot="dropdown" src="/x/pages/identity.html" loading="lazy"></x-page>
+                <x-page slot="dropdown" src="/pages/identity.html" loadingg="lazy"></x-page>
+                <x-menu slot="dropdown" x-prop:menu="state.menuProfile"></x-menu>
             </x-dropdown>
-
-            <!--
-            <x-dropdown x-if="state.shellDebug" class="debug popover left" collapse-on-click>
-                <x-icon tabindex="1" icon="x-debug" class="size-x2"></x-icon>
-                <x-page slot="dropdown" src="/x/pages/debug.html" loading="lazy"></x-page>
-            </x-dropdown>
-            -->
 
         </nav>
 
@@ -234,13 +228,14 @@ export default XElement.define("x-layout-main", {
                 </li>
                 <li x-for="item in state.breadcrumb" x-class:empty="!item.label">
                     <x-anchor x-attr:href="item.href" class="plain" x-class:selected="(item!=state.breadcrumb[state.breadcrumb.length-1])" x-class:gray="item==state.breadcrumb[state.breadcrumb.length-1]">{{ item.label }}</x-anchor>
-                    <x-icon icon="x-keyboard-arrow-right" class="separator"><x-icon>                    
+                    <x-icon icon="x-keyboard-arrow-right" class="separator"><x-icon>
                 </li>
             </ul>
 
             <div class="spacer"></div>
 
             <x-menu x-prop:menu="state.menuTools" class="horizontal"></x-menu>
+            
         </nav>
 
         <!-- body -->
@@ -249,7 +244,7 @@ export default XElement.define("x-layout-main", {
                 <div>
                     <x-button class="anchor" icon="x-keyboard-arrow-left" x-on:click="toggle-menu"></x-button>
                     <x-button class="anchor" icon="x-close" x-on:click="toggle-menu"></x-button>
-                    <x-menu x-prop:menu="state.menuMain"></x-menu>
+                    <x-menumain x-prop:menu="state.menuMain"></x-menumain>
                 </div>
             </nav>
             <div class="divider"></div>
@@ -264,13 +259,14 @@ export default XElement.define("x-layout-main", {
     `,
     state: {
         status: "",
-        appLogo:    xshell.config.get("app.logo"),
+        appIcon:    xshell.config.get("app.icon"),
         appLabel:   xshell.config.get("app.label"),
         appBase:    xshell.config.get("app.base"),
         userName:   "",
         userInitials: "",
         menuMain:   null,
         menuTools:  null,
+        menuProfile: null,
         toggled:    false,
         breadcrumb: [],
         label:      "",
@@ -321,6 +317,7 @@ export default XElement.define("x-layout-main", {
                     //show menu main and tools
                     this.state.menuMain = xshell.menus.get("main");
                     this.state.menuTools = xshell.menus.get("tools");
+                    this.state.menuProfile = xshell.menus.get("profile");
                     //show breadcrumb
                     this.state.breadcrumb = breadcrumb;
                     //show label
@@ -330,6 +327,7 @@ export default XElement.define("x-layout-main", {
                     // show menu main and tools
                     this.state.menuMain = xshell.menus.get("main");
                     this.state.menuTools = xshell.menus.get("tools");
+                    this.state.menuProfile = xshell.menus.get("profile");
                     //breadcrumb
                     if (this.state.menuMain) {
                         let menuitems = Utils.findObjectsPath(this.state.menuMain, 'href', src);

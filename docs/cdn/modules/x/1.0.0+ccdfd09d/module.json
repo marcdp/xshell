@@ -7,7 +7,6 @@
     "/css/styles.css"
   ],
   "icon": "",
-  "type": "library",
   "start": "",
   "menus.main": {
     "label": "Module X",

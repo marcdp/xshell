@@ -1,19 +1,16 @@
 {
     //module
-    "name": "x-man",
-    "label": "XShell Manual",
+    "name": "x-help",
+    "label": "XShell help",
     "version": "1.0.0",
     "depends": [],
     "styles": [],
     "icon": "",
-    "type": "application",
-    "start": "/pages/index.md",
 
     // menus
-    "menus.main": {
-        "label": "XShell Manual",
+    "menus.main.help": [{
+        "label": "XShell Help",
         "href": "/pages/index.md",
-        "group": "x-man",
         "children": [
             {"label": "Shell", "href":"/pages/shell/index.md", "children":[                
             ]},
@@ -58,6 +55,10 @@
                 {"label": "Wizard", "href":"/pages/components/wizard.md"}
             ]}
         ]
-    }  
+    }],
+
+    // global areas
+    "global.xshell.areas.help.label": "Help",
+    "global.xshell.areas.help.home": "/pages/index.md"
 
 }

@@ -59,6 +59,9 @@ export default class I18n {
         return [...result];
         
     }
+    getDefaultLang(){
+        return this.config.lang;
+    }
     getLang(id) {
         let result = this._cache[id];
         if (!result) {

@@ -1,0 +1,46 @@
+
+<script type="module">
+    import xshell, { Utils } from "xshell";
+    import XController from "x-controller";
+    
+    xshell.pages.createController(new XController({
+        state: {
+            areas: xshell.areas.getAreas(),
+            selected: ""
+        },
+        async onCommand(command, args, page) {
+            if (command == "load") {
+                // listen for navigation end event to update selected area
+                page.bindEvent(xshell.bus, "xshell:navigation:end", "refresh");
+                // refresh areas
+                await this.onCommand("refresh");
+
+            } else if (command == "refresh") {
+                // refresh selected area
+                let mainMenu = xshell.menus.getMainMenu();
+                if (mainMenu) {
+                    this.state.selected = mainMenu.area || "main";
+                }
+            }
+        }
+    }));
+</script>
+
+<template>
+    <p>
+        Please select the area to navigate:
+    </p>
+    
+    <x-listview view="icons">
+        <x-listview-item 
+            x-for="area in state.areas"
+            x-class:selected="(state.selected == area.id)"
+            x-attr:label="area.label"
+            x-attr:description="area.description"
+            x-attr:icon="area.icon"
+            x-attr:href="area.href"
+            target="#root"
+        ></x-listview-item>
+    </x-listview>       
+    
+</template>

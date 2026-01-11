@@ -65,13 +65,14 @@ export default class Loader {
             let loader = loaders[definition.loader];
             if (!loader) {
                 let appBase = this._config.get("app.base");
+                let assetsPrefix = this._config.get("xshell.assetsPrefix");
                 let loaderUrl = definition.loader;
                 if (loaderUrl.indexOf(":")!=-1) {
                     loaderUrl = definition.loader;
                 } else if (loaderUrl.indexOf("/")!=-1) {
                     loaderUrl = appBase + definition.loader;
                 } else {
-                    loaderUrl = appBase + "/xshell/loaders/" + definition.loader + ".js";
+                    loaderUrl = appBase + "/" + assetsPrefix + "/xshell/loaders/" + definition.loader + ".js";
                 }
                 let loaderToUse = new (await import(loaderUrl)).default();
                 loaders[definition.loader] = loaderToUse;

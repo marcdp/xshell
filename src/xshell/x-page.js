@@ -144,6 +144,7 @@ class XPage extends HTMLElement {
         xshell.debug.log(`x-page: load '${this.src} ...`);
         let src = this.src;
         if (src.indexOf("error") != -1) {
+            //debugger;
             //return;
         }
         //reset

@@ -6,11 +6,9 @@
     "version": "0.1.0",
     "depends": [],  
     "styles": [],
-    "type": "application",      
-    "start": "/pages/page2.html",
 
     // menu
-    "menus.main": {
+    "menus.main.main": [{
         "label": "Amazon S5555",
         "children": [
             { "label": "page 1", "href": "/pages/page1.html", "children":[
@@ -19,5 +17,5 @@
                 { "label": "Page 3", "href": "/pages/page3.html"}
             ]
         }]
-    }
+    }]
 }

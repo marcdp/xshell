@@ -11,10 +11,10 @@ export default class Menus {
     _config = null;
     _navigation = null;
     _modules = null;
-
+    // sources of menu items registered by modules
     _sources = {};
-
-    _computed = {};
+    // computed menus
+    _menus = {};
 
     // ctor
     constructor( { bus, config, modules, navigation } ) {
@@ -30,8 +30,12 @@ export default class Menus {
     init() {
         this._refresh();
     }
-    get(name){
-        return this._computed[name];
+    get(name) {
+        return this._menus[name];
+    }
+    getMainMenu() {
+        debugger;
+        return this._menus[MENU_MAIN];
     }
     registerSource(name, source) {
         // register a menu source, which can provide menu items dynamically, and recompute them on events it depends on
@@ -48,85 +52,73 @@ export default class Menus {
         let src = page ? page.src : "";
         if (page.srcPage) src = page.srcPage;
         if (src.indexOf("#")!=-1) src = src.substr(0, src.indexOf("#"));        
-        // build from config and from dinamic sources
+        // build menus from config and from dinamic sources
         let cache = {};
         for(let key in this._config.config) {
             if (key.startsWith("modules.") && key.indexOf(".menus.") != -1) {
-                let moduleName = key.substring(key.indexOf(".") + 1, key.indexOf(".menus."));
-                let menuName = key.substring(key.lastIndexOf(".") + 1);
-                let menu = this._cloneMenuitemRecursive(this._config.config[key], moduleName, "", src);
+                const keyParts = key.split(".");
+                const moduleName = keyParts[1];
+                const menuName = keyParts[3];
+                const menuArea = keyParts[4] || (menuName == MENU_MAIN ? "main" : "");
+                const menuItems = this._config.config[key];
                 if (!cache[menuName]) cache[menuName] = [];
-                cache[menuName].push(menu);
-            }
-        }
-        // get active group
-        let group = "";
-        for(let menuName in cache) {
-            let menus = cache[menuName];
-            let menuitems = Utils.findObjectsPath(menus, 'href', src);
-            if (menuitems && menuitems.length > 0) {
-                group = menuitems[0].group || "";
-            }
-        }
-        // remove menus from other groups
-        for(let menuName in cache) {
-            let menus = cache[menuName];
-            for(let i = menus.length - 1; i >= 0; i--) {
-                let menu = menus[i];
-                let menuGroup = menu.group || "";
-                if (group != menuGroup) {
-                    menus.splice(i, 1);
+                for(let menuitem of menuItems.map(item => this._cloneMenuitemRecursive(item, moduleName, menuArea, "", src))){
+                    cache[menuName].push(menuitem);
                 }
             }
-            cache[menuName] = menus;
+        }
+        // get active area for main menu
+        let area = null;
+        for(let name in cache) {
+            if (name == MENU_MAIN) {
+                // for main menu, merge all areas into one menu
+                const menu = cache[name];
+                let menuitems = Utils.findObjectsPath(menu, 'href', src);
+                if (menuitems && menuitems.length > 0) {
+                    area = menuitems[0].area;
+                }
+                // remove menus from other areas
+                for(let i = menu.length - 1; i >= 0; i--) {
+                    let menuArea = menu[i].area || "";
+                    if (area != menuArea) {
+                        cache[name].splice(i, 1);
+                    }
+                }
+            }
         }
         // for each menu, merge menuitems
-        for(let menuName in cache) {
-            let menus = cache[menuName];
-            // TODO ...
-        }
-        // convert each menu to a rooted menu
-        for(let menuName in cache) {
-            let menus = cache[menuName];
-            let menu = menus[0];
-            if (menus.length > 1) {
-                menu = {
-                    label: "",
-                    children: menus
-                }
-            }            
-            cache[menuName] = menu;
-        }
+        // TODO ...
         // if changed, apply changes
-        if (JSON.stringify(this._computed) != JSON.stringify(cache)) {
+        if (JSON.stringify(this._menus) != JSON.stringify(cache)) {
             // assign new value
-            this._computed = cache;
+            this._menus = cache;
             // emit event
             this._bus.emit("xshell:menus:changed", { } );
         }
     }
-    _evaluateMenuitemSource(sourceName, moduleName, src) {
+    _evaluateMenuitemSource(sourceName, moduleName, areaName, src) {
         // evaluate a menu source
         let source = this._sources[sourceName];
         if (source) {
             let modulePath = this._modules.getModule(moduleName).path;
             let menuitems = source.resolve();
-            return menuitems.map( menuitem => this._cloneMenuitemRecursive(menuitem, moduleName, modulePath, src) );
+            return menuitems.map( menuitem => this._cloneMenuitemRecursive(menuitem, moduleName, areaName, modulePath, src) );
         }
     }
-    _cloneMenuitemRecursive(menuitem, moduleName, hrefPrefix="", src) {
+    _cloneMenuitemRecursive(menuitem, moduleName, areaName, hrefPrefix, src) {
         // clone menu item recursively
         let href = (menuitem.href ? (hrefPrefix + menuitem.href) : null);
         let selected = (src == (href && href.indexOf("#")!=-1 ? href.substring(0, href.indexOf("#")) : href));        
-        let result ={
+        let result = {
             label: menuitem.label,
             href: href,
             icon: menuitem.icon || null,
-            group: menuitem.group || "",
+            module: moduleName,
+            area: areaName,
             selected: selected,
             children: (menuitem.children ? 
-                menuitem.children.map( child => this._cloneMenuitemRecursive(child, moduleName, hrefPrefix, src) ) : 
-                (menuitem.childrenSource ? this._evaluateMenuitemSource(menuitem.childrenSource, moduleName, src)  : []) 
+                menuitem.children.map( child => this._cloneMenuitemRecursive(child, moduleName, areaName, hrefPrefix, src) ) : 
+                (menuitem.childrenSource ? this._evaluateMenuitemSource(menuitem.childrenSource, moduleName, areaName, hrefPrefix, src)  : []) 
             )
         }
         return Object.freeze(result);

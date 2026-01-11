@@ -7,21 +7,6 @@
     "depends": [],
     "styles": ["/css/styles.css"],
     "icon": "",
-    "type": "library",
-    "start": "",
-    "menus.main": {
-        "label": "Module X",
-        "href":"",
-        "group": "x",
-        "children": [
-            { "label": "Debug", "href": "/pages/debug.html" },
-            { "label": "Modules", "href": "/pages/modules.html" },
-            { "label": "Language picker", "href": "/pages/lang-picker.html" },
-            { "label": "Playground", "href": "/pages/playground.html" },
-            { "label": "Search", "href": "/pages/search.html" },
-            { "label": "Google", "href": "http://www.google.com/", "target":"_blank"}
-        ]
-    },
     
     // resolver
     "global.resolver.component:ace-editor":"https://unpkg.com/ace-custom-element@latest/dist/index.min.js; loader=import;",
