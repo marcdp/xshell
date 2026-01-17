@@ -91,7 +91,7 @@ class XShell {
         this._navigation = new Navigation( { areas: this._areas, bus: this._bus, config: this._config, container: this._container });
         this._settings = new Settings();
         this._storage = new Storage( {config: this.config } );
-        this._pages = new Pages();
+        this._pages = new Pages( {config: this.config } );
         this._tabs = new Tabs( { bus: this._bus } );
         this._menus = new Menus( { bus: this._bus, config: this._config, modules: this._modules, navigation: this._navigation } );
         // auth

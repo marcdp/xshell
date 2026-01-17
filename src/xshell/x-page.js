@@ -168,7 +168,8 @@ class XPage extends HTMLElement {
         //fetch page
         let page = null;
         try {
-            page = await xshell.loader.load("page:" + src);
+            const pageClass = await xshell.loader.load("page:" + src);
+            page = new pageClass( {src} );
         } catch(e) {
             this.error({ 
                 code: 404, 
@@ -188,7 +189,7 @@ class XPage extends HTMLElement {
         }
         if (!layoutName) layoutName = "embed";
         let layout = xshell.config.get("page.layout." + layoutName);
-        await xshell.loader.load("layout:" + layout);
+        let layoutClass = await xshell.loader.load("layout:" + layout);
         if (layoutElement == null || layoutElement.localName != layout) {
             if (layoutElement) layoutElement.remove();
             layoutElement = document.createElement(layout);
@@ -250,6 +251,7 @@ class XPage extends HTMLElement {
         // set new page
         this._page = page;
         // init new page
+        debugger
         await this._page.init(this);
         // label forced
         if (labelForced) {

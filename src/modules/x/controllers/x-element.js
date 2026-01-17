@@ -1,6 +1,6 @@
 import XTemplate, {utils} from "./x-template.js";
 import createState from "./create-state.js";
-import xshell, { Binds }  from "xshell";
+import xshell, { Binds, Utils }  from "xshell";
 
 
 // utils
@@ -184,7 +184,6 @@ class XElement extends HTMLElement {
         };
         //render
         if (!this.preRender()) {
-            //this._xtemplateInstance.render(this._stateUnproxied);
             this._xtemplateInstance.render(this._state);
             this._renderCount++;
         }
@@ -226,6 +225,10 @@ class XElement extends HTMLElement {
             //props
             get settings() { return settings ;}
         };
+        //url rewriting
+        //if (definition.template && (definition.template.indexOf("=\"/") != -1)) {
+            //Utils.rewriteTemplateUrls(definition.template, xshell.settings.baseUrl);
+        //}
         //xtemplate
         result.prototype.xtemplate = new XTemplate({ 
             template: definition.template || "", 

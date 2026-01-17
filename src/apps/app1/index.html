@@ -241,6 +241,20 @@ x - bus asincrono
 x - menus -> sources
 x - Debug bus: debug.emit("log:info:..., eventa fins que la sessio de debug llegira
 
+- allow to load js pages
+- allow to load raw html pages (no sfc)
+- move old html pages to js pages
+
+- python dev server: enforce CSP strict compliance
+
+- objective: CSP strict compliance. Currently the 2 obstacles to an strict CSP compliant mode are:
+    - x-template.js -> uses "Func" -> we can migrate to use an IR object model and interpre it, nor evaluate it!!
+        - allow only basic expression (property access and basic operations) (no method calls)
+    - to import single_file_componenet pages (ex: /pages/page1.html) we can not have a inline script because it breaks CSP. Solution
+        - make the default file /pages/page1.js. -- > defines the page controller and optionally imports the template from /pages/page1.html
+
+    Solutions:
+       - accept CSP lax mode
 
 - menus:
     x - Group -- areaApp.json: deginir arees de navegacio (label i icon)
@@ -249,6 +263,9 @@ x - Debug bus: debug.emit("log:info:..., eventa fins que la sessio de debug lleg
     x - pensar deeplinks
     x - Pagina inicial por cada area
     x - menu profile
+    - autotranslate relative url in templates and stylesheets in XElement.define !!! call to a central resolucion function lie xshell.modules.translateUrls(template, moduleName)
+    
+
     - compute area prefixes
     - Check permisos al crear el menúitems
     - Breadcrumb: mostrar prefijo de la area

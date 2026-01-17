@@ -74,7 +74,6 @@ class PageHtml extends Page {
             }
         }     
         // rewrite resource urls            
-        var waitForControllerRegistration = false;
         Utils.rewriteDocumentUrls(document, (localName, attr, url) => {
             if (url.startsWith("xshell/")) return url;
             if (url.indexOf(":") != -1) return url;
@@ -85,6 +84,7 @@ class PageHtml extends Page {
             return Utils.combineUrls(this._src, url);
         });      
         // create and append scripts
+        var waitForControllerRegistration = false;
         let scripts = [];
         for(let script of document.querySelectorAll("script")){
             if (!script.src) {

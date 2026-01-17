@@ -9,7 +9,7 @@ export default XElement.define("x-menu", {
     `,
     template: `
         <nav x-if="state.menu">
-            <x-menuitem x-recursive="menuitem in state.menu" x-key="href" x-attr:label="menuitem.label" x-attr:href="menuitem.href" x-attr:icon="menuitem.icon">
+            <x-menuitem x-recursive="menuitem in state.menu" x-key="href" x-attr:label="menuitem.label" x-attr:href="menuitem.href" x-attr:icon="menuitem.icon" x-attr:selected="menuitem.selected">
             </x-menuitem>
         </nav>        
     `,

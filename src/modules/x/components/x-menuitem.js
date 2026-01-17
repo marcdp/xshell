@@ -15,6 +15,7 @@ export default XElement.define("x-menuitem", {
         :host x-anchor x-icon:first-child {}
         :host x-anchor x-icon:first-child:last-child {align-self:flex-end;}
         :host x-anchor x-icon + .label {padding-left:.35em;}
+        :host x-anchor.selected {font-weight: 600;}
         :host x-anchor[expanded] {outline:var(--x-menuitem-border)}
         :host x-anchor[disabled] {pointer-events:none; cursor:default;}
         :host x-anchor[disabled] x-icon {color:var(--x-color-text-disabled)!important;}
@@ -55,6 +56,7 @@ export default XElement.define("x-menuitem", {
         href: "",
         suffix: "",
         command: "",
+        selected: false,
         checked: false,
         disabled: false,
         expanded: false,
@@ -64,7 +66,7 @@ export default XElement.define("x-menuitem", {
     },
     template: `
         <hr x-if="state.label=='-'" />
-        <x-anchor x-else class="menuitem anchor" x-attr:href="state.href" x-attr:command="state.command" x-attr:disabled="state.disabled" x-attr:expanded="state.expanded" >
+        <x-anchor x-else class="menuitem anchor" x-attr:href="state.href" x-attr:command="state.command" x-attr:disabled="state.disabled" x-attr:expanded="state.expanded" x-class:selected="state.selected">
             <x-icon x-if="state.checked" icon="x-check"></x-icon>
             <x-icon x-if="!state.checked && state.icon" class="icon"x-attr:icon="state.icon"></x-icon>
             <span   x-if="state.label" class="label">{{ state.label }}</span>

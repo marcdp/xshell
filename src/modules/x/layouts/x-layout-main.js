@@ -214,7 +214,7 @@ export default XElement.define("x-layout-main", {
 
             <x-dropdown class="popover left" collapse-on-click>
                 <x-button x-attr:label="state.userInitials" x-attr:title="state.userName" class="round light"></x-button>
-                <x-page slot="dropdown" src="/pages/identity.html" loadingg="lazy"></x-page>
+                <x-page slot="dropdown" src="/pages/identity.html" loading="lazy"></x-page>
                 <x-menu slot="dropdown" x-prop:menu="state.menuProfile"></x-menu>
             </x-dropdown>
 
