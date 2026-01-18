@@ -58,10 +58,6 @@ export default class Page {
         this._host = host;
         xshell.pages.registerPage(this);
     }
-    async mount() {
-        // mount
-        await this.onCommand("mount", {}, this);
-    }
     async load() {
         // call load command
         const url = new URL(this.src, document.baseURI);
@@ -74,6 +70,10 @@ export default class Page {
         await this.onCommand("load", params, this);
         // set status
         this._status = "loaded";
+    }
+    async mount() {
+        // mount
+        await this.onCommand("mount", {}, this);
     }
     async onCommand(command, params = {}, page) {
         // on command

@@ -19,7 +19,7 @@ class PageHtml extends Page {
         super();
         this._html = html;
         this._src = src;
-        this._virtual_src = virtual_src;    
+        this._virtual_src = virtual_src;
         this._moduleUrl = virtual_src.substring(0, virtual_src.indexOf("/", 1));
     }
 

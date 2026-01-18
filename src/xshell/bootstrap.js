@@ -131,8 +131,8 @@ async function loadModulesConfig(config) {
         config[`resolver.icon:${name}-{name}`] = `/${assetsPrefix}/${name}/icons/{name}.svg; loader=icon; cache=true;`;
         config[`resolver.component:${name}-{name}`] = `/${assetsPrefix}/${name}/components/${name}-{name}.js; loader=import; cache=true;`;
         config[`resolver.layout:${name}-layout-{name}`] = `/${assetsPrefix}/${name}/layouts/${name}-layout-{name}.js; loader=import; cache=true;`;
-        config[`resolver.page:/${assetsPrefix}/${name}/{path}.html`] = `/${assetsPrefix}/${name}/{path}.html; loader=html; cache=true;`;                
-        config[`resolver.page:/${assetsPrefix}/${name}/{path}.js`] = `/${assetsPrefix}/${name}/{path}.js; loader=import; cache=true;`;                
+        config[`resolver.page:/${assetsPrefix}/${name}/{path}.html`] = `/${assetsPrefix}/${name}/{path}.html; loader=page-html; cache=true;`;                
+        config[`resolver.page:/${assetsPrefix}/${name}/{path}.js`] = `/${assetsPrefix}/${name}/{path}.js; loader=page-js; cache=true;`;                
         config[`resolver.module:/${assetsPrefix}/${name}/{path}.js`] = `/${assetsPrefix}/${name}/{path}.js; loader=import; cache=true;`;
     }
     // log
