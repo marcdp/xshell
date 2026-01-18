@@ -144,8 +144,8 @@ class XPage extends HTMLElement {
         xshell.debug.log(`x-page: load '${this.src} ...`);
         let src = this.src;
         if (src.indexOf("error") != -1) {
-            //debugger;
-            //return;
+            debugger;
+            return;
         }
         //reset
         this._result = null;
@@ -257,8 +257,6 @@ class XPage extends HTMLElement {
         if (labelForced) {
             this.label = labelForced;
         }
-        // mount new page
-        await this._page.mount();
         // set as loaded
         if (this._status == "loading") {
             this._status = "loaded"; 
@@ -273,6 +271,8 @@ class XPage extends HTMLElement {
         this.dispatchEvent(new CustomEvent("load"));
         //bus event
         xshell.bus.emit("xshell:page:load", { src: page.src, id: page.id });
+        // mount new page
+        await this._page.mount();
     }
     error({code, message, src, stack}) {
         //error
