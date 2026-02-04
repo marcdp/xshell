@@ -8,14 +8,17 @@ export default class Debug {
     }
 
     //methods
-    log(message) {
-        this.emit("log:info", { message: message });
+    log(message, ...params) {
+        this.emit("log:info", { message: message, ...params });
+        console.log(message, ...params);
     }
-    warn(message) {
-        this.emit("log:warn", { message: message });
+    warn(message, ...params) {
+        this.emit("log:warn", { message: message, ...params });
+        console.warn(message, ...params);
     }
     error(message, ...params) {
         this.emit("log:error", { message: message, ...params });
+        console.error(message, ...params);
     }
     emit(event, detail) {
         console.log(" .... ", event, detail);

@@ -1,23 +1,4 @@
- 
-<script type="module">
-    import xshell from "xshell";
-    import XController from "x-controller";
 
-    xshell.pages.createController(new XController({
-        state: {
-            tabId: null
-        },
-        async onCommand(command, params, page) {
-            if (command == "load") {
-                //load
-                this.state.tabId = params.query.tabId;
-            }
-        }
-    }));
-</script>
+    
+This is a tab session {{ state.tabId }}
 
-<template>
-    
-   This is a tab session {{ state.tabId }}
-    
-</template>

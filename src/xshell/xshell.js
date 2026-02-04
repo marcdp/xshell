@@ -12,14 +12,13 @@ import Navigation from "./navigation.js";
 import Menus from "./menus.js";
 import Modules from "./modules.js";
 import Page from "./page.js";
-import Pages from "./pages.js";
 import Resolver from "./resolver.js";
+import Services from "./services.js";
 import Settings from "./settings.js";
 import Storage from "./storage.js";
 import Tabs from "./tabs.js";
 import Utils from "./utils.js";
 import XPage from "./x-page.js";
-
 
 // class
 class XShell {
@@ -39,17 +38,15 @@ class XShell {
     _menus = null;
     _modules = [];
     _navigation = null;
-    _pages = null;
     _resolver = null;
     _settings = null;
+    _services = null;
     _storage = null;
     _tabs = null;
-
 
     //ctor
     constructor() {
     }
-
 
     //props
     get api() { return this._api; }
@@ -66,9 +63,9 @@ class XShell {
     get menus() { return this._menus; }
     get modules() { return this._modules; }
     get navigation() { return this._navigation; }
-    get pages() { return this._pages; }
     get resolver() { return this._resolver; }
     get settings() { return this._settings; }
+    get services() { return this._services; }
     get storage() { return this._storage; }
     get tabs() { return this._tabs; }
 
@@ -91,17 +88,36 @@ class XShell {
         this._navigation = new Navigation( { areas: this._areas, bus: this._bus, config: this._config, container: this._container });
         this._settings = new Settings();
         this._storage = new Storage( {config: this.config } );
-        this._pages = new Pages( {config: this.config } );
         this._tabs = new Tabs( { bus: this._bus } );
         this._menus = new Menus( { bus: this._bus, config: this._config, modules: this._modules, navigation: this._navigation } );
+        this._services = new Services();
         // auth
         this._identity = await this.auth.login(this._config);
+        // services
+        this._services.register("api", this._api);
+        this._services.register("areas", this._areas);
+        this._services.register("auth", this._auth);
+        this._services.register("bus", this._bus);
+        this._services.register("config", this._config);
+        this._services.register("container", this._container);
+        this._services.register("debug", this._debug);
+        this._services.register("dialog", this._dialog);
+        this._services.register("i18n", this._i18n);
+        this._services.register("identity", this._identity);
+        this._services.register("loader", this._loader);
+        this._services.register("menus", this._menus);
+        this._services.register("modules", this._modules);
+        this._services.register("navigation", this._navigation);
+        this._services.register("resolver", this._resolver);
+        this._services.register("settings", this._settings);
+        this._services.register("services", this._services);
+        this._services.register("storage", this._storage);
+        this._services.register("tabs", this._tabs);
         // modules
         await this._modules.init();               
         // navigation
         await this._navigation.init();
-    }
-   
+    }   
 }
 
 // creates a default instance

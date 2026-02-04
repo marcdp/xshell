@@ -11,45 +11,7 @@ const bootstrapUrlDir = bootstrapUrl.href.substring(0, bootstrapUrl.href.lastInd
 // utils
 function stripJsonComments(s) {let o="",i=0,n=s.length;for(;i<n;){let c=s[i];if(c=='"'||c=="'"){let q=c;o+=c;i++;while(i<n){if(s[i]=="\\"){o+=s[i++]+s[i++];}else if(s[i]==q){o+=s[i++];break;}else{o+=s[i++];}}continue;}if(c=='/'&&s[i+1]=='/'){i+=2;while(i<n&&s[i]!="\n"&&s[i]!="\r")i++;continue;}if(c=='/'&&s[i+1]=='*'){i+=2;while(i<n&&!(s[i]=='*'&&s[i+1]=='/'))i++;i+=2;continue;}o+=c;i++;};return o;}
 function combineUrls(t,n){if(-1!=t.indexOf("?")&&(t=t.substring(0,t.indexOf("?"))),-1!=n.indexOf(":"))return n;if(n.startsWith("/")){if(-1!=t.indexOf("://")){let i=t.indexOf("/",t.indexOf("://")+3);return-1!=i&&(t=t.substring(0,i)),t+n}return n}if(n.startsWith("./")||"."==n)return t.endsWith("/")?t=t.substring(0,t.length-1):t.length>0&&(t=t.substring(0,t.lastIndexOf("/"))),t+n.substring(1);if(n.startsWith("../")){t.endsWith("/")?t=t.substring(0,t.length-1):t.length>0&&(t=t.substring(0,t.lastIndexOf("/")));let i=t+"/"+n;if(i.startsWith("/")){i=new URL(i,window.location.origin).pathname}else i=new URL(i).toString();return i}return t.endsWith("/")||-1!=t.indexOf("/")&&(t=t.substring(0,t.lastIndexOf("/")+1)),t+n}
-function normalizeUrls(key, obj, path) {
-    if (typeof(obj) == "string") {
-        if (obj.startsWith("url:")) {
-            // url: are urls relative to internet, or origin
-            obj = obj.substring(4).trim();
-            if (obj.startsWith("/") || obj.startsWith("./") || obj.startsWith("../") || obj == ".") {
-                obj = combineUrls(path, obj);
-            }
-        } else if (obj.startsWith("/")) {
-            // relative to path (module root or xshell root)
-            obj = path + obj;
-            if (obj.startsWith(document.location.origin)) obj = obj.substring(document.location.origin.length);
-        } else if (obj.startsWith("./") || obj.startsWith("../") || obj == ".") {
-            // relative to path (module root or xshell root)
-            obj = combineUrls(path + "/", obj);
-            if (obj.startsWith(document.location.origin)) obj = obj.substring(document.location.origin.length);
-        }
-        if (obj.indexOf("=/") != -1) {
-            // parse multiple urls in single string (ex: /path/to/resource; loader=/path/to another/resouces; cache=true;)
-            let parts = obj.split(";");
-            for (let i = 1; i < parts.length; i++) {
-                if (parts[i].indexOf("=/") != -1) {
-                    let subparts = parts[i].split("=");
-                    parts[i] = subparts[0] + "=" + normalizeUrls("", subparts[1].trim(), path);
-                }
-            }
-            obj = parts.join(";");
-        }
-    } else if (Array.isArray(obj)) {
-        for (let i = 0; i < obj.length; i++) {
-            obj[i] = normalizeUrls(i, obj[i], path);
-        }
-    } else if (obj instanceof Object) {
-        for (let subkey in obj) {
-            obj[subkey] = normalizeUrls(subkey, obj[subkey], path);
-        }
-    }
-    return obj;
-}
+function normalizeUrls(key, obj, path) {if (typeof(obj) == "string") {if (obj.startsWith("url:")) {obj = obj.substring(4).trim();if (obj.startsWith("/") || obj.startsWith("./") || obj.startsWith("../") || obj == ".") {obj = combineUrls(path, obj);}} else if (obj.startsWith("/")) {obj = path + obj;if (obj.startsWith(document.location.origin)) obj = obj.substring(document.location.origin.length);} else if (obj.startsWith("./") || obj.startsWith("../") || obj == ".") {obj = combineUrls(path + "/", obj);if (obj.startsWith(document.location.origin)) obj = obj.substring(document.location.origin.length);}if (obj.indexOf("=/") != -1) {let parts = obj.split(";");for (let i = 1; i < parts.length; i++) {if (parts[i].indexOf("=/") != -1) {let subparts = parts[i].split("=");parts[i] = subparts[0] + "=" + normalizeUrls("", subparts[1].trim(), path);}}obj = parts.join(";");}} else if (Array.isArray(obj)) {for (let i = 0; i < obj.length; i++) {obj[i] = normalizeUrls(i, obj[i], path);}} else if (obj instanceof Object) {for (let subkey in obj) {obj[subkey] = normalizeUrls(subkey, obj[subkey], path);}}return obj;}
 
 // bootstrap methods
 async function loadXShellConfig(config) {
@@ -119,21 +81,23 @@ async function loadModulesConfig(config) {
             let value = moduleConfig[key];
             if (key.startsWith("global.")){
                 key = key.substring(key.indexOf(".")+1).replaceAll("{module}", name);
-                if (key.indexOf(":/")!=-1) {
-                    debugger;
+                value = value.replaceAll("{module}", name).trim()
+                if (key.startsWith("resolver.")) {
+                    value += `${(!value.endsWith(";") ? ";": "")} module=${name}; modulePath=/${assetsPrefix}/${name};`;
                 }
-                config[key] = value.replaceAll("{module}", name);
+                config[key] = value;
             } else {
                 config["modules." + name + "." + key] = value;
             }
         }
         // add resolvers
-        config[`resolver.icon:${name}-{name}`] = `/${assetsPrefix}/${name}/icons/{name}.svg; loader=icon; cache=true;`;
-        config[`resolver.component:${name}-{name}`] = `/${assetsPrefix}/${name}/components/${name}-{name}.js; loader=import; cache=true;`;
-        config[`resolver.layout:${name}-layout-{name}`] = `/${assetsPrefix}/${name}/layouts/${name}-layout-{name}.js; loader=import; cache=true;`;
-        config[`resolver.page:/${assetsPrefix}/${name}/{path}.html`] = `/${assetsPrefix}/${name}/{path}.html; loader=page-html; cache=true;`;                
-        config[`resolver.page:/${assetsPrefix}/${name}/{path}.js`] = `/${assetsPrefix}/${name}/{path}.js; loader=page-js; cache=true;`;                
-        config[`resolver.module:/${assetsPrefix}/${name}/{path}.js`] = `/${assetsPrefix}/${name}/{path}.js; loader=import; cache=true;`;
+        config[`resolver.icon:${name}-{name}`] = `/${assetsPrefix}/${name}/icons/{name}.svg; loader=icon-svg; cache=true; module=${name}; modulePath=/${assetsPrefix}/${name};`;
+        config[`resolver.component:${name}-{name}`] = `/${assetsPrefix}/${name}/components/${name}-{name}.js; loader=module-js; cache=true; module=${name}; modulePath=/${assetsPrefix}/${name};`;
+        config[`resolver.layout:${name}-layout-{name}`] = `/${assetsPrefix}/${name}/layouts/${name}-layout-{name}.js; loader=module-js; cache=true; module=${name}; modulePath=/${assetsPrefix}/${name};`;
+        config[`resolver.page:/${assetsPrefix}/${name}/{path}.js`] = `/${assetsPrefix}/${name}/{path}.js; loader=page-js; cache=true; module=${name}; modulePath=/${assetsPrefix}/${name};`;
+        config[`resolver.page:/${assetsPrefix}/${name}/{path}.html`] = `/${assetsPrefix}/${name}/{path}.html; loader=page-html; cache=true; module=${name}; modulePath=/${assetsPrefix}/${name};`;
+        config[`resolver.page:/${assetsPrefix}/${name}/{path}.md`] = `/${assetsPrefix}/${name}/{path}.md; loader=page-md; cache=true; module=${name}; modulePath=/${assetsPrefix}/${name};`;
+        config[`resolver.module:/${assetsPrefix}/${name}/{path}.js`] = `/${assetsPrefix}/${name}/{path}.js; loader=module-js; cache=true; module=${name}; modulePath=/${assetsPrefix}/${name};`;
     }
     // log
     console.log("bootstrap: config", config);
@@ -214,7 +178,7 @@ async function bootstrap() {
     for (let key in config) {
         if (key.startsWith("resolver.import:")) {
             let importName = key.substring(key.indexOf(":") + 1);
-            let importSrc = config[key];
+            let importSrc = config[key].split(";")[0].trim();
             imports[importName] = (importSrc.indexOf(":")!=-1 ? importSrc : appUrlDir + importSrc.substring(1));
         }
     }

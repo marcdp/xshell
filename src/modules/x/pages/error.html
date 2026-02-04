@@ -1,5 +1,9 @@
-<title>Error</title>
-
+<html>
+    <head>
+        <title>Error page</title>
+    </head>
+<body>
+<!--
 <script type="module">
     import xshell from "xshell";
     import XController from "x-controller";
@@ -23,27 +27,26 @@
         }
     }));
 </script>
-
-<template>
+-->
+<body>
 
     <style>
-        @scope {
-            table {
-                width: 100%;
-                border-collapse: collapse;                
-            }
-            td {vertical-align:top;}
-            tr.pre td {padding-top:1em;}
-            pre { margin-top:0.2em; font-size:0.9em; }
-            @media (max-width: 768px) { 
-                table {display:block; margin-left:.25em; margin-bottom:.25em;}
-                tr {display:block;}
-                td {display:block;word-break:break-word;}
-                pre {white-space: break-spaces;}
-                tr.pre td:last-child {padding-top:0em;}
-            }
+        table {
+            width: 100%;
+            border-collapse: collapse;                
+        }
+        td {vertical-align:top;}
+        tr.pre td {padding-top:1em;}
+        pre { margin-top:0.2em; font-size:0.9em; }
+        @media (max-width: 768px) { 
+            table {display:block; margin-left:.25em; margin-bottom:.25em;}
+            tr {display:block;}
+            td {display:block;word-break:break-word;}
+            pre {white-space: break-spaces;}
+            tr.pre td:last-child {padding-top:0em;}
         }
     </style>
+
     <x-notice type="error">
         <table>
             <tr>
@@ -73,4 +76,5 @@
         </table>
     </x-notice>
     
-</template>
+</body>
+</html>

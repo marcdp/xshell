@@ -16,19 +16,15 @@ class XPage extends HTMLElement {
     _connected = false;
     _breadcrumb = [];
     _src = "";
-    _srcPage = "";
-    _srcAbsolute = "";
+    //_srcPage = "";
     _layout = "";
     _status = "";
-    _statusPage = "";
-    _result = null;
-    _label = "";
-    _icon = "";
+
     _loading = "";
     _loadingObserver = null;
     _module = null;
     _page = null;
-    _context = null;
+    //_context = null;
     
 
     //ctor
@@ -39,10 +35,20 @@ class XPage extends HTMLElement {
             this.queryClose();
         });
         this.addEventListener("command", (event) => {
-            this.onCommand(event.detail.command, { event, data: event.detail.data });
+            this.onCommand(event.detail.command, event.detail.data, { event });
             event.preventDefault();
             event.stopPropagation();
             return false;
+        });
+        this.addEventListener("click", (event) => {
+            const anchor = event.target.closest("a");
+            if (!anchor || !this.contains(anchor)) return;
+            if (false) {
+                // todo: intercept path navigation urls (without #!)
+                event.preventDefault();
+                event.stopPropagation();
+                return false;
+            }
         });
     }
 
@@ -59,21 +65,19 @@ class XPage extends HTMLElement {
         this._src = value; 
         if (changed){
             this._breadcrumb = [];
-            this._result = null;
+            //this._result = null;
             if (this._src && this._connected) this.load();
         }
     }
     get srcPage() {return this._srcPage;}
-    get srcAbsolute() {return xshell.resolver.resolveUrl("page:" + this.src);}
 
     get status() {return this._status;}
-    get statusPage() {return this._statusPage;}
     
     get breadcrumb() {return this._breadcrumb;}
     set breadcrumb(value) {this._breadcrumb = value;}
 
-    get result() {return this._result;}
-    set result(value) {this._result = value;}
+    get result() {return this.page.result;}
+    set result(value) {debugger; this.page.result = value;}
 
     get layout() { return this._layout;}
     set layout(value) { this._layout = value;}
@@ -81,11 +85,12 @@ class XPage extends HTMLElement {
     get module() { return this._module; }
     set module(value) { this._module = value; }
 
-    get context() { return this._context; }
-    set context(value) { this._context = value; }
+    //get context() { return this._context; }
+    //set context(value) { this._context = value; }
 
-    get label() {return this._label;}
+    get label() {return this._page.label;}
     set label(value) {
+        debugger;
         let changed = (this._label != value);
         this._label = value; 
         if (changed) {
@@ -148,11 +153,7 @@ class XPage extends HTMLElement {
             return;
         }
         //reset
-        this._result = null;
-        this._label = "";
-        this._icon = "";
         this._status = "loading";
-        this._statusPage = "";
         //set layout as loading (if exists)
         let layoutElement = this.shadowRoot.firstChild;
         if (layoutElement) {
@@ -171,9 +172,12 @@ class XPage extends HTMLElement {
             const pageClass = await xshell.loader.load("page:" + src);
             page = new pageClass( {src} );
         } catch(e) {
+            debugger;
+            let message = "x-page: error loading page '" + src + "': " + e.message;
+            xshell.debug.error(message, e);
             this.error({ 
                 code: 404, 
-                message: "Error loading page: " + e.message, 
+                message: message, 
                 src: src, 
                 stack: e.stack
             });
@@ -213,8 +217,8 @@ class XPage extends HTMLElement {
         let menu = xshell.config.get("modules." + moduleName + ".menus.main", {});
         let menuitems = Utils.findObjectsPath(menu, 'href', src.split("#")[0]);
         let menuitem = (menuitems ? menuitems[menuitems.length-1] : null);  
-        //label
-        let label = page.title;
+        //title
+        let label = page.label;
         let labelForced = null;
         if (!label && menuitems) label = menuitem.label;
         if (searchParams.get("xshell-page-label")) {
@@ -222,15 +226,15 @@ class XPage extends HTMLElement {
             labelForced = label;
             searchParams.delete("xshell-page-label");
         }
-        this.label = label;
+        page.label = label;
         //icon
-        let icon = "";
+        let icon = page.icon;
         if (!icon && menuitem) icon = menuitem.icon;
         if (searchParams.get("xshell-page-icon")) {
             icon = searchParams.get("xshell-page-icon");
             searchParams.delete("xshell-page-icon");
         }
-        this.icon = icon;
+        page.icon = icon;
         //breadcrumb
         let breadcrumb = [];
         if (searchParams.get("xshell-page-breadcrumb")) {
@@ -250,13 +254,6 @@ class XPage extends HTMLElement {
         await this.unload();
         // set new page
         this._page = page;
-        // init new page
-        debugger
-        await this._page.init(this);
-        // label forced
-        if (labelForced) {
-            this.label = labelForced;
-        }
         // set as loaded
         if (this._status == "loading") {
             this._status = "loaded"; 
@@ -266,17 +263,15 @@ class XPage extends HTMLElement {
         //load status
         this._loadStatus = 200;
         // call load on page
-        await this._page.load();        
+        await this._page.load();
+        // call mount on page
+        await this._page.mount( { host: this });
         //raise load event
         this.dispatchEvent(new CustomEvent("load"));
-        //bus event
-        xshell.bus.emit("xshell:page:load", { src: page.src, id: page.id });
-        // mount new page
-        await this._page.mount();
     }
     error({code, message, src, stack}) {
         //error
-        let url = xshell.config.get("xshell.error");
+        let url = xshell.config.get("xshell.url.error");
         if (url.indexOf("?") == -1) url += "?";
         url += "code=" + encodeURIComponent(code);
         url += "&message=" + encodeURIComponent(message);
@@ -285,7 +280,6 @@ class XPage extends HTMLElement {
         xshell.debug.error("x-page: error loading page: " + message + " (code: " + code + ", src: " + src + ")");
         if (stack) url += "&stack=" + encodeURIComponent(stack);
         this.src = url;
-        this._statusPage = "error";
     }
     replace(src) {
         //replace
@@ -328,7 +322,7 @@ class XPage extends HTMLElement {
     }
     async close(result) {
         //close page
-        if (result != undefined) this._result = result;
+        if (result != undefined) this._page.result = result;
         this.dispatchEvent(new CustomEvent("close", { composed: true }));
     }
     async removePage() {

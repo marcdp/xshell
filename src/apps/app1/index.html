@@ -4,25 +4,12 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <!-- config meta tags for xshell -->
-    <meta name="xshell.bootstrap_url"   content="/xshell/bootstrap.js">
     <meta name="xshell.app_config_url"  content="/apps/app1/app.jsonc">
     <meta name="xshell.sw_url"          content="/apps/app1/sw.js">
+    <!-- bootstrap -->
+    <script src="/xshell/bootstrap.js"></script>
 </head>
 <body>
-    <script>
-        // load bootstrap script
-        (function () {
-            const meta = name => document.head.querySelector(`meta[name="${name}"]`)?.content;
-            const bootstrapUrl = meta("xshell.bootstrap_url");
-            const script = document.createElement("script");
-            script.src = bootstrapUrl;
-            script.async = false;
-            script.onerror = () => {
-                console.error("Failed to load XShell bootstrap:", bootstrapUrl);
-            };
-            document.head.appendChild(script);
-        })();
-    </script>
 </body>
 </html>
 
@@ -106,7 +93,7 @@ x- fieldset
 x - x-datafield with langs
 x - menu drop down
 x - menu drop down de segon nivell
-x - create module with documentation pages: for x-buttons, for x-icons, x-cards, x-anchor, pages , etc layouts
+x - create module with documentation pages: for x-buttons, for x-icons, x-cards, pages , etc layouts
 x- in debug mode, we should show the "/x/pages/debug" as dropdown ???? This page should have:
 x - loader: allow define nont cacheable???
 x - sfc: use <template> tag in the definition of a page
@@ -240,10 +227,23 @@ x - modules -> menuas defined in modules participates to main menus
 x - bus asincrono
 x - menus -> sources
 x - Debug bus: debug.emit("log:info:..., eventa fins que la sessio de debug llegira
+x- rewrite normal anchor urls?
+x - rewrite x- anchor urls?
+x - allow to load js pages
+x - allow to load raw html pages (no sfc)
+x - move old html pages to js pages
+x - md pages frontmattern
 
-- allow to load js pages
-- allow to load raw html pages (no sfc)
-- move old html pages to js pages
+
+
+- pensar com obrir dialogs, tabs, emded pages, etc utilitzant: <a href="" data-open="dialog|embed|hash">...</a>"
+- simplify x-anchor -> only urls relative to app base root ! no commands, no external urls, no hash navigation
+
+
+
+
+
+
 
 - python dev server: enforce CSP strict compliance
 
@@ -292,8 +292,6 @@ x - Debug bus: debug.emit("log:info:..., eventa fins que la sessio de debug lleg
 
 - x-debugger module
 
-- rewrite normal anchor urls?
-- rewrite x-anchor urls?
 
 - record resources load time + size
 - show resources load time + size in debug pages + modules
