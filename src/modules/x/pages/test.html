@@ -1,43 +1,25 @@
-<title>Test</title>
+<html>
+<head>
+    <title>Test page Lorem ipsum</title>
+    <meta name="page.stateEngine" content="proxy">
+    <script type="module" src="/pages/test.js"></script>
+    <script type="application/json" id="state">
+    {
+        "var1": 42,
+        "var2": "hello"
+    }
+    </script>
+</head>
+<body>
 
-<script type="module">
-    import xshell from "xshell";
-    import XController from "x-controller";
+    This is a test PAGE: {{ state.var2 }}, claaaa!
+    The value of var1 is {{ state.var1 }}. <span x-text="state.var1"></span>
 
-    xshell.pages.createController(new XController({
-        state: {
-            children:[]
-        },
-        async onCommand(command, args, page) {
-            if (command == "load") {
-                //load
-                this.state.children = [
-                    {label:"foo 1", children:[
-                        {label:"world"}
-                    ]},
-                    {label:"foo 2", children:[
-                        {label:"bar"}
-                    ]},
-                    {label:"foo 3", children:[]},
-                    {label:"foo 4", children:[]},
-                    {label:"foo 5", children:[]},
-                    {label:"foo 6", children:[]}
-                ]
-            }
-        }
-    }));
-</script>
+    <x-button command="inc1" label="Increment var1"></x-button>
+    <x-button class="anchor" command="inc1" label="Increment var1"></x-button>
+    <a href="#" data-command="inc1?a=123">comand simlation</a>
 
-<template>
+    <x-clock></x-clock>
 
-    <x-treeview>
-        <x-treeview-head>
-            <x-treeview-column label="Name"></x-treeview-column>
-        </x-treeview-head>
-        <x-treeview-body>
-            <x-treeview-item x-recursive="item in state.children" x-attr:label="item.label" expanded></x-treeview-item>
-        </x-treeview-body>
-    </x-treeview>   
-
-</template>
-
+</body>
+</html>

@@ -2,7 +2,6 @@
 // LoaderException
 class LoaderException extends Error {
     constructor(message, details) {
-        debugger;
         super(message); // Call the parent constructor (Error)
         this.name = this.constructor.name; // Set the error name
         this.errors = details; // Custom property for additional info
@@ -22,6 +21,11 @@ export default class Loader {
     _config = null;
     _debug = null;
     _resolver = null;
+    _appBase = null;
+    _assetsPrefix = null;
+    _navigationMode = null;
+    _navigationHashPrefix = null;
+    
 
     _cache = {};
     _registry = [];
@@ -32,6 +36,10 @@ export default class Loader {
         this._config = config;
         this._debug = debug;
         this._resolver = resolver;
+        this._appBase = new URL(this._config.get("app.base")).pathname;
+        this._assetsPrefix = this._config.get("xshell.assetsPrefix");
+        this._navigationMode = config.get("navigation.mode");
+        this._navigationHashPrefix = config.get("navigation.hashPrefix");
     }
 
     //props
@@ -60,19 +68,17 @@ export default class Loader {
             if (!definitionObject) {
                 throw new LoaderException(`Resource not found: ${resource}`);
             }
-            let {definition, src} = definitionObject;
+            let {definition, src, path} = definitionObject;
             // get or load handler
             let loader = loaders[definition.loader];
-            if (!loader) {
-                let appBase = this._config.get("app.base");
-                let assetsPrefix = this._config.get("xshell.assetsPrefix");
+            if (!loader) {                
                 let loaderUrl = definition.loader;
                 if (loaderUrl.indexOf(":")!=-1) {
                     loaderUrl = definition.loader;
                 } else if (loaderUrl.indexOf("/")!=-1) {
-                    loaderUrl = appBase + definition.loader;
+                    loaderUrl = this._appBase + definition.loader;
                 } else {
-                    loaderUrl = appBase + "/" + assetsPrefix + "/xshell/loaders/" + definition.loader + ".js";
+                    loaderUrl = this._appBase + "/" + this._assetsPrefix + "/xshell/loaders/" + definition.loader + ".js";
                 }
                 let loaderToUse = new (await import(loaderUrl)).default();
                 loaders[definition.loader] = loaderToUse;
@@ -95,11 +101,17 @@ export default class Loader {
                 let promise = (async () => {
                     let value = null;
                     let registryItem = {resource, definition, src, status: "pending"};
-                    this._registry.push(registryItem);
-                    
+                    this._registry.push(registryItem);                    
                     await this._bus.emit("xshell:loader:resource:fetch", {resource, src});
                     try {
-                        value = await loader.load(src, name, definition);
+                        value = await loader.load(src, {
+                            resourceName: name, 
+                            resourcePath:path, 
+                            resourceDefinition: definition, 
+                            appBase:this._appBase, 
+                            navigationMode: this._navigationMode,
+                            navigationHashPrefix: this._navigationHashPrefix
+                        });
                         registryItem.status = "loaded";
                         await this._bus.emit("xshell:loader:resource:loaded", {resource, src});
                     } catch (e) {

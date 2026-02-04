@@ -1,20 +1,6 @@
 ﻿<title>Sample Page 1</title>
 <meta name="description" content="This page shows the dashboard">
-<meta name="author" content="mdp">
-<meta name="xshell.page.layout" content="main">
-
-
-<script type="module">
-    import xshell from "xshell";
-    
-    xshell.pages.createController({
-        onCommand(cmd, params, page) {
-            if (cmd === "load") {
-                // load
-            }
-        }
-    });
-</script>
+<meta name="author" content="Marc Delos">
 
 
 <x-json value="123"></x-json>
@@ -47,4 +33,8 @@ hellol <x-icon icon="x-bell"></x-icon>
         <td>Value 4</td>
     </tr>
 </table>
+
+<x-lazy>
+    this is more elements 
+</x-lazy>
 

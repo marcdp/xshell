@@ -27,7 +27,7 @@
                                 icon: node.icon,
                                 layout: node.layout, 
                                 loading: node.loading || '', 
-                                status: node.statusPage || node.status,
+                                status: node.status,
                                 module: (node.srcPage || node.src ? xshell.modules.resolveModuleName(node.srcPage || node.src) || '' : ''),
                                 loadTime: (node.stats && node.stats.loadTime ? node.stats.loadTime : -1),
                                 loadSize: (node.stats && node.stats.loadSize ? node.stats.loadSize : -1),

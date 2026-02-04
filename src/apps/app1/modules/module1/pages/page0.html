@@ -1,22 +1,15 @@
-﻿<script type="module">
-    import xshell from "xshell";
-    import XController from "x-controller";
+﻿<html>
+    <head>
+        <meta name="page.renderEngine" content="x" />
+    </head>
+    <body>
+        
+        <script type="application/json">
+            {"var1":"hola mundo"}
+        </script>
 
-    xshell.pages.createController(new XController({
-        state: {
-            var1: "hola mundo"
-        },
-        onCommand(cmd, params, page) {
-            if (cmd === "load"){
-                // load
-            }
-        }
-    }));
-</script>
+        This is a template: {{state.var1}}, claaaa
+    </body>
+</html>
 
-this is the page 0
-
-<template>
-    This is a template: {{state.var1}}
-</template>
 

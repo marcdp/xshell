@@ -1,6 +1,6 @@
 import Binds from "./binds.js";
-import Utils from "./utils.js";
-import xshell from "./xshell.js";
+import { generateId } from "./utils/ids.js";
+import xshell from "xshell";
 
 
 // class
@@ -8,16 +8,21 @@ export default class Page {
 
 
     //vars
-    _id = Utils.generateId("page");
+    _id = null;
+    _src = null;
+    _label = null;
+    _icon = null;
+    _result = null;
+
     _host = null;
+    _renderEngine = null;
     _refs = null;
     _binds = new Binds();
-    _status = "";
-    _controller = null;
-
 
     //ctor
-    constructor() {
+    constructor({ src }) {
+        this._src= src;
+        this._id = generateId("page");
     }
 
 
@@ -27,20 +32,16 @@ export default class Page {
     get id() { return this._id; }
     set id(value) { this._id = value; }
 
-    get src() { return this._host.src; }
-    get srcAbsolute() { return this._host.srcAbsolute; }
+    get src() { return this._src; }
 
-    get label() { return this._host.label; }
-    set label(value) { this._host.label = value; }
+    get label() { return this._label; }
+    set label(value) { this._label = value; }
 
-    get icon() { return this._host.icon; }
-    set icon(value) { this._host.icon = value; }
+    get icon() { return this._icon; }
+    set icon(value) { this._icon = value; }
 
-    get result() { return this._host.result; }
-    set result(value) { this._host.result = value; }
-
-    get controller() { return this._controller; }
-    set controller(value) { this._controller = value; }
+    get result() { return this._result; }
+    set result(value) { this._result = value; }
 
     get refs() {
         if (!this._refs) {
@@ -53,58 +54,61 @@ export default class Page {
         return this._refs;
     }
 
-    //mehods
-    async init(host) {
-        this._host = host;
-        xshell.pages.registerPage(this);
-    }
+    // lifecycle mehods
     async load() {
         // call load command
-        const url = new URL(this.src, document.baseURI);
+        const url = new URL(this._src, document.baseURI);
         const params = {
             query: Object.fromEntries(url.searchParams.entries()),
-            context: this._host.context,
             path: url.pathname,
             hash: url.hash
         };
-        await this.onCommand("load", params, this);
-        // set status
-        this._status = "loaded";
+        await this.onCommand("load", params);
+        // bus event
+        xshell.bus.emit("xshell:page:load", { src: this._src, id: this._id });
     }
-    async mount() {
+    async mount({ host, renderEngine }) {
         // mount
-        await this.onCommand("mount", {}, this);
+        this._host = host;
+        this._renderEngine = renderEngine;
+        this._renderEngine.mount();
+        await this.onCommand("mount", {});
     }
-    async onCommand(command, params = {}, page) {
+    async onCommand(command, params = {}) {
         // on command
-        if (this._controller && this._controller.onCommand) {
-            await this._controller.onCommand(command, params, this);
-        }
-    }
-    error({code, message, src, stack}) {
-        // show error
-        this._host.error(code, message, src, stack);
-    }
-    replace(src) {
-        // replace source
-        this._host.replace(src);
-    }
-    close(result) {
-        // close
-        return this._host.close(result);
     }
     async unmount() {
         // unmount
-        await this.onCommand("unmount", {}, this);
+        this._renderEngine.unmount();
+        this._renderEngine = null;
+        this._host = null;
+        await this.onCommand("unmount", {});
     }
     async unload() {
         // unload
         this._binds.clear();
-        await this.onCommand("unload", {}, this);
+        await this.onCommand("unload", {});
         this._refs = null;
-        this._status = "unloaded";
-        xshell.pages.unregisterPage(this);
-        this._host = null;
+    }
+
+
+    // error methods
+    error({code, message, src, stack}) {
+        // show error
+        this._host.error(code, message, src, stack);
+    }
+
+
+    // close methods
+    close(result) {
+        // close
+        return this._host.close(result);
+    }
+
+    // nav methods ??? WE SHOULD REMOVE THIS !
+    replace(src) {
+        // replace source
+        this._host.replace(src);
     }
 
 
@@ -112,7 +116,7 @@ export default class Page {
     bindEvent(target, event, command) {
         this._binds.bindEvent(target, event, (event)=> {
             if (typeof(command) == "string") {
-                this.onCommand(command, {event}, this);
+                this.onCommand(command, {event});
             } else {
                 command(event);
             }
@@ -121,7 +125,7 @@ export default class Page {
     bindTimeout(timeout, command) {
         this._binds.bindTimeout(timeout, (event)=> {
             if (typeof(command) == "string") {
-                this.onCommand(command, {event}, this);
+                this.onCommand(command, {event});
             } else {
                 command(event);
             }
@@ -130,13 +134,19 @@ export default class Page {
     bindInterval(timeout, command) {
         this._binds.bindInterval(timeout, (event)=> {
             if (typeof(command) == "string") {
-                this.onCommand(command, {event}, this);
+                this.onCommand(command, {event});
             } else {
                 command(event);
             }
         });
     }
-
     
-   
+    // render engine methods
+    invalidate() {
+        this._renderEngine?.invalidate();
+    }
+    render() {
+        this._renderEngine?.render();
+    }
+    
 }

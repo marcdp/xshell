@@ -7,13 +7,14 @@
     "depends": [],
     "styles": ["/css/styles.css"],
     "icon": "",
+
+    /* page defaults */
+    "page.renderEngine": "x",
     
     // resolver
-    "global.resolver.component:ace-editor":"https://unpkg.com/ace-custom-element@latest/dist/index.min.js; loader=import;",
+    "global.resolver.component:ace-editor":"https://unpkg.com/ace-custom-element@latest/dist/index.min.js; loader=module-js;",
     "global.resolver.import:marked":"/vendor/marked/marked.esm.js",
-    "global.resolver.page:{path}.md": "{path}.md; loader=/loaders/md.js; cache=true;",
     "global.resolver.import:x-element": "/controllers/x-element.js",
-    "global.resolver.import:x-controller": "/controllers/x-controller.js",
     
     // global pages
     "global.page.layout.default": "x-layout-default",
@@ -23,7 +24,7 @@
     "global.page.layout.embed": "x-layout-embed",
 
     // global xshell
-    "global.xshell.error": "/pages/error.html",
-    "global.xshell.lazy": "x-lazy"
+    "global.xshell.component.lazy": "x-lazy",
+    "global.xshell.url.error": "/pages/error.html"
 
 }

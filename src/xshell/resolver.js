@@ -72,20 +72,18 @@ export default class Resolver {
         if (resource.indexOf("#") != -1) resource = resource.split("#")[0];
         if (resource.indexOf("?") != -1) resource = resource.split("?")[0];
         for(let i = 0; i < this._definitions.length ; i++) {
-            let definition = this._definitions[i];
-            let match = resource.match(definition.regexp);
+            const definition = this._definitions[i];
+            const match = resource.match(definition.regexp);
             if (match) {
                 let src = definition.src;
                 for(var key in match.groups) {
                     src = src.replaceAll("{" + key + "}", match.groups[key]);
                 }
+                const path = src;
                 if (src.indexOf(":")==-1) {
                     src = (document.location.pathname + src).replaceAll("//", "/");
                 }
-                return { 
-                    definition: definition, 
-                    src: src
-                };
+                return { definition, src, path };
             }
         }
         this._debug.error(`resolver.resolveDefinition('${resource}'): unable to resolve`);

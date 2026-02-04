@@ -58,7 +58,10 @@ export default XElement.define("x-button", {
         :host(.cancel) .button:active {background:var(--x-button-background-active);}
         :host(.cancel[disabled]) .button {color:var(--x-color-xxx-gray)}
 
+        :host(.anchor) {display:inline;}
+        :host(.anchor) > div {display:inline;}
         :host(.anchor) .button {padding:unset; border:none; color:var(--x-color-text);}
+        :host(.anchor) .button > div span.label {font-weight: normal; text-decoration:underline;}
         :host(.anchor) .button:hover {background: none; color:var(--x-color-primary)}
         :host(.anchor) .button:active {background: none; color:var(--x-color-primary-dark)}
         :host(.anchor) div.more {border:none;}

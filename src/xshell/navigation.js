@@ -1,7 +1,4 @@
-import Utils from "./utils.js";
-
-// constants
-const HASH_PREFIX = "#!";
+import {combineUrls} from "./utils/urls.js";
 
 // class
 export default class Navigation {
@@ -12,8 +9,8 @@ export default class Navigation {
     _config = null;
     _container = null;
 
-    _mode = "hash"; //hash|path
-    _routerPrefix = "/";
+    _mode = ""; //hash|path
+    _hashPrefix = "";
     
     // ctor
     constructor( { areas, bus, config, container} ) {
@@ -21,11 +18,12 @@ export default class Navigation {
         this._bus = bus;
         this._config = config;
         this._container = container;
+        this._mode = config.get("navigation.mode");
+        this._hashPrefix = config.get("navigation.hashPrefix");
     }
 
     // props
     get mode() { return this._mode; }
-    get routerPrefix() { return this._routerPrefix; }
     get src() { 
         let page = this.getPage();
         return (page ? page.src : null);
@@ -42,7 +40,7 @@ export default class Navigation {
             await this._navigate(document.location.hash);
         } else {
             let defaultArea = this._areas.getDefaultArea();
-            document.location.hash = HASH_PREFIX + defaultArea.home;
+            document.location.hash = this._hashPrefix + defaultArea.home;
         }
     }
 
@@ -74,7 +72,7 @@ export default class Navigation {
         //absolute
         if (src.indexOf("://") != -1) return src;
         //resolve src
-        src = Utils.combineUrls(page.src, src);
+        src = combineUrls(page.src, src);
         //breadcrumb
         if (settings.breadcrumb) {
             src += (src.indexOf("?") != -1 ? "&" : "?") + "xshell-page-breadcrumb=" + btoa(JSON.stringify(page.breadcrumb)).replace(/\+/g, "-").replace(/\//g, "_");
@@ -83,19 +81,19 @@ export default class Navigation {
         let index = pages.indexOf(page);
         if (settings.target == "#stack") index++;
         for (var i = 0; i < index; i++) {
-            prefix += HASH_PREFIX + pages[i].src;
+            prefix += this._hashPrefix + pages[i].src;
         }
         //return
-        return this._config.get("app.base") + "/" + prefix + HASH_PREFIX + src;
+        return this._config.get("app.base") + "/" + prefix + this._hashPrefix + src;
     }
     navigate(src) {
         //navigate
-        window.document.location.hash = HASH_PREFIX + src;
+        window.document.location.hash = this._hashPrefix + src;
     }
     async showPage({ src, sender, target }) {
         //show page
         if (sender) {
-            src = Utils.combineUrls(sender.src, src);
+            src = combineUrls(sender.src, src);
         }
         if (target == "#dialog") {
             //show page dialog
@@ -105,17 +103,17 @@ export default class Navigation {
             this.showStackedPage({ src, sender });
         } else {
             //show page main
-            window.document.location.hash = HASH_PREFIX + src;
+            window.document.location.hash = this._hashPrefix + src;
         }
     }
     async showStackedPage({ src }) {
         //show page stack
-        window.document.location.hash += HASH_PREFIX + src;
+        window.document.location.hash += this._hashPrefix + src;
     }
     async showDialog({ src, context, sender }) {
         //show page dialog
         if (sender) {
-            src = Utils.combineUrls(sender.src, src);
+            src = combineUrls(sender.src, src);
         }
         let resolveFunc = null;
         let page = document.createElement("x-page");
@@ -137,8 +135,8 @@ export default class Navigation {
     // private methods
     async _navigate(hash) {
         //navigate
-        let hashBeforeParts = (this._hash ? this._hash.split(HASH_PREFIX) : []);
-        let hashAfterParts = (hash ? hash.substring(HASH_PREFIX.length).split(HASH_PREFIX) : []);
+        let hashBeforeParts = (this._hash ? this._hash.split(this._hashPrefix) : []);
+        let hashAfterParts = (hash ? hash.substring(this._hashPrefix.length).split(this._hashPrefix) : []);
         let inc = 0;
         //close the last dialog
         let allPages = Array.from(this._container.querySelectorAll(":scope > x-page"));
@@ -164,10 +162,10 @@ export default class Navigation {
                     page.addEventListener("close", (event) => {
                         //page close
                         let pages = this.getPages();
-                        let hashParts = document.location.hash.substring(HASH_PREFIX.length).split(HASH_PREFIX);
+                        let hashParts = document.location.hash.substring(this._hashPrefix.length).split(this._hashPrefix);
                         let index = pages.indexOf(event.target);
                         hashParts = hashParts.filter((_, idx) => idx !== index);
-                        document.location.hash = HASH_PREFIX + hashParts.join(HASH_PREFIX);
+                        document.location.hash = this._hashPrefix + hashParts.join(this._hashPrefix);
                     });
                 }
                 page.addEventListener("change", (event) => {
@@ -181,10 +179,10 @@ export default class Navigation {
                 page.addEventListener("replace", (event) => {
                     //page replace
                     let pages = this.getPages();
-                    let hashParts = document.location.hash.substring(HASH_PREFIX.length).split(HASH_PREFIX);
+                    let hashParts = document.location.hash.substring(this._hashPrefix.length).split(this._hashPrefix);
                     let index = pages.indexOf(event.target);
                     hashParts[index] = event.target.src;
-                    history.replaceState(null, "", HASH_PREFIX + hashParts.join(HASH_PREFIX));
+                    history.replaceState(null, "", this._hashPrefix + hashParts.join(this._hashPrefix));
                 });
                 page.addEventListener("load", (event) => {
                     //page load
@@ -200,9 +198,9 @@ export default class Navigation {
                     let pages = this.getPages();
                     let index = pages.indexOf(event.target);
                     if (index != -1) {
-                        let hashParts = document.location.hash.substring(HASH_PREFIX.length).split(HASH_PREFIX);
+                        let hashParts = document.location.hash.substring(this._hashPrefix.length).split(this._hashPrefix);
                         hashParts[index] = event.detail;
-                        document.location.hash = HASH_PREFIX + hashParts.join(HASH_PREFIX);
+                        document.location.hash = this._hashPrefix + hashParts.join(this._hashPrefix);
                     }
                 });
                 //add page to container
@@ -224,7 +222,7 @@ export default class Navigation {
                 }
             }
         }
-        this._hash = hashAfterParts.join(HASH_PREFIX);
+        this._hash = hashAfterParts.join(this._hashPrefix);
     }
 }
 

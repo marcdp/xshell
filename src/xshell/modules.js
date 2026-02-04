@@ -58,7 +58,6 @@ export default class Modules {
             }));
         }
         await Promise.all(tasks); 
-
     }
 
     // modules
@@ -71,6 +70,11 @@ export default class Modules {
             }
         }
         return null;
+    }
+    getModuleBySrc(src) {
+        //get module by src
+        const name = this.resolveModuleName(src);
+        return (name ? this.getModule(name) : null);
     }
     getModule(name) {
         //get module by name

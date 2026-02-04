@@ -21,8 +21,8 @@
                 { "label": "Es un hecho establecido hace ", "href": "/pages/page6.html" }
             ] },                
             { "label": "-"},
-            { "label": "Page 7", "href": "/pages/page7.html" },
-            { "label": "Page 8", "href": "/pages/page8.html" },
+            { "label": "Page 7", "href": "/pages/page7.js" },
+            { "label": "Page 8", "href": "/pages/page8.js" },
             { "label": "Page Not found", "href": "/pages/page-not-found.html" }                
         ]
     }],
