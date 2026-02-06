@@ -1,4 +1,4 @@
-import { createPageClassFromDefinition } from "./page-js.js"
+import { createPageClassFromJsDefinition } from "./page-js.js"
 import { normalizeModuleResourceUrl } from "../utils/rewriteDocumentUrls.js";
 
 //export 
@@ -60,7 +60,7 @@ export default class LoaderPageHtml {
         // template
         definition.template = doc.body.innerHTML;
         // create page l
-        const pageClass = createPageClassFromDefinition(src, context, definition);
+        const pageClass = createPageClassFromJsDefinition(src, context, definition);
         // return
         return pageClass;
     }

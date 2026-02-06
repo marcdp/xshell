@@ -40,6 +40,7 @@ export default class Loader {
         this._assetsPrefix = this._config.get("xshell.assetsPrefix");
         this._navigationMode = config.get("navigation.mode");
         this._navigationHashPrefix = config.get("navigation.hashPrefix");
+        this._componentLazy = config.get("xshell.component.lazy");
     }
 
     //props
@@ -110,7 +111,8 @@ export default class Loader {
                             resourceDefinition: definition, 
                             appBase:this._appBase, 
                             navigationMode: this._navigationMode,
-                            navigationHashPrefix: this._navigationHashPrefix
+                            navigationHashPrefix: this._navigationHashPrefix,
+                            componentLazy: this._componentLazy
                         });
                         registryItem.status = "loaded";
                         await this._bus.emit("xshell:loader:resource:loaded", {resource, src});

@@ -1,8 +1,10 @@
 // export
-export default function createStateEngineFactory(stateDefinition) {
+export default function createStateEngineFactoryNone(stateDefinition) {
 
 	// returns a state instance factory
-	return function(handler) {
-		return null
+	return {
+		create: () => {
+			return null;
+		}
 	};
 }

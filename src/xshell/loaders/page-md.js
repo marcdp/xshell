@@ -1,5 +1,5 @@
-import xshell from "xshell";
-import { createPageClassFromDefinition } from "./page-js.js"
+import { createPageClassFromJsDefinition } from "./page-js.js"
+
 
 // functions
 function extractFrontmatter(source) {
@@ -38,7 +38,7 @@ export default class LoaderPageMd {
         }
         definition.meta.renderEngine = "markdown";
         // create page
-        const pageClass = createPageClassFromDefinition(src, context, definition);
+        const pageClass = createPageClassFromJsDefinition(src, context, definition);
         // return
         return pageClass;
     }
