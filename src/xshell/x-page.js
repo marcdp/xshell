@@ -43,6 +43,9 @@ class XPage extends HTMLElement {
         this.addEventListener("click", (event) => {
             const anchor = event.target.closest("a");
             if (!anchor || !this.contains(anchor)) return;
+            const breadcrumb = anchor.hasAttribute("data-breadcrumb");
+            const target = anchor.target;
+            debugger
             if (false) {
                 // todo: intercept path navigation urls (without #!)
                 event.preventDefault();

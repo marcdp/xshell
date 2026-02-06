@@ -1,4 +1,5 @@
 import xshell from '../xshell.js';
+import {rewriteDocumentUrls} from "../utils/rewriteDocumentUrls.js";
 
 class XTemplate {
 
@@ -848,59 +849,46 @@ class XTemplateInstance {
 
 
 
-
-
 // export
-export default class RenderEngineX {
+export class RenderEngineX {
 	
-	// vars
-	_renderTimeoutId = null;
-	_xtemplateInstance = null;
+	// vars+
 	_host = null;
-	_fragment = null;
 	_state = null;
-	_page = null;
+	_renderTimeoutId = null;
 
 	// ctor
-	constructor({ host, fragment, state, page }){
+	constructor({ host, xtemplate, state }){
 		this._host = host;
-		this._fragment = fragment.cloneNode(true);
+		this._xtemplateInstance = xtemplate.createInstance(
+			(command, event) => {
+				//handler
+				debugger;
+				self.onCommand(command, {event});
+			}, 
+			() => {
+				//invalidate
+				self.invalidate();
+			}, 
+			this._host
+		);
 		this._state = state;
-		this._page = page;
-
-		this._xtemplate =new XTemplate({ 
-            template: fragment,
-            styleSheets: []
-        })
 	}
 
 	// methods
 	mount() {
-		// add fragment to host DOM
-		this._xtemplateInstance = this._xtemplate.createInstance(
-            (command, event) => {
-                //handler
-                self.onCommand(command, {event});
-            }, 
-            () => {
-                //invalidate
-                self.invalidate();
-            }, 
-            this._host
-        );
 		this.render();
 	}
-	invalidate() {
-        //enqueue a render
-        if (this._host) {
+	invalidate(path) {
+		if (this._host) {
             if (!this._renderTimeoutId) {
                 this._renderTimeoutId = window.requestAnimationFrame(() => {
                     this.render();
                 });
             }
         }
-    }
-    preRender() {
+	}
+	preRender() {
         //pre render
     }
     render() {
@@ -920,12 +908,34 @@ export default class RenderEngineX {
         //post render
     }
 	unmount() {
-		// Cleanup if needed in the future
-		while (this._host.firstChild) {
-			this._host.removeChild(this._host.firstChild);
-		}
-		this._fragment = null;
+		// Cleanup
+		this._host.replaceChildren();
 	}
-
-
+}
+export default function createRenderEngineFactoryX(template, context) {
+	// template
+	const templateElement = document.createElement("TEMPLATE");
+	templateElement.innerHTML = template;
+	// dependencies
+	const dependencies = new Set();
+	templateElement.content.querySelectorAll("*").forEach(el => {
+		if (el.tagName.includes("-")) {
+			if (context.componentLazy && (el.localName != context.componentLazy && el.closest(context.componentLazy) != null)) return;
+			dependencies.add("component:" + el.tagName.toLowerCase());
+		}
+	});
+	// url rewrite
+	rewriteDocumentUrls(templateElement.content, context)
+	// xtemplate
+	const xtemplate =new XTemplate({ 
+		template: templateElement.content,
+		styleSheets: []
+	})
+	// return
+	return {
+		dependencies: Object.freeze(Object.seal([...dependencies])),
+		create: ({host, state}) => {
+			return new RenderEngineX({ host, xtemplate, state });
+		}
+	};
 }

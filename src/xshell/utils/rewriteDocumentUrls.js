@@ -1,3 +1,5 @@
+import {combineUrls} from "../utils/urls.js";
+
 // rules
 let rules = [
     // navigation
@@ -40,14 +42,54 @@ export function normalizeModuleResourceUrl(url, modulePath, resourcePath) {
     }    
 }
 
+// export
+export function rewrite( el, attr, type, url, context ) {
+    if (url.indexOf("page222")!=-1) debugger;
+    if (url.indexOf(":") != -1) {
+        return url;
+    } else if (url.startsWith("xshell/")) {
+        return url;
+    } else if (type == "resource") {
+        if (url.startsWith("/")) {
+            return xshell.resolver.resolveUrl(context.resourceDefinition.modulePath + url);
+        } else{
+            return context.appBase + combineUrls(context.resourcePath, url);
+        }
+    } else if (type == "navigation") {
+        let virtualUrl = null;
+        if (url.startsWith("/")) {
+            virtualUrl = context.resourceDefinition.modulePath + url;
+        } else if (url.startsWith("#")) {
+            virtualUrl = context.resourcePath + url;
+        } else {
+            virtualUrl = combineUrls(context.resourcePath, url);
+        }
+        let realUrl = null;
+        if (context.navigationMode == "hash") {
+            realUrl = context.navigationHashPrefix + virtualUrl;
+        } else {
+            realUrl = context.appBase + virtualUrl;
+        }
+        if (el.localName == "a") {
+            const breadcrumb = el.hasAttribute("data-breadcrumb");
+            if (breadcrumb) {
+                debugger;
+            }
+        }
+        return realUrl;
+    } else {
+        throw new Error("Unknown rewrite type: " + type);
+    }
+}
+
 // rewrite document resource URLs
-export function rewriteDocumentUrls(doc, rewriteFn) {
+export function rewriteDocumentUrls(doc, context) {
     // simple attribute rewrites
     for (const { selector, attr, type } of rules) {
         doc.querySelectorAll(selector).forEach(el => {
             const oldUrl = el.getAttribute(attr);
             if (!oldUrl) return;
-            const newUrl = rewriteFn(el.localName, attr, type, oldUrl);
+            const newUrl = rewrite(el, attr, type, oldUrl, context);
             if (newUrl !== oldUrl) el.setAttribute(attr, newUrl);
         });
     }
@@ -58,7 +100,7 @@ export function rewriteDocumentUrls(doc, rewriteFn) {
         const newStyle = oldStyle.replace(/url\(([^)]+)\)/g, (match, url) => {
             // strip quotes
             const clean = url.trim().replace(/^['"]|['"]$/g, "");
-            return `url("${rewriteFn(el.localName, "style", "", clean)}")`;
+            return `url("${rewrite(el, "style", "", clean, context)}")`;
         });
         el.setAttribute("style", newStyle);
     });
@@ -67,7 +109,7 @@ export function rewriteDocumentUrls(doc, rewriteFn) {
         let css = style.textContent;
         css = css.replace(/url\(([^)]+)\)/g, (match, url) => {
             const clean = url.trim().replace(/^['"]|['"]$/g, "");
-            return `url("${rewriteFn("style", "textContent", "", clean)}")`;
+            return `url("${rewrite(style, "textContent", "", clean, context)}")`;
         });
         style.textContent = css;
     });
@@ -81,7 +123,7 @@ export function rewriteDocumentUrls(doc, rewriteFn) {
                 /import\s+([^'"]*)['"]([^'"]+)['"]/g,
                 (match, bindings, importPath) => {
                     // resolve url
-                    return `import ${bindings}"${rewriteFn("script", "textContent", "",  importPath)}"`;
+                    return `import ${bindings}"${rewrite("script", "textContent", "",  importPath, context)}"`;
                 }
             );
             // create a new script because textContent would reset execution

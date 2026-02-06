@@ -142,11 +142,8 @@ export default class Page {
     }
     
     // render engine methods
-    invalidate() {
-        this._renderEngine?.invalidate();
-    }
-    render() {
-        this._renderEngine?.render();
+    invalidate(...params) {
+        this._renderEngine?.invalidate(...params);
     }
     
 }
