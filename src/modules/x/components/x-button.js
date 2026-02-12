@@ -190,6 +190,7 @@ export default XElement.define("x-button", {
                 }
                 // href
                 if (this.state.href) {
+                    debugger;
                     this.state.realHref = xshell.navigation.getHref(this.state.href, this.page, { breadcrumb: this.state.breadcrumb });
                 } else {
                     this.state.realHref = null;

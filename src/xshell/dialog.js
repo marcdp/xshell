@@ -1,4 +1,3 @@
-import Utils from "./utils.js";
 
 export default class Dialog {
 

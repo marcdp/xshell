@@ -1,11 +1,11 @@
 // export
-export default function createStateEngineFactoryProxy(stateDefinition) {
+export default function createStateEngineFactoryProxy(stateSkeleton, stateDefinition) {
 	// init state definition json
-	const stateDefinitionJson = JSON.stringify(stateDefinition || {});
+	const stateSkeletonJson = JSON.stringify(stateSkeleton || {});
 	// returns a state instance factory
 	return {
 		create: (handler) => {
-			const value = JSON.parse(stateDefinitionJson);
+			const value = JSON.parse(stateSkeletonJson);
 			return new Proxy(value, {
 				get: function(target, prop, receiver) {
 					// return real value
@@ -16,9 +16,14 @@ export default function createStateEngineFactoryProxy(stateDefinition) {
 					let oldValue = target[prop];
 					let changed = (oldValue != newValue);
 					if (!changed && oldValue && newValue) {
-						if (Array.isArray(newValue)) { //dirty check: check if number of elements are the same
+						if (Array.isArray(newValue)) { 
+							//dirty check: check if number of elements are the same
 							changed = (oldValue.length != newValue.length);
-						} else if (typeof(newValue) == "object") { //dirty check: check if keyslength  are the same
+						} else if (typeof(oldValue) == "object" && typeof(newValue) == "object") { 
+							//supose objects has changed
+							changed = true;
+						} else if (typeof(newValue) == "object") { 
+							//dirty check: check if keyslength  are the same
 							changed = (Object.keys(oldValue).length != Object.keys(newValue).length);
 						}
 					}

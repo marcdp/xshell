@@ -855,20 +855,19 @@ export class RenderEngineX {
 	// vars+
 	_host = null;
 	_state = null;
-	_renderTimeoutId = null;
+	_xtemplateInstance = null;
 
 	// ctor
-	constructor({ host, xtemplate, state }){
+	constructor({ host, xtemplate, state, handler, invalidate }){
 		this._host = host;
 		this._xtemplateInstance = xtemplate.createInstance(
 			(command, event) => {
 				//handler
-				debugger;
-				self.onCommand(command, {event});
+				handler(command, {event});
 			}, 
 			() => {
 				//invalidate
-				self.invalidate();
+				invalidate();
 			}, 
 			this._host
 		);
@@ -877,38 +876,12 @@ export class RenderEngineX {
 
 	// methods
 	mount() {
-		this.render();
 	}
-	invalidate(path) {
-		if (this._host) {
-            if (!this._renderTimeoutId) {
-                this._renderTimeoutId = window.requestAnimationFrame(() => {
-                    this.render();
-                });
-            }
-        }
-	}
-	preRender() {
-        //pre render
-    }
     render() {
-        //cancel pending render
-        if (this._renderTimeoutId) {
-            window.cancelAnimationFrame(this._renderTimeoutId);
-            this._renderTimeoutId = 0;
-        };
-        //render
-        if (!this.preRender()) {
-            this._xtemplateInstance.render(this._state);
-            this._renderCount++;
-        }
-        this.postRender();
-    }
-    postRender(){
-        //post render
+		this._xtemplateInstance.render(this._state);
+		this._renderCount++;
     }
 	unmount() {
-		// Cleanup
 		this._host.replaceChildren();
 	}
 }
@@ -924,18 +897,20 @@ export default function createRenderEngineFactoryX(template, context) {
 			dependencies.add("component:" + el.tagName.toLowerCase());
 		}
 	});
-	// url rewrite
-	rewriteDocumentUrls(templateElement.content, context)
-	// xtemplate
-	const xtemplate =new XTemplate({ 
-		template: templateElement.content,
-		styleSheets: []
-	})
 	// return
 	return {
 		dependencies: Object.freeze(Object.seal([...dependencies])),
-		create: ({host, state}) => {
-			return new RenderEngineX({ host, xtemplate, state });
+		init: () => {
+			// url rewrite
+			rewriteDocumentUrls(templateElement.content, context)
+			// xtemplate
+			this._xtemplate =new XTemplate({ 
+				template: templateElement.content,
+				styleSheets: []
+			})
+		},
+		create: ({host, state, handler, invalidate}) => {
+			return new RenderEngineX({ host, xtemplate: this._xtemplate, state, handler, invalidate });
 		}
 	};
 }

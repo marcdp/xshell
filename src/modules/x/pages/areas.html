@@ -1,6 +1,6 @@
 
 <script type="module">
-    import xshell, { Utils } from "xshell";
+    import xshell from "xshell";
     import XController from "x-controller";
     
     xshell.pages.createController(new XController({
@@ -17,7 +17,7 @@
 
             } else if (command == "refresh") {
                 // refresh selected area
-                let mainMenu = xshell.menus.getMainMenu();
+                let mainMenu = xshell.menus.getMenuMain();
                 if (mainMenu) {
                     this.state.selected = mainMenu.area || "main";
                 }

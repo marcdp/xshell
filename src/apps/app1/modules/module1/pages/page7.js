@@ -25,13 +25,19 @@ export default {
         var1: "value1",
         var2: "value2"
     },
-    script({ bus, state }) {
+    script({ bus, state, timer, events }) {
         return {
             onCommand(command, params) {
                 if (command == "load") {
                     //load
                     state.var1 = "holaaa";
+                    //timer.setInterval(1000, "refresh");
+                    events.on(bus, "xshell", "refresh")
                     
+                } else if (command == "refresh") { 
+                    // refresh
+                    console.log("HElllooo" + new Date());
+
                 } else if (command == "mount") { 
                     // mount
                     this.refs.btn1.innerHTML = state.var1;

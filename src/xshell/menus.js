@@ -1,4 +1,4 @@
-import Utils from "./utils.js";
+import { findObjectsPath } from "./utils/object.js";
 
 // const
 const MENU_MAIN = "main";
@@ -13,8 +13,8 @@ export default class Menus {
     _modules = null;
     // sources of menu items registered by modules
     _sources = {};
-    // computed menus
-    _menus = {};
+    // cached menus
+    _cache = null;
 
     // ctor
     constructor( { bus, config, modules, navigation } ) {
@@ -22,105 +22,118 @@ export default class Menus {
         this._config = config;
         this._modules = modules;
         this._navigation = navigation;
-        // listen for navigation end event, to refresh menus
-        this._bus.addEventListener("xshell:navigation:end", () => this._refresh());
     }
 
     // method
     init() {
-        this._refresh();
-    }
-    get(name) {
-        return this._menus[name];
-    }
-    getMainMenu() {
-        debugger;
-        return this._menus[MENU_MAIN];
-    }
-    registerSource(name, source) {
-        // register a menu source, which can provide menu items dynamically, and recompute them on events it depends on
-        this._sources[name] = source;
-        for(let event of source.dependsOn || []) {
-            this._bus.addEventListener(event, () => this._refresh() );
-        }        
-    }
-
-
-    // private methods
-    _refresh() {
-        let page = this._navigation.getPage(); 
-        let src = page ? page.src : "";
-        if (page.srcPage) src = page.srcPage;
-        if (src.indexOf("#")!=-1) src = src.substr(0, src.indexOf("#"));        
-        // build menus from config and from dinamic sources
+        // build menus from config
         let cache = {};
         for(let key in this._config.config) {
             if (key.startsWith("modules.") && key.indexOf(".menus.") != -1) {
                 const keyParts = key.split(".");
                 const moduleName = keyParts[1];
+                const modulePath = this._modules.getModule(moduleName).path;
                 const menuName = keyParts[3];
                 const menuArea = keyParts[4] || (menuName == MENU_MAIN ? "main" : "");
                 const menuItems = this._config.config[key];
                 if (!cache[menuName]) cache[menuName] = [];
-                for(let menuitem of menuItems.map(item => this._cloneMenuitemRecursive(item, moduleName, menuArea, "", src))){
+                for(let menuitem of menuItems.map(item => this._cloneMenuitem(item, moduleName, modulePath, menuArea, ""))) {
                     cache[menuName].push(menuitem);
                 }
             }
         }
-        // get active area for main menu
-        let area = null;
-        for(let name in cache) {
-            if (name == MENU_MAIN) {
-                // for main menu, merge all areas into one menu
-                const menu = cache[name];
-                let menuitems = Utils.findObjectsPath(menu, 'href', src);
-                if (menuitems && menuitems.length > 0) {
-                    area = menuitems[0].area;
-                }
-                // remove menus from other areas
-                for(let i = menu.length - 1; i >= 0; i--) {
-                    let menuArea = menu[i].area || "";
-                    if (area != menuArea) {
-                        cache[name].splice(i, 1);
+        this._cache = cache;
+    }
+    getMenu(name) {
+        // get menu 
+        if (name == MENU_MAIN) {
+            return this.getMenuMain();
+        }
+        return this._cache[name];
+    }
+    getMenuMain() {
+        // get main menu (by area)
+        let result =  [];
+        const breadcrum = this.getMenuitemBreadcrumb(this._navigation.src);
+        if (breadcrum) {
+            const area = breadcrum[0].area;
+            for(let i in this._cache[MENU_MAIN]) {
+                const menu = this._cache[MENU_MAIN][i];
+                if (menu.area == area) result.push(menu);
+            }
+        }
+        return result;
+    }
+    getMenuitemBreadcrumb(href) {
+        // get menuitem breadcrumb
+        let hrefs = [];
+        hrefs.push(href);
+        if (href.indexOf("#")!=-1) {
+            href = href.substring(0, href.indexOf("#"));
+            hrefs.push(href);
+        }
+        if (href.indexOf("?")!=-1) {
+            href = href.substring(0, href.indexOf("?"));
+            hrefs.push(href);
+        }
+        for(let target_href of hrefs) {
+            for(let menuName in this._cache) {
+                let menu = this._cache[menuName];
+                let menuitems = findObjectsPath(menu, 'href', target_href);
+                if (menuitems) {
+                    const result = [];
+                    for(let i = 0; i < menuitems.length; i++) {
+                        let menuitem = menuitems[i];
+                        let item = { label: menuitem.label, href: menuitem.href};
+                        if (menuitem.icon) item.icon = menuitem.icon;
+                        if (menuitem.area) item.area = menuitem.area;
+                        result.push(item);
                     }
+                    return result;
                 }
             }
         }
-        // for each menu, merge menuitems
-        // TODO ...
-        // if changed, apply changes
-        if (JSON.stringify(this._menus) != JSON.stringify(cache)) {
-            // assign new value
-            this._menus = cache;
-            // emit event
-            this._bus.emit("xshell:menus:changed", { } );
-        }
+        return null;
     }
-    _evaluateMenuitemSource(sourceName, moduleName, areaName, src) {
-        // evaluate a menu source
-        let source = this._sources[sourceName];
-        if (source) {
-            let modulePath = this._modules.getModule(moduleName).path;
-            let menuitems = source.resolve();
-            return menuitems.map( menuitem => this._cloneMenuitemRecursive(menuitem, moduleName, areaName, modulePath, src) );
-        }
+
+    
+    // sources
+    registerSource(name, source) {
+        // register a menu source, which can provide menu items dynamically, and recompute them on events it depends on
+        this._sources[name] = source;
+        for(let event of source.dependsOn || []) {
+            this._bus.addEventListener(event, () => {
+                const changed = source.refresh();
+                if (changed) this._bus.emit("xshell:menus:changed", { } );
+            });
+        }        
     }
-    _cloneMenuitemRecursive(menuitem, moduleName, areaName, hrefPrefix, src) {
+
+    // private methods
+    _cloneMenuitem(menuitem, moduleName, modulePath, areaName, hrefPrefix) {
         // clone menu item recursively
         let href = (menuitem.href ? (hrefPrefix + menuitem.href) : null);
-        let selected = (src == (href && href.indexOf("#")!=-1 ? href.substring(0, href.indexOf("#")) : href));        
         let result = {
             label: menuitem.label,
             href: href,
             icon: menuitem.icon || null,
             module: moduleName,
             area: areaName,
-            selected: selected,
-            children: (menuitem.children ? 
-                menuitem.children.map( child => this._cloneMenuitemRecursive(child, moduleName, areaName, hrefPrefix, src) ) : 
-                (menuitem.childrenSource ? this._evaluateMenuitemSource(menuitem.childrenSource, moduleName, areaName, hrefPrefix, src)  : []) 
-            )
+            children: (menuitem.children ? menuitem.children.map( (child) => this._cloneMenuitem(child, moduleName, modulePath, areaName, hrefPrefix) ) : [])
+        }
+        if (menuitem.childrenSource) {
+            // create refresh function for that childrenSource
+            const source = this._sources[menuitem.childrenSource];
+            const cloneMenuitem = this._cloneMenuitem;
+            source.refresh = function() {
+                let menuitems = source.resolve();
+                result.children.length = 0;
+                result.children.push(...menuitems.map( menuitem => cloneMenuitem(menuitem, moduleName, modulePath, areaName, modulePath)));
+                return true; //changed
+            };
+            source.refresh();
         }
         return Object.freeze(result);
     } 
+    
 }

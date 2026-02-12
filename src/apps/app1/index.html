@@ -2,7 +2,8 @@
 <html lang="en">
 <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport"    content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="XShell is a microfrontend shell to build modular web applications.">
     <!-- config meta tags for xshell -->
     <meta name="xshell.app_config_url"  content="/apps/app1/app.jsonc">
     <meta name="xshell.sw_url"          content="/apps/app1/sw.js">
@@ -233,13 +234,27 @@ x - allow to load js pages
 x - allow to load raw html pages (no sfc)
 x - move old html pages to js pages
 x - md pages frontmattern
+x - <x-anchor breadcrum ...
+x - <x-anchor disabled> ...
+x - simplify x-anchor -> only urls relative to app base root ! no commands, no external urls, no hash navigation
+x - menus -> do not rebuild on each page navigation (compute all areas+menus once, and refrsh only the dinamic sources on each page navigation)
+x - create component-js.js to load webcomponents from js files
+x - rewrite urls inside web components
+
+- <x-anchor open="dialog" ...
+- <x-anchor open="stack" ...
 
 
+- x-breacrumb component
+- remove breadcrumb render login from x-layout-main, and use only the web component created
 
-- pensar com obrir dialogs, tabs, emded pages, etc utilitzant: <a href="" data-open="dialog|embed|hash">...</a>"
-- <a ... data-breadcrumb> -- > afegeix el breadcrumb al onclick
-- simplify x-anchor -> only urls relative to app base root ! no commands, no external urls, no hash navigation
+- <x-anchor replace>... replace history
 
+- x-button, only commands, no href
+
+- error page
+
+- page -> when consuming services as log -> return a instance of log per that page exactly (that generates  prefixed log entries)
 
 
 

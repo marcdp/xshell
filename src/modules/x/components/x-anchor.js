@@ -1,127 +1,88 @@
-import xshell, {Utils} from "xshell";
-import XElement from "x-element";
 
-// class
-export default XElement.define("x-anchor", {
+// export
+export default {
+    meta: {
+        renderEngine: "x",
+        stateEngine:  "proxy"
+    },
     style: `
         :host {}
         :host a {display:inline; align-items:center; width:100%; }
+        :host a[disabled] { pointer-events: none; color:gray;}
         
         :host(.menuitem) {}
         :host(.menuitem) a {display:flex; padding-left:.6em; padding-right:.6em; text-decoration:none;}
+
         :host(.plain) {}
         :host(.plain) a {text-decoration:none; color:var(--x-color-text)}
         :host(.plain) a:hover {color:var(--x-color-primary);}
         :host(.plain) a:active {color:var(--x-color-primary-dark)}
         :host(.plain.selected) a {color:var(--x-color-primary);}
-        :host(.plain.selected) a:hover {color:var(--x-color-primary-dark);}
-        :host(.disabled) { pointer-events: none}
-
-        :host(:not([href]):not([command])) a:hover {color:inherit}
-
+        :host(.plain.selected) a:hover {color:var(--x-color-primary-dark);}    
     `,
     template: `
-        <a 
-            x-attr:href="state.hrefReal"
-            x-on:click="click" 
-            x-on:keydown.enter="click"
-            x-attr:target="state.target"
-            x-attr:rel="state.rel"
-            part="a"
-            ><slot></slot></a>
+        <a x-attr:href="state.hrefReal" x-attr:disabled="state.disabled" x-attr:target="state.target" x-attr:rel="state.rel" x-on:click="click"><slot></slot></a>
     `,
     state: {
-        command: "",
-        href: "",
-        hrefReal: null,
-        breadcrumb: false,
-        rel: null,
-        target: null
+        href:       {value: "",     attr:true, prop:true},
+        open:       {value: "auto", attr:true, enum: ["auto","top","dialog","stack","embed"]},
+        qs:         {value: {},     attr:true},
+        breadcrumb: {value: false,  attr:true},
+        title:      {value: null,   attr:true},
+        icon:       {value: null,   attr:true},
+        disabled:   {value: false,  attr:true},
+        target:     {value: null,   attr:true},
+        rel:        {value: null,   attr:true, reflect:true},
+        replace:    {value: false,  attr:true},
+        hrefReal:   {value: null}
     },
-    methods: {
-        focus() {
-            this.shadowRoot.querySelector("a").focus();
-        },
-        onCommand(command, args) {
-            if (command == "init") {
-                //init
-                this.state.addEventListener("change", (event) => {
-                    if (event.prop == "href") this.onCommand("refresh");
-                    if (event.prop == "breadcrumb") this.onCommand("refresh");
-                });
-                
-            } else if (command == "load") {
-                //load
-                this.onCommand("refresh");
+    script({ state, navigation }) {
+        return {
+            onCommand(command, params){
+                if (command == "load") {
+                    // load
 
-            } else if (command == "refresh") {
-                //refresh
-                if (this.page && this.state.href) {
-                    this.state.hrefReal = xshell.navigation.getHref(this.state.href, this.page, { breadcrumb: this.state.breadcrumb, target: this.state.target });
-                } else {
-                    this.state.hrefReal = null;
-                }                
-                
-            } else if (command == "click") {
-                //click
-                let event = args.event;
-                if (this.state.command) {
-                    //command
-                    this.dispatchEvent(new CustomEvent("command", {detail: {command: this.state.command, data: this.dataset}, bubbles: true, composed: true}));
-                    event.preventDefault();
-                    event.stopPropagation();
-                    return false;
-                } else if (this.state.target) {
-                    //target 
-                    if (this.state.href) {
-                        let src = Utils.combineUrls(this.page.src, this.state.href);
-                        if (this.state.target == "#stack") {
-                            xshell.navigation.showPage({ src: src, sender: this.page, target: this.state.target, breadcrumb: this.state.breadcrumb });
-                            event.preventDefault();
-                            event.stopPropagation();
-                            return false;
-                        } else if (this.state.target == "#dialog") {
-                            xshell.navigation.showPage({ src: src, sender: this.page, target: this.state.target, breadcrumb: this.state.breadcrumb });
-                            event.preventDefault();
-                            event.stopPropagation();
-                            return false;
-                        } else if (this.state.target == "#root") {
-                            xshell.navigation.navigate( src );
-                            event.preventDefault();
-                            event.stopPropagation();
-                            return false;
-                        } else if (this.state.target.startsWith("#")) {
-                            let targetPage = this.page.querySelector(this.state.target);
-                            if (!targetPage) targetPage = Utils.getElementByIdRecursive(document, this.state.target.substring(1));
-                            if (targetPage) targetPage.src = src;
-                            event.preventDefault();
-                            event.stopPropagation();
-                            return false;
-                        } else {
-                            debugger
-                            let src = xshell.getHref(this.state.href, this.page, { breadcrumb: this.state.breadcrumb });
-                            window.open(src);
+                } else if (command == "stateChanged") {
+                    // refresh
+                    if (state.href) {
+                        const xpage = this.closest("x-page");
+                        const href = navigation.buildUrlAbsolute({
+                            href:       state.href,
+                            params:     state.qs,
+                            open:       state.open,
+                            replace:    state.replace,
+                            from:       xpage,
+                            nav: {
+                                breadcrumb: (state.breadcrumb ? xpage?.breadcrumb : null),
+                                title:      state.title,
+                                icon:       state.icon
+                            }
+                        });
+                        // set real href    
+                        state.hrefReal = href;
+                    }
+
+                } else if (command == "click") {
+                    // click
+                    const event = params.event;
+                    if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || state.target) return;
+                    const xpage = this.closest("x-page");
+                    navigation.navigate( {
+                        href: state.href, 
+                        params: state.qs,
+                        open: state.open,
+                        replace: state.replace,
+                        from: xpage,
+                        nav: {
+                            breadcrumb: (state.breadcrumb ? xpage?.breadcrumb : null),
+                            title:      state.title,
+                            icon:       state.icon
                         }
-                    }
-                //} else if (this.state.href == "#") {
-                    //do nothing
-                    //event.preventDefault();
-                    //event.stopPropagation();
-                    //return false;
-
-                } else if (this.state.href){
-                    //page
-                    let src = Utils.combineUrls(this.page.src, this.state.href);
-                    if (src.startsWith("/")) {
-                        xshell.navigation.navigate(src, {breadcrumb: this.state.breadcrumb});
-                    } else {
-                        document.location = src;
-                    }
+                    });
                     event.preventDefault();
-                    event.stopPropagation();
-                    return false;
                 }
             }
         }
     }
-});
+};
+
