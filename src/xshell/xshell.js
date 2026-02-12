@@ -17,7 +17,7 @@ import Services from "./services.js";
 import Settings from "./settings.js";
 import Storage from "./storage.js";
 import Tabs from "./tabs.js";
-import Utils from "./utils.js";
+import UrlRewriter from "./urlRewriter.js";
 import XPage from "./x-page.js";
 
 // class
@@ -43,7 +43,8 @@ class XShell {
     _services = null;
     _storage = null;
     _tabs = null;
-
+    _urlRewriter = null;
+    
     //ctor
     constructor() {
     }
@@ -68,7 +69,7 @@ class XShell {
     get services() { return this._services; }
     get storage() { return this._storage; }
     get tabs() { return this._tabs; }
-
+    get urlRewriter() { return this._urlRewriter; }
 
     //methods
     async init(value) {
@@ -91,8 +92,7 @@ class XShell {
         this._tabs = new Tabs( { bus: this._bus } );
         this._menus = new Menus( { bus: this._bus, config: this._config, modules: this._modules, navigation: this._navigation } );
         this._services = new Services();
-        // auth
-        this._identity = await this.auth.login(this._config);
+        this._urlRewriter = new UrlRewriter();
         // services
         this._services.register("api", this._api);
         this._services.register("areas", this._areas);
@@ -113,10 +113,15 @@ class XShell {
         this._services.register("services", this._services);
         this._services.register("storage", this._storage);
         this._services.register("tabs", this._tabs);
+        this._services.register("urlRewriter", this._urlRewriter);
+        // auth
+        this._identity = await this.auth.login(this._config);
         // modules
         await this._modules.init();               
         // navigation
         await this._navigation.init();
+        // menus
+        await this._menus.init();
     }   
 }
 
@@ -127,4 +132,4 @@ let xshell = new XShell();
 export default xshell;
 
 // export other objects and classes
-export { Binds, Page, Utils };
+export { Binds, Page };

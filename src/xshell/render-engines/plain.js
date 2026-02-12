@@ -12,14 +12,11 @@ export class RenderEnginePlain {
 
 	// methods
 	mount() {
-		// add fragment to host DOM
 		this._host.appendChild(this._template.content);
 	}
-	invalidate() {
-		// No-op (plain HTML is static)
+	render() {
 	}
 	unmount() {
-		// Cleanup if needed in the future
 		this._host.replaceChildren();
 		this._template = null;
 	}
@@ -38,11 +35,12 @@ export default function createRenderEngineFactoryPlain(template, context) {
 			dependencies.add("component:" + el.tagName.toLowerCase());
 		}
 	});
-	// url rewrite
-	rewriteDocumentUrls(templateElement.content, context)
 	// return
 	return {
 		dependencies: Object.freeze(Object.seal([...dependencies])),
+		init: () => {
+			rewriteDocumentUrls(templateElement.content, context);
+		},
 		create: ({host, state}) => {
 			return new RenderEnginePlain({ host, template: templateElement, state });
 		}

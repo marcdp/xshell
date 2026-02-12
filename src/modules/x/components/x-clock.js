@@ -1,30 +1,27 @@
-import XElement from "x-element";
-
 // export
-export default XElement.define("x-clock", {
+export default {
+    style: `
+        :host {border:1px solid black; display:inline-block; padding:10px;}
+    `,
     template: `
         {{ state.time }}
     `,
     state: {
-        time: new Date().toLocaleTimeString(),
+        time: {value:null, type:"date"}
     },
-    methods:{
-        onCommand(command) {
-            if (command == "load") {
-                //load
-                this.onCommand("refresh");
-                this._timerId = setInterval(() => {
+    script: ({ state, timer }) => {
+        return {
+            onCommand(command) {
+                if (command == "load") {
+                    //load
                     this.onCommand("refresh");
-                }, 1000);
+                    timer.setInterval(1000, "refresh");
 
-            } else if (command == "refresh") {
-                //refresh
-                this.state.time = new Date().toLocaleTimeString();
-
-            } else if (command == "unload") {
-                //refresh
-                clearInterval(this._timerId);
+                } else if (command == "refresh") {
+                    //refresh
+                    state.time = new Date().toLocaleTimeString();
+                }
             }
-        }
+        };
     }
-});
+};

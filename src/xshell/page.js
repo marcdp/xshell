@@ -1,4 +1,3 @@
-import Binds from "./binds.js";
 import { generateId } from "./utils/ids.js";
 import xshell from "xshell";
 
@@ -15,13 +14,11 @@ export default class Page {
     _result = null;
 
     _host = null;
-    _renderEngine = null;
     _refs = null;
-    _binds = new Binds();
 
     //ctor
     constructor({ src }) {
-        this._src= src;
+        this._src = src;
         this._id = generateId("page");
     }
 
@@ -70,8 +67,6 @@ export default class Page {
     async mount({ host, renderEngine }) {
         // mount
         this._host = host;
-        this._renderEngine = renderEngine;
-        this._renderEngine.mount();
         await this.onCommand("mount", {});
     }
     async onCommand(command, params = {}) {
@@ -79,14 +74,11 @@ export default class Page {
     }
     async unmount() {
         // unmount
-        this._renderEngine.unmount();
-        this._renderEngine = null;
         this._host = null;
         await this.onCommand("unmount", {});
     }
     async unload() {
         // unload
-        this._binds.clear();
         await this.onCommand("unload", {});
         this._refs = null;
     }
@@ -105,45 +97,5 @@ export default class Page {
         return this._host.close(result);
     }
 
-    // nav methods ??? WE SHOULD REMOVE THIS !
-    replace(src) {
-        // replace source
-        this._host.replace(src);
-    }
 
-
-    // bind methods
-    bindEvent(target, event, command) {
-        this._binds.bindEvent(target, event, (event)=> {
-            if (typeof(command) == "string") {
-                this.onCommand(command, {event});
-            } else {
-                command(event);
-            }
-        });
-    }
-    bindTimeout(timeout, command) {
-        this._binds.bindTimeout(timeout, (event)=> {
-            if (typeof(command) == "string") {
-                this.onCommand(command, {event});
-            } else {
-                command(event);
-            }
-        });
-    }
-    bindInterval(timeout, command) {
-        this._binds.bindInterval(timeout, (event)=> {
-            if (typeof(command) == "string") {
-                this.onCommand(command, {event});
-            } else {
-                command(event);
-            }
-        });
-    }
-    
-    // render engine methods
-    invalidate(...params) {
-        this._renderEngine?.invalidate(...params);
-    }
-    
 }

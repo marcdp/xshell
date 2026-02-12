@@ -1,5 +1,4 @@
 import xshell from "./xshell.js";
-import Utils from "./utils.js";
 
 
 // class
@@ -35,24 +34,31 @@ class XPage extends HTMLElement {
             this.queryClose();
         });
         this.addEventListener("command", (event) => {
-            this.onCommand(event.detail.command, event.detail.data, { event });
+            this.page?.onCommand(event.detail.command, event.detail.data, { event });
             event.preventDefault();
             event.stopPropagation();
             return false;
         });
         this.addEventListener("click", (event) => {
-            const anchor = event.target.closest("a");
-            if (!anchor || !this.contains(anchor)) return;
-            const breadcrumb = anchor.hasAttribute("data-breadcrumb");
-            const target = anchor.target;
-            debugger
-            if (false) {
-                // todo: intercept path navigation urls (without #!)
-                event.preventDefault();
-                event.stopPropagation();
-                return false;
+            const a = event.target.closest("a");
+            if (!a || !this.contains(a) ||
+                event.defaultPrevented ||
+                event.button !== 0 ||        
+                event.metaKey || event.ctrlKey || event.shiftKey || event.altKey ||
+                a.target === "_blank" ||
+                a.hasAttribute("download")
+                ) {
+                return; // browser navigation
             }
-        });
+            //const breadcrumb = anchor.hasAttribute("data-breadcrumb");
+            //const target = anchor.target;
+            //if (false) {
+            //    // todo: intercept path navigation urls (without #!)
+            //    event.preventDefault();
+            //    event.stopPropagation();
+            //    return false;
+            //}
+        }, true);
     }
 
 
@@ -79,8 +85,8 @@ class XPage extends HTMLElement {
     get breadcrumb() {return this._breadcrumb;}
     set breadcrumb(value) {this._breadcrumb = value;}
 
-    get result() {return this.page.result;}
-    set result(value) {debugger; this.page.result = value;}
+    get result() {return this._page.result;}
+    set result(value) {this._page.result = value;}
 
     get layout() { return this._layout;}
     set layout(value) { this._layout = value;}
@@ -93,7 +99,6 @@ class XPage extends HTMLElement {
 
     get label() {return this._page.label;}
     set label(value) {
-        debugger;
         let changed = (this._label != value);
         this._label = value; 
         if (changed) {
@@ -120,9 +125,9 @@ class XPage extends HTMLElement {
     }
     connectedCallback() {
         this._connected = true;
-        //load now, or on the first activation
+        // load now, or on the first activation
         if (this.loading == "lazy") {
-            //intersection observer
+            // intersection observer
             const onIntersection = (entries) => {
                 entries.forEach(entry => {
                     if (entry.isIntersecting) {
@@ -137,6 +142,7 @@ class XPage extends HTMLElement {
             this._loadingObserver.observe(this); // start observing the element
 
         } else if (this._src) {
+            // load
             this.load();
         }
     }
@@ -155,27 +161,26 @@ class XPage extends HTMLElement {
             debugger;
             return;
         }
-        //reset
+        // reset
         this._status = "loading";
-        //set layout as loading (if exists)
+        // set layout as loading (if exists)
         let layoutElement = this.shadowRoot.firstChild;
         if (layoutElement) {
             layoutElement.setAttribute("status", "loading");
         }
-        //load module 
+        // load module 
         let moduleName = await xshell.modules.resolveModuleName(src);
         this.setAttribute("module", moduleName ?? "");
         if (!moduleName) {
             this.error({ code: 404, message: "Module not registered for page path: " + src, src: src});            
             return;
         }        
-        //fetch page
+        // fetch page
         let page = null;
         try {
             const pageClass = await xshell.loader.load("page:" + src);
             page = new pageClass( {src} );
         } catch(e) {
-            debugger;
             let message = "x-page: error loading page '" + src + "': " + e.message;
             xshell.debug.error(message, e);
             this.error({ 
@@ -185,14 +190,20 @@ class XPage extends HTMLElement {
                 stack: e.stack
             });
             return;
-        }                 
-        //search params
+        }        
+        // unmount previous page
+        await this.unmount();
+        // unload previous page
+        await this.unload();
+        // set new page
+        this._page = page;         
+        // search params
         let searchParams = new URLSearchParams(src.indexOf("?") != -1 ? src.substring(src.indexOf("?") + 1).split("#")[0] : "");
-        //layout
+        // layout
         let layoutName = this._layout;
-        if (searchParams.get("xshell-page-layout")) {
-            layoutName = searchParams.get("xshell-page-layout");
-            searchParams.delete("xshell-page-layout");
+        if (searchParams.get("nav.layout")) {
+            layoutName = searchParams.get("nav.layout");
+            searchParams.delete("nav.layout");
         }
         if (!layoutName) layoutName = "embed";
         let layout = xshell.config.get("page.layout." + layoutName);
@@ -205,75 +216,69 @@ class XPage extends HTMLElement {
             layoutElement.setAttribute("status", "loading");
         }        
         this._layout = layoutName;
+
         //delay
         //    if (document.body.querySelectorAll(":scope > page").length > 1) {
         //        await new Promise(r => setTimeout(r, 1000));                
         //    }
+
         //xshell-page-src
-        let srcPage = "";
-        if (searchParams.get("xshell-page-src")) {
-            srcPage = searchParams.get("xshell-page-src");
-            searchParams.delete("xshell-page-src");
+        //let srcPage = "";
+        //if (searchParams.get("xshell-page-src")) {
+        //    srcPage = searchParams.get("xshell-page-src");
+        //    searchParams.delete("xshell-page-src");
+        //}
+        //this._srcPage = srcPage;
+
+        // breadcrumb
+        let breadcrumb = xshell.menus.getMenuitemBreadcrumb(src.split("?")[0]);
+        if (searchParams.get("nav.breadcrumb")) {
+            breadcrumb = JSON.parse(atob(searchParams.get("nav.breadcrumb").replace(/_/g, "/").replace(/-/g, "+")));
+            breadcrumb.push({ label: page.label, href: src });
+            searchParams.delete("nav.breadcrumb");
+            this.breadcrumb = breadcrumb;
         }
-        this._srcPage = srcPage;
-        //menuitem
-        let menu = xshell.config.get("modules." + moduleName + ".menus.main", {});
-        let menuitems = Utils.findObjectsPath(menu, 'href', src.split("#")[0]);
-        let menuitem = (menuitems ? menuitems[menuitems.length-1] : null);  
-        //title
+        this.breadcrumb = breadcrumb;
+        // title
         let label = page.label;
-        let labelForced = null;
-        if (!label && menuitems) label = menuitem.label;
-        if (searchParams.get("xshell-page-label")) {
-            label = searchParams.get("xshell-page-label");
-            labelForced = label;
-            searchParams.delete("xshell-page-label");
+        if (searchParams.get("nav.title")) {
+            label = searchParams.get("nav.title");
+            searchParams.delete("nav.title");
+            if (breadcrumb && breadcrumb.length > 0) breadcrumb[breadcrumb.length - 1].label = label;
+        }
+        if (!label) {
+            if (breadcrumb && breadcrumb.length > 0) label = breadcrumb[breadcrumb.length - 1].label;
         }
         page.label = label;
-        //icon
+        // icon
         let icon = page.icon;
-        if (!icon && menuitem) icon = menuitem.icon;
-        if (searchParams.get("xshell-page-icon")) {
-            icon = searchParams.get("xshell-page-icon");
-            searchParams.delete("xshell-page-icon");
+        if (!icon && breadcrumb && breadcrumb.length > 0) icon = breadcrumb[breadcrumb.length - 1].icon;
+        if (searchParams.get("nav.icon")) {
+            icon = searchParams.get("nav.icon");
+            searchParams.delete("nav.icon");
+            if (breadcrumb && breadcrumb.length > 0) breadcrumb[breadcrumb.length - 1].icon = icon;
+        }
+        if (!icon) {
+            if (breadcrumb && breadcrumb.length > 0) icon = breadcrumb[breadcrumb.length - 1].icon;
         }
         page.icon = icon;
-        //breadcrumb
-        let breadcrumb = [];
-        if (searchParams.get("xshell-page-breadcrumb")) {
-            breadcrumb = JSON.parse(atob(searchParams.get("xshell-page-breadcrumb").replace(/_/g, "/").replace(/-/g, "+")));
-            breadcrumb.push({ label: label, href: src });
-            searchParams.delete("xshell-page-breadcrumb");
-        } else if (menuitems) {
-            for(let i = 0; i <menuitems.length; i++) {
-                let menuitem = menuitems[i];
-                breadcrumb.push({ label: menuitem.label, href: menuitem.href });
-            }
-        }
-        this.breadcrumb = breadcrumb;        
-        // unmount previous page
-        await this.unmount();
-        // unload previous page
-        await this.unload();
-        // set new page
-        this._page = page;
         // set as loaded
         if (this._status == "loading") {
             this._status = "loaded"; 
         }
-        //remove loading
+        // remove loading
         if (layoutElement) layoutElement.removeAttribute("status");
-        //load status
+        // load status
         this._loadStatus = 200;
         // call load on page
         await this._page.load();
         // call mount on page
         await this._page.mount( { host: this });
-        //raise load event
+        // raise load event
         this.dispatchEvent(new CustomEvent("load"));
     }
     error({code, message, src, stack}) {
-        //error
+        // error
         let url = xshell.config.get("xshell.url.error");
         if (url.indexOf("?") == -1) url += "?";
         url += "code=" + encodeURIComponent(code);
@@ -285,7 +290,7 @@ class XPage extends HTMLElement {
         this.src = url;
     }
     replace(src) {
-        //replace
+        // replace
         let value = this.src;
         if (src.startsWith("?")) {
             let aux = value.indexOf("?");
@@ -307,13 +312,13 @@ class XPage extends HTMLElement {
         }
     }
     async unmount() {
-        //unmount
+        // unmount
         if (this._page) {
             await this._page.unmount();
         }
     }
     async unload() {
-        //unload
+        // unload
         if (this._page) {
             await this._page.unload();
         }
@@ -339,12 +344,6 @@ class XPage extends HTMLElement {
         }
         //remove DOM node
         removeHandler();
-    }
-    async onCommand(command, args) {
-        //command
-        if (this._page && this._page.onCommand) {
-            await this._page.onCommand(command, args);
-        }
     }
 
 }

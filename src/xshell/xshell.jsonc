@@ -12,6 +12,10 @@
     "page.renderEngine": "plain",
     // page state engine
     "page.stateEngine": "plain",
+    // component render engine
+    "component.renderEngine": "plain",
+    // component state engine
+    "component.stateEngine": "plain",
     // resolver    
     "resolver.component:x-page": "/x-page.js; loader=module-js; cache=true;",
     "resolver.import:xshell": "/xshell.js",  
@@ -22,8 +26,8 @@
     "xshell.build": "2025-12-06",
     "xshell.debug": false,
     "xshell.assetsPrefix": "_cdn",  // assets prefix to use in url
-    "xshell.component.lazy": "",     //web component to render markdown
-    "xshell.url.error": "",    //url of error page
+    "xshell.component.lazy": "",    //web component to render markdown
+    "xshell.url.error": "",         //url of error page
     "xshell.areaDefault": "main",
     "xshell.version": "0.9.0",
     "xshell.identity.provider": "anonymous"

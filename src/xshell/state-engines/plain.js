@@ -1,11 +1,11 @@
 // export
-export default function createStateEngineFactoryPlain(stateDefinition) {
+export default function createStateEngineFactoryPlain(stateSkeleton, stateDefinition) {
 	// init state definition json
-	const stateDefinitionJson = JSON.stringify(stateDefinition || {});
+	const stateSkeletonJson = JSON.stringify(stateSkeleton || {});
 	// returns a state instance factory
 	return {
 		create: () => {
-			return JSON.parse(stateDefinitionJson);
+			return JSON.parse(stateSkeletonJson);
 		}
 	};
 }

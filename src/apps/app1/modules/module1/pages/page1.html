@@ -22,7 +22,16 @@
     <x-datetime datetime="2025-01-04T10:48:39.847Z" format="time"></x-datetime>
 
     <ul>
-        <li><a href="page2.html">Help 2</a></li>
+        <li><a href="page2.html">Page 2</a></li>
+        <li><x-anchor href="page2.html" qs-var1="hello" qs-var2="world" open="top">Page 2 (with qs vars)</x-anchor></li>
+        <li><x-anchor href="page2.html" qs-var1="hello" title="Lucas grijander">Page 2 (with title)</x-anchor></li>
+        <li><x-anchor href="page2.html" qs-var1="hello" breadcrumb>Page 2 (with breadcrumb)</x-anchor></li>
+        <li><x-anchor href="page2.html" qs-var1="hello" breadcrumb title="Lucas grijander">Page 2 (with breadcrumb and title)</x-anchor></li>
+        <li><x-anchor href="page2.html" disabled>Page 2 disabled</x-anchor></li>
+        <li><x-anchor href="page2.html" open="stack">Page 2 stack</x-anchor></li>
+        <li><x-anchor href="page2.html" open="dialog">Page 2 dialog</x-anchor></li>
+
+        <hr/>
         <li><a href="page2.html" target="#dialog">Help in dialog</a></li>
         <li><a href="page2.html" target="#stack">Help in stack</a></li>
         <li><a href="/pages/page2.html" data-breadcrumb>Help with breadcrumb</a></li>

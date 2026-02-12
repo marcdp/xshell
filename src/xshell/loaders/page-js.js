@@ -1,15 +1,11 @@
 import Page from "../page.js"
+import Timer from "../timer.js"
+import Events from "../events.js"
 import xshell from "xshell";
 
 // create page class from js definition
 export async function createPageClassFromJsDefinition(src, context, definition) {
-    const resourcePath = context.resourcePath;
-    const modulePath = context.resourceDefinition.modulePath;
-    const appBase = context.appBase;
-    const navigationMode = context.navigationMode;
-    const navigationHashPrefix = context.navigationHashPrefix;
     // style
-    /*
     const style = [];
     if (typeof(definition.style) == "string") {
         style.push(`<style>@scope (:scope) {${definition.style}}</style>`);
@@ -17,12 +13,7 @@ export async function createPageClassFromJsDefinition(src, context, definition) 
         for(let styleText of definition.style) {
             style.push(`<style>@scope (:scope) {${styleText}}</style>`);
         }
-    }
-    
-    // validations
-    if (template.content.querySelector("link")) {
-        throw new Error(`Error loading page: link tags are not allowed in page templates. Use the \`style\` property or <meta name="xshell.style"> instead.: ${src}`);
-    }*/
+    }    
     // state engine
     const stateEngineXShell = xshell.config.get(`page.stateEngine`);
     const stateEngineModule = xshell.config.get(`modules.${context.resourceDefinition.module}.page.stateEngine`, stateEngineXShell);
@@ -34,25 +25,20 @@ export async function createPageClassFromJsDefinition(src, context, definition) 
     const renderEngineModule = xshell.config.get(`modules.${context.resourceDefinition.module}.page.renderEngine`, renderEngineXShell);
     const renderEnginePage = definition.meta.renderEngine || renderEngineModule;
     const renderEngineFactoryCreator = await xshell.loader.load("render-engine:" + renderEnginePage);
-    const renderEngineFactory = new renderEngineFactoryCreator(definition.template, context);
+    const renderEngineFactory = new renderEngineFactoryCreator(definition.template + style.join(""), context);
     // render engine dependencies
     if (renderEngineFactory.dependencies.length) {
-        try {
-            await xshell.loader.load(renderEngineFactory.dependencies);
-        } catch (e) {
-            let errorTexts = [];
-            if (e.errors) {
-                for(let error of e.errors) errorTexts.push(error);
-            } else {
-                errorTexts.push(e.message);
-            }
-            throw new Error(errorTexts.join(""));
-        }
-    }     
+        await xshell.loader.load(renderEngineFactory.dependencies);
+    }    
+    // init 
+    renderEngineFactory.init();
     // returns a class that extends base class Page
     return class extends Page {
         // vars
         _state = null;
+        _renderEngine = null;
+        _renderPending = false;
+        _disposables = [];
         // ctor
         constructor({ src }) {
             super({ src });
@@ -66,16 +52,30 @@ export async function createPageClassFromJsDefinition(src, context, definition) 
                     // state changed
                 }, invalidate(path) {
                     // invalidate
-                    self.invalidate(path);
+                    self._renderEngine?.invalidate(path);
                 }
             });
             // services provider
             const servicesProvider = new Proxy({}, {
                 get: (obj, prop) => {
-                    if (prop == "definition") return Object.seal(Object.freeze(definition));
-                    if (prop == "state") return self._state;
-                    if (prop == "bus") return xshell.bus;
-                    throw new Error(`Unknown service key: ${prop.toString()}`);
+                    if (prop == "definition") {
+                        return definition;
+                    } else if (prop == "state") {
+                        return self._state;
+                    } else if (prop == "timer") {
+                        const timer = new Timer( (command) => {self.onCommand(command);} );
+                        self._disposables.push(timer);
+                        return timer;
+                    } else if (prop == "events") {
+                        const events = new Events( (command) => {self.onCommand(command);} );
+                        self._disposables.push(events);
+                        return events;
+                    } else if (prop == "bus") {
+                        return xshell.bus;
+                    } else if (prop == "navigation") {
+                        return xshell.navigation;                        
+                    }
+                    throw new Error(`Unknown page service key: ${prop.toString()}`);
                 }
             });            
             // set methods
@@ -83,11 +83,34 @@ export async function createPageClassFromJsDefinition(src, context, definition) 
             // bind methods to the instance
             Object.assign(this, methods);
         }
-        // methods
+        // mount/unmount
         async mount({ host }) {
-            await super.mount({ 
-                host, 
-                renderEngine: renderEngineFactory.create({ host, state: this._state })
+            this._renderEngine = renderEngineFactory.create({ host, state: this._state, handler:(command, ...params) => {
+                this.onCommand(command, ...params);
+            }, invalidate: () => { 
+                this.invalidate(); 
+            } })
+            this._renderEngine.mount();
+            await super.mount({ host });
+            this.invalidate();
+        }
+        async unmount() {
+            await super.unmount();
+            this._renderEngine.unmount();
+            this._renderEngine = null;
+            for(var disposable of this._disposables){
+                disposable.dispose();
+            }
+            this._disposables = null;
+        }
+        // invalidate
+        invalidate(path) {
+            if (this._renderPending) return;
+            this._renderPending = true;
+            requestAnimationFrame(() => {
+                this.onCommand("refresh");
+                this._renderPending = false;
+                this._renderEngine.render();
             });
         }
     };
@@ -96,10 +119,21 @@ export async function createPageClassFromJsDefinition(src, context, definition) 
 //export 
 export default class LoaderPageJs {
     async load(src, context) {
+        // import
         const module = await import(src);
         let definition = module.default;
+        // check if its a promise
+        if (typeof(definition) === "object" && typeof(definition.then) === "function") {
+            definition = await definition;
+        }
+        // check if its a class
+        if (typeof(definition) === "function"  && /^class\s/.test(Function.prototype.toString.call(definition))) {
+            return definition;
+        }
+        // else, asume its a definition object
         if (!definition.meta) definition.meta = {};
         definition = Object.seal(Object.freeze(definition));
+        // create class definition
         return await createPageClassFromJsDefinition(src, context, definition);        
     }
 };

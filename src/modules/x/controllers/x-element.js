@@ -1,6 +1,6 @@
 import XTemplate, {utils} from "./x-template.js";
 import createState from "./create-state.js";
-import xshell, { Binds, Utils }  from "xshell";
+import xshell, { Binds }  from "xshell";
 
 
 // utils
@@ -58,7 +58,7 @@ class XElement extends HTMLElement {
 
     //props
     get page() {
-        return xshell.navigation.getPageByElement(this);
+        return xshell.navigation.getXPageFromElement(this);
     }
     get state() {return this._state;}
     set state(value) {

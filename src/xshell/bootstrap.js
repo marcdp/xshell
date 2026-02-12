@@ -92,8 +92,8 @@ async function loadModulesConfig(config) {
         }
         // add resolvers
         config[`resolver.icon:${name}-{name}`] = `/${assetsPrefix}/${name}/icons/{name}.svg; loader=icon-svg; cache=true; module=${name}; modulePath=/${assetsPrefix}/${name};`;
-        config[`resolver.component:${name}-{name}`] = `/${assetsPrefix}/${name}/components/${name}-{name}.js; loader=module-js; cache=true; module=${name}; modulePath=/${assetsPrefix}/${name};`;
-        config[`resolver.layout:${name}-layout-{name}`] = `/${assetsPrefix}/${name}/layouts/${name}-layout-{name}.js; loader=module-js; cache=true; module=${name}; modulePath=/${assetsPrefix}/${name};`;
+        config[`resolver.layout:${name}-layout-{name}`] = `/${assetsPrefix}/${name}/layouts/${name}-layout-{name}.js; loader=component-js; cache=true; module=${name}; modulePath=/${assetsPrefix}/${name};`;
+        config[`resolver.component:${name}-{name}`] = `/${assetsPrefix}/${name}/components/${name}-{name}.js; loader=component-js; cache=true; module=${name}; modulePath=/${assetsPrefix}/${name};`;
         config[`resolver.page:/${assetsPrefix}/${name}/{path}.js`] = `/${assetsPrefix}/${name}/{path}.js; loader=page-js; cache=true; module=${name}; modulePath=/${assetsPrefix}/${name};`;
         config[`resolver.page:/${assetsPrefix}/${name}/{path}.html`] = `/${assetsPrefix}/${name}/{path}.html; loader=page-html; cache=true; module=${name}; modulePath=/${assetsPrefix}/${name};`;
         config[`resolver.page:/${assetsPrefix}/${name}/{path}.md`] = `/${assetsPrefix}/${name}/{path}.md; loader=page-md; cache=true; module=${name}; modulePath=/${assetsPrefix}/${name};`;

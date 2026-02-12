@@ -1,7 +1,7 @@
 import {combineUrls} from "../utils/urls.js";
 
 // rules
-let rules = [
+const rules = [
     // navigation
     { selector: "a", attr: "href", type:"navigation"},
     { selector: "area", attr: "href", type:"navigation"},
@@ -44,14 +44,14 @@ export function normalizeModuleResourceUrl(url, modulePath, resourcePath) {
 
 // export
 export function rewrite( el, attr, type, url, context ) {
-    if (url.indexOf("page222")!=-1) debugger;
+    //if (url.indexOf("colibri")!=-1) debugger;
     if (url.indexOf(":") != -1) {
         return url;
     } else if (url.startsWith("xshell/")) {
         return url;
     } else if (type == "resource") {
         if (url.startsWith("/")) {
-            return xshell.resolver.resolveUrl(context.resourceDefinition.modulePath + url);
+            return context.appBase + context.resourceDefinition.modulePath + url;
         } else{
             return context.appBase + combineUrls(context.resourcePath, url);
         }
@@ -69,12 +69,6 @@ export function rewrite( el, attr, type, url, context ) {
             realUrl = context.navigationHashPrefix + virtualUrl;
         } else {
             realUrl = context.appBase + virtualUrl;
-        }
-        if (el.localName == "a") {
-            const breadcrumb = el.hasAttribute("data-breadcrumb");
-            if (breadcrumb) {
-                debugger;
-            }
         }
         return realUrl;
     } else {

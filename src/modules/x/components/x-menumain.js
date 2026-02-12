@@ -1,4 +1,5 @@
 import XElement from "x-element";
+import xshell from "xshell";
 
 // class
 export default XElement.define("x-menumain", {
@@ -27,7 +28,7 @@ export default XElement.define("x-menumain", {
             <ul x-if="state.menu">
                 <li class="menuitem new" x-recursive="menuitem in state.menu" x-key="href" x-recursive-wrapper="ul">
                     <hr x-if="menuitem.label=='-'" />
-                    <x-anchor x-else x-attr:href="menuitem.href" x-attr:target="menuitem.target" x-attr:icon="menuitem.icon" class="plain" x-class:selected="menuitem.selected">
+                    <x-anchor x-else x-attr:href="menuitem.href" x-attr:target="menuitem.target" x-attr:icon="menuitem.icon" class="plain" x-class:selected="state.selected == menuitem.href" >
                         <x-icon x-if="menuitem.icon" x-attr:icon="menuitem.icon"></x-icon>
                         <span x-text="menuitem.label"></span>
                         <x-icon x-if="menuitem.target && !menuitem.target.startsWith('#')" class="new" icon="x-open_in_new"></x-icon>
@@ -42,9 +43,19 @@ export default XElement.define("x-menumain", {
     `,
     state: {
         menu: null,
+        selected : null
     },
     methods: {
         onCommand(command) {
+            if (command == "load") {
+                // load
+                this.bindEvent(xshell.bus, "xshell:navigation:end", (event) => {
+                    let href = event.detail.src;
+                    if (href.indexOf("#")!=-1) href = href.substring(0, href.indexOf("#"));
+                    if (href.indexOf("?")!=-1) href = href.substring(0, href.indexOf("?"));
+                    this.state.selected = href;
+                })
+            }
         }
     }
 });

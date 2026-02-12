@@ -11,6 +11,9 @@ export default class Navigation {
 
     _mode = ""; //hash|path
     _hashPrefix = "";
+    _appBase = "";
+
+    _stack = [];
     
     // ctor
     constructor( { areas, bus, config, container} ) {
@@ -18,40 +21,55 @@ export default class Navigation {
         this._bus = bus;
         this._config = config;
         this._container = container;
-        this._mode = config.get("navigation.mode");
+        this._mode = config.get("navigation.mode") || "hash";
         this._hashPrefix = config.get("navigation.hashPrefix");
+        this._appBase = this._config.get("app.base");        
     }
 
     // props
     get mode() { return this._mode; }
     get src() { 
-        let page = this.getPage();
-        return (page ? page.src : null);
+        let xpage = this.getXPage();
+        return (xpage ? xpage.src : null);
     }
     
     // init
     async init() {
-        // add event listener hashchange
-        window.addEventListener("hashchange", () => {
-            this._navigate(document.location.hash);
-        });
-        // init
-        if (document.location.hash) {
-            await this._navigate(document.location.hash);
-        } else {
-            let defaultArea = this._areas.getDefaultArea();
-            document.location.hash = this._hashPrefix + defaultArea.home;
+        if (this._mode == "hash") {
+            // hash mode
+            window.addEventListener("hashchange", async () => {
+                await this._syncFromHash(document.location.hash);
+            });
+            // init
+            if (document.location.hash) {
+                await this._syncFromHash(document.location.hash);
+            } else {
+                let defaultArea = this._areas.getDefaultArea();
+                document.location.hash = this._hashPrefix + defaultArea.home;
+            }
+        } else if (this._mode == "path") {
+            // path mode
+            // todo ...
+            window.addEventListener("popstate", async () => {
+                await this._syncFromPath(document.location.pathname, document.location.search);
+            });
+            // init
+            debugger;
+            throw new Error("Path mode is not implemented yet");
         }
     }
 
     // methods
-    getPage() {
-        return this.getPages()[0];
+    getXPage() {
+        // get the first page that is a direct child of the container and not a dialog
+        return this.getXPages()[0];
     }
-    getPages() {
+    getXPages() {
+        // get pages that are direct children of the container and not dialogs
         return Array.from(this._container.querySelectorAll(":scope > x-page:not([layout='dialog'])"));
     }
-    getPageByElement(target) {
+    getXPageFromElement(target) {
+        // get the page element from a target element by traversing up the DOM tree
         while (target) {
             if (!target.parentNode) {
                 target = target.host;
@@ -64,86 +82,191 @@ export default class Navigation {
         }
         return null;
     }
-    getHref(src, page, settings) {
-        let pages = this.getPages();
-        if (!settings) settings = {};
-        if (typeof (settings.relative) == "undefined") settings.relative = false;
-        let prefix = "";
-        //absolute
-        if (src.indexOf("://") != -1) return src;
-        //resolve src
-        src = combineUrls(page.src, src);
-        //breadcrumb
-        if (settings.breadcrumb) {
-            src += (src.indexOf("?") != -1 ? "&" : "?") + "xshell-page-breadcrumb=" + btoa(JSON.stringify(page.breadcrumb)).replace(/\+/g, "-").replace(/\//g, "_");
-        }
-        //stack page
-        let index = pages.indexOf(page);
-        if (settings.target == "#stack") index++;
-        for (var i = 0; i < index; i++) {
-            prefix += this._hashPrefix + pages[i].src;
-        }
-        //return
-        return this._config.get("app.base") + "/" + prefix + this._hashPrefix + src;
-    }
-    navigate(src) {
-        //navigate
-        window.document.location.hash = this._hashPrefix + src;
-    }
-    async showPage({ src, sender, target }) {
-        //show page
-        if (sender) {
-            src = combineUrls(sender.src, src);
-        }
-        if (target == "#dialog") {
-            //show page dialog
-            return await this.showDialog({ src, sender });
-        } else if (target == "#stack") {
-            //show page stack
-            this.showStackedPage({ src, sender });
+    buildUrlAbsolute(...params){
+        let href = this.buildUrl(...params);
+        if (this._mode == "hash") {
+            href = this._appBase + "/" + this._hashPrefix + href;
         } else {
-            //show page main
-            window.document.location.hash = this._hashPrefix + src;
+            href = this._appBase + href;
+        }
+        return href;
+    }
+    buildUrl({
+            href,           // url relative to app base
+            params = {},    // ws variables to be added as query string parameters
+            nav = {         // navigation data to be added as query string parameters (nav.title, nav.icon, nav.breadcrumb)
+                title,      // nav.title
+                icon,       // nav.icon
+                breadcrumb},// nav.breadcrumb
+            from,           // current xpage element for resolving relative urls
+        }) {
+        // produces real, navigable URLS
+        if (!href || typeof href !== "string") throw new Error("buildUrl: href must be a non-empty string");
+        if (/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(href)) return href;
+        if (href.startsWith("#!")) href = href.substring(2);
+        // resolve relative urls
+        if (!href.startsWith("/")) href = combineUrls(from ? from.src : "/", href);
+        // params
+        for (const [k, v] of Object.entries(params)) {
+            href += (href.includes("?") ? "&" : "?") + encodeURIComponent(k) + "=" + encodeURIComponent(v);
+        }    
+        // breadcrumb
+        if (nav.breadcrumb) {
+            href += (href.includes("?") ? "&" : "?") + "nav.breadcrumb=" + btoa(JSON.stringify(nav.breadcrumb)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+        }
+        // title
+        if (nav.title) {
+            href += (href.includes("?") ? "&" : "?") + "nav.title=" + encodeURIComponent(nav.title);
+        }
+        // icon
+        if (nav.icon) {
+            href += (href.includes("?") ? "&" : "?") + "nav.icon=" + encodeURIComponent(nav.icon);
+        }
+        // return
+        return href;
+    }
+    parseUrl(url) {
+        if (!url || typeof url !== "string") throw new Error("parseUrl: url must be a non-empty string");
+        // remove hash prefix if present (#!)
+        if (url.startsWith("#!")) url = url.substring(2);
+        // separate path and query
+        const [pathPart, queryPart] = url.split("?");
+        const result = {
+            href: pathPart || "",
+            params: {},
+            nav: {
+                title: null,
+                icon: null,
+                breadcrumb: null
+            }
+        };
+        if (!queryPart) return result;
+        const searchParams = new URLSearchParams(queryPart);
+        for (const [key, value] of searchParams.entries()) {
+            if (key === "nav.title") result.nav.title = value;
+            else if (key === "nav.icon") result.nav.icon = value;
+            else if (key === "nav.breadcrumb") {
+                try {
+                    const decoded = value
+                        .replace(/-/g, "+")
+                        .replace(/_/g, "/");
+
+                    const json = atob(decoded);
+                    result.nav.breadcrumb = JSON.parse(json);
+                } catch {
+                    result.nav.breadcrumb = null;
+                }
+            } else {
+                result.params[key] = value;
+            }
+        }
+        return result;
+    }
+
+    async navigate({
+            href,
+            params = {},    // ws variables to be added as query string parameters
+            nav = {         // navigation data to be added as query string parameters (nav.title, nav.icon, nav.breadcrumb)
+                title,      // nav.title
+                icon,       // nav.icon
+                breadcrumb},// nav.breadcrumb
+            from,
+            open = "auto",  // auto | top | stack | dialog | embed 
+            replace = false
+        }) {
+        //navigate
+        href = this.buildUrl({ href, params, nav, from });
+        // open
+        if (open == "auto") {
+            // auto
+            const xpages = this.getXPages();
+            const indexPage = xpages.indexOf(from);
+            if  (from == null) {
+                // top
+                this._updateBrowserUrl(href, { replace });
+            } else if (indexPage == 0) {
+                // top
+                this._updateBrowserUrl(href, { replace });
+            } else if (indexPage != -1) {
+                // stackpage
+                // todo ...
+                debugger;
+            } else {
+                // dialog or embed
+                debugger;
+                from.setAttribute("src", href);
+            }
+        } else if (open == "top") {
+            // top
+            this._updateBrowserUrl(href, { replace });
+            debugger;
+        } else if (open == "dialog") {
+            // dialog
+            await this._showDialog({ href });
+        } else if (open == "stack") {
+            // stack
+            let aux = this._stack;
+            //this._updateBrowserUrl(href, { replace });
+            debugger;
+        } else if (open == "embed") {
+            // embed
+            debugger;
         }
     }
-    async showStackedPage({ src }) {
-        //show page stack
-        window.document.location.hash += this._hashPrefix + src;
+
+
+    // private methods
+    _updateBrowserUrl(url, { replace }) {
+        if (this._mode === "hash") {
+            if (replace) {
+                location.replace(this._hashPrefix + url);
+            } else {
+                location.hash = this._hashPrefix + url;
+            }
+        } else {
+            if (replace) {
+                history.replaceState(null, "", this._appBase + url);
+            } else {
+                history.pushState(null, "", this._appBase + url);
+            }
+        }
     }
-    async showDialog({ src, context, sender }) {
+    async _showDialog({ href }) {
         //show page dialog
-        if (sender) {
-            src = combineUrls(sender.src, src);
-        }
         let resolveFunc = null;
-        let page = document.createElement("x-page");
-        page.setAttribute("src", src);
-        page.setAttribute("layout", "dialog");
-        page.context = context || {};
-        page.addEventListener("close", (event) => {
+        let xpage = document.createElement("x-page");
+        xpage.setAttribute("src", href);
+        xpage.setAttribute("layout", "dialog");
+        xpage.addEventListener("close", (event) => {
             resolveFunc(event.target.result);
             if (event.target.parentNode) {
                 event.target.parentNode.removeChild(event.target);
             }
         });
-        this._container.appendChild(page);
+        this._container.appendChild(xpage);
         return new Promise((resolve) => {
             resolveFunc = resolve;
         });
     }
-
-    // private methods
-    async _navigate(hash) {
+    async _handleLocationChange() {
+        // handle clocation change
+        if (this._mode === "hash") {
+            await this._syncFromHash(location.hash);
+        } else {
+            await this._syncFromPath(location.pathname, location.search);
+        }
+    }
+    async _syncFromHash(hash) {
         //navigate
-        let hashBeforeParts = (this._hash ? this._hash.split(this._hashPrefix) : []);
+        let hashBeforeParts = this._stack;
         let hashAfterParts = (hash ? hash.substring(this._hashPrefix.length).split(this._hashPrefix) : []);
         let inc = 0;
         //close the last dialog
-        let allPages = Array.from(this._container.querySelectorAll(":scope > x-page"));
-        for (let i = allPages.length - 1; i >= 0; i--) {
-            let page = allPages[i];
-            if (page.getAttribute("layout") != "dialog") break;
-            this._container.removeChild(page);            
+        let allXPages = Array.from(this._container.querySelectorAll(":scope > x-page"));
+        for (let i = allXPages.length - 1; i >= 0; i--) {
+            let xpage = allXPages[i];
+            if (xpage.getAttribute("layout") != "dialog") break;
+            this._container.removeChild(xpage);            
         }
         //process hash parts
         for (let i = 0; i < Math.max(hashBeforeParts.length, hashAfterParts.length); i++) {
@@ -151,52 +274,52 @@ export default class Navigation {
             let hashAfterPart = hashAfterParts[i];
             if (!hashBeforePart && hashAfterPart) {
                 //add page
-                let page = document.createElement("x-page");
-                page.setAttribute("src", hashAfterPart);
+                let xpage = document.createElement("x-page");
+                xpage.setAttribute("src", hashAfterPart);
                 if (i == 0) {
-                    page.setAttribute("layout", "main");
+                    xpage.setAttribute("layout", "main");
                     //emit event navigation-start
-                    this._bus.emit("xshell:navigation:start", { src: page.src });
+                    this._bus.emit("xshell:navigation:start", { src: xpage.src });
                 } else {
-                    page.setAttribute("layout", "stack");
-                    page.addEventListener("close", (event) => {
+                    xpage.setAttribute("layout", "stack");
+                    xpage.addEventListener("close", (event) => {
                         //page close
-                        let pages = this.getPages();
+                        let xpages = this.getXPages();
                         let hashParts = document.location.hash.substring(this._hashPrefix.length).split(this._hashPrefix);
-                        let index = pages.indexOf(event.target);
+                        let index = xpages.indexOf(event.target);
                         hashParts = hashParts.filter((_, idx) => idx !== index);
                         document.location.hash = this._hashPrefix + hashParts.join(this._hashPrefix);
                     });
                 }
-                page.addEventListener("change", (event) => {
+                xpage.addEventListener("change", (event) => {
                     //page change
-                    let pages = this.getPages();
-                    if (pages.indexOf(event.target) == 0) {
+                    let xpages = this.getXPages();
+                    if (xpages.indexOf(event.target) == 0) {
                         var label = event.target.label;
                         if (label) document.title = label + " / " + this._config.get("app.label");
                     }
                 });
-                page.addEventListener("replace", (event) => {
+                xpage.addEventListener("replace", (event) => {
                     //page replace
-                    let pages = this.getPages();
+                    let xpages = this.getXPages();
                     let hashParts = document.location.hash.substring(this._hashPrefix.length).split(this._hashPrefix);
-                    let index = pages.indexOf(event.target);
+                    let index = xpages.indexOf(event.target);
                     hashParts[index] = event.target.src;
                     history.replaceState(null, "", this._hashPrefix + hashParts.join(this._hashPrefix));
                 });
-                page.addEventListener("load", (event) => {
+                xpage.addEventListener("load", (event) => {
                     //page load
-                    let pages = this.getPages();
-                    if (pages.indexOf(event.target) == 0) {
+                    let xpages = this.getXPages();
+                    if (xpages.indexOf(event.target) == 0) {
                         var label = event.target.label;
                         if (label) document.title = label + " / " + this._config.get("app.label");
                         this._bus.emit("xshell:navigation:end", { src: event.target.src });
                     }
                 });
-                page.addEventListener("navigate", (event) => {
+                xpage.addEventListener("navigate", (event) => {
                     //page navigation
-                    let pages = this.getPages();
-                    let index = pages.indexOf(event.target);
+                    let xpages = this.getXPages();
+                    let index = xpages.indexOf(event.target);
                     if (index != -1) {
                         let hashParts = document.location.hash.substring(this._hashPrefix.length).split(this._hashPrefix);
                         hashParts[index] = event.detail;
@@ -204,25 +327,38 @@ export default class Navigation {
                     }
                 });
                 //add page to container
-                this._container.appendChild(page);
+                this._container.appendChild(xpage);
             } else if (hashBeforePart && !hashAfterPart) {
                 //remove page
-                let pages = this.getPages();
-                let page = pages[i + inc];
-                page.removePage();
+                let xpages = this.getXPages();
+                let xpage = xpages[i + inc];
+                xpage.removePage();
                 inc -= 1;
             } else if (hashBeforePart != hashAfterPart) {
                 //change page
-                let pages = this.getPages();
-                let page = pages[i];
-                page.src = hashAfterPart;
+                let xpages = this.getXPages();
+                let xpage = xpages[i];
+                xpage.src = hashAfterPart;
                 //emit event navigation-start
                 if (i == 0) {
-                    this._bus.emit("xshell:navigation:start", { src: page.src });
+                    this._bus.emit("xshell:navigation:start", { src: xpage.src });
                 }
             }
         }
-        this._hash = hashAfterParts.join(this._hashPrefix);
+        this._stack = hashAfterParts;
     }
+    async _syncFromPath(path) {
+        // handle from path
+        // todo ...
+        debugger;
+        throw new Error("Path mode is not implemented yet");
+    }
+    _serializeStack(stackArray){
+        debugger;
+    }
+    _deserializeStack(string){
+        debugger;
+    }
+
 }
 

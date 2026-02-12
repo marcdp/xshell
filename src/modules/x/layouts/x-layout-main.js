@@ -1,5 +1,6 @@
-import xshell, { Utils } from "xshell";
+import xshell from "xshell";
 import XElement from "x-element";
+import { probablyPhone } from "../utils/dom.js";
 
 
 // class
@@ -282,7 +283,7 @@ export default XElement.define("x-layout-main", {
                 this.state.userInitials =  (() => { let w = xshell.identity.name.trim().split(/\s+/); return (w.length > 1 ? w[0][0] + w.at(-1)[0] : w[0].slice(0,2)); })().toUpperCase();
                 // auto close menu on navigation start (mobile)
                 this.bindEvent(xshell.bus, "xshell:navigation:start", () => {
-                    if (Utils.probablyPhone()){
+                    if (probablyPhone()){
                         if (this.state.toggled) {
                             this.state.toggled = false;
                         }
@@ -315,9 +316,9 @@ export default XElement.define("x-layout-main", {
                     }
                     module = xshell.modules.resolveModuleName(href);
                     //show menu main and tools
-                    this.state.menuMain = xshell.menus.get("main");
-                    this.state.menuTools = xshell.menus.get("tools");
-                    this.state.menuProfile = xshell.menus.get("profile");
+                    this.state.menuMain = xshell.menus.getMenu("main");
+                    this.state.menuTools = xshell.menus.getMenu("tools");
+                    this.state.menuProfile = xshell.menus.getMenu("profile");
                     //show breadcrumb
                     this.state.breadcrumb = breadcrumb;
                     //show label
@@ -325,12 +326,13 @@ export default XElement.define("x-layout-main", {
                 } else { 
                     // not found breadcrumb in page
                     // show menu main and tools
-                    this.state.menuMain = xshell.menus.get("main");
-                    this.state.menuTools = xshell.menus.get("tools");
-                    this.state.menuProfile = xshell.menus.get("profile");
+                    this.state.menuMain = xshell.menus.getMenu("main");
+                    this.state.menuTools = xshell.menus.getMenu("tools");
+                    this.state.menuProfile = xshell.menus.getMenu("profile");
                     //breadcrumb
                     if (this.state.menuMain) {
-                        let menuitems = Utils.findObjectsPath(this.state.menuMain, 'href', src);
+                        debugger;
+                        let menuitems = findObjectsPath(this.state.menuMain, 'href', src);
                         if (menuitems) {
                             this.state.breadcrumb = menuitems;
                             this.state.label = menuitems[menuitems.length -1].label;

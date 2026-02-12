@@ -10,6 +10,9 @@
 
     /* page defaults */
     "page.renderEngine": "x",
+    "page.stateEngine": "proxy",
+    "component.renderEngine": "x",
+    "component.stateEngine": "proxy",
     
     // resolver
     "global.resolver.component:ace-editor":"https://unpkg.com/ace-custom-element@latest/dist/index.min.js; loader=module-js;",
