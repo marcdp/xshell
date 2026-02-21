@@ -104,16 +104,7 @@ export async function createComponentClassFromJsDefinition(src, context, definit
             this._state = stateEngineFactory.create({
                 stateChange(prop, oldValue, newValue) {
                     // state changed
-                    self._stateChanges.push({prop, oldValue, newValue});
-                    // reflect to attribute if needed
-                    if (stateReflectedAttributeNames.includes(prop)) {
-                        const attrName = camelToKebab(prop);
-                        if (newValue === false || newValue === null) {
-                            self.removeAttribute(attrName);
-                        } else {
-                            self.setAttribute(attrName, (newValue === true ? "" : newValue));
-                        }
-                    }
+                    self.stateChange(prop, oldValue, newValue);
                 }, invalidate(path) {
                     // invalidate
                     self.invalidate(path);
@@ -221,14 +212,27 @@ export async function createComponentClassFromJsDefinition(src, context, definit
                 disposable.dispose();
             }
         }
+        // stateChange(prop, oldValue, newValue) {
+        stateChange(prop, oldValue, newValue) {
+            this._stateChanges.push({prop, oldValue, newValue});
+            // reflect to attribute if needed
+            if (stateReflectedAttributeNames.includes(prop)) {
+                const attrName = camelToKebab(prop);
+                if (newValue === false || newValue === null) {
+                    this.removeAttribute(attrName);
+                } else {
+                    this.setAttribute(attrName, (newValue === true ? "" : newValue));
+                }
+            }
+        }
         // invalidate
         invalidate(path) {
             if (this._renderPending) return;
             this._renderPending = true;
             requestAnimationFrame(() => {
                 this.onCommand("stateChange", {changes: this._stateChanges});
-                this._renderPending = false;
                 this._stateChanges = [];
+                this._renderPending = false;
                 this._renderEngine.render();
             });
         }
