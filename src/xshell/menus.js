@@ -54,7 +54,7 @@ export default class Menus {
     getMenuMain() {
         // get main menu (by area)
         let result =  [];
-        const breadcrum = this.getMenuitemBreadcrumb(this._navigation.src);
+        const breadcrum = this.getMenuitemBreadcrumb(this._navigation.stack[0].href);
         if (breadcrum) {
             const area = breadcrum[0].area;
             for(let i in this._cache[MENU_MAIN]) {

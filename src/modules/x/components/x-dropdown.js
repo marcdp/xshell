@@ -1,5 +1,6 @@
 import XElement from "x-element";
 import xshell from "xshell";
+import { findFocusableElement, getDeepActiveElement, isDescendantOfElement } from "../utils/dom.js";
 
 // class
 export default XElement.define("x-dropdown", {
@@ -19,10 +20,8 @@ export default XElement.define("x-dropdown", {
             box-shadow:var(--x-dropdown-shadow);
         }
         .body > div {
-            min-height:1em;
             padding: var(--x-dropdown-padding-vertical) var(--x-dropdown-padding-horizontal) var(--x-dropdown-padding-vertical) var(--x-dropdown-padding-horizontal);            
             max-height:calc(100vh - 7em);
-            __overflow:auto;
             scrollbar-width: var(--x-scrollbar-width);
             scrollbar-gutter: var(--x-scrollbar-gutter);
         }

@@ -1,11 +1,11 @@
 import XElement from "x-element";
 
 // class
-export default XElement.define("x-notice", {
+export default {
     style: `
         :host {display:block;}
 
-        :host > div {display:flex; border:var(--x-notice-border); border-radius:var(--x-notice-border-radius); margin-top:.5em; margin-bottom:.5em; align-items:start;}
+        :host > div {display:flex; border:var(--x-notice-border); border-radius:var(--x-notice-border-radius); margin-top:0em; margin-bottom:.5em; align-items:start;}
 
         :host > div div.header {padding:.75em; display:flex; align-items:baseline;}
         :host > div div.header x-icon {width:2.5em; text-align:center;transform:translateY(-.3em);}
@@ -44,21 +44,23 @@ export default XElement.define("x-notice", {
         </div>
     `,
     state: {
-        type: "info",
-        label:"",
-        message: "",
-        visible: true
+        type:       {value:"info", attr:true},
+        label:      {value:"", attr:true},
+        message:    {value:"", attr:true},
+        visible:    {value:true, attr:true}
     },
-    methods:{
-        onCommand(command) {
-            if (command == "load") {
+    script({}) {
+        return {
+            onCommand:(command)=>{
+                if (command == "load") {
                 //load  
 
             } else if (command == "close") {
                 //close
                 this.state.visible = false;
             }
+            }
         }
     }
-});
+};
 

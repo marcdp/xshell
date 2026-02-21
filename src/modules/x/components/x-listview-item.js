@@ -19,12 +19,12 @@ export default XElement.define("x-listview-item", {
         
 
         /* icons */
-        x-anchor.icons {display:flex; width:6em; height:6em; border-radius:.5em;}  
+        x-anchor.icons {display:flex; width:6em; height:6em; border-radius:.5em; }
         x-anchor.icons x-icon {font-size:2em; amargin-bottom:.15em;}
-        x-anchor.icons::part(a) { display:flex; flex-direction:column; align-items:center; padding-left:.5em; padding-right:.5em; box-sizing:border-box; }
+        x-anchor.icons::part(a) { display:flex; flex-direction:column; align-items:center; padding-left:.25em; padding-right:.25em; box-sizing:border-box; justify-content: center; padding-bottom:.75em;}
         x-anchor.icons :focus { outline:.15em solid var(--x-color-text)!important;}
         x-anchor.icons::part(a):focus {outline:anone; }
-        x-anchor.icons .label { text-align:center;}
+        x-anchor.icons .label { text-align:center; display:block; width:100%; text-overflow:ellipsis; white-space:nowrap; overflow:hidden;}
         x-anchor.icons .description {display:none}
 
         :host(.selected) x-anchor.icons {font-weight:600; outline:.15em solid var(--x-color-primary);}
@@ -40,7 +40,7 @@ export default XElement.define("x-listview-item", {
         <div x-if="state.category" class="category">
             {{state.category}}
         </div>
-        <x-anchor x-attr:href="state.href" x-attr:target="state.target" x-attr:class="'plain ' + state.view" x-attr:title="state.description" x-prop:breadcrumb="state.breadcrumb">
+        <x-anchor x-attr:href="state.href" x-attr:target="state.target" x-attr:class="'plain ' + state.view" x-attr:title="state.description" x-prop:breadcrumb="state.breadcrumb" x-attr:open="state.open">
             <x-icon x-else x-attr:icon="state.icon || 'x-file'"></x-icon>
             <span class="label" x-text="state.label"></span>
             <span class="description" x-text="state.description"></span>
@@ -55,6 +55,7 @@ export default XElement.define("x-listview-item", {
         category: "",
         href: "",
         target: "",
+        open: "",
         view: "list",
     },
     methods: {

@@ -1,8 +1,6 @@
-import xshell from "xshell";
-import XElement from "x-element";
 
 // class
-export default XElement.define("x-button", {
+export default {
     style: `
         :host {position:relative; display:inline-flex;}
         :host > div {display:flex; flex:1;  }
@@ -110,93 +108,103 @@ export default XElement.define("x-button", {
         </div>
     `,
     state: {
-        icon: "",
-        label: "",
-        message: "",
-        command: "",
-        href: "",
-        realHref: null,
-        breadcrumb: false,
-        childs:false,
-        expanded:false,
-        forceRight:"",
+        icon: {value:"", attr:true},
+        label: {value:"", attr:true},
+        message: {value:"", attr:true},
+        command: {value:"", attr:true},
+        href: {value:"", attr:true},
+        realHref: {value:null},
+        breadcrumb: {value:false},
+        autofocus: {value:false, attr:true},
+        childs: {value:false},
+        expanded: {value:false},
+        forceRight: {value:""},
     },
-    methods:{
-        onCommand(command, args) {
-            if (command == "init") {
-                //init
-                this.bindEvent(this.state, "change:href", "refresh");
+    script({ state, events }) {
+        return {
+            onCommand(command, args) {
+                if (command == "load") {
+                    // load
+                    events.on(state, "change:href", "refresh");
+                    this.onCommand("refresh");
 
-            } else if (command == "load") {
-                // load
-                this.onCommand("refresh");
+                } else if (command == "mount") {
+                    // mount
+                    if (state.autofocus) {
+                        requestAnimationFrame(() => {
+                            let focusable = this.shadowRoot.querySelector("a.button");
+                            if (focusable) {
+                                focusable.focus();
+                            }
+                        });
+                    }
 
-            } else if (command == "command") {
-                // command
-                let handled = false;
-                if (this.state.command) {
-                    this.dispatchEvent(new CustomEvent("command", {detail: {command: this.state.command, data: this.dataset}, bubbles: true, composed: false}));
-                    handled = true;
-                } else if (this.state.childs) {
-                    if (this.state.expanded) {
+                } else if (command == "command") {
+                    // command
+                    let handled = false;
+                    if (state.command) {
+                        this.dispatchEvent(new CustomEvent("command", {detail: {command: state.command, data: this.dataset}, bubbles: true, composed: false}));
+                        handled = true;
+                    } else if (state.childs) {
+                        if (state.expanded) {
+                            this.onCommand("collapse");
+                        } else {
+                            this.onCommand("expand");
+                        }
+                        handled = true;
+                    }
+                    //cancel propagation
+                    if (handled) {
+                        let event = args.event;
+                        if (event) {
+                            event.preventDefault();
+                            event.stopPropagation();
+                        }
+                    }
+
+                } else if (command == "expand") {
+                    // expand
+                    state.expanded = true;
+                    // bind event               
+                    if (!this.onDocumentClick) {
+                        this.onDocumentClick = function() { this.onCommand("collapse"); }.bind(this);
+                    }
+                    document.addEventListener("click", this.onDocumentClick, true);
+
+                } else if (command == "collapse") {
+                    // collapse
+                    state.expanded = false;
+                    // unbind event
+                    document.removeEventListener("click", this.onDocumentClick, true);
+                    delete this.onDocumentClick;
+
+                } else if (command == "toggle") {
+                    //toggle
+                    if (state.expanded) {
                         this.onCommand("collapse");
                     } else {
                         this.onCommand("expand");
                     }
-                    handled = true;
-                }
-                //cancel propagation
-                if (handled) {
-                    let event = args.event;
-                    if (event) {
-                        event.preventDefault();
-                        event.stopPropagation();
+    
+                } else if (command == "refresh") {
+                    // refresh
+                    state.childs = (this.firstElementChild != null);
+                    // childsClass
+                    if (state.childs) {
+                        let rect = this.getBoundingClientRect();
+                        if (window.innerWidth - rect.right < 100) {
+                            state.forceRight = true;
+                        }
                     }
-                }
-
-            } else if (command == "expand") {
-                // expand
-                this.state.expanded = true;
-                // bind event               
-                if (!this.onDocumentClick) {
-                    this.onDocumentClick = function() { this.onCommand("collapse"); }.bind(this);
-                }
-                document.addEventListener("click", this.onDocumentClick, true);
-
-            } else if (command == "collapse") {
-                // collapse
-                this.state.expanded = false;
-                // unbind event
-                document.removeEventListener("click", this.onDocumentClic, true);
-                delete this.onDocumentClick;
-
-            } else if (command == "toggle") {
-                //toggle
-                if (this.state.expanded) {
-                    this.onCommand("collapse");
-                } else {
-                    this.onCommand("expand");
-                }
- 
-            } else if (command == "refresh") {
-                // refresh
-                this.state.childs = (this.firstElementChild != null);
-                // childsClass
-                if (this.state.childs) {
-                    let rect = this.getBoundingClientRect();
-                    if (window.innerWidth - rect.right < 100) {
-                        this.state.forceRight = true;
+                    // href
+                    if (state.href) {
+                        state.realHref = xshell.navigation.getHref(state.href, this.page, { breadcrumb: state.breadcrumb });
+                    } else {
+                        state.realHref = null;
                     }
-                }
-                // href
-                if (this.state.href) {
-                    debugger;
-                    this.state.realHref = xshell.navigation.getHref(this.state.href, this.page, { breadcrumb: this.state.breadcrumb });
-                } else {
-                    this.state.realHref = null;
                 }
             }
         }
     }
-});
+};
 

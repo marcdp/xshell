@@ -5,8 +5,12 @@ import xshell from "xshell";
 export default XElement.define("x-layout-stack", {
     style:`
         x-loading {
-            position:fixed; top:0; left:0; right:0; 
-            z-index:5;
+            position:fixed;
+            width:var(--x-loading-width);
+            left:50%;
+            top:var(--x-loading-top);
+            transform:translateX(-50%);
+            z-index:10;
         }
         div.backdrop {
             background:var(--x-layout-stack-backdrop);
@@ -71,16 +75,16 @@ export default XElement.define("x-layout-stack", {
         <div class="panel" x-class:expanded="state.expanded" x-on:transitionend="transition-end">
             <x-loading x-if="state.status=='loading'"></x-loading>
             <div class="header">
-                <h2>{{ state.label }}&nbsp;</h2>
+            
+                <h2><x-page-title></x-page-title></h2>
                 <x-button class="anchor" icon="x-close" x-on:click="query-close"></x-button>
             </div>
-            <div class="body">
+            <div class="body">                
                 <slot></slot>
             <div>
         </div>
     `,
     state: {
-        label:"", 
         expanded: false,
         status: ""
     },
@@ -103,10 +107,6 @@ export default XElement.define("x-layout-stack", {
                         this.state.expanded = true;    
                     }, 50);
                 }                
-
-            } else if (command == "refresh") {
-                //refresh
-                this.label = this.page.label;
 
             } else if (command == "query-close") {
                 //query close

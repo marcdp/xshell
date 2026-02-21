@@ -14,6 +14,11 @@
     "component.renderEngine": "x",
     "component.stateEngine": "proxy",
     
+    // dialogs
+    "page.dialog.confirm": null,
+    "page.dialog.message": null,
+    "page.dialog.prompt": null,
+
     // resolver
     "global.resolver.component:ace-editor":"https://unpkg.com/ace-custom-element@latest/dist/index.min.js; loader=module-js;",
     "global.resolver.import:marked":"/vendor/marked/marked.esm.js",
@@ -28,6 +33,12 @@
 
     // global xshell
     "global.xshell.component.lazy": "x-lazy",
-    "global.xshell.url.error": "/pages/error.html"
+    "global.xshell.component.error": "x-error",
+    "global.xshell.dialog.confirm": "/pages/dialog-confirm.js",    
+    "global.xshell.dialog.message": "/pages/dialog-message.js",    
+    "global.xshell.dialog.prompt": "/pages/dialog-prompt.js"     
+
+    
+
 
 }

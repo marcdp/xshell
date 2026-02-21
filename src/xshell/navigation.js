@@ -1,4 +1,5 @@
 import {combineUrls} from "./utils/urls.js";
+import { base64UrlEncode, base64UrlDecode } from "./utils/base64.js";
 
 // class
 export default class Navigation {
@@ -29,8 +30,17 @@ export default class Navigation {
     // props
     get mode() { return this._mode; }
     get src() { 
+        debugger;
+        this._stack[0].href;
         let xpage = this.getXPage();
         return (xpage ? xpage.src : null);
+    }
+    get stack() {
+        return this._stack.map(p => Object.freeze({
+            href: p.href,
+            params: p.params,
+            nav: p.nav
+        }))
     }
     
     // init
@@ -38,23 +48,25 @@ export default class Navigation {
         if (this._mode == "hash") {
             // hash mode
             window.addEventListener("hashchange", async () => {
-                await this._syncFromHash(document.location.hash);
+                this._stack = this._browserUrlToStack(document.location.hash);
+                this._stackToDom();
             });
             // init
             if (document.location.hash) {
-                await this._syncFromHash(document.location.hash);
+                this._stack = this._browserUrlToStack(document.location.hash);
+                this._stackToDom();
             } else {
                 let defaultArea = this._areas.getDefaultArea();
-                document.location.hash = this._hashPrefix + defaultArea.home;
+                this._stackToBrowser([this.parseUrl(defaultArea.home)], { replace: false });
             }
         } else if (this._mode == "path") {
             // path mode
             // todo ...
-            window.addEventListener("popstate", async () => {
-                await this._syncFromPath(document.location.pathname, document.location.search);
-            });
+            //window.addEventListener("popstate", async () => {
+            //    this._stack = this._browserUrlToStack(document.location.pathname + document.location.search);
+            //    this._syncDomWithStack();
+            //});
             // init
-            debugger;
             throw new Error("Path mode is not implemented yet");
         }
     }
@@ -96,31 +108,24 @@ export default class Navigation {
             params = {},    // ws variables to be added as query string parameters
             nav = {         // navigation data to be added as query string parameters (nav.title, nav.icon, nav.breadcrumb)
                 title,      // nav.title
+                description,// nav.description
                 icon,       // nav.icon
                 breadcrumb},// nav.breadcrumb
-            from,           // current xpage element for resolving relative urls
+            page,           // current page element for resolving relative urls
         }) {
         // produces real, navigable URLS
         if (!href || typeof href !== "string") throw new Error("buildUrl: href must be a non-empty string");
         if (/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(href)) return href;
         if (href.startsWith("#!")) href = href.substring(2);
         // resolve relative urls
-        if (!href.startsWith("/")) href = combineUrls(from ? from.src : "/", href);
+        if (!href.startsWith("/")) href = combineUrls(page ? page.src : "/", href);
         // params
         for (const [k, v] of Object.entries(params)) {
             href += (href.includes("?") ? "&" : "?") + encodeURIComponent(k) + "=" + encodeURIComponent(v);
         }    
-        // breadcrumb
-        if (nav.breadcrumb) {
-            href += (href.includes("?") ? "&" : "?") + "nav.breadcrumb=" + btoa(JSON.stringify(nav.breadcrumb)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
-        }
-        // title
-        if (nav.title) {
-            href += (href.includes("?") ? "&" : "?") + "nav.title=" + encodeURIComponent(nav.title);
-        }
-        // icon
-        if (nav.icon) {
-            href += (href.includes("?") ? "&" : "?") + "nav.icon=" + encodeURIComponent(nav.icon);
+        // nav
+        if (nav && (nav.title || nav.description || nav.icon || nav.breadcrumb)) {
+            href += (href.includes("?") ? "&" : "?") + "nav=" + base64UrlEncode(JSON.stringify(nav));
         }
         // return
         return href;
@@ -136,6 +141,7 @@ export default class Navigation {
             params: {},
             nav: {
                 title: null,
+                description: null,
                 icon: null,
                 breadcrumb: null
             }
@@ -143,18 +149,17 @@ export default class Navigation {
         if (!queryPart) return result;
         const searchParams = new URLSearchParams(queryPart);
         for (const [key, value] of searchParams.entries()) {
-            if (key === "nav.title") result.nav.title = value;
-            else if (key === "nav.icon") result.nav.icon = value;
-            else if (key === "nav.breadcrumb") {
+            if (key === "nav") {
                 try {
-                    const decoded = value
-                        .replace(/-/g, "+")
-                        .replace(/_/g, "/");
-
-                    const json = atob(decoded);
-                    result.nav.breadcrumb = JSON.parse(json);
+                    const json = base64UrlDecode(value);
+                    result.nav = JSON.parse(json);
                 } catch {
-                    result.nav.breadcrumb = null;
+                    result.nav = {
+                        title: null,
+                        description: null,
+                        icon: null,
+                        breadcrumb: null
+                    };
                 }
             } else {
                 result.params[key] = value;
@@ -167,63 +172,93 @@ export default class Navigation {
             href,
             params = {},    // ws variables to be added as query string parameters
             nav = {         // navigation data to be added as query string parameters (nav.title, nav.icon, nav.breadcrumb)
-                title,      // nav.title
-                icon,       // nav.icon
-                breadcrumb},// nav.breadcrumb
-            from,
+                title: null,      // nav.title
+                description: null,// nav.description
+                icon: null,       // nav.icon
+                breadcrumb: null},// nav.breadcrumb
+            page,
+            outlet,         // target outlet for embed mode (outlet name or element)
             open = "auto",  // auto | top | stack | dialog | embed 
+            context = {},   // additional context to be passed to the page (e.g. dialog parameters)
             replace = false
         }) {
         //navigate
-        href = this.buildUrl({ href, params, nav, from });
+        const hrefAbsolute = this.buildUrl({ href, params, nav, page });
         // open
         if (open == "auto") {
             // auto
+            const xpage = page.host;
             const xpages = this.getXPages();
-            const indexPage = xpages.indexOf(from);
-            if  (from == null) {
+            const indexPage = xpages.indexOf(xpage);
+            if  (xpage == null) {
                 // top
-                this._updateBrowserUrl(href, { replace });
+                this._stackToBrowser([ this.parseUrl(hrefAbsolute) ], { replace });
             } else if (indexPage == 0) {
                 // top
-                this._updateBrowserUrl(href, { replace });
+                this._stackToBrowser([ this.parseUrl(hrefAbsolute) ], { replace });
             } else if (indexPage != -1) {
                 // stackpage
-                // todo ...
-                debugger;
+                let stack = [...this._stack];
+                stack[indexPage] = this.parseUrl(hrefAbsolute);
+                this._stackToBrowser(stack, { replace } );                
             } else {
-                // dialog or embed
-                debugger;
-                from.setAttribute("src", href);
+                // dialog or embed                
+                xpage.setAttribute("src", hrefAbsolute);
             }
         } else if (open == "top") {
-            // top
-            this._updateBrowserUrl(href, { replace });
-            debugger;
-        } else if (open == "dialog") {
-            // dialog
-            await this._showDialog({ href });
+            // top                        
+            this._stackToBrowser([ this.parseUrl(hrefAbsolute) ], { replace });
+
         } else if (open == "stack") {
             // stack
-            let aux = this._stack;
-            //this._updateBrowserUrl(href, { replace });
-            debugger;
+            this._stackToBrowser([...this._stack, this.parseUrl(hrefAbsolute)], { replace });
+            
+        } else if (open == "dialog") {
+            // dialog
+            return await this._showDialog({ href: hrefAbsolute, context });
+
         } else if (open == "embed") {
             // embed
-            debugger;
+            if (typeof outlet === "string") {
+                const xpage = page.host;
+                const outletElement = xpage.querySelector(`x-page[outlet="${outlet}"]`);
+                if (outletElement) {
+                    outletElement.setAttribute("src", hrefAbsolute);
+                }
+            }
         }
     }
 
 
     // private methods
-    _updateBrowserUrl(url, { replace }) {
+    _stackToBrowser(stack, { replace }) {
+        let url = "";
+        if (stack.length) {
+            // root page
+            const root = stack[0];
+            url = this.buildUrl({
+                href: root.href,
+                params: root.params,
+                nav: (stack.length == 1 ? root.nav : null)
+            })
+            // for stack with multiples pages, creates a single nav variable encoded in base64 with the nav data of the root page and a stack array with the href, params and nav of the rest of pages
+            if (stack.length > 1) {
+                let aux = {};
+                aux.title = root.nav.title;
+                aux.description = root.nav.description;
+                aux.icon = root.nav.icon;
+                aux.breadcrumb = root.nav.breadcrumb;
+                aux.stack = stack.slice(1);
+                url += (url.includes("?") ? "&" : "?") + "nav=" + base64UrlEncode(JSON.stringify(aux));
+            }
+        }
         if (this._mode === "hash") {
             if (replace) {
                 location.replace(this._hashPrefix + url);
             } else {
                 location.hash = this._hashPrefix + url;
-            }
-        } else {
+            }            
+        } else if (this._mode === "path") {
             if (replace) {
                 history.replaceState(null, "", this._appBase + url);
             } else {
@@ -231,35 +266,58 @@ export default class Navigation {
             }
         }
     }
-    async _showDialog({ href }) {
-        //show page dialog
-        let resolveFunc = null;
-        let xpage = document.createElement("x-page");
-        xpage.setAttribute("src", href);
-        xpage.setAttribute("layout", "dialog");
-        xpage.addEventListener("close", (event) => {
-            resolveFunc(event.target.result);
-            if (event.target.parentNode) {
-                event.target.parentNode.removeChild(event.target);
-            }
-        });
-        this._container.appendChild(xpage);
-        return new Promise((resolve) => {
-            resolveFunc = resolve;
-        });
-    }
-    async _handleLocationChange() {
-        // handle clocation change
-        if (this._mode === "hash") {
-            await this._syncFromHash(location.hash);
-        } else {
-            await this._syncFromPath(location.pathname, location.search);
+    _browserUrlToStack(url) {
+        if (!url || typeof url !== "string") {
+            throw new Error("_browserUrlToStack: url must be a non-empty string");
         }
+        // remove hash prefix if needed
+        if (this._mode === "hash") {
+            if (url.startsWith(this._hashPrefix)) {
+                url = url.substring(this._hashPrefix.length);
+            }
+        }
+
+        // parse root page normally
+        const rootParsed = this.parseUrl(url);
+        const stack = [];
+        // root page without nav.stack
+        const { nav, ...rootWithoutNavStack } = rootParsed;
+        const rootItem = {
+            href: rootParsed.href,
+            params: rootParsed.params,
+            nav: {
+                title: rootParsed.nav.title,
+                description: rootParsed.nav.description,
+                icon: rootParsed.nav.icon,
+                breadcrumb: rootParsed.nav.breadcrumb
+            }
+        };
+        stack.push(rootItem);
+        // if nav.stack exists, decode it
+        const navEncoded = new URLSearchParams(url.split("?")[1] || "").get("nav");
+        if (navEncoded) {
+            try {
+                // restore base64
+                const base64 = base64UrlDecode(navEncoded);
+                const nav = JSON.parse(base64); // array of url strings
+                if (nav.title) stack[0].nav.title = nav.title;
+                if (nav.description) stack[0].nav.description = nav.description;
+                if (nav.icon) stack[0].nav.icon = nav.icon;
+                if (nav.breadcrumb) stack[0].nav.breadcrumb = nav.breadcrumb;
+                if (nav.stack && Array.isArray(nav.stack)) {
+                    // if nav.stack exists, decode it and add it to the stack
+                    stack.push(...nav.stack);
+                }
+                
+            } catch (e) {
+                console.warn("Invalid nav value", e);
+            }
+        }
+        return stack;
     }
-    async _syncFromHash(hash) {
+    _stackToDom() {
         //navigate
-        let hashBeforeParts = this._stack;
-        let hashAfterParts = (hash ? hash.substring(this._hashPrefix.length).split(this._hashPrefix) : []);
+        let domStack = this.getXPages().map(xpage => { return this.parseUrl(xpage.src); });
         let inc = 0;
         //close the last dialog
         let allXPages = Array.from(this._container.querySelectorAll(":scope > x-page"));
@@ -268,14 +326,14 @@ export default class Navigation {
             if (xpage.getAttribute("layout") != "dialog") break;
             this._container.removeChild(xpage);            
         }
-        //process hash parts
-        for (let i = 0; i < Math.max(hashBeforeParts.length, hashAfterParts.length); i++) {
-            let hashBeforePart = hashBeforeParts[i];
-            let hashAfterPart = hashAfterParts[i];
-            if (!hashBeforePart && hashAfterPart) {
+        //process stack
+        for (let i = 0; i < Math.max(this._stack.length, domStack.length); i++) {
+            let itemBefore = domStack[i];
+            let itemAfter = this._stack[i];
+            if (!itemBefore && itemAfter) {
                 //add page
                 let xpage = document.createElement("x-page");
-                xpage.setAttribute("src", hashAfterPart);
+                xpage.setAttribute("src", this.buildUrl(itemAfter));
                 if (i == 0) {
                     xpage.setAttribute("layout", "main");
                     //emit event navigation-start
@@ -285,14 +343,14 @@ export default class Navigation {
                     xpage.addEventListener("close", (event) => {
                         //page close
                         let xpages = this.getXPages();
-                        let hashParts = document.location.hash.substring(this._hashPrefix.length).split(this._hashPrefix);
                         let index = xpages.indexOf(event.target);
-                        hashParts = hashParts.filter((_, idx) => idx !== index);
-                        document.location.hash = this._hashPrefix + hashParts.join(this._hashPrefix);
+                        this._stack.splice(index, 1);
+                        this._stackToBrowser(this._stack, { replace: false });
                     });
                 }
                 xpage.addEventListener("change", (event) => {
                     //page change
+                    debugger; // TODO ...
                     let xpages = this.getXPages();
                     if (xpages.indexOf(event.target) == 0) {
                         var label = event.target.label;
@@ -301,6 +359,7 @@ export default class Navigation {
                 });
                 xpage.addEventListener("replace", (event) => {
                     //page replace
+                    debugger; // TODO ...
                     let xpages = this.getXPages();
                     let hashParts = document.location.hash.substring(this._hashPrefix.length).split(this._hashPrefix);
                     let index = xpages.indexOf(event.target);
@@ -313,11 +372,12 @@ export default class Navigation {
                     if (xpages.indexOf(event.target) == 0) {
                         var label = event.target.label;
                         if (label) document.title = label + " / " + this._config.get("app.label");
-                        this._bus.emit("xshell:navigation:end", { src: event.target.src });
+                        this._bus.emit("xshell:navigation:end", { src: event.target.src, id: event.target.page.id});
                     }
                 });
                 xpage.addEventListener("navigate", (event) => {
                     //page navigation
+                    debugger;
                     let xpages = this.getXPages();
                     let index = xpages.indexOf(event.target);
                     if (index != -1) {
@@ -328,37 +388,41 @@ export default class Navigation {
                 });
                 //add page to container
                 this._container.appendChild(xpage);
-            } else if (hashBeforePart && !hashAfterPart) {
+            } else if (itemBefore && !itemAfter) {
                 //remove page
                 let xpages = this.getXPages();
                 let xpage = xpages[i + inc];
                 xpage.removePage();
                 inc -= 1;
-            } else if (hashBeforePart != hashAfterPart) {
+            } else if (itemBefore.href != itemAfter.href) {
                 //change page
                 let xpages = this.getXPages();
                 let xpage = xpages[i];
-                xpage.src = hashAfterPart;
+                xpage.src = this.buildUrl(itemAfter);
                 //emit event navigation-start
                 if (i == 0) {
                     this._bus.emit("xshell:navigation:start", { src: xpage.src });
                 }
             }
         }
-        this._stack = hashAfterParts;
     }
-    async _syncFromPath(path) {
-        // handle from path
-        // todo ...
-        debugger;
-        throw new Error("Path mode is not implemented yet");
+    async _showDialog({ href, context }) {
+        //show page dialog
+        let resolveFunc = null;
+        let xpage = document.createElement("x-page");
+        xpage.setAttribute("src", href);
+        xpage.setAttribute("layout", "dialog");
+        xpage.addEventListener("close", (event) => {
+            resolveFunc(event.target.result);
+            if (event.target.parentNode) {
+                event.target.parentNode.removeChild(event.target);
+            }
+        });
+        xpage.context = context || {};
+        this._container.appendChild(xpage);
+        return new Promise((resolve) => {
+            resolveFunc = resolve;
+        });
     }
-    _serializeStack(stackArray){
-        debugger;
-    }
-    _deserializeStack(string){
-        debugger;
-    }
-
 }
 

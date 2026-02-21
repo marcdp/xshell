@@ -7,6 +7,7 @@ const rules = [
     { selector: "area", attr: "href", type:"navigation"},
     { selector: "form", attr: "action", type:"navigation"},
     { selector: "button[formaction]", attr: "formaction", type:"navigation"},
+    { selector: "x-page", attr: "src", type:"virtual_navigation"},
     // resources
     { selector: "img", attr: "src", type:"resource" },
     { selector: "img", attr: "srcset", type:"resource" },
@@ -71,6 +72,16 @@ export function rewrite( el, attr, type, url, context ) {
             realUrl = context.appBase + virtualUrl;
         }
         return realUrl;
+    } else if (type == "virtual_navigation") {
+        let virtualUrl = null;
+        if (url.startsWith("/")) {
+            virtualUrl = context.resourceDefinition.modulePath + url;
+        } else if (url.startsWith("#")) {
+            virtualUrl = context.resourcePath + url;
+        } else {
+            virtualUrl = combineUrls(context.resourcePath, url);
+        }
+        return virtualUrl;
     } else {
         throw new Error("Unknown rewrite type: " + type);
     }

@@ -4,7 +4,8 @@ export default {
     meta: {
         title: "Sample Page 7",
         icon: "icon-sample7",
-        description: "This is a sample page 7 description"
+        description: "This is a sample page 7 description",
+        renderEngine: "plain"
     },
     template: `
         <p>This is sample page <b>7</b><br/></p>
@@ -18,12 +19,9 @@ export default {
         <br/>
         <button ref="btn1">Do Something</button>
     `,
-    style: `
-        p {display:block; border:1px red solid;}
-    `,
     state: {
-        var1: "value1",
-        var2: "value2"
+        var1: {value:"value1"},
+        var2: {value:"value2"}
     },
     script({ bus, state, timer, events }) {
         return {
@@ -41,7 +39,7 @@ export default {
                 } else if (command == "mount") { 
                     // mount
                     this.refs.btn1.innerHTML = state.var1;
-                    this.bindEvent(this.refs.btn1, "click", "do-something");
+                    events.on(this.refs.btn1, "click", "do-something");
                     this.refs.btn1.style.border = "2px solid blue";
 
                 } else if (command == "do-something") { 

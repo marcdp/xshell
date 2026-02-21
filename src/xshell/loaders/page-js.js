@@ -14,12 +14,24 @@ export async function createPageClassFromJsDefinition(src, context, definition) 
             style.push(`<style>@scope (:scope) {${styleText}}</style>`);
         }
     }    
+    // state skeleton
+    let stateSkeleton = {};
+    let stateQsNames = []
+    let stateReflectedQsNames = []
+    for(let propName in definition.state) {
+        const propDefinition = definition.state[propName];
+        if (typeof(propDefinition.value) == "undefined") propDefinition.value = null;
+        if (typeof(propDefinition.type) == "undefined") propDefinition.type = "string";
+        stateSkeleton[propName] = propDefinition.value; 
+        if (propDefinition.qs === true) stateQsNames.push(propName);
+        if (propDefinition.reflect) stateReflectedQsNames.push(propName);
+    }
     // state engine
     const stateEngineXShell = xshell.config.get(`page.stateEngine`);
     const stateEngineModule = xshell.config.get(`modules.${context.resourceDefinition.module}.page.stateEngine`, stateEngineXShell);
     const stateEnginePage = definition.meta.stateEngine || stateEngineModule;
     const stateEngineFactoryCreator = await xshell.loader.load("state-engine:" + stateEnginePage);
-    const stateEngineFactory = new stateEngineFactoryCreator(definition.state, context);
+    const stateEngineFactory = new stateEngineFactoryCreator(stateSkeleton, context);
     // render engine
     const renderEngineXShell = xshell.config.get(`page.renderEngine`);
     const renderEngineModule = xshell.config.get(`modules.${context.resourceDefinition.module}.page.renderEngine`, renderEngineXShell);
@@ -40,42 +52,68 @@ export async function createPageClassFromJsDefinition(src, context, definition) 
         _renderPending = false;
         _disposables = [];
         // ctor
-        constructor({ src }) {
-            super({ src });
+        constructor({ src, context }) {
+            super({ src, context });
             const self = this;
             // meta
             this._label = definition.meta.title || "";
+            this._description = definition.meta.description || "";
             this._icon = definition.meta.icon || "";
             // state
             this._state = stateEngineFactory.create({
-                stateChanged(prop, oldValue, newValue) {
+                stateChange(prop, oldValue, newValue) {
                     // state changed
                 }, invalidate(path) {
                     // invalidate
-                    self._renderEngine?.invalidate(path);
+                    self.invalidate(path);
                 }
             });
+            // stateQsNames
+            if (stateQsNames.length) {
+                var qs = new URLSearchParams(src.split("?")[1] || "");
+                for(let propName of stateQsNames) {
+                    if (qs.has(propName)) {
+                        let value = qs.get(propName);
+                        let oldValue = self._state[propName];
+                        const propDefinition = definition.state[propName];
+                        if (propDefinition.type == "boolean" || typeof(oldValue) == "boolean") {
+                            self._state[propName] = (value == "true" || value == "1");
+                        } else if (propDefinition.type == "number" || typeof(oldValue) == "number") {
+                            if (value !== "" && isNaN(value) == false){
+                                self._state[propName] = Number(value);
+                            }
+                        } else {
+                            self._state[propName] = value;
+                        }
+                    }
+                }
+            }
             // services provider
             const servicesProvider = new Proxy({}, {
                 get: (obj, prop) => {
                     if (prop == "definition") {
+                        // page definition
                         return definition;
                     } else if (prop == "state") {
+                        // state
                         return self._state;
+                    } else if (prop == "context") {
+                        // context
+                        return self._context;
                     } else if (prop == "timer") {
+                        // timer
                         const timer = new Timer( (command) => {self.onCommand(command);} );
                         self._disposables.push(timer);
                         return timer;
                     } else if (prop == "events") {
+                        // events
                         const events = new Events( (command) => {self.onCommand(command);} );
                         self._disposables.push(events);
                         return events;
-                    } else if (prop == "bus") {
-                        return xshell.bus;
-                    } else if (prop == "navigation") {
-                        return xshell.navigation;                        
+                    } else {
+                        // resolve from services
+                        return xshell.services.resolve(prop);                    
                     }
-                    throw new Error(`Unknown page service key: ${prop.toString()}`);
                 }
             });            
             // set methods

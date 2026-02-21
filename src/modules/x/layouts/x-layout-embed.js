@@ -13,6 +13,12 @@ export default XElement.define("x-layout-embed", {
         ::slotted(p:last-child) {
             margin-bottom:0;
         }        
+        x-loading {
+            width:var(--x-loading-width);
+            left:50%;
+            transform:translateX(-50%);
+            z-index:10;
+        }
     `,
     template: `
         <x-loading x-if="state.status=='loading'"></x-loading>

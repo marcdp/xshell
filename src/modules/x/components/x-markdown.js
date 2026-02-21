@@ -53,10 +53,9 @@ export default XElement.define("x-markdown", {
                     let src = event.newValue;
                     let response = await xshell.loader.load(src);
                     if (!response.ok) {
-                        this.page.error({ code: 404, message:`Error ${response.status}: ${response.statusText}: ${src}`, src: this.page.src});
+                        this.state.value = "404 - Not Found: " + src;
                         return;
-                    }
-                        
+                    }                        
                     this.state.value = await response.text();
                 });
                 

@@ -8,6 +8,10 @@
     "depends": [],
     "styles": ["/css/styles.css"],
 
+    "page.renderEngine": "x",
+    "page.stateEngine":"proxy",
+    
+
     // menu
     "menus.main.main": [{
         "label": "Amazon S3",

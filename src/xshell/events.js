@@ -27,7 +27,7 @@ export default class Events {
         }
         for (let ev of event) {
             element.addEventListener(ev, listener);
-            this._eventListeners.push({ element, ev, listener });
+            this._eventListeners.push({ element, event: ev, listener });
         }   
     }
     
