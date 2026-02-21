@@ -6,11 +6,12 @@ export default {
         description: "This is a sample page 8 description"
     },
     state: {
-        var1: { value: 0,  qs: true },
+        varMarc1: { value: 0,  qs: true, reflect:true },
+        var2: { value: 0 }
     },
     template: `
         <p>
-            This is sample page 8: {{state.var1}}
+            This is sample page 8: {{state.varMarc1}}
             <br/>
             <x-button label="Do something" command="doSomething"></x-button>
         </p>
@@ -20,7 +21,8 @@ export default {
             onCommand(command, params){
                 if (command == "doSomething") {
                     // dosomething
-                    state.var1++;
+                    state.varMarc1++;
+                    state.var2++;
                 }
             }
         }

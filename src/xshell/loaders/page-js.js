@@ -3,6 +3,19 @@ import Timer from "../timer.js"
 import Events from "../events.js"
 import xshell from "xshell";
 
+// utils
+function kebabToCamel(str) {
+    return str.split('-')
+        .map((word, index) => index === 0 ? word : word.charAt(0).toUpperCase() + word.slice(1))
+        .join('');
+};
+function camelToKebab(str) {
+    return str
+      .replace(/([a-z])([A-Z])/g, '$1-$2') 
+      .toLowerCase();                      
+}
+
+
 // create page class from js definition
 export async function createPageClassFromJsDefinition(src, context, definition) {
     // style
@@ -48,6 +61,7 @@ export async function createPageClassFromJsDefinition(src, context, definition) 
     return class extends Page {
         // vars
         _state = null;
+        _stateChanges = [];
         _renderEngine = null;
         _renderPending = false;
         _disposables = [];
@@ -63,6 +77,7 @@ export async function createPageClassFromJsDefinition(src, context, definition) 
             this._state = stateEngineFactory.create({
                 stateChange(prop, oldValue, newValue) {
                     // state changed
+                    self.stateChange(prop, oldValue, newValue);
                 }, invalidate(path) {
                     // invalidate
                     self.invalidate(path);
@@ -72,8 +87,9 @@ export async function createPageClassFromJsDefinition(src, context, definition) 
             if (stateQsNames.length) {
                 var qs = new URLSearchParams(src.split("?")[1] || "");
                 for(let propName of stateQsNames) {
-                    if (qs.has(propName)) {
-                        let value = qs.get(propName);
+                    const propNameKebabCase = camelToKebab(propName);
+                    if (qs.has(propNameKebabCase)) {
+                        let value = qs.get(propNameKebabCase);
                         let oldValue = self._state[propName];
                         const propDefinition = definition.state[propName];
                         if (propDefinition.type == "boolean" || typeof(oldValue) == "boolean") {
@@ -141,12 +157,37 @@ export async function createPageClassFromJsDefinition(src, context, definition) 
             }
             this._disposables = null;
         }
+        // statechange
+        stateChange(prop, oldValue, newValue) {
+            // state changed
+            this._stateChanges.push({prop, oldValue, newValue});
+            // reflect to property to qs if needed
+            if (stateReflectedQsNames.includes(prop)) {
+                const src = this.src;
+                const qsName = camelToKebab(prop);
+                const item = xshell.navigation.parseUrl(src);
+                if (newValue === false || newValue === null) {
+                    self.removeAttribute(attrName);
+                    delete item.params[qsName];
+                } else if (typeof(newValue) == "boolean" && newValue === true) {
+                    item.params[qsName] = "true";
+                } else if (typeof(newValue) == "number") {
+                    item.params[qsName] = newValue.toString();
+                } else {
+                    item.params[qsName] = newValue;
+                }
+                const newUrl = xshell.navigation.buildUrl(item);
+                // call navigate, with replace true to avoid creating a new history entry for each state change
+                xshell.navigation.navigate({...item, page:this, replace:true});
+            }
+        }
         // invalidate
         invalidate(path) {
             if (this._renderPending) return;
             this._renderPending = true;
             requestAnimationFrame(() => {
-                this.onCommand("refresh");
+                this.onCommand("stateChange", {changes: this._stateChanges});
+                this._stateChanges = [];
                 this._renderPending = false;
                 this._renderEngine.render();
             });
