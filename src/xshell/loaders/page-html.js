@@ -5,6 +5,7 @@ import { normalizeModuleResourceUrl } from "../utils/rewriteDocumentUrls.js";
 export default class LoaderPageHtml {
     async load(src, context) {
         const request = await fetch(src);
+        if (!request.ok) throw new Error(`Error loading page: ${request.status} ${request.statusText}: ${src}`);
         const html = await request.text();
         const doc = (new DOMParser()).parseFromString(html, "text/html");
         // definition

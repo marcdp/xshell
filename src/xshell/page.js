@@ -9,7 +9,10 @@ export default class Page {
     //vars
     _id = null;
     _src = null;
+    _context = null;
     _label = null;
+    _description = null;
+    _breadcrumb = null;
     _icon = null;
     _result = null;
 
@@ -17,8 +20,9 @@ export default class Page {
     _refs = null;
 
     //ctor
-    constructor({ src }) {
+    constructor({ src, context }) {
         this._src = src;
+        this._context = context;
         this._id = generateId("page");
     }
 
@@ -32,10 +36,25 @@ export default class Page {
     get src() { return this._src; }
 
     get label() { return this._label; }
-    set label(value) { this._label = value; }
+    set label(value) { 
+        this._label = value; 
+        if (this._breadcrumb && this._breadcrumb.length > 0) this._breadcrumb[this._breadcrumb.length - 1].label = value;
+    }
+
+    get description() { return this._description; }
+    set description(value) { 
+        this._description = value; 
+        if (this._breadcrumb && this._breadcrumb.length > 0) this._breadcrumb[this._breadcrumb.length - 1].description = value;
+    }
+
+    get breadcrumb() { return this._breadcrumb; }
+    set breadcrumb(value) { this._breadcrumb = value; }
 
     get icon() { return this._icon; }
-    set icon(value) { this._icon = value; }
+    set icon(value) { 
+        this._icon = value; 
+        if (this._breadcrumb && this._breadcrumb.length > 0) this._breadcrumb[this._breadcrumb.length - 1].icon = value;
+    }
 
     get result() { return this._result; }
     set result(value) { this._result = value; }
@@ -82,14 +101,6 @@ export default class Page {
         await this.onCommand("unload", {});
         this._refs = null;
     }
-
-
-    // error methods
-    error({code, message, src, stack}) {
-        // show error
-        this._host.error(code, message, src, stack);
-    }
-
 
     // close methods
     close(result) {

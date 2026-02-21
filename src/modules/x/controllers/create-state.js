@@ -32,7 +32,7 @@ function createState(value, self) {
             }
             if (changed) {
                 target[prop] = newValue;
-                self.stateChanged(prop, oldValue, newValue);
+                self.stateChange(prop, oldValue, newValue);
                 for(let listener of this.listeners) {
                     if (listener.name == "change") {
                         listener.callback({name: listener.name, prop, oldValue, newValue});

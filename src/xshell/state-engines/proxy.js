@@ -6,9 +6,25 @@ export default function createStateEngineFactoryProxy(stateSkeleton, stateDefini
 	return {
 		create: (handler) => {
 			const value = JSON.parse(stateSkeletonJson);
+			let listeners = [];
 			return new Proxy(value, {
 				get: function(target, prop, receiver) {
 					// return real value
+					if (prop == "addEventListener") {
+						return function(event, listener) {
+							if (event.startsWith("change:")) {
+								let prop = event.substring("change:".length);
+								listeners.push({prop: prop, listener});
+							}
+						}
+					} else if (prop == "removeEventListener") {
+						return function(event, listener) {
+							if (event.startsWith("change:")) {
+								let prop = event.substring("change:".length);
+								listeners = listeners.filter(l => l.prop !== prop || l.listener !== listener);
+							}
+						}
+					}
 					return target[prop];
 				},
 				set(target, prop, newValue) {
@@ -29,7 +45,12 @@ export default function createStateEngineFactoryProxy(stateSkeleton, stateDefini
 					}
 					if (changed) {
 						target[prop] = newValue;
-						handler.stateChanged(prop, oldValue, newValue);
+						for (let listener of listeners) {
+							if (listener.prop === prop) {
+								listener.listener(newValue, oldValue);
+							}
+						}
+						handler.stateChange(prop, oldValue, newValue);
 						handler.invalidate(prop);
 					}
 					return true;

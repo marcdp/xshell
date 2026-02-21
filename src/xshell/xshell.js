@@ -76,7 +76,6 @@ class XShell {
         // init
         this._bus = new Bus();
         this._debug = new Debug();
-        this._dialog = new Dialog();
         this._config = new Config({ debug: this._debug, bus: this._bus, value: value });
         this._api = new Api( { config: this._config} );
         this._areas = new Areas( { bus: this._bus, config: this._config } );
@@ -93,6 +92,7 @@ class XShell {
         this._menus = new Menus( { bus: this._bus, config: this._config, modules: this._modules, navigation: this._navigation } );
         this._services = new Services();
         this._urlRewriter = new UrlRewriter();
+        this._dialog = new Dialog( { config: this._config, navigation: this._navigation } );
         // services
         this._services.register("api", this._api);
         this._services.register("areas", this._areas);
@@ -103,7 +103,6 @@ class XShell {
         this._services.register("debug", this._debug);
         this._services.register("dialog", this._dialog);
         this._services.register("i18n", this._i18n);
-        this._services.register("identity", this._identity);
         this._services.register("loader", this._loader);
         this._services.register("menus", this._menus);
         this._services.register("modules", this._modules);
@@ -116,6 +115,7 @@ class XShell {
         this._services.register("urlRewriter", this._urlRewriter);
         // auth
         this._identity = await this.auth.login(this._config);
+        this._services.register("identity", this._identity);
         // modules
         await this._modules.init();               
         // navigation

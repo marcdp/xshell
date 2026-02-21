@@ -8,12 +8,11 @@
 
     <script type="application/json">
         {
-            "val1": true,
-            "val2": false,
-            "val3": true
+            "val1": {"value": true},
+            "val2": {"value": false},
+            "val3": {"value": true}
         }
     </script>    
-
         
     Use Amazon S3 Block public access settings to control the settings that allow public access to your data.
     
@@ -23,22 +22,23 @@
 
     <ul>
         <li><a href="page2.html">Page 2</a></li>
-        <li><x-anchor href="page2.html" qs-var1="hello" qs-var2="world" open="top">Page 2 (with qs vars)</x-anchor></li>
+        <li><x-anchor href="page2.html" qs-var1="hello" qs-var2="world">Page 2 (with qs vars)</x-anchor></li>
         <li><x-anchor href="page2.html" qs-var1="hello" title="Lucas grijander">Page 2 (with title)</x-anchor></li>
         <li><x-anchor href="page2.html" qs-var1="hello" breadcrumb>Page 2 (with breadcrumb)</x-anchor></li>
         <li><x-anchor href="page2.html" qs-var1="hello" breadcrumb title="Lucas grijander">Page 2 (with breadcrumb and title)</x-anchor></li>
+        <li><x-anchor href="page2.html" qs-var1="hello" qs-var2="world" open="top">Page 2 top (with qs vars) top</x-anchor></li>
         <li><x-anchor href="page2.html" disabled>Page 2 disabled</x-anchor></li>
         <li><x-anchor href="page2.html" open="stack">Page 2 stack</x-anchor></li>
         <li><x-anchor href="page2.html" open="dialog">Page 2 dialog</x-anchor></li>
-
-        <hr/>
-        <li><a href="page2.html" target="#dialog">Help in dialog</a></li>
-        <li><a href="page2.html" target="#stack">Help in stack</a></li>
-        <li><a href="/pages/page2.html" data-breadcrumb>Help with breadcrumb</a></li>
-        <li><a href="page2.html?xshell-page-label=helllllloooooo" data-breadcrumb>Help with breadcrumb and label</a></li>
-        <li><a href="page2.html" target="#mypage">Help insinde x-page</a></li>
-        <li><a href="page2.html" target="#tray">Help insinde tray</a></li>
+        <li><x-anchor href="page2.html" open="embed" outlet="myoutlet1">Page 2 embeded</x-anchor></li>
+        <li><x-anchor href="page2.html" replace>Page 2 replace</x-anchor></li>
     </ul>
+
+    <x-page  layout="embed" outlet="myoutlet1" style="border:1px red solid"></x-page>
+
+    <hr/>
+
+    
 
     <x-toolbar>
         <x-button disabled label="hello"></x-button>
@@ -102,8 +102,7 @@
         <x-button slot="toolbar" class="" icon="x-settings"></x-button>
     </x-toolbar>
 
-    <x-page id="mypage"></x-page>
-
+    
     <x-clock></x-clock>
 
     <x-accordion>

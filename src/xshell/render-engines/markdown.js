@@ -14,7 +14,7 @@ export class RenderEngineMarkdown {
 
 	// methods
 	mount() {
-		this._host.appendChild(this._templateElement.content);
+		this._host.replaceChildren(this._templateElement.content);
 	}
 	render(){
 	}

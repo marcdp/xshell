@@ -144,7 +144,7 @@ class XElement extends HTMLElement {
             }
         });
     }
-    stateChanged(prop, oldValue, newValue) {
+    stateChange(prop, oldValue, newValue) {
         //a state prop changed
         let attr = camelToKebab(prop);
         if (this.settings.backPropagatedAttributes.indexOf(attr) != -1) {

@@ -240,26 +240,39 @@ x - simplify x-anchor -> only urls relative to app base root ! no commands, no e
 x - menus -> do not rebuild on each page navigation (compute all areas+menus once, and refrsh only the dinamic sources on each page navigation)
 x - create component-js.js to load webcomponents from js files
 x - rewrite urls inside web components
+x - <x-anchor open="dialog" ...
+x - <x-anchor open="stack" ...
+x - x-page-breacrumb component
+x - x-page-title component
+x- - remove breadcrumb render login from x-layout-main, and use only the web component created
+x - <x-anchor replace>... replace history
+x - x-button, only commands, no href
+x - error component
+x - loading animation in pages
+x - no- x-page-url -- to show the url of the page in the breadcrumb
+x - identity
+x - identity.js
+x - utilizar una única variable "nav=" donde meter title+icon+breadcrumb+stack
+x - x-page-description
+x - page state: qs: true
 
-- <x-anchor open="dialog" ...
-- <x-anchor open="stack" ...
+- page state: qs: true, reflect:true
+
+- pagina de ayuda de modulos
+- pagina de ayuda de html normal
+- pagina de ayuda de anchors
+- pagina de ayuda de dialogs
+
+- convertir all pages to new format
+- search page (search in areas + modules + pages)
+- no enviar las request al servidor con los parametros "nav.*"
+- convertir web components a declarative web components!!
+- dialog.picker() -- > open a dialog with a picker page, and return the result
+- eliminar x/controllers
 
 
-- x-breacrumb component
-- remove breadcrumb render login from x-layout-main, and use only the web component created
-
-- <x-anchor replace>... replace history
-
-- x-button, only commands, no href
-
-- error page
 
 - page -> when consuming services as log -> return a instance of log per that page exactly (that generates  prefixed log entries)
-
-
-
-
-
 
 - python dev server: enforce CSP strict compliance
 

@@ -27,7 +27,10 @@
     "xshell.debug": false,
     "xshell.assetsPrefix": "_cdn",  // assets prefix to use in url
     "xshell.component.lazy": "",    //web component to render markdown
-    "xshell.url.error": "",         //url of error page
+    "xshell.component.error": "",   //web component to render errors
+    "xshell.dialog.confirm": null,    // dialog page for confirm
+    "xshell.dialog.message": null,    // dialog page for message
+    "xshell.dialog.prompt": null,     // dialog page for prompt
     "xshell.areaDefault": "main",
     "xshell.version": "0.9.0",
     "xshell.identity.provider": "anonymous"

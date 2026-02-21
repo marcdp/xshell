@@ -14,6 +14,23 @@ function camelToKebab(str) {
       .replace(/([a-z])([A-Z])/g, '$1-$2') 
       .toLowerCase();                      
 }
+function findClosestXPage(element) {
+    let current = element;
+    while (current) {
+        if (current.tagName === "X-PAGE") return current;
+        if (current.parentNode) {
+            current = current.parentNode;
+            continue;
+        }
+        const root = current.getRootNode();
+        if (root && root.host) {
+            current = root.host;
+            continue;
+        }
+        return null;
+    }
+    return null;
+}
 
 
 // create page class from js definition
@@ -67,7 +84,7 @@ export async function createComponentClassFromJsDefinition(src, context, definit
     // init 
     renderEngineFactory.init();
     // returns a class that extends base class component
-    const aClass = class extends HTMLElement {
+    const WebComponent = class extends HTMLElement {
         // vars
         _state = null;
         _stateChanges = [];
@@ -85,7 +102,7 @@ export async function createComponentClassFromJsDefinition(src, context, definit
             this.shadowRoot.adoptedStyleSheets.push(...stylesheets);
             // state
             this._state = stateEngineFactory.create({
-                stateChanged(prop, oldValue, newValue) {
+                stateChange(prop, oldValue, newValue) {
                     // state changed
                     self._stateChanges.push({prop, oldValue, newValue});
                     // reflect to attribute if needed
@@ -106,23 +123,31 @@ export async function createComponentClassFromJsDefinition(src, context, definit
             const servicesProvider = new Proxy({}, {
                 get: (obj, prop) => {
                     if (prop == "definition") {
+                        // definition of component
                         return definition;
                     } else if (prop == "state") {
+                        // state
                         return self._state;
                     } else if (prop == "timer") {
+                        // timer helper
                         const timer = new Timer( (command) => {self.onCommand(command);} );
                         self._disposables.push(timer);
                         return timer;
                     } else if (prop == "events") {
+                        // events helper
                         const events = new Events( (command) => {self.onCommand(command);} );
                         self._disposables.push(events);
                         return events;
-                    } else if (prop == "bus") {
-                        return xshell.bus;
-                    } else if (prop == "navigation") {
-                        return xshell.navigation;
-                    }
-                    throw new Error(`Unknown component service key: ${prop.toString()}`);
+                    } else if (prop == "getPage") {
+                        // get current page function
+                        return function() {
+                            const xpage = findClosestXPage(self);
+                            return (xpage ? xpage.page : null);
+                        }
+                    } else {
+                        // resolve from services
+                        return xshell.services.resolve(prop);
+                    }                    
                 }
             });
             // set methods
@@ -201,7 +226,7 @@ export async function createComponentClassFromJsDefinition(src, context, definit
             if (this._renderPending) return;
             this._renderPending = true;
             requestAnimationFrame(() => {
-                this.onCommand("stateChanged", {changes: this._stateChanges});
+                this.onCommand("stateChange", {changes: this._stateChanges});
                 this._renderPending = false;
                 this._stateChanges = [];
                 this._renderEngine.render();
@@ -215,7 +240,7 @@ export async function createComponentClassFromJsDefinition(src, context, definit
     for(const propName in definition.state) {
         const propDefinition = definition.state[propName];
         if (propDefinition.prop) {
-            Object.defineProperty(aClass.prototype, propName, {
+            Object.defineProperty(WebComponent.prototype, propName, {
                 get() {
                     return this._state[propName];
                 },
@@ -227,31 +252,12 @@ export async function createComponentClassFromJsDefinition(src, context, definit
             });
         }
     }
-    
-    
-
-    /*
-    for(let propName in definition.state) {
-        const propDefinition = definition.state[propName];
-        if (typeof propDefinition.attr === "object" && propDefinition.attr !== null) {
-            debugger;
-            const observer = new MutationObserver((mutationsList) => {
-                for (let mutation of mutationsList) {
-                    if (mutation.type === "attributes" && mutation.attributeName.startsWith(propDefinition.attr.prefix)) {
-                        const attrName = mutation.attributeName.substring(propDefinition.attr.prefix.length);
-                        this._state[propName][attrName] = this.getAttribute(mutation.attributeName);
-                    }
-                }
-            });
-            observer.observe(aClass.prototype, { attributes: true });
-        }
-    }*/
     // register
     if (!window.customElements.get(definition.meta.name)) {
-        window.customElements.define(definition.meta.name, aClass);
+        window.customElements.define(definition.meta.name, WebComponent);
     }
     // return class
-    return aClass
+    return WebComponent
 }
 
 //export 

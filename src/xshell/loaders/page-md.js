@@ -29,6 +29,7 @@ function extractFrontmatter(source) {
 export default class LoaderPageMd {
     async load(src, context) {
         const request = await fetch(src);
+        if (!request.ok) throw new Error(`Failed to load markdown page: ${src}`);
         const markdown = await request.text();
         const { meta, body } = extractFrontmatter(markdown);
         // definition

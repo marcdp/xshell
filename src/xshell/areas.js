@@ -2,9 +2,11 @@
 // default
 export default class Areas {
     
+    
     // vars
     _currentAreaName = null;
     _areas = [];
+
 
     // ctor
     constructor({ config, bus }) {
@@ -14,7 +16,6 @@ export default class Areas {
             const areaName = this.resolveAreaName(src);
             if (this._currentAreaName != areaName) {
                 this._currentAreaName = areaName;
-                debugger;
                 bus.emit("xshell:area:change", { area: areaName } );
             }
         });
@@ -55,11 +56,15 @@ export default class Areas {
     }
     resolveAreaName(src) {
         //get area name by src
-        //for (let area of this._areas) {
-        //    if (src.startsWith(area.prefix)) {
-        //        return area.name;
-        //    }
-        //}
+        // search by prefixes
+        for (const area of this._areas) {
+            for(const prefix of area.prefixes) {
+                if (src.startsWith(prefix)) {
+                    return area.name;
+                }
+            }
+        }
+        return null;
     }
 
 }

@@ -876,6 +876,7 @@ export class RenderEngineX {
 
 	// methods
 	mount() {
+		this._host.replaceChildren();
 	}
     render() {
 		this._xtemplateInstance.render(this._state);

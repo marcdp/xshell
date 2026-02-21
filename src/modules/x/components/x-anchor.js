@@ -21,7 +21,7 @@ export default {
         :host(.plain.selected) a:hover {color:var(--x-color-primary-dark);}    
     `,
     template: `
-        <a x-attr:href="state.hrefReal" x-attr:disabled="state.disabled" x-attr:target="state.target" x-attr:rel="state.rel" x-on:click="click"><slot></slot></a>
+        <a part="a" x-attr:href="state.hrefReal" x-attr:disabled="state.disabled" x-attr:target="state.target" x-attr:rel="state.rel" x-on:click="click"><slot></slot></a>
     `,
     state: {
         href:       {value: "",     attr:true, prop:true},
@@ -32,28 +32,29 @@ export default {
         icon:       {value: null,   attr:true},
         disabled:   {value: false,  attr:true},
         target:     {value: null,   attr:true},
+        outlet:     {value: null,   attr:true},
         rel:        {value: null,   attr:true, reflect:true},
         replace:    {value: false,  attr:true},
         hrefReal:   {value: null}
     },
-    script({ state, navigation }) {
+    script({ state, navigation, getPage }) {
         return {
             onCommand(command, params){
                 if (command == "load") {
                     // load
 
-                } else if (command == "stateChanged") {
+                } else if (command == "stateChange") {
                     // refresh
                     if (state.href) {
-                        const xpage = this.closest("x-page");
+                        const page = getPage();
                         const href = navigation.buildUrlAbsolute({
                             href:       state.href,
                             params:     state.qs,
                             open:       state.open,
                             replace:    state.replace,
-                            from:       xpage,
+                            page:       page,
                             nav: {
-                                breadcrumb: (state.breadcrumb ? xpage?.breadcrumb : null),
+                                breadcrumb: (state.breadcrumb ? page?.breadcrumb : null),
                                 title:      state.title,
                                 icon:       state.icon
                             }
@@ -66,15 +67,16 @@ export default {
                     // click
                     const event = params.event;
                     if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || state.target) return;
-                    const xpage = this.closest("x-page");
+                    const page = getPage();
                     navigation.navigate( {
                         href: state.href, 
                         params: state.qs,
                         open: state.open,
                         replace: state.replace,
-                        from: xpage,
+                        page: page,
+                        outlet: state.outlet,
                         nav: {
-                            breadcrumb: (state.breadcrumb ? xpage?.breadcrumb : null),
+                            breadcrumb: (state.breadcrumb ? page.breadcrumb : null),
                             title:      state.title,
                             icon:       state.icon
                         }

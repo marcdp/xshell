@@ -12,13 +12,12 @@ export class RenderEnginePlain {
 
 	// methods
 	mount() {
-		this._host.appendChild(this._template.content);
+		this._host.replaceChildren(this._template.content);
 	}
 	render() {
 	}
 	unmount() {
 		this._host.replaceChildren();
-		this._template = null;
 	}
 
 

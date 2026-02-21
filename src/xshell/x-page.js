@@ -1,4 +1,11 @@
 import xshell from "./xshell.js";
+import Page from "./page.js";
+
+// stylesheet
+const stylesheet = new CSSStyleSheet();
+stylesheet.replaceSync(`
+    :host {display:block;}
+`);
 
 
 // class
@@ -13,27 +20,28 @@ class XPage extends HTMLElement {
 
     //fields
     _connected = false;
-    _breadcrumb = [];
     _src = "";
-    //_srcPage = "";
     _layout = "";
     _status = "";
+    _context = {};
 
     _loading = "";
     _loadingObserver = null;
     _module = null;
     _page = null;
-    //_context = null;
     
 
     //ctor
     constructor() {
         super();
         this.attachShadow({ mode: "open" });
+        this.shadowRoot.adoptedStyleSheets = [stylesheet];
         this.addEventListener("query-close", () => {
+            // query close
             this.queryClose();
         });
         this.addEventListener("command", (event) => {
+            // handle command
             this.page?.onCommand(event.detail.command, event.detail.data, { event });
             event.preventDefault();
             event.stopPropagation();
@@ -46,18 +54,22 @@ class XPage extends HTMLElement {
                 event.button !== 0 ||        
                 event.metaKey || event.ctrlKey || event.shiftKey || event.altKey ||
                 a.target === "_blank" ||
-                a.hasAttribute("download")
-                ) {
-                return; // browser navigation
+                a.hasAttribute("download") ) {
+                // normal browser navigation
+                return; 
             }
-            //const breadcrumb = anchor.hasAttribute("data-breadcrumb");
-            //const target = anchor.target;
-            //if (false) {
-            //    // todo: intercept path navigation urls (without #!)
-            //    event.preventDefault();
-            //    event.stopPropagation();
-            //    return false;
-            //}
+            // handle navigation
+            const xpage = a.closest("x-page");
+            const href = a.getAttribute("href");
+            const item = {
+                ...xshell.navigation.parseUrl(href),
+                open: "auto",
+                page: xpage.page
+            };
+            xshell.navigation.navigate( item );
+            event.preventDefault();
+            event.stopPropagation();
+            return false;
         }, true);
     }
 
@@ -73,19 +85,16 @@ class XPage extends HTMLElement {
         }
         this._src = value; 
         if (changed){
-            this._breadcrumb = [];
-            //this._result = null;
             if (this._src && this._connected) this.load();
         }
     }
-    get srcPage() {return this._srcPage;}
-
     get status() {return this._status;}
+    get page() {return this._page;}
     
-    get breadcrumb() {return this._breadcrumb;}
-    set breadcrumb(value) {this._breadcrumb = value;}
+    get breadcrumb() {return this._page.breadcrumb; }
+    set breadcrumb(value) { this._page.breadcrumb = value; }
 
-    get result() {return this._page.result;}
+    get result() {return this._page?.result || null;}
     set result(value) {this._page.result = value;}
 
     get layout() { return this._layout;}
@@ -94,27 +103,35 @@ class XPage extends HTMLElement {
     get module() { return this._module; }
     set module(value) { this._module = value; }
 
-    //get context() { return this._context; }
-    //set context(value) { this._context = value; }
-
-    get label() {return this._page.label;}
+    get label() {return this._page?.label || "";}
     set label(value) {
-        let changed = (this._label != value);
-        this._label = value; 
+        let changed = (this._page.label != value);
+        this._page.label = value; 
         if (changed) {
-            if (this._breadcrumb && this._breadcrumb.length > 0) this._breadcrumb[this._breadcrumb.length - 1].label = value;
             this.dispatchEvent(new CustomEvent("change"));
         }
     }
 
-    get icon() {return this._icon;}
-    set icon(value) {
-        let changed = (this._icon != value);
-        this._icon = value; 
+    get description() {return this._page?.description || "";}
+    set description(value) {
+        let changed = (this._page.description != value);
+        this._page.description = value; 
         if (changed) {
             this.dispatchEvent(new CustomEvent("change"));
         }
     }
+
+    get icon() {return this._page?.icon || "";}
+    set icon(value) {
+        let changed = (this._page.icon != value);
+        this._page.icon = value; 
+        if (changed) {
+            this.dispatchEvent(new CustomEvent("change"));
+        }
+    }
+    
+    get context() {return this._context;}
+    set context(value) { this._context = Object.freeze(value); }
 
     //events
     attributeChangedCallback(name, oldValue, newValue) {
@@ -127,7 +144,7 @@ class XPage extends HTMLElement {
         this._connected = true;
         // load now, or on the first activation
         if (this.loading == "lazy") {
-            // intersection observer
+            // intersection observer            
             const onIntersection = (entries) => {
                 entries.forEach(entry => {
                     if (entry.isIntersecting) {
@@ -158,7 +175,6 @@ class XPage extends HTMLElement {
         xshell.debug.log(`x-page: load '${this.src} ...`);
         let src = this.src;
         if (src.indexOf("error") != -1) {
-            debugger;
             return;
         }
         // reset
@@ -168,43 +184,8 @@ class XPage extends HTMLElement {
         if (layoutElement) {
             layoutElement.setAttribute("status", "loading");
         }
-        // load module 
-        let moduleName = await xshell.modules.resolveModuleName(src);
-        this.setAttribute("module", moduleName ?? "");
-        if (!moduleName) {
-            this.error({ code: 404, message: "Module not registered for page path: " + src, src: src});            
-            return;
-        }        
-        // fetch page
-        let page = null;
-        try {
-            const pageClass = await xshell.loader.load("page:" + src);
-            page = new pageClass( {src} );
-        } catch(e) {
-            let message = "x-page: error loading page '" + src + "': " + e.message;
-            xshell.debug.error(message, e);
-            this.error({ 
-                code: 404, 
-                message: message, 
-                src: src, 
-                stack: e.stack
-            });
-            return;
-        }        
-        // unmount previous page
-        await this.unmount();
-        // unload previous page
-        await this.unload();
-        // set new page
-        this._page = page;         
-        // search params
-        let searchParams = new URLSearchParams(src.indexOf("?") != -1 ? src.substring(src.indexOf("?") + 1).split("#")[0] : "");
         // layout
         let layoutName = this._layout;
-        if (searchParams.get("nav.layout")) {
-            layoutName = searchParams.get("nav.layout");
-            searchParams.delete("nav.layout");
-        }
         if (!layoutName) layoutName = "embed";
         let layout = xshell.config.get("page.layout." + layoutName);
         let layoutClass = await xshell.loader.load("layout:" + layout);
@@ -216,60 +197,78 @@ class XPage extends HTMLElement {
             layoutElement.setAttribute("status", "loading");
         }        
         this._layout = layoutName;
-
+        // load module 
+        let moduleName = await xshell.modules.resolveModuleName(src);
+        this.setAttribute("module", moduleName ?? "");
+        // fetch page
+        let page = null;
+        try {
+            const pageClass = await xshell.loader.load("page:" + src);
+            page = new pageClass( { src, context: this._context } );
+        } catch(e) {
+            page = new Page({ src, context: this._context });
+            page.onCommand = (command, params) => {
+                if (command == "mount") {
+                    this.showError({ code: 404, message: e.message, src: src, stack: e.stack, module:moduleName})
+                }
+            }
+        }        
         //delay
-        //    if (document.body.querySelectorAll(":scope > page").length > 1) {
-        //        await new Promise(r => setTimeout(r, 1000));                
-        //    }
-
-        //xshell-page-src
-        //let srcPage = "";
-        //if (searchParams.get("xshell-page-src")) {
-        //    srcPage = searchParams.get("xshell-page-src");
-        //    searchParams.delete("xshell-page-src");
-        //}
-        //this._srcPage = srcPage;
-
+        if (false && (src.indexOf("dialog")!=-1 || document.body.querySelectorAll(":scope > x-page").length > 1)) {
+            await new Promise(r => setTimeout(r, 1000111));                
+        }        
+        // unmount previous page
+        await this.unmount();
+        // unload previous page
+        await this.unload();
+        // set new page
+        this._page = page;
+        // search params
+        let searchParams = new URLSearchParams(src.indexOf("?") != -1 ? src.substring(src.indexOf("?") + 1).split("#")[0] : "");
+        // nav
+        let nav = null;
+        if (searchParams.get("nav")) {
+            nav = JSON.parse(atob(searchParams.get("nav").replace(/_/g, "/").replace(/-/g, "+")));
+            nav.breadcrumb = nav.breadcrumb || [];
+            nav.breadcrumb.push({ label: page.label, href: src });
+            searchParams.delete("nav");
+        }
         // breadcrumb
         let breadcrumb = xshell.menus.getMenuitemBreadcrumb(src.split("?")[0]);
-        if (searchParams.get("nav.breadcrumb")) {
-            breadcrumb = JSON.parse(atob(searchParams.get("nav.breadcrumb").replace(/_/g, "/").replace(/-/g, "+")));
-            breadcrumb.push({ label: page.label, href: src });
-            searchParams.delete("nav.breadcrumb");
-            this.breadcrumb = breadcrumb;
+        if (nav && nav.breadcrumb) {
+            breadcrumb = nav.breadcrumb;
         }
-        this.breadcrumb = breadcrumb;
+        page.breadcrumb = breadcrumb;
         // title
         let label = page.label;
-        if (searchParams.get("nav.title")) {
-            label = searchParams.get("nav.title");
-            searchParams.delete("nav.title");
+        if (nav && nav.title) {
+            label = nav.title;
             if (breadcrumb && breadcrumb.length > 0) breadcrumb[breadcrumb.length - 1].label = label;
         }
         if (!label) {
             if (breadcrumb && breadcrumb.length > 0) label = breadcrumb[breadcrumb.length - 1].label;
         }
+        if (this._layout == "dialog" && this._context && this._context.title){
+            label = this._context.title;
+        }
         page.label = label;
         // icon
         let icon = page.icon;
         if (!icon && breadcrumb && breadcrumb.length > 0) icon = breadcrumb[breadcrumb.length - 1].icon;
-        if (searchParams.get("nav.icon")) {
-            icon = searchParams.get("nav.icon");
-            searchParams.delete("nav.icon");
+        if (nav && nav.icon) {
+            icon = nav.icon;
             if (breadcrumb && breadcrumb.length > 0) breadcrumb[breadcrumb.length - 1].icon = icon;
         }
         if (!icon) {
             if (breadcrumb && breadcrumb.length > 0) icon = breadcrumb[breadcrumb.length - 1].icon;
         }
-        page.icon = icon;
+        page.icon = icon;        
         // set as loaded
         if (this._status == "loading") {
             this._status = "loaded"; 
         }
         // remove loading
         if (layoutElement) layoutElement.removeAttribute("status");
-        // load status
-        this._loadStatus = 200;
         // call load on page
         await this._page.load();
         // call mount on page
@@ -277,20 +276,10 @@ class XPage extends HTMLElement {
         // raise load event
         this.dispatchEvent(new CustomEvent("load"));
     }
-    error({code, message, src, stack}) {
-        // error
-        let url = xshell.config.get("xshell.url.error");
-        if (url.indexOf("?") == -1) url += "?";
-        url += "code=" + encodeURIComponent(code);
-        url += "&message=" + encodeURIComponent(message);
-        url += "&src=" + encodeURIComponent(src);
-        url += "&xshell-page-src=" + encodeURIComponent(src);
-        xshell.debug.error("x-page: error loading page: " + message + " (code: " + code + ", src: " + src + ")");
-        if (stack) url += "&stack=" + encodeURIComponent(stack);
-        this.src = url;
-    }
+    /*
     replace(src) {
         // replace
+        debugger;
         let value = this.src;
         if (src.startsWith("?")) {
             let aux = value.indexOf("?");
@@ -310,7 +299,7 @@ class XPage extends HTMLElement {
             this._src = value;
             this.dispatchEvent(new CustomEvent("replace", {detail: {src: this._src}}));
         }
-    }
+    }*/
     async unmount() {
         // unmount
         if (this._page) {
@@ -345,7 +334,18 @@ class XPage extends HTMLElement {
         //remove DOM node
         removeHandler();
     }
-
+    async showError({code, message, src, module, stack}) {
+        // show error
+        let name = xshell.config.get("xshell.component.error");
+        const errorCoomponentClass = await xshell.loader.load("component:" + name);
+        const errorComponent = new errorCoomponentClass();
+        errorComponent.code = code;
+        errorComponent.message = message;
+        errorComponent.src = src;
+        errorComponent.module = module;
+        errorComponent.stack = stack;
+        this.replaceChildren(errorComponent);
+    }
 }
 
 //define web component

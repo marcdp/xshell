@@ -86,8 +86,10 @@
     --x-layout-dialog-page-padding-horizontal: 1.5em;
 
     /* x-loading */
+    --x-loading-top: .5em;
+    --x-loading-width: 10em;
     --x-loading-color: var(--x-color-primary);
-    --x-loading-height: .25em;
+    --x-loading-height: .4em;
     --x-loading-duration: 4s;
     --x-loading-delay: .250ms;
 
