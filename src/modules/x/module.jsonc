@@ -36,7 +36,8 @@
     "global.xshell.component.error": "x-error",
     "global.xshell.dialog.confirm": "/pages/dialog-confirm.js",    
     "global.xshell.dialog.message": "/pages/dialog-message.js",    
-    "global.xshell.dialog.prompt": "/pages/dialog-prompt.js"     
+    "global.xshell.dialog.prompt": "/pages/dialog-prompt.js",     
+    "global.xshell.dialog.picker": "/pages/dialog-picker.js"     
 
     
 

@@ -29,15 +29,17 @@ export async function createPageClassFromJsDefinition(src, context, definition) 
     }    
     // state skeleton
     let stateSkeleton = {};
-    let stateQsNames = []
-    let stateReflectedQsNames = []
+    let stateQsNames = [];
+    let stateReflectedQsNames = [];
+    let stateContextNames = [];
     for(let propName in definition.state) {
         const propDefinition = definition.state[propName];
         if (typeof(propDefinition.value) == "undefined") propDefinition.value = null;
         if (typeof(propDefinition.type) == "undefined") propDefinition.type = "string";
         stateSkeleton[propName] = propDefinition.value; 
         if (propDefinition.qs === true) stateQsNames.push(propName);
-        if (propDefinition.reflect) stateReflectedQsNames.push(propName);
+        if (propDefinition.qs === true && propDefinition.reflect) stateReflectedQsNames.push(propName);
+        if (propDefinition.context === true) stateContextNames.push(propName);
     }
     // state engine
     const stateEngineXShell = xshell.config.get(`page.stateEngine`);
@@ -101,6 +103,15 @@ export async function createPageClassFromJsDefinition(src, context, definition) 
                         } else {
                             self._state[propName] = value;
                         }
+                    }
+                }
+            }
+            // stateContextNames
+            if (stateContextNames.length) {
+                for(let propName of stateContextNames) {
+                    if (typeof(this._context[propName]) != "undefined") {
+                        let value = this._context[propName];
+                        self._state[propName] = value;
                     }
                 }
             }

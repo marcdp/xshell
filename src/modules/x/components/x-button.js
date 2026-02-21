@@ -89,7 +89,7 @@ export default {
         :host(.icon-big) .button {padding:.25em .5em;}
         :host(.icon-big) .button x-icon {font-size:1.1em;}
     `,
-    template: `
+    template: ` 
         <div>
             <a class="button" tabindex="1" x-attr:href="state.realHref" x-attr:expanded="(state.expanded && !state.command ? true : false)" x-on:click="command" x-attr:has-more="(state.childs && state.command ? true : false)" x-on:keydown.enter="command">
                 <x-icon class="icon" x-if="state.icon" x-attr:icon="state.icon"></x-icon>

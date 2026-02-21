@@ -1,7 +1,6 @@
-import XElement from "x-element";
 
 // class
-export default XElement.define("x-tab", {
+export default {
     style: `
         :host {display:block;}
     `,
@@ -9,8 +8,8 @@ export default XElement.define("x-tab", {
         <slot></slot>
     `,
     state: {
-        label:"",
-        hash:""
+        label: {value:"", attr:true},
+        hash:  {value:"", attr:true}
     }
-});
+};
 

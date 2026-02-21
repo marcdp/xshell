@@ -12,24 +12,24 @@ function formatFileSize(bytes) {
 }
 
 // export
-export default XElement.define("x-file-size", {
+export default {
     template: `
         {{ state.valueFormatted || ''}}
     `,
     state: {
-        value: 0,
-        valueFormatted: null
+        value: {value:0, attr:true, type:"int"},
+        valueFormatted: {value:null}
     },
-    methods: {
-        onCommand(command) {
-            if (command == "init"){
-                //init
-                this.bindEvent(this.state, "change:value", (event)=>{
-                    let value = event.newValue;
-                    this.state.valueFormatted = formatFileSize(value);
-                });
-
+    script({ state, events }) {
+        return {
+            onCommand(command, params){
+                if (command == "load") {
+                    //load
+                    events.on(state, "change:value", (event) => {
+                        state.valueFormatted = formatFileSize(event.newValue);
+                    });
+                } 
             }
         }
     }
-});
+}

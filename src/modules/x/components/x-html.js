@@ -1,4 +1,4 @@
-import XElement from "x-element";
+
 
 //utils
 function encodeHTMLEntities(str) {
@@ -51,9 +51,8 @@ function colorize(html) {
     return result.join("");
 }
 
-
 // export
-export default XElement.define("x-html", {
+export default {
     style:`
         :host {}
         pre {
@@ -72,27 +71,19 @@ export default XElement.define("x-html", {
         <pre><code x-html="state.colorized"></code></pre>
     `,
     state: {
-        value:"",
-        colorized:""
+        value:    {value:"", attr:true},
+        colorized:{value:""}
     },
-    methods: {
-        onCommand(command) {
-            if (command == "init"){
-                //init
-                this.bindEvent(this.state, "change:value", (event) => {
-                    let html = event.newValue; //.replaceAll("<","&lt;").replaceAll(">","&gt;");
-                    this.state.colorized = colorize(html);
-                    
-                    //let parser = new DOMParser();
-                    //let doc = parser.parseFromString(html, "text/html");    
-
-                    //const serializer = new XMLSerializer();
-                    //const htmlString = serializer.serializeToString(doc);
-                    
-                    
-                    //this.state.colorized = colorizeHTML(event.newValue);
-                });
+    script({ state, events }) {
+        return {
+            onCommand(command, params){
+                if (command == "load") {
+                    //load
+                    events.on(state, "change:value", (event) => {
+                        state.colorized = colorize(event.newValue);                        
+                    });
+                } 
             }
         }
-    }                
-});
+    }
+}

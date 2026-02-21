@@ -150,6 +150,10 @@ b {font-weight: 600;}
 x-page[layout='stack'] + x-page[layout='stack'] {--x-layout-stack-width: 78vw; --x-layout-stack-backdrop:none;}
 x-page[layout='stack'] + x-page[layout='stack'] + x-page[layout='stack'] {--x-layout-stack-width: 76vw;}
 
+x-datatable > table {width:100%;}
+x-datatable > table > thead > tr > th {text-align:left; font-weight:600;}
+x-datatable > table > tbody > tr:nth-child(odd) {background:var(--x-color-background-alt);}
+
 :root {
 
     /* x-accordion */

@@ -31,6 +31,7 @@
     "xshell.dialog.confirm": null,    // dialog page for confirm
     "xshell.dialog.message": null,    // dialog page for message
     "xshell.dialog.prompt": null,     // dialog page for prompt
+    "xshell.dialog.picker": null,     // dialog page for picker
     "xshell.areaDefault": "main",
     "xshell.version": "0.9.0",
     "xshell.identity.provider": "anonymous"

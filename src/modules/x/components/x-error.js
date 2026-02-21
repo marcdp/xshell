@@ -2,10 +2,6 @@ import XElement from "x-element";
 
 // export
 export default {
-    meta: {
-        renderEngine: "x",
-        stateEngine:  "proxy"
-    },
     style: `
         table {
             width: 100%;

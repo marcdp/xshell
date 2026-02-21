@@ -1,7 +1,6 @@
-import XElement from "x-element";
 
 // class
-export default XElement.define("x-divider", {
+export default {
     style: `
         :host {display:block;}
         :host hr {border:var(--x-divider-border); margin-left:0; margin-right:0;}
@@ -11,5 +10,5 @@ export default XElement.define("x-divider", {
         :host-context(x-toolbar) hr {height:2em; margin:0; display:block}
     `,
     template: `<hr/>`
-});
+};
 

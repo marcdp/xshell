@@ -20,6 +20,7 @@ export default XElement.define("x-datafield", {
         :host label span.langs {float:right; display:inline-flex; gap:.15em}
         :host label span.langs div {display:flex; gap:.15em}
         :host label span.langs x-button {}
+        :host label[label-mode='hidden'] {display:none;}
 
         :host .description {font-size:var(--x-font-size-small); margin-top:-.25em; margin-bottom:.5em; padding:0; }
         :host .message {font-size:var(--x-font-size-small); margin-top:.5em; margin-bottom:0; padding:0; }
@@ -130,7 +131,7 @@ export default XElement.define("x-datafield", {
         :host > div.error x-icon {vertical-align:text-bottom}       
         `,
     template: `
-        <label x-if="state.label" x-attr:for="state.inputId" x-class:error="state.errors.length">
+        <label x-if="state.label" x-attr:for="state.inputId" x-attr:label-mode="state.labelMode" x-class:error="state.errors.length">
             <span class="label" x-if="state.label" x-text="state.label"></span>
             <span class="required" x-if="state.required">*</span>
             <span class="langs" x-if="state.type.endsWith('_i18n')" >
@@ -382,6 +383,7 @@ export default XElement.define("x-datafield", {
     `,
     state: {
         label:"",
+        labelMode: "auto",
         description:"",
         labelSecondary:"",
         message: "",

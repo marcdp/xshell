@@ -12,16 +12,14 @@ export default {
         </x-form>
     `,    
     state: {
-        message: {value:""},
-        variant: {value:"yesno", enum:["yesno","yesnocancel","okcancel","ok"]},
+        message: {value:"", context:true},
+        variant: {value:"yesno", enum:["yesno","yesnocancel","okcancel","ok"], context:true},
     },
     script({ state, context }) {
         return {
             onCommand(command, params) {
                 if (command == "load") {
                     // load
-                    state.message = context.message;
-                    state.variant = context.variant ?? "yesno";
 
                 } else if (command == "yes") {
                     //yes

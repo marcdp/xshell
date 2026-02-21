@@ -1,7 +1,6 @@
-import XElement from "x-element";
 
 // class
-export default XElement.define("x-datafields", {
+export default {
     style: `
         :host {
             display:block;
@@ -71,37 +70,30 @@ export default XElement.define("x-datafields", {
         </div>
     `,
     state: {
-        label: "",
-        message: "",
-        columns: 2,
-        remove:false,
-        move:false,
-        edit: false,
+        label:   {value:"", attr:true},
+        message: {value:"", attr:true},
+        columns: {value:2, attr:true},
+        remove: {value:false, attr:true},
+        move:   {value:false, attr:true},
+        edit:   {value:false, attr:true}
     },
-    //settings:{
-    //    observedAttributes:["label","message","columns","remove", "move", "edit"]
-    //},
-    methods:{
-        onCommand(command, args){
-            if (command == "load") {
-                //load
+    script({ }) {
+        return {
+            onCommand(command, params){
+                if (command == "move") {
+                    //move
+                    let event = params.event;
+                    let direction = event.target.dataset.direction;
+                    this.dispatchEvent(new CustomEvent("move", {detail: {direction: direction}, bubbles: true, composed: false}));
 
-            } else if (command == "move") {
-                //move
-                let event = args.event;
-                let direction = event.target.dataset.direction;
-                this.dispatchEvent(new CustomEvent("move", {detail: {direction: direction}, bubbles: true, composed: false}));
+                } else if (command == "edit") {
+                    //edit
+                    this.dispatchEvent(new CustomEvent("edit", {bubbles: true, composed: false}));
 
-            } else if (command == "edit") {
-                //edit
-                this.dispatchEvent(new CustomEvent("edit", {bubbles: true, composed: false}));
-
-            } else if (command == "remove") {
-                //remove
-                this.dispatchEvent(new CustomEvent("remove", {bubbles: true, composed: false}));
-
+                } else if (command == "remove") {
+                    //remove
+                    this.dispatchEvent(new CustomEvent("remove", {bubbles: true, composed: false}));
             }
         }
     }
-});
-
+};
