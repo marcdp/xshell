@@ -92,7 +92,7 @@ class XShell {
         this._menus = new Menus( { bus: this._bus, config: this._config, modules: this._modules, navigation: this._navigation } );
         this._services = new Services();
         this._urlRewriter = new UrlRewriter();
-        this._dialog = new Dialog( { config: this._config, navigation: this._navigation } );
+        this._dialog = new Dialog( { config: this._config, navigation: this._navigation, i18n: this._i18n } );
         // services
         this._services.register("api", this._api);
         this._services.register("areas", this._areas);

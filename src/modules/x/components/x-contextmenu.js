@@ -1,7 +1,6 @@
-import XElement from "x-element";
 
 // class
-export default XElement.define("x-contextmenu", {
+export default {
     style: `
         :host {
             background:var(--x-contextmenu-background);
@@ -20,5 +19,5 @@ export default XElement.define("x-contextmenu", {
     template: `
         <slot></slot>
     `
-});
+};
 

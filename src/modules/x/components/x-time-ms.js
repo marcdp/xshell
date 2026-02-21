@@ -8,24 +8,24 @@ function formatMilliseconds(ms) {
 }
 
 // export
-export default XElement.define("x-time-ms", {
+export default {
     template: `
         {{ state.valueFormatted || ''}}
     `,
     state: {
-        value: 0,
-        valueFormatted: null
+        value: {value:0, attr:true, type:"number"},
+        valueFormatted: {value:null}
     },
-    methods: {
-        onCommand(command) {
-            if (command == "init"){
-                //init
-                this.bindEvent(this.state, "change:value", (event)=>{
-                    let value = event.newValue;
-                    this.state.valueFormatted = formatMilliseconds(value);
-                });
-
+    script({ state, events }) {
+        return {
+            onCommand(command) {
+                if (command == "load"){
+                    //load
+                    events.on(state, "change:value", (event)=>{
+                        state.valueFormatted = formatMilliseconds(event.newValue);
+                    });
+                }
             }
         }
     }
-});
+};

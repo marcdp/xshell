@@ -1,7 +1,6 @@
-import XElement from "x-element";
 
 // class
-export default XElement.define("x-avatar", {
+export default {
     style: `
         :host {display:flex; flex-direction:row; user-select:none;}
         :host(.cursor) {cursor:pointer;}
@@ -32,28 +31,26 @@ export default XElement.define("x-avatar", {
             <span class="message" x-text="state.message"></span>
         </div>
     `,
-    //settings:{
-    //    observedAttributes:["initials", "icon", "image", "label", "message", "command"]
-    //},
     state: {
-        initials:"", 
-        icon:"",
-        image:"",
-        label:"",
-        message:"",
-        command:"",
+        initials: {value:"", attr:true}, 
+        icon:{value:"", attr:true},
+        image:{value:"", attr:true},
+        label:{value:"", attr:true},
+        message:{value:"", attr:true},
+        command:{value:"", attr:true},
     },
-    methods:{
-        onCommand(command) {
-            if (command == "load") {
-                //load
-                this.addEventListener("click", ()=>{
-                    if (this.state.command) {
-                        this.dispatchEvent(new CustomEvent("command", {detail: {command: this.state.command, data: this.dataset}, bubbles: true, composed: false}));
-                    }
-                });
+    script({ }) {
+        return {
+            onCommand(command, params){
+                if (command == "load") {
+                    //load
+                    this.addEventListener("click", ()=>{
+                        if (this.state.command) {
+                            this.dispatchEvent(new CustomEvent("command", {detail: {command: this.state.command, data: this.dataset}, bubbles: true, composed: false}));
+                        }
+                    });
+                } 
             }
         }
     }
-});
-
+}

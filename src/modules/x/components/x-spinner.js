@@ -1,7 +1,6 @@
-import XElement from "x-element";
 
 // export
-export default XElement.define("x-spinner", {
+export default {
     template: `
         <div class="loader"></div>
         <span>{{state.message}}</span>
@@ -38,11 +37,6 @@ export default XElement.define("x-spinner", {
         }
     `,
     state: {
-        message:"",
-    },
-    //settings: {
-    //    observedAttributes: ["message"]
-    //}
-    
-
-});
+        message: {value:"", attr:true}
+    },   
+};

@@ -1,11 +1,6 @@
-import XElement from "x-element";
 
 // export
 export default {
-    meta: {
-        renderEngine: "x",
-        stateEngine:  "proxy"
-    },
     style: `
         ul {margin:0; padding:0; display: flex; align-items:center; box-sizing: border-box;}
         ul li {list-style:none; margin-right:.5em; display:flex; }

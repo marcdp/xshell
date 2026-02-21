@@ -47,7 +47,7 @@ export default function createStateEngineFactoryProxy(stateSkeleton, stateDefini
 						target[prop] = newValue;
 						for (let listener of listeners) {
 							if (listener.prop === prop) {
-								listener.listener(newValue, oldValue);
+								listener.listener({ prop, newValue, oldValue});
 							}
 						}
 						handler.stateChange(prop, oldValue, newValue);

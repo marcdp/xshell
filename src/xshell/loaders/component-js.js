@@ -62,7 +62,7 @@ export async function createComponentClassFromJsDefinition(src, context, definit
         if (typeof(propDefinition.reflect) == "undefined") propDefinition.reflect = false;
         stateSkeleton[propName] = propDefinition.value; 
         if (propDefinition.attr === true) stateAttributeNames.push(propName);
-        if (propDefinition.reflect) stateReflectedAttributeNames.push(propName);
+        if (propDefinition.attr === true && propDefinition.reflect) stateReflectedAttributeNames.push(propName);
         if (propDefinition.value && typeof(propDefinition.value) === "object" && !Array.isArray(propDefinition.value) && Object.keys(propDefinition.value).length === 0) stateMapAttributeNames.push(propName);
     }
     // state engine

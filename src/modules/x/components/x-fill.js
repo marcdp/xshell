@@ -1,7 +1,6 @@
-import XElement from "x-element";
 
 // definition
-export default await XElement.define("x-fill", {
+export default {
     style: `
         :host {
             display:flex; 
@@ -18,4 +17,4 @@ export default await XElement.define("x-fill", {
     template: `
         <slot></slot>
     `,
-});
+};

@@ -1,11 +1,10 @@
-import XElement from "x-element";
 
 // export
-export default XElement.define("x-i18n", {
+export default {
     template: `
         {{ i18n.translate(state.text) }}
     `,
     state: {
-        text: ""
+        text: {value:"", attr:true}
     }
-});
+}

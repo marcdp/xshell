@@ -1,11 +1,10 @@
-import XElement from "x-element";
 
 // class
-export default XElement.define("x-menu", {
+export default {
     style: `
-    :host(.horizontal) {display:flex; align-items:center;}
-    :host(.horizontal) nav {display:flex; align-items:center;}
-    :host(.horizontal) nav > x-menuitem
+        :host(.horizontal) {display:flex; align-items:center;}
+        :host(.horizontal) nav {display:flex; align-items:center;}
+        :host(.horizontal) nav > x-menuitem
     `,
     template: `
         <nav x-if="state.menu">
@@ -14,11 +13,7 @@ export default XElement.define("x-menu", {
         </nav>        
     `,
     state: {
-        menu: null,
+        menu: {value:null, prop:true}
     },
-    methods: {
-        onCommand(command) {
-        }
-    }
-});
+};
 

@@ -1,7 +1,7 @@
 import XElement from "x-element";
 
 // class
-export default XElement.define("x-badge", {
+export default  {
     style: `
         :host {}
         :host .message {
@@ -26,12 +26,9 @@ export default XElement.define("x-badge", {
     template: `
         <span class="message" x-text="state.value" ></span>
     `,
-    //settings:{
-    //    observedAttributes:["value"]
-    //},
     state: {
-        value:""
+        value: {value:"", attr:true}
     }
-});
+};
 
 

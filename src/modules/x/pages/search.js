@@ -13,6 +13,7 @@ export default {
                         x-attr:href="result.href"
                         x-attr:target="result.target"
                         x-attr:category="result.category"                    
+                        open="top"
                     ></x-listview-item>
                 </x-listview>       
                 <div>
@@ -36,7 +37,7 @@ export default {
         keyword: {value:"", attr:true},
         results: {value:[]}
     },
-    script({ state, events, bus, modules, config }) {
+    script({ state, events, bus, modules, areas, menus, config }) {
         return {
             onCommand(command, params) {
                 if (command == "load") {
@@ -50,32 +51,23 @@ export default {
                     // search
                     let keyword = state.keyword.toLowerCase();
                     let results = [];
-                    let category_ant = null;
                     if (keyword.length > 2) {
-                        var searchRecursive = function(module, menuitem) {
+                        const searchRecursive = function(menuitem) {
                             if (menuitem.label.toLowerCase().indexOf(keyword) >= 0 && menuitem.href) {
-                                results.push({
-                                    label: menuitem.label,
-                                    description: menuitem.description,
-                                    category: (category_ant != module.label ? module.label : ""),
-                                    logo: menuitem.logo || "x-page",
-                                    href: menuitem.href,
-                                    target: menuitem.target || "#root"
-                                });
-                                category_ant = module.label
+                                results.push(menuitem);
                             }
                             if (menuitem.children) {
                                 for (let child of menuitem.children) {
-                                    searchRecursive(module, child);
+                                    searchRecursive(child);
                                 }
                             }
                         }
-                        for(let module of modules.getModules()) {
-                            for(let menu_name of config.getSubKeys("modules." + module.name + ".menus")){
-                                let menu = config.get("modules." + module.name + ".menus." + menu_name);
-                                searchRecursive(module, menu);
-                            }
-                        }
+                        // search current area
+                        const currentArea = areas.getCurrentArea();
+                        const menu = menus.getMenu(currentArea.id);
+                        for(let menuitem of menu) searchRecursive(menuitem);
+                        // search other areas
+                        // todo ...
                     }
                     state.results = results;
                 }                

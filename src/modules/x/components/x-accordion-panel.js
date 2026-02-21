@@ -1,7 +1,6 @@
-import XElement from "x-element";
 
 // class
-export default XElement.define("x-accordion-panel", {
+export default {
     style: `
         :host {display:block;}
         .header {display:flex; height:2.5em; align-items:center; padding:0 .5em 0 1em; cursor:pointer; user-select: none;}
@@ -44,31 +43,30 @@ export default XElement.define("x-accordion-panel", {
         </div>
     `,
     state: {
-        label:"",
-        icon:"",
-        expanded: false
+        label: {value:"", attr:true},
+        icon:  {value:"", attr:true},
+        expanded: {value:false, attr:true},
     },
-    //settings: {
-    //    observedAttributes: ["label", "icon", "expanded"],
-    //},
-    methods: {
-        onCommand(command) {
-            if (command == "load") {
-                //load
-                this.onCommand("refresh");
+    script({ state, navigation, getPage }) {
+        return {
+            onCommand(command, params){
+                if (command == "load") {
+                    //load
+                    this.onCommand("refresh");
 
-            } else if (command == "collapse") {
-                //collapse
-                if (this.state.expanded) {
-                    this.onCommand("toggle");
+                } else if (command == "collapse") {
+                    //collapse
+                    if (state.expanded) {
+                        this.onCommand("toggle");
+                    }
+
+                } else if (command == "toggle") {
+                    //toggle
+                    state.expanded = !state.expanded;
+                    this.dispatchEvent(new CustomEvent("toggle", {bubbles: true, composed: false}));
                 }
-
-            } else if (command == "toggle") {
-                //toggle
-                this.state.expanded = !this.state.expanded;
-                this.dispatchEvent(new CustomEvent("toggle", {bubbles: true, composed: false}));
             }
         }
     }
-});
+};
 

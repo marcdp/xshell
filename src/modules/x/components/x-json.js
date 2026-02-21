@@ -1,4 +1,4 @@
-import XElement from "x-element";
+
 
 //utils
 function syntaxHighlight(json) {
@@ -24,7 +24,7 @@ function syntaxHighlight(json) {
 }
 
 // export
-export default XElement.define("x-json", {
+export default {
     style:`
         :host {}
         pre {
@@ -57,17 +57,19 @@ export default XElement.define("x-json", {
         <pre><code x-html="state.colorized"></code></pre>
     `,
     state: {
-        value:"",
-        colorized:""
+        value:    {value:"", attr:true},
+        colorized:{value:"", attr:true}
     },
-    methods: {
-        onCommand(command) {
-            if (command == "init"){
-                //init
-                this.bindEvent(this.state, "change:value", (event) => {
-                    this.state.colorized = syntaxHighlight(event.newValue);
-                });
+    script({ state, events }) {
+        return {
+            onCommand(command, params){
+                if (command == "load") {
+                    //load
+                    events.on(state, "change:value", (event) => {
+                        state.colorized = syntaxHighlight(event.newValue);
+                    });
+                } 
             }
         }
-    }                
-});
+    }
+}

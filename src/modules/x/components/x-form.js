@@ -34,9 +34,8 @@ export default XElement.define("x-form", {
 
         .errors {margin-top:1em;padding:1em;color:var(--x-datafield-error-color);border: var(--x-datafield-border); border-color:var(--x-datafield-error-color);border-radius:var(--x-datafield-border-radius);}
         .errors div {font-size: var(--x-font-size-small);}
-        .errors ul {list-style:none; margin:0; padding:0; margin-top:1em;}
+        .errors ul {list-style-position:outside; margin:0; padding:0; padding-left:1.5em; margin-top:1em;}
         .errors ul li {}
-        .errors ul li x-icon {margin-right:.2em; vertical-align:text-bottom;}
  
         .footer-separator {
             display:var(--x-form-footer-hr-display, none);
@@ -87,8 +86,9 @@ export default XElement.define("x-form", {
                         Solve error before continue:
                         <ul>
                             <li x-for="error in state.errors">
-                                <x-icon icon="x-error"></x-icon>
-                                [<span x-html="error.path"></span>]
+                                <span x-if="error.path">
+                                    [<span x-html="error.path"></span>]
+                                </span>
                                 <b><span x-html="error.label"></span>:</b>
                                 <span x-html="error.message"></span>
                             </li>

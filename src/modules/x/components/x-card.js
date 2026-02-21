@@ -1,7 +1,7 @@
 import XElement from "x-element";
 
 // class
-export default XElement.define("x-card", {
+export default {
     style: `
         :host {
             display:block; 
@@ -30,5 +30,5 @@ export default XElement.define("x-card", {
         <div class="body"><slot></slot></div>
         <div class="footer"><slot name="footer"></slot></div>
     `
-});
+};
 
