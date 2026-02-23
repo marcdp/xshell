@@ -1,11 +1,39 @@
 
 // LoaderException
-class LoaderException extends Error {
-    constructor(message, details) {
-        super(message); // Call the parent constructor (Error)
+/*
+class LoaderExceptionOld extends Error {
+    constructor(message, opts={}) {
+        super(message, ( opts.cause ? { cause: opts.cause } : undefined )); // Call the parent constructor (Error)
         this.name = this.constructor.name; // Set the error name
-        this.errors = details; // Custom property for additional info
-        this.stack = (new Error()).stack; // Optional: keep the stack trace
+        if (opts.code) this.code = opts.code// Custom error code
+        if (opts.details) this.details = opts.details; // Custom property for additional info
+        if (opts.errors) this.errors = opts.errors || []; // Array of LoaderExption of {message...}
+        if (Error.captureStackTrace) {
+            Error.captureStackTrace(this, this.constructor);
+        }
+    }
+}
+*/
+class ResourceLoadError extends Error {
+    constructor(resource, message, opts = {}) {
+        super(message, { cause: opts.cause });
+        this.name = this.constructor.name;
+        this.resource = resource;
+        this.src = opts.src;
+        this.path = opts.path;
+        this.code = opts.code;
+    }
+}
+class LoaderException extends AggregateError {
+    constructor(errors, message = "Loader failed", opts = {}) {
+        super(errors, message, { cause: opts.cause });
+        this.name = this.constructor.name;
+        this.code = opts.code ?? "LOADER_FAILED";
+        this.details = {
+            total: errors.length,
+            failed: errors.length,
+            succeeded: 0
+        };
     }
 }
 
@@ -61,15 +89,19 @@ export default class Loader {
         if (typeof(resources) == "string") resources = [resources];
         //load resources
         let result = [];
+        let srcs = [];
+        let paths = [];
         let tasks = [];
         for(let resource of resources) {            
             // resolve definition
             let name = resource.split(":")[1];
             let definitionObject = this._resolver.resolve(resource);
             if (!definitionObject) {
-                throw new LoaderException(`Resource not found: ${resource}`);
+                throw new LoaderException([new Error(`Resource not found: ${resource}`)]);
             }
             let {definition, src, path} = definitionObject;
+            srcs.push(src);
+            paths.push(path);
             // get or load handler
             let loader = loaders[definition.loader];
             if (!loader) {                
@@ -116,10 +148,10 @@ export default class Loader {
                         });
                         registryItem.status = "loaded";
                         await this._bus.emit("xshell:loader:resource:loaded", {resource, src});
-                    } catch (e) {
+                    } catch (exception) {
                         registryItem.status = "error";
                         await this._bus.emit("xshell:loader:resource:error", {resource, src});
-                        throw e;
+                        throw exception;
                     }                    
                     return value;
                 })();
@@ -149,20 +181,28 @@ export default class Loader {
                     }
                     result[i] = value;
                 } else if (taskResult.status === 'rejected') {
-                    errors.push(taskResult.reason);
+                    const exception = taskResult.reason instanceof Error ? taskResult.reason : new Error(String(taskResult.reason));
+                    const error = new ResourceLoadError(
+                        resources[i], 
+                        exception.message, 
+                        {
+                            code: (exception.message.indexOf("Failed to fetch") != -1 ? 404 : 500),
+                            src: srcs[i],
+                            path: paths[i],
+                            cause: exception
+                        }
+                    );
+                    errors.push(error);
                 }
             }
         }
-        //throw exception if errors
+        // throw exception if errors
+        if (errors.length) {
+            throw new LoaderException(errors, "Some resources failed");
+        }
+        // result
         if (isString) {
-            if (errors.length) {
-                throw errors[0];
-            }
             result = result[0];
-        } else {
-            if (errors.length) {
-                throw new LoaderException("Error loading resources", errors);
-            }
         }
         //return
         return result;

@@ -234,6 +234,7 @@ export default {
                 <div>
                     <x-button class="anchor" icon="x-keyboard-arrow-left" x-on:click="toggle-menu"></x-button>
                     <x-button class="anchor" icon="x-close" x-on:click="toggle-menu"></x-button>
+                    <x-page-menu></x-page-menu>
                     <x-menumain x-prop:menu="state.menuMain"></x-menumain>
                 </div>
             </nav>

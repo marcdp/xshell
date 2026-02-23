@@ -205,11 +205,12 @@ class XPage extends HTMLElement {
         try {
             const pageClass = await xshell.loader.load("page:" + src);
             page = new pageClass( { src, context: this._context } );
-        } catch(e) {
-            page = new Page({ src, context: this._context });
+        } catch(exception) {
+            page = new Page({ src });
             page.onCommand = (command, params) => {
                 if (command == "mount") {
-                    this.showError({ code: 404, message: e.message, src: src, stack: e.stack, module:moduleName})
+                    debugger;
+                    this.showError(exception);
                 }
             }
         }        
@@ -276,30 +277,6 @@ class XPage extends HTMLElement {
         // raise load event
         this.dispatchEvent(new CustomEvent("load"));
     }
-    /*
-    replace(src) {
-        // replace
-        debugger;
-        let value = this.src;
-        if (src.startsWith("?")) {
-            let aux = value.indexOf("?");
-            if (aux != -1) value = value.substring(0, aux);
-            value += (src != "?" ? src : "");
-        } else if (src.startsWith("#")) {
-            let aux = value.indexOf("#");
-            if (aux != -1) value = value.substring(0, aux);
-            value += (src != "#" ? src : "");
-        } else {
-            value = src;
-        }
-        if (this._breadcrumb && this._breadcrumb.length > 0) {
-            this._breadcrumb[this._breadcrumb.length - 1].href = value;
-        }
-        if (this._src != value) {
-            this._src = value;
-            this.dispatchEvent(new CustomEvent("replace", {detail: {src: this._src}}));
-        }
-    }*/
     async unmount() {
         // unmount
         if (this._page) {
@@ -334,7 +311,7 @@ class XPage extends HTMLElement {
         //remove DOM node
         removeHandler();
     }
-    async showError({code, message, src, module, stack}) {
+    async showError({code, message, src, module, stack, errors}) {
         // show error
         let name = xshell.config.get("xshell.component.error");
         const errorCoomponentClass = await xshell.loader.load("component:" + name);
@@ -343,6 +320,7 @@ class XPage extends HTMLElement {
         errorComponent.message = message;
         errorComponent.src = src;
         errorComponent.module = module;
+        errorComponent.errors = errors;
         errorComponent.stack = stack;
         this.replaceChildren(errorComponent);
     }
