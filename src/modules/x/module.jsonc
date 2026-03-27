@@ -8,7 +8,7 @@
     "styles": ["/css/styles.css"],
     "icon": "",
 
-    /* page defaults */
+    // page defaults
     "page.renderEngine": "x",
     "page.stateEngine": "proxy",
     "component.renderEngine": "x",
@@ -38,8 +38,5 @@
     "global.xshell.dialog.message": "/pages/dialog-message.js",    
     "global.xshell.dialog.prompt": "/pages/dialog-prompt.js",     
     "global.xshell.dialog.picker": "/pages/dialog-picker.js"     
-
-    
-
 
 }

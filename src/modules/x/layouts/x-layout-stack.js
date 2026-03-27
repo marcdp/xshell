@@ -13,13 +13,16 @@ export default XElement.define("x-layout-stack", {
             z-index:10;
         }
         div.backdrop {
-            background:var(--x-layout-stack-backdrop);
             position:fixed; 
             top:0;
             left:0;
             right: 0;
             bottom:0;
             z-index:7;
+            transition: background var(--x-transition-duration) ease;
+        }
+        div.backdrop.expanded {
+            background: var(--x-layout-stack-backdrop);
         }
         div.panel {
             background:white;
@@ -71,11 +74,10 @@ export default XElement.define("x-layout-stack", {
         }
     `,
     template: `
-        <div class="backdrop" x-on:click="query-close"></div>
-        <div class="panel" x-class:expanded="state.expanded" x-on:transitionend="transition-end">
+        <div class="backdrop" x-class:expanded="state.expanded" x-on:click="query-close"></div>
+        <div class="panel"    x-class:expanded="state.expanded" x-on:transitionend="transition-end">
             <x-loading x-if="state.status=='loading'"></x-loading>
-            <div class="header">
-            
+            <div class="header">            
                 <h2><x-page-title></x-page-title></h2>
                 <x-button class="anchor" icon="x-close" x-on:click="query-close"></x-button>
             </div>
@@ -88,19 +90,16 @@ export default XElement.define("x-layout-stack", {
         expanded: false,
         status: ""
     },
-    //settings: {
-    //    observedAttributes: ["status"]
-    //},
     methods: {
         onCommand(command) {
             if (command == "load") {
                 //load
                 this.bindEvent(this.page, "load", "refresh");
                 this.onCommand("refresh");
-                this.shadowRoot.addEventListener("transitionEnd", ()=>this.onCommand("transition-end"));
+                this.shadowRoot.addEventListener("transitionend", ()=>this.onCommand("transition-end"));
                 this.render();
-                const secondsSinceLoad = ((performance.now() - xshell.loadTime) / 1000).toFixed(2);
-                if (secondsSinceLoad < .5) {
+                const msSinceLoad = xshell.runtime.uptimeMs;
+                if (msSinceLoad < 500) {
                     this.state.expanded = true;    
                 } else {
                     setTimeout(()=>{

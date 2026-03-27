@@ -13,6 +13,15 @@ export default XElement.define("x-layout-dialog", {
             box-shadow:var(--x-layout-dialog-shadow);
             box-sizing:border-box;
         }
+        dialog::backdrop {
+            background-color: transparent;
+            transition: background-color var(--x-transition-duration) ease;  
+            
+        }
+        dialog.opened::backdrop {
+            background-color: var(--x-layout-dialog-backdrop);
+        }
+        
         x-loading {
             position:fixed;
             width:var(--x-loading-width);
@@ -42,7 +51,7 @@ export default XElement.define("x-layout-dialog", {
         
     `,
     template: `
-        <dialog x-on:cancel="query-close">
+        <dialog x-class:opened="state.opened" x-on:cancel="query-close">
             <div class="container">
                 <x-loading x-if="state.status=='loading'"></x-loading>
                 <div class="header">
@@ -58,17 +67,22 @@ export default XElement.define("x-layout-dialog", {
     `,
     state: {
         label: "",
-        status: ""
+        status: "",
+        opened: false
     },
     methods: {
         onCommand(command, args) {
             if (command == "load") {
                 //load
-                this.render();
-                this.shadowRoot.querySelector("DIALOG").showModal();
                 this.bindEvent(this.page, "load", "refresh");
                 this.onCommand("refresh");
-                
+                setTimeout(()=>{
+                    this.shadowRoot.querySelector("DIALOG").showModal();
+                    setTimeout(()=>{
+                        this.state.opened = true;
+                    }, 0);
+                }, 0);
+
             } else if (command == "refresh") {
                 //refresh
                 this.label = this.page.label;

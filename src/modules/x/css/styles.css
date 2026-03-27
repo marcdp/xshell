@@ -84,6 +84,7 @@
     --x-layout-dialog-shadow:0 4px 15px rgba(0, 0, 0, 0.1);
     --x-layout-dialog-page-padding-vertical: 1em;
     --x-layout-dialog-page-padding-horizontal: 1.5em;
+    --x-layout-dialog-backdrop: rgba(0,0,0,.1);
 
     /* x-loading */
     --x-loading-top: .5em;

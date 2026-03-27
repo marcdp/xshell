@@ -13,6 +13,7 @@ import Menus from "./menus.js";
 import Modules from "./modules.js";
 import Page from "./page.js";
 import Resolver from "./resolver.js";
+import Runtime from "./runtime.js";
 import Services from "./services.js";
 import Settings from "./settings.js";
 import Storage from "./storage.js";
@@ -39,6 +40,7 @@ class XShell {
     _modules = [];
     _navigation = null;
     _resolver = null;
+    _runtime = null;
     _settings = null;
     _services = null;
     _storage = null;
@@ -65,6 +67,7 @@ class XShell {
     get modules() { return this._modules; }
     get navigation() { return this._navigation; }
     get resolver() { return this._resolver; }
+    get runtime() { return this._runtime; }
     get settings() { return this._settings; }
     get services() { return this._services; }
     get storage() { return this._storage; }
@@ -93,6 +96,7 @@ class XShell {
         this._services = new Services();
         this._urlRewriter = new UrlRewriter();
         this._dialog = new Dialog( { config: this._config, navigation: this._navigation, i18n: this._i18n } );
+        this._runtime = new Runtime();
         // services
         this._services.register("api", this._api);
         this._services.register("areas", this._areas);
@@ -108,6 +112,7 @@ class XShell {
         this._services.register("modules", this._modules);
         this._services.register("navigation", this._navigation);
         this._services.register("resolver", this._resolver);
+        this._services.register("runtime", this._runtime);
         this._services.register("settings", this._settings);
         this._services.register("services", this._services);
         this._services.register("storage", this._storage);

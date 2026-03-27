@@ -1,20 +1,11 @@
 #!/usr/bin/env python3
 from dprojectstools.commands import command, CommandsManager
-from dprojectstools.secrets import SecretsManager
 from dprojectstools.git import GitManager
 from scripts.package import package_xshell, package_module, package_app
 from scripts.webserver_dev import webserver_dev
 import sys
 
-# Secrets
-secrets = SecretsManager("cett")
 
-
-
-#@command("HostingWEB backups: snapshots", index = 20)
-#def restore_hostingweb_snapshots():
-#    # list snapshots
-#    resticHostingWEB.snapshots_list()
 
 # **************
 # ** Pacakge   **
@@ -24,10 +15,8 @@ def webserver():
     webserver_dev()
     
 
-
-
 # **************
-# ** Pacakge   **
+# ** Package  **
 # **************
 @command("Package all", index=20)
 def package():
