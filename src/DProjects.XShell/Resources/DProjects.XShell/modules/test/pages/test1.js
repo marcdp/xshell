@@ -2,7 +2,7 @@
 export default {
     template: `
         <p>
-            this is a test page  
+            this is a test page 1
         </p>
     `,    
     state: {
@@ -14,7 +14,6 @@ export default {
             onCommand(command, params) {
                 if (command == "load") {
                    // load
-                   debugger;
                 }                
             }
         };
