@@ -9,7 +9,7 @@ export const contract = {
 // export page
 export default {
     style: `
-        P {display:block; border:1px red solid}
+        P {display:block; border:1px red dotted}
     `,
     template: `
         <p>
