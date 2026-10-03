@@ -1,6 +1,6 @@
 // contract
 export const contract = {
-    description: "Modules page",
+    description: "Components page",
     events: {},
     properties: {},
     methods: {}
@@ -8,35 +8,39 @@ export const contract = {
 
 // export page
 export default {
-    style: `
-    `,
+    meta: {
+        title: "Components"
+    },
     template: `
         <x-listview view="details">
-            <div slot="column" style="width:8em">
-                <x-datafield type="search" x-model="state.id" placeholder="Compopnent"></x-datafield>
+            <div slot="column" style="width:12em">
+                <x-datafield type="search" x-model="state.id" placeholder="Component"></x-datafield>
             </div>
-            <div slot="column">
+            <div slot="column" style="width:12em">
                 <x-datafield type="search" x-model="state.moduleId" placeholder="Module"></x-datafield>
             </div>
             <div slot="column">
                 <x-datafield type="search" x-model="state.description" placeholder="Description"></x-datafield>
             </div>
-            <div slot="column" style="width:6em; text-align:right">
+            <div slot="column" style="width:4em; text-align:right">
                 Size
             </div>
-            <div slot="column" style="width:6em;">
+            <div slot="column" style="width:4em; text-align:right">
+                Time
+            </div>
+            <div slot="column" style="width:4em;">
                 Status
             </div>
-            <x-listview-item 
-                x-for="component in state.components"
-                
+            <x-listview-item x-for="component in state.components"
+                x-attr:href="component.url" 
                 x-attr:label="component.id"
-                x-attr:description="component.description"
                 x-attr:icon="component.icon"
-                target="#root"
+                target="_blank"
             >
-                <div>{{ component.label }}</div>                
+                <div>{{ component.moduleId }}</div>
+                <div>{{ component.description }}</div>
                 <x-file-size x-prop:value="component.size" style="text-align:right"></x-file-size>
+                <div style="text-align:right"><x-time-ms x-prop:value="component.time"></x-time-ms></div>
                 <div>{{ component.status }}</div>
             </x-listview-item>
         </x-listview> 
@@ -48,7 +52,7 @@ export default {
         description: "",
         components: null
     },
-    controller({ state, events, config, bus}) {
+    controller({ state, events, config, bus, loader}) {
         return {
             load() {
                // load
@@ -63,26 +67,36 @@ export default {
                     }
                 });
             },
-            refresh() {
+            async refresh() {
                 // refresh
                 let list = [];
+                let loaderRegistryCache = {};
+                for (const loaderRegistryItem of loader.registry) {
+                    loaderRegistryCache[loaderRegistryItem.resource] = loaderRegistryItem;
+                }
                 for(let moduleId of Object.keys(config.modules)) {
                     const moduleConfig = config.modules[moduleId];
                     let moduleComponentsPath = moduleConfig.assetsPath + "/components";
                     for(const file of Object.values(moduleConfig.files)) {
                         if (file.path.startsWith(moduleComponentsPath)) {
-                            const filename = (file.path.split("/").pop() || "").split(".")[0];
+                            const id = (file.path.split("/").pop() || "").split(".")[0];
+                            const loaderRegistryItem = loaderRegistryCache["component:" + id];
+                            const contract = loaderRegistryItem?.value?.contract || null;
+                            const loaded = (customElements.get(id) != null);
+                            const url = config.app.basePath + file.path;
                             let valid = true;
-                            if (state.id && filename.indexOf(state.id) == -1 ) valid = false;
+                            if (state.id && id.indexOf(state.id) == -1 ) valid = false;
                             if (state.moduleId && moduleId.indexOf(state.moduleId) == -1 ) valid = false;
-                            //if (state.description && moduleConfig.description.indexOf(state.description) == -1 ) valid = false;
+                            if (state.description && (!contract?.description || contract.description.indexOf(state.description) == -1 )) valid = false;
                             if (valid) {
                                 list.push({
-                                    id: filename,
-                                    version: moduleConfig.version || "",
-                                    label: moduleConfig.label || "",
+                                    id: id,
+                                    moduleId: moduleId,
+                                    description: contract?.description || "",
                                     icon: moduleConfig.icon || "x-component",
-                                    status: (customElements.get(filename) ? "loaded" : ""),
+                                    url: url,
+                                    status: (loaded ? "loaded" : ""),
+                                    time: loaderRegistryItem?.time || 0,
                                     size: file.size
                                 });
                             }
