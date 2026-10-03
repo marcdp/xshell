@@ -12,7 +12,7 @@ export default {
         title: "Config Page"
     },
     template: `
-        <x-json x-prop:value="state.config" indent="2"></x-json>
+        <x-object x-prop:value="state.config" expanded="true"></x-object>
     `,    
     state:{
         config: null
