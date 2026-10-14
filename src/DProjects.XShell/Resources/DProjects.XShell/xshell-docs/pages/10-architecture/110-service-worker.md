@@ -26,8 +26,9 @@ finalizing each `assets.path`, `assets.url`, and `configUrl`. The array contains
 an absolute virtual `src` URL under the application base URL, a normalized physical `dst` URL, and `version`, `name`, and `exceptions` metadata.
 Bootstrap then registers the application-level `/sw.js` and sends this array directly in `registerMappings`. The worker runs its own `normalizeRule`
 validation at the message boundary and merges the batch into IndexedDB. After resolver generation from the already embedded inventories, bootstrap
-validates and freezes the effective configuration. `xshell.serviceWorker` is generated runtime state; authored XShell and module documents cannot
-supply mappings.
+validates and freezes the effective configuration. `xshell.serviceWorker` is normal authored configuration and participates in the ordinary merge
+order, allowing framework defaults and module/root contributions. Its `mappings` property is different: bootstrap replaces any merged authored
+value with the generated mappings for this effective application generation, so authored mappings are not runtime mapping inputs.
 
 ```text
 client: /_assets/<module-id>/<generation>/<resource>
@@ -54,7 +55,7 @@ preparing each descriptor, before Service Worker registration, and later uses th
 `config.xshell.serviceWorker.mappings` records only the mappings requested by this application bootstrap generation. The worker's IndexedDB registry
 is the durable additive union of registrations from active and historical generations. For example, two tabs can have different effective mapping
 arrays while the worker retains both generations. The worker does not read from IndexedDB into effective config or mutate that config after
-registration.
+registration. Authored Service Worker configuration, generated effective mappings, and this persisted worker registry are separate layers.
 
 Every descriptor-embedded physical inventory uses package-relative paths such as `/pages/home.js`. Bootstrap exposes those entries as virtual
 application resource paths such as `/_assets/x/1.4.0.dev/pages/home.js` in `config.modules.x.files` or

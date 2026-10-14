@@ -127,8 +127,10 @@ need it. The framework property is `xshell.builtAt`; module properties are `modu
 Bootstrap also generates `xshell.serviceWorker.mappings` after finalizing XShell and module asset paths and URLs. It contains one mapping for the
 framework and one for each effective module, with absolute virtual `src`, normalized physical `dst`, and `version`, `name`, and `exceptions`
 metadata. The array represents mappings requested by this effective application generation; the worker's durable IndexedDB registry can contain
-additional generations registered by other tabs. This field is part of effective runtime configuration and is deeply frozen with it. Authored
-XShell and module configuration cannot define `xshell.serviceWorker`.
+additional generations registered by other tabs. `xshell.serviceWorker` is a normal authored object: framework defaults and module/root
+contributions follow the ordinary configuration merge order. Bootstrap then replaces only `xshell.serviceWorker.mappings` with the generated
+effective array, which is deeply frozen with the rest of the configuration. Any authored `mappings` value is therefore ignored rather than
+concatenated with the generated mappings.
 
 ## Merge and precedence
 

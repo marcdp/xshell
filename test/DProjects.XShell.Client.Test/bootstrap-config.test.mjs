@@ -172,6 +172,7 @@ test("module discovery rejects malformed and reserved external reference ids bef
 test("checked-in assets.basePath resolves for root and subpath hosting", () => {
     const defaults = api.parseJsonc(readFileSync(new URL("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/xshell.jsonc", import.meta.url), "utf8"));
     assert.deepEqual(plain(defaults.xshell.assets), { basePath: "app:/_assets", url: "url:./" });
+    assert.deepEqual(plain(defaults.xshell.serviceWorker), {});
     for (const field of ["assetsBasePath", "assetsPath", "assetsUrl"]) assert.equal(Object.hasOwn(defaults.xshell, field), false);
     for (const [basePath, effectiveUrl] of [["", "https://example.test/_assets"], ["/myapp", "https://example.test/myapp/_assets"]]) {
         const isolated = vm.createContext({
@@ -720,22 +721,41 @@ test("authored top-level app is rejected in root, dependency, and XShell configu
         { "https://example.test/modules/child/module.jsonc": { app: {}, modules: { child: definition("child") } } }), /must not define top-level app/);
 });
 
-test("authored xshell.serviceWorker mappings are rejected before configuration merging", async () => {
+test("authored xshell.serviceWorker is merged and generated mappings replace authored mappings", async () => {
     const xshellUrl = "https://example.test/xshell/xshell.json";
-    const framework = { modules: {}, xshell: { assets: { basePath: "app:/_assets", url: "url:./" }, environment: "Development", version: "0.9.0",
-        temp: { url: "url:./" }, resolver: {} } };
-    fetchedResources.set(xshellUrl, { ...framework, xshell: { ...framework.xshell, serviceWorker: { mappings: [] } } });
-    fetchedResources.set(rootUrl, { modules: { app: definition("app") } });
-    await assert.rejects(api.loadConfig(), /Authored XShell configuration.*must not define xshell.serviceWorker/);
-
-    fetchedResources.set(xshellUrl, framework);
-    fetchedResources.set(rootUrl, { modules: { app: definition("app") }, xshell: { serviceWorker: { mappings: [] } } });
-    await assert.rejects(api.loadConfig(), /Authored module configuration.*must not define xshell.serviceWorker/);
-
     const childUrl = "https://example.test/modules/child/module.jsonc";
-    fetchedResources.set(rootUrl, { modules: { app: definition("app"), child: reference(childUrl) } });
-    fetchedResources.set(childUrl, { modules: { child: definition("child") }, xshell: { serviceWorker: { mappings: [] } } });
-    await assert.rejects(api.loadConfig(), /Authored module configuration.*must not define xshell.serviceWorker/);
+    const generatedMappings = [
+        { src: "https://example.test/app/_assets/xshell/0.9.0.dev", dst: "https://example.test/xshell/",
+            version: "0.9.0", name: "xshell", exceptions: [xshellUrl] },
+        { src: "https://example.test/app/_assets/child/1.0.0.dev", dst: "https://example.test/modules/child/",
+            version: "1.0.0", name: "child", exceptions: [childUrl] },
+        { src: "https://example.test/app/_assets/app/1.0.0.dev", dst: "https://example.test/modules/app/",
+            version: "1.0.0", name: "app", exceptions: [rootUrl] }
+    ];
+    const framework = { modules: {}, xshell: { assets: { basePath: "app:/_assets", url: "url:./" }, environment: "Development", version: "0.9.0",
+        temp: { url: "url:./" }, resolver: {}, serviceWorker: {} } };
+    fetchedResources.set(xshellUrl, framework);
+    fetchedResources.set(rootUrl, {
+        modules: { app: definition("app"), child: reference(childUrl) },
+        xshell: { serviceWorker: {} }
+    });
+    fetchedResources.set(childUrl, {
+        modules: { child: definition("child") },
+        xshell: { serviceWorker: {} }
+    });
+
+    const config = plain(await api.loadConfig());
+    assert.deepEqual(config.xshell.serviceWorker.mappings, generatedMappings);
+
+    const authoredMapping = { src: "https://authored.invalid/fake", dst: "https://authored.invalid/not-used" };
+    fetchedResources.set(rootUrl, {
+        modules: { app: definition("app"), child: reference(childUrl) },
+        xshell: { serviceWorker: { mappings: [authoredMapping] } }
+    });
+
+    const overridden = plain(await api.loadConfig());
+    assert.deepEqual(overridden.xshell.serviceWorker.mappings, generatedMappings);
+    assert.equal(overridden.xshell.serviceWorker.mappings.some(mapping => mapping.src === authoredMapping.src), false);
 });
 
 test("loadConfig derives every assets.path from a custom assets.basePath", async () => {

@@ -180,6 +180,7 @@ async function discoverModuleConfigs(rootConfig, rootConfigUrl, loadConfig, asse
     let currentNodes = [rootNode];
     while (currentNodes.length) {
         const pendingByUrl = new Map();
+        const pendingById = new Map();
         for (const node of currentNodes) {
             for (const reference of node.references) {
                 const existing = nodesById.get(reference.id);
@@ -191,6 +192,9 @@ async function discoverModuleConfigs(rootConfig, rootConfigUrl, loadConfig, asse
                     }
                     continue;
                 }
+                const pendingUrl = pendingById.get(reference.id);
+                if (pendingUrl && pendingUrl !== reference.loadUrl) throw new Error(`Module '${reference.id}' is referenced with conflicting configUrl values: '${pendingUrl}' and '${reference.loadUrl}'.`);
+                pendingById.set(reference.id, reference.loadUrl);
                 const pending = pendingByUrl.get(reference.loadUrl) || { expectedIds: new Set() };
                 pending.expectedIds.add(reference.id);
                 pendingByUrl.set(reference.loadUrl, pending);
@@ -334,21 +338,20 @@ async function loadConfig() {
     }
 
     // generate the mappings requested by this effective application generation after all asset locations are finalized
-    config.xshell.serviceWorker = {
-        mappings: [{
-            src: new URL(config.xshell.assets.path.substring(1), appBaseUrl).href,
-            dst: config.xshell.assets.url,
-            version: config.xshell.version,
-            name: "xshell",
-            exceptions: [config.xshell.configUrl]
-        }, ...Object.entries(config.modules).map(([moduleId, module]) => ({
-            src: new URL(module.assets.path.substring(1), appBaseUrl).href,
-            dst: module.assets.url,
-            version: module.version,
-            name: moduleId,
-            exceptions: [module.configUrl]
-        }))]
-    };
+    config.xshell.serviceWorker ??= {};
+    config.xshell.serviceWorker.mappings = [{
+        src: new URL(config.xshell.assets.path.substring(1), appBaseUrl).href,
+        dst: config.xshell.assets.url,
+        version: config.xshell.version,
+        name: "xshell",
+        exceptions: [config.xshell.configUrl]
+    }, ...Object.entries(config.modules).map(([moduleId, module]) => ({
+        src: new URL(module.assets.path.substring(1), appBaseUrl).href,
+        dst: module.assets.url,
+        version: module.version,
+        name: moduleId,
+        exceptions: [module.configUrl]
+    }))];
 
     console.log("bootstrap: config:", config);
 

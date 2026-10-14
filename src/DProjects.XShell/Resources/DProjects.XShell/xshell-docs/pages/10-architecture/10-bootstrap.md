@@ -73,7 +73,9 @@ composition independent of network completion order. The final
 After resolving effective XShell and module definitions, bootstrap finalizes their `assets.path`, `assets.url`, and `configUrl` values. It then generates
 `config.xshell.serviceWorker.mappings`: one mapping for XShell and one per effective module. Each `src` is an absolute browser URL under
 `config.app.baseUrl` for that generation's virtual asset path; each `dst` is the normalized physical `assets.url`. Mapping metadata retains the
-package `version`, module `name`, and `configUrl` in `exceptions`. This is generated effective runtime configuration, not an authored setting.
+package `version`, module `name`, and `configUrl` in `exceptions`. The enclosing `xshell.serviceWorker` object is normal authored configuration and
+follows the same merge order as other `xshell` settings. Bootstrap preserves that merged object but replaces its `mappings` property with the
+generated effective array, so authored mappings are never concatenated into the runtime mappings.
 
 Bootstrap registers the application Service Worker at `app.basePath + "/sw.js"`, waits for control, and sends these mappings directly in a
 `registerMappings` message. The worker validates the batch and adds it to its durable registry before acknowledging. The effective mappings describe
