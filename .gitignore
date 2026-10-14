@@ -23,6 +23,9 @@ temp/
 *.userosscache
 *.sln.docstates
 
+# Test results
+TestResults/
+
 # Build results
 [Dd]ebug/
 [Dd]ebugPublic/

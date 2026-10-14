@@ -54,8 +54,8 @@ Documentation marked **Draft**, **TODO**, **proposed**, or **future work** must 
 
 If implementation and documentation disagree, investigate the discrepancy rather than silently choosing one.
 
-Here, implementation means primarily `src/DProjects.XShell/**`. Tests include both `test/DProjects.XShell.Test/**` and runtime browser tests under
-`src/DProjects.XShell/Resources/DProjects.XShell/xshell/tests/**`.
+Here, implementation means primarily `src/DProjects.XShell/**`. Tests include both .NET tests under `test/DProjects.XShell.Test/**` and
+client-runtime Node tests under `test/DProjects.XShell.Client.Test/**`.
 
 Do not infer XShell behavior from conventions in other frameworks.
 
@@ -75,7 +75,7 @@ For non-trivial changes:
 8. Update contracts, schemas, tests, demos, documentation, or ADRs when required.
 9. Run relevant validation when available.
 
-When relevant, also inspect the .NET tests, runtime browser tests, root solution/build/CI files, canonical documentation, and ADRs.
+When relevant, also inspect the .NET tests, client-runtime Node tests, root solution/build/CI files, canonical documentation, and ADRs.
 
 Do not report tests or validation as passing unless they were actually executed.
 
@@ -106,9 +106,10 @@ src/DProjects.XShell/
         ├── render-engines/
         ├── state-engines/
         ├── schemas/
-        ├── validation/
-        └── tests/
-test/DProjects.XShell.Test/         # .NET tests
+        └── validation/
+test/
+├── DProjects.XShell.Client.Test/  # Client-runtime Node tests
+└── DProjects.XShell.Test/         # .NET tests
 ```
 
 Everything under:
@@ -655,10 +656,10 @@ Before reversing an architectural decision, inspect and update the relevant ADR.
 
 ## Tests and x-demo
 
-Runtime/browser JavaScript tests live under:
+Client-runtime Node tests live under:
 
 ```text
-src/DProjects.XShell/Resources/DProjects.XShell/xshell/tests/
+test/DProjects.XShell.Client.Test/
 ```
 
 .NET tests live under:

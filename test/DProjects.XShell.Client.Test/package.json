@@ -1,0 +1,10 @@
+{
+  "name": "dprojects-xshell-client-test",
+  "private": true,
+  "scripts": {
+    "test": "node --test --test-concurrency=1"
+  },
+  "engines": {
+    "node": ">=24"
+  }
+}
