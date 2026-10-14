@@ -8,12 +8,12 @@ These instructions apply only to:
 src/DProjects.XShell/**
 ```
 
-Do not inspect or infer architecture from sibling projects in `marcdp/libs` unless explicitly requested.
+Do not inspect or infer architecture from sibling projects in `marcdp/xshell` unless explicitly requested.
 
 When referring to **XShell**, **the project**, or **the repository code**, assume:
 
 ```text
-marcdp/libs/src/DProjects.XShell
+marcdp/xshell/src/DProjects.XShell
 ```
 
 Files inside this directory are the authoritative source for XShell.

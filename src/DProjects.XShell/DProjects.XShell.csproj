@@ -24,7 +24,7 @@
     </ItemGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\DProjects.Commands\DProjects.Commands.csproj" />
+      <ProjectReference Include="..\..\..\libs\src\DProjects.Commands\DProjects.Commands.csproj" />
     </ItemGroup>
 
 </Project>

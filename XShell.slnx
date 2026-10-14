@@ -1,0 +1,11 @@
+<Solution>
+  <Folder Name="/libs/">
+    <Project Path="../libs/src/DProjects.Commands/DProjects.Commands.csproj" />
+  </Folder>
+  <Folder Name="/src/">
+    <Project Path="src/DProjects.XShell/DProjects.XShell.csproj" />
+  </Folder>
+  <Folder Name="/test/">
+    <Project Path="test/DProjects.XShell.Test/DProjects.XShell.Test.csproj" />
+  </Folder>
+</Solution>
