@@ -20,6 +20,9 @@ namespace DProjects.XShell.Middlewares {
         public TempMiddleware(RequestDelegate next, Extensions.TempConfig tempConfig) {
             mNext = next;
             mConfig = tempConfig;
+            if (string.IsNullOrEmpty(tempConfig.BasePath)) throw new ArgumentException("BasePath cannot be null.", nameof(tempConfig.BasePath));
+            if (string.IsNullOrEmpty(tempConfig.BasePath.Trim())) throw new ArgumentException("BasePath cannot be empty.", nameof(tempConfig.BasePath));
+            if (tempConfig.BasePath.Trim().Equals("/")) throw new ArgumentException("BasePath cannot be root (/).", nameof(tempConfig.BasePath));
             Directory.CreateDirectory(mConfig.Path);
             // create a cron that deletes expired files every X minutes 
             mTimer = new System.Threading.Timer(_ => {

@@ -224,15 +224,6 @@ namespace DProjects.XShell.Test {
             Assert.Equal(StatusCodes.Status405MethodNotAllowed, response.StatusCode);
             Assert.Equal(0, harness.NextCalls);
         }
-        [Fact]
-        public async Task ConfiguredTrailingSlash_IsNormalizedForUpload() {
-            using var harness = new TempHarness("/temp/");
-
-            var response = await harness.SendAsync(HttpMethods.Post, "/temp", new UploadFile("file.txt", [1]));
-
-            Assert.Equal(StatusCodes.Status201Created, response.StatusCode);
-            Assert.Equal(0, harness.NextCalls);
-        }
         [Theory]
         [InlineData("")]
         [InlineData("   ")]

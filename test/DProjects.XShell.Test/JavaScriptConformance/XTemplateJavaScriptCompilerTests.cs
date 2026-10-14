@@ -116,11 +116,11 @@ namespace DProjects.XShell.Test {
         public void CompilesLiteralStylesAsStructuredStylesInsteadOfAttributes() {
             var javascript = new XTemplateCompiler().Compile("<div id=\"x\" title=\"y\" style=\" display : none ; width : 100% ; margin-top:8px; --my-value:123; background-image:url('/image?a=b:c;d=e') \" ></div>");
 
-            Assert.Contains("[\"display\"]:{value:\"none\",priority:\"\"}", javascript, StringComparison.Ordinal);
-            Assert.Contains("[\"width\"]:{value:\"100%\",priority:\"\"}", javascript, StringComparison.Ordinal);
-            Assert.Contains("[\"margin-top\"]:{value:\"8px\",priority:\"\"}", javascript, StringComparison.Ordinal);
-            Assert.Contains("[\"--my-value\"]:{value:\"123\",priority:\"\"}", javascript, StringComparison.Ordinal);
-            Assert.Contains("[\"background-image\"]:{value:", javascript, StringComparison.Ordinal);
+            Assert.Contains("[\"display\"]:{value:utils.rewriteStyleValue(\"none\"),priority:\"\"}", javascript, StringComparison.Ordinal);
+            Assert.Contains("[\"width\"]:{value:utils.rewriteStyleValue(\"100%\"),priority:\"\"}", javascript, StringComparison.Ordinal);
+            Assert.Contains("[\"margin-top\"]:{value:utils.rewriteStyleValue(\"8px\"),priority:\"\"}", javascript, StringComparison.Ordinal);
+            Assert.Contains("[\"--my-value\"]:{value:utils.rewriteStyleValue(\"123\"),priority:\"\"}", javascript, StringComparison.Ordinal);
+            Assert.Contains("[\"background-image\"]:{value:utils.rewriteStyleValue(", javascript, StringComparison.Ordinal);
             Assert.Contains("a=b:c;d=e", javascript, StringComparison.Ordinal);
             Assert.Contains("\"id\":utils.rewriteAttribute", javascript, StringComparison.Ordinal);
             Assert.Contains("\"title\":utils.rewriteAttribute", javascript, StringComparison.Ordinal);
@@ -152,7 +152,7 @@ namespace DProjects.XShell.Test {
         public void CompilesWholeObjectStylesInAttributeSourceOrder() {
             var javascript = new XTemplateCompiler().Compile("<div style=\"border:red\" x-style=\"state.styles\" x-style:border=\"state.border\"></div>");
 
-            var literal = javascript.IndexOf("[\"border\"]:{value:\"red\",priority:\"\"}", StringComparison.Ordinal);
+            var literal = javascript.IndexOf("[\"border\"]:{value:utils.rewriteStyleValue(\"red\"),priority:\"\"}", StringComparison.Ordinal);
             var spread = javascript.IndexOf("utils.expr.styles(utils.expr.member(state, \"styles\"))", StringComparison.Ordinal);
             var named = javascript.IndexOf("utils.expr.style(\"border\", utils.expr.member(state, \"border\"))", StringComparison.Ordinal);
 
@@ -182,7 +182,7 @@ namespace DProjects.XShell.Test {
             var important = new XTemplateCompiler().Compile("<div style=\"display:none !important\"></div>");
             var empty = new XTemplateCompiler().Compile("<div style=\"\"></div>");
 
-            Assert.Contains("[\"display\"]:{value:\"none\",priority:\"important\"}", important, StringComparison.Ordinal);
+            Assert.Contains("[\"display\"]:{value:utils.rewriteStyleValue(\"none\"),priority:\"important\"}", important, StringComparison.Ordinal);
             Assert.Contains("utils.createVDOM(\"div\", null, null, {}, null, {index:0})", empty, StringComparison.Ordinal);
         }
 
