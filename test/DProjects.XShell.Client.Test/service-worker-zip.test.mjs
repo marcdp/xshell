@@ -101,17 +101,25 @@ function createWorker({ archive = createArchive(), cacheStorage = createCacheSto
         }
     });
     new vm.Script(workerSource, { filename: workerPath.pathname }).runInContext(context);
-    new vm.Script(
-        "globalThis.__parseCount = 0; globalThis.__parseZip = parseZip; parseZip = (...args) => { __parseCount++; return __parseZip(...args); };"
-    ).runInContext(context);
+    new vm.Script(`
+        globalThis.__parseCount = 0;
+        if (!globalThis.__zipParseInstrumented) {
+            const originalParse = ZipHandler.prototype._parse;
+            ZipHandler.prototype._parse = function (...args) {
+                globalThis.__parseCount++;
+                return originalParse.apply(this, args);
+            };
+            globalThis.__zipParseInstrumented = true;
+        }
+    `).runInContext(context);
 
     return {
         cacheStorage,
         context,
         fetches,
         get parseCount() { return context.__parseCount; },
-        clearZipMemory() { new vm.Script("zipPromises.clear();").runInContext(context); },
-        normalizePath(path) { return new vm.Script(`normalizeZipEntryPath(${JSON.stringify(path)})`).runInContext(context); },
+        clearZipMemory() { new vm.Script("assetHandlers[0].clearMemoryCache();").runInContext(context); },
+        normalizePath(path) { return new vm.Script(`assetHandlers[0]._normalizeEntryPath(${JSON.stringify(path)})`).runInContext(context); },
         async register(rules = [{ src: virtualRoot, dst: packageUrl }]) {
             let waiting;
             let reply;
