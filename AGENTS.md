@@ -2,21 +2,41 @@
 
 ## Scope
 
-These instructions apply only to:
+Treat the entire `marcdp/xshell` repository as the XShell project.
+
+The primary implementation lives under:
 
 ```text
 src/DProjects.XShell/**
 ```
 
-Do not inspect or infer architecture from sibling projects in `marcdp/xshell` unless explicitly requested.
+The .NET tests live under:
+
+```text
+test/DProjects.XShell.Test/**
+```
+
+Repository-level project files are also part of XShell when relevant, including:
+
+```text
+AGENTS.md
+README.md
+XShell.slnx
+global.json
+.github/**
+other root-level build and configuration files
+```
+
+It is fine to inspect any file inside `marcdp/xshell` when relevant to the task. Do not infer XShell behavior or architecture from external
+repositories unless explicitly requested.
 
 When referring to **XShell**, **the project**, or **the repository code**, assume:
 
 ```text
-marcdp/xshell/src/DProjects.XShell
+marcdp/xshell
 ```
 
-Files inside this directory are the authoritative source for XShell.
+The implementation under `src/DProjects.XShell/**` remains the primary architectural source of truth.
 
 ---
 
@@ -33,6 +53,9 @@ When determining current behavior, use this order:
 Documentation marked **Draft**, **TODO**, **proposed**, or **future work** must not be treated as implemented behavior.
 
 If implementation and documentation disagree, investigate the discrepancy rather than silently choosing one.
+
+Here, implementation means primarily `src/DProjects.XShell/**`. Tests include both `test/DProjects.XShell.Test/**` and runtime browser tests under
+`src/DProjects.XShell/Resources/DProjects.XShell/xshell/tests/**`.
 
 Do not infer XShell behavior from conventions in other frameworks.
 
@@ -52,6 +75,8 @@ For non-trivial changes:
 8. Update contracts, schemas, tests, demos, documentation, or ADRs when required.
 9. Run relevant validation when available.
 
+When relevant, also inspect the .NET tests, runtime browser tests, root solution/build/CI files, canonical documentation, and ADRs.
+
 Do not report tests or validation as passing unless they were actually executed.
 
 ---
@@ -59,15 +84,22 @@ Do not report tests or validation as passing unless they were actually executed.
 ## Important paths
 
 ```text
+AGENTS.md                          # Repository guidance
+README.md                          # Repository overview
+XShell.slnx                        # .NET solution
+global.json                        # .NET SDK configuration
+.github/                           # CI/workflow configuration, when present
 src/DProjects.XShell/
 ├── Commands/                       # CLI commands
 ├── Middlewares/                    # ASP.NET Core resource/dev middleware
 ├── Services/                       # Server/build-time services
 │   └── XTemplate/                  # X Template compiler
 └── Resources/DProjects.XShell/
+    ├── codemirror/                 # CodeMirror resources
     ├── x/                          # Core UI module
-    ├── x-debug/                    # Debug module
     ├── x-demo/                     # Demo/sample module
+    ├── x-schema/                   # Schema module
+    ├── xshell-diagnostics/         # Diagnostics module
     ├── xshell-docs/                # Canonical documentation
     └── xshell/                     # Browser runtime
         ├── loaders/
@@ -76,6 +108,7 @@ src/DProjects.XShell/
         ├── schemas/
         ├── validation/
         └── tests/
+test/DProjects.XShell.Test/         # .NET tests
 ```
 
 Everything under:
@@ -622,13 +655,19 @@ Before reversing an architectural decision, inspect and update the relevant ADR.
 
 ## Tests and x-demo
 
-Runtime tests live under:
+Runtime/browser JavaScript tests live under:
 
 ```text
-xshell/tests/
+src/DProjects.XShell/Resources/DProjects.XShell/xshell/tests/
 ```
 
-The `x-demo` module provides representative examples of supported behavior.
+.NET tests live under:
+
+```text
+test/DProjects.XShell.Test/
+```
+
+The `x-demo` module under `src/DProjects.XShell/Resources/DProjects.XShell/x-demo/` provides representative examples of supported behavior.
 
 Use tests and demo code as supporting evidence, but do not assume one example defines the entire public contract.
 
@@ -696,7 +735,7 @@ For intentional breaking changes, update known consumers, schemas, tests/demo co
 
 Do not:
 
-- inspect sibling projects as XShell architectural evidence unless requested;
+- infer XShell architecture or implementation behavior from external repositories unless explicitly requested;
 - redesign unrelated subsystems;
 - introduce speculative abstractions;
 - duplicate existing mechanisms;
