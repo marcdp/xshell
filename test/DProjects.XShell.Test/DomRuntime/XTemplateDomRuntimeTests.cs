@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using System.Text;
 using System.Text.Json;
 using DProjects.XShell.Services.XTemplate;
@@ -171,7 +170,7 @@ public sealed class XTemplateDomRuntimeTests {
                 });
                 console.log(JSON.stringify(results));
                 """);
-            using var process = Process.Start(new ProcessStartInfo("node", modulePath) { RedirectStandardOutput = true, RedirectStandardError = true, UseShellExecute = false })!;
+            using var process = NodeTestRuntime.Start(modulePath);
             var output = process.StandardOutput.ReadToEnd();
             var error = process.StandardError.ReadToEnd();
             process.WaitForExit();
@@ -240,7 +239,7 @@ public sealed class XTemplateDomRuntimeTests {
                 engine.render();
                 console.log(JSON.stringify({ initial, updated:element.style.values, initialSetCalls, setCalls:element.style.setCalls, removeCalls:element.style.removeCalls, attributes:element.attributes, borderReads }));
                 """);
-            using var process = Process.Start(new ProcessStartInfo("node", modulePath) { RedirectStandardOutput = true, RedirectStandardError = true, UseShellExecute = false })!;
+            using var process = NodeTestRuntime.Start(modulePath);
             var output = process.StandardOutput.ReadToEnd();
             var error = process.StandardError.ReadToEnd();
             process.WaitForExit();
@@ -306,7 +305,7 @@ public sealed class XTemplateDomRuntimeTests {
                 engine.render();
                 console.log(JSON.stringify({ initial, updated:element.style.values, initialSetCalls, removeCalls:element.style.removeCalls, attributes:element.attributes }));
                 """);
-            using var process = Process.Start(new ProcessStartInfo("node", modulePath) { RedirectStandardOutput = true, RedirectStandardError = true, UseShellExecute = false })!;
+            using var process = NodeTestRuntime.Start(modulePath);
             var output = process.StandardOutput.ReadToEnd();
             var error = process.StandardError.ReadToEnd();
             process.WaitForExit();
@@ -383,7 +382,7 @@ public sealed class XTemplateDomRuntimeTests {
                 recursiveState.items = null; recursiveEngine.engine.render(); recursive.push(count(recursiveEngine.host));
                 console.log(JSON.stringify({positional:transitionList({{{positionalRenderer}}}), keyed:transitionList({{{keyedRenderer}}}), recursive}));
                 """);
-            using var process = Process.Start(new ProcessStartInfo("node", modulePath) { RedirectStandardOutput = true, RedirectStandardError = true, UseShellExecute = false })!;
+            using var process = NodeTestRuntime.Start(modulePath);
             var output = process.StandardOutput.ReadToEnd();
             var error = process.StandardError.ReadToEnd();
             process.WaitForExit();
@@ -454,7 +453,7 @@ public sealed class XTemplateDomRuntimeTests {
                 console.log(JSON.stringify({readyVNodes, snapshots, statusReads:reads}));
                 """
             );
-            using var process = Process.Start(new ProcessStartInfo("node", modulePath) { RedirectStandardOutput = true, RedirectStandardError = true, UseShellExecute = false })!;
+            using var process = NodeTestRuntime.Start(modulePath);
             var output = process.StandardOutput.ReadToEnd();
             var error = process.StandardError.ReadToEnd();
             process.WaitForExit();

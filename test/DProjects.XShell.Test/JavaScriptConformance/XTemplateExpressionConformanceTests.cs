@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using System.Text;
 using System.Text.Json;
 using DProjects.XShell.Services.XTemplate;
@@ -117,7 +116,7 @@ public sealed class XTemplateExpressionConformanceTests {
         var modulePath = Path.Combine(Path.GetTempPath(), $"xtemplate-conformance-{Guid.NewGuid():N}.mjs");
         try {
             File.WriteAllText(modulePath, CreateJavaScriptModule(runtimePath, cases));
-            using var process = Process.Start(new ProcessStartInfo("node", modulePath) { RedirectStandardOutput = true, RedirectStandardError = true, UseShellExecute = false })!;
+            using var process = NodeTestRuntime.Start(modulePath);
             var output = process.StandardOutput.ReadToEnd();
             var error = process.StandardError.ReadToEnd();
             process.WaitForExit();

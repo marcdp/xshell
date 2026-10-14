@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using System.Text;
 using System.Text.Json;
 using DProjects.XShell.Services.XTemplate;
@@ -67,6 +66,8 @@ public sealed class XTemplateStyleConformanceTests {
                 globalThis.customElements = { get() {}, define() {} };
                 globalThis.window = { customElements: globalThis.customElements };
                 const { XTemplateRuntimeUtils } = await import({{{JsonSerializer.Serialize(new Uri(runtimePath).AbsoluteUri)}}});
+                const utils = Object.create(XTemplateRuntimeUtils);
+                utils.rewriteStyleValue = value => value;
                 const runs = {
                     literalThenDynamic: { renderer:{{{literalThenDynamic}}}, state:{border:"blue"} },
                     dynamicThenLiteral: { renderer:{{{dynamicThenLiteral}}}, state:{border:"blue"} },
@@ -77,12 +78,12 @@ public sealed class XTemplateStyleConformanceTests {
                     arrayValue: { renderer:{{{arrayValue}}}, state:{border:[]} }
                 };
                 const result = Object.fromEntries(Object.entries(runs).map(([name, run]) => {
-                    try { return [name, run.renderer(run.state, null, () => {}, XTemplateRuntimeUtils, null, 0)[0].styles]; }
+                    try { return [name, run.renderer(run.state, null, () => {}, utils, null, 0)[0].styles]; }
                     catch { return [name, "error"]; }
                 }));
                 console.log(JSON.stringify(result));
                 """);
-            using var process = Process.Start(new ProcessStartInfo("node", modulePath) { RedirectStandardOutput = true, RedirectStandardError = true, UseShellExecute = false })!;
+            using var process = NodeTestRuntime.Start(modulePath);
             var output = process.StandardOutput.ReadToEnd();
             var error = process.StandardError.ReadToEnd();
             process.WaitForExit();
@@ -110,7 +111,7 @@ public sealed class XTemplateStyleConformanceTests {
                 ];
                 console.log(JSON.stringify(cases.map(run => { try { run.renderer(run.state, null, () => {}, XTemplateRuntimeUtils, null, 0); return false; } catch { return true; } })));
                 """);
-            using var process = Process.Start(new ProcessStartInfo("node", modulePath) { RedirectStandardOutput = true, RedirectStandardError = true, UseShellExecute = false })!;
+            using var process = NodeTestRuntime.Start(modulePath);
             var output = process.StandardOutput.ReadToEnd();
             var error = process.StandardError.ReadToEnd();
             process.WaitForExit();
@@ -166,7 +167,7 @@ public sealed class XTemplateStyleConformanceTests {
                     invalid
                 }));
                 """.Replace("undefined: [String(undefinedValue)]", "undefined: [undefinedValue === null ? \"null\" : String(undefinedValue)]"));
-            using var process = Process.Start(new ProcessStartInfo("node", modulePath) { RedirectStandardOutput = true, RedirectStandardError = true, UseShellExecute = false })!;
+            using var process = NodeTestRuntime.Start(modulePath);
             var output = process.StandardOutput.ReadToEnd();
             var error = process.StandardError.ReadToEnd();
             process.WaitForExit();
@@ -194,8 +195,10 @@ public sealed class XTemplateStyleConformanceTests {
                 globalThis.customElements = { get() {}, define() {} };
                 globalThis.window = { customElements: globalThis.customElements };
                 const { XTemplateRuntimeUtils } = await import({{JsonSerializer.Serialize(new Uri(runtimePath).AbsoluteUri)}});
+                const utils = Object.create(XTemplateRuntimeUtils);
+                utils.rewriteStyleValue = value => value;
                 const summarize = styles => Object.fromEntries(Object.entries(styles).map(([name, value]) => [name, [value.value, value.priority]]));
-                const run = (renderer, state) => summarize(renderer(state, null, () => {}, XTemplateRuntimeUtils, null, 0)[0].styles);
+                const run = (renderer, state) => summarize(renderer(state, null, () => {}, utils, null, 0)[0].styles);
                 const invalid = [{{string.Join(",", invalid.Select((renderer, index) => $"{{renderer:{renderer},state:{{value:{new[] { "null", "[]", "'text'", "1", "true" }[index]}}}}}"))}}].map(({renderer, state}) => {
                     try { renderer(state, null, () => {}, XTemplateRuntimeUtils, null, 0); return "unexpected"; }
                     catch (error) { return "error:" + error.message; }
@@ -221,7 +224,7 @@ public sealed class XTemplateStyleConformanceTests {
                     order: [run({{literalThenSpread}}, { styles: { border: "blue" } }).border[0], run({{spreadThenLiteral}}, { styles: { border: "blue" } }).border[0], importantStyle[0], importantStyle[1], spreadThenNamedStyle[0], namedThenSpreadStyle[0]]
                 }));
                 """);
-            using var process = Process.Start(new ProcessStartInfo("node", modulePath) { RedirectStandardOutput = true, RedirectStandardError = true, UseShellExecute = false })!;
+            using var process = NodeTestRuntime.Start(modulePath);
             var output = process.StandardOutput.ReadToEnd();
             var error = process.StandardError.ReadToEnd();
             process.WaitForExit();

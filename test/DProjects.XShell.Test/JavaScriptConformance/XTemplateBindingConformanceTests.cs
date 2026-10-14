@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using System.Text;
 using System.Text.Json;
 using DProjects.XShell.Services.XTemplate;
@@ -90,7 +89,7 @@ public sealed class XTemplateBindingConformanceTests {
                 });
                 console.log(JSON.stringify(results));
                 """);
-            using var process = Process.Start(new ProcessStartInfo("node", modulePath) { RedirectStandardOutput = true, RedirectStandardError = true, UseShellExecute = false })!;
+            using var process = NodeTestRuntime.Start(modulePath);
             var output = process.StandardOutput.ReadToEnd();
             var error = process.StandardError.ReadToEnd();
             process.WaitForExit();
@@ -133,7 +132,7 @@ public sealed class XTemplateBindingConformanceTests {
                 });
                 console.log(JSON.stringify(results));
                 """);
-            using var process = Process.Start(new ProcessStartInfo("node", modulePath) { RedirectStandardOutput = true, RedirectStandardError = true, UseShellExecute = false })!;
+            using var process = NodeTestRuntime.Start(modulePath);
             var output = process.StandardOutput.ReadToEnd();
             var error = process.StandardError.ReadToEnd();
             process.WaitForExit();
@@ -166,7 +165,7 @@ public sealed class XTemplateBindingConformanceTests {
                 input.events["change.stop"]({ target: { localName: "input", value: "updated" } });
                 console.log(JSON.stringify({ order, name: state.groups[0].items[0].name }));
                 """);
-            using var process = Process.Start(new ProcessStartInfo("node", modulePath) { RedirectStandardOutput = true, RedirectStandardError = true, UseShellExecute = false })!;
+            using var process = NodeTestRuntime.Start(modulePath);
             var output = process.StandardOutput.ReadToEnd();
             var error = process.StandardError.ReadToEnd();
             process.WaitForExit();

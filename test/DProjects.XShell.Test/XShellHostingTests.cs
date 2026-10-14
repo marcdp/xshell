@@ -190,7 +190,7 @@ namespace DProjects.XShell.Test {
             }
 
             // methods
-            public static async Task<HostingApplication> StartAsync(string appBasePath = "/app", string[]? unhandledPrefixes = null, string appConfigPath = "", string xshellBasePath = "/_resources/DProjects.XShell/xshell",
+            public static async Task<HostingApplication> StartAsync(string appBasePath = "/app", string[]? unhandledPrefixes = null, string appConfigPath = "/_resources/DProjects.XShell/x-demo/module.jsonc", string xshellBasePath = "/_resources/DProjects.XShell/xshell",
                 Action<WebApplication>? configureEndpoints = null) {
                 var tempPath = Path.Combine(Path.GetTempPath(), "DProjects.XShell.Test", Guid.NewGuid().ToString("N"));
                 var builder = WebApplication.CreateBuilder(new WebApplicationOptions { EnvironmentName = "Development" });
@@ -205,8 +205,13 @@ namespace DProjects.XShell.Test {
                             ConfigPath = appConfigPath,
                             Params = new Dictionary<string, string>()
                         },
+                        Resources = new Extensions.ResourcesConfig {
+                            BasePath = "/_resources/DProjects.XShell",
+                            ResourceName = "DProjects.XShell"
+                        },
                         Server = new Extensions.ServerConfig {
-                            Environment = "Development"
+                            Environment = "Development",
+                            UnhandledPrefixes = unhandledPrefixes ?? new Extensions.ServerConfig().UnhandledPrefixes
                         },
                         Temp = new Extensions.TempConfig {
                             Path = tempPath,
