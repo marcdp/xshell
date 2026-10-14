@@ -51,7 +51,10 @@ globalThis.customElements = {
         return this.definitions.get(name);
     }
 };
-globalThis.window = { customElements: globalThis.customElements };
+globalThis.window = {
+    customElements: globalThis.customElements,
+    location: { origin: "https://example.test" }
+};
 
 const { createComponentClassFromJsDefinition } = await import("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/loaders/component-js.js");
 const { default: Areas } = await import("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/areas.js");
@@ -65,7 +68,7 @@ class StateEngineFactory {
     }
 
     create() {
-        return { ...this.state };
+        return JSON.parse(JSON.stringify(this.state));
     }
 }
 
@@ -116,9 +119,12 @@ function createRouteAreas() {
     return areas;
 }
 
+let AnchorClass = null;
+
 async function createAnchor(attributes = {}, navigation = createNavigation()) {
     const navigateCalls = [];
     navigation.navigate = params => navigateCalls.push(params);
+
     xshell._config = {
         modules: {
             test: {
@@ -128,34 +134,46 @@ async function createAnchor(attributes = {}, navigation = createNavigation()) {
             }
         }
     };
+
     xshell._loader = {
         async load(resource) {
             return resource.startsWith("state-engine:") ? StateEngineFactory : RenderEngineFactory;
         }
     };
+
     xshell._services = {
         resolve(name) {
             if (name === "navigation") return navigation;
             throw new Error(`Unexpected service: ${String(name)}`);
         }
     };
-    const definition = {
-        ...anchorDefinition,
-        meta: { ...anchorDefinition.meta, id: "x-anchor-test" }
-    };
-    const Anchor = await createComponentClassFromJsDefinition(
-        "x-anchor.js",
-        { resourceDefinition: { moduleId: "test" } },
-        definition,
-        contract
-    );
+
+    if (!AnchorClass) {
+        const definition = {
+            ...anchorDefinition,
+            meta: { ...anchorDefinition.meta, id: "x-anchor-test" }
+        };
+
+        AnchorClass = await createComponentClassFromJsDefinition(
+            "x-anchor.js",
+            {
+                appBasePath: "",
+                resourceDefinition: { moduleId: "test" }
+            },
+            definition,
+            contract
+        );
+    }
+
     initialAttributes = attributes;
-    const anchor = new Anchor();
+    const anchor = new AnchorClass();
     initialAttributes = {};
+
     anchor.parentNode = {
         tagName: "X-PAGE",
         page: { breadcrumb: [], host: null, src: "/current" }
     };
+
     return { anchor, navigateCalls };
 }
 

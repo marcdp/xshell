@@ -24,27 +24,14 @@ def test_dotnet():
 def test_node():
     # execute "node --test --test-concurrency=1 --test-reporter=spec .\test\DProjects.XShell.Client.Test\*.test.mjs"
     print("Running node tests...")
-    # subprocess.run([
-    #     "node",
-    #     "--test",
-    #     "--test-concurrency=1",
-    #     "--test-reporter=spec",
-    #     ".\\test\\DProjects.XShell.Client.Test\\*.test.mjs"
-    # ])
     repo_root = Path(__file__).parent
     repo_root = Path(repo_root).resolve()
     test_directory = repo_root / "test" / "DProjects.XShell.Client.Test"
     test_files = sorted(test_directory.glob("*.test.mjs"))
-
-    if not test_files:
-        print(f"No test files found in {test_directory}")
-        return 1
-
     failed_files: list[Path] = []
 
     for test_file in test_files:
         print(f"\n=== {test_file.name} ===", flush=True)
-
         result = subprocess.run(
             [
                 "node",

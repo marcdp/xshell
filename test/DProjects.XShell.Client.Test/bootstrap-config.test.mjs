@@ -271,9 +271,22 @@ test("bootstrap loads the authored XShell JSONC source through the canonical run
 
 test("module URL traversal fails after logical normalization and reports the declaring document", () => {
     const physicalFile = "https://cdn.example.test/orders/module.jsonc";
-    for (const value of ["../foo.js", "../../foo.js", "./../foo.js", "a/../../foo.js", "/a/../../foo.js", "%2e%2e/foo.js"]) {
-        assert.throws(() => api.relativizePaths(value, "/_assets/x", "/module.jsonc", physicalFile), error =>
-            error.message.includes(value) && error.message.includes(physicalFile) && error.message.includes("escapes the module root"));
+
+    for (const value of [
+        "../foo.js",
+        "../../foo.js",
+        "./../foo.js",
+        "/a/../../foo.js",
+        "./%2e%2e/foo.js",
+        "/%2e%2e/foo.js"
+    ]) {
+        assert.throws(
+            () => api.relativizePaths(value, "/_assets/x", "/module.jsonc", physicalFile),
+            error =>
+                error.message.includes(value) &&
+                error.message.includes(physicalFile) &&
+                error.message.includes("escapes the module root")
+        );
     }
 });
 
@@ -281,20 +294,56 @@ test("module discovery keeps logical configUrl separate from its pre-Service-Wor
     const physicalUrl = "https://example.test/modules/app/x/module.jsonc";
     const root = { modules: { app: definition("app"), x: reference("./x/module.jsonc") } };
     const calls = [];
-    const graph = await discover(root, { [physicalUrl]: { modules: { x: definition("x") } } }, calls);
+
+    const graph = await discover(root, {
+        [physicalUrl]: { modules: { x: definition("x") } }
+    }, calls);
 
     assert.deepEqual(calls, [physicalUrl]);
-    assert.equal(graph.rootNode.references[0].configUrl, "/_assets/app/1.0.0.dev/x/module.jsonc");
-    assert.equal(graph.rootNode.config.modules.x.configUrl, "/_assets/app/1.0.0.dev/x/module.jsonc");
-    assert.equal(graph.nodesById.get("x").config.modules.x.configUrl, physicalUrl);
+
+    // discovery keeps both logical and physical coordinates
+    assert.equal(
+        graph.rootNode.references[0].configUrl,
+        "/_assets/app/1.0.0.dev/x/module.jsonc"
+    );
+    assert.equal(
+        graph.rootNode.references[0].loadUrl,
+        physicalUrl
+    );
+
+    // the reference contribution no longer carries configUrl
+    assert.equal(
+        Object.hasOwn(graph.rootNode.config.modules.x, "configUrl"),
+        false
+    );
+
+    // the referenced local definition owns its canonical configUrl
+    assert.equal(
+        graph.nodesById.get("x").config.modules.x.configUrl,
+        physicalUrl
+    );
 
     const siblingUrl = "https://example.test/modules/x/module.jsonc";
-    const physical = await discover({ modules: { app: definition("app"), x: reference("url:../x/module.jsonc") } },
-        { [siblingUrl]: { modules: { x: definition("x") } } });
+    const physical = await discover(
+        { modules: { app: definition("app"), x: reference("url:../x/module.jsonc") } },
+        { [siblingUrl]: { modules: { x: definition("x") } } }
+    );
+
     assert.equal(physical.rootNode.references[0].configUrl, siblingUrl);
-    await assert.rejects(() => discover({ modules: { app: definition("app"), x: reference("../x/module.jsonc") } }), error =>
-        error.message.includes("../x/module.jsonc") && error.message.includes(rootUrl) && error.message.includes("escapes the module root"));
-    await assert.rejects(() => discover({ modules: { app: definition("app"), x: reference("module.jsonc") } }), /unsupported configUrl/);
+    assert.equal(physical.rootNode.references[0].loadUrl, siblingUrl);
+
+    await assert.rejects(
+        () => discover({ modules: { app: definition("app"), x: reference("../x/module.jsonc") } }),
+        error =>
+            error.message.includes("../x/module.jsonc") &&
+            error.message.includes(rootUrl) &&
+            error.message.includes("escapes the module root")
+    );
+
+    await assert.rejects(
+        () => discover({ modules: { app: definition("app"), x: reference("module.jsonc") } }),
+        /unsupported configUrl/
+    );
 });
 
 test("module configuration URLs use the file's logical path when assets.url names its source root", async () => {
