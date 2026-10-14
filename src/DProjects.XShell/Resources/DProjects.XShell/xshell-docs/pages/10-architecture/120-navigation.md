@@ -95,7 +95,7 @@ target. `path` is an alias, not a replacement for `href`. A menu item without `p
 For example, a module may contribute:
 
 ```jsonc
-{ "label": "Components", "path": "/components", "href": "/_assets/x-demo/pages/01-components/index.js" }
+{ "label": "Components", "path": "components", "href": "/pages/01-components/index.js" }
 ```
 
 For an Area with prefix `/main`, the effective item uses Area-aware values for both fields:

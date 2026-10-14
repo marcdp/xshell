@@ -13,7 +13,7 @@ This composition fragment omits module metadata/defaults and other effective con
     "modules": {
         "reports": {
             "menus": {
-                "navigation": [{ "label": "Reports", "path": "/reports", "href": "/pages/report.js", "default": true }],
+                "navigation": [{ "label": "Reports", "path": "reports", "href": "/pages/report.js", "default": true }],
                 "tools": [{ "label": "Export", "href": "/pages/export.js" }]
             }
         }
@@ -23,8 +23,8 @@ This composition fragment omits module metadata/defaults and other effective con
             "default": "customers",
             "global": [],
             "definitions": {
-                "customers": { "prefix": "/customers", "label": "Customers", "modules": ["reports"] },
-                "inventory": { "prefix": "/inventory", "label": "Inventory", "modules": ["reports"] }
+                "customers": { "prefix": "customers", "label": "Customers", "modules": ["reports"] },
+                "inventory": { "prefix": "inventory", "label": "Inventory", "modules": ["reports"] }
             }
         }
     }
@@ -35,6 +35,8 @@ Each `xshell.areas.definitions.<id>` entry may set `prefix`, `label`, `icon`, `m
 sets participation
 and menu contribution order. The effective schema rejects a configured Area `home`; runtime derives it from menus. Root ownership is an architectural convention: bootstrap can merge
 `xshell` fragments from imported configurations. Arrays, including `area.modules`, concatenate during that merge.
+Authored navigation prefixes and friendly menu paths conventionally omit the leading `/`; a leading `/` is XShell's module-root-relative
+configuration syntax. Areas normalizes the ordinary authored values into leading-slash navigation paths at runtime.
 
 Areas are presented with the configured default first, then by `order`, then `label`. An unknown configured default or duplicate normalized
 prefix throws. With no configured default, the first sorted Area is used. The initial current Area is the default Area.
@@ -77,7 +79,7 @@ labels and friendly path segments. The module label names the root menu item. Th
 inventory, not authored inventory metadata. Registered runtime sources and `childrenSource` remain separate mechanisms.
 
 Bootstrap first maps module-relative menu hrefs into `/_assets/<module-id>/...`. Areas then applies the Area prefix to both local `path` and local
-`href`, leaving external scheme URLs unchanged. For example, `/components` and `/_assets/x-demo/pages/01-components/index.js` become
+`href`, leaving external scheme URLs unchanged. For example, authored `components` and normalized `/_assets/x-demo/pages/01-components/index.js` become
 `/main/components` and `/main/_assets/x-demo/pages/01-components/index.js` in the `main` Area. The Area home is `path || href` of the first
 `navigation` default item in depth-first traversal. If that result has no target, it falls back to the first depth-first item with `path || href`,
 testing each item before its children. Despite the helper's "visible" name, no visibility flag is tested. `home` is null only when neither search

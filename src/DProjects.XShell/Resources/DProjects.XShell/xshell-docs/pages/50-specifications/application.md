@@ -28,7 +28,7 @@ and there is no separate authored application descriptor or application package.
             "default": "customers",
             "global": [],
             "definitions": {
-                "customers": { "prefix": "/customers", "modules": ["customers", "reports"] }
+                "customers": { "prefix": "customers", "modules": ["customers", "reports"] }
             }
         }
     }

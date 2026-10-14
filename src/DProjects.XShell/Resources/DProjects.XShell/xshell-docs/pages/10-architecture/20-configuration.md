@@ -47,6 +47,10 @@ new URL("file.js", config.app.baseUrl)
 Authored configuration is a separate input layer. It may contain configuration coordinates / URL expressions such as `app:/foo`, `url:./foo`,
 `/foo`, `./foo`, and `../foo`; these are not necessarily final runtime URLs. Bootstrap normalizes them before runtime:
 
+Configuration path normalization is value-driven and recursively applies to every string value, regardless of its property name. A string using one
+of these recognized forms is therefore a path/URL expression wherever it appears; ordinary strings that do not use a recognized form remain
+unchanged. Object property names are not normalized.
+
 ```text
 authored configuration expression
     ↓ bootstrap/config normalization

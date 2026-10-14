@@ -356,19 +356,33 @@ test("module configuration URLs use the file's logical path when assets.url name
     assert.equal(graph.rootNode.config.modules.orders.routes["/shared"], "/_assets/orders/1.0.0.dev/pages/shared.js");
 });
 
-test("non-URL configuration text and area prefixes keep their authored values", async () => {
+test("configuration path expressions normalize regardless of their owning property", async () => {
     const root = {
-        modules: { app: definition("app", { params: { note: "/literal", hint: "../literal" }, routes: { "/home": "/pages/index.js" } }) },
-        xshell: { areas: { definitions: { main: { prefix: "/public", label: "/literal" } } } }
+        modules: { app: definition("app", { params: {
+            resource: "/images/logo.svg",
+            relative: "./local.txt",
+            literal: "ordinary text",
+            unrelated: { label: "/one", tooltip: "/two", arbitrary: "/three" }
+        }, routes: { "/home": "/pages/index.js" } }) },
+        xshell: { areas: { definitions: { main: { prefix: "/public", label: "Main" } } } }
     };
     const graph = await discover(root);
-    assert.deepEqual(plain(graph.rootNode.config.modules.app.params), { note: "/literal", hint: "../literal" });
-    assert.equal(graph.rootNode.config.xshell.areas.definitions.main.prefix, "/public");
-    assert.equal(graph.rootNode.config.xshell.areas.definitions.main.label, "/literal");
+    assert.deepEqual(plain(graph.rootNode.config.modules.app.params), {
+        resource: "/_assets/app/1.0.0.dev/images/logo.svg",
+        relative: "/_assets/app/1.0.0.dev/local.txt",
+        literal: "ordinary text",
+        unrelated: {
+            label: "/_assets/app/1.0.0.dev/one",
+            tooltip: "/_assets/app/1.0.0.dev/two",
+            arbitrary: "/_assets/app/1.0.0.dev/three"
+        }
+    });
+    assert.equal(graph.rootNode.config.xshell.areas.definitions.main.prefix, "/_assets/app/1.0.0.dev/public");
+    assert.equal(graph.rootNode.config.xshell.areas.definitions.main.label, "Main");
     assert.equal(graph.rootNode.config.modules.app.routes["/home"], "/_assets/app/1.0.0.dev/pages/index.js");
 });
 
-test("menu contributions normalize by structure regardless of menu name", async () => {
+test("menu configuration follows generic value-driven path semantics", async () => {
     const root = { modules: { x: definition("x", { menus: {
         navigation: "/pages/navigation",
         tools: "/pages/tools",
@@ -378,7 +392,7 @@ test("menu contributions normalize by structure regardless of menu name", async 
             label: "Reports", path: "/reports", href: "/pages/report.js", tooltip: "/literal-tooltip",
             children: [{ label: "Detail", path: "/reports/detail", href: "./pages/detail.js", class: "/literal-class" }]
         }]
-    }, params: { metadata: { path: "/must-remain-literal" }, sample: { href: "/literal", url: "../literal" } } }) } };
+    }, params: { metadata: { path: "/metadata" }, sample: { href: "/sample", url: "ordinary-url" } } }) } };
     const graph = await discover(root);
     const module = plain(graph.rootNode.config.modules.x);
 
@@ -386,16 +400,19 @@ test("menu contributions normalize by structure regardless of menu name", async 
     assert.equal(module.menus.tools, "/_assets/x/1.0.0.dev/pages/tools");
     assert.equal(module.menus.arbitraryMenu123, "/_assets/x/1.0.0.dev/pages/custom");
     assert.equal(module.menus.registered, "customer-pages");
-    assert.equal(module.menus.reports[0].path, "/reports");
+    assert.equal(module.menus.reports[0].path, "/_assets/x/1.0.0.dev/reports");
     assert.equal(module.menus.reports[0].href, "/_assets/x/1.0.0.dev/pages/report.js");
-    assert.equal(module.menus.reports[0].tooltip, "/literal-tooltip");
-    assert.equal(module.menus.reports[0].children[0].path, "/reports/detail");
+    assert.equal(module.menus.reports[0].tooltip, "/_assets/x/1.0.0.dev/literal-tooltip");
+    assert.equal(module.menus.reports[0].children[0].path, "/_assets/x/1.0.0.dev/reports/detail");
     assert.equal(module.menus.reports[0].children[0].href, "/_assets/x/1.0.0.dev/pages/detail.js");
-    assert.equal(module.menus.reports[0].children[0].class, "/literal-class");
-    assert.deepEqual(module.params, { metadata: { path: "/must-remain-literal" }, sample: { href: "/literal", url: "../literal" } });
+    assert.equal(module.menus.reports[0].children[0].class, "/_assets/x/1.0.0.dev/literal-class");
+    assert.deepEqual(module.params, {
+        metadata: { path: "/_assets/x/1.0.0.dev/metadata" },
+        sample: { href: "/_assets/x/1.0.0.dev/sample", url: "ordinary-url" }
+    });
 });
 
-test("resolver, service, UI, and Area resources normalize within their owning structures", async () => {
+test("configuration values normalize generically across resolver, service, UI, and Area structures", async () => {
     const root = {
         modules: { x: definition("x") },
         xshell: {
@@ -409,19 +426,19 @@ test("resolver, service, UI, and Area resources normalize within their owning st
     const xshell = plain((await discover(root)).rootNode.config.xshell);
 
     assert.equal(xshell.resolver.anyType.anyRule.src, "/_assets/x/1.0.0.dev/resources/{name}.js");
-    assert.equal(xshell.resolver.anyType.anyRule.loader, "/literal-loader");
+    assert.equal(xshell.resolver.anyType.anyRule.loader, "/_assets/x/1.0.0.dev/literal-loader");
     assert.equal(xshell.services.foo.implementation, "/_assets/x/1.0.0.dev/services/foo.js");
     assert.equal(xshell.services.bar.implementation, "/_assets/x/1.0.0.dev/services/bar.js");
-    assert.equal(xshell.services.foo.contract, "/literal-contract");
+    assert.equal(xshell.services.foo.contract, "/_assets/x/1.0.0.dev/literal-contract");
     assert.equal(xshell.ui.component.lazy, "x-lazy");
     assert.equal(xshell.ui.component.error, "/_assets/x/1.0.0.dev/components/error.js");
-    assert.equal(xshell.ui.component.unrelated, "/literal");
+    assert.equal(xshell.ui.component.unrelated, "/_assets/x/1.0.0.dev/literal");
     assert.equal(xshell.ui.layout.main, "x-layout-main");
     assert.equal(xshell.ui.dialog.confirm, "https://example.test/modules/app/dialog.js");
-    assert.equal(xshell.ui.unrelated.label, "/literal");
-    assert.equal(xshell.areas.definitions.main.prefix, "/public");
+    assert.equal(xshell.ui.unrelated.label, "/_assets/x/1.0.0.dev/literal");
+    assert.equal(xshell.areas.definitions.main.prefix, "/_assets/x/1.0.0.dev/public");
     assert.equal(xshell.areas.definitions.main.icon, "/_assets/x/1.0.0.dev/icons/main.svg");
-    assert.equal(xshell.areas.definitions.main.label, "/literal-label");
+    assert.equal(xshell.areas.definitions.main.label, "/_assets/x/1.0.0.dev/literal-label");
 });
 
 test("assets.url requires an explicit physical or application URL", async () => {
