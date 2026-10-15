@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Collections.Specialized;
 
 using DProjects.Commands;
@@ -21,7 +22,7 @@ namespace DProjects.XShell.Commands {
         [Flag('e', "Environment", "")]
         public string Environment { get; init; } = "";
         [Flag('p', "Parameter", "")]
-        public StringDictionary Param { get; init; } = new();
+        public Dictionary<string, string> Param { get; init; } = new();
         [Flag('r', "Resources name", "DProjects.XShell")]
         public string ResourcesName { get; init; } = "DProjects.XShell";
 

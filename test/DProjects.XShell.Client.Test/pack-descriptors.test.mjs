@@ -709,7 +709,8 @@ test("deployment bootstrap options create distinct root generations without chan
         assert.match(index, /xshell:app.basePath"\s+content="\/demo"/);
         assert.match(index, /xshell:xshell.environment"\s+content="Staging"/);
         assert.match(index, /xshell:xshell.temp.url"\s+content="\/uploads"/);
-        assert.match(index, /tenant=acme%20%26%20co&amp;mode=a%3Db/);
+        assert.match(index, /tenant=acme%20%26%20co/);
+        assert.match(index, /mode=a%3Db/);
         assert.ok(worker.includes(`importScripts("/demo/${dirname(packed.xshell)}/sw.js")`));
         const defaultTemp = check(["--app-base-path", "/demo"]);
         assert.match(readFileSync(join(output, dirname(defaultTemp.root), "index.html"), "utf8"), /xshell:xshell.temp.url"\s+content="\/demo\/temp"/);

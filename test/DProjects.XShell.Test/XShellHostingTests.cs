@@ -1,5 +1,7 @@
 using System.Net;
+using System.Collections.Specialized;
 
+using DProjects.XShell.Commands;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.TestHost;
@@ -9,6 +11,21 @@ namespace DProjects.XShell.Test {
     public sealed class XShellHostingTests {
 
         // methods
+        [Fact]
+        public void ServerConfiguration_PreservesAlreadyParsedParameterValues() {
+            var command = new Server {
+                Param = new Dictionary<string,string> {
+                    ["mode"] = "a=b",
+                    ["tenant"] = "acme"
+                }
+            };
+
+            var config = command.BuildConfiguration();
+
+            Assert.IsType<Dictionary<string, string>>(config.App.Params);
+            Assert.Equal("a=b", config.App.Params["mode"]);
+            Assert.Equal("acme", config.App.Params["tenant"]);
+        }
         [Fact]
         public async Task AppBasePath_RedirectsToTrailingSlash() {
             await using var host = await HostingApplication.StartAsync();

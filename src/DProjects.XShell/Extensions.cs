@@ -3,7 +3,6 @@ using System.Reflection;
 using System.Text;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
-using System.Collections.Specialized;
 using Microsoft.AspNetCore.Http;
 using DProjects.Utils;
 
@@ -31,7 +30,7 @@ namespace DProjects.XShell {
             public string Description { get; init; } = "";
             public string BasePath { get; init; } = "";
             public string ConfigPath { get; init; } = "";
-            public StringDictionary Params { get; init; } = new();
+            public Dictionary<string, string> Params { get; init; } = new();
         }
         public class ServerConfig {
             public string? Environment { get; init; } = null;

@@ -144,7 +144,7 @@ export default class Modules {
         }
     } 
     async stop() {
-        for (const module of this._modules.reverse()) {
+        for (const module of [...this._modules].reverse()) {
             if (module.controller?.stop) {
                 await module.controller.stop();
             }

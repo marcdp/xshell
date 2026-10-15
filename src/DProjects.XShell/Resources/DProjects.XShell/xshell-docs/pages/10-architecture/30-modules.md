@@ -136,8 +136,8 @@ See [Module Specification](../50-specifications/module.md), [Configuration](20-c
 
 Module constructors receive `moduleAssetsPath`, `moduleConfig` (including `id` and params), or named registered services via the provider proxy.
 There is no direct injected `params` value.
-`Modules.start()` awaits controllers sequentially in reverse runtime-record order; on failure it stops already-started records in reverse start order.
-Normal `stop()` visits records in forward order. Controller constructors are created while iterating the effective module map, not on service lookup.
+`Modules.start()` awaits controllers sequentially in runtime-record order; on failure it stops already-started records in order.
+Normal `stop()` visits records in reverse forward order. Controller constructors are created while iterating the effective module map, not on service lookup.
 The optional module-wide `/styles/index.css` is loaded only when its path appears in the module inventory. `Modules` requests it as a `style:`
 resource through Resolver → Loader → `style-css`, retains the resulting `CSSStyleSheet` in `module.styles`, and adopts it after successful startup.
 Loader caching ensures the conventional stylesheet is fetched once per module. Relative CSS `@import` and `url(...)` references resolve against the
