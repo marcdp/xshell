@@ -164,7 +164,7 @@ namespace DProjects.XShell {
 
             // validate independent host request paths without changing their values
             if (!IsRequestBasePath(config.App.BasePath, true)) throw new ArgumentException("XShell App.BasePath must be empty or a rooted request path starting with '/'.", nameof(config));
-            if (!IsRequestBasePath(config.Resources.BasePath, true)) throw new ArgumentException("XShell Resources.BasePath must be empty or a rooted request path starting with '/'.", nameof(config));
+            if (!IsRequestBasePath(config.Resources.BasePath, false)) throw new ArgumentException("XShell Resources.BasePath must be a non-empty rooted request path starting with '/'.", nameof(config));
             if (!IsRequestBasePath(config.XShell.BasePath, false)) throw new ArgumentException("XShell XShell.BasePath must be a non-empty rooted request path starting with '/'.", nameof(config));
             if (!IsRequestBasePath(config.Temp.BasePath, false)) throw new ArgumentException("XShell Temp.BasePath must be a non-empty rooted request path starting with '/'.", nameof(config));
 

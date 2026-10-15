@@ -45,7 +45,7 @@ app.Run();
 | `App.BasePath` | `""`; valid root hosting. A nonempty value must be a rooted request path such as `/app`. |
 | `App.ConfigPath` | `""` is a placeholder rejected by `UseXShell()`; supply a nonempty root module configuration path or URL. |
 | `App.Params` | Empty string dictionary; host params become root-module/application params. |
-| `Resources.BasePath` | `""`; passed directly as the resource middleware request path. Empty is allowed and does not create a `/_resources/DProjects.XShell` prefix. For ordinary hosting, set an explicit dedicated rooted path such as `/_resources/DProjects.XShell`. |
+| `Resources.BasePath` | `""` is a placeholder rejected by `UseXShell()`; supply a non-empty rooted request path, normally a dedicated resource namespace such as `/_resources/DProjects.XShell`. |
 | `Resources.ResourceName` | `"DProjects.XShell"`; selects the physical resource directory under `Resources/` in the XShell project (Development) or assembly output directory (other environments). It does not set a URL prefix. |
 | `XShell.BasePath` | `""` is a placeholder rejected by `UseXShell()`; supply a rooted bootstrap and worker source base. |
 | `Server.Environment` | `null`; use ASP.NET's environment name. An explicit value overrides XShell's own environment and development resource behavior. |
@@ -63,8 +63,8 @@ default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; f
 ```
 
 `UseXShell()` rejects invalid static host settings before resource lookup, middleware registration, or bootstrap generation. It requires positive Temp limits,
-rooted request paths for `Temp.BasePath`, `XShell.BasePath`, and each `Server.UnhandledPrefixes` entry. Nonempty `App.BasePath` and
-`Resources.BasePath` values must also be rooted; empty values remain valid. Temp directory creation remains in `TempMiddleware`.
+rooted request paths for `Resources.BasePath`, `Temp.BasePath`, `XShell.BasePath`, and each `Server.UnhandledPrefixes` entry. Only
+`App.BasePath` may be empty; nonempty values must be rooted. Temp directory creation remains in `TempMiddleware`.
 `Resources.BasePath`, `XShell.BasePath`, and `Temp.BasePath` are independent, not automatically rebased by `App.BasePath`.
 The bundled `server` command explicitly derives `Resources.BasePath` as `<AppBasePath>/_resources/<ResourcesName>`.
 Set browser runtime paths consistently when changing resource routing.

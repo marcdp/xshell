@@ -67,15 +67,29 @@ namespace DProjects.XShell.Test {
             Assert.Contains("importScripts(\"/custom/xshell/sw.js\")", body);
             Assert.DoesNotContain("<!DOCTYPE html>", body, StringComparison.OrdinalIgnoreCase);
         }
-        [Fact]
-        public async Task XShellResource_IsServedBeforeAppBaseRedirect() {
-            await using var host = await HostingApplication.StartAsync();
+        [Theory]
+        [InlineData("/_resources/DProjects.XShell")]
+        [InlineData("/app/_resources/DProjects.XShell")]
+        public async Task ResourceNamespace_ServesResourceWithoutClaimingAppIndex(string resourcesBasePath) {
+            await using var host = await HostingApplication.StartAsync(resourcesBasePath: resourcesBasePath);
 
-            using var response = await host.Client.GetAsync("/_resources/DProjects.XShell/xshell/bootstrap.js",
+            using var response = await host.Client.GetAsync(resourcesBasePath + "/xshell/bootstrap.js",
                 TestContext.Current.CancellationToken);
+            using var index = await host.Client.GetAsync("/app/index.html", TestContext.Current.CancellationToken);
 
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
             Assert.True(response.Content.Headers.ContentType?.MediaType is "text/javascript" or "application/javascript");
+            AssertBootstrap(index, await index.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
+        }
+        [Theory]
+        [InlineData("")]
+        [InlineData("resources")]
+        [InlineData("/")]
+        public async Task InvalidResourcesBasePath_IsRejected(string resourcesBasePath) {
+            var exception = await Assert.ThrowsAsync<ArgumentException>(() =>
+                HostingApplication.StartAsync(resourcesBasePath: resourcesBasePath));
+
+            Assert.Contains("XShell Resources.BasePath must be a non-empty rooted request path starting with '/'.", exception.Message);
         }
         [Fact]
         public async Task TempRequest_IsHandledBeforeAppBaseRedirect() {
@@ -190,7 +204,7 @@ namespace DProjects.XShell.Test {
             }
 
             // methods
-            public static async Task<HostingApplication> StartAsync(string appBasePath = "/app", string[]? unhandledPrefixes = null, string appConfigPath = "/_resources/DProjects.XShell/x-demo/module.jsonc", string xshellBasePath = "/_resources/DProjects.XShell/xshell",
+            public static async Task<HostingApplication> StartAsync(string appBasePath = "/app", string[]? unhandledPrefixes = null, string appConfigPath = "/_resources/DProjects.XShell/x-demo/module.jsonc", string xshellBasePath = "/_resources/DProjects.XShell/xshell", string resourcesBasePath = "/_resources/DProjects.XShell",
                 Action<WebApplication>? configureEndpoints = null) {
                 var tempPath = Path.Combine(Path.GetTempPath(), "DProjects.XShell.Test", Guid.NewGuid().ToString("N"));
                 var builder = WebApplication.CreateBuilder(new WebApplicationOptions { EnvironmentName = "Development" });
@@ -206,7 +220,7 @@ namespace DProjects.XShell.Test {
                             Params = new Dictionary<string, string>()
                         },
                         Resources = new Extensions.ResourcesConfig {
-                            BasePath = "/_resources/DProjects.XShell",
+                            BasePath = resourcesBasePath,
                             ResourceName = "DProjects.XShell"
                         },
                         Server = new Extensions.ServerConfig {
