@@ -77,12 +77,12 @@ Generated host HTML attribute values are HTML encoded. This serialization safety
 2. Temp middleware handles its prefix.
 3. A request exactly at `App.BasePath` redirects to `App.BasePath + "/"`. With a nonempty application base, requests outside it also redirect there unless resource or Temp middleware handled them first.
 4. `UseRouting()` selects registered endpoints.
-5. Generated `index.html` and `sw.js` at the application base are returned before matched endpoints; other already-matched endpoints continue through the pipeline.
-6. Unmatched requests inside the base with an unhandled relative prefix continue through the pipeline.
-7. Other unmatched requests inside the base receive the generated host HTML as SPA fallback.
+5. For GET and HEAD, generated `index.html` and `sw.js` at the application base are returned before matched endpoints; other already-matched endpoints continue through the pipeline.
+6. Unmatched GET and HEAD requests inside the base with an unhandled relative prefix continue through the pipeline.
+7. Other unmatched GET and HEAD requests inside the base receive the generated host HTML as SPA fallback.
 
 Unhandled matching is case-insensitive textual prefix matching: `/apiary` also matches `/api`.
-SPA fallback has no method filter. Path navigation needs this fallback for friendly-URL reloads.
+Generated files and SPA fallback handle only GET and HEAD. HEAD returns the same representation status, Content-Type, and Content-Length as GET without a body. Other methods continue through the ASP.NET pipeline, including to registered endpoints. Path navigation uses SPA fallback for friendly-URL reloads.
 
 `BootstrapFilesBuilder` emits HTML, CSP meta, `xshell:` startup meta, and the bootstrap script.
 Generated `sw.js` imports the configured worker source. Bootstrap registers it with the application base-path scope

@@ -55,6 +55,40 @@ namespace DProjects.XShell.Test {
             Assert.Equal(indexBody, routeBody);
             Assert.Equal(routeBody, queriedBody);
         }
+        [Theory]
+        [InlineData("/app/index.html", "text/html")]
+        [InlineData("/app/sw.js", "application/javascript")]
+        [InlineData("/app/customers/42", "text/html")]
+        public async Task GeneratedResponse_HeadHasGetHeadersWithoutBody(string path, string contentType) {
+            await using var host = await HostingApplication.StartAsync();
+
+            using var get = await host.Client.GetAsync(path, TestContext.Current.CancellationToken);
+            using var head = await host.Client.SendAsync(new HttpRequestMessage(HttpMethod.Head, path), TestContext.Current.CancellationToken);
+            var getBytes = await get.Content.ReadAsByteArrayAsync(TestContext.Current.CancellationToken);
+            var headBytes = await head.Content.ReadAsByteArrayAsync(TestContext.Current.CancellationToken);
+
+            Assert.Equal(HttpStatusCode.OK, get.StatusCode);
+            Assert.NotEmpty(getBytes);
+            Assert.Equal(contentType, get.Content.Headers.ContentType?.MediaType);
+            Assert.Equal(getBytes.Length, get.Content.Headers.ContentLength);
+            Assert.Equal(get.StatusCode, head.StatusCode);
+            Assert.Equal(get.Content.Headers.ContentType, head.Content.Headers.ContentType);
+            Assert.Equal(getBytes.Length, head.Content.Headers.ContentLength);
+            Assert.Empty(headBytes);
+        }
+        [Theory]
+        [InlineData("POST", "/app/customers/42")]
+        [InlineData("PUT", "/app/customers/42")]
+        [InlineData("POST", "/app/index.html")]
+        [InlineData("PUT", "/app/sw.js")]
+        public async Task NonRetrievalRequests_DoNotReceiveGeneratedContent(string method, string path) {
+            await using var host = await HostingApplication.StartAsync();
+
+            using var response = await host.Client.SendAsync(new HttpRequestMessage(new HttpMethod(method), path), TestContext.Current.CancellationToken);
+
+            Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+            Assert.DoesNotContain("xshell:app.basePath", await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
+        }
         [Fact]
         public async Task ServiceWorker_UsesConfiguredXShellBasePath() {
             await using var host = await HostingApplication.StartAsync(xshellBasePath: "/custom/xshell");
@@ -108,6 +142,21 @@ namespace DProjects.XShell.Test {
 
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
             Assert.Equal("server-response", await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
+        }
+        [Theory]
+        [InlineData("/app/action")]
+        [InlineData("/app/index.html")]
+        public async Task RegisteredPostEndpoint_ExecutesInsideAppBase(string path) {
+            await using var host = await HostingApplication.StartAsync(configureEndpoints: app => app.MapPost(path, () => "posted"));
+
+            using var response = await host.Client.PostAsync(path, null, TestContext.Current.CancellationToken);
+
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+            Assert.Equal("posted", await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
+            if (path == "/app/index.html") {
+                using var get = await host.Client.GetAsync(path, TestContext.Current.CancellationToken);
+                AssertBootstrap(get, await get.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
+            }
         }
         [Fact]
         public async Task RegisteredApiEndpoint_ExecutesUnderUnhandledPrefix() {
@@ -163,6 +212,15 @@ namespace DProjects.XShell.Test {
             Assert.Equal(rootBody, routeBody);
             Assert.Equal(HttpStatusCode.NotFound, api.StatusCode);
             Assert.DoesNotContain("xshell:app.basePath", await api.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
+        }
+        [Fact]
+        public async Task RootMountedApp_PostClientRouteDoesNotReceiveSpaFallback() {
+            await using var host = await HostingApplication.StartAsync(appBasePath: "");
+
+            using var response = await host.Client.PostAsync("/client-route", null, TestContext.Current.CancellationToken);
+
+            Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+            Assert.DoesNotContain("xshell:app.basePath", await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
         }
         [Fact]
         public async Task Bootstrap_ReflectsHostingConfiguration() {

@@ -1,5 +1,6 @@
 
 using System.Reflection;
+using System.Text;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.AspNetCore.Http;
@@ -99,12 +100,15 @@ namespace DProjects.XShell {
 
             // SPA fallback
             app.Use(async (context, next) => {
+                if (!HttpMethods.IsGet(context.Request.Method) && !HttpMethods.IsHead(context.Request.Method)) {
+                    await next();
+                    return;
+                }
 
                 // bootstrap files
                 foreach (var aa in bootstrapFiles.Keys) {
                     if (context.Request.Path == config.App.BasePath + aa) {
-                        context.Response.ContentType = MimeTypeUtils.GetMimeType(context.Request.Path);
-                        await context.Response.WriteAsync(bootstrapFiles[aa]);
+                        await WriteGeneratedTextAsync(context, bootstrapFiles[aa], MimeTypeUtils.GetMimeType(context.Request.Path));
                         return;
                     }
                 }
@@ -132,14 +136,21 @@ namespace DProjects.XShell {
                 }
 
                 // SPA fallback
-                context.Response.ContentType = "text/html";
-                await context.Response.WriteAsync(bootstrapFiles["/index.html"]);
+                await WriteGeneratedTextAsync(context, bootstrapFiles["/index.html"], "text/html");
             });
 
 
         }
 
         // methods (private)
+        private static async Task WriteGeneratedTextAsync(HttpContext context, string content, string contentType) {
+            var bytes = Encoding.UTF8.GetBytes(content);
+            context.Response.ContentType = contentType;
+            context.Response.ContentLength = bytes.Length;
+            if (!HttpMethods.IsHead(context.Request.Method)) {
+                await context.Response.Body.WriteAsync(bytes, context.RequestAborted);
+            }
+        }
         private static void ValidateConfiguration(Configuration config) {
             if (config.App == null) throw new ArgumentNullException(nameof(config.App), "XShell App configuration is required.");
             if (config.Temp == null) throw new ArgumentNullException(nameof(config.Temp), "XShell Temp configuration is required.");
