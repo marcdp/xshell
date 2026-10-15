@@ -3,7 +3,7 @@
 XShell authors configuration as JSONC. The root module uses the same `module.jsonc` composition model as dependency modules; there is no separate
 application file format. See [Root Module](application.md) for the application-specific `app` section and [Module](module.md) for local definitions,
 external reference contributions, asset locations, and the declarative public contract.
-The root also composes [Areas](../subsystems/10-areas.md) from module ids. Module menu contributions remain independent of that placement.
+The root also composes [Areas](../30-subsystems/10-areas.md) from module ids. Module menu contributions remain independent of that placement.
 
 The validation boundary is the complete effective configuration after discovery, descriptor and embedded-inventory normalization, merge, worker
 mapping, and resolver generation. Bootstrap imports XShell and awaits `xshell.validateConfig(config)` against
@@ -20,10 +20,10 @@ state-engine names. These select how the owning module's definition-based resour
 **XShell defaults** object, `xshell.ui`, requires `layout`, `component`, and `dialog` groups for global UI infrastructure: layout contexts,
 lazy/error/Markdown components, and standard dialog pages. It does not provide render or state engines for modules.
 
-See [Configuration](../architecture/20-configuration.md) and [ADR-0002](../adr/0002-jsonc-specifications.md).
+See [Configuration](../10-architecture/20-configuration.md) and [ADR-0002](../60-adr/0002-jsonc-specifications.md).
 
 ## Public contract schemas
 
-[Component Contract](../components/10-manifest.md) describes `component.contract.schema.json`.
-[Services](../architecture/100-services.md) describes the distinct `contract.schema.json` service contract.
-[Component Architecture](../architecture/60-components.md) describes the default implementation checked by `component.schema.json`.
+[Component Contract](../20-components/10-manifest.md) describes `component.contract.schema.json`.
+[Services](../10-architecture/100-services.md) describes the distinct `contract.schema.json` service contract.
+[Component Architecture](../10-architecture/60-components.md) describes the default implementation checked by `component.schema.json`.

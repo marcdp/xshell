@@ -30,9 +30,9 @@ exposure of internal state.
 
 ## Related documentation
 
-- [Properties](../components/20-properties.md)
-- [State](../components/30-state.md)
-- [Component Contract](../components/10-manifest.md)
+- [Properties](../20-components/20-properties.md)
+- [State](../20-components/30-state.md)
+- [Component Contract](../20-components/10-manifest.md)
 
 ## V0 enforcement limits
 

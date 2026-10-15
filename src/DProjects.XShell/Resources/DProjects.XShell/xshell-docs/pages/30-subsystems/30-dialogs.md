@@ -49,4 +49,4 @@ The bundled confirm Page returns `"yes"`, `"no"`, `"cancel"`, or `"ok"` accordin
 Message confirmation returns `"ok"`. Prompt/picker submit their current value, and cancellation returns `null`.
 Closing without a result yields `null`. The picker Page contract accepts `select` and `radios` input modes.
 
-See [Pages](../architecture/70-pages.md), [Navigation](../architecture/120-navigation.md), and [Lifecycle](../components/60-lifecycle.md).
+See [Pages](../10-architecture/70-pages.md), [Navigation](../10-architecture/120-navigation.md), and [Lifecycle](../20-components/60-lifecycle.md).

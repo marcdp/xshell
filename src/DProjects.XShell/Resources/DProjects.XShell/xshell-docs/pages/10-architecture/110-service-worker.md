@@ -62,7 +62,7 @@ application resource paths such as `/_assets/x/1.4.0.dev/pages/home.js` in `conf
 `/_assets/xshell/0.9.0.dev/xshell.js` in
 `config.xshell.files` before validation and XShell initialization.
 
-See [Asset URL Namespace ADR](../adr/0001-asset-url-namespace.md) and [Modules](30-modules.md).
+See [Asset URL Namespace ADR](../60-adr/0001-asset-url-namespace.md) and [Modules](30-modules.md).
 
 ## Immutable mapping registry
 

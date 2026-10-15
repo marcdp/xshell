@@ -73,7 +73,7 @@ constructing the service. These concepts remain distinct:
 - implementation `dependencies` declares concrete resources for a Component or Page and loads them through Resolver and Loader; and
 - `controller({ serviceName })` resolves and injects an existing runtime service when the controller accesses it.
 
-See [Modules](30-modules.md), [Module Specification](../specifications/module.md), and [Loaders](90-loaders.md).
+See [Modules](30-modules.md), [Module Specification](../50-specifications/module.md), and [Loaders](90-loaders.md).
 
 ## Contract discovery and identity
 
@@ -138,4 +138,4 @@ created event. Consumers can re-read `services.registry` to inspect the current 
 The registered core names are `areas`, `bus`, `config`, `container`, `dialog`, `i18n`, `loader`, `modules`, `navigation`, `resolver`, `runtime`,
 `contracts`, `services`, and `temp`. There is no auth/identity registration. A Diagnostics getter is not a registered service contract.
 
-See [Bus](../subsystems/20-bus.md), [Dialogs](../subsystems/30-dialogs.md), and [Temp](../subsystems/50-temp.md).
+See [Bus](../30-subsystems/20-bus.md), [Dialogs](../30-subsystems/30-dialogs.md), and [Temp](../30-subsystems/50-temp.md).

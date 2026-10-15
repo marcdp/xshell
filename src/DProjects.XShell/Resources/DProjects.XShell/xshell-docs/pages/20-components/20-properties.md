@@ -94,4 +94,4 @@ replacement semantics; properties without `reflect: true` remain input-only. Thi
 - [Components](index.md)
 - [State](30-state.md)
 - [Component Contract](10-manifest.md)
-- [Properties and State ADR](../adr/0004-properties-and-state.md)
+- [Properties and State ADR](../60-adr/0004-properties-and-state.md)

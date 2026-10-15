@@ -126,4 +126,4 @@ the default `App.ConfigPath = "/demo/_resources/Custom/x-demo/module.jsonc"`. An
 `ResourcesName` selects bundled source content; it is not a module id, package id, published path, or runtime assets namespace. The default
 application is x-demo; server supplies no application authentication pipeline. Select `Development` for on-demand compilation.
 
-See [Bootstrap](10-bootstrap.md), [Navigation](120-navigation.md), [Packaging](50-packaging.md), [Service Worker](110-service-worker.md), and [Temp](../subsystems/50-temp.md).
+See [Bootstrap](10-bootstrap.md), [Navigation](120-navigation.md), [Packaging](50-packaging.md), [Service Worker](110-service-worker.md), and [Temp](../30-subsystems/50-temp.md).

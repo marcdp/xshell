@@ -212,9 +212,9 @@ Use Navigation methods and browser-history paths.
 Navigation intents are outside V0. V0 defines neither `module.contract.intents` nor an intent registry/dispatch API; use supported Page hrefs/routes.
 A future intent feature may define its configuration/schema together with its runtime semantics.
 
-See [Pages](70-pages.md) and [ADR-0003](../adr/0003-navigation.md).
+See [Pages](70-pages.md) and [ADR-0003](../60-adr/0003-navigation.md).
 
-See [Hosting](40-hosting.md) for path fallback, [Dialogs](../subsystems/30-dialogs.md) for helper Pages, and [Bus](../subsystems/20-bus.md) for notifications.
+See [Hosting](40-hosting.md) for path fallback, [Dialogs](../30-subsystems/30-dialogs.md) for helper Pages, and [Bus](../30-subsystems/20-bus.md) for notifications.
 
 ## Opening modes
 

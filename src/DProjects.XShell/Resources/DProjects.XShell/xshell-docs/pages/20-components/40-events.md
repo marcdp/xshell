@@ -15,7 +15,7 @@ controller({ host }) {
 }
 ```
 
-DOM events propagate according to those flags. [Bus events](../subsystems/20-bus.md) are asynchronous application messages delivered to listeners.
+DOM events propagate according to those flags. [Bus events](../30-subsystems/20-bus.md) are asynchronous application messages delivered to listeners.
 Component/module event declarations do not automatically dispatch either kind.
 
 ## Optional X Templates integration
@@ -36,5 +36,5 @@ Unknown flags have no defined X Template behavior. There are no `self`, `meta`, 
 Current mouse filtering also applies to keyboard events: `.left`/`.right` fail for ordinary key events because `event.button` is absent.
 `.up`/`.down` have no such conflict. `passive.prevent` cannot override browser passive-listener rules.
 
-See [X Template Bindings](../extensions/x-templates/40-bindings.md) and the
-[modifier specification](../extensions/x-templates/10-specification.md#25-event-modifiers) for syntax and dispatch details.
+See [X Template Bindings](../40-extensions/x-templates/40-bindings.md) and the
+[modifier specification](../40-extensions/x-templates/10-specification.md#25-event-modifiers) for syntax and dispatch details.

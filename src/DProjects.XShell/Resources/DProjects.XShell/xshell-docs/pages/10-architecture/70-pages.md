@@ -241,7 +241,7 @@ A Page instance is loaded once and can be mounted and unmounted repeatedly. `x-p
 temporarily disconnected, then remounts that same instance when the host reconnects. Replacing the resource, and `removePage()`, are final
 destruction paths: they unmount the current Page and then unload it before the instance is discarded. Page render engines and page styles belong
 to each mount; Page state, controller, timers, events, and disposables belong to the Page instance until its final unload. See the component
-[Lifecycle](../components/60-lifecycle.md) contract for the complete sequence.
+[Lifecycle](../20-components/60-lifecycle.md) contract for the complete sequence.
 
 `x-page` may prepare Page loads concurrently, but it replaces Pages one at a time. When `src` changes during a load, only the most recent candidate
 may begin replacement; obsolete candidates are unloaded without affecting the active Page. Once replacement begins, unmounting and unloading the
@@ -289,4 +289,4 @@ Although Page runtime reads description/icon metadata, the shared implementation
 
 Pages reject render-factory-reported slots. The built-in definition render engines are `html` and `x`; `html` reports no slots, so that check is not a
 raw template scan.
-See [Dialogs](../subsystems/30-dialogs.md) for standard Page helpers and result/cleanup limitations.
+See [Dialogs](../30-subsystems/30-dialogs.md) for standard Page helpers and result/cleanup limitations.

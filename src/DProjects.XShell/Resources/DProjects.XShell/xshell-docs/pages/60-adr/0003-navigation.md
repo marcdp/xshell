@@ -23,4 +23,4 @@ The legacy `x-page` `replace`/`navigate` event listeners are commented out, not 
 V0 uses the mode-neutral Navigation API, routes, Page stacks, query replacement, and dialog/embed presentation.
 Intent mapping and dispatch remain outside V0. Layout presentation is separate from route resolution.
 
-See [Navigation](../architecture/120-navigation.md) and [Pages](../architecture/70-pages.md).
+See [Navigation](../10-architecture/120-navigation.md) and [Pages](../10-architecture/70-pages.md).

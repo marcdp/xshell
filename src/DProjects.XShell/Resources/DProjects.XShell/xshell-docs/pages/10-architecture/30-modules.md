@@ -96,7 +96,7 @@ declarative module metadata; Navigation interprets them only after Areas compose
 
 A module can declare named menu contributions. Each is either a static array or the name of a dynamic source registered with
 `Areas.registerSource()`. Areas compose these contributions from module ids; Area membership does not create dependencies or additional runtime
-module instances. See [Areas](../subsystems/10-areas.md).
+module instances. See [Areas](../30-subsystems/10-areas.md).
 
 ## Required services
 
@@ -129,7 +129,7 @@ Retrieve a runtime module with `xshell.modules.getModuleById(id)`. `xshell.modul
 runtime controllers and mutable internal records.
 `module.routes` is declarative metadata: Areas compose it, and Navigation uses the resulting ordered Area routes for forward and reverse resolution.
 
-See [Module Specification](../specifications/module.md), [Configuration](20-configuration.md), [Bootstrap](10-bootstrap.md), and
+See [Module Specification](../50-specifications/module.md), [Configuration](20-configuration.md), [Bootstrap](10-bootstrap.md), and
 [Service Worker](110-service-worker.md).
 
 ## Controller access and startup order

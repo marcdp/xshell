@@ -197,7 +197,7 @@ It is separate from the runtime implementation.
 `query` is valid property metadata in the shared contract. The Page loader may use `query: true` to initialize state-backed public properties from
 the Page `src` query string; generic Component loading accepts the metadata but does not read or rewrite query strings. Component `reflect: true`
 writes a kebab-case attribute even without `attribute: true`, which controls incoming observation.
-Page reflection requires `query: true` and does not reflect HTML attributes. See [Properties](../components/20-properties.md).
+Page reflection requires `query: true` and does not reflect HTML attributes. See [Properties](../20-components/20-properties.md).
 
 When the component definition is loaded, the component loader validates render-factory slot metadata against the contract before registering the
 component.
@@ -524,16 +524,16 @@ retain their `.md` URLs and resolve through the generic [Markdown Page adapter](
 
 ## Related documentation
 
-* [Components](../components/)
-* [Component Contract](../components/10-manifest.md)
-* [Properties](../components/20-properties.md)
-* [Slots](../components/50-slots.md)
-* [State](../components/30-state.md)
-* [Lifecycle](../components/60-lifecycle.md)
+* [Components](../20-components/)
+* [Component Contract](../20-components/10-manifest.md)
+* [Properties](../20-components/20-properties.md)
+* [Slots](../20-components/50-slots.md)
+* [State](../20-components/30-state.md)
+* [Lifecycle](../20-components/60-lifecycle.md)
 * [Resolvers](80-resolvers.md)
 * [Loaders](90-loaders.md)
-* [X Templates](../extensions/x-templates/)
+* [X Templates](../40-extensions/x-templates/)
 
 Implementation fields also include `meta` and compiler-generated `templateRenderer`.
 Loader-derived `meta.id` is required by the implementation schema, alongside optional `title` and engine overrides.
-Contract enforcement and metadata limits are detailed in [Component Contract](../components/10-manifest.md).
+Contract enforcement and metadata limits are detailed in [Component Contract](../20-components/10-manifest.md).

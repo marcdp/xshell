@@ -51,4 +51,4 @@ immutable startup generation. Both files participate in the root hash and ZIP, b
 loose index substitutes the real hash. Startup settings and selected XShell generation can change the root identity without changing dependencies.
 Stable public application and worker URLs, when required, are deployment aliases to the selected root generation.
 
-See [Module Specification](module.md), [Bootstrap](../architecture/10-bootstrap.md), and [Packaging](../architecture/50-packaging.md).
+See [Module Specification](module.md), [Bootstrap](../10-architecture/10-bootstrap.md), and [Packaging](../10-architecture/50-packaging.md).

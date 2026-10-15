@@ -172,7 +172,7 @@ becomes this effective runtime entry for module `x-demo`:
 "/repository/{repositoryId}/projects/{projectId}/items": "/_assets/x-demo/pages/items.js"
 ```
 
-See [Root Module](application.md), [Modules](../architecture/30-modules.md), and [Configuration](../architecture/20-configuration.md).
+See [Root Module](application.md), [Modules](../10-architecture/30-modules.md), and [Configuration](../10-architecture/20-configuration.md).
 
 ## Inventories and module styles
 
@@ -184,10 +184,10 @@ The optional module-wide `/styles/index.css` is loaded only when its path occurs
 the standard Resolver → Loader → `style-css` pipeline. Relative CSS imports and URLs resolve against the stylesheet containing them. There is no
 accepted effective module `styles` field.
 `params` is a free-form object. `menus` maps arbitrary menu names to static arrays, module-relative inventory paths beginning with `/` such as
-`"/pages"`, or registered runtime source names. Inventory paths derive Page menus from generated `files`; see [Areas](../subsystems/10-areas.md).
+`"/pages"`, or registered runtime source names. Inventory paths derive Page menus from generated `files`; see [Areas](../30-subsystems/10-areas.md).
 Menu items may set `tooltip` for navigation-anchor tooltip text. They may set `embedded` so `x-menu` / `x-menuitem` hosts the target Page inline
 instead of rendering a navigation anchor; that menu presentation option is separate from general Navigation Page lifecycle and
 `xshell.ui.layout.embed`.
 
 The effective schema requires complete module defaults, source locations, and generated `files`/`assets.path` metadata.
-Bootstrap enriches the object before schema validation. See [Packaging](../architecture/50-packaging.md).
+Bootstrap enriches the object before schema validation. See [Packaging](../10-architecture/50-packaging.md).

@@ -30,4 +30,4 @@ The runtime constructs canonical modules first, then Areas composes effective me
 prefix only for module resource lookup. Breadcrumb lookup uses the canonical href's Area before Navigation emits an Area change. Dynamic menu
 updates retain `xshell:menus:change`; Area changes use `xshell:area:change`.
 
-See [Areas](../subsystems/10-areas.md), [Navigation](../architecture/120-navigation.md), and [Configuration](../architecture/20-configuration.md).
+See [Areas](../30-subsystems/10-areas.md), [Navigation](../10-architecture/120-navigation.md), and [Configuration](../10-architecture/20-configuration.md).

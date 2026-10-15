@@ -105,7 +105,7 @@ when the option is enabled. A valid object containing only null members does not
 
 Common modifiers include `.stop`, `.prevent`, keyboard filters such as `.enter` and `.escape`, and mouse or modifier-key filters. `@event` is not
 supported.
-See [Component Events](../../components/40-events.md) for the exact runtime set and keyboard left/right limitation.
+See [Component Events](../../20-components/40-events.md) for the exact runtime set and keyboard left/right limitation.
 
 ## Classes
 
@@ -141,4 +141,4 @@ Use the specification when working with control-specific behavior, advanced mode
 - [X Templates](index.md)
 - [XTemplate Language Specification](10-specification.md)
 - [Syntax guide](20-syntax.md)
-- [Component Events](../../components/40-events.md)
+- [Component Events](../../20-components/40-events.md)

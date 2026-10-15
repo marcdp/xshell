@@ -189,7 +189,7 @@ route keys remain Area-relative application Path patterns unchanged. Routes are 
 declarations, while routes are application
 Path-to-Page declarations. Runtime modules expose the normalized object as `module.routes`; Areas compose ordered `area.routes` from participating
 modules without adding their prefixes, and Navigation performs forward and reverse route resolution. See [Modules](30-modules.md),
-[Areas](../subsystems/10-areas.md), and [Navigation](120-navigation.md).
+[Areas](../30-subsystems/10-areas.md), and [Navigation](120-navigation.md).
 Bootstrap deeply freezes the result before `xshell.init(config)`.
 
-See [Modules](30-modules.md), [Bootstrap](10-bootstrap.md), and [Specifications](../specifications/).
+See [Modules](30-modules.md), [Bootstrap](10-bootstrap.md), and [Specifications](../50-specifications/).

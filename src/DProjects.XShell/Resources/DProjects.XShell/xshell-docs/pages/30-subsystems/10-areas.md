@@ -135,8 +135,8 @@ Menu UIs should refresh on that event; `xshell:menus:change` is reserved for dyn
 Both hash and path navigation apply Area prefixes. Bootstrap's generic configuration merge can accept Area definitions from dependency fragments even
 though Area composition belongs to the root application. Dynamic `childrenSource` content can refresh; complete named menu sources are composed once.
 
-See [Navigation](../architecture/120-navigation.md), [Configuration](../architecture/20-configuration.md),
-[Module Specification](../specifications/module.md), and [ADR-0005](../adr/0005-area-menu-composition.md).
+See [Navigation](../10-architecture/120-navigation.md), [Configuration](../10-architecture/20-configuration.md),
+[Module Specification](../50-specifications/module.md), and [ADR-0005](../60-adr/0005-area-menu-composition.md).
 
 ## Global menus
 

@@ -79,7 +79,7 @@ and may contain `description` and `schema`. Example names start with a letter an
 Component `reflect: true` emits an attribute even
 without `attribute: true`; that flag controls incoming observation. State-backed reflection requires an engine change notification.
 Pages do not install Component-style public property accessors or HTML attribute bindings. See [Properties](20-properties.md) and
-[Pages](../architecture/70-pages.md) for conversions and query/context behavior.
+[Pages](../10-architecture/70-pages.md) for conversions and query/context behavior.
 
 Public methods require callable controller methods with the same names and cannot collide with framework/native members. Parameter and return
 metadata does not add runtime checking. Component proxies forward all arguments; the current Page command bridge forwards only its first parameter.
@@ -88,4 +88,4 @@ Event metadata does not dispatch CustomEvents, validate payloads, or configure e
 `x` reports compiler-produced slot names, while `html` currently reports none. Slot `required` does not enforce supplied content.
 Examples are documentation/tooling data.
 
-See [State](30-state.md), [Events](40-events.md), [Slots](50-slots.md), and [Services](../architecture/100-services.md) for the separate service contract.
+See [State](30-state.md), [Events](40-events.md), [Slots](50-slots.md), and [Services](../10-architecture/100-services.md) for the separate service contract.

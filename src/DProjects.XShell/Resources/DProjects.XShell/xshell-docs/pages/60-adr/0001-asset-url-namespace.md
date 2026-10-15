@@ -32,7 +32,7 @@ immutable mapping: the same `src` and `dst` is idempotent, while the same `src` 
 Different generation paths coexist across tabs and worker restarts. V0 has no per-tab mapping state and does not expire or garbage-collect old
 generations. A development mapping remains immutable while the files at its physical destination may change; same-version tabs share that mutable
 source, and different `.dev` versions may coexist. Reload, not HMR, is the V0 boundary for loading current development configuration, inventories,
-and resources. See [Service Worker](../architecture/110-service-worker.md#development-generations) for the canonical details.
+and resources. See [Service Worker](../10-architecture/110-service-worker.md#development-generations) for the canonical details.
 
 ## Consequences
 
@@ -48,6 +48,6 @@ cached by physical package URL and parsed under the documented ZIP format and in
 
 ## Related documentation
 
-- [Service Worker](../architecture/110-service-worker.md)
-- [Modules](../architecture/30-modules.md)
-- [Resolvers](../architecture/80-resolvers.md)
+- [Service Worker](../10-architecture/110-service-worker.md)
+- [Modules](../10-architecture/30-modules.md)
+- [Resolvers](../10-architecture/80-resolvers.md)

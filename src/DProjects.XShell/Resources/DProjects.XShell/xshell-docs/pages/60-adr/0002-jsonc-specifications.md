@@ -32,4 +32,4 @@ services are constructed. The X module currently has no module controller; valid
 for layouts, lazy/error/Markdown components, and standard dialog pages, plus descriptive module `contract.events`. The server default points to
 `x-demo/module.jsonc`. Browser JSONC supports comments and trailing commas, matching server/build descriptor parsing.
 
-See [Configuration](../architecture/20-configuration.md) and [Specifications](../specifications/).
+See [Configuration](../10-architecture/20-configuration.md) and [Specifications](../50-specifications/).

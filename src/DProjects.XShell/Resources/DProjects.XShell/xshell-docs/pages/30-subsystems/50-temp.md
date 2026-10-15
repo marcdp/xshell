@@ -64,4 +64,4 @@ cleanup timestamps can differ slightly.
 The middleware provides no authentication, ownership authorization, scanning, or application-specific quotas.
 ASP.NET limits and access policy belong to the surrounding host pipeline. MIME and hash metadata are not content trust checks.
 
-See [Hosting](../architecture/40-hosting.md) and [Components](../components/index.md).
+See [Hosting](../10-architecture/40-hosting.md) and [Components](../20-components/index.md).

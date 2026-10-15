@@ -20,4 +20,4 @@ authentication subsystem.
 
 - [Subsystems](index.md)
 - [Identity](70-identity.md)
-- [Application Specification](../specifications/application.md)
+- [Application Specification](../50-specifications/application.md)

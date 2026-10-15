@@ -177,4 +177,4 @@ entries.
 - [X Templates](index.md)
 - [XTemplate Language Specification](10-specification.md)
 - [Expressions](30-expressions.md)
-- [Loaders](../../architecture/90-loaders.md)
+- [Loaders](../../10-architecture/90-loaders.md)

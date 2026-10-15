@@ -25,7 +25,7 @@ export default {
 ```
 
 For Pages, query-enabled values are initialized before controller construction; context-enabled values are copied afterwards and may override
-query values. See [Pages](../architecture/70-pages.md).
+query values. See [Pages](../10-architecture/70-pages.md).
 
 ## Engine selection
 
@@ -65,4 +65,4 @@ The loader batches `stateChange` and rendering through `requestAnimationFrame`; 
 The engine owns state creation, change detection, notification, and invalidation. It does not own contracts, public API, controllers, lifecycle,
 rendering, or navigation. The loader coordinates engines, lifecycle, and queued commands.
 
-See [Properties](20-properties.md), [Lifecycle](60-lifecycle.md), [Rendering Engines](70-rendering.md), and [ADR-0004](../adr/0004-properties-and-state.md).
+See [Properties](20-properties.md), [Lifecycle](60-lifecycle.md), [Rendering Engines](70-rendering.md), and [ADR-0004](../60-adr/0004-properties-and-state.md).

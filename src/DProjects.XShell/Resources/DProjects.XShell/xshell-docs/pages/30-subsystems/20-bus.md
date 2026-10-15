@@ -33,4 +33,4 @@ Bus messages have no DOM bubbling, composed path, or cancellation.
 `module.contract.events` and service event contracts are metadata, without automatic validation/dispatch.
 
 Area consumers listen for `xshell:area:change` and `xshell:menus:change`; Navigation emits `xshell:navigation:end`.
-See [Areas](10-areas.md), [Navigation](../architecture/120-navigation.md), and [Component Events](../components/40-events.md).
+See [Areas](10-areas.md), [Navigation](../10-architecture/120-navigation.md), and [Component Events](../20-components/40-events.md).

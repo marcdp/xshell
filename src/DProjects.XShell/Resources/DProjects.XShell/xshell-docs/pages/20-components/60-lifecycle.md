@@ -95,7 +95,7 @@ render engine is ignored once that engine has been unmounted or replaced.
 
 - [Components](index.md)
 - [State](30-state.md)
-- [Loaders](../architecture/90-loaders.md)
+- [Loaders](../10-architecture/90-loaders.md)
 
 ## Awaiting handlers
 
@@ -105,4 +105,4 @@ If the Component is still mounted, it first runs `unmount` and tears down the re
 Page `load`, `mount`, `unmount`, and `unload` use asynchronous lifecycle methods that await their handlers.
 Use the host's Page load sequence when completion matters.
 
-See [Dialogs](../subsystems/30-dialogs.md) for dialog final destruction and result handling.
+See [Dialogs](../30-subsystems/30-dialogs.md) for dialog final destruction and result handling.

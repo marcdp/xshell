@@ -59,7 +59,7 @@ lifecycle. The loader receives the command and decides whether and how to dispat
 
 - [Lifecycle](60-lifecycle.md)
 - [State](30-state.md)
-- [Loaders](../architecture/90-loaders.md)
+- [Loaders](../10-architecture/90-loaders.md)
 
 ## Selection and implementation limits
 
