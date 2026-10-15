@@ -124,14 +124,14 @@ export default class Modules {
     async start() {
         const started = [];
         try {
-            for (const module of [...this._modules].reverse()) {
+            for (const module of [...this._modules]) {
                 if (module.controller?.start) {
                     await module.controller.start();
                 }
                 started.push(module);
             }
         } catch (error) {
-            for (const module of started.reverse()) {
+            for (const module of started) {
                 try {
                     if (module.controller?.stop) {
                         await module.controller.stop();
@@ -144,7 +144,7 @@ export default class Modules {
         }
     } 
     async stop() {
-        for (const module of this._modules) {
+        for (const module of this._modules.reverse()) {
             if (module.controller?.stop) {
                 await module.controller.stop();
             }
