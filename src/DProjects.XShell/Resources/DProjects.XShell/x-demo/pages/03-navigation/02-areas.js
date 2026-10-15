@@ -42,12 +42,12 @@ export default {
 
         <p>
             This Page's canonical destination is
-            <code>/demo/_assets/x-demo/pages/03-navigation/02-areas.js</code>:
+            <code>{{ state.pageSrc }}</code>:
         </p>
 
         <ul>
             <li><code>/demo</code> is the Area navigation context.</li>
-            <li><code>/_assets/x-demo/...</code> identifies the resource owned by the <code>x-demo</code> Module.</li>
+            <li><code>/_assets/x-demo/&lt;generation&gt;/...</code> identifies the effective generation of the resource owned by the <code>x-demo</code> Module.</li>
         </ul>
 
         <p>

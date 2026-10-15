@@ -58,6 +58,73 @@ test("module without service requirements initializes and starts normally", asyn
     assert.equal(starts, 1);
 });
 
+test("module controllers start in dependency order and stop in reverse dependency order", async () => {
+    const events = [];
+    const config = freeze({
+        xshell: { assets: { basePath: "/_assets" } },
+        modules: Object.fromEntries(["base", "feature", "app"].map(id => [
+            id,
+            moduleDefinition(id, { files: [{ path: `/_assets/${id}/module.js` }] })
+        ]))
+    });
+    const modules = createModules(config, {
+        loader: { async load(resource) {
+            const id = resource.split("/").at(-2);
+            return class ModuleController {
+
+                async start() { events.push(`${id}.start`); }
+                async stop() { events.push(`${id}.stop`); }
+            };
+        } }
+    });
+
+    await modules.init();
+    const orderBeforeStop = modules.registry.map(module => module.id);
+    assert.deepEqual(events, ["base.start", "feature.start", "app.start"]);
+
+    await modules.stop();
+
+    assert.deepEqual(events, [
+        "base.start", "feature.start", "app.start",
+        "app.stop", "feature.stop", "base.stop"
+    ]);
+    assert.deepEqual(modules.registry.map(module => module.id), orderBeforeStop);
+});
+
+test("failed module startup rolls back successful starts in reverse order and preserves the startup error", async () => {
+    const events = [];
+    const startupError = new Error("app startup failed");
+    const config = freeze({
+        xshell: { assets: { basePath: "/_assets" } },
+        modules: Object.fromEntries(["base", "feature", "app"].map(id => [
+            id,
+            moduleDefinition(id, { files: [{ path: `/_assets/${id}/module.js` }] })
+        ]))
+    });
+    const modules = createModules(config, {
+        loader: { async load(resource) {
+            const id = resource.split("/").at(-2);
+            return class ModuleController {
+
+                async start() {
+                    events.push(`${id}.start`);
+                    if (id === "app") throw startupError;
+                }
+                async stop() {
+                    events.push(`${id}.stop`);
+                    if (id === "feature") throw new Error("feature stop failed");
+                }
+            };
+        } }
+    });
+
+    await assert.rejects(() => modules.init(), error => error === startupError);
+    assert.deepEqual(events, [
+        "base.start", "feature.start", "app.start",
+        "feature.stop", "base.stop"
+    ]);
+});
+
 test("module registry is a frozen metadata snapshot of the runtime modules", async () => {
     const config = freeze({
         xshell: { assets: { basePath: "/_assets" } },

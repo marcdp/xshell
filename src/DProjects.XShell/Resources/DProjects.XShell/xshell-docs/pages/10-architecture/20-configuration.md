@@ -9,8 +9,8 @@ scheme or origin, and is relative to the XShell application URL namespace. For e
 
 ```text
 /my-app-prefix
-/_assets/x/page.js
-/_assets/codemirror/components/editor.js
+/_assets/x/<generation>/page.js
+/_assets/codemirror/<generation>/components/editor.js
 ```
 
 A **URL** is a fully qualified absolute browser URL. It contains a scheme and, where applicable, an origin, so it can be passed directly to browser
@@ -18,7 +18,7 @@ URL, fetch, or import APIs. For example:
 
 ```text
 https://server/my-app-prefix/
-https://server/my-app-prefix/_assets/x/page.js
+https://server/my-app-prefix/_assets/x/<generation>/page.js
 https://cdn.example.com/codemirror/
 ```
 
@@ -184,7 +184,8 @@ The X module currently has no module controller; configuration validation occurs
 The required `xshell.i18n` section supplies the current language, available languages, date/time formats, and translation dictionaries. The X module
 provides the baseline values, and application composition may override them through the normal merge precedence.
 An effective module may optionally declare `routes`, an object mapping friendly application Path patterns to module-relative Page targets. During
-bootstrap, route target values are normalized into canonical module resource Paths in the owning module's `/_assets/<module-id>/...` namespace;
+bootstrap, route target values are normalized into canonical module resource Paths in the owning module's
+`/_assets/<module-id>/<generation>/...` namespace;
 route keys remain Area-relative application Path patterns unchanged. Routes are distinct from module `menus`: menus describe user-visible navigation
 declarations, while routes are application
 Path-to-Page declarations. Runtime modules expose the normalized object as `module.routes`; Areas compose ordered `area.routes` from participating

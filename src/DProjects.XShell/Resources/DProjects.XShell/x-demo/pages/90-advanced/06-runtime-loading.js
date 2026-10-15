@@ -30,9 +30,7 @@ loaded runtime value</code></pre>
             <label>
                 Resource
                 <select x-model="state.resource">
-                    <option value="component:x-button">component:x-button</option>
-                    <option value="icon:x-file">icon:x-file</option>
-                    <option value="page:/_assets/x-demo/pages/06-modules/index.js">page:/_assets/x-demo/pages/06-modules/index.js</option>
+                    <option x-for="resource in state.resources" x-key="resource" x-attr:value="resource">{{ resource }}</option>
                 </select>
             </label>
             <button x-on:click="loadResource">Resolve and load</button>
@@ -58,6 +56,7 @@ loaded runtime value</code></pre>
 
     state: {
         resource: "component:x-button",
+        resources: [],
         error: "",
         result: {
             resource: "(choose a resource)",
@@ -67,8 +66,17 @@ loaded runtime value</code></pre>
         }
     },
 
-    controller({ state, loader, resolver }) {
+    controller({ state, loader, resolver, config }) {
         return {
+            load() {
+                const xDemoPath = config.modules["x-demo"].assets.path;
+                state.resources = [
+                    "component:x-button",
+                    "icon:x-file",
+                    `page:${xDemoPath}/pages/06-modules/index.js`
+                ];
+            },
+
             async loadResource() {
                 // resolve metadata first, then use the injected Loader service
                 state.error = "";

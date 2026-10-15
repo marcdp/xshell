@@ -98,7 +98,7 @@ Bootstrap resolves references recursively and the final effective entry is a com
 ```
 
 `configUrl` is the source document. `assets.url` is the physical resource container and defaults to that document's directory. Runtime resource
-references use `/_assets/<module-id>/...` rather than the physical URL.
+references use the generation-qualified `assets.path` form `/_assets/<module-id>/<generation>/...` rather than the physical URL.
 In configuration URL fields, `/foo` starts at the module root; `./foo` and `../foo` use the declaring file's logical module directory and
 cannot escape the module root. `app:` and `url:` are available only during configuration/bootstrap. `url:` uses the physical declaring document URL,
 including for `configUrl` and `assets.url`; `app:` resolves against the XShell application base, including `app:foo` and `app:/foo` under a nested
@@ -142,7 +142,7 @@ keys are Area-relative application Path patterns. They support literal segments 
 wildcards, catch-alls, typed parameters, custom regular expressions, and route priorities are unsupported.
 
 During bootstrap, each authored module-relative route target is normalized into a canonical module resource Path in the owning module's
-`/_assets/<module-id>/...` namespace. Route keys remain unchanged, and neither Area prefixes nor application base paths are stored in the
+`/_assets/<module-id>/<generation>/...` namespace. Route keys remain unchanged, and neither Area prefixes nor application base paths are stored in the
 declaration. The runtime module exposes the normalized object as `module.routes`. Areas compose `area.routes` from `area.modules`, preserving module
 order, route declaration order, and duplicate paths.
 
@@ -169,7 +169,7 @@ For example, this authored route:
 becomes this effective runtime entry for module `x-demo`:
 
 ```jsonc
-"/repository/{repositoryId}/projects/{projectId}/items": "/_assets/x-demo/pages/items.js"
+"/repository/{repositoryId}/projects/{projectId}/items": "/_assets/x-demo/<generation>/pages/items.js"
 ```
 
 See [Root Module](application.md), [Modules](../10-architecture/30-modules.md), and [Configuration](../10-architecture/20-configuration.md).

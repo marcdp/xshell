@@ -12,13 +12,13 @@ export default {
         <h2>Resources</h2>
 
         <p>
-            Module resources use a stable logical namespace, regardless of where the module is physically stored:
-            <code>/_assets/&lt;module-id&gt;/&lt;resource&gt;</code>.
+            <code>/_assets</code> is the virtual asset base. Each effective module generation has its own runtime path:
+            <code>/_assets/&lt;module-id&gt;/&lt;generation&gt;/&lt;resource&gt;</code>.
         </p>
 
         <ul>
-            <li><code>/_assets/x/components/x-button.js</code></li>
-            <li><code>/_assets/x-demo/pages/06-modules/index.js</code></li>
+            <li><code>/_assets/x/&lt;generation&gt;/components/x-button.js</code></li>
+            <li><code>/_assets/x-demo/&lt;generation&gt;/pages/06-modules/index.js</code></li>
         </ul>
 
         <pre x-pre><code>client URL
@@ -30,12 +30,13 @@ module assets.url
 physical resource</code></pre>
 
         <p>
-            The Service Worker maps the client-facing prefix to the module's physical <code>assets.url</code>. Application code should depend on the
-            stable <code>/_assets/&lt;module-id&gt;/...</code> URL, not on the storage layout.
+            Bootstrap records that generation-qualified virtual prefix as <code>assets.path</code>. The Service Worker maps it to the module's
+            physical <code>assets.url</code>; <code>configUrl</code> remains the separate module configuration document URL.
         </p>
 
         <p>
-            Module resources may be backed by expanded directories or ZIP packages. Application code continues to use the stable logical namespace above.
+            Module resources may be backed by expanded directories or ZIP packages. Application code uses the effective
+            <code>assets.path</code> rather than reconstructing a generation or depending on the physical storage layout.
         </p>
 
         <h3>Current x-demo resource mapping</h3>
@@ -43,14 +44,14 @@ physical resource</code></pre>
         <x-datafields>
             <x-datafield label="configUrl"><code>{{ state.configUrl }}</code></x-datafield>
             <x-datafield label="assets.url"><code>{{ state.assetUrl }}</code></x-datafield>
-            <x-datafield label="logical asset prefix"><code>{{ state.logicalPrefix }}</code></x-datafield>
+            <x-datafield label="assets.path"><code>{{ state.assetPath }}</code></x-datafield>
         </x-datafields>
     `,
 
     state: {
         configUrl: "",
         assetUrl: "",
-        logicalPrefix: "/_assets/x-demo/"
+        assetPath: ""
     },
 
     controller({ state, config }) {
@@ -60,6 +61,7 @@ physical resource</code></pre>
                 const moduleConfig = config.modules["x-demo"] || {};
                 state.configUrl = moduleConfig.configUrl || "";
                 state.assetUrl = moduleConfig.assets.url || "";
+                state.assetPath = moduleConfig.assets.path || "";
             }
         };
     }

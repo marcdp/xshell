@@ -43,10 +43,11 @@ export default {
         <ul>
             <li><code>configUrl</code> identifies the location of the module's <code>module.jsonc</code>.</li>
             <li><code>assets.url</code> identifies the physical directory or package that contains module resources.</li>
+            <li><code>assets.path</code> identifies the generation-qualified virtual runtime path.</li>
         </ul>
 
         <p>
-            Runtime clients normally use <code>/_assets/&lt;module-id&gt;/...</code>. They should not couple themselves to the physical
+            Runtime clients normally use <code>/_assets/&lt;module-id&gt;/&lt;generation&gt;/...</code> through <code>assets.path</code>. They should not couple themselves to the physical
             <code>assets.url</code> layout.
         </p>
 
@@ -57,6 +58,7 @@ export default {
             <x-datafield label="Label"><span>{{ state.current.label }}</span></x-datafield>
             <x-datafield label="Version"><span>{{ state.current.version }}</span></x-datafield>
             <x-datafield label="configUrl"><code>{{ state.current.configUrl }}</code></x-datafield>
+            <x-datafield label="assets.path"><code>{{ state.current.assets.path }}</code></x-datafield>
             <x-datafield label="assets.url"><code>{{ state.current.assets.url }}</code></x-datafield>
         </x-datafields>
 
@@ -69,7 +71,7 @@ export default {
             label: "",
             version: "",
             configUrl: "",
-            assets: { url: "" }
+            assets: { path: "", url: "" }
         }
     },
 
@@ -83,7 +85,10 @@ export default {
                     label: moduleConfig.label || "",
                     version: moduleConfig.version || "",
                     configUrl: moduleConfig.configUrl || "",
-                    assets: { url: moduleConfig.assets.url || "" }
+                    assets: {
+                        path: moduleConfig.assets.path || "",
+                        url: moduleConfig.assets.url || ""
+                    }
                 };
             }
         };

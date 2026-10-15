@@ -39,7 +39,7 @@ A caller awaits an arbitrary Page exposed by the composed application:
 
 ```js
 const result = await dialog.open({
-    href: "/_assets/x-demo/pages/04-dialogs/custom-dialog.js",
+    href: "/_assets/x-demo/<generation>/pages/04-dialogs/custom-dialog.js",
     title: "Results"
 });
 ```

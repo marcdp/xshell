@@ -67,7 +67,7 @@ xshell.init(config)</code></pre>
         <p>
             Discovery finds the root and referenced configuration documents recursively. Normalization resolves <code>url:</code> references,
             records each module's <code>configUrl</code>, derives <code>assets.url</code> when needed, and maps module-relative resources into the
-            runtime namespace <code>/_assets/&lt;module-id&gt;/...</code>. Merge combines the resulting fragments using the current Bootstrap
+            generation-qualified runtime namespace <code>/_assets/&lt;module-id&gt;/&lt;generation&gt;/...</code>. Merge combines the resulting fragments using the current Bootstrap
             registration and merge behavior.
         </p>
 

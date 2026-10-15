@@ -40,7 +40,7 @@ prefix reapplied. Route parameters are encoded as query parameters; target query
 incoming values replacing same-name target values unless that name is a route parameter. Route parameters win all same-name conflicts. Incoming
 fragments are retained. For example,
 `/demo/repository/12/projects/7/items?sort=name#summary` can resolve internally to
-`/demo/_assets/x-demo/pages/items.js?repositoryId=12&projectId=7&sort=name#summary`.
+`/demo/_assets/x-demo/<generation>/pages/items.js?repositoryId=12&projectId=7&sort=name#summary`.
 
 This conversion is internal before `x-page.src` is assigned. Browser-facing URLs remain friendly, canonical URLs continue to work directly, and an
 unmatched path follows the existing fallback.
@@ -52,7 +52,7 @@ while unrelated parameters and the fragment remain. Missing placeholder values m
 the canonical fallback can be used.
 
 For example, canonical
-`/_assets/x-demo/pages/items.js?repositoryId=12&projectId=7&sort=name` becomes public
+`/_assets/x-demo/<generation>/pages/items.js?repositoryId=12&projectId=7&sort=name` becomes public
 `/demo/repository/12/projects/7/items?sort=name`. Reverse routing remains private to Navigation; `x-anchor` continues to request a browser-facing URL
 without understanding route syntax.
 
@@ -77,9 +77,9 @@ public context.
 For example, a route `/repository/{repositoryId}/items` in Area `demo` round-trips as follows:
 
 ```text
-canonical: /_assets/x-demo/pages/items.js?repositoryId=12
+canonical: /_assets/x-demo/<generation>/pages/items.js?repositoryId=12
 public:    /demo/repository/12/items
-forward:   /demo/repository/12/items → /demo/_assets/x-demo/pages/items.js?repositoryId=12
+forward:   /demo/repository/12/items → /demo/_assets/x-demo/<generation>/pages/items.js?repositoryId=12
 ```
 
 `x-anchor` preserves its logical `href` as the canonical target and delegates its rendered native `<a href>` to
@@ -101,7 +101,7 @@ For example, a module may contribute:
 For an Area with prefix `/main`, the effective item uses Area-aware values for both fields:
 
 ```jsonc
-{ "label": "Components", "path": "/main/components", "href": "/main/_assets/x-demo/pages/01-components/index.js" }
+{ "label": "Components", "path": "/main/components", "href": "/main/_assets/x-demo/<generation>/pages/01-components/index.js" }
 ```
 
 `x-menu`, `x-page-menu`, and search results pass `path || href` to their generic navigation elements. `x-menuitem` and `x-anchor` receive only an
@@ -110,18 +110,19 @@ the returned breadcrumb entries carry their `path` for UIs that choose to expose
 
 Navigation accepts either form. When a browser/navigation URL matches `Areas.resolvePath(value)`, Navigation replaces it with that effective menu
 item's canonical `href` before setting `x-page.src`; when no path matches, it preserves the original value. Thus `/main/components` and direct
-`/main/_assets/x-demo/pages/01-components/index.js` navigation both remain valid. Navigation translates to the Area-aware canonical href, not to
+`/main/_assets/x-demo/<generation>/pages/01-components/index.js` navigation both remain valid. Navigation translates to the Area-aware canonical href, not to
 the final module resource URL.
 
 For browser-facing links, Navigation performs the inverse lookup through `Areas.resolveHref(href, areaId)`. For an unprefixed module resource,
-Areas derives the module id from `/_assets/<module-id>/...`, searches the effective menus of Areas associated with that module, and returns the
+Areas derives the module id from the structural `/_assets/<module-id>/...` prefix, searches the effective menus of Areas associated with that
+module, and returns the
 matching item, including items materialized from dynamic menu sources. The originating Page's Area is tried first when applicable; otherwise the
 target module's participating Areas determine the public path. Query parameters and fragments remain attached to the public path. When no matching
 item or friendly `path` exists, the Area-aware canonical href remains the browser-facing fallback. The logical target retained by `x-anchor` stays
 canonical, so normal clicks and native browser link actions share the same destination identity without making the component aware of Areas or menus.
 
 `x-page` receives that canonical Area-aware href, identifies its Area, and removes only the Area prefix before asking the loader/resolver for the
-module resource. The loader/resolver therefore sees `/_assets/x-demo/pages/01-components/index.js`; it does not know about menu `path` values or
+module resource. The loader/resolver therefore sees `/_assets/x-demo/<generation>/pages/01-components/index.js`; it does not know about menu `path` values or
 perform path-to-href translation.
 
 ## Ordinary Page anchors
@@ -142,7 +143,7 @@ After reverse route generation, hash mode wraps the public application path with
 `/demo`, and public route `/repository/12/items`, the browser href is `/app/#!/demo/repository/12/items`.
 
 ```text
-host page#!/_assets/test/pages/test1.js → Navigation → x-page → page resource
+host page#!/_assets/test/<generation>/pages/test1.js → Navigation → x-page → page resource
 ```
 
 ## Path mode
@@ -169,8 +170,8 @@ finishes loading, it emits `xshell:navigation:end`; Areas resolves the current A
 breadcrumb Area from the URL itself so lookup does not depend on the later navigation-end event.
 
 A non-empty Area prefix wraps both friendly paths and canonical hrefs. For example, the browser can show `#!/customers/reports` in hash mode or
-`/customers/reports` in path mode, while `x-page` receives `/customers/_assets/reports/pages/report.js`. `x-page` removes the Area prefix before
-resolving the module resource; the `/_assets/reports/...` segment still denotes the resource owner.
+`/customers/reports` in path mode, while `x-page` receives `/customers/_assets/reports/<generation>/pages/report.js`. `x-page` removes the Area prefix before
+resolving the module resource; the structural `/_assets/reports/...` prefix still denotes the resource owner.
 
 The query portion of a Page destination remains part of its canonical Page `src`. Navigation preserves that input, while `page-js` exposes raw
 query access to a definition-based Page controller as `controller({ query })` and separately interprets query parameters for contract properties

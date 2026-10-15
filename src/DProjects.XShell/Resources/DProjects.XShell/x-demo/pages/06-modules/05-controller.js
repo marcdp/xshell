@@ -12,16 +12,17 @@ export default {
         <h2>Controller</h2>
 
         <p>
-            A module controller is the executable part of a module definition. XShell constructs it with registered services plus the module's
-            <code>params</code> and calls its lifecycle methods.
+            A module controller is the executable part of a module definition. XShell constructs it with
+            <code>moduleAssetsPath</code>, <code>moduleConfig</code>, and registered services by name, then calls its lifecycle methods.
         </p>
 
         <pre x-pre><code>export default class {
-    constructor({ navigation, bus, config, params }) {
+    constructor({ navigation, bus, moduleAssetsPath, moduleConfig }) {
         this.navigation = navigation;
         this.bus = bus;
-        this.config = config;
-        this.params = params;
+        this.moduleAssetsPath = moduleAssetsPath;
+        this.moduleConfig = moduleConfig;
+        this.params = moduleConfig.params;
     }
 
     async start() {

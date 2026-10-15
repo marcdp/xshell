@@ -43,7 +43,7 @@ export default {
         <h3>Area prefix versus resource ownership</h3>
 
         <p>
-            <code>/customers/reports</code> is a public Area/navigation context. <code>/_assets/reports/pages/report.js</code> identifies the module
+            <code>/customers/reports</code> is a public Area/navigation context. <code>/_assets/reports/&lt;generation&gt;/pages/report.js</code> identifies the module
             resource that owns a Page. Areas prefix navigation values during composition; they do not change which module owns the resource.
         </p>
 

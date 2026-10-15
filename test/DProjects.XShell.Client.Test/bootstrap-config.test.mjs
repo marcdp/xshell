@@ -1033,6 +1033,7 @@ test("transitive dependencies load and merge before their dependents", async () 
     const effective = plain(api.mergeConfigs(Array.from(graph.mergeOrder, node => node.config)));
 
     assert.deepEqual(orderOf(graph), ["x", "a", "app"]);
+    assert.deepEqual(Object.keys(effective.modules), ["x", "a", "app"]);
     assert.deepEqual(effective.trace, ["x", "a", "root"]);
 });
 

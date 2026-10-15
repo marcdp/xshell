@@ -101,8 +101,8 @@ my-module/
 
 ### Packaging and current deployment
 
-The V0 browser runtime maps module resources through its Service Worker into the application resource namespace, using Paths such as
-`/_assets/my-module/...`. Development destinations are normally expanded directories. Published `assets.url` values can point to immutable ZIP
+The V0 browser runtime maps module resources through its Service Worker into the application resource namespace, using generation-qualified Paths
+such as `/_assets/my-module/<generation>/...`. Development destinations are normally expanded directories. Published `assets.url` values can point to immutable ZIP
 packages, which the Service Worker fetches and reads to serve JavaScript, CSS, Pages, icons, and other package entries.
 
 `DProjects.XShell pack ./app ./dist` publishes the application, its recursive module dependencies, and the XShell framework as

@@ -93,7 +93,7 @@ export default {
 
         <p>
             A menu item can expose a friendly <code>path</code>, such as <code>/demo/pages/query-parameters</code>, while its <code>href</code> remains
-            the canonical XShell Page destination under <code>/_assets/x-demo/...</code>. Areas composes both values and Navigation resolves menu
+            the canonical XShell Page destination under <code>/_assets/x-demo/&lt;generation&gt;/...</code>. Areas composes both values and Navigation resolves menu
             paths; <code>x-anchor</code> does not perform that lookup itself.
         </p>
     `,

@@ -1,8 +1,8 @@
 # Resolvers
 
 A Resolver maps a logical resource such as `icon:x-file` to a concrete resource location and loader metadata. The Loader then obtains the resource.
-They are separate responsibilities. Generated resolver entries currently use application-root-relative virtual Paths such as
-`/_assets/x/icons/x-file.svg`. See [Configuration](20-configuration.md#path-and-url-terminology).
+They are separate responsibilities. Generated resolver entries currently use generation-qualified, application-root-relative virtual Paths such as
+`/_assets/x/<generation>/icons/x-file.svg`. See [Configuration](20-configuration.md#path-and-url-terminology).
 
 A custom rule may use this nested shape:
 
@@ -11,7 +11,7 @@ A custom rule may use this nested shape:
     "xshell": {
         "resolver": {
             "icon": {
-                "x-{name}": { "src": "/_assets/x/icons/x-{name}.svg", "loader": "icon-svg" }
+                "x-{name}": { "src": "/_assets/x/<generation>/icons/x-{name}.svg", "loader": "icon-svg" }
             }
         }
     }
@@ -43,7 +43,7 @@ resource-specific loader. Bootstrap uses `path` for its generated Page rules; un
 ## Declarative component and Page dependencies
 
 Values in a Component or Page implementation's `dependencies` object are ordinary logical resource references, such as
-`module:/_assets/x/utils/markdown.js`, `icon:x-file`, or `component:x-code-editor`. The Resolver determines which resource definition matches a
+`module:/_assets/x/<generation>/utils/markdown.js`, `icon:x-file`, or `component:x-code-editor`. The Resolver determines which resource definition matches a
 reference and maps it to its URL and loader metadata. The Loader then obtains that resource and exposes the value under the declaration's key in
 `controller({ dependencies })`.
 

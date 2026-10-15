@@ -35,7 +35,7 @@ one module instance per module id</code></pre>
 
         <pre x-pre><code>module resource
     ↓
-/_assets/&lt;module-id&gt;/...
+/_assets/&lt;module-id&gt;/&lt;generation&gt;/...
     ↓
 Service Worker
     ↓
@@ -43,7 +43,7 @@ assets.url</code></pre>
 
         <p>
             The Service Worker hides the physical asset container. Components, Pages, icons, styles, and module controllers can therefore use the
-            stable <code>/_assets/&lt;module-id&gt;/...</code> namespace even when the module's storage layout changes.
+            generation-qualified <code>/_assets/&lt;module-id&gt;/&lt;generation&gt;/...</code> namespace even when the module's storage layout changes.
         </p>
 
         <h3>Seven topics</h3>

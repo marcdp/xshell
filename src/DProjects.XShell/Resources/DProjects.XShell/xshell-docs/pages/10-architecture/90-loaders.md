@@ -111,7 +111,7 @@ Loading an icon:
 ```text
 icon:x-file
     ↓
-/_assets/x/icons/x-file.svg
+/_assets/x/<generation>/icons/x-file.svg
 loader=icon-svg
     ↓
 SVG element
@@ -120,9 +120,9 @@ SVG element
 Loading an ES module:
 
 ```text
-module:/_assets/module1/module.js
+module:/_assets/module1/<generation>/module.js
     ↓
-/_assets/module1/module.js
+/_assets/module1/<generation>/module.js
 loader=module-js
     ↓
 ES module export
@@ -133,7 +133,7 @@ Loading a component:
 ```text
 component:x-button
     ↓
-/_assets/x/components/x-button.js
+/_assets/x/<generation>/components/x-button.js
 loader=component-js
     ↓
 Web Component class
@@ -142,9 +142,9 @@ Web Component class
 Loading a page:
 
 ```text
-page:/_assets/module1/pages/page1.js
+page:/_assets/module1/<generation>/pages/page1.js
     ↓
-/_assets/module1/pages/page1.js
+/_assets/module1/<generation>/pages/page1.js
 loader=page-js
     ↓
 Page component
@@ -232,7 +232,7 @@ flowchart LR
     A["Logical resource<br/>icon:x-file"]
         --> B[Resolver]
 
-    B --> C["Resolved Path<br/>/_assets/x/icons/x-file.svg<br/>loader=icon-svg"]
+    B --> C["Resolved Path<br/>/_assets/x/&lt;generation&gt;/icons/x-file.svg<br/>loader=icon-svg"]
 
     C --> D[Loader]
 

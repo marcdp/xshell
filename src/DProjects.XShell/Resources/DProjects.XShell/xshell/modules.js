@@ -131,7 +131,7 @@ export default class Modules {
                 started.push(module);
             }
         } catch (error) {
-            for (const module of started) {
+            for (const module of [...started].reverse()) {
                 try {
                     if (module.controller?.stop) {
                         await module.controller.stop();

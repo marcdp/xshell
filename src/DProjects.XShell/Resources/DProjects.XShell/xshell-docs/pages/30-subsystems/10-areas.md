@@ -78,9 +78,10 @@ An `index` Page is the directory destination. Numeric filename and directory pre
 labels and friendly path segments. The module label names the root menu item. This is a menu-generation convention over the generated physical
 inventory, not authored inventory metadata. Registered runtime sources and `childrenSource` remain separate mechanisms.
 
-Bootstrap first maps module-relative menu hrefs into `/_assets/<module-id>/...`. Areas then applies the Area prefix to both local `path` and local
-`href`, leaving external scheme URLs unchanged. For example, authored `components` and normalized `/_assets/x-demo/pages/01-components/index.js` become
-`/main/components` and `/main/_assets/x-demo/pages/01-components/index.js` in the `main` Area. The Area home is `path || href` of the first
+Bootstrap first maps module-relative menu hrefs into `/_assets/<module-id>/<generation>/...`. Areas then applies the Area prefix to both local `path` and local
+`href`, leaving external scheme URLs unchanged. For example, authored `components` and normalized
+`/_assets/x-demo/<generation>/pages/01-components/index.js` become `/main/components` and
+`/main/_assets/x-demo/<generation>/pages/01-components/index.js` in the `main` Area. The Area home is `path || href` of the first
 `navigation` default item in depth-first traversal. If that result has no target, it falls back to the first depth-first item with `path || href`,
 testing each item before its children. Despite the helper's "visible" name, no visibility flag is tested. `home` is null only when neither search
 returns a target. A targetless default ends that search at its current sibling level; fallback still runs.
@@ -106,8 +107,8 @@ does not attach them as refresh targets, so they are not live-reactive after com
 
 ```jsonc
 [
-    { "path": "/something", "href": "/_assets/x-demo/pages/index.js", "module": "x-demo" },
-    { "path": "/settings", "href": "/_assets/x/pages/settings.js", "module": "x" }
+    { "path": "/something", "href": "/_assets/x-demo/<generation>/pages/index.js", "module": "x-demo" },
+    { "path": "/settings", "href": "/_assets/x/<generation>/pages/settings.js", "module": "x" }
 ]
 ```
 

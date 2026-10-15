@@ -29,8 +29,8 @@ resource-specific loader</code></pre>
         <ul>
             <li><code>component:x-button</code></li>
             <li><code>icon:x-file</code></li>
-            <li><code>module:/_assets/x/utils/...</code></li>
-            <li><code>page:/_assets/x-demo/pages/...</code></li>
+            <li><code>module:/_assets/x/&lt;generation&gt;/utils/...</code></li>
+            <li><code>page:/_assets/x-demo/&lt;generation&gt;/pages/...</code></li>
         </ul>
 
         <h3>Declarative dependencies</h3>
@@ -70,14 +70,15 @@ resource-specific loader</code></pre>
         resources: []
     },
 
-    controller({ state, resolver }) {
+    controller({ state, resolver, config }) {
         return {
             load() {
                 // inspect resolver metadata without loading or mutating resources
+                const xDemoPath = config.modules["x-demo"].assets.path;
                 const resources = [
                     "component:x-button",
                     "icon:x-file",
-                    "page:/_assets/x-demo/pages/06-modules/index.js"
+                    `page:${xDemoPath}/pages/06-modules/index.js`
                 ];
                 state.resources = resources.map(resource => {
                     const resolved = resolver.resolve(resource);

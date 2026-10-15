@@ -31,10 +31,10 @@ events.
 Markdown documents are also Page resources. Their browser-facing URLs keep the `.md` extension, including documentation menu destinations:
 
 ```text
-page:/_assets/xshell-docs/pages/10-architecture/100-services.md
+page:/_assets/xshell-docs/<generation>/pages/10-architecture/100-services.md
     → Resolver (page-md, cached Page class by path)
     → page-md → normal Page → mount
-    → configured xshell.ui.component.markdown Component with src="/_assets/xshell-docs/pages/10-architecture/100-services.md"
+    → configured xshell.ui.component.markdown Component with src="/_assets/xshell-docs/<generation>/pages/10-architecture/100-services.md"
     → fetch(src) → Markdown text → rendered DOM
 ```
 
@@ -49,7 +49,7 @@ different policy. Its `src` is a normal browser URL, without a logical resource 
 that browser URL. Each Page instance retains its navigation query while the cached Page class uses the resolved Markdown resource URL.
 
 Relative links and media resolve against `src`. For the example above, `30-modules.md` resolves to
-`/_assets/xshell-docs/pages/10-architecture/30-modules.md`. Query strings and fragments are retained. Links to other Markdown documents stay normal
+`/_assets/xshell-docs/<generation>/pages/10-architecture/30-modules.md`. Query strings and fragments are retained. Links to other Markdown documents stay normal
 `.md` links: the containing `x-page` sends ordinary internal anchors through Navigation and the Page resolver. Fragment-only links such as `#section`,
 explicit protocol URLs such as `https:` or `mailto:`, and protocol-relative URLs (`//example.com/path`) retain native browser behavior. XShell's `#!`
 navigation prefix remains an application link. The component does not navigate directly. See
@@ -63,7 +63,7 @@ the `dependencies` object passed to `controller({ dependencies })`, and whose va
 ```js
 export default {
     dependencies: {
-        marked: "module:/_assets/x/utils/markdown.js",
+        marked: "module:/_assets/x/<generation>/utils/markdown.js",
         fileIcon: "icon:x-file",
         editor: "component:x-code-editor"
     },

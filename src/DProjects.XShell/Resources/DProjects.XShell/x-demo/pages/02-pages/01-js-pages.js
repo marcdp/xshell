@@ -8,9 +8,6 @@ export const contract = {
 
 // export page
 export default {
-    dependencies: {
-        code: "string:/_assets/x-demo/1.0.0.dev/pages/02-pages/01-js-pages.js"
-    },
     style: `
         P.p2 {
             border:1px blue solid; font-weight:bold;
@@ -31,11 +28,12 @@ export default {
     state: {
         content: "This should be the content of the current file"
     },
-    controller({ state, dependencies }) {
+    controller({ state, loader, config }) {
         return {
-            load() {
-               // load
-               state.content = dependencies.code;
+            async load() {
+               // load this Page from the effective x-demo generation
+               const xDemoPath = config.modules["x-demo"].assets.path;
+               state.content = await loader.load(`string:${xDemoPath}/pages/02-pages/01-js-pages.js`);
                
             }
         };

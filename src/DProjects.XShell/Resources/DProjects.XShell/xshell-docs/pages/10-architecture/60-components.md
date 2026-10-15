@@ -246,7 +246,7 @@ is an ordinary XShell resource reference.
 ```js
 export default {
     dependencies: {
-        marked: "module:/_assets/x/utils/markdown.js",
+        marked: "module:/_assets/x/<generation>/utils/markdown.js",
         fileIcon: "icon:x-file",
         editor: "component:x-code-editor"
     },
@@ -505,7 +505,7 @@ sanitize untrusted or user-controlled Markdown according to their own policy bef
 appropriate sanitization policy. CSP is defense in depth and does not replace sanitizing untrusted content.
 
 ```html
-<x-markdown src="/_assets/xshell-docs/pages/10-architecture/100-services.md"></x-markdown>
+<x-markdown src="/_assets/xshell-docs/<generation>/pages/10-architecture/100-services.md"></x-markdown>
 <x-markdown value="This is **Markdown**."></x-markdown>
 ```
 
