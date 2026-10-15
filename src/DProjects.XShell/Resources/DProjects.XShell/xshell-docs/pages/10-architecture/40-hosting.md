@@ -16,18 +16,19 @@ app.UseXShell(new Extensions.Configuration {
         Params = new Dictionary<string, string>()
     },
     Resources = new Extensions.ResourcesConfig {
-        BasePath = ""
+        BasePath = "/_resources/DProjects.XShell",
+        ResourceName = "DProjects.XShell"
     },
     XShell = new Extensions.XShellConfig {
         BasePath = "/_resources/DProjects.XShell/xshell"
     },
     Server = new Extensions.ServerConfig {
         Environment = null,
-        HeaderCSP = "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; ",
+        ContentSecurityPolicy = "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; ",
         UnhandledPrefixes = new[] { "/_", "/api", "/temp" }
     },
     Temp = new Extensions.TempConfig {
-        Path = Path.Combine(Path.GetTempPath(), Extensions.ResourceName, "temp"),
+        Path = Path.Combine(Path.GetTempPath(), "DProjects.XShell", "temp"),
         BasePath = "/temp",
         ExpirationTime = TimeSpan.FromHours(1),
         FileSizeLimit = 100 * 1024 * 1024
@@ -44,17 +45,18 @@ app.Run();
 | `App.BasePath` | `""`; valid root hosting. A nonempty value must be a rooted request path such as `/app`. |
 | `App.ConfigPath` | `""` is a placeholder rejected by `UseXShell()`; supply a nonempty root module configuration path or URL. |
 | `App.Params` | Empty string dictionary; host params become root-module/application params. |
-| `Resources.BasePath` | `""`; prefixes resource middleware route `/_resources/DProjects.XShell`. |
+| `Resources.BasePath` | `""`; passed directly as the resource middleware request path. Empty is allowed and does not create a `/_resources/DProjects.XShell` prefix. For ordinary hosting, set an explicit dedicated rooted path such as `/_resources/DProjects.XShell`. |
+| `Resources.ResourceName` | `"DProjects.XShell"`; selects the physical resource directory under `Resources/` in the XShell project (Development) or assembly output directory (other environments). It does not set a URL prefix. |
 | `XShell.BasePath` | `""` is a placeholder rejected by `UseXShell()`; supply a rooted bootstrap and worker source base. |
 | `Server.Environment` | `null`; use ASP.NET's environment name. An explicit value overrides XShell's own environment and development resource behavior. |
-| `Server.HeaderCSP` | Same-origin default policy, data images allowed, objects disabled; HTML CSP meta value. |
+| `Server.ContentSecurityPolicy` | Same-origin default policy, data images allowed, objects disabled; emitted as an HTML CSP meta element. |
 | `Server.UnhandledPrefixes` | `["/_", "/api", "/temp"]`; unmatched relative paths with these prefixes bypass SPA fallback. |
 | `Temp.Path` | `""` is a placeholder rejected by `UseXShell()`; supply a nonempty physical temporary-file storage root. |
 | `Temp.BasePath` | `/temp`; independent public Temp prefix. |
 | `Temp.ExpirationTime` | One hour. |
 | `Temp.FileSizeLimit` | `104857600` bytes (100 MiB); maximum accepted upload size. |
 
-The default CSP text is:
+The default `Server.ContentSecurityPolicy` text is (the implementation includes a trailing space after the last semicolon):
 
 ```text
 default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self';
@@ -64,6 +66,7 @@ default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; f
 rooted request paths for `Temp.BasePath`, `XShell.BasePath`, and each `Server.UnhandledPrefixes` entry. Nonempty `App.BasePath` and
 `Resources.BasePath` values must also be rooted; empty values remain valid. Temp directory creation remains in `TempMiddleware`.
 `Resources.BasePath`, `XShell.BasePath`, and `Temp.BasePath` are independent, not automatically rebased by `App.BasePath`.
+The bundled `server` command explicitly derives `Resources.BasePath` as `<AppBasePath>/_resources/<ResourcesName>`.
 Set browser runtime paths consistently when changing resource routing.
 The host URL-encodes each `App.Params` key and value, joins them as query text, and HTML-encodes the resulting meta attribute value.
 Generated host HTML attribute values are HTML encoded. This serialization safety does not replace semantic host configuration validation.
@@ -72,10 +75,11 @@ Generated host HTML attribute values are HTML encoded. This serialization safety
 
 1. Resource middleware serves the physical resource tree.
 2. Temp middleware handles its prefix.
-3. The application base redirects to `App.BasePath + "/"`. Paths outside a nonempty application base redirect too unless under the resource base.
+3. A request exactly at `App.BasePath` redirects to `App.BasePath + "/"`. With a nonempty application base, requests outside it also redirect there unless resource or Temp middleware handled them first.
 4. `UseRouting()` selects registered endpoints.
-5. Generated `index.html`/`sw.js` at the application base are returned first; other already-matched endpoints continue.
-6. Remaining requests inside the base receive host HTML unless their relative path starts with an unhandled prefix.
+5. Generated `index.html` and `sw.js` at the application base are returned before matched endpoints; other already-matched endpoints continue through the pipeline.
+6. Unmatched requests inside the base with an unhandled relative prefix continue through the pipeline.
+7. Other unmatched requests inside the base receive the generated host HTML as SPA fallback.
 
 Unhandled matching is case-insensitive textual prefix matching: `/apiary` also matches `/api`.
 SPA fallback has no method filter. Path navigation needs this fallback for friendly-URL reloads.
@@ -101,10 +105,11 @@ compatibility, polyfills, and downlevel builds.
 
 ## Resources and development
 
-XShell uses the effective `Configuration.Sserver.Environment` when supplied, otherwise ASP.NET's environment name. A case-insensitive `Development`
+XShell uses `Server.Environment` when nonempty, otherwise ASP.NET's environment name. A case-insensitive `Development`
 value enables XShell development resources; an explicit `Production` disables them even if the ASP.NET host is Development. This does not modify
 ASP.NET's own environment object.
-Development uses assembly ProjectDirectory metadata to locate `Resources/DProjects.XShell`; other environments use the assembly output directory.
+Development uses assembly `ProjectDirectory` metadata to locate `<project>/Resources/<Resources.ResourceName>`; other environments use
+`<assembly output directory>/Resources/<Resources.ResourceName>`.
 The resource directory must exist.
 
 Development middleware disables caching, serves generated module and XShell descriptor responses with current physical inventories embedded at
@@ -118,12 +123,14 @@ Debugger presence does not select this behavior.
 
 ## Server command
 
-The bundled `server` command hosts resources and the demo. Options include `-a` (app base path), `-c` (app config file path),
-`-e` / `--environment` (XShell environment), repeatable `-p` (params), and `-r` / `--resources-name`. The resource name defaults to
+The bundled `server` command hosts resources and the demo. Options include `-a` / `--app-base-path` (app base path),
+`-c` / `--app-config-path` (app config file path), `-e` / `--environment` (XShell environment), repeatable `-p` / `--param`
+(params), and `-r` / `--resources-name`. The resource name defaults to
 `DProjects.XShell` and selects the logical directory `Resources/<name>/`. For `ResourcesName = "Custom"` and `AppBasePath = "/demo"`, server uses
 `Resources.ResourceName = "Custom"`, `Resources.BasePath = "/demo/_resources/Custom"`, `XShell.BasePath = "/demo/_resources/Custom/xshell"`, and
 the default `App.ConfigPath = "/demo/_resources/Custom/x-demo/module.jsonc"`. An explicit `--app-config-path` is preserved unchanged.
-`ResourcesName` selects bundled source content; it is not a module id, package id, published path, or runtime assets namespace. The default
+`ResourcesName` selects bundled source content. The command separately derives the HTTP resource request path and XShell bootstrap/worker
+source path from that name. It is not a module id, package id, or runtime assets namespace. The default
 application is x-demo; server supplies no application authentication pipeline. Select `Development` for on-demand compilation.
 
 See [Bootstrap](10-bootstrap.md), [Navigation](120-navigation.md), [Packaging](50-packaging.md), [Service Worker](110-service-worker.md), and [Temp](../30-subsystems/50-temp.md).
