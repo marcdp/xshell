@@ -9,7 +9,8 @@ namespace DProjects.XShell.Services {
             var result = new Dictionary<string, string>();
 
             // serialize app params
-            var appParams = string.Join("&", config.App.Params.Select(kv => Uri.EscapeDataString(kv.Key) + "=" + Uri.EscapeDataString(kv.Value)));
+            var appParams = string.Join("&", config.App.Params.Cast<System.Collections.DictionaryEntry>().Select(kv => Uri.EscapeDataString((string)kv.Key) + "=" + Uri.EscapeDataString((string)kv.Value)));
+
 
             // index
             result["/index.html"] = $"""

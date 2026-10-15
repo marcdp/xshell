@@ -2,7 +2,7 @@
     "profiles": {
         "DProjects.XShell server": {
             "commandName": "Project",
-            "commandLineArgs": "server  --app-base-path /prefix --app-config-path /prefix/_resources/DProjects.XShell/x-demo/module.jsonc --environment Development --resources-name DProjects.XShell"
+            "commandLineArgs": "server  --app-base-path /prefix --app-config-path /prefix/_resources/DProjects.XShell/x-demo/module.jsonc --environment Development --resources-name DProjects.XShell --param aaa=123 --param bbb=123123"
         },
         "DProjects.XShell server --environment Production": {
             "commandName": "Project",

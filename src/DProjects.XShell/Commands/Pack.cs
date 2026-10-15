@@ -7,6 +7,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
+using System.Collections.Specialized;
 
 using DProjects.Commands;
 using DProjects.Commands.Attributes;
@@ -41,7 +42,7 @@ namespace DProjects.XShell.Commands {
         [Flag('e', "Bootstrap environment", "")]
         public string Environment { get; init; } = "";
         [Flag('p', "Root module parameter", "")]
-        public string[] Param { get; init; } = [];
+        public StringDictionary Param { get; init; } = new();
         [Flag('r', "Resources name", "DProjects.XShell")]
         public string ResourcesName { get; init; } = "DProjects.XShell";
         [Flag('t', "Temporary file public base path", "")]
@@ -58,12 +59,6 @@ namespace DProjects.XShell.Commands {
             if (string.IsNullOrWhiteSpace(bootstrapEnvironment)) throw new ArgumentException("Environment must be non-empty.");
             var tempBasePath = string.IsNullOrEmpty(TempBasePath) ? AppBasePath + "/temp" : TempBasePath;
             if (!IsRequestBasePath(tempBasePath, false)) throw new ArgumentException("Temp base path must be a non-empty rooted request path starting with '/'.");
-            var parameters = new Dictionary<string, string>(StringComparer.Ordinal);
-            foreach (var parameter in Param) {
-                var separator = parameter.IndexOf('=');
-                if (separator <= 0) throw new ArgumentException($"Parameter '{parameter}' must use key=value.");
-                if (!parameters.TryAdd(parameter[..separator], parameter[(separator + 1)..])) throw new ArgumentException($"Duplicate parameter '{parameter[..separator]}'.");
-            }
             var sourcePath = Path.GetFullPath(Source);
             var outputPath = Path.GetFullPath(Output);
             if (!Directory.Exists(sourcePath)) throw new DirectoryNotFoundException($"Application directory not found: {sourcePath}");
@@ -93,8 +88,7 @@ namespace DProjects.XShell.Commands {
                 var root = framework;
                 if (!hasFramework) {
                     var rootNode = order[^1];
-                    root = await BuildModuleAsync(rootNode, packages, stagingPath, outputPath, cancellationToken,
-                        rootHash => BuildRootStartupFiles(rootNode, framework, rootHash, AppBasePath, bootstrapEnvironment, parameters, tempBasePath));
+                    root = await BuildModuleAsync(rootNode, packages, stagingPath, outputPath, cancellationToken, rootHash => BuildRootStartupFiles(rootNode, framework, rootHash, AppBasePath, bootstrapEnvironment, Param, tempBasePath));
                     packages.Add(root.Id, root);
                 }
                 await ValidateBuiltReferencesAsync(order, packages, stagingPath, cancellationToken);
@@ -253,12 +247,14 @@ namespace DProjects.XShell.Commands {
             return new BuiltPackage(node.Id, node.Version, hash, relativeDirectory, "module.json",
                 canonicalStartupFiles == null ? PackageKind.Module : PackageKind.RootModule);
         }
-        private static Dictionary<string, string> BuildRootStartupFiles(ModuleNode root, BuiltPackage framework, string rootHash, string appBasePath,
-            string environment, Dictionary<string, string> parameters, string tempBasePath) {
+        private static Dictionary<string, string> BuildRootStartupFiles(ModuleNode root, BuiltPackage framework, string rootHash, string appBasePath, string environment, StringDictionary parameters, string tempBasePath) {
             // generate startup resources from structured bootstrap values for canonical and published root representations
             var config = new Extensions.Configuration {
-                App = new Extensions.AppConfig { BasePath = appBasePath,
-                    ConfigPath = $"{appBasePath}/{root.Id}/{root.Version}.{rootHash}/module.json", Params = parameters },
+                    App = new Extensions.AppConfig { BasePath = appBasePath,
+                    ConfigPath = $"{appBasePath}/{root.Id}/{root.Version}.{rootHash}/module.json", 
+                    Params = 
+                    parameters 
+                },
                 XShell = new Extensions.XShellConfig { BasePath = appBasePath + "/" + framework.RelativeDirectory },
                 Temp = new Extensions.TempConfig { BasePath = tempBasePath }
             };

@@ -1,3 +1,5 @@
+using System.Collections.Specialized;
+
 using DProjects.Commands;
 using DProjects.Commands.Attributes;
 using DProjects.XShell.Services;
@@ -19,7 +21,7 @@ namespace DProjects.XShell.Commands {
         [Flag('e', "Environment", "")]
         public string Environment { get; init; } = "";
         [Flag('p', "Parameter", "")]
-        public string[] Param { get; init; } = [];
+        public StringDictionary Param { get; init; } = new();
         [Flag('r', "Resources name", "DProjects.XShell")]
         public string ResourcesName { get; init; } = "DProjects.XShell";
 
@@ -52,7 +54,7 @@ namespace DProjects.XShell.Commands {
                 App = new Extensions.AppConfig {
                     BasePath = AppBasePath,
                     ConfigPath = string.IsNullOrEmpty(AppConfigPath) ? AppBasePath + "/_resources/" + ResourcesName + "/x-demo/module.jsonc" : AppConfigPath,
-                    Params = Param.ToDictionary(p => p.Split('=')[0], p => p.Split('=')[1])
+                    Params = Param
                 },
                 Temp = new Extensions.TempConfig {
                     Path = System.IO.Path.Combine(System.IO.Path.GetTempPath(), ResourcesName, "temp"),
