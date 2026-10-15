@@ -35,7 +35,7 @@ physical resource</code></pre>
         </p>
 
         <p>
-            Expanded module directories are currently supported. ZIP-backed module resource loading is planned but not implemented.
+            Module resources may be backed by expanded directories or ZIP packages. Application code continues to use the stable logical namespace above.
         </p>
 
         <h3>Current x-demo resource mapping</h3>

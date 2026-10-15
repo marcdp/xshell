@@ -252,13 +252,13 @@ dotnet run --project src/DProjects.XShell -- server
 The documentation is itself an XShell Module:
 
 ```text
-Resources/DProjects.XShell/xshell-docs/
+src/DProjects.XShell/Resources/DProjects.XShell/xshell-docs/
 ```
 
 Start here:
 
 ```text
-Resources/DProjects.XShell/xshell-docs/pages/index.md
+src/DProjects.XShell/Resources/DProjects.XShell/xshell-docs/pages/index.md
 ```
 
 It covers architecture, Components, Pages, subsystems, extensions, specifications, and ADRs.
