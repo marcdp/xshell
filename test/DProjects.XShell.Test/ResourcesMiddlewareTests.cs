@@ -164,6 +164,21 @@ namespace DProjects.XShell.Test {
             Assert.Equal(0, response.NextCalls);
         }
         [Fact]
+        public async Task DevelopmentHtmlSfc_HeadCompilesAtJavaScriptPathWithoutBody() {
+            using var workspace = new TemporaryDirectory();
+            workspace.Write("resources/demo/module.jsonc", ModuleDescriptor);
+            workspace.Write("resources/demo/component.html", "<template><p>Héllo</p></template>");
+
+            var root = workspace.PathFor("resources");
+            var get = await SendAsync(root, "/_resources/demo/component.js", isDevelopment: true);
+            var head = await SendAsync(root, "/_resources/demo/component.js", isDevelopment: true, method: HttpMethods.Head);
+
+            Assert.Equal(StatusCodes.Status200OK, get.StatusCode);
+            Assert.Contains("Héllo", get.Text);
+            Assert.StartsWith("application/javascript", get.ContentType, StringComparison.OrdinalIgnoreCase);
+            AssertCompiledHeadMatchesGet(get, head);
+        }
+        [Fact]
         public async Task DevelopmentHtmlSfc_IsNotServedAtAuthoredPath() {
             using var workspace = new TemporaryDirectory();
             workspace.Write("resources/demo/module.jsonc", ModuleDescriptor);
@@ -205,6 +220,22 @@ namespace DProjects.XShell.Test {
             Assert.Equal(0, response.NextCalls);
         }
         [Fact]
+        public async Task DevelopmentJavaScript_HeadHasGetHeadersWithoutBody() {
+            using var workspace = new TemporaryDirectory();
+            workspace.Write("resources/demo/module.jsonc", ModuleDescriptor);
+            workspace.Write("resources/demo/component.js", "export default { meta: { renderEngine: 'html' }, label: 'café' };");
+
+            var root = workspace.PathFor("resources");
+            var get = await SendAsync(root, "/_resources/demo/component.js", isDevelopment: true);
+            var head = await SendAsync(root, "/_resources/demo/component.js", isDevelopment: true, method: HttpMethods.Head);
+
+            Assert.Equal(StatusCodes.Status200OK, get.StatusCode);
+            Assert.Contains("café", get.Text);
+            Assert.True(get.Body.Length > get.Text.Length);
+            Assert.StartsWith("application/javascript", get.ContentType, StringComparison.OrdinalIgnoreCase);
+            AssertCompiledHeadMatchesGet(get, head);
+        }
+        [Fact]
         public async Task DevelopmentCss_CompilesRelativeResourceUrl() {
             using var workspace = new TemporaryDirectory();
             workspace.Write("resources/demo/module.jsonc", ModuleDescriptor);
@@ -217,6 +248,39 @@ namespace DProjects.XShell.Test {
             Assert.Contains("url('/image.png')", response.Text);
             AssertNoCache(response);
             Assert.Equal(0, response.NextCalls);
+        }
+        [Fact]
+        public async Task DevelopmentCss_HeadHasGetHeadersWithoutBody() {
+            using var workspace = new TemporaryDirectory();
+            workspace.Write("resources/demo/module.jsonc", ModuleDescriptor);
+            workspace.Write("resources/demo/styles/site.css", ".café { background: url('../image.png'); }");
+
+            var root = workspace.PathFor("resources");
+            var get = await SendAsync(root, "/_resources/demo/styles/site.css", isDevelopment: true);
+            var head = await SendAsync(root, "/_resources/demo/styles/site.css", isDevelopment: true, method: HttpMethods.Head);
+
+            Assert.Equal(StatusCodes.Status200OK, get.StatusCode);
+            Assert.Contains("url('/image.png')", get.Text);
+            Assert.StartsWith("text/css", get.ContentType, StringComparison.OrdinalIgnoreCase);
+            AssertCompiledHeadMatchesGet(get, head);
+        }
+        [Theory]
+        [InlineData("POST", "/_resources/demo/component.js")]
+        [InlineData("PUT", "/_resources/demo/styles/site.css")]
+        [InlineData("POST", "/_resources/demo/component.html")]
+        public async Task DevelopmentCompiler_OtherMethodsContinueDownstream(string method, string requestPath) {
+            using var workspace = new TemporaryDirectory();
+            workspace.Write("resources/demo/module.jsonc", ModuleDescriptor);
+            workspace.Write("resources/demo/component.js", "export default { label: 'compiled' };");
+            workspace.Write("resources/demo/component.html", "<template><p>Source</p></template>");
+            workspace.Write("resources/demo/styles/site.css", ".card { color: red; }");
+
+            var response = await SendAsync(workspace.PathFor("resources"), requestPath, isDevelopment: true, method: method);
+
+            Assert.Equal(StatusCodes.Status204NoContent, response.StatusCode);
+            Assert.Equal(1, response.NextCalls);
+            Assert.Empty(response.Body);
+            Assert.Null(response.ContentType);
         }
         [Fact]
         public async Task DevelopmentResourceWithoutModuleDescriptor_UsesStaticFileStage() {
@@ -300,6 +364,17 @@ namespace DProjects.XShell.Test {
             Assert.Contains("must-revalidate", directives);
             Assert.Equal("no-cache", response.Headers.Pragma.ToString());
             Assert.Equal("0", response.Headers.Expires.ToString());
+        }
+        private static void AssertCompiledHeadMatchesGet(MiddlewareResponse get, MiddlewareResponse head) {
+            Assert.Equal(get.StatusCode, head.StatusCode);
+            Assert.Equal(get.ContentType, head.ContentType);
+            Assert.Equal(get.Body.Length, get.Headers.ContentLength);
+            Assert.Equal(get.Body.Length, head.Headers.ContentLength);
+            Assert.Empty(head.Body);
+            AssertNoCache(get);
+            AssertNoCache(head);
+            Assert.Equal(0, get.NextCalls);
+            Assert.Equal(0, head.NextCalls);
         }
         private static InventoryEntry[] ReadInventory(JsonElement inventory) {
             return inventory.EnumerateArray().Select(item => new InventoryEntry(

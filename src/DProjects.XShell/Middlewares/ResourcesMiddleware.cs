@@ -83,6 +83,10 @@ namespace DProjects.XShell.Middlewares {
             // compile module resources during development
             if (isDevelopment) {
                 app.Use(async (context, nextMiddleware) => {
+                    if (!HttpMethods.IsGet(context.Request.Method) && !HttpMethods.IsHead(context.Request.Method)) {
+                        await nextMiddleware();
+                        return;
+                    }
                     if (!context.Request.Path.StartsWithSegments(requestPath, out var remaining)) {
                         await nextMiddleware();
                         return;
@@ -147,9 +151,11 @@ namespace DProjects.XShell.Middlewares {
                     // compile to js
                     var fileContent = await new Services.ModuleFileCompiler().CompileAsync(moduleJson, file, context.RequestAborted);
                     // return response
+                    var bytes = Encoding.UTF8.GetBytes(fileContent.Content);
                     SetNoCacheHeaders(context.Response);
                     context.Response.ContentType = fileContent.ContentType;
-                    await context.Response.WriteAsync(fileContent.Content);
+                    context.Response.ContentLength = bytes.Length;
+                    if (!HttpMethods.IsHead(context.Request.Method)) await context.Response.Body.WriteAsync(bytes, context.RequestAborted);
                 });
             }
 
