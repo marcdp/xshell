@@ -1,0 +1,280 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://xshell.dev/schemas/x-schema.schema.json",
+  "title": "X-Schema",
+  "description": "Declarative specification for rendering and editing structured object values in XShell.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "types", "root"],
+  "properties": {
+    "version": { "type": "string", "const": "0" },
+    "types": {
+      "type": "object",
+      "description": "Named reusable or recursive object type definitions.",
+      "additionalProperties": { "$ref": "#/$defs/objectType" }
+    },
+    "root": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Name of the root object type declared in types."
+    },
+    "meta": { "$ref": "#/$defs/meta" }
+  },
+
+  "$defs": {
+    "node": {
+      "oneOf": [
+        { "$ref": "#/$defs/objectReference" },
+        { "$ref": "#/$defs/fieldNode" },
+        { "$ref": "#/$defs/objectNode" },
+        { "$ref": "#/$defs/arrayNode" },
+        { "$ref": "#/$defs/containerNode" }
+      ]
+    },
+
+    "objectReference": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type"],
+      "properties": {
+        "type": { "type": "string", "minLength": 1, "description": "Name of an object type declared in the top-level types registry." },
+        "bind": { "$ref": "#/$defs/bind" },
+        "optional": { "type": "boolean", "default": false },
+        "props": { "$ref": "#/$defs/properties" },
+        "conditions": { "$ref": "#/$defs/conditions" },
+        "create": true,
+        "meta": { "$ref": "#/$defs/meta" }
+      }
+    },
+
+    "objectType": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "children"],
+      "properties": {
+        "kind": { "const": "object" },
+        "description": { "type": "string" },
+        "tag": { "type": "string", "minLength": 1 },
+        "attrs": { "$ref": "#/$defs/attributes" },
+        "props": { "$ref": "#/$defs/properties" },
+        "children": { "$ref": "#/$defs/children" },
+        "create": true,
+        "conditions": { "$ref": "#/$defs/conditions" },
+        "meta": { "$ref": "#/$defs/meta" }
+      }
+    },
+
+    "objectNode": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "children"],
+      "properties": {
+        "kind": { "const": "object" },
+        "bind": { "$ref": "#/$defs/bind" },
+        "optional": { "type": "boolean", "default": false },
+        "description": { "type": "string" },
+        "tag": { "type": "string", "minLength": 1 },
+        "attrs": { "$ref": "#/$defs/attributes" },
+        "props": { "$ref": "#/$defs/properties" },
+        "children": { "$ref": "#/$defs/children" },
+        "create": true,
+        "conditions": { "$ref": "#/$defs/conditions" },
+        "meta": { "$ref": "#/$defs/meta" }
+      }
+    },
+
+    "fieldNode": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind"],
+      "properties": {
+        "kind": { "const": "field" },
+        "bind": { "$ref": "#/$defs/bind" },
+        "optional": { "type": "boolean", "default": false },
+        "description": { "type": "string" },
+        "dataType": { "$ref": "#/$defs/dataType" },
+        "tag": { "type": "string", "minLength": 1 },
+        "attrs": { "$ref": "#/$defs/attributes" },
+        "props": { "$ref": "#/$defs/properties" },
+        "default": true,
+        "reference": { "$ref": "#/$defs/dataReference" },
+        "conditions": { "$ref": "#/$defs/conditions" },
+        "meta": { "$ref": "#/$defs/meta" }
+      }
+    },
+
+    "arrayNode": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "item"],
+      "properties": {
+        "kind": { "const": "array" },
+        "bind": { "$ref": "#/$defs/bind" },
+        "optional": { "type": "boolean", "default": false },
+        "description": { "type": "string" },
+        "tag": { "type": "string", "minLength": 1 },
+        "attrs": { "$ref": "#/$defs/attributes" },
+        "props": { "$ref": "#/$defs/properties" },
+        "item": { "$ref": "#/$defs/node" },
+        "array": { "$ref": "#/$defs/arrayOptions" },
+        "default": { "type": "array" },
+        "conditions": { "$ref": "#/$defs/conditions" },
+        "meta": { "$ref": "#/$defs/meta" }
+      }
+    },
+
+    "containerNode": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "tag", "children"],
+      "properties": {
+        "kind": { "const": "container" },
+        "bind": { "$ref": "#/$defs/bind" },
+        "description": { "type": "string" },
+        "tag": { "type": "string", "minLength": 1 },
+        "attrs": { "$ref": "#/$defs/attributes" },
+        "props": { "$ref": "#/$defs/properties" },
+        "children": { "$ref": "#/$defs/children" },
+        "conditions": { "$ref": "#/$defs/conditions" },
+        "meta": { "$ref": "#/$defs/meta" }
+      }
+    },
+
+    "children": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/node" }
+    },
+
+    "bind": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Path relative to the current data context. Scoped paths may use $current, $parent or $root."
+    },
+
+    "dataType": {
+      "enum": ["string", "number", "integer", "boolean", "date", "datetime", "time", "object", "array", "any"]
+    },
+
+    "arrayOptions": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "allowAdd": { "type": "boolean", "default": true },
+        "allowRemove": { "type": "boolean", "default": true },
+        "allowMove": { "type": "boolean", "default": false },
+        "minItems": { "type": "integer", "minimum": 0 },
+        "maxItems": { "type": "integer", "minimum": 0 }
+      }
+    },
+
+    "conditions": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "visible": { "$ref": "#/$defs/condition" },
+        "hidden": { "$ref": "#/$defs/condition" },
+        "enabled": { "$ref": "#/$defs/condition" },
+        "disabled": { "$ref": "#/$defs/condition" },
+        "readonly": { "$ref": "#/$defs/condition" },
+        "required": { "$ref": "#/$defs/condition" }
+      }
+    },
+
+    "condition": {
+      "oneOf": [
+        { "$ref": "#/$defs/pathCondition" },
+        { "$ref": "#/$defs/allCondition" },
+        { "$ref": "#/$defs/anyCondition" },
+        { "$ref": "#/$defs/notCondition" }
+      ]
+    },
+
+    "pathCondition": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path"],
+      "minProperties": 2,
+      "properties": {
+        "path": { "type": "string", "minLength": 1 },
+        "equals": true,
+        "notEquals": true,
+        "exists": { "type": "boolean" },
+        "in": { "type": "array" },
+        "notIn": { "type": "array" },
+        "greaterThan": { "type": ["number", "string"] },
+        "greaterThanOrEqual": { "type": ["number", "string"] },
+        "lessThan": { "type": ["number", "string"] },
+        "lessThanOrEqual": { "type": ["number", "string"] }
+      }
+    },
+
+    "allCondition": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["all"],
+      "properties": {
+        "all": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/condition" } }
+      }
+    },
+
+    "anyCondition": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["any"],
+      "properties": {
+        "any": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/condition" } }
+      }
+    },
+
+    "notCondition": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["not"],
+      "properties": {
+        "not": { "$ref": "#/$defs/condition" }
+      }
+    },
+
+    "dataReference": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source"],
+      "properties": {
+        "source": {
+          "oneOf": [
+            { "type": "string", "minLength": 1, "description": "Local scoped source such as $root.countries." },
+            { "$ref": "#/$defs/externalReferenceSource" }
+          ]
+        },
+        "key": { "type": "string", "minLength": 1 },
+        "label": { "type": "string", "minLength": 1 }
+      }
+    },
+
+    "externalReferenceSource": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind"],
+      "properties": {
+        "kind": { "enum": ["entity", "resource"] },
+        "name": { "type": "string", "minLength": 1 },
+        "resource": { "type": "string", "minLength": 1 }
+      }
+    },
+
+    "attributes": {
+      "type": "object",
+      "additionalProperties": { "type": ["string", "number", "boolean", "null"] }
+    },
+
+    "properties": {
+      "type": "object",
+      "additionalProperties": true
+    },
+
+    "meta": {
+      "type": "object",
+      "additionalProperties": true
+    }
+  }
+}
