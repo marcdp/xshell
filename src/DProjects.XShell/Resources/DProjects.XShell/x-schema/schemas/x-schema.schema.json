@@ -9,18 +9,14 @@
   "properties": {
     "version": { "type": "string", "const": "0" },
     "meta": { "$ref": "#/$defs/meta" },
-    "root": {
-      "type": "string",
-      "minLength": 1,
-      "description": "Name of the root object type declared in types."
-    },
+    "root": { "type": "string", "minLength": 1, "description": "Name of the root object type declared in types." },
     "types": {
       "type": "object",
       "description": "Named reusable or recursive object type definitions.",
       "additionalProperties": { "$ref": "#/$defs/objectType" }
     }
   },
-  
+
   "$defs": {
     "node": {
       "oneOf": [
@@ -39,7 +35,7 @@
       "properties": {
         "type": { "type": "string", "minLength": 1, "description": "Name of an object type declared in the top-level types registry." },
         "bind": { "$ref": "#/$defs/bind" },
-        "optional": { "type": "boolean", "default": false },
+        "required": { "$ref": "#/$defs/requiredState" },
         "attrs": { "$ref": "#/$defs/attributes" },
         "props": { "$ref": "#/$defs/properties" },
         "conditions": { "$ref": "#/$defs/conditions" },
@@ -72,7 +68,7 @@
       "properties": {
         "kind": { "const": "object" },
         "bind": { "$ref": "#/$defs/bind" },
-        "optional": { "type": "boolean", "default": false },
+        "required": { "$ref": "#/$defs/requiredState" },
         "description": { "type": "string" },
         "tag": { "type": "string", "minLength": 1 },
         "attrs": { "$ref": "#/$defs/attributes" },
@@ -91,7 +87,7 @@
       "properties": {
         "kind": { "const": "field" },
         "bind": { "$ref": "#/$defs/bind" },
-        "optional": { "type": "boolean", "default": false },
+        "required": { "$ref": "#/$defs/requiredState" },
         "description": { "type": "string" },
         "dataType": { "$ref": "#/$defs/dataType" },
         "tag": { "type": "string", "minLength": 1 },
@@ -111,7 +107,7 @@
       "properties": {
         "kind": { "const": "array" },
         "bind": { "$ref": "#/$defs/bind" },
-        "optional": { "type": "boolean", "default": false },
+        "required": { "$ref": "#/$defs/requiredState" },
         "description": { "type": "string" },
         "tag": { "type": "string", "minLength": 1 },
         "attrs": { "$ref": "#/$defs/attributes" },
@@ -130,7 +126,6 @@
       "required": ["kind", "tag", "children"],
       "properties": {
         "kind": { "const": "container" },
-        "bind": { "$ref": "#/$defs/bind" },
         "description": { "type": "string" },
         "tag": { "type": "string", "minLength": 1 },
         "attrs": { "$ref": "#/$defs/attributes" },
@@ -150,6 +145,12 @@
       "type": "string",
       "minLength": 1,
       "description": "Path relative to the current data context. Scoped paths may use $current, $parent or $root."
+    },
+
+    "requiredState": {
+      "type": "boolean",
+      "default": false,
+      "description": "Static required state for the bound value. A conditions.required rule, when present, dynamically overrides this state."
     },
 
     "dataType": {
@@ -240,7 +241,7 @@
     "dataReference": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["source"],
+      "required": ["source", "key", "label"],
       "properties": {
         "source": {
           "oneOf": [
@@ -248,8 +249,8 @@
             { "$ref": "#/$defs/externalReferenceSource" }
           ]
         },
-        "key": { "type": "string", "minLength": 1 },
-        "label": { "type": "string", "minLength": 1 }
+        "key": { "type": "string", "minLength": 1, "description": "Property containing the value stored by the field." },
+        "label": { "type": "string", "minLength": 1, "description": "Property containing the human-readable label presented to the user." }
       }
     },
 
@@ -299,4 +300,3 @@
     }
   }
 }
-
