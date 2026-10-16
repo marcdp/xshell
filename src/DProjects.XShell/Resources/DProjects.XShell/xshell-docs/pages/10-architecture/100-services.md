@@ -8,7 +8,7 @@ concrete ES module class selected by `xshell.services`.
     "services": {
         "toast": {
             "contract": "toast",
-            "implementation": "/_assets/x/<generation>/services/toast-default.js"
+            "implementation": "/services/toast-default.js"
         }
     }
 }

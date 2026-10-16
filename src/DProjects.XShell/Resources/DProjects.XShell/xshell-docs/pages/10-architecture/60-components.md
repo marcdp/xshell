@@ -246,7 +246,7 @@ is an ordinary XShell resource reference.
 ```js
 export default {
     dependencies: {
-        marked: "module:/_assets/x/<generation>/utils/markdown.js",
+        marked: "module:/utils/markdown.js",
         fileIcon: "icon:x-file",
         editor: "component:x-code-editor"
     },

@@ -11,7 +11,7 @@ A custom rule may use this nested shape:
     "xshell": {
         "resolver": {
             "icon": {
-                "x-{name}": { "src": "/_assets/x/<generation>/icons/x-{name}.svg", "loader": "icon-svg" }
+                "x-{name}": { "src": "/icons/x-{name}.svg", "loader": "icon-svg" }
             }
         }
     }
