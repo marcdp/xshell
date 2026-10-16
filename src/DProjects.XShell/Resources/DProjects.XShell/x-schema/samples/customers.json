@@ -21,8 +21,8 @@
 
         {
           "kind": "object",
-          "bind": "customer",
-          "optional": true,
+          "bind": "customer",          
+          "required": true,
           "props": { "label": "Customer" },
           "create": { "name": "", "email": "" },
           "children": [
@@ -30,6 +30,7 @@
               "kind": "field",
               "bind": "name",
               "dataType": "string",
+              "required": true,
               "tag": "x-datafield",
               "props": { "type": "text", "label": "Name" },
               "default": ""
@@ -38,6 +39,7 @@
               "kind": "field",
               "bind": "email",
               "dataType": "string",
+              "required": true,
               "tag": "x-datafield",
               "props": { "type": "email", "label": "Email" },
               "default": "",
