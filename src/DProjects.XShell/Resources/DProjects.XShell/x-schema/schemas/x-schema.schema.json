@@ -5,22 +5,22 @@
   "description": "Declarative specification for rendering and editing structured object values in XShell.",
   "type": "object",
   "additionalProperties": false,
-  "required": ["version", "types", "root"],
+  "required": ["version", "meta", "types", "root"],
   "properties": {
     "version": { "type": "string", "const": "0" },
-    "types": {
-      "type": "object",
-      "description": "Named reusable or recursive object type definitions.",
-      "additionalProperties": { "$ref": "#/$defs/objectType" }
-    },
+    "meta": { "$ref": "#/$defs/meta" },
     "root": {
       "type": "string",
       "minLength": 1,
       "description": "Name of the root object type declared in types."
     },
-    "meta": { "$ref": "#/$defs/meta" }
+    "types": {
+      "type": "object",
+      "description": "Named reusable or recursive object type definitions.",
+      "additionalProperties": { "$ref": "#/$defs/objectType" }
+    }
   },
-
+  
   "$defs": {
     "node": {
       "oneOf": [
@@ -40,9 +40,10 @@
         "type": { "type": "string", "minLength": 1, "description": "Name of an object type declared in the top-level types registry." },
         "bind": { "$ref": "#/$defs/bind" },
         "optional": { "type": "boolean", "default": false },
+        "attrs": { "$ref": "#/$defs/attributes" },
         "props": { "$ref": "#/$defs/properties" },
         "conditions": { "$ref": "#/$defs/conditions" },
-        "create": true,
+        "create": { "$ref": "#/$defs/jsonValue" },
         "meta": { "$ref": "#/$defs/meta" }
       }
     },
@@ -58,7 +59,7 @@
         "attrs": { "$ref": "#/$defs/attributes" },
         "props": { "$ref": "#/$defs/properties" },
         "children": { "$ref": "#/$defs/children" },
-        "create": true,
+        "create": { "$ref": "#/$defs/jsonValue" },
         "conditions": { "$ref": "#/$defs/conditions" },
         "meta": { "$ref": "#/$defs/meta" }
       }
@@ -77,7 +78,7 @@
         "attrs": { "$ref": "#/$defs/attributes" },
         "props": { "$ref": "#/$defs/properties" },
         "children": { "$ref": "#/$defs/children" },
-        "create": true,
+        "create": { "$ref": "#/$defs/jsonValue" },
         "conditions": { "$ref": "#/$defs/conditions" },
         "meta": { "$ref": "#/$defs/meta" }
       }
@@ -96,7 +97,7 @@
         "tag": { "type": "string", "minLength": 1 },
         "attrs": { "$ref": "#/$defs/attributes" },
         "props": { "$ref": "#/$defs/properties" },
-        "default": true,
+        "default": { "$ref": "#/$defs/jsonValue" },
         "reference": { "$ref": "#/$defs/dataReference" },
         "conditions": { "$ref": "#/$defs/conditions" },
         "meta": { "$ref": "#/$defs/meta" }
@@ -194,13 +195,14 @@
       "additionalProperties": false,
       "required": ["path"],
       "minProperties": 2,
+      "description": "Condition evaluated against one path. When multiple comparison operators are present, all of them must evaluate to true.",
       "properties": {
         "path": { "type": "string", "minLength": 1 },
-        "equals": true,
-        "notEquals": true,
+        "equals": { "$ref": "#/$defs/jsonValue" },
+        "notEquals": { "$ref": "#/$defs/jsonValue" },
         "exists": { "type": "boolean" },
-        "in": { "type": "array" },
-        "notIn": { "type": "array" },
+        "in": { "type": "array", "items": { "$ref": "#/$defs/jsonValue" } },
+        "notIn": { "type": "array", "items": { "$ref": "#/$defs/jsonValue" } },
         "greaterThan": { "type": ["number", "string"] },
         "greaterThanOrEqual": { "type": ["number", "string"] },
         "lessThan": { "type": ["number", "string"] },
@@ -252,29 +254,49 @@
     },
 
     "externalReferenceSource": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["kind"],
-      "properties": {
-        "kind": { "enum": ["entity", "resource"] },
-        "name": { "type": "string", "minLength": 1 },
-        "resource": { "type": "string", "minLength": 1 }
-      }
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "name"],
+          "properties": {
+            "kind": { "const": "entity" },
+            "name": { "type": "string", "minLength": 1 }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "resource"],
+          "properties": {
+            "kind": { "const": "resource" },
+            "resource": { "type": "string", "minLength": 1 }
+          }
+        }
+      ]
     },
 
     "attributes": {
       "type": "object",
+      "description": "DOM attributes applied to the rendered component.",
       "additionalProperties": { "type": ["string", "number", "boolean", "null"] }
     },
 
     "properties": {
       "type": "object",
+      "description": "DOM/Web Component properties applied directly to the rendered component.",
       "additionalProperties": true
     },
 
     "meta": {
       "type": "object",
+      "description": "Compiler, source or diagnostic metadata ignored by normal rendering.",
       "additionalProperties": true
+    },
+
+    "jsonValue": {
+      "description": "Any valid JSON value."
     }
   }
 }
+

@@ -2,86 +2,106 @@
   "version": "0",
   "meta": {
     "name": "Example X-Schema",
-    "description": "Example object editor schema with reusable types, nested objects, arrays, conditions, defaults and references."
+    "description": "Example object editor schema with reusable object types, nested objects, arrays, conditions, defaults and references."
   },
-  "root": { "type": "Root" },
+  "root": "Root",
 
   "types": {
     "Root": {
       "kind": "object",
       "children": [
-        { "bind": "advanced", "type": "BooleanField", "props": { "label": "Advanced mode" } },
-        { "bind": "customer", "type": "Customer", "optional": true, "props": { "label": "Customer" } },
-        { "bind": "addresses", "type": "AddressList", "props": { "label": "Addresses" } }
-      ]
-    },
-
-    "BooleanField": {
-      "kind": "field",
-      "dataType": "boolean",
-      "tag": "x-datafield",
-      "props": { "type": "checkbox" },
-      "default": false
-    },
-
-    "TextField": {
-      "kind": "field",
-      "dataType": "string",
-      "tag": "x-datafield",
-      "props": { "type": "text" },
-      "default": ""
-    },
-
-    "Customer": {
-      "kind": "object",
-      "create": { "name": "", "email": "" },
-      "children": [
-        { "bind": "name", "type": "TextField", "props": { "label": "Name" }, "conditions": { "required": { "path": "$current.name", "exists": true } } },
         {
-          "bind": "email",
-          "type": "TextField",
-          "props": { "label": "Email" },
-          "conditions": { "visible": { "path": "$root.advanced", "equals": true } }
+          "kind": "field",
+          "bind": "advanced",
+          "dataType": "boolean",
+          "tag": "x-datafield",
+          "props": { "type": "checkbox", "label": "Advanced mode" },
+          "default": false
+        },
+
+        {
+          "kind": "object",
+          "bind": "customer",
+          "optional": true,
+          "props": { "label": "Customer" },
+          "create": { "name": "", "email": "" },
+          "children": [
+            {
+              "kind": "field",
+              "bind": "name",
+              "dataType": "string",
+              "tag": "x-datafield",
+              "props": { "type": "text", "label": "Name" },
+              "default": ""
+            },
+            {
+              "kind": "field",
+              "bind": "email",
+              "dataType": "string",
+              "tag": "x-datafield",
+              "props": { "type": "email", "label": "Email" },
+              "default": "",
+              "conditions": { "visible": { "path": "$root.advanced", "equals": true } }
+            }
+          ]
+        },
+
+        {
+          "kind": "array",
+          "bind": "addresses",
+          "props": { "label": "Addresses" },
+          "item": { "type": "Address" },
+          "array": { "allowAdd": true, "allowRemove": true, "allowMove": true, "minItems": 0, "maxItems": 10 },
+          "default": []
+        },
+
+        {
+          "kind": "container",
+          "tag": "x-panel",
+          "props": { "label": "Advanced" },
+          "conditions": { "visible": { "path": "$root.advanced", "equals": true } },
+          "children": [
+            {
+              "kind": "field",
+              "bind": "notes",
+              "dataType": "string",
+              "tag": "x-datafield",
+              "props": { "type": "textarea", "label": "Notes" },
+              "default": ""
+            }
+          ]
         }
       ]
-    },
-
-    "AddressList": {
-      "kind": "array",
-      "item": { "type": "Address" },
-      "array": { "allowAdd": true, "allowRemove": true, "allowMove": true, "minItems": 0, "maxItems": 10 },
-      "default": []
     },
 
     "Address": {
       "kind": "object",
       "create": { "street": "", "city": "", "countryId": null },
       "children": [
-        { "bind": "street", "type": "TextField", "props": { "label": "Street" } },
-        { "bind": "city", "type": "TextField", "props": { "label": "City" } },
         {
+          "kind": "field",
+          "bind": "street",
+          "dataType": "string",
+          "tag": "x-datafield",
+          "props": { "type": "text", "label": "Street" },
+          "default": ""
+        },
+        {
+          "kind": "field",
+          "bind": "city",
+          "dataType": "string",
+          "tag": "x-datafield",
+          "props": { "type": "text", "label": "City" },
+          "default": ""
+        },
+        {
+          "kind": "field",
           "bind": "countryId",
-          "type": "CountryField",
-          "props": { "label": "Country" },
+          "dataType": "string",
+          "tag": "x-datafield",
+          "props": { "type": "select", "label": "Country" },
           "reference": { "source": "$root.countries", "key": "id", "label": "name" }
         }
-      ]
-    },
-
-    "CountryField": {
-      "kind": "field",
-      "dataType": "string",
-      "tag": "x-datafield",
-      "props": { "type": "select" }
-    },
-
-    "AdvancedPanel": {
-      "kind": "container",
-      "tag": "x-panel",
-      "props": { "label": "Advanced" },
-      "conditions": { "visible": { "path": "$root.advanced", "equals": true } },
-      "children": [
-        { "bind": "customer", "type": "Customer" }
       ]
     }
   }
