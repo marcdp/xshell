@@ -10,15 +10,21 @@ from pathlib import Path
 # **************
 @command()
 def test():
-    # execute "dotnet test"
-    test_dotnet()
-    test_node()
+    dotnet_result = test_dotnet()
+    node_result = test_node()
+    return 0 if dotnet_result == 0 and node_result == 0 else 1
 
 @command()
 def test_dotnet():
     # execute "dotnet test"
     print("Running dotnet tests...")
-    subprocess.run(["dotnet", "test"])
+    try:
+        result = subprocess.run(["dotnet", "test"], check=False)
+    except OSError as error:
+        print(f"Unable to run dotnet tests: {error}", file=sys.stderr)
+        return 1
+
+    return result.returncode
 
 @command()
 def test_node():
@@ -32,15 +38,19 @@ def test_node():
 
     for test_file in test_files:
         print(f"\n=== {test_file.name} ===", flush=True)
-        result = subprocess.run(
-            [
-                "node",
-                "--test",
-                "--test-reporter=spec",
-                str(test_file),
-            ],
-            check=False,
-        )
+        try:
+            result = subprocess.run(
+                [
+                    "node",
+                    "--test",
+                    "--test-reporter=spec",
+                    str(test_file),
+                ],
+                check=False,
+            )
+        except OSError as error:
+            print(f"Unable to run node tests: {error}", file=sys.stderr)
+            return 1
 
         if result.returncode != 0:
             failed_files.append(test_file)
@@ -52,12 +62,14 @@ def test_node():
         return 1
 
     print(f"\nAll {len(test_files)} test files passed.")
+    return 0
     
 
 # ***************
 # **  Execute  **
 # ***************
-commandsManager = CommandsManager()
-commandsManager.register()
-commandsManager.register(GitManager())
-commandsManager.execute(sys.argv)
+if __name__ == "__main__":
+    commandsManager = CommandsManager()
+    commandsManager.register()
+    commandsManager.register(GitManager())
+    sys.exit(commandsManager.execute(sys.argv))
