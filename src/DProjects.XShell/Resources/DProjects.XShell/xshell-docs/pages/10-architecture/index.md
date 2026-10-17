@@ -66,6 +66,7 @@ current state. Operational APIs such as `services.resolve(...)` and `loader.load
 - [Pages](70-pages.md) — Pages and layouts.
 - [Resolvers](80-resolvers.md) — Logical resource resolution.
 - [Loaders](90-loaders.md) — Resource loading.
+- [DataSets](95-datasets.md) — Static, URL, and module-owned tabular JSON resources.
 - [Services](100-services.md) — Contracts, configured implementations, immutable registry topology, and lazy singleton resolution.
 - [Service Worker](110-service-worker.md) — Resource virtualization.
 - [Navigation](120-navigation.md) — Hash and path navigation plus Area context.

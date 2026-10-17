@@ -523,6 +523,16 @@ function fillResolverRules(config) {
             modulePath: moduleAssetsPath
         };
 
+        resolver.dataset ??= {};
+        resolver.dataset[`${moduleId}:{path}`] ??= {
+            src: `${moduleAssetsPath}/datasets/{path}.json`,
+            loader: "dataset-url",
+            cache: false,
+            moduleId,
+            modulePath: moduleAssetsPath
+        };
+
+
         resolver.contract ??= {};
 
         for (const file of module.files ?? []) {

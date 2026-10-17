@@ -191,3 +191,10 @@ instead of rendering a navigation anchor; that menu presentation option is separ
 
 The effective schema requires complete module defaults, source locations, and generated `files`/`assets.path` metadata.
 Bootstrap enriches the object before schema validation. See [Packaging](../10-architecture/50-packaging.md).
+
+## Module-owned DataSets
+
+JSON DataSets stored under a module's `/datasets` directory are addressable through extensionless `dataset:<module-id>:<path>` logical resources.
+Bootstrap generates the resolver rule from the canonical module definition and maps nested logical paths into the module's versioned assets. This
+convention does not add a declarative `datasets` field to module configuration. See [DataSets](../10-architecture/95-datasets.md) and the
+[DataSet JSON specification](dataset.md).

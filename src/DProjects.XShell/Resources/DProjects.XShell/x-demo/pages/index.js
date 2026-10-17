@@ -21,7 +21,7 @@ export default {
             async load(params) {
                // load
                //var aux = await loader.load("dataset:static:a=1|b=2|c=3");
-               var aux = await loader.load("dataset:url:/datasets/countries.json");
+               var aux = await loader.load("dataset:x-demo:countries");
 
                debugger;
                alert(JSON.stringify(aux))

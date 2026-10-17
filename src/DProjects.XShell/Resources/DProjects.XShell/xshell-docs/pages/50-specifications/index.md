@@ -27,3 +27,4 @@ See [Configuration](../10-architecture/20-configuration.md) and [ADR-0002](../60
 [Component Contract](../20-components/10-manifest.md) describes `component.contract.schema.json`.
 [Services](../10-architecture/100-services.md) describes the distinct `contract.schema.json` service contract.
 [Component Architecture](../10-architecture/60-components.md) describes the default implementation checked by `component.schema.json`.
+[DataSet JSON](dataset.md) describes the tabular object shape in `dataset.schema.json` and its current runtime validation boundary.

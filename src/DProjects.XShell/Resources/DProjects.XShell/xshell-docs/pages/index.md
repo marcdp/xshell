@@ -10,6 +10,7 @@ virtualizes assets, initializes services/modules, and activates Pages through Ar
 - [Browser Platform Baseline](10-architecture/15-browser-platform.md) — Baseline 2026, secure-context, and V0 compatibility contract.
 - [Components](20-components/index.md) and [Pages](10-architecture/70-pages.md) — Contracts, controllers, state, lifecycle, and presentation.
 - [Resolvers](10-architecture/80-resolvers.md) and [Loaders](10-architecture/90-loaders.md) — Resource meaning versus obtaining concrete resources.
+- [DataSets](10-architecture/95-datasets.md) — Static, URL, and module-owned tabular JSON resources.
 - [Services and service Contracts](10-architecture/100-services.md) — Fixed registry, eager class loading, lazy singletons.
 - [Areas](30-subsystems/10-areas.md) and [Navigation](10-architecture/120-navigation.md) — Menus, routes, homes, browser URLs, and Page stacks.
 - [State](20-components/30-state.md) and [Rendering Engines](20-components/70-rendering.md) — Separate engines coordinated by loaders.

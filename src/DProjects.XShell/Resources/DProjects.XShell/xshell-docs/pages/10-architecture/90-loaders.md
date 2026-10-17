@@ -31,7 +31,12 @@ component-js
 
 page-js
     → load or build a Page component
+
+dataset-static / dataset-url
+    → return a materialized DataSet JSON object
 ```
+
+See [DataSets](95-datasets.md) for the supported `dataset:` locators, module-owned assets, JSON shape, and V0 boundaries.
 
 ## Absolute HTTP(S) resources
 
