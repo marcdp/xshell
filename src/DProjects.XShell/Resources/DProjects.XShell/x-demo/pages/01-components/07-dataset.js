@@ -8,7 +8,6 @@ export const contract = {
 
 export default {
     template: `
-        <h2>Dataset component</h2>
 
         <p>
             The <code>x-dataset</code> component displays
@@ -17,7 +16,7 @@ export default {
             inside an <code>x-datatable</code> container.
         </p>
 
-        <h3>1. Module dataset</h3>
+        <h2>1. Module dataset</h2>
 
         <p>
             Load the countries dataset from the x-demo module.
@@ -31,7 +30,7 @@ export default {
             {{ state.countriesError }}
         </p>
 
-        <h3>2. Static dataset</h3>
+        <h2>2. Static dataset</h2>
 
         <p>
             Static datasets use compact key/value definitions.
@@ -45,7 +44,7 @@ export default {
             {{ state.statusesError }}
         </p>
 
-        <h3>3. Multiple tables</h3>
+        <h2>3. Multiple tables</h2>
 
         <p>
             A single DataSet can contain several tables.
@@ -53,6 +52,16 @@ export default {
         </p>
 
         <x-dataset x-prop:value="state.multiple"></x-dataset>
+
+
+        <h2>4. Select</h2>
+        <p>
+            A select field populated from the countries dataset.
+        </p>
+        <x-datafield type="select" label="Country" placeholder="Select a country" domain="dataset:x-demo:countries"></x-datafield>    
+        <x-datafield type="radios" label="Priority" domain="dataset:x-demo:countries"></x-datafield>
+        <x-datafield type="checkboxes" label="Notifications" domain="dataset:x-demo:countries" ></x-datafield>
+
     `,
 
     state: {

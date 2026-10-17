@@ -56,7 +56,6 @@ export const contract = {
         autocomplete:   {type:"any", default:null, attribute:true, state:true, description:""},
         domain:         {type:"any", default:null, attribute:true, state:true, description:""},
         value:          {type:"any", default:null, attribute:true, state:true, description:""},
-        valueOriginal:  {type:"any", default:null, attribute:true, state:true, description:""},
         accept:         {type:"any", default:null, attribute:true, state:true, description:""},
         lang:           {type:"any", default:null, attribute:true, state:true, description:""},
         spellcheck:     {type:"string", default:"true", attribute:true, state:true, description:""},
@@ -64,7 +63,6 @@ export const contract = {
         langIndex:      {type:"number", default:0, attribute:true, state:true, description:""},
         errors:         {type:"array", default:[], attribute:true, state:true, description:""},
         validated:      {type:"boolean", default:false, attribute:true, state:true, description:""},
-        inputId:        {type:"string", default:"input", attribute:true, state:true, description:""},
         add:            {type:"boolean", default:false, attribute:true, state:true, description:""}
     },
     methods: {
@@ -201,7 +199,7 @@ export default {
 
         :host .richtext {padding:0;}
 
-        :host .search {}
+        :host .search {position:relative}
         :host .search x-icon {position:absolute; left:.5em; top:.35em; color:var(--x-datafield-color-placeholder); }
         :host .search:focus-within x-icon {color:var(--x-color-text);}
         :host .search input {padding-left:2em; }
@@ -252,11 +250,11 @@ export default {
             x-attr:id="state.inputId"
             x-attr:multiple="state.multiple">
             <option x-if="!state.multiple" x-text="state.placeholder" class="placeholder" value=""></option>
-            <option x-for="option in state.domain" x-attr:value="option.value" x-text="option.label" x-attr:disabled="option.disabled" x-attr:selected="state.selectedOptions[option.value]"></option>
+            <option x-for="option in state.domainNormalized" x-attr:value="option.value" x-text="option.label" x-attr:disabled="option.disabled" x-attr:selected="state.selectedOptions[option.value]"></option>
         </select>
 
         <div x-elseif="state.type=='radios'" class="input container">
-            <div x-for="(option,index) in state.domain">
+            <div x-for="(option,index) in state.domainNormalized">
                 <input type="radio" x-attr:value="option.value" name="radio" x-attr:id="'radio' + index" x-model="state.value" x-attr:disabled="option.disabled"/>
                 <label x-text="option.label" x-attr:for="'radio' + index"></label>
             </div>
@@ -270,7 +268,7 @@ export default {
         </div>
 
         <div x-elseif="state.type=='checkboxes'" class="input container">
-            <div x-for="(option,index) in state.domain">
+            <div x-for="(option,index) in state.domainNormalized">
                 <input type="checkbox" x-attr:value="option.value" x-attr:id="'radio' + index" name="checkbox" x-attr:checked="state.selectedOptions[option.value]" x-on:change="checkboxChanged" x-attr:disabled="option.disabled"/>
                 <label x-text="option.label" x-attr:for="'radio' + index"></label>
             </div>
@@ -502,10 +500,13 @@ export default {
         langLabels: {},
         emptyTranslations: {},
         localizedValues: {},
+        domainNormalized: [],
         selectedOptions: {},
-        files: []
+        files: [],
+        valueOriginal: null,
+        inputId: null
     },
-    controller({ state, events, timer, navigation, i18n, host, temp, dialog }) {
+    controller({ state, events, timer, loader, i18n, host, temp, dialog }) {
         const updateTemplateState = () => {
             const value = state.value || "";
             const languages = state.langs || [];
@@ -516,7 +517,7 @@ export default {
             state.langLabels = Object.fromEntries(languages.map(lang => [lang, i18n.getLangLabel(lang)]));
             state.emptyTranslations = Object.fromEntries(languages.map(lang => [lang, value.indexOf("i18n:" + lang + "=") == -1]));
             state.localizedValues = Object.fromEntries(languages.map(lang => [lang, i18n.formatText(value, lang)]));
-            for (const option of state.domain || []) {
+            for (const option of state.domainNormalized || []) {
                 selectedOptions[option.value] = state.multiple ? values.indexOf("," + option.value + ",") != -1 : option.value == value;
             }
             state.selectedOptions = selectedOptions;
@@ -538,16 +539,30 @@ export default {
             }
         };
         return {
-            async load(args) {
+            async load() {
                 // load
-                state.inputId = getFreeId();
+                state.inputId = getFreeId();                
                 events.on(state, ["change:domain", "change:type", "change:required", "change:min", "change:max", "change:minlength", "change:maxlength", "change:pattern", "change:value", "change:langs", "change:langIndex", "change:multiple"], (event) => {
                     let prop = event.prop;
                     let newValue = event.newValue;
                     let oldValue = event.oldValue;
                     if (prop == "domain") {
-                        //transform domain if required
-                        if (typeof newValue == "string") {
+                        // domain changed
+                        if (typeof newValue == "string" && newValue.startsWith("dataset:")) {
+                            // dataset:...
+                            loader.load(newValue).then((dataset) => {
+                                // convert dataset to domainNormalized format
+                                const table = dataset.tables[0];
+                                const domainNormalized = [];
+                                const c1 = table.columns[0].name;
+                                const c2 = table.columns[1].name;
+                                for (const row of table.rows) {
+                                    domainNormalized.push({value: row[c1], label: row[c2]});
+                                }
+                                state.domainNormalized = domainNormalized;
+                            });
+                        } else if (typeof newValue == "string") {
+                            // string 
                             let domain = [];
                             for(let item of newValue.split("|")){
                                 let i = item.indexOf("=");
@@ -557,8 +572,11 @@ export default {
                                     domain.push({value: itemValue, label: itemLabel});
                                 }
                             }
-                            state.domain = domain;
+                            state.domainNormalized = domain;
+                        } else {
+                            state.domainNormalized = state.domain;
                         }
+
                     } else if (prop == "type" || prop == "required" || prop == "min" || prop == "max" || prop == "minlength" || prop == "maxlength" || prop == "pattern") {
                         //value changed
                         this.validate();
@@ -579,7 +597,7 @@ export default {
             },
 
             async mount(args) {
-                //load
+                // mount
                 if (state.autofocus) {
                     timer.setTimeout(25, () => {
                         let element = host.shadowRoot.querySelector(".input");
@@ -593,12 +611,12 @@ export default {
             },
 
             async slotchange(args) {
-                //slotchange
+                // slotchange
                 state.hasChilds = (host.firstElementChild != null);
             },
 
             async langAdd(args) {
-                //langAdd
+                // langAdd
                 let lang = await dialog.language({
                     current: state.langs.join(",")
                 });
@@ -612,14 +630,14 @@ export default {
             },
 
             async langChanged(args) {
-                //langChanged
+                // langChanged
                 let lang = args.event.target.dataset.lang;
                 state.langIndex = state.langs.indexOf(lang);
                 updateTemplateState();
             },
 
             async objectChanged(args) {
-                //objectChanged
+                // objectChanged
                 if (state.value) {
                     state.valueOriginal = state.value;
                     state.value = null;
