@@ -21,9 +21,16 @@ A custom rule may use this nested shape:
 Bootstrap generates conventional rules for module icons, layouts, components, pages, and JavaScript modules. The checked-in default prefix is
 `/_assets`. Rules for a canonical module definition are generated once, regardless of repeated dependency references.
 
-Resolver patterns consist of literal text and named placeholders `{name}`. Placeholder names follow `[A-Za-z_][A-Za-z0-9_]*`. Literal text has
-no regular-expression semantics. Placeholders match one or more characters and may include `/`. Multiple placeholders must be separated by
-literal text; malformed, adjacent, or duplicate placeholders are invalid.
+Resolver patterns consist of literal text and named placeholders. Placeholder names follow `[A-Za-z_][A-Za-z0-9_]*`, and literal text has no
+regular-expression semantics. `{name}` matches one nonempty resource-name segment; it excludes `/`, `\\`, `?`, `#`, and `%`, and cannot be `.` or
+`..`. `{path}` matches one or more nonempty relative path segments separated by `/`; it cannot begin or end with `/`, contain empty, `.`, or `..`
+segments, or contain `\\`, `?`, `#`, or `%`. Rejecting `%` also rejects encoded separators and traversal for this resolver version.
+
+In a module-root rule such as `dataset:x-demo:/{path}`, the leading `/` is literal and is not part of the captured path. Thus
+`dataset:x-demo:/datasets/countries.json` captures `datasets/countries.json`, while `dataset:x-demo:countries` is suitable for a `{name}` rule.
+Values such as `dataset:x-demo:crm/customers`, `dataset:x-demo:/crm/../config.json`, and `dataset:x-demo:/crm//customers.json` do not match those
+respective rules. Other placeholder names retain the existing generic matching behavior for compatibility. Multiple placeholders must be separated
+by literal text; malformed, adjacent, or duplicate placeholders are invalid.
 
 `resolver.js` reads nested `config.xshell.resolver` rule objects. Bootstrap adds defaults for each canonical module id after merging. Resolver
 matching and loader dispatch still require the usual resource location and loader metadata.

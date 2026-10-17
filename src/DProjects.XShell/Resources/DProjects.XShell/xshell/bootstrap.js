@@ -642,26 +642,15 @@ function fillResolverRules(config) {
         };
         for (const file of module.files ?? []) {
             if (!file.path.startsWith(moduleAssetsPathContracts + "/") || !file.path.endsWith(".json")) continue;
-
             const id = file.path.substring(moduleAssetsPathContracts.length + 1).replace(/\.json$/, "");
             const first = contractDeclarations.get(id);
-
             if (first) {
-                throw new Error(
-                    `Duplicate contract '${id}' declared by module '${first.moduleId}' in '${first.path}' ` +
-                    `and module '${moduleId}' in '${file.path}'.`
-                );
+                throw new Error(`Duplicate contract '${id}' declared by module '${first.moduleId}' in '${first.path}' ` + `and module '${moduleId}' in '${file.path}'.`);
             }
-
             if (Object.hasOwn(resolver.contract, id)) {
-                throw new Error(
-                    `Duplicate contract '${id}' conflicts with an existing resolver entry while processing ` +
-                    `module '${moduleId}' file '${file.path}'.`
-                );
+                throw new Error(`Duplicate contract '${id}' conflicts with an existing resolver entry while processing ` + `module '${moduleId}' file '${file.path}'.`);
             }
-
             contractDeclarations.set(id, { moduleId, path: file.path });
-
             resolver.contract[id] = {
                 src: `${moduleAssetsPathContracts}/${id}.json`,
                 loader: "object-json",

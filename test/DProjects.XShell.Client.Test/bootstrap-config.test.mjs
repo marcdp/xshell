@@ -118,6 +118,25 @@ test("generated Markdown Page rules preserve document URLs and cache classes by 
     }
 });
 
+test("generated module resolver rules distinguish names from root-relative paths", () => {
+    const config = {
+        app: { basePath: "/app", baseUrl: "https://example.test/app/" },
+        modules: {
+            x: { assets: { path: "/_assets/x" }, files: [] },
+            "x-demo": { assets: { path: "/_assets/x-demo" }, files: [] }
+        },
+        xshell: { resolver: {} }
+    };
+    api.fillResolverRules(config);
+    const resolver = new Resolver({ config });
+
+    assert.equal(resolver.resolve("dataset:x-demo:countries").path, "/_assets/x-demo/datasets/countries.json");
+    assert.equal(resolver.resolve("dataset:x-demo:/datasets/countries.json").path, "/_assets/x-demo/datasets/countries.json");
+    assert.equal(resolver.resolve("dataset:x-demo:/crm/customers.json").path, "/_assets/x-demo/crm/customers.json");
+    assert.equal(resolver.resolve("page:x-demo:/pages/index.js").path, "/_assets/x-demo/pages/index.js");
+    assert.equal(resolver.resolve("component:x:x-button").path, "/_assets/x/components/x-button.js");
+});
+
 test("generated style rules route module CSS through the standard cached style-css loader", () => {
     const config = {
         app: { basePath: "/app", baseUrl: "https://example.test/app/" },

@@ -56,6 +56,73 @@ test("resolver patterns preserve literal text and capture named placeholders", (
     assert.equal(resolver.registry.find(definition => definition.resource === "page:/_assets/demo/{path}.js").resource, "page:/_assets/demo/{path}.js");
 });
 
+test("resolver gives name and path placeholders safe unambiguous semantics", () => {
+    const resolver = new Resolver({ config: { app: { basePath: "/app", baseUrl: "https://example.test/app/" }, xshell: { resolver: {
+        dataset: {
+            "x-demo:{name}": { src: "/_assets/x-demo/datasets/{name}.json", loader: "dataset-url" },
+            "x-demo:/{path}": { src: "/_assets/x-demo/{path}", loader: "dataset-url" }
+        },
+        page: { "x-demo:/{path}": { src: "/_assets/x-demo/{path}", loader: "page-js" } },
+        component: { "x:{name}": { src: "/_assets/x/components/{name}.js", loader: "component-js" } },
+        icon: { "x-file": { src: "/icons/x-file.svg", loader: "icon-svg" } },
+        module: { "{name}": { src: "/modules/{name}.js", loader: "module-js" } }
+    } } } });
+
+    const cases = [
+        ["dataset:x-demo:countries", "/_assets/x-demo/datasets/countries.json", "dataset-url"],
+        ["dataset:x-demo:/datasets/countries.json", "/_assets/x-demo/datasets/countries.json", "dataset-url"],
+        ["page:x-demo:/pages/index.js", "/_assets/x-demo/pages/index.js", "page-js"],
+        ["component:x:x-button", "/_assets/x/components/x-button.js", "component-js"],
+        ["dataset:x-demo:/crm/customers.json", "/_assets/x-demo/crm/customers.json", "dataset-url"],
+        ["icon:x-file", "/icons/x-file.svg", "icon-svg"],
+        ["module:xshell", "/modules/xshell.js", "module-js"]
+    ];
+    for (const [resource, path, loader] of cases) {
+        assert.equal(resolver.has(resource), true, resource);
+        const result = resolver.resolve(resource);
+        assert.equal(result.path, path, resource);
+        assert.equal(result.url, "https://example.test/app" + path, resource);
+        assert.equal(result.definition.loader, loader, resource);
+    }
+
+    const invalid = [
+        "dataset:x-demo:crm/customers",
+        "dataset:x-demo:../config",
+        "dataset:x-demo:.",
+        "dataset:x-demo:..",
+        "dataset:x-demo:crm\\customers",
+        "dataset:x-demo:%2e%2e",
+        "dataset:x-demo:/crm/../config.json",
+        "dataset:x-demo:/crm//customers.json",
+        "dataset:x-demo:/crm\\customers.json",
+        "dataset:x-demo:/%2e%2e/config.json",
+        "dataset:x-demo:/crm/%2f/config.json",
+        "dataset:x-demo:/crm/./customers.json",
+        "dataset:x-demo:/.",
+        "dataset:x-demo:/..",
+        "dataset:x-demo:",
+        "dataset:x-demo:/",
+        "dataset:x-demo://crm/customers.json",
+        "dataset:x-demo:/crm/customers.json/"
+    ];
+    const originalError = console.error;
+    console.error = () => {};
+    try {
+        for (const resource of invalid) {
+            assert.equal(resolver.has(resource), false, resource);
+            assert.equal(resolver.resolve(resource), null, resource);
+        }
+    } finally {
+        console.error = originalError;
+    }
+
+    assert.equal(resolver.has("dataset:x-demo:countries?language=en#summary"), false);
+    assert.equal(resolver.has("dataset:x-demo:countries#summary"), false);
+    assert.equal(resolver.has("dataset:x-demo:/crm/customers.json?language=en"), false);
+    assert.equal(resolver.resolve("dataset:x-demo:countries?language=en#summary").path, "/_assets/x-demo/datasets/countries.json");
+    assert.equal(resolver.resolve("dataset:x-demo:/crm/customers.json?language=en").path, "/_assets/x-demo/crm/customers.json");
+});
+
 test("resolver rejects invalid placeholder grammar", () => {
     const resolver = new Resolver({ config: { app: { basePath: "/app", baseUrl: "https://example.test/app/" }, xshell: { resolver: {} } } });
     const invalidPatterns = [

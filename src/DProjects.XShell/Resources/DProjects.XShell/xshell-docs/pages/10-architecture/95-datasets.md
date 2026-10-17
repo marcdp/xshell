@@ -153,8 +153,15 @@ After module discovery and asset normalization, bootstrap generates this rule fo
 
 ```jsonc
 "dataset": {
-    "<module-id>:{path}": {
-        "src": "/_assets/<module-id>/<generation>/datasets/{path}.json",
+    "<module-id>:{name}": {
+        "src": "/_assets/<module-id>/<generation>/datasets/{name}.json",
+        "loader": "dataset-url",
+        "cache": false,
+        "moduleId": "<module-id>",
+        "modulePath": "/_assets/<module-id>/<generation>"
+    },
+    "<module-id>:/{path}": {
+        "src": "/_assets/<module-id>/<generation>/{path}",
         "loader": "dataset-url",
         "cache": false,
         "moduleId": "<module-id>",
@@ -163,9 +170,10 @@ After module discovery and asset normalization, bootstrap generates this rule fo
 }
 ```
 
-The `{path}` placeholder matches one or more characters and may contain `/`, so an extensionless reference such as
-`dataset:orders:lookups/statuses` resolves to `datasets/lookups/statuses.json`. Bootstrap does not check the inventory before generating this
-general rule; a missing file fails when fetched.
+The `{name}` rule maps one extensionless resource-name segment, such as `dataset:orders:statuses`, to `datasets/statuses.json`. The `/{path}` rule
+addresses a safe relative path from the module root, so `dataset:orders:/datasets/lookups/statuses.json` captures
+`datasets/lookups/statuses.json`. Its leading `/` is part of the rule rather than the `{path}` value. Bootstrap does not check the inventory before
+generating either general rule; a missing file fails when fetched. See [Resolvers](80-resolvers.md) for the placeholder safety rules.
 
 Module qualification makes ownership explicit. `dataset:x-demo:countries` resolves through the `x-demo` assets regardless of which Component or
 Page requests it, so the consuming resource's own module does not change its meaning. The `x-demo` module demonstrates this with

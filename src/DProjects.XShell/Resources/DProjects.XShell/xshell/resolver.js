@@ -77,7 +77,11 @@ export default class Resolver {
                 throw new Error(`Invalid resolver pattern '${resource}': duplicate placeholder '${name}'.`);
             }
             placeholders.add(name);
-            regexp += `(?<${name}>.+?)`;
+            regexp += name === "name"
+                ? `(?<name>[^/\\\\?#%]+?)`
+                : name === "path"
+                    ? `(?<path>[^/\\\\?#%]+(?:/[^/\\\\?#%]+)*?)`
+                    : `(?<${name}>.+?)`;
             index = end + 1;
             previousTokenWasPlaceholder = true;
         }
@@ -91,11 +95,14 @@ export default class Resolver {
         };
         this._definitions.push(definition);
     }
-    has(resource) {        
+    has(resource) {
         for(let i = 0; i < this._definitions.length ; i++) {
             let definition = this._definitions[i];
             let match = resource.match(definition.regexp);
-            if (match) {
+            if (match && !Object.entries(match.groups ?? {}).some(([key, value]) =>
+                key === "name"
+                    ? value === "." || value === ".." || /[/\\?#%]/.test(value)
+                    : key === "path" && (/[\\?#%]/.test(value) || value.split("/").some(segment => !segment || segment === "." || segment === "..")))) {
                 return true;
             }
         }
@@ -116,7 +123,10 @@ export default class Resolver {
         for(let i = this._definitions.length - 1; i >= 0 ; i--) {
             const definition = this._definitions[i];
             const match = resource.match(definition.regexp);
-            if (match) {
+            if (match && !Object.entries(match.groups ?? {}).some(([key, value]) =>
+                key === "name"
+                    ? value === "." || value === ".." || /[/\\?#%]/.test(value)
+                    : key === "path" && (/[\\?#%]/.test(value) || value.split("/").some(segment => !segment || segment === "." || segment === "..")))) {
                 const isAbsoluteUrl = /^[A-Za-z][A-Za-z0-9+.-]*:/.test(definition.src);
                 let url = isAbsoluteUrl ? definition.src : new URL(definition.src.replace(/^\/+/, ""), this._appBaseUrl).href.replaceAll("%7B", "{").replaceAll("%7D", "}");
                 let path = isAbsoluteUrl ? null : definition.src;
