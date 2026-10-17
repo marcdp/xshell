@@ -414,8 +414,7 @@ function fillResolverRules(config) {
 
     for (const [moduleId, module] of Object.entries(config.modules)) {
         const moduleAssetsPath = module.assets.path;
-        const moduleAssetsPathContracts = moduleAssetsPath + "/contracts";
-
+        
         // icon
         resolver.icon ??= {};
         resolver.icon[moduleId] ??= {
@@ -501,7 +500,7 @@ function fillResolverRules(config) {
             modulePath: moduleAssetsPath
         };
         resolver.page[`${moduleId}:/{path}.html`] ??= {
-            src: `${moduleAssetsPath}/{path}.html`,
+            src: `${moduleAssetsPath}/{path}.js`,
             loader: "page-js",
             cache: true,
             cacheMode: "path",
@@ -623,9 +622,24 @@ function fillResolverRules(config) {
             moduleId,
             modulePath: moduleAssetsPath
         };
+        resolver.dataset[`${moduleId}:/{path}`] ??= {
+            src: `${moduleAssetsPath}/{path}`,
+            loader: "dataset-url",
+            cache: false,
+            moduleId,
+            modulePath: moduleAssetsPath
+        };
 
+        // contracts
+        const moduleAssetsPathContracts = moduleAssetsPath + "/contracts";
         resolver.contract ??= {};
-
+        resolver.contract[`${moduleId}:{name}`] ??= {
+            src: `${moduleAssetsPathContracts}/{name}.json`,
+            loader: "object-json",
+            cache: true,
+            moduleId,
+            modulePath: moduleAssetsPath
+        };
         for (const file of module.files ?? []) {
             if (!file.path.startsWith(moduleAssetsPathContracts + "/") || !file.path.endsWith(".json")) continue;
 
