@@ -63,7 +63,7 @@ the `dependencies` object passed to `controller({ dependencies })`, and whose va
 ```js
 export default {
     dependencies: {
-        marked: "module:/_assets/x/<generation>/utils/markdown.js",
+        marked: "module:x:/utils/markdown.js",
         fileIcon: "icon:x-file",
         editor: "component:x-code-editor"
     },
@@ -128,7 +128,7 @@ For example:
 ```js
 export default {
     dependencies: {
-        formatter: "module:/utils/formatter.js"
+        markdown: "module:x:/utils/markdown.js"
     },
 
     state: {

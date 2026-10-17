@@ -17,6 +17,10 @@ The Loader is responsible for:
 
 The resource-specific loader is responsible for understanding the resource format.
 
+Global and module-qualified references use the same loaders. Qualification is resolved before dispatch, so neither the generic Loader nor a
+resource-specific loader needs a separate module-qualified code path. See [Resolvers](80-resolvers.md#resource-addressing-conventions) for the
+generated locator forms and rule table.
+
 For example:
 
 ```text
@@ -92,6 +96,8 @@ cached value and any in-flight load promise. The logical resource scheme is pres
 
 `cacheMode` affects only the Loader's internal cache key. It does not rewrite the requested resource, resolved resource location, registry diagnostics, or values
 such as a Page instance's `src`. Use `path` only for resource types whose implementation identity is genuinely independent of query state.
+Because the key is the logical reference rather than the resolved URL, two different locators—for example a global physical locator and its
+module-qualified equivalent—can resolve to the same URL and still occupy separate cache entries.
 
 ## Flow
 
@@ -115,6 +121,7 @@ Loading an icon:
 
 ```text
 icon:x-file
+or icon:x:x-file
     ↓
 /_assets/x/<generation>/icons/x-file.svg
 loader=icon-svg
@@ -126,6 +133,7 @@ Loading an ES module:
 
 ```text
 module:/_assets/module1/<generation>/module.js
+or module:module1:/module.js
     ↓
 /_assets/module1/<generation>/module.js
 loader=module-js
@@ -148,6 +156,7 @@ Loading a page:
 
 ```text
 page:/_assets/module1/<generation>/pages/page1.js
+or page:module1:/pages/page1.js
     ↓
 /_assets/module1/<generation>/pages/page1.js
 loader=page-js
@@ -175,7 +184,8 @@ resource-specific loader
     knows how to load a particular resource type
 ```
 
-The generic Loader does not need to know how SVG, JavaScript, Components, or Pages are implemented.
+The generic Loader does not need to know how SVG, JavaScript, Components, or Pages are implemented, nor whether their logical locator was global
+or module-qualified.
 
 It only dispatches the resolved resource to the appropriate loader.
 

@@ -125,6 +125,9 @@ canonical, so normal clicks and native browser link actions share the same desti
 module resource. The loader/resolver therefore sees `/_assets/x-demo/<generation>/pages/01-components/index.js`; it does not know about menu `path` values or
 perform path-to-href translation.
 
+Module-qualified Page locators such as `page:x-demo:/pages/index.js` are logical Loader inputs, not automatically browser-facing navigation URLs.
+Navigation continues to operate on friendly paths and canonical Page-resource hrefs; it does not translate module-qualified locator syntax.
+
 ## Ordinary Page anchors
 
 Inside `x-page`, ordinary internal anchors (including relative Page links and `.md` documents) call Navigation with the originating Page context.
