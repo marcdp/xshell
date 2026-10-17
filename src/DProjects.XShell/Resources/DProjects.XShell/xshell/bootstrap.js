@@ -416,6 +416,7 @@ function fillResolverRules(config) {
         const moduleAssetsPath = module.assets.path;
         const moduleAssetsPathContracts = moduleAssetsPath + "/contracts";
 
+        // icon
         resolver.icon ??= {};
         resolver.icon[moduleId] ??= {
             src: `${moduleAssetsPath}/icons/${moduleId}.svg`,
@@ -424,7 +425,6 @@ function fillResolverRules(config) {
             moduleId,
             modulePath: moduleAssetsPath
         };
-
         resolver.icon[`${moduleId}-{name}`] ??= {
             src: `${moduleAssetsPath}/icons/${moduleId}-{name}.svg`,
             loader: "icon-svg",
@@ -432,7 +432,15 @@ function fillResolverRules(config) {
             moduleId,
             modulePath: moduleAssetsPath
         };
+        resolver.icon[`${moduleId}:${moduleId}-{name}`] ??= {
+            src: `${moduleAssetsPath}/icons/${moduleId}-{name}.svg`,
+            loader: "icon-svg",
+            cache: true,
+            moduleId,
+            modulePath: moduleAssetsPath
+        };
 
+        // layout
         resolver.layout ??= {};
         resolver.layout[`${moduleId}-layout-{name}`] ??= {
             src: `${moduleAssetsPath}/layouts/${moduleId}-layout-{name}.js`,
@@ -441,7 +449,15 @@ function fillResolverRules(config) {
             moduleId,
             modulePath: moduleAssetsPath
         };
+        resolver.layout[`${moduleId}:${moduleId}-layout-{name}`] ??= {
+            src: `${moduleAssetsPath}/layouts/${moduleId}-layout-{name}.js`,
+            loader: "component-js",
+            cache: true,
+            moduleId,
+            modulePath: moduleAssetsPath
+        };
 
+        // component
         resolver.component ??= {};
         resolver.component[`${moduleId}-{name}`] ??= {
             src: `${moduleAssetsPath}/components/${moduleId}-{name}.js`,
@@ -449,8 +465,16 @@ function fillResolverRules(config) {
             cache: true,
             moduleId,
             modulePath: moduleAssetsPath
-        };
+        };        
+        resolver.component[`${moduleId}:${moduleId}-{name}`] ??= {
+            src: `${moduleAssetsPath}/components/${moduleId}-{name}.js`,
+            loader: "component-js",
+            cache: true,
+            moduleId,
+            modulePath: moduleAssetsPath
+        };        
 
+        // page
         resolver.page ??= {};
         resolver.page[`${moduleAssetsPath}/{path}.js`] ??= {
             src: `${moduleAssetsPath}/{path}.js`,
@@ -460,7 +484,14 @@ function fillResolverRules(config) {
             moduleId,
             modulePath: moduleAssetsPath
         };
-
+        resolver.page[`${moduleId}:/{path}.js`] ??= {
+            src: `${moduleAssetsPath}/{path}.js`,
+            loader: "page-js",
+            cache: true,
+            cacheMode: "path",
+            moduleId,
+            modulePath: moduleAssetsPath
+        };
         resolver.page[`${moduleAssetsPath}/{path}.html`] ??= {
             src: `${moduleAssetsPath}/{path}.js`,
             loader: "page-js",
@@ -469,7 +500,14 @@ function fillResolverRules(config) {
             moduleId,
             modulePath: moduleAssetsPath
         };
-
+        resolver.page[`${moduleId}:/{path}.html`] ??= {
+            src: `${moduleAssetsPath}/{path}.html`,
+            loader: "page-js",
+            cache: true,
+            cacheMode: "path",
+            moduleId,
+            modulePath: moduleAssetsPath
+        };
         resolver.page[`${moduleAssetsPath}/{path}.md`] ??= {
             src: `${moduleAssetsPath}/{path}.md`,
             loader: "page-md",
@@ -478,7 +516,16 @@ function fillResolverRules(config) {
             moduleId,
             modulePath: moduleAssetsPath
         };
+        resolver.page[`${moduleId}:/{path}.md`] ??= {
+            src: `${moduleAssetsPath}/{path}.md`,
+            loader: "page-md",
+            cache: true,
+            cacheMode: "path",
+            moduleId,
+            modulePath: moduleAssetsPath
+        };
 
+        // module
         resolver.module ??= {};
         resolver.module[`${moduleId}-{name}`] ??= {
             src: `${moduleAssetsPath}/${moduleId}-{name}.js`,
@@ -487,7 +534,13 @@ function fillResolverRules(config) {
             moduleId,
             modulePath: moduleAssetsPath
         };
-
+        resolver.module[`${moduleId}:${moduleId}-{name}`] ??= {
+            src: `${moduleAssetsPath}/${moduleId}-{name}.js`,
+            loader: "module-js",
+            cache: true,
+            moduleId,
+            modulePath: moduleAssetsPath
+        };
         resolver.module[`${moduleAssetsPath}/{path}.js`] ??= {
             src: `${moduleAssetsPath}/{path}.js`,
             loader: "module-js",
@@ -495,7 +548,15 @@ function fillResolverRules(config) {
             moduleId,
             modulePath: moduleAssetsPath
         };
+        resolver.module[`${moduleId}:/{path}.js`] ??= {
+            src: `${moduleAssetsPath}/{path}.js`,
+            loader: "module-js",
+            cache: true,
+            moduleId,
+            modulePath: moduleAssetsPath
+        };
 
+        // style
         resolver.style ??= {};
         resolver.style[`${moduleAssetsPath}/{path}.css`] ??= {
             src: `${moduleAssetsPath}/{path}.css`,
@@ -504,7 +565,15 @@ function fillResolverRules(config) {
             moduleId,
             modulePath: moduleAssetsPath
         };
+        resolver.style[`${moduleId}:/{path}.css`] ??= {
+            src: `${moduleAssetsPath}/{path}.css`,
+            loader: "style-css",
+            cache: true,
+            moduleId,
+            modulePath: moduleAssetsPath
+        };
 
+        // string
         resolver.string ??= {};
         resolver.string[`${moduleAssetsPath}/{path}`] ??= {
             src: `${moduleAssetsPath}/{path}`,
@@ -513,7 +582,15 @@ function fillResolverRules(config) {
             moduleId,
             modulePath: moduleAssetsPath
         };
+        resolver.string[`${moduleId}:/{path}`] ??= {
+            src: `${moduleAssetsPath}/{path}`,
+            loader: "string-any",
+            cache: false,
+            moduleId,
+            modulePath: moduleAssetsPath
+        };
 
+        // bytes
         resolver.bytes ??= {};
         resolver.bytes[`${moduleAssetsPath}/{path}`] ??= {
             src: `${moduleAssetsPath}/{path}`,
@@ -522,8 +599,23 @@ function fillResolverRules(config) {
             moduleId,
             modulePath: moduleAssetsPath
         };
+        resolver.bytes[`${moduleId}:/{path}`] ??= {
+            src: `${moduleAssetsPath}/{path}`,
+            loader: "bytes-any",
+            cache: false,
+            moduleId,
+            modulePath: moduleAssetsPath
+        };
 
+        // datasets
         resolver.dataset ??= {};
+        resolver.dataset[`${moduleAssetsPath}/{path}`] ??= {
+            src: `${moduleAssetsPath}/{path}`,
+            loader: "dataset-url",
+            cache: false,
+            moduleId,
+            modulePath: moduleAssetsPath
+        };
         resolver.dataset[`${moduleId}:{name}`] ??= {
             src: `${moduleAssetsPath}/datasets/{name}.json`,
             loader: "dataset-url",
@@ -531,7 +623,6 @@ function fillResolverRules(config) {
             moduleId,
             modulePath: moduleAssetsPath
         };
-
 
         resolver.contract ??= {};
 
