@@ -24,12 +24,14 @@ export default {
         <p><code>state.name | trim | upper</code>: <strong>{{ state.name | trim | upper }}</strong></p>
         <p><code>state.name | trim | lower</code>: <strong>{{ state.name | trim | lower }}</strong></p>
         <p><code>state.name | slug</code>: <strong>{{ state.name | slug }}</strong></p>
+        <p><code>state.name | stringify</code>: <strong>{{ state.name | stringify }}</strong></p>
 
         <pre x-pre><code>{{ state.name }}
 {{ state.name | trim }}
 {{ state.name | trim | upper }}
 {{ state.name | trim | lower }}
-{{ state.name | slug }}</code></pre>
+{{ state.name | slug }}
+{{ state.name | stringify }}</code></pre>
 
         <x-divider></x-divider>
 
@@ -41,10 +43,12 @@ export default {
         <p><code>state.name | startsWith('Ada')</code>: <strong>{{ state.name | startsWith('Ada') }}</strong></p>
         <p><code>state.name | endsWith('Lovelace')</code>: <strong>{{ state.name | endsWith('Lovelace') }}</strong></p>
         <p><code>state.name | contains('Love')</code>: <strong>{{ state.name | contains('Love') }}</strong></p>
+        <p><code>state.name | stringify</code>: <strong>{{ state.name | stringify }}</strong></p>
 
         <pre x-pre><code>{{ state.name | startsWith('Ada') }}
 {{ state.name | endsWith('Lovelace') }}
-{{ state.name | contains('Love') }}</code></pre>
+{{ state.name | contains('Love') }}
+{{ state.name | stringify }}</code></pre>
 
         <x-divider></x-divider>
 
@@ -63,10 +67,12 @@ export default {
         <p><code>state.price | number(2)</code>: <strong>{{ state.price | number(2) }}</strong></p>
         <p><code>state.ratio | percent(1)</code>: <strong>{{ state.ratio | percent(1) }}</strong></p>
         <p><code>state.price | currency(state.currencyCode | trim | upper, 2)</code>: <strong>{{ state.price | currency(state.currencyCode | trim | upper, 2) }}</strong></p>
+        <p><code>state.price | stringify</code>: <strong>{{ state.price | stringify }}</strong></p>
 
         <pre x-pre><code>{{ state.price | number(2) }}
 {{ state.ratio | percent(1) }}
-{{ state.price | currency(state.currencyCode | trim | upper, 2) }}</code></pre>
+{{ state.price | currency(state.currencyCode | trim | upper, 2) }}
+{{ state.price | stringify }}</code></pre>
 
         <x-divider></x-divider>
 
@@ -76,10 +82,13 @@ export default {
         <p><code>state.createdAt | date('dd/MM/yyyy')</code>: <strong>{{ state.createdAt | date('dd/MM/yyyy') }}</strong></p>
         <p><code>state.createdAt | datetime('yyyy-MM-dd HH:mm')</code>: <strong>{{ state.createdAt | datetime('yyyy-MM-dd HH:mm') }}</strong></p>
         <p><code>state.createdAt | time('HH:mm:ss')</code>: <strong>{{ state.createdAt | time('HH:mm:ss') }}</strong></p>
+        <p><code>state.createdAt | stringify</code>: <strong>{{ state.createdAt | stringify }}</strong></p>
+
 
         <pre x-pre><code>{{ state.createdAt | date('dd/MM/yyyy') }}
 {{ state.createdAt | datetime('yyyy-MM-dd HH:mm') }}
-{{ state.createdAt | time('HH:mm:ss') }}</code></pre>
+{{ state.createdAt | time('HH:mm:ss') }}
+{{ state.createdAt | stringify }}</code></pre>
 
         <x-divider></x-divider>
 

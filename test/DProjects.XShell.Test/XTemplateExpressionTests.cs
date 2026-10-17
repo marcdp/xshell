@@ -224,6 +224,39 @@ namespace DProjects.XShell.Test {
         }
 
         [Fact]
+        public void StringifyProducesDisplayTextForJsonCompatibleValues() {
+            var state = new Dictionary<string, object?> {
+                ["text"] = "Hello", ["integer"] = 123, ["floating"] = 12.5, ["trueValue"] = true, ["falseValue"] = false,
+                ["missing"] = null, ["array"] = new object?[] { "A", "B" }, ["emptyArray"] = Array.Empty<object>(),
+                ["object"] = new Dictionary<string, object?> { ["city"] = "Barcelona", ["details"] = new Dictionary<string, object?> { ["active"] = true } },
+                ["emptyObject"] = new Dictionary<string, object?>()
+            };
+            var context = Context(new { state });
+
+            Assert.Equal("Hello", XTemplateExpressions.Evaluate("state.text | stringify", context));
+            Assert.Equal("123", XTemplateExpressions.Evaluate("state.integer | stringify", context));
+            Assert.Equal("12.5", XTemplateExpressions.Evaluate("state.floating | stringify", context));
+            Assert.Equal("true", XTemplateExpressions.Evaluate("state.trueValue | stringify", context));
+            Assert.Equal("false", XTemplateExpressions.Evaluate("state.falseValue | stringify", context));
+            Assert.Equal(string.Empty, XTemplateExpressions.Evaluate("state.missing | stringify", context));
+            Assert.Equal("[\"A\",\"B\"]", XTemplateExpressions.Evaluate("state.array | stringify", context));
+            Assert.Equal("[]", XTemplateExpressions.Evaluate("state.emptyArray | stringify", context));
+            Assert.Equal("{\"city\":\"Barcelona\",\"details\":{\"active\":true}}", XTemplateExpressions.Evaluate("state.object | stringify", context));
+            Assert.Equal("{}", XTemplateExpressions.Evaluate("state.emptyObject | stringify", context));
+        }
+
+        [Fact]
+        public void StringifyRejectsArgumentsAndNonJsonCompatibleValues() {
+            var cyclic = new Dictionary<string, object?>();
+            cyclic["self"] = cyclic;
+            var context = Context(new { state = new { cyclic, nonFinite = double.PositiveInfinity } });
+
+            Assert.Throws<XTemplateExpressionEvaluationException>(() => XTemplateExpressions.Evaluate("'value' | stringify(1)", context));
+            Assert.Throws<XTemplateExpressionEvaluationException>(() => XTemplateExpressions.Evaluate("state.cyclic | stringify", context));
+            Assert.Throws<XTemplateExpressionEvaluationException>(() => XTemplateExpressions.Evaluate("state.nonFinite | stringify", context));
+        }
+
+        [Fact]
         public void AppliesStringPredicateTransformersWithTypedResults() {
             var context = Context();
 

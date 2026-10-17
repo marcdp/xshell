@@ -15,6 +15,29 @@ globalThis.document = { adoptedStyleSheets: [], baseURI: "https://example.test/"
 const { XTemplateRuntimeUtils } = await import("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/render-engines/x.js");
 const transform = (value, name, ...args) => XTemplateRuntimeUtils.expr.transform(value, name, () => args, null);
 
+test("stringify produces display text for JSON-compatible values", () => {
+    assert.equal(transform("Hello", "stringify"), "Hello");
+    assert.equal(transform(123, "stringify"), "123");
+    assert.equal(transform(12.5, "stringify"), "12.5");
+    assert.equal(transform(true, "stringify"), "true");
+    assert.equal(transform(false, "stringify"), "false");
+    assert.equal(transform(null, "stringify"), "");
+    assert.equal(transform(undefined, "stringify"), "");
+    assert.equal(transform({ city: "Barcelona", details: { active: true } }, "stringify"), '{"city":"Barcelona","details":{"active":true}}');
+    assert.equal(transform(["A", "B"], "stringify"), '["A","B"]');
+    assert.equal(transform([], "stringify"), "[]");
+    assert.equal(transform({}, "stringify"), "{}");
+    assert.equal(transform("<script>alert('x')</script>", "stringify"), "<script>alert('x')</script>");
+});
+
+test("stringify rejects arguments and non-JSON-compatible values", () => {
+    assert.throws(() => transform("value", "stringify", 2), /Transformer 'stringify' received an invalid argument count/);
+    assert.throws(() => transform(1n, "stringify"), /Transformer 'stringify' received a value that cannot be converted to text/);
+    const cyclic = {};
+    cyclic.self = cyclic;
+    assert.throws(() => transform(cyclic, "stringify"), /Transformer 'stringify' received a value that cannot be serialized/);
+});
+
 test("json_stringify serializes every JSON-compatible XTemplate value kind", () => {
     assert.equal(transform({ name: "Marc", enabled: true }, "json_stringify"), '{"name":"Marc","enabled":true}');
     assert.equal(transform([1, 2, 3], "json_stringify"), "[1,2,3]");

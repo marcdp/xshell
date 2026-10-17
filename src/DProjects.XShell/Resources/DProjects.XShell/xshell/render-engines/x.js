@@ -234,19 +234,32 @@ const utils = new class {
 			}
 			return found ? result : fail("Transformer pattern must contain a token");
 		};
+		const jsonStringify = (value, name) => {
+			try {
+				const result = JSON.stringify(value, (_, item) => {
+					if (item === undefined) return null;
+					if ((typeof item === "number" && !Number.isFinite(item)) || typeof item === "function" || typeof item === "symbol") throw new TypeError();
+					return item;
+				});
+				if (typeof result === "string") return result;
+			} catch {}
+			return fail(`Transformer '${name}' received a value that cannot be serialized`);
+		};
 		const transform = (value, name, getArguments, i18n) => {
+			if (name === "stringify") {
+				const args = getArguments();
+				if (args.length) return fail("Transformer 'stringify' received an invalid argument count");
+				if (value == null) return "";
+				if (typeof value === "string") return value;
+				if (typeof value === "boolean") return value ? "true" : "false";
+				if (typeof value === "number") return Number.isFinite(value) ? String(Object.is(value, -0) ? 0 : value) : fail("Transformer 'stringify' received a value that cannot be converted to text");
+				if (typeof value === "object") return jsonStringify(value, "stringify");
+				return fail("Transformer 'stringify' received a value that cannot be converted to text");
+			}
 			if (name === "json_stringify") {
 				const args = getArguments();
 				if (args.length) return fail("Transformer 'json_stringify' received an invalid argument count");
-				try {
-					const result = JSON.stringify(value, (_, item) => {
-						if (item === undefined) return null;
-						if ((typeof item === "number" && !Number.isFinite(item)) || typeof item === "function" || typeof item === "symbol") throw new TypeError();
-						return item;
-					});
-					if (typeof result === "string") return result;
-				} catch {}
-				return fail("Transformer 'json_stringify' received a value that cannot be serialized");
+				return jsonStringify(value, "json_stringify");
 			}
 			if (value === null) return null;
 			const args = getArguments();

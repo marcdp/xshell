@@ -1,3 +1,5 @@
+import validateDataset from "../validation/dataset.js";
+
 export default class LoaderDatasetUrl {
 
     async load(url, context) {
@@ -8,6 +10,8 @@ export default class LoaderDatasetUrl {
                 `Failed to load dataset '${url}': HTTP ${response.status} ${response.statusText}`
             );
         }
-        return await response.json();
+        const dataset = await response.json();
+        await validateDataset(url, dataset);
+        return dataset;
     }
 }

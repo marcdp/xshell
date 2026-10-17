@@ -543,6 +543,7 @@ state.name | trim | upper
 state.type | endsWith('_i18n')
 state.name | startsWith('A')
 state.code | contains('-')
+state.value | stringify
 state.value | json_stringify
 state.json | json_parse
 ```
@@ -591,7 +592,7 @@ internally, but their observable XTemplate behavior MUST be equivalent for the c
 use compatible locale data and preserve equivalent results where the host locale data permits.
 
 The locale-sensitive transformers are `number`, `percent`, `currency`, `date`, `datetime`, `time`, `upper`, and `lower`. The locale-insensitive
-transformers are `trim`, `slug`, `startsWith`, `endsWith`, `contains`, `json_stringify`, and `json_parse`.
+transformers are `trim`, `slug`, `startsWith`, `endsWith`, `contains`, `stringify`, `json_stringify`, and `json_parse`.
 
 Locale behavior has three distinct parts:
 
@@ -667,6 +668,7 @@ reinterpret their names as host-language calls.
 | `date` | ISO date/date-time string or native date/time value | pattern | string | yes |
 | `datetime` | offset date-time string or native date/time value | pattern | string | yes |
 | `time` | offset date-time string or native date/time value | pattern | string | yes |
+| `stringify` | null or any JSON-compatible XTemplate value | none | display string | no |
 | `json_stringify` | any JSON-compatible XTemplate value | none | compact JSON string | no |
 | `json_parse` | JSON string | none | corresponding XTemplate value | no |
 
@@ -698,6 +700,13 @@ does not transliterate to ASCII, percent-encode a URL, or guarantee a unique ide
 they MUST NOT use locale-sensitive comparison or implicit type coercion. Thus `'abcdef' | startsWith('abc')`, `'abcdef' | endsWith('def')`, and
 `'abcdef' | contains('cd')` each return `true`. `123 | startsWith('1')`, `'abc' | endsWith(123)`, `'abc' | contains()`, and
 `'abc' | contains('a', 'b')` are transformer evaluation errors.
+
+`stringify` accepts exactly zero arguments and converts a value to predictable display text. `null` becomes the empty string; strings are returned
+without JSON quotation marks; booleans become `true` or `false`; finite numbers use invariant XTemplate scalar conversion; and objects and arrays use
+the same compact JSON serialization rules as `json_stringify`. Thus `'Hello' | stringify` produces `Hello`, while an insertion-ordered object with
+`city = Barcelona` produces `{"city":"Barcelona"}`. In the browser runtime, an `undefined` source also becomes the empty string. Cyclic values,
+BigInt, functions, symbols, non-finite numbers, unsupported host objects, and other values outside the JSON-compatible XTemplate model are transformer
+evaluation errors. No pretty-printing, localization, or custom property sorting is performed.
 
 `json_stringify` accepts exactly zero arguments and serializes a JSON-compatible XTemplate value to compact JSON with no optional indentation. It
 produces a JSON string for every successful input: `null` becomes `null`, `true` becomes `true`, `123` becomes `123`, the XTemplate string `abc`
@@ -776,16 +785,16 @@ therefore accept examples such as `dd/MM/yyyy`, `yyyy-MM-dd`, `MMMM`, `dd/MM/yyy
 
 #### Result kinds and nulls
 
-The presentation transformers `number`, `currency`, `percent`, `date`, `datetime`, and `time` return strings. `trim`, `upper`, and `lower` are
+The presentation transformers `number`, `currency`, `percent`, `date`, `datetime`, `time`, and `stringify` return strings. `trim`, `upper`, and `lower` are
 string-to-string transformers. `startsWith`, `endsWith`, and `contains` return booleans. `json_stringify` returns a string, while `json_parse` may
 return any JSON-compatible XTemplate value kind. A transformer MUST return only the XTemplate value kind declared by its signature. For example,
 `(state.price | number(2)) + 1` is string concatenation under the ordinary `+` rule; `number` MUST NOT silently convert its string result back to a
 number.
 
 If the current pipeline value is `null`, the current transformer is not invoked, its arguments are not evaluated, and the remaining pipeline result
-remains `null`, except that `json_stringify` is invoked so it can return the JSON string `null`. Thus `null | number(1 / 0)` returns `null` without
+remains `null`, except that `stringify` and `json_stringify` are invoked so they can return their defined null text. Thus `null | number(1 / 0)` returns `null` without
 evaluating `1 / 0`, and `null | endsWith('_i18n')` returns `null`, not `false` or an error. In contrast, `null | json_stringify` returns `null` as a
-string and evaluates the transformer argument list so that the required zero-argument contract is enforced. This rule otherwise applies to
+string, while `null | stringify` returns the empty string. Both evaluate the transformer argument list so that the required zero-argument contract is enforced. This rule otherwise applies to
 presentation, predicate, and `json_parse` transformers alike.
 
 Transformer failures are XTemplate evaluation errors. Unknown transformers, wrong input kinds, invalid arguments, malformed patterns, unsupported

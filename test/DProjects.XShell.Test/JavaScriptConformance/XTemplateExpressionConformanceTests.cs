@@ -79,7 +79,11 @@ public sealed class XTemplateExpressionConformanceTests {
             ["number"] = 12.3456,
             ["ratio"] = 0.25,
             ["maximum"] = double.MaxValue,
-            ["code"] = " eur "
+            ["code"] = " eur ",
+            ["stringifyObject"] = new Dictionary<string, object?> { ["city"] = "Barcelona", ["details"] = new Dictionary<string, object?> { ["active"] = true } },
+            ["stringifyArray"] = new object?[] { "A", "B" },
+            ["stringifyEmptyArray"] = Array.Empty<object>(),
+            ["stringifyEmptyObject"] = new Dictionary<string, object?>()
         };
         return [
             new("null", state), new("true", state), new("12.5", state), new("'text'", state),
@@ -89,6 +93,8 @@ public sealed class XTemplateExpressionConformanceTests {
             new("1 == 1", state), new("1 != '1'", state), new("'a' < '😀'", state), new("2 <= 2", state), new("3 > 2", state), new("3 >= 3", state),
             new("false && (1 / 0)", state), new("true || (1 / 0)", state), new("1 ?? (1 / 0)", state), new("true ? 1 : (1 / 0)", state), new("false ? (1 / 0) : 2", state),
             new("null | number(1 / 0)", state), new("state.name | trim | upper", state), new("state.number | number(2)", state, "en-US"), new("state.ratio | percent(1)", state, "en-US"),
+            new("'Hello' | stringify", state), new("123 | stringify", state), new("12.5 | stringify", state), new("true | stringify", state), new("false | stringify", state), new("null | stringify", state),
+            new("state.stringifyObject | stringify", state), new("state.stringifyArray | stringify", state), new("state.stringifyEmptyArray | stringify", state), new("state.stringifyEmptyObject | stringify", state),
             new("'abcdef' | startsWith('abc')", state), new("'abcdef' | startsWith('def')", state), new("'abcdef' | endsWith('def')", state), new("'abcdef' | endsWith('abc')", state),
             new("'abcdef' | contains('cd')", state), new("'abcdef' | contains('xy')", state), new("state.name | trim | startsWith('a')", state), new("12.5 | number(1) | endsWith('5')", state),
             new("null | endsWith(1 / 0)", state), new("1 | startsWith('1')", state), new("'abc' | startsWith(1)", state), new("'abc' | startsWith()", state), new("'abc' | startsWith('a', 'b')", state),

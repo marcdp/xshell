@@ -498,6 +498,14 @@ namespace DProjects.XShell.Test {
         }
 
         [Fact]
+        public void RendersStringifyThroughSafeTextInterpolation() {
+            var state = new { metadata = new { active = true, label = "<Admin>" }, missing = (object?)null };
+
+            Assert.Equal("<td>{\"active\":true,\"label\":\"&lt;Admin&gt;\"}</td><td></td>",
+                Render("<td>{{ state.metadata | stringify }}</td><td>{{ state.missing | stringify }}</td>", state));
+        }
+
+        [Fact]
         public void RendersPredicateTransformerResultsThroughNormalDirectiveAndScalarSemantics() {
             Assert.Equal("<span>Languages</span>", Render("<span x-if=\"state.type | endsWith('_i18n')\">Languages</span>", new { type = "field_i18n" }));
             Assert.Equal(string.Empty, Render("<span x-if=\"state.type | endsWith('_i18n')\">Languages</span>", new { type = "field" }));

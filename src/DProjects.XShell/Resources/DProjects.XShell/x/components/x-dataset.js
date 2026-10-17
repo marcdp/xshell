@@ -3,7 +3,8 @@ export const contract = {
     description: "Displays the tables of a DataSet using a tabbed interface.",
     events: {},
     properties: {
-        value: {type: "object", default: null, state: true, description: "DataSet object to display."}
+        value: {type: "object", default: null, state: true, description: "DataSet object to display."},
+        src: {type: "string", default: "", description: "Source URL for the dataset."}
     },
     methods: {}
 };
@@ -27,6 +28,10 @@ export default {
 
         th {
             font-weight: 600;
+        }
+
+        tbody tr:nth-child(odd) {
+            background-color: var(--x-color-background-alt);
         }
 
         .empty {
@@ -53,7 +58,7 @@ export default {
                         <tbody>
                             <tr x-for="row in table.rows">
                                 <td x-for="column in table.columns">
-                                    {{ row[column.name] }}
+                                    {{ row[column.name] | stringify}}
                                 </td>
                             </tr>
                         </tbody>
@@ -73,36 +78,27 @@ export default {
     controller({ state, events }) {
         return {
             load() {
+                // load
                 events.on(state, "change:value", () => {
                     this.refresh();
+                });
+                events.on(state, "change:src", async () => {
+                    state.value = await loader.load(state.src);
                 });
                 this.refresh();
             },
 
             refresh() {
+                // refresh
                 const dataset = state.value;
-
                 if (!dataset || !Array.isArray(dataset.tables)) {
                     state.tables = [];
                     return;
                 }
-
                 state.tables = dataset.tables.map(table => {
-                    const rows = Array.isArray(table.rows)
-                        ? table.rows
-                        : [];
-
-                    const columns = table.columns?.length
-                        ? table.columns
-                        : Object.keys(rows[0] || {}).map(name => ({
-                            name
-                        }));
-
-                    return {
-                        name: table.name,
-                        columns,
-                        rows
-                    };
+                    const rows = Array.isArray(table.rows) ? table.rows : [];
+                    const columns = table.columns?.length ? table.columns : Object.keys(rows[0] || {}).map(name => ({name}));
+                    return { name: table.name, columns, rows };
                 });
             }
         };

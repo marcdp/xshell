@@ -21,7 +21,8 @@ namespace DProjects.XShell.Services.XTemplate {
 
         // methods
         public static object? Apply(string name, object? input, IReadOnlyList<object?> arguments, string? locale, int offset, XTemplateObjectAccess? objectAccess = null) {
-            if (name == "json_stringify") return JsonStringify(input, arguments, objectAccess, offset);
+            if (name == "stringify") return Stringify(input, arguments, objectAccess, offset);
+            if (name == "json_stringify") return JsonStringify(input, arguments, objectAccess, offset, "json_stringify");
             if (input == null) return null;
             return name switch {
                 "json_parse" => JsonParse(input, arguments, offset),
@@ -43,12 +44,21 @@ namespace DProjects.XShell.Services.XTemplate {
         }
 
         // methods (private)
-        private static string JsonStringify(object? input, IReadOnlyList<object?> arguments, XTemplateObjectAccess? objectAccess, int offset) {
-            RequireCount("json_stringify", arguments, 0, 0, offset);
+        private static string Stringify(object? input, IReadOnlyList<object?> arguments, XTemplateObjectAccess? objectAccess, int offset) {
+            RequireCount("stringify", arguments, 0, 0, offset);
+            if (input == null) return string.Empty;
+            if (input is bool or string || XTemplateValues.IsNumeric(input)) {
+                try { return XTemplateValues.ToScalarString(input); }
+                catch (XTemplateValueException) { throw Error("Transformer 'stringify' received a value that cannot be converted to text", offset); }
+            }
+            return JsonStringify(input, arguments, objectAccess, offset, "stringify");
+        }
+        private static string JsonStringify(object? input, IReadOnlyList<object?> arguments, XTemplateObjectAccess? objectAccess, int offset, string name) {
+            RequireCount(name, arguments, 0, 0, offset);
             try {
                 var value = JsonValue(input, objectAccess, new HashSet<object>(ReferenceEqualityComparer.Instance));
                 return JsonSerializer.Serialize(value, JsonOptions);
-            } catch (Exception) { throw Error("Transformer 'json_stringify' received a value that cannot be serialized", offset); }
+            } catch (Exception) { throw Error($"Transformer '{name}' received a value that cannot be serialized", offset); }
         }
         private static object? JsonParse(object input, IReadOnlyList<object?> arguments, int offset) {
             RequireCount("json_parse", arguments, 0, 0, offset);

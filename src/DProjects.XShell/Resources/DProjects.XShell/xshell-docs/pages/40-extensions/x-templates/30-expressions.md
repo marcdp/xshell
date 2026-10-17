@@ -31,6 +31,7 @@ Transformers are the restricted pipeline extension:
 <p>{{ state.createdAt | date('dd/MM/yyyy') }}</p>
 <p>{{ state.name | trim | upper }}</p>
 <p>{{ state.title | slug }}</p>
+<code>{{ state.value | stringify }}</code>
 <code>{{ state.value | json_stringify }}</code>
 <span x-text="state.json | json_parse | json_stringify"></span>
 <span x-if="state.type | endsWith('_i18n')">Languages</span>
@@ -41,6 +42,35 @@ Transformer arguments are full XTemplate expressions, but transformer names refe
 method access remain invalid: `formatPrice(state.price)`, `state.price.toFixed(2)`, and `state.name.toUpperCase()` are not XTemplate expressions.
 
 `slug` is a pure built-in string-formatting transformer. It produces the same result regardless of the active locale.
+
+`stringify` is the display-oriented counterpart to `json_stringify`. It takes no arguments, leaves strings unquoted, formats finite numbers and
+booleans invariantly, converts null (and browser-side undefined) to an empty string, and serializes objects and arrays as compact JSON. Browser-compiled
+and server-rendered XTemplates provide the same behavior for JSON-compatible XTemplate values. Cyclic structures, BigInt, functions, symbols,
+non-finite numbers, and unsupported host objects are errors. Ordinary interpolation and `x-text` keep their normal text/HTML-escaping behavior;
+`stringify` does not make `x-html` safe.
+
+For example, a DataSet may contain arbitrary metadata:
+
+```js
+{
+    tables: [
+        {
+            name: "items",
+            rows: [
+                { id: 1, metadata: { active: true } }
+            ]
+        }
+    ]
+}
+```
+
+After selecting the `items` rows in the template context, a cell can render that metadata without producing `[object Object]`:
+
+```html
+<td>{{ row.metadata | stringify }}</td>
+```
+
+The cell text is `{"active":true}`. Quotes, angle brackets, ampersands, and other HTML-sensitive characters in the JSON remain text rather than markup.
 
 The transformer pipeline has lower precedence than the conditional operator. An unparenthesized pipeline transforms the complete preceding conditional,
 so `state.ok ? 'yes' : 'no' | upper` means `(state.ok ? 'yes' : 'no') | upper`. Parenthesize a branch to transform only that branch. Transformer-call

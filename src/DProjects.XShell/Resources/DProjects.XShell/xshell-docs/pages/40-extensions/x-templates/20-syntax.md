@@ -27,6 +27,7 @@ accepted, including attribute bindings:
 <p>{{ state.createdAt | datetime('dd/MM/yyyy HH:mm') }}</p>
 <p>{{ state.name | trim | upper }}</p>
 <a x-attr:href="'/articles/' + (state.title | slug)">{{ state.title }}</a>
+<code>{{ state.value | stringify }}</code>
 <code>{{ state.value | json_stringify }}</code>
 <span x-text="state.json | json_parse | json_stringify"></span>
 <span x-if="state.type | endsWith('_i18n')">Languages</span>
@@ -40,6 +41,11 @@ ordinary scalar conversion remains invariant. General function calls and object 
 specification for its required numeric, percent, currency, month-name, and casing cases.
 
 `slug` formats a title as a locale-independent URL path segment; see the specification for its Unicode rules.
+
+`stringify` takes no arguments and produces human-readable display text: strings remain unquoted, numbers and booleans use invariant text, null (and
+browser-side undefined) becomes empty text, and objects and arrays become compact JSON. It is supported by both browser-compiled and server-rendered
+XTemplates. Use it in `{{ ... }}` or `x-text` when the result is content: those text paths preserve normal HTML escaping and cannot turn JSON string
+content into executable markup. `stringify` is not an HTML sanitizer, so do not pass untrusted output to `x-html`.
 
 `json_stringify` accepts any JSON-compatible XTemplate value, takes no arguments, and returns compact JSON. `json_parse` accepts a JSON string, takes no
 arguments, and returns the corresponding XTemplate value. Parsed objects and arrays participate in ordinary member access, indexing, and collection
