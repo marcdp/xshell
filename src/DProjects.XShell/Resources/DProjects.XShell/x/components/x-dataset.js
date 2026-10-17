@@ -4,7 +4,7 @@ export const contract = {
     events: {},
     properties: {
         value: {type: "object", default: null, state: true, description: "DataSet object to display."},
-        src: {type: "string", default: "", description: "Source URL for the dataset."}
+        src: {type: "string", attribute:true, state:true, default: "", description: "Source URL for the dataset."}
     },
     methods: {}
 };
@@ -75,19 +75,25 @@ export default {
         tables: []
     },
 
-    controller({ state, events }) {
+    controller({ state, events, loader }) {
         return {
-            load() {
+            async load() {
                 // load
                 events.on(state, "change:value", () => {
                     this.refresh();
                 });
-                events.on(state, "change:src", async () => {
-                    state.value = await loader.load(state.src);
+                events.on(state, "change:src", () => {
+                    this.loadSource().catch(error => {
+                        console.error("x-dataset: failed to load source", error);
+                    });
                 });
                 this.refresh();
+                if (state.src) await this.loadSource();
             },
-
+            async loadSource() {
+                if (!state.src) return;
+                state.value = await loader.load(state.src);
+            },
             refresh() {
                 // refresh
                 const dataset = state.value;

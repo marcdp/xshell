@@ -524,8 +524,8 @@ function fillResolverRules(config) {
         };
 
         resolver.dataset ??= {};
-        resolver.dataset[`${moduleId}:{path}`] ??= {
-            src: `${moduleAssetsPath}/datasets/{path}.json`,
+        resolver.dataset[`${moduleId}:{name}`] ??= {
+            src: `${moduleAssetsPath}/datasets/{name}.json`,
             loader: "dataset-url",
             cache: false,
             moduleId,
