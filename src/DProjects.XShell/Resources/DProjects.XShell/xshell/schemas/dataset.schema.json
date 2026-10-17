@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://xshell.dev/schemas/dataset.schema.json",
+  "title": "XShell DataSet",
+  "description": "A collection of named tables containing JSON rows and optional column metadata.",
+  "type": "object",
+  "required": ["tables"],
+  "properties": {
+    "tables": {
+      "type": "array",
+      "description": "Ordered collection of tables. The first table is the default table.",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/table"
+      }
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "table": {
+      "title": "DataTable",
+      "type": "object",
+      "required": ["name", "rows"],
+      "properties": {
+        "name": {"type": "string", "minLength": 1, "description": "Unique table name within the DataSet."},
+        "columns": {"type": "array", "description": "Optional ordered column metadata.", "items": { "$ref": "#/$defs/column"}},
+        "rows": { "type": "array", "description": "Ordered collection of JSON objects representing table rows.", "items": { "type": "object", "additionalProperties": true }}
+      },
+      "additionalProperties": false
+    },
+    "column": {
+      "title": "DataColumn",
+      "type": "object",
+      "required": ["name"],
+      "properties": {
+        "name": {"type": "string", "minLength": 1, "description": "Column name corresponding to a property in each row."},
+        "type": { "type": "string", "enum": ["string","number","integer","boolean","object","array","date","any"],"description": "Optional logical data type."},
+        "label": {"type": "string","description": "Optional human-readable column label."}
+      },
+      "additionalProperties": false
+    }
+  }
+}

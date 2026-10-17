@@ -32,6 +32,10 @@
             "component": {
                 "x-page": {"src": "/x-page.js", "loader": "module-js", "cache": true}
             },
+            "dataset": {
+                "static:{definition}": {"src": "static:{definition}", "loader": "dataset-static"},
+                "url:{definition}":    {"src": "{definition}", "loader": "dataset-url"}
+            },
             "http": {
                 "{url}": {"src": "http:{url}","loader": "response-http", "cache": false}
             },

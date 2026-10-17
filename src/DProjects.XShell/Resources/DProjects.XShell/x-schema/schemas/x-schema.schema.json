@@ -9,12 +9,22 @@
   "properties": {
     "version": { "type": "string", "const": "0" },
     "meta": { "$ref": "#/$defs/meta" },
-    "root": { "type": "string", "minLength": 1, "description": "Name of the root object type declared in types. The referenced type must exist; this is enforced by X-Schema semantic validation."},
-    "types": { "type": "object", "minProperties": 1, "description": "Named reusable or recursive object type definitions.", "additionalProperties": { "$ref": "#/$defs/objectType" } }
+    "root": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Name of the root object type declared in types. The referenced type must exist; this is enforced by X-Schema semantic validation."
+    },
+    "types": {
+      "type": "object",
+      "minProperties": 1,
+      "description": "Named reusable or recursive object type definitions.",
+      "additionalProperties": { "$ref": "#/$defs/objectType" }
+    }
   },
 
   "$defs": {
     "node": {
+      "description": "Any node allowed in an object or container children collection.",
       "oneOf": [
         { "$ref": "#/$defs/objectReference" },
         { "$ref": "#/$defs/fieldNode" },
@@ -24,20 +34,53 @@
       ]
     },
 
+    "dataNode": {
+      "description": "Node representing a data value. Unlike node, this excludes presentation-only containers and is therefore suitable for array items.",
+      "oneOf": [
+        { "$ref": "#/$defs/objectReference" },
+        { "$ref": "#/$defs/fieldNode" },
+        { "$ref": "#/$defs/objectNode" },
+        { "$ref": "#/$defs/arrayNode" }
+      ]
+    },
+
     "objectReference": {
       "type": "object",
       "additionalProperties": false,
       "required": ["type"],
-      "description": "Reference to a named object type. Properties declared on the reference override the corresponding defaults declared by the referenced object type.",
+      "description": "Reference to a named object type. The referenced type owns its tag, description and children. attrs, props, conditions and meta are shallow-merged with the type defaults, with reference values taking precedence. create, when specified on the reference, replaces the type create value.",
       "properties": {
-        "type": { "type": "string", "minLength": 1, "description": "Name of an object type declared in the top-level types registry. The referenced type must exist; this is enforced by X-Schema semantic validation."},
+        "type": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Name of an object type declared in the top-level types registry. The referenced type must exist; this is enforced by X-Schema semantic validation."
+        },
         "bind": { "$ref": "#/$defs/bind" },
-        "required": {"type": "boolean","default": false,"description": "Static required state for the bound value. A conditions.required rule, when present, dynamically overrides this value."},
-        "attrs": {"$ref": "#/$defs/attributes","description": "Context-specific attributes. Values override attributes with the same name declared by the referenced object type."},
-        "props": {"$ref": "#/$defs/properties","description": "Context-specific component properties. Values override properties with the same name declared by the referenced object type."},
-        "conditions": {"$ref": "#/$defs/conditions","description": "Context-specific conditions. Conditions with the same name override conditions declared by the referenced object type."},
-        "create": {"$ref": "#/$defs/jsonValue","description": "Context-specific creation value. When present, overrides the create value declared by the referenced object type."},
-        "meta": { "$ref": "#/$defs/meta" }
+        "required": {
+          "type": "boolean",
+          "default": false,
+          "description": "Static required state for the referenced value. A conditions.required rule, when present, dynamically overrides this value."
+        },
+        "attrs": {
+          "$ref": "#/$defs/attributes",
+          "description": "Context-specific attributes shallow-merged over attributes declared by the referenced object type."
+        },
+        "props": {
+          "$ref": "#/$defs/properties",
+          "description": "Context-specific properties shallow-merged over properties declared by the referenced object type."
+        },
+        "conditions": {
+          "$ref": "#/$defs/conditions",
+          "description": "Context-specific conditions shallow-merged by condition name over conditions declared by the referenced object type."
+        },
+        "create": {
+          "$ref": "#/$defs/jsonValue",
+          "description": "Context-specific creation value. When present, replaces the creation value declared by the referenced object type."
+        },
+        "meta": {
+          "$ref": "#/$defs/meta",
+          "description": "Context-specific metadata shallow-merged over metadata declared by the referenced object type."
+        }
       }
     },
 
@@ -45,16 +88,32 @@
       "type": "object",
       "additionalProperties": false,
       "required": ["kind", "children"],
-      "description": "Named reusable object definition. Presentation and behavior properties declared here act as defaults for every reference to this type.",
+      "description": "Named reusable object definition. Its tag, description and children define the object's structural identity. attrs, props, conditions, create and meta provide defaults that may be overridden where supported by an object reference.",
       "properties": {
         "kind": { "const": "object" },
         "description": { "type": "string" },
-        "tag": {"type": "string","minLength": 1,"description": "Default DOM/Web Component tag used when rendering instances of this object type."},
-        "attrs": {"$ref": "#/$defs/attributes","description": "Default attributes inherited by references to this object type."},
-        "props": {"$ref": "#/$defs/properties","description": "Default component properties inherited by references to this object type."},
+        "tag": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Default DOM/Web Component tag used to render this object type."
+        },
+        "attrs": {
+          "$ref": "#/$defs/attributes",
+          "description": "Default attributes inherited by references to this object type."
+        },
+        "props": {
+          "$ref": "#/$defs/properties",
+          "description": "Default component properties inherited by references to this object type."
+        },
         "children": { "$ref": "#/$defs/children" },
-        "create": {"$ref": "#/$defs/jsonValue","description": "Default value used when creating an instance of this object type."},
-        "conditions": {"$ref": "#/$defs/conditions","description": "Default dynamic conditions inherited by references to this object type."},
+        "create": {
+          "$ref": "#/$defs/jsonValue",
+          "description": "Default value used when creating an instance of this object type."
+        },
+        "conditions": {
+          "$ref": "#/$defs/conditions",
+          "description": "Default dynamic conditions inherited by references to this object type."
+        },
         "meta": { "$ref": "#/$defs/meta" }
       }
     },
@@ -63,20 +122,24 @@
       "type": "object",
       "additionalProperties": false,
       "required": ["kind", "children"],
+      "description": "Inline object node. When bind is omitted, the object operates on the current data-context value.",
       "properties": {
         "kind": { "const": "object" },
         "bind": { "$ref": "#/$defs/bind" },
         "required": {
           "type": "boolean",
           "default": false,
-          "description": "Static required state for the bound value. A conditions.required rule, when present, dynamically overrides this value."
+          "description": "Static required state for the object value. A conditions.required rule, when present, dynamically overrides this value."
         },
         "description": { "type": "string" },
         "tag": { "type": "string", "minLength": 1 },
         "attrs": { "$ref": "#/$defs/attributes" },
         "props": { "$ref": "#/$defs/properties" },
         "children": { "$ref": "#/$defs/children" },
-        "create": {"$ref": "#/$defs/jsonValue", "description": "Value used when creating or activating this object."},
+        "create": {
+          "$ref": "#/$defs/jsonValue",
+          "description": "Value used when creating or activating this object."
+        },
         "conditions": { "$ref": "#/$defs/conditions" },
         "meta": { "$ref": "#/$defs/meta" }
       }
@@ -86,16 +149,24 @@
       "type": "object",
       "additionalProperties": false,
       "required": ["kind"],
+      "description": "Editable atomic value. When bind is omitted, the field edits the current data-context value itself.",
       "properties": {
         "kind": { "const": "field" },
         "bind": { "$ref": "#/$defs/bind" },
-        "required": { "type": "boolean", "default": false, "description": "Static required state for the bound value. A conditions.required rule, when present, dynamically overrides this value."},
+        "required": {
+          "type": "boolean",
+          "default": false,
+          "description": "Static required state for the field value. A conditions.required rule, when present, dynamically overrides this value."
+        },
         "description": { "type": "string" },
         "dataType": { "$ref": "#/$defs/dataType" },
         "tag": { "type": "string", "minLength": 1 },
         "attrs": { "$ref": "#/$defs/attributes" },
         "props": { "$ref": "#/$defs/properties" },
-        "default": { "$ref": "#/$defs/jsonValue", "description": "Default value used when the bound value has not otherwise been initialized."},
+        "default": {
+          "$ref": "#/$defs/jsonValue",
+          "description": "Default value used when the field value has not otherwise been initialized."
+        },
         "reference": { "$ref": "#/$defs/dataReference" },
         "conditions": { "$ref": "#/$defs/conditions" },
         "meta": { "$ref": "#/$defs/meta" }
@@ -106,17 +177,28 @@
       "type": "object",
       "additionalProperties": false,
       "required": ["kind", "item"],
+      "description": "Ordered collection of data values. When bind is omitted, the array operates on the current data-context value.",
       "properties": {
         "kind": { "const": "array" },
         "bind": { "$ref": "#/$defs/bind" },
-        "required": {"type": "boolean","default": false,"description": "Static required state for the bound value. A conditions.required rule, when present, dynamically overrides this value."},
+        "required": {
+          "type": "boolean",
+          "default": false,
+          "description": "Static required state for the array value. A conditions.required rule, when present, dynamically overrides this value."
+        },
         "description": { "type": "string" },
         "tag": { "type": "string", "minLength": 1 },
         "attrs": { "$ref": "#/$defs/attributes" },
         "props": { "$ref": "#/$defs/properties" },
-        "item": {"$ref": "#/$defs/node","description": "Definition of each array item. Object references may be used for reusable or recursive object items."},
+        "item": {
+          "$ref": "#/$defs/dataNode",
+          "description": "Definition of each array item. Presentation-only container nodes are not valid array items."
+        },
         "array": { "$ref": "#/$defs/arrayOptions" },
-        "default": {"type": "array","description": "Default array value used when the bound array has not otherwise been initialized."},
+        "default": {
+          "type": "array",
+          "description": "Default array value used when the array has not otherwise been initialized."
+        },
         "conditions": { "$ref": "#/$defs/conditions" },
         "meta": { "$ref": "#/$defs/meta" }
       }
@@ -126,7 +208,7 @@
       "type": "object",
       "additionalProperties": false,
       "required": ["kind", "tag", "children"],
-      "description": "Presentation-only node used to compose child nodes. Containers do not establish a data binding context.",
+      "description": "Presentation-only node used to compose child nodes. Containers do not bind data and do not establish a new data context.",
       "properties": {
         "kind": { "const": "container" },
         "description": { "type": "string" },
@@ -147,10 +229,11 @@
     "bind": {
       "type": "string",
       "minLength": 1,
-      "description": "Path relative to the current data context. Scoped paths may use $current, $parent or $root."
+      "description": "Path relative to the current data context. Scoped paths may use $current, $parent or $root. When a data node omits bind, it operates directly on the current data-context value."
     },
 
     "dataType": {
+      "description": "Logical value type edited by a field. object and array are allowed for field components that edit those values atomically, such as a JSON editor.",
       "enum": ["string", "number", "integer", "boolean", "date", "datetime", "time", "object", "array", "any"]
     },
 
@@ -170,14 +253,32 @@
     "conditions": {
       "type": "object",
       "additionalProperties": false,
-      "description": "Dynamic node-state rules. Missing positive conditions default to true; missing negative conditions default to false. Effective visibility is visible && !hidden. Effective enabled state is enabled && !disabled.",
+      "description": "Dynamic node-state rules. Missing positive conditions default to true and missing negative conditions default to false. Effective visibility is visible && !hidden. Effective enabled state is enabled && !disabled.",
       "properties": {
-        "visible": {"$ref": "#/$defs/condition", "description": "Positive visibility condition. When absent, visibility defaults to true before applying hidden."},
-        "hidden": { "$ref": "#/$defs/condition", "description": "Negative visibility condition. When true, the node is hidden regardless of visible."},
-        "enabled": { "$ref": "#/$defs/condition", "description": "Positive enabled condition. When absent, enabled defaults to true before applying disabled."},
-        "disabled": { "$ref": "#/$defs/condition", "description": "Negative enabled condition. When true, the node is disabled regardless of enabled."},
-        "readonly": { "$ref": "#/$defs/condition", "description": "Condition controlling whether the node is read-only."},
-        "required": { "$ref": "#/$defs/condition", "description": "Condition that dynamically overrides the node's static required property."}
+        "visible": {
+          "$ref": "#/$defs/condition",
+          "description": "Positive visibility condition. When absent, visibility defaults to true before applying hidden."
+        },
+        "hidden": {
+          "$ref": "#/$defs/condition",
+          "description": "Negative visibility condition. When true, the node is hidden regardless of visible."
+        },
+        "enabled": {
+          "$ref": "#/$defs/condition",
+          "description": "Positive enabled condition. When absent, enabled defaults to true before applying disabled."
+        },
+        "disabled": {
+          "$ref": "#/$defs/condition",
+          "description": "Negative enabled condition. When true, the node is disabled regardless of enabled."
+        },
+        "readonly": {
+          "$ref": "#/$defs/condition",
+          "description": "Condition controlling whether the node is read-only. When absent, read-only defaults to false."
+        },
+        "required": {
+          "$ref": "#/$defs/condition",
+          "description": "Condition that dynamically overrides the node's static required property."
+        }
       }
     },
 
@@ -195,7 +296,7 @@
       "additionalProperties": false,
       "required": ["path"],
       "minProperties": 2,
-      "description": "Condition evaluated against one path. When multiple comparison operators are present, all of them must evaluate to true.",
+      "description": "Condition evaluated against one path. When multiple comparison operators are present, all operators must evaluate to true.",
       "properties": {
         "path": { "type": "string", "minLength": 1 },
         "equals": { "$ref": "#/$defs/jsonValue" },

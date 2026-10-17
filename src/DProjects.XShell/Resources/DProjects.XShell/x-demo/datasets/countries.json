@@ -1,0 +1,15 @@
+{
+  "tables": [
+    {
+      "name": "countries",
+      "columns": [
+        { "name": "code", "type": "string" },
+        { "name": "name", "type": "string" }
+      ],
+      "rows": [
+        { "code": "ES", "name": "Spain" },
+        { "code": "FR", "name": "France" }
+      ]
+    }
+  ]
+}

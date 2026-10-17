@@ -16,10 +16,15 @@ export default {
             this is the index page
         </p>
     `,    
-    controller({ state }) {
+    controller({ state, loader }) {
         return {
-            load(params) {
+            async load(params) {
                // load
+               //var aux = await loader.load("dataset:static:a=1|b=2|c=3");
+               var aux = await loader.load("dataset:url:/datasets/countries.json");
+
+               debugger;
+               alert(JSON.stringify(aux))
             }
         };
     }
