@@ -54,9 +54,12 @@ enforce column-name uniqueness, and does not require a column declaration for ea
 
 ## Runtime validation boundary
 
-The schema is the canonical structural specification, but the built-in `dataset-url` loader currently parses and returns JSON without invoking it.
-The static loader constructs this shape directly. Consequently, successful loading proves that fetched content was valid JSON, not that it
-conformed to `dataset.schema.json`. Applications or custom loaders that require enforcement must validate explicitly.
+The schema is the canonical structural specification. The built-in `dataset-url` loader fetches and parses JSON, then validates the parsed value
+against `dataset.schema.json`; invalid DataSets reject through the normal Loader error path. The `dataset-static` loader directly constructs a
+DataSet using its predefined `items` table structure.
+
+Schema validation enforces only the constraints expressed by the schema. It does not, for example, enforce uniqueness of table names or the other
+V0 invariants described above that are not encoded in `dataset.schema.json`.
 
 The returned value is a materialized JSON object. There is no DataSet class, `query()` API, relation engine, or mutation contract in V0. See
 [DataSets](../10-architecture/95-datasets.md) for locators, resolution, loading, and examples.

@@ -76,10 +76,18 @@ export default {
     },
 
     controller({ state, events, loader }) {
+        let sourceRevision = 0;
+        let sourceOwnsValue = false;
+        let updatingFromSource = false;
+
         return {
             async load() {
                 // load
                 events.on(state, "change:value", () => {
+                    if (!updatingFromSource) {
+                        ++sourceRevision;
+                        sourceOwnsValue = false;
+                    }
                     this.refresh();
                 });
                 events.on(state, "change:src", () => {
@@ -91,8 +99,33 @@ export default {
                 if (state.src) await this.loadSource();
             },
             async loadSource() {
-                if (!state.src) return;
-                state.value = await loader.load(state.src);
+                const revision = ++sourceRevision;
+                const src = state.src;
+                if (!src) {
+                    if (sourceOwnsValue) {
+                        updatingFromSource = true;
+                        try {
+                            state.value = null;
+                        } finally {
+                            updatingFromSource = false;
+                        }
+                    }
+                    sourceOwnsValue = false;
+                    return;
+                }
+                try {
+                    const value = await loader.load(src);
+                    if (revision !== sourceRevision) return;
+                    sourceOwnsValue = true;
+                    updatingFromSource = true;
+                    try {
+                        state.value = value;
+                    } finally {
+                        updatingFromSource = false;
+                    }
+                } catch (error) {
+                    if (revision === sourceRevision) throw error;
+                }
             },
             refresh() {
                 // refresh

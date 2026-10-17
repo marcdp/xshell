@@ -3,7 +3,6 @@ import validateDataset from "../validation/dataset.js";
 export default class LoaderDatasetUrl {
 
     async load(url, context) {
-        debugger
         const response = await fetch(url);
         if (!response.ok) {
             throw new Error(

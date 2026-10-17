@@ -121,7 +121,8 @@ DataSet must provide a custom resolver rule whose `src` itself is an absolute UR
 
 `dataset-url` uses `fetch`, rejects non-success HTTP responses with the status and status text, and then calls `response.json()`. The response is
 expected to already use the [DataSet JSON format](../50-specifications/dataset.md). V0 does not convert an arbitrary API response into that format,
-and the loader does not validate the parsed object against the DataSet schema. Invalid JSON rejects through the normal Loader error path.
+and the loader validates the parsed value against `dataset.schema.json`. Invalid JSON and DataSets that do not conform to the schema reject through
+the normal Loader error path. `dataset-static` directly constructs a DataSet using its predefined `items` table structure.
 
 URL loading follows browser Fetch restrictions. When a custom rule resolves a DataSet to a cross-origin URL, that request requires CORS permission,
 and the application's Content Security Policy must permit the destination through `connect-src`.
@@ -220,8 +221,7 @@ V0 does not provide:
 - relations or constraints between tables;
 - automatic conversion of arbitrary HTTP response shapes;
 - query strings in DataSet URL locators;
-- cross-origin absolute URLs through the built-in `dataset:url:` rule;
-- automatic runtime validation of loaded DataSets against `dataset.schema.json`.
+- cross-origin absolute URLs through the built-in `dataset:url:` rule.
 
 Application code reads the returned JSON object directly, normally beginning with `dataset.tables[0]`. See the
-[DataSet JSON specification](../50-specifications/dataset.md) for its descriptive structure and validation boundary.
+[DataSet JSON specification](../50-specifications/dataset.md) for its structure and validation boundary.
