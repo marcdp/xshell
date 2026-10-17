@@ -96,6 +96,8 @@ export default class Resolver {
         this._definitions.push(definition);
     }
     has(resource) {
+        if (resource.indexOf("#") != -1) resource = resource.split("#")[0];
+        if (resource.indexOf("?") != -1) resource = resource.split("?")[0];
         for(let i = 0; i < this._definitions.length ; i++) {
             let definition = this._definitions[i];
             let match = resource.match(definition.regexp);
