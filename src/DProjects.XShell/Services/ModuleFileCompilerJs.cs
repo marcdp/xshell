@@ -10,7 +10,10 @@ namespace DProjects.XShell.Services {
             // resolve the resource render engine from static metadata or its module default
             var moduleConfig = context.Config.Modules[context.ModuleId];
             var isComponent = context.RelativePath.StartsWith("/components/", StringComparison.OrdinalIgnoreCase);
-            var defaultRenderEngine = isComponent ? moduleConfig.Defaults.Component.RenderEngine : moduleConfig.Defaults.Page.RenderEngine;
+            var isPage = context.RelativePath.StartsWith("/pages/", StringComparison.OrdinalIgnoreCase);
+            var defaultRenderEngine = isComponent ? moduleConfig.Defaults.Component.RenderEngine
+                : isPage ? moduleConfig.Defaults.Page.RenderEngine
+                : "";
             var document = XTemplate.JavaScriptSource.Parse(js);
             var renderEngineProperty = document.FindDefaultExportObject()?.FindProperty("meta")?.Value.AsObject()?.FindProperty("renderEngine");
             var renderEngine = defaultRenderEngine;

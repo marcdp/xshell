@@ -22,14 +22,6 @@ export const contract = {
     }
 };
 
-// constants
-const themes = ["system", "light", "dark"];
-const themeIcons = { system: "x-monitor", light: "x-sun", dark: "x-moon" };
-
-function applyTheme(theme) {
-    if (theme === "system") document.documentElement.removeAttribute("data-theme");
-    else document.documentElement.setAttribute("data-theme", theme);
-}
 
 // implementation
 export default {
@@ -251,19 +243,18 @@ export default {
 
             <div class="spacer"></div>
 
-            <div class="shortcuts" >
+            <div class="shortcuts">
                 <div x-for="menuitem in state.menuShortcuts">
                     <div x-if="menuitem.href">
                         <x-anchor x-attr:href="menuitem.href" x-attr:title="menuitem.tooltip" class="plain">
                             {{ menuitem.label }}
                         </x-anchor>
                     </div>
-                    <x-dropdown x-else class="popover left" collapse-on-click>
+                    <x-dropdown x-else class="popover left menu" collapse-on-click>
                         <x-button x-attr:label="menuitem.label" x-attr:icon="menuitem.icon" x-attr:title="menuitem.tooltip" class="round light"></x-button>
                         <x-menu slot="dropdown" x-prop:menu="menuitem.children"></x-menu>            
                     </x-dropdown>
                 </div>
-                <x-button class="round light" x-attr:icon="state.themeIcon" x-attr:title="state.theme" x-on:click="toggleTheme"></x-button>
             </div>
 
         </nav>
@@ -271,7 +262,7 @@ export default {
         <!-- breadcrumb -->
         <nav class="header breadcrumb">
             <div x-if="state.menuNavigation">
-                <x-icon icon="x-menu" x-on:click="toggle-menu" class="toggle" x-class:toggled="state.toggled"></x-icon>
+                <x-icon icon="x-menu" x-on:click="toggleMenu" class="toggle" x-class:toggled="state.toggled"></x-icon>
             </div>
             <x-page-breadcrumb></x-page-breadcrumb>
 
@@ -284,7 +275,7 @@ export default {
         <div class="body" x-class:toggled="state.toggled">
             <nav class="menu">
                 <div>
-                    <x-button class="anchor" icon="x-close" x-on:click="toggle-menu"></x-button>
+                    <x-button class="anchor" icon="x-close" x-on:click="toggleMenu"></x-button>
                     <x-page-menu></x-page-menu>
                 </div>
             </nav>
@@ -305,20 +296,14 @@ export default {
     state: {
         menuNavigation:  null,
         menuTools:       null,
-        c:     null,
-        theme: "system",
-        themeIcon: themeIcons.system
     },
     controller({ state, events, areas, bus, getPage, host }) {
         return {
             async load(params) {
                 // toggled
                 state.toggled = false; //xshell.settings.getItem("x-layout-main.toggled", false);
-                // theme
-                const savedTheme = localStorage.getItem("xshell.theme");
-                state.theme = themes.includes(savedTheme) ? savedTheme : "system";
-                state.themeIcon = themeIcons[state.theme];
-                applyTheme(state.theme);
+                //state.toggled = localStorage.getItem("xshell.toggled");
+
                 // auto close menu on navigation start (mobile)
                 events.on(bus, "xshell:navigation:start", (e) => {
                     if (probablyPhone()) {
@@ -391,12 +376,7 @@ export default {
                 }
             },
 
-            async "menuitem-clicked"(params) {
-                //menuitem-clicked
-                alert("menuitem-clicked");
-            },
-
-            async "toggle-menu"(params) {
+            async toggleMenu(params) {
                 //toggle-menu
                 state.toggled = !state.toggled;
                 //settings.setItem("x-layout-main.toggled", state.toggled);
@@ -407,14 +387,6 @@ export default {
                 bus.emit("xshell:search", { keyword: state.keyword.trim() });
             },
 
-            async toggleTheme() {
-                const current = themes.indexOf(state.theme);
-                state.theme = themes[(current + 1) % themes.length];
-                state.themeIcon = themeIcons[state.theme];
-
-                applyTheme(state.theme);
-                localStorage.setItem("xshell.theme", state.theme);
-            }
         };
     }
 }

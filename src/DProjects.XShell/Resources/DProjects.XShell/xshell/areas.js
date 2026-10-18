@@ -264,6 +264,7 @@ export default class Areas {
             label: menuitem.label,
             href: menuitem.href,
             path: menuitem.path,
+            command: menuitem.command || null,
             icon: menuitem.icon || null,
             embedded: menuitem.embedded ?? false,
             class: menuitem.class || "",
@@ -281,11 +282,13 @@ export default class Areas {
         }
         Object.freeze(result.children);
         return Object.freeze(result);
+        //return result;
     }
     _cloneMenuitem(menuitem, module, area) {
         const result = {
             label: menuitem.label,
             href: this._buildAreaHref(menuitem.href, area),
+            command: menuitem.command || null,
             path: this._buildAreaHref(menuitem.path, area),
             icon: menuitem.icon || null,
             embedded: menuitem.embedded ?? false,

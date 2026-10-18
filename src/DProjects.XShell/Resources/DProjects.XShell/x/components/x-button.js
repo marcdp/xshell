@@ -44,13 +44,17 @@ export default {
             align-items:baseline; 
             box-sizing: border-box;
             flex:1;
+            cursor:pointer; 
             justify-content: var(--x-button-justify-content);
             text-decoration:none;            
             color:var(--x-color-primary);
+            font-family: var(--x-font-family); 
+            font-size: var(--x-font-size);
+            background: var(--x-button-background);
         }
         :host .button:hover {border-color:var(--x-color-text); color:var(--x-color-text); background:var(--x-button-background-hover); cursor:pointer; }
         :host .button:active {background:var(--x-button-background-active);}
-        :host .button > x-icon.icon {transform:translateY(-.1em); apadding-left:.15em; }
+        :host .button > x-icon.icon {transform:translateY(-.1em); }
         :host .button > x-icon.icon[icon] + div {padding-left:.15em;}
         :host .button > x-icon.down {transform:translateY(-.1em); padding-left:.15em; margin-right:-.25em; }
         :host .button[expanded] > x-icon.down {transform:translateY(.1em) rotate(-180deg) ; }
@@ -70,7 +74,7 @@ export default {
         :host div.more[expanded] {background:var(--x-button-background-hover)!important;}
         :host div.more[expanded] x-icon {transform:  rotate(-180deg) ; }
 
-        :host(.submit) .button {background:var(--x-color-secondary); border-color:var(--x-color-secondary); color:var(--x-color-text); }
+        :host(.submit) .button {background:var(--x-color-secondary); border-color:var(--x-color-secondary); color:light-dark(var(--x-color-text), var(--x-color-text-white)); }
         :host(.submit) .button x-icon {}
         :host(.submit) .button:hover {background:var(--x-color-secondary-dark); border-color:var(--x-color-secondary-dark);}
         :host(.submit) .button:active {background:var(--x-color-secondary-x-dark); border-color:var(--x-color-secondary-x-dark);}
@@ -95,6 +99,12 @@ export default {
         :host(.anchor.big) .button {padding:.25em .25em;}
         :host(.anchor.big) .button x-icon {font-size:1.1em;}
         :host(.anchor[disabled]) .button {color:var(--x-color-xxx-gray)}
+
+        :host(.menuitem) {}
+        :host(.menuitem) .button {display:flex; padding-left:.6em; padding-right:.6em; text-decoration:none; height:2.1em; outline:none; border:none; background:var(--x-button-background); border-radius:var(--x-menuitem-border-radius); align-items:center;}
+        :host(.menuitem) .button > x-icon {font-weight: normal; color:var(--x-color-text); margin-right:.2em;}
+        :host(.menuitem) .button > div span.label {font-weight: normal; color:var(--x-color-text);}
+        :host(.menuitem) .button:hover {background:var(--x-color-background-x-gray); }
         
         :host(.round) .button {padding-left:0; padding-right:0; width:100%; width:2.5em; justify-content: center;}
 
@@ -119,14 +129,14 @@ export default {
     `,
     template: ` 
         <div>
-            <a class="button" tabindex="1" x-attr:href="state.realHref" x-attr:expanded="(state.expanded && !state.command ? true : false)" x-on:click="command" x-attr:has-more="(state.childs && state.command ? true : false)" x-on:keydown.enter="command">
+            <button class="button" tabindex="1" x-attr:expanded="(state.expanded && !state.command ? true : false)" x-on:click="command" x-attr:has-more="(state.childs && state.command ? true : false)" x-on:keydown.enter="command">
                 <x-icon class="icon" x-if="state.icon" x-attr:icon="state.icon"></x-icon>
                 <div x-if="state.label">
                     <span class="label"   x-if="state.label" x-html="state.label"></span>
                     <span class="message" x-if="state.message" x-text="state.message"></span>
                 </div>
                 <x-icon class="down" x-if="state.childs && !state.command" icon="x-arrow-down-fill"></x-icon>
-            </a>
+            </button>
             <div class="more" tabindex="2" x-if="state.childs && state.command" x-on:click="expand" x-attr:expanded="state.expanded" x-on:keydown.enter="toggle">
                 <x-icon class="independent" icon="x-arrow-down-fill"></x-icon>
             </div>
@@ -136,7 +146,6 @@ export default {
         </div>
     `,
     state: {
-        realHref: null,
         breadcrumb: false,
         childs: false,
         expanded: false,
@@ -166,7 +175,7 @@ export default {
                 // command
                 let handled = false;
                 if (state.command) {
-                    host.dispatchEvent(new CustomEvent("command", {detail: {command: state.command, data: host.dataset}, bubbles: true, composed: false}));
+                    host.dispatchEvent(new CustomEvent("command", {detail: {command: state.command, data: host.dataset}, bubbles: true, composed: true}));
                     handled = true;
                 } else if (state.childs) {
                     if (state.expanded) {
@@ -222,12 +231,6 @@ export default {
                     if (window.innerWidth - rect.right < 100) {
                         state.forceRight = true;
                     }
-                }
-                // href
-                if (state.href) {
-                    state.realHref = navigation.getHref(state.href, getPage(), { breadcrumb: state.breadcrumb });
-                } else {
-                    state.realHref = null;
                 }
             }
         }

@@ -171,7 +171,7 @@ namespace DProjects.XShell.Test {
                 }
             };
             var modulePath = Path.GetFullPath(AppContext.BaseDirectory);
-            var context = new ModuleFileCompilerContext(config, "test", modulePath, Path.Combine(modulePath, "page.html"));
+            var context = new ModuleFileCompilerContext(config, "test", modulePath, Path.Combine(modulePath, "pages", "page.html"));
             return new ModuleFileCompilerHtmlSfc().Compile(context, html);
         }
     }

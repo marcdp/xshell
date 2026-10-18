@@ -152,14 +152,28 @@ namespace DProjects.XShell.Test {
         public async Task DevelopmentHtmlSfc_IsCompiledAtJavaScriptPath() {
             using var workspace = new TemporaryDirectory();
             workspace.Write("resources/demo/module.jsonc", ModuleDescriptor);
-            workspace.Write("resources/demo/component.html", "<template><p>Hello</p></template>");
+            workspace.Write("resources/demo/pages/page.html", "<template><p>Hello</p></template>");
 
-            var response = await SendAsync(workspace.PathFor("resources"), "/_resources/demo/component.js", isDevelopment: true);
+            var response = await SendAsync(workspace.PathFor("resources"), "/_resources/demo/pages/page.js", isDevelopment: true);
 
             Assert.Equal(StatusCodes.Status200OK, response.StatusCode);
             Assert.StartsWith("application/javascript", response.ContentType, StringComparison.OrdinalIgnoreCase);
             Assert.Contains("template: `<p>Hello</p>`", response.Text);
             Assert.Contains("templateRenderer:", response.Text);
+            AssertNoCache(response);
+            Assert.Equal(0, response.NextCalls);
+        }
+        [Fact]
+        public async Task DevelopmentRootJavaScript_DoesNotUsePageRenderEngine() {
+            using var workspace = new TemporaryDirectory();
+            const string source = "export default { value: 1 };";
+            workspace.Write("resources/demo/module.jsonc", ModuleDescriptor);
+            workspace.Write("resources/demo/module.js", source);
+
+            var response = await SendAsync(workspace.PathFor("resources"), "/_resources/demo/module.js", isDevelopment: true);
+
+            Assert.Equal(StatusCodes.Status200OK, response.StatusCode);
+            Assert.Equal(source, response.Text);
             AssertNoCache(response);
             Assert.Equal(0, response.NextCalls);
         }

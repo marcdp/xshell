@@ -214,6 +214,23 @@ export default {
             display:var(--x-datafield-error-display, none);
         }
         :host > div.error x-icon {vertical-align:text-bottom}       
+
+        /* horizontal */
+        :host(.horizontal) {display:flex; gap:0em; --x-datafield-label-display:block; padding-right:.25em}
+        :host(.horizontal) > label {width:6em; flex-shrink:0; padding:0; padding-top:.25em; margin:0;  margin-left:2.2em; box-sizing:border-box;}
+        :host(.horizontal) > label span {font-weight:normal; }
+        :host(.horizontal) > label span:after {content:":"; }
+        :host(.horizontal) > .container {flex:1;}
+
+        /* segmented */
+        :host(.segmented) .container {display:flex; gap:.2em; padding:0; border:none; background:none;}
+        :host(.segmented) .container > div {position:relative; flex:1;}
+        :host(.segmented) .container input[type="radio"] {position:absolute; opacity:0; width:100%; height:100%; margin:0; cursor:pointer;}
+        :host(.segmented) .container div label {display:block; text-align:center; padding:.275em .7em; border:var(--x-datafield-border); border-radius:var(--x-datafield-border-radius); cursor:pointer; line-height: var(--x-datafield-line-height);}
+        :host(.segmented) .container input:checked + label {background:var(--x-color-primary); color:var(--x-color-white); border-color:var(--x-color-primary);}
+        :host(.segmented) .container input:focus-visible + label {outline:2px solid var(--x-color-primary); outline-offset:2px;}
+        :host(.segmented) .container input:disabled + label {opacity:.5; cursor:default;}
+
         `,
     template: `
         <label x-if="state.label" x-attr:for="state.inputId" x-attr:label-mode="state.labelMode" x-class:error="state.errors.length">

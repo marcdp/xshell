@@ -44,8 +44,7 @@ export default {
         :host x-anchor[disabled] x-icon {color:var(--x-color-text-disabled)!important;}
         :host x-anchor[disabled] span.label {color:var(--x-color-text-disabled)!important; padding-left:0!important;}
         :host(.selected) x-anchor {background:var(--x-color-background-x-gray);}
-
-        :host HR {border-top:var(--x-layout-main-border);; margin-top:.5em; margin-bottom:.5em; display:block; box-sizing: border-box; width:100%;}
+        :host HR {border:none; background:var(--x-menuitem-separator-color); height:.1px; margin-top:.25em; margin-bottom:.25em; display:block; box-sizing: border-box; width:100%;}
         
         /* dropdown */
         x-contextmenu {
@@ -73,6 +72,8 @@ export default {
         }
     `,
     state: {
+        command:"",
+        href:"",
         embedded: false,
         expanded: false,
         childsDown: false,
@@ -81,12 +82,14 @@ export default {
     template: `
         <hr x-if="state.label=='-'" />
         <div x-elseif="state.embedded">
-            <x-page x-attr:src="state.href" loading="lazy"></x-page>
+            <x-page  x-attr:src="state.href" loading="lazy"></x-page>
         </div>
-        <x-anchor x-else class="menuitem anchor" x-class:down="state.childsDown" x-attr:href="state.href" x-attr:command="state.command" x-attr:disabled="state.disabled" x-attr:expanded="state.expanded" x-class:selected="state.selected" x-attr:tooltip="state.tooltip">
+        <x-button x-elseif="state.command" class="menuitem" x-attr:command="state.command" x-attr:label="state.label" x-attr:icon="state.icon" >
+        </x-button>
+        <x-anchor x-else class="menuitem anchor" x-class:down="state.childsDown" x-attr:href="state.href" x-attr:disabled="state.disabled" x-attr:expanded="state.expanded" x-class:selected="state.selected" x-attr:tooltip="state.tooltip">
             <x-icon x-if="state.checked" icon="x-check"></x-icon>
-            <x-icon x-if="!state.checked && state.icon" class="icon"x-attr:icon="state.icon"></x-icon>
-            <span   x-if="state.label" class="label">{{ state.label }}</span>
+            <x-icon x-if="!state.checked && state.icon" class="icon" x-attr:icon="state.icon"></x-icon>
+            <span   x-if="state.label" class="label">{{ state.label + ' ' + state.command}}</span>
             <span   x-if="state.suffix" class="suffix">{{ state.suffix }}</span>
             <x-icon x-if="state.hasChilds" class="has-childs" x-attr:icon="(state.childsDown ? 'x-keyboard-arrow-down' : 'x-keyboard-arrow-right')"></x-icon>
         </x-anchor>

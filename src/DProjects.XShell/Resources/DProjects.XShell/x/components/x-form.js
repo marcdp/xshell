@@ -280,7 +280,7 @@ export default {
                 //submit
                 this.validate();
                 if (state.errors.length == 0) {
-                    host.dispatchEvent(new CustomEvent("command", {detail: {command: state.command, data: host.dataset}, bubbles: true, composed: false}));
+                    host.dispatchEvent(new CustomEvent("command", {detail: {command: state.command, data: host.dataset}, bubbles: true, composed: true}));
                 }
             },
             refresh(args) {

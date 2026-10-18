@@ -15,14 +15,62 @@ namespace DProjects.XShell.Test {
             Assert.Contains("templateRenderer: {", result.Content);
         }
         [Fact]
+        public void Compile_RootJavaScript_DoesNotUsePageDefault() {
+            const string source = "export default { value: 1 };";
+
+            var result = Compile(source, "module.js", "x", "x");
+
+            Assert.Equal(source, result.Content);
+        }
+        [Fact]
+        public void Compile_UtilityJavaScript_DoesNotUsePageDefault() {
+            const string source = "export default { value: 1 };";
+
+            var result = Compile(source, "utils/helpers.js", "x", "x");
+
+            Assert.Equal(source, result.Content);
+        }
+        [Fact]
+        public void Compile_PageJavaScript_UsesPageDefault() {
+            var result = Compile("export default { template: `<p>content</p>` };", "pages/settings.js", "x", "other");
+
+            Assert.Contains("templateRenderer: {", result.Content);
+        }
+        [Fact]
+        public void Compile_ComponentJavaScript_UsesComponentDefault() {
+            var result = Compile("export default { template: `<p>content</p>` };", "components/x-button.js", "other", "x");
+
+            Assert.Contains("templateRenderer: {", result.Content);
+        }
+        [Fact]
+        public void Compile_PageJavaScriptWithoutTemplate_StillFailsXTemplateValidation() {
+            var exception = Assert.Throws<InvalidOperationException>(() =>
+                Compile("export default { value: 1 };", "pages/settings.js", "x", "other"));
+
+            Assert.Equal("The exported X component definition does not declare a static 'template' property.", exception.Message);
+        }
+        [Fact]
+        public void Compile_ComponentJavaScriptWithoutTemplate_StillFailsXTemplateValidation() {
+            var exception = Assert.Throws<InvalidOperationException>(() =>
+                Compile("export default { value: 1 };", "components/x-button.js", "other", "x"));
+
+            Assert.Equal("The exported X component definition does not declare a static 'template' property.", exception.Message);
+        }
+        [Fact]
+        public void Compile_RootJavaScriptWithExplicitXRenderEngine_CompilesXTemplate() {
+            var result = Compile("export default { meta: { renderEngine: \"x\" }, template: `<p>content</p>` };", "module.js", "other", "other");
+
+            Assert.Contains("templateRenderer: {", result.Content);
+        }
+        [Fact]
         public void Compile_WithoutMeta_UsesModuleDefault() {
-            var result = Compile("export default { template: `<p>content</p>` };", "x");
+            var result = Compile("export default { template: `<p>content</p>` };", "pages/page.js", "x", "");
 
             Assert.Contains("templateRenderer: {", result.Content);
         }
         [Fact]
         public void Compile_WithoutMetaRenderEngine_UsesModuleDefault() {
-            var result = Compile("export default { meta: { stateEngine: \"proxy\" }, template: `<p>content</p>` };", "x");
+            var result = Compile("export default { meta: { stateEngine: \"proxy\" }, template: `<p>content</p>` };", "pages/page.js", "x", "");
 
             Assert.Contains("templateRenderer: {", result.Content);
         }
@@ -177,7 +225,7 @@ namespace DProjects.XShell.Test {
         }
         [Fact]
         public void Compile_XTemplate_InsertsRendererAndPreservesSurroundingSource() {
-            var result = Compile("import value from \"./value.js\";\nexport default { template: `<p>content</p>`, state: { value } };\nconst tail = true;", "x");
+            var result = Compile("import value from \"./value.js\";\nexport default { template: `<p>content</p>`, state: { value } };\nconst tail = true;", "pages/page.js", "x", "");
 
             Assert.StartsWith("import value from \"./value.js\";", result.Content);
             Assert.Contains("templateRenderer: {", result.Content);
@@ -185,7 +233,7 @@ namespace DProjects.XShell.Test {
         }
         [Fact]
         public void Compile_XTemplate_ReplacesExistingRenderer() {
-            var result = Compile("export default { template: `<p>content</p>`, templateRenderer: oldRenderer, state: {} };", "x");
+            var result = Compile("export default { template: `<p>content</p>`, templateRenderer: oldRenderer, state: {} };", "pages/page.js", "x", "");
 
             Assert.DoesNotContain("oldRenderer", result.Content);
             Assert.Equal(1, result.Content.Split("templateRenderer:", StringSplitOptions.None).Length - 1);
@@ -193,17 +241,21 @@ namespace DProjects.XShell.Test {
 
         // methods (private)
         private static ModuleFileCompiler.FileContent Compile(string source, string moduleRenderEngine) {
+            return Compile(source, "page.js", moduleRenderEngine, "");
+        }
+        private static ModuleFileCompiler.FileContent Compile(string source, string relativePath, string pageRenderEngine, string componentRenderEngine) {
             var config = new ModuleFileCompiler.Config {
                 Modules = new Dictionary<string, ModuleFileCompiler.ModuleConfig> {
                     ["test"] = new ModuleFileCompiler.ModuleConfig {
                         Defaults = new ModuleFileCompiler.Defaults {
-                            Page = new ModuleFileCompiler.PageDefaults { RenderEngine = moduleRenderEngine }
+                            Page = new ModuleFileCompiler.PageDefaults { RenderEngine = pageRenderEngine },
+                            Component = new ModuleFileCompiler.ComponentDefaults { RenderEngine = componentRenderEngine }
                         }
                     }
                 }
             };
             var modulePath = Path.GetFullPath(AppContext.BaseDirectory);
-            var context = new ModuleFileCompilerContext(config, "test", modulePath, Path.Combine(modulePath, "page.js"));
+            var context = new ModuleFileCompilerContext(config, "test", modulePath, Path.Combine(modulePath, relativePath));
             return new ModuleFileCompilerJs().Compile(context, source);
         }
         private static ModuleFileCompilerContext CreateContext(string relativePath, string renderEngine) {

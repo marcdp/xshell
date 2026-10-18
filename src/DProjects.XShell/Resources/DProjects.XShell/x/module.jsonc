@@ -17,6 +17,15 @@
                     "renderEngine": "x",
                     "stateEngine": "proxy"
                 }
+            },
+            "menus": {
+                "shortcuts": [
+                    {"label": "", "icon": "x-more-vert", "class": "", "children": [
+                        {"label": "Settings", "href": "/pages/settings.js", "embedded":true},
+                        {"label": "-"},
+                        {"label": "About", "icon": "x-xshell", "href": "/pages/about.js"}
+                    ] }
+                ]
             }
         },
         "codemirror": {

@@ -29,13 +29,13 @@ namespace DProjects.XShell.Test {
             Assert.True(File.Exists(Path.Combine(output, "release.json")));
             Assert.False(File.Exists(Path.Combine(source, "module.json")));
             Assert.True(File.Exists(Path.Combine(source, "module.jsonc")));
-            Assert.True(File.Exists(Path.Combine(source, "page.html")));
+            Assert.True(File.Exists(Path.Combine(source, "pages", "page.html")));
             var files = ReadZipFiles(Path.Combine(package, "module.zip"));
             Assert.Contains("module.json", files.Keys);
             Assert.DoesNotContain("module.jsonc", files.Keys);
-            Assert.Contains("page.js", files.Keys);
-            Assert.DoesNotContain("page.html", files.Keys);
-            Assert.Contains("templateRenderer:", Encoding.UTF8.GetString(files["page.js"]));
+            Assert.Contains("pages/page.js", files.Keys);
+            Assert.DoesNotContain("pages/page.html", files.Keys);
+            Assert.Contains("templateRenderer:", Encoding.UTF8.GetString(files["pages/page.js"]));
             Assert.Equal("value", Encoding.UTF8.GetString(files["data/value.txt"]));
             using var descriptor = JsonDocument.Parse(File.ReadAllText(Path.Combine(package, "module.json")));
             var module = descriptor.RootElement.GetProperty("modules").GetProperty(ModuleId);
@@ -159,7 +159,7 @@ namespace DProjects.XShell.Test {
                         },
                     }
                     """),
-                ("page.html", "<template><p>pack</p></template>"),
+                ("pages/page.html", "<template><p>pack</p></template>"),
                 ("data/value.txt", "value")
             };
             foreach (var file in reverseCreationOrder ? files.Reverse() : files) {

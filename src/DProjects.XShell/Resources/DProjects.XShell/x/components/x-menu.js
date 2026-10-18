@@ -24,6 +24,7 @@ export default {
                 x-attr:embedded="menuitem.embedded" 
                 x-attr:label="menuitem.label" 
                 x-attr:href="menuitem.path || menuitem.href" 
+                x-attr:command="menuitem.command"
                 x-attr:icon="menuitem.icon" 
                 x-attr:selected="menuitem.selected" 
                 x-attr:class="menuitem.class"

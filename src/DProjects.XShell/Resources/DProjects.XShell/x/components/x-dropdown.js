@@ -103,7 +103,8 @@ export default {
 
         /* menu */
         :host(.menu) .body > div {
-            padding:.25em;;
+            padding:.25em;
+            padding-bottom:.1em;
         }
 
         .expanded ::slotted(x-button) {
