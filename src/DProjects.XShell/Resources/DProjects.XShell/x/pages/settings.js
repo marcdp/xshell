@@ -27,28 +27,23 @@ export default {
         ],
         languages: []
     },
-    controller({state, events, i18n}) {
+    controller({state, events, i18n, moduleController}) {
         return {
             load() {
+                debugger;
+                // theme
                 const savedTheme = localStorage.getItem("xshell.theme");
-                state.theme = ["system", "light", "dark"].includes(savedTheme) ? savedTheme : "system";
+                state.theme = moduleController.getThemes().includes(savedTheme) ? savedTheme : "system";
                 state.language = i18n.getDefaultLang();
                 state.languages = i18n.config.langs.map(lang => ({value:lang.id, label:lang.id.toUpperCase()}));
-
-                events.on(state, "change:theme", "changeTheme");
-                events.on(state, "change:language", "changeLanguage");
+                events.on(state, "change:theme", ()=>{
+                    moduleController.setTheme(state.theme);
+                });
+                // language
+                events.on(state, "change:language", ()=>{
+                    i18n.setLanguage(state.language);
+                });
             },
-
-            changeTheme() {
-                localStorage.setItem("xshell.theme", state.theme);
-                if (state.theme === "system") document.documentElement.removeAttribute("data-theme");
-                else document.documentElement.setAttribute("data-theme", state.theme);
-            },
-
-            changeLanguage() {
-                localStorage.setItem("xshell.language", state.language);
-                window.location.reload();
-            }
         };
     }
 };

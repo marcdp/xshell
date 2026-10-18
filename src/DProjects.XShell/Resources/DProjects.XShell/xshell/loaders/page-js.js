@@ -219,6 +219,7 @@ export async function createPageClassFromJsDefinition(src, context, implementati
         }
     }
     // modules
+    const moduleInstance = xshell.modules.getModuleById(context.resourceDefinition.moduleId);
     // state engine
     const stateEngineFactoryCreator = await xshell.loader.load("state-engine:" + implementation.meta.stateEngine);
     const stateEngineFactory = new stateEngineFactoryCreator(stateSkeleton, context);
@@ -325,6 +326,12 @@ export async function createPageClassFromJsDefinition(src, context, implementati
                         return {
                             enqueue: (command, ...params) => { self._commandsPending.push( { command, params: [...params] }); }
                         };
+                    } else if (prop == "moduleInstance") {
+                        // get module instance
+                        return moduleInstance;
+                    } else if (prop == "moduleController") {
+                        // get module controller
+                        return moduleInstance.controller;
                     } else {
                         // resolve from services
                         return xshell.services.resolve(prop);                    

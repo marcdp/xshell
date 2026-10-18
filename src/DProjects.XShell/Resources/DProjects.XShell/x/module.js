@@ -1,33 +1,39 @@
-// constants
-const themes = ["system", "light", "dark"];
-const themeIcons = { system: "x-monitor", light: "x-sun", dark: "x-moon" };
 
-// export
-export default class {
+export default class Module {
 
-    // vars
-    _theme = "system";
-    _themeIcon = themeIcons["system"];
+    // const
+    static THEMES = ["system", "light", "dark"];
+
+    // ctor
+    constructor({ bus }) {
+        this._bus = bus;
+        this._theme = "system";
+    }
+
+    // start
+    async start() {
+        const saved = localStorage.getItem("xshell.theme");
+        this.setTheme(Module.THEMES.includes(saved) ? saved : "system");
+        
+    }
 
     // methods
-    start() {
-        // start
-        const savedTheme = localStorage.getItem("xshell.theme");
-        this._theme = themes.includes(savedTheme) ? savedTheme : "system";
-        this._themeIcon = themeIcons[this._theme];
-        this.applyTheme(this._theme);
+    getThemes() {
+        return Module.THEMES;
     }
-    toggleTheme() {
-        // toggle theme
-        alert("TOGGLE")
-        const savedTheme = localStorage.getItem("xshell.theme");
-        this._theme = themes.includes(savedTheme) ? savedTheme : "system";
-        this._themeIcon = themeIcons[this._theme];
-        this.applyTheme(this._theme);
-        debugger;
-    }
-    applyTheme(theme) {
+    setTheme(theme) {
+        if (!Module.THEMES.includes(theme)) return;
+
+        this._theme = theme;
         if (theme === "system") document.documentElement.removeAttribute("data-theme");
         else document.documentElement.setAttribute("data-theme", theme);
+
+        localStorage.setItem("xshell.theme", theme);
+        this._bus.emit("xshell:theme:change", { theme });
+    }
+
+    toggleTheme() {
+        const index = Module.THEMES.indexOf(this._theme);
+        this.setTheme(Module.THEMES[(index + 1) % Module.THEMES.length]);
     }
 }
