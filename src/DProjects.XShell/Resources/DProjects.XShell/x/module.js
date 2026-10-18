@@ -4,18 +4,26 @@ const themeIcons = { system: "x-monitor", light: "x-sun", dark: "x-moon" };
 
 // export
 export default class {
-    load() {
-        // load
-        debugger;
-        alert(1)
+
+    // vars
+    _theme = "system";
+    _themeIcon = themeIcons["system"];
+
+    // methods
+    start() {
+        // start
+        const savedTheme = localStorage.getItem("xshell.theme");
+        this._theme = themes.includes(savedTheme) ? savedTheme : "system";
+        this._themeIcon = themeIcons[this._theme];
+        this.applyTheme(this._theme);
     }
     toggleTheme() {
         // toggle theme
-        debugger;
+        alert("TOGGLE")
         const savedTheme = localStorage.getItem("xshell.theme");
-        state.theme = themes.includes(savedTheme) ? savedTheme : "system";
-        state.themeIcon = themeIcons[state.theme];
-        applyTheme(state.theme);
+        this._theme = themes.includes(savedTheme) ? savedTheme : "system";
+        this._themeIcon = themeIcons[this._theme];
+        this.applyTheme(this._theme);
         debugger;
     }
     applyTheme(theme) {
