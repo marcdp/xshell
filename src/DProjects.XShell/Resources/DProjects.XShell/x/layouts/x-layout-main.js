@@ -22,6 +22,14 @@ export const contract = {
     }
 };
 
+// constants
+const themes = ["system", "light", "dark"];
+const themeIcons = { system: "x-monitor", light: "x-sun", dark: "x-moon" };
+
+function applyTheme(theme) {
+    if (theme === "system") document.documentElement.removeAttribute("data-theme");
+    else document.documentElement.setAttribute("data-theme", theme);
+}
 
 // implementation
 export default {
@@ -255,6 +263,7 @@ export default {
                         <x-menu slot="dropdown" x-prop:menu="menuitem.children"></x-menu>            
                     </x-dropdown>
                 </div>
+                <x-button class="round light" x-attr:icon="state.themeIcon" x-attr:title="state.theme" x-on:click="toggleTheme"></x-button>
             </div>
 
         </nav>
@@ -296,13 +305,20 @@ export default {
     state: {
         menuNavigation:  null,
         menuTools:       null,
-        c:     null
+        c:     null,
+        theme: "system",
+        themeIcon: themeIcons.system
     },
     controller({ state, events, areas, bus, getPage, host }) {
         return {
             async load(params) {
                 // toggled
                 state.toggled = false; //xshell.settings.getItem("x-layout-main.toggled", false);
+                // theme
+                const savedTheme = localStorage.getItem("xshell.theme");
+                state.theme = themes.includes(savedTheme) ? savedTheme : "system";
+                state.themeIcon = themeIcons[state.theme];
+                applyTheme(state.theme);
                 // auto close menu on navigation start (mobile)
                 events.on(bus, "xshell:navigation:start", (e) => {
                     if (probablyPhone()) {
@@ -389,6 +405,15 @@ export default {
             async search(params) {
                 //search
                 bus.emit("xshell:search", { keyword: state.keyword.trim() });
+            },
+
+            async toggleTheme() {
+                const current = themes.indexOf(state.theme);
+                state.theme = themes[(current + 1) % themes.length];
+                state.themeIcon = themeIcons[state.theme];
+
+                applyTheme(state.theme);
+                localStorage.setItem("xshell.theme", state.theme);
             }
         };
     }
