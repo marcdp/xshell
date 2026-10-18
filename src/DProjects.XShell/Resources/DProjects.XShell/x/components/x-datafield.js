@@ -216,7 +216,7 @@ export default {
         :host > div.error x-icon {vertical-align:text-bottom}       
 
         /* horizontal */
-        :host(.horizontal) {display:flex; gap:0em; --x-datafield-label-display:block; padding-right:.25em}
+        :host(.horizontal) {display:flex; gap:0em; --x-datafield-label-display:block; padding-right:0}
         :host(.horizontal) > label {width:6em; flex-shrink:0; padding:0; padding-top:.25em; margin:0;  margin-left:2.2em; box-sizing:border-box;}
         :host(.horizontal) > label span {font-weight:normal; }
         :host(.horizontal) > label span:after {content:":"; }

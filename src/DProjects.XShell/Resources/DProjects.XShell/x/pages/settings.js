@@ -10,12 +10,11 @@ export default {
     meta: { title: "Settings" },
     style: `
         :scope {display:block;}
+        x-datafield + x-datafield {margin-top: .25em;}
     `,
     template: `
-        <x-datafields>
-            <x-datafield class="horizontal segmented" type="radios" label="Theme" x-prop:domain="state.themes" x-model="state.theme"></x-datafield>
-            <x-datafield class="horizontal segmented" type="select" label="Language" x-prop:domain="state.languages" x-model="state.language"></x-datafield>
-        </x-datafields>
+        <x-datafield class="horizontal segmented" type="radios" label="Theme" x-prop:domain="state.themes" x-model="state.theme"></x-datafield>
+        <x-datafield class="horizontal segmented" type="select" label="Language" x-prop:domain="state.languages" x-model="state.language"></x-datafield>
     `,
     state: {
         theme: "system",

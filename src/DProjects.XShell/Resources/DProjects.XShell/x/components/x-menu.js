@@ -16,6 +16,8 @@ export default {
         :host(.horizontal) {display:flex; align-items:center; }
         :host(.horizontal) nav {display:flex; align-items:center;}
         :host(.horizontal) nav > x-menuitem {margin-right: 1em;}
+
+        :host(x-menu) x-menuitem[label="-"] {}
     `,
     template: `
         <nav x-if="state.menu" x-attr:class="state.horizontal ? 'horizontal' : ''">

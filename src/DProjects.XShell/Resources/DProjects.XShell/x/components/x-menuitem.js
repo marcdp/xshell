@@ -44,7 +44,7 @@ export default {
         :host x-anchor[disabled] x-icon {color:var(--x-color-text-disabled)!important;}
         :host x-anchor[disabled] span.label {color:var(--x-color-text-disabled)!important; padding-left:0!important;}
         :host(.selected) x-anchor {background:var(--x-color-background-x-gray);}
-        :host HR {border:none; background:var(--x-menuitem-separator-color); height:.1px; margin-top:.25em; margin-bottom:.25em; display:block; box-sizing: border-box; width:100%;}
+        :host HR {border:none; background:var(--x-menuitem-separator-color); height:.1px; margin-top:.15em; margin-bottom:.15em; display:block; box-sizing: border-box; width:100%;}
         
         /* dropdown */
         x-contextmenu {
