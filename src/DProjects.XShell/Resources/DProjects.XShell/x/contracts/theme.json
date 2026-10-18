@@ -1,0 +1,44 @@
+{
+  "label": "Theme",
+  "description": "Controls the application color-scheme preference.",
+  "properties": {
+    "mode": {
+      "type": "string",
+      "readonly": true,
+      "enum": [ "system", "light", "dark" ],
+      "description": "Active theme mode. System follows the operating system color scheme."
+    }
+  },
+  "events": {},
+  "methods": {
+    "getModes": {
+      "description": "Returns the supported theme modes.",
+      "returns": {
+        "type": "array",
+        "description": "Supported modes in toggle order.",
+        "schema": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [ "system", "light", "dark" ]
+          }
+        }
+      }
+    },
+    "setMode": {
+      "description": "Applies and persists a supported theme mode.",
+      "parameters": [
+        {
+          "name": "mode",
+          "type": "string",
+          "required": true,
+          "enum": [ "system", "light", "dark" ],
+          "description": "Theme mode to apply."
+        }
+      ]
+    },
+    "toggleMode": {
+      "description": "Selects the next supported theme mode."
+    }
+  }
+}

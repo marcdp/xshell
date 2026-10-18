@@ -72,10 +72,14 @@
 
         // services
         "services": {
+            "theme": {
+                "contract": "theme",
+                "implementation": "/services/theme.js"
+            },
             "toast": {
                 "contract": "toast",
                 "implementation": "/services/toast-default.js"
-            }            
+            }
         },
 
         // ui

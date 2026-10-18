@@ -1,10 +1,52 @@
 import assert from "node:assert/strict";
 import { existsSync, readFileSync } from "node:fs";
 import test from "node:test";
-import layoutDefinition from "../../src/DProjects.XShell/Resources/DProjects.XShell/x/layouts/x-layout-main.js";
+import ThemeContract from "../../src/DProjects.XShell/Resources/DProjects.XShell/x/contracts/theme.json" with { type: "json" };
+import XModule from "../../src/DProjects.XShell/Resources/DProjects.XShell/x/module.js";
+import settingsDefinition from "../../src/DProjects.XShell/Resources/DProjects.XShell/x/pages/settings.js";
+import Theme from "../../src/DProjects.XShell/Resources/DProjects.XShell/x/services/theme.js";
+import Services from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services.js";
+import validateContract from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/validation/contract.js";
 
 const stylesDirectory = new URL("../../src/DProjects.XShell/Resources/DProjects.XShell/x/styles/", import.meta.url);
 const css = readFileSync(new URL("index.css", stylesDirectory), "utf8");
+const xDirectory = new URL("../../src/DProjects.XShell/Resources/DProjects.XShell/x/", import.meta.url);
+const xshellDirectory = new URL("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/", import.meta.url);
+
+async function withThemeEnvironment(saved, callback) {
+    const attributes = new Map([["data-theme", "stale"]]);
+    const storage = new Map();
+    const emitted = [];
+    if (saved !== undefined) storage.set("xshell.theme", saved);
+
+    const originalDocument = globalThis.document;
+    const originalLocalStorage = globalThis.localStorage;
+
+    globalThis.document = {
+        documentElement: {
+            removeAttribute(name) { attributes.delete(name); },
+            setAttribute(name, value) { attributes.set(name, value); }
+        }
+    };
+    globalThis.localStorage = {
+        getItem(name) { return storage.get(name) ?? null; },
+        setItem(name, value) { storage.set(name, value); }
+    };
+
+    try {
+        await callback({
+            attributes,
+            storage,
+            emitted,
+            bus: { emit(type, detail) { emitted.push({ type, detail }); } }
+        });
+    } finally {
+        if (originalDocument === undefined) delete globalThis.document;
+        else globalThis.document = originalDocument;
+        if (originalLocalStorage === undefined) delete globalThis.localStorage;
+        else globalThis.localStorage = originalLocalStorage;
+    }
+}
 
 test("X theme variables use one native light-dark definition", () => {
     assert.match(css, /:root\s*\{[\s\S]*?color-scheme:\s*light dark;/);
@@ -15,7 +57,7 @@ test("X theme variables use one native light-dark definition", () => {
         "--x-color-background-page: light-dark(#FFFFFF, #121314);",
         "--x-color-text: light-dark(#303030, #DDDDDD);",
         "--x-layout-main-border: 1px light-dark(#B4B4BB, #313236) solid;",
-        "--x-button-background: light-dark(var(--x-color-background-x-gray), transparent);",
+        "--x-button-background: light-dark(var(--x-color-background), transparent);",
         "--x-datafield-border-focus: light-dark(#B4B4BB, #888899);",
         "--x-tooltip-color: light-dark(#ffffff, #202124);"
     ];
@@ -41,57 +83,185 @@ test("the datafield border retains its theme-specific width", () => {
     assert.match(css, /:root\[data-theme="dark"\]\s*\{\s*--x-datafield-border-width:\s*\.05em;/);
 });
 
-test("the main layout applies and persists system, light, and dark modes", async () => {
-    const attributes = new Map([["data-theme", "dark"]]);
-    const storage = new Map([["xshell.theme", "system"]]);
-    const originalDocument = globalThis.document;
-    const originalLocalStorage = globalThis.localStorage;
+test("theme initializes missing and invalid preferences to system", async () => {
+    for (const saved of [undefined, "sepia"]) {
+        await withThemeEnvironment(saved, async ({ attributes, bus, emitted }) => {
+            const theme = new Theme({ bus });
 
-    globalThis.document = {
-        documentElement: {
-            removeAttribute(name) { attributes.delete(name); },
-            setAttribute(name, value) { attributes.set(name, value); }
-        }
-    };
-    globalThis.localStorage = {
-        getItem(name) { return storage.get(name) ?? null; },
-        setItem(name, value) { storage.set(name, value); }
-    };
-
-    try {
-        const state = { ...layoutDefinition.state, keyword: "" };
-        const controller = layoutDefinition.controller({
-            state,
-            events: { on() {} },
-            areas: {},
-            bus: {},
-            getPage() { return null; },
-            host: {}
+            assert.equal(theme.mode, "system");
+            assert.deepEqual(theme.getModes(), ["system", "light", "dark"]);
+            assert.equal(attributes.has("data-theme"), false);
+            assert.deepEqual(emitted, []);
         });
+    }
+});
 
-        await controller.load();
-        assert.equal(state.theme, "system");
-        assert.equal(state.themeIcon, "x-monitor");
-        assert.equal(attributes.has("data-theme"), false);
+test("theme restores saved light and dark preferences", async () => {
+    for (const saved of ["light", "dark"]) {
+        await withThemeEnvironment(saved, async ({ attributes, bus }) => {
+            const theme = new Theme({ bus });
 
-        await controller.toggleTheme();
-        assert.equal(state.theme, "light");
+            assert.equal(theme.mode, saved);
+            assert.equal(attributes.get("data-theme"), saved);
+        });
+    }
+});
+
+test("setMode applies, persists, and announces valid changes", async () => {
+    await withThemeEnvironment("system", async ({ attributes, storage, bus, emitted }) => {
+        const theme = new Theme({ bus });
+
+        theme.setMode("light");
+        assert.equal(theme.mode, "light");
         assert.equal(attributes.get("data-theme"), "light");
         assert.equal(storage.get("xshell.theme"), "light");
 
-        await controller.toggleTheme();
-        assert.equal(state.theme, "dark");
+        theme.setMode("dark");
         assert.equal(attributes.get("data-theme"), "dark");
-        assert.equal(storage.get("xshell.theme"), "dark");
 
-        await controller.toggleTheme();
-        assert.equal(state.theme, "system");
+        theme.setMode("system");
         assert.equal(attributes.has("data-theme"), false);
         assert.equal(storage.get("xshell.theme"), "system");
-    } finally {
-        if (originalDocument === undefined) delete globalThis.document;
-        else globalThis.document = originalDocument;
-        if (originalLocalStorage === undefined) delete globalThis.localStorage;
-        else globalThis.localStorage = originalLocalStorage;
-    }
+        assert.deepEqual(emitted, [
+            { type: "xshell:theme:change", detail: { theme: "light" } },
+            { type: "xshell:theme:change", detail: { theme: "dark" } },
+            { type: "xshell:theme:change", detail: { theme: "system" } }
+        ]);
+    });
+});
+
+test("toggleMode cycles system, light, dark, and system", async () => {
+    await withThemeEnvironment("system", async ({ storage, bus }) => {
+        const theme = new Theme({ bus });
+
+        theme.toggleMode();
+        assert.equal(theme.mode, "light");
+        theme.toggleMode();
+        assert.equal(theme.mode, "dark");
+        theme.toggleMode();
+        assert.equal(theme.mode, "system");
+        assert.equal(storage.get("xshell.theme"), "system");
+    });
+});
+
+test("invalid and repeated modes do not apply or emit notifications", async () => {
+    await withThemeEnvironment("light", async ({ attributes, storage, bus, emitted }) => {
+        const theme = new Theme({ bus });
+
+        theme.setMode("sepia");
+        theme.setMode("light");
+        assert.equal(theme.mode, "light");
+        assert.equal(attributes.get("data-theme"), "light");
+        assert.equal(storage.get("xshell.theme"), "light");
+        assert.deepEqual(emitted, []);
+
+        theme.setMode("dark");
+        theme.setMode("dark");
+        assert.deepEqual(emitted, [
+            { type: "xshell:theme:change", detail: { theme: "dark" } }
+        ]);
+    });
+});
+
+test("theme contract validates and the configured service resolves as a singleton", async () => {
+    await validateContract("theme.json", ThemeContract);
+
+    await withThemeEnvironment("dark", async ({ bus }) => {
+        const contractItem = {
+            id: "theme",
+            url: "https://example.test/contracts/theme.json",
+            moduleId: "x",
+            contract: ThemeContract,
+            size: 1,
+            status: "loaded",
+            time: 0
+        };
+        const config = {
+            app: { baseUrl: "https://example.test/" },
+            modules: { x: { files: [{ path: "/services/theme.js", size: 1 }] } },
+            xshell: { services: { theme: { contract: "theme", implementation: "/services/theme.js" } } }
+        };
+        const services = new Services({
+            config,
+            loader: { async load() { return Theme; } },
+            contracts: { getContractItemById() { return contractItem; } },
+            areas: { getModuleId() { return "x"; } },
+            bus
+        });
+
+        services.register("bus", bus);
+        await services.init();
+        assert.equal(services.getServiceInfo("theme").state, "registered");
+        const theme = services.resolve("theme");
+        assert.strictEqual(services.resolve("theme"), theme);
+        assert.equal(theme.mode, "dark");
+        assert.equal(services.getServiceInfo("theme").state, "created");
+    });
+});
+
+test("XShell initializes services before modules and navigation", () => {
+    const source = readFileSync(new URL("xshell.js", xshellDirectory), "utf8");
+    const servicesInit = source.indexOf("await this._services.init()");
+    const modulesInit = source.indexOf("await this._modules.init()");
+    const navigationInit = source.indexOf("await this._navigation.init()");
+
+    assert.ok(servicesInit >= 0);
+    assert.ok(modulesInit > servicesInit);
+    assert.ok(navigationInit > modulesInit);
+});
+
+test("the x module registers and resolves theme through controller injection", () => {
+    const moduleConfig = readFileSync(new URL("module.jsonc", xDirectory), "utf8");
+    let resolutions = 0;
+
+    assert.match(moduleConfig, /"theme"\s*:\s*\{\s*"contract"\s*:\s*"theme"\s*,\s*"implementation"\s*:\s*"\/services\/theme\.js"/);
+    assert.equal(existsSync(new URL("module.js", xDirectory)), true);
+    new XModule({ get theme() { resolutions++; return {}; } });
+    assert.equal(resolutions, 1);
+
+    const source = readFileSync(new URL("module.js", xDirectory), "utf8");
+    assert.doesNotMatch(source, /localStorage|setTheme|toggleTheme|xshell:theme:change/);
+});
+
+test("settings uses the injected theme service and preserves language selection", () => {
+    const listeners = new Map();
+    const selectedThemes = [];
+    const selectedLanguages = [];
+    const state = { ...settingsDefinition.state };
+    const theme = {
+        mode: "dark",
+        getModes() { return ["system", "light", "dark"]; },
+        setMode(mode) { selectedThemes.push(mode); }
+    };
+    const i18n = {
+        config: { langs: [{ id: "en" }, { id: "es" }] },
+        getDefaultLang() { return "es"; },
+        setLanguage(language) { selectedLanguages.push(language); }
+    };
+    const controller = settingsDefinition.controller({
+        state,
+        theme,
+        i18n,
+        events: { on(target, name, handler) { listeners.set(name, handler); } }
+    });
+
+    controller.load();
+    assert.equal(state.theme, "dark");
+    assert.deepEqual(state.themes, [
+        { value: "system", label: "System" },
+        { value: "light", label: "Light" },
+        { value: "dark", label: "Dark" }
+    ]);
+    assert.equal(state.language, "es");
+    assert.deepEqual(state.languages, [{ value: "en", label: "EN" }, { value: "es", label: "ES" }]);
+
+    state.theme = "light";
+    listeners.get("change:theme")();
+    state.language = "en";
+    listeners.get("change:language")();
+    assert.deepEqual(selectedThemes, ["light"]);
+    assert.deepEqual(selectedLanguages, ["en"]);
+
+    const source = readFileSync(new URL("pages/settings.js", xDirectory), "utf8");
+    assert.doesNotMatch(source, /moduleController|localStorage|debugger/);
 });

@@ -19,24 +19,22 @@ export default {
     state: {
         theme: "system",
         language: "en",
-        themes: [
-            {value:"system", label:"System"},
-            {value:"light", label:"Light"},
-            {value:"dark", label:"Dark"}
-        ],
+        themes: [],
         languages: []
     },
-    controller({state, events, i18n, moduleController}) {
+    controller({state, events, theme, i18n}) {
         return {
             load() {
-                debugger;
                 // theme
-                const savedTheme = localStorage.getItem("xshell.theme");
-                state.theme = moduleController.getThemes().includes(savedTheme) ? savedTheme : "system";
+                state.theme = theme.mode;
+                state.themes = theme.getModes().map(mode => ({
+                    value: mode,
+                    label: mode.charAt(0).toUpperCase() + mode.slice(1)
+                }));
                 state.language = i18n.getDefaultLang();
                 state.languages = i18n.config.langs.map(lang => ({value:lang.id, label:lang.id.toUpperCase()}));
                 events.on(state, "change:theme", ()=>{
-                    moduleController.setTheme(state.theme);
+                    theme.setMode(state.theme);
                 });
                 // language
                 events.on(state, "change:language", ()=>{

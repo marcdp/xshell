@@ -120,4 +120,8 @@ export default class I18n {
             return dateTimeFormat.format(datetime);
         }        
     }   
+    setLanguage(lang) {
+        // TODO ...
+        console.warn("Pending: Implement setLanguage. This will change the application's language. Currently, this is just a placeholder. No actual language change will occur.");
+    }
 }

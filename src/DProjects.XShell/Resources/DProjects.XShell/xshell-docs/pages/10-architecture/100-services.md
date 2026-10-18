@@ -18,6 +18,16 @@ During startup, XShell discovers and validates contracts, registers its core/run
 validates every configured contract reference, eagerly loads each configured implementation class, registers the implementation metadata, and then
 finalizes the registry. Configured service instances are not constructed during initialization.
 
+The `theme` service is the one explicit startup exception. The X module controller declares `theme` as a constructor dependency, so normal service
+injection resolves it while modules initialize and before navigation renders UI. The saved `system`, `light`, or `dark` mode is therefore applied to
+the root `data-theme` attribute without waiting for a Page or layout. The service remains the single source of truth and emits
+`xshell:theme:change` on the Bus when the active mode changes. Native CSS `color-scheme` and `light-dark()` continue to resolve the visual palette;
+`system` is represented by an absent root attribute.
+
+This startup integration does not run until asynchronous configuration, contract, and implementation discovery reaches `XShell.init()`. It avoids
+an incorrect theme during XShell UI rendering, but it cannot guarantee that a browser will not paint the host document once before a saved forced
+mode is restored. Preventing that earlier host-document flash would require integration before the current asynchronous bootstrap boundary.
+
 `Services.register()` is therefore an initialization-time API. Core/runtime services are registered before `Services.init()`, and configured
 services from `xshell.services` are registered during it. Once initialization completes, the registry topology is immutable: modules, Components,
 and Pages can resolve existing services but cannot dynamically add or replace providers after startup. A later `Services.register()` call throws a
