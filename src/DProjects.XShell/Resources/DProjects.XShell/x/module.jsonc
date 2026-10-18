@@ -20,10 +20,10 @@
             },
             "menus": {
                 "shortcuts": [
-                    {"label": "", "icon": "x-more-vert", "class": "", "children": [
+                    {"label": "", "icon": "x-more-vert", "class": "menu", "children": [
+                        {"label": "Home", "icon": "x-folder", "href": "app:/"},
                         {"label": "Settings", "href": "/pages/settings.js", "embedded":true},
-                        {"label": "-"},
-                        {"label": "About", "icon": "x-xshell", "href": "/pages/about.js"}
+                        {"label": "About", "href": "/pages/about.js"}
                     ] }
                 ]
             }

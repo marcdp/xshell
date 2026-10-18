@@ -28,7 +28,7 @@ export default class Theme {
         this._mode = mode;
         this._applyMode();
         localStorage.setItem("xshell.theme", mode);
-        this._bus.emit("xshell:theme:change", { theme: mode });
+        this._bus.emit("x:theme:changed", { mode });
     }
     toggleMode() {
         const index = MODES.indexOf(this._mode);

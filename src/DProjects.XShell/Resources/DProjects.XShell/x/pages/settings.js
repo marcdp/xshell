@@ -10,11 +10,11 @@ export default {
     meta: { title: "Settings" },
     style: `
         :scope {display:block;}
-        x-datafield + x-datafield {margin-top: .25em;}
+        x-datafield {margin-top: .25em;}
     `,
     template: `
-        <x-datafield class="horizontal segmented" type="radios" label="Theme" x-prop:domain="state.themes" x-model="state.theme"></x-datafield>
-        <x-datafield class="horizontal segmented" type="select" label="Language" x-prop:domain="state.languages" x-model="state.language"></x-datafield>
+        <x-datafield class="menuitem segmented" type="radios" label="Theme" x-prop:domain="state.themes" x-model="state.theme"></x-datafield>
+        <x-datafield class="menuitem" type="select" label="Language" x-prop:domain="state.languages" x-model="state.language"></x-datafield>
     `,
     state: {
         theme: "system",
@@ -32,7 +32,7 @@ export default {
                     label: mode.charAt(0).toUpperCase() + mode.slice(1)
                 }));
                 state.language = i18n.getDefaultLang();
-                state.languages = i18n.config.langs.map(lang => ({value:lang.id, label:lang.id.toUpperCase()}));
+                state.languages = i18n.config.langs.map(lang => ({value:lang.id, label:lang.label}));
                 events.on(state, "change:theme", ()=>{
                     theme.setMode(state.theme);
                 });

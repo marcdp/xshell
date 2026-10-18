@@ -21,7 +21,8 @@ finalizes the registry. Configured service instances are not constructed during 
 The `theme` service is the one explicit startup exception. The X module controller declares `theme` as a constructor dependency, so normal service
 injection resolves it while modules initialize and before navigation renders UI. The saved `system`, `light`, or `dark` mode is therefore applied to
 the root `data-theme` attribute without waiting for a Page or layout. The service remains the single source of truth and emits
-`xshell:theme:change` on the Bus when the active mode changes. Native CSS `color-scheme` and `light-dark()` continue to resolve the visual palette;
+`x:theme:changed` with `{ mode }` on the Bus when the selected mode changes. Restoring the selected mode at startup and operating-system appearance
+changes while `system` is selected do not emit this event. Native CSS `color-scheme` and `light-dark()` continue to resolve the visual palette;
 `system` is represented by an absent root attribute.
 
 This startup integration does not run until asynchronous configuration, contract, and implementation discovery reaches `XShell.init()`. It avoids

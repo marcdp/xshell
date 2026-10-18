@@ -250,7 +250,7 @@ export default {
                             {{ menuitem.label }}
                         </x-anchor>
                     </div>
-                    <x-dropdown x-else class="popover left menu" collapse-on-click>
+                    <x-dropdown x-else x-attr:class="'popover left' + (menuitem.class ? ' ' + menuitem.class : '')"  __collapse-on-click>
                         <x-button x-attr:label="menuitem.label" x-attr:icon="menuitem.icon" x-attr:title="menuitem.tooltip" class="round light"></x-button>
                         <x-menu slot="dropdown" x-prop:menu="menuitem.children"></x-menu>            
                     </x-dropdown>

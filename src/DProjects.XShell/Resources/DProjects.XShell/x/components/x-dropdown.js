@@ -165,14 +165,10 @@ export default {
 
             clickHead() {
                 //click-head
-                if (state.collapseOnClick) {
-                    if (state.expanded) {
-                        let diff = performance.now() - this._expandedAt;
-                        if (diff > 200) {
-                            this.collapse();
-                        }
-                    } else {
-                        this.expand();
+                if (state.expanded) {
+                    let diff = performance.now() - this._expandedAt;
+                    if (diff > 200) {
+                        this.collapse();
                     }
                 } else {
                     this.expand();

@@ -98,18 +98,24 @@ test("theme initializes missing and invalid preferences to system", async () => 
 
 test("theme restores saved light and dark preferences", async () => {
     for (const saved of ["light", "dark"]) {
-        await withThemeEnvironment(saved, async ({ attributes, bus }) => {
+        await withThemeEnvironment(saved, async ({ attributes, bus, emitted }) => {
             const theme = new Theme({ bus });
 
             assert.equal(theme.mode, saved);
             assert.equal(attributes.get("data-theme"), saved);
+            assert.deepEqual(emitted, []);
         });
     }
 });
 
-test("setMode applies, persists, and announces valid changes", async () => {
+test("setMode applies and persists before announcing valid changes", async () => {
     await withThemeEnvironment("system", async ({ attributes, storage, bus, emitted }) => {
         const theme = new Theme({ bus });
+        const snapshots = [];
+        bus.emit = (type, detail) => {
+            snapshots.push({ mode: theme.mode, attribute: attributes.get("data-theme"), stored: storage.get("xshell.theme") });
+            emitted.push({ type, detail });
+        };
 
         theme.setMode("light");
         assert.equal(theme.mode, "light");
@@ -123,24 +129,38 @@ test("setMode applies, persists, and announces valid changes", async () => {
         assert.equal(attributes.has("data-theme"), false);
         assert.equal(storage.get("xshell.theme"), "system");
         assert.deepEqual(emitted, [
-            { type: "xshell:theme:change", detail: { theme: "light" } },
-            { type: "xshell:theme:change", detail: { theme: "dark" } },
-            { type: "xshell:theme:change", detail: { theme: "system" } }
+            { type: "x:theme:changed", detail: { mode: "light" } },
+            { type: "x:theme:changed", detail: { mode: "dark" } },
+            { type: "x:theme:changed", detail: { mode: "system" } }
         ]);
+        assert.deepEqual(snapshots, [
+            { mode: "light", attribute: "light", stored: "light" },
+            { mode: "dark", attribute: "dark", stored: "dark" },
+            { mode: "system", attribute: undefined, stored: "system" }
+        ]);
+        assert.equal(emitted.some(event => event.type === "xshell:theme:change"), false);
     });
 });
 
-test("toggleMode cycles system, light, dark, and system", async () => {
-    await withThemeEnvironment("system", async ({ storage, bus }) => {
+test("toggleMode cycles system, light, dark, and system with one event per change", async () => {
+    await withThemeEnvironment("system", async ({ storage, bus, emitted }) => {
         const theme = new Theme({ bus });
 
         theme.toggleMode();
         assert.equal(theme.mode, "light");
+        assert.equal(emitted.length, 1);
         theme.toggleMode();
         assert.equal(theme.mode, "dark");
+        assert.equal(emitted.length, 2);
         theme.toggleMode();
         assert.equal(theme.mode, "system");
+        assert.equal(emitted.length, 3);
         assert.equal(storage.get("xshell.theme"), "system");
+        assert.deepEqual(emitted, [
+            { type: "x:theme:changed", detail: { mode: "light" } },
+            { type: "x:theme:changed", detail: { mode: "dark" } },
+            { type: "x:theme:changed", detail: { mode: "system" } }
+        ]);
     });
 });
 
@@ -158,13 +178,24 @@ test("invalid and repeated modes do not apply or emit notifications", async () =
         theme.setMode("dark");
         theme.setMode("dark");
         assert.deepEqual(emitted, [
-            { type: "xshell:theme:change", detail: { theme: "dark" } }
+            { type: "x:theme:changed", detail: { mode: "dark" } }
         ]);
     });
 });
 
 test("theme contract validates and the configured service resolves as a singleton", async () => {
     await validateContract("theme.json", ThemeContract);
+    assert.deepEqual(ThemeContract.events["x:theme:changed"], {
+        description: "Emitted on the Bus when the selected theme mode changes.",
+        detail: {
+            mode: {
+                type: "string",
+                required: true,
+                description: "The newly selected theme mode."
+            }
+        }
+    });
+    assert.equal(Object.hasOwn(ThemeContract.events, "xshell:theme:change"), false);
 
     await withThemeEnvironment("dark", async ({ bus }) => {
         const contractItem = {
@@ -220,7 +251,7 @@ test("the x module registers and resolves theme through controller injection", (
     assert.equal(resolutions, 1);
 
     const source = readFileSync(new URL("module.js", xDirectory), "utf8");
-    assert.doesNotMatch(source, /localStorage|setTheme|toggleTheme|xshell:theme:change/);
+    assert.doesNotMatch(source, /localStorage|setTheme|toggleTheme|xshell:theme:change|x:theme:changed/);
 });
 
 test("settings uses the injected theme service and preserves language selection", () => {

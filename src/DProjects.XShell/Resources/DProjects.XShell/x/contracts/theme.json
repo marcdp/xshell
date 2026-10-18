@@ -9,7 +9,18 @@
       "description": "Active theme mode. System follows the operating system color scheme."
     }
   },
-  "events": {},
+  "events": {
+    "x:theme:changed": {
+      "description": "Emitted on the Bus when the selected theme mode changes.",
+      "detail": {
+        "mode": {
+          "type": "string",
+          "required": true,
+          "description": "The newly selected theme mode."
+        }
+      }
+    }
+  },
   "methods": {
     "getModes": {
       "description": "Returns the supported theme modes.",

@@ -59,8 +59,8 @@ export default {
             A select field populated from the countries dataset.
         </p>
         <x-datafield type="select" label="Country" placeholder="Select a country" domain="dataset:x-demo:countries"></x-datafield>    
-        <x-datafield type="radios" label="Priority" domain="dataset:x-demo:countries"></x-datafield>
-        <x-datafield type="checkboxes" label="Notifications" domain="dataset:x-demo:countries" ></x-datafield>
+        <x-datafield type="radios" label="Priority" domain="dataset:x-demo:countries" class="segmented"></x-datafield>
+        <x-datafield type="checkboxes" label="Notifications" domain="dataset:x-demo:countries" class="segmented"></x-datafield>
 
     `,
 

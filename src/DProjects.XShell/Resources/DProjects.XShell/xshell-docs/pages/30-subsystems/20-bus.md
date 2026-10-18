@@ -32,5 +32,6 @@ The `events` helper removes this registration on final unload. With direct regis
 Bus messages have no DOM bubbling, composed path, or cancellation.
 `module.contract.events` and service event contracts are metadata, without automatic validation/dispatch.
 
-Area consumers listen for `xshell:area:change` and `xshell:menus:change`; Navigation emits `xshell:navigation:end`.
+Area consumers listen for `xshell:area:change` and `xshell:menus:change`; Navigation emits `xshell:navigation:end`; the Theme service emits
+`x:theme:changed` with `{ mode }` when the selected theme mode changes.
 See [Areas](10-areas.md), [Navigation](../10-architecture/120-navigation.md), and [Component Events](../20-components/40-events.md).
