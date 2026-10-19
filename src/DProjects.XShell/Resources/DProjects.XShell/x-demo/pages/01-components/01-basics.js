@@ -11,12 +11,16 @@ export default {
             Basic visual and interactive components provided by XShell.
         </p>
 
+        <h2>Anchors</h2>
+
+        <ul>
+            <li>a tag:<a href="02-forms.js">Open the forms examples</a></li>
+            <li>x-anchor tag:<x-anchor href="02-forms.js">Open the forms examples</x-anchor></li>
+        </ul>
+
+        <x-divider></x-divider>
         <h2>Buttons</h2>
-
-        <a href="02-forms.js">Open the forms examples</a>
-
-        <x-anchor href="02-forms.js">Open the forms examples</x-anchor>
-
+        
         <div>
             <x-button label="Default button"></x-button>
             <x-button class="submit" label="Submit"></x-button>
@@ -86,13 +90,7 @@ export default {
 
         <x-divider></x-divider>
 
-        <h2>Anchor</h2>
-
-        <x-anchor class="plain" href="02-forms.js">
-            Open the forms examples
-        </x-anchor>
-
-        <x-divider></x-divider>
+        
 
         <h2>Clock</h2>
 

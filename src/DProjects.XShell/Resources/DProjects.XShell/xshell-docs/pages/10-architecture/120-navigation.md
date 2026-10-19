@@ -134,6 +134,11 @@ Inside `x-page`, ordinary internal anchors (including relative Page links and `.
 Fragment-only links such as `#section`, explicit URI schemes (`https:`, `mailto:`, `tel:`, etc.), and protocol-relative URLs (`//example.com/path`)
 remain native browser links. The `#!` application-navigation prefix is preserved.
 
+HTML and Markdown rendering may expose an ordinary anchor as an already resolved browser path such as
+`<App.BasePath>/_assets/<module-id>/...`. Before Area selection, Navigation recognizes that structural application asset namespace and removes
+only `App.BasePath`, restoring the logical `/_assets/...` target. It then applies the originating or target Area once. Other root-relative paths
+remain logical navigation paths and are not stripped merely because they begin with the application base path.
+
 Modified clicks, non-primary buttons, already-prevented events, downloads, and explicit non-self browsing targets also retain native behavior.
 An absent/empty target or `_self` permits interception of an internal link. `x-anchor` remains an explicit XShell navigation component.
 

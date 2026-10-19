@@ -158,7 +158,7 @@ function createNavigation({ areas = createAreas(), mode = "path", basePath = "",
         bus: { emit() {} },
         config: {
             app: { basePath, baseUrl },
-            xshell: { navigation: { mode } }
+            xshell: { assets: { basePath: "/_assets" }, navigation: { mode } }
         },
         container: { querySelectorAll() { return []; } }
     });
@@ -404,6 +404,40 @@ test("Navigation formats friendly URLs through existing path and hash modes with
 
     assert.equal(pathNavigation.buildUrlAbsolute({ href: "/_assets/customer/pages/detail.js", page }), "/app/sales/detail");
     assert.equal(hashNavigation.buildUrlAbsolute({ href: "/_assets/customer/pages/detail.js", page }), "/app/#!/sales/detail");
+});
+
+test("Navigation removes AppBasePath from already resolved asset targets before applying an Area", () => {
+    const page = { src: "/demo/_assets/x-demo/1.0.0.dev/pages/01-components/01-basics.js" };
+    const assetHref = "/_assets/x-demo/1.0.0.dev/pages/01-components/02-forms.js?view=all#examples";
+
+    for (const mode of ["path", "hash"]) {
+        for (const basePath of ["", "/prefix", "/prefix/demo"]) {
+            const navigation = createNavigation({
+                mode,
+                basePath,
+                baseUrl: `https://example.test${basePath}/`
+            });
+            const renderedHref = basePath + assetHref;
+            const canonicalHref = "/demo" + assetHref;
+            const renderedCanonicalHref = basePath + canonicalHref;
+            const browserHref = basePath + (mode === "hash" ? "/#!" : "") + canonicalHref;
+
+            assert.equal(navigation._resolveCanonicalHref(renderedHref, page), canonicalHref);
+            assert.equal(navigation._resolveCanonicalHref(canonicalHref, page), canonicalHref);
+            assert.equal(navigation._resolveCanonicalHref(renderedCanonicalHref, page), canonicalHref);
+            assert.equal(navigation.buildUrlAbsolute({ href: renderedHref, page }), browserHref);
+            assert.equal(navigation.buildUrlAbsolute({ href: canonicalHref, page }), browserHref);
+            assert.equal(navigation.buildUrlAbsolute({ href: renderedCanonicalHref, page }), browserHref);
+            if (basePath) assert.equal(browserHref.includes(basePath + "/demo" + basePath), false);
+        }
+    }
+});
+
+test("Navigation does not strip AppBasePath from non-asset logical paths", () => {
+    const navigation = createNavigation({ basePath: "/prefix", baseUrl: "https://example.test/prefix/" });
+    const page = { src: "/demo/_assets/x-demo/pages/origin.js" };
+
+    assert.equal(navigation._resolveCanonicalHref("/prefix/reports?view=all#summary", page), "/demo/prefix/reports?view=all#summary");
 });
 
 test("Navigation still resolves incoming friendly paths to canonical Page hrefs", () => {

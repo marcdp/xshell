@@ -291,7 +291,7 @@ test("x-page intercepts only application anchors and preserves native clicks", a
                 // exercise the registered click listener with real Navigation URL parsing
                 const navigation = new Navigation({
                     areas: {}, bus: {}, container: {},
-                    config: { app: { basePath: "", baseUrl: "https://example.test/" }, xshell: { navigation: { mode } } }
+                    config: { app: { basePath: "", baseUrl: "https://example.test/" }, xshell: { assets: { basePath: "/_assets" }, navigation: { mode } } }
                 });
                 const calls = [];
                 navigation.navigate = item => calls.push(item);
@@ -319,12 +319,110 @@ test("x-page intercepts only application anchors and preserves native clicks", a
                 assert.equal(prevented, expected);
                 assert.equal(stopped, expected);
                 if (scenario.intercept) {
-                    assert.deepEqual(calls[0], { ...navigation.parseUrl(scenario.href), open: "auto", page: xpage.page });
+                    assert.deepEqual(calls[0], { href: scenario.href, open: "auto", page: xpage.page });
                     assert.equal(calls[0].page, xpage.page);
                 }
             });
         }
     }
+});
+
+test("x-page native anchors and x-anchor targets reach the same JavaScript and Markdown Pages", () => {
+    const definitions = [
+        { id: "demo", prefix: "/demo", modules: ["x-demo"] },
+        { id: "xshell-docs", prefix: "/xshell-docs", modules: ["xshell-docs"] }
+    ];
+    const areas = {
+        resolveAreaId(href) {
+            return definitions.find(area => href === area.prefix || href.startsWith(area.prefix + "/"))?.id || null;
+        },
+        getArea(id) { return definitions.find(area => area.id === id) || null; },
+        getAreas() { return definitions; },
+        getCurrentArea() { return definitions[0]; },
+        getDefaultArea() { return definitions[0]; },
+        getModuleId(href) { return /\/_assets\/([^/]+)\//.exec(href)?.[1] || null; },
+        resolveHref() { return null; },
+        resolvePath() { return null; }
+    };
+    const scenarios = [
+        {
+            name: "JavaScript Page",
+            pageSrc: "/demo/_assets/x-demo/1.0.0.dev/pages/01-components/01-basics.js",
+            renderedHref: "/prefix/_assets/x-demo/1.0.0.dev/pages/01-components/02-forms.js?view=all#examples",
+            authoredHref: "02-forms.js?view=all#examples"
+        },
+        {
+            name: "Markdown Page",
+            pageSrc: "/xshell-docs/_assets/xshell-docs/1.0.0.dev/pages/index.md",
+            renderedHref: "/prefix/_assets/xshell-docs/1.0.0.dev/pages/10-architecture/30-modules.md?view=all#configuration",
+            authoredHref: "10-architecture/30-modules.md?view=all#configuration"
+        }
+    ];
+
+    for (const mode of ["path", "hash"]) {
+        for (const scenario of scenarios) {
+            const browserUrls = [];
+            const navigation = new Navigation({
+                areas,
+                bus: {},
+                container: { querySelectorAll() { return []; } },
+                config: {
+                    app: { basePath: "/prefix", baseUrl: "https://example.test/prefix/" },
+                    xshell: { assets: { basePath: "/_assets" }, navigation: { mode } }
+                }
+            });
+            navigation._stackToBrowser = stack => {
+                browserUrls.push(navigation.buildUrlAbsolute(stack[0]));
+                return Promise.resolve();
+            };
+            xshell._navigation = navigation;
+            const xpage = new XPage();
+            xpage._page = new Page({ src: scenario.pageSrc, context: {} });
+            const anchor = document.createElement("a");
+            anchor.setAttribute("href", scenario.renderedHref);
+            anchor.target = "";
+            anchor.closest = selector => selector === "a" ? anchor : xpage;
+            const event = {
+                type: "click", target: anchor, button: 0, defaultPrevented: false,
+                metaKey: false, ctrlKey: false, shiftKey: false, altKey: false,
+                composedPath() { return [anchor, xpage]; },
+                preventDefault() { this.defaultPrevented = true; },
+                stopPropagation() {}
+            };
+
+            xpage.dispatchEvent(event);
+
+            const xAnchorUrl = navigation.buildUrlAbsolute({ href: scenario.authoredHref, page: xpage.page });
+            assert.deepEqual(browserUrls, [xAnchorUrl], `${mode}: ${scenario.name}`);
+            assert.equal(browserUrls[0].includes("/prefix/demo/prefix/"), false);
+            assert.equal(browserUrls[0].includes("/prefix/xshell-docs/prefix/"), false);
+        }
+    }
+});
+
+test("x-page finds native anchors through a composed Shadow DOM click path", () => {
+    const calls = [];
+    xshell._navigation = { navigate(item) { calls.push(item); } };
+    const xpage = new XPage();
+    xpage._page = new Page({ src: "/demo/_assets/example/pages/current.js", context: {} });
+    const anchor = document.createElement("a");
+    anchor.setAttribute("href", "next.js");
+    anchor.target = "";
+    anchor.closest = () => null;
+    const componentHost = document.createElement("example-component");
+    componentHost.closest = () => null;
+    const event = {
+        type: "click", target: componentHost, button: 0, defaultPrevented: false,
+        metaKey: false, ctrlKey: false, shiftKey: false, altKey: false,
+        composedPath() { return [anchor, { nodeName: "#document-fragment" }, componentHost, xpage]; },
+        preventDefault() { this.defaultPrevented = true; },
+        stopPropagation() {}
+    };
+
+    xpage.dispatchEvent(event);
+
+    assert.deepEqual(calls, [{ href: "next.js", open: "auto", page: xpage.page }]);
+    assert.equal(event.defaultPrevented, true);
 });
 
 const renderEngines = [];

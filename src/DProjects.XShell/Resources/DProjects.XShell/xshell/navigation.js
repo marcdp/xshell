@@ -16,6 +16,7 @@ export default class Navigation {
 
     _mode = ""; 
     _appBasePath = "";
+    _assetsBasePath = "";
     _compiledRoutes = new Map();
 
     _stack = [];
@@ -30,6 +31,7 @@ export default class Navigation {
         this._mode = config.xshell.navigation.mode;
         this._appBasePath = config.app.basePath;
         if (this._appBasePath == "/") this._appBasePath = "";
+        this._assetsBasePath = config.xshell.assets?.basePath || "";
     }
 
     // props
@@ -537,6 +539,7 @@ export default class Navigation {
         // resolve relative targets and apply the originating navigation context
         if (/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(href)) return href;
         if (href.startsWith("#!")) href = href.substring(2);
+        href = this._removeAppBasePathFromAssetHref(href);
         if (!href.startsWith("/")) href = combineUrls(page ? page.src : "/", href);
         const { identity, suffix } = this._splitHref(href);
         const targetArea = this._areas.getArea?.(this._areas.resolveAreaId?.(identity));
@@ -664,6 +667,18 @@ export default class Navigation {
         // apply the public navigation context exactly once
         if (!area?.prefix || path === area.prefix || path.startsWith(area.prefix + "/")) return path;
         return area.prefix + path;
+    }
+    _removeAppBasePathFromAssetHref(href) {
+        // Rendered native links may already contain App.BasePath. Convert only
+        // structural application asset URLs back to Navigation's logical namespace.
+        if (!this._appBasePath || !this._assetsBasePath) return href;
+        const { identity, suffix } = this._splitHref(href);
+        if (identity !== this._appBasePath && !identity.startsWith(this._appBasePath + "/")) return href;
+        const applicationIdentity = identity.substring(this._appBasePath.length) || "/";
+        const isAssetPath = path => path === this._assetsBasePath || path.startsWith(this._assetsBasePath + "/");
+        if (isAssetPath(applicationIdentity)) return applicationIdentity + suffix;
+        const area = this._areas.getArea?.(this._areas.resolveAreaId?.(applicationIdentity));
+        return isAssetPath(this._removeAreaPrefix(applicationIdentity, area)) ? applicationIdentity + suffix : href;
     }
     _splitHref(href) {
         const queryIndex = href.indexOf("?");

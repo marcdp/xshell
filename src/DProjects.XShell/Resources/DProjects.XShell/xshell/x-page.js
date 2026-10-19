@@ -51,8 +51,10 @@ class XPage extends HTMLElement {
             return false;
         });
         this.addEventListener("click", (event) => {
-            const a = event.target.closest("a");
-            if (!a || !this.contains(a) ||
+            const path = typeof event.composedPath === "function" ? event.composedPath() : [];
+            const a = event.target?.closest?.("a") || path.find(element => element?.localName === "a");
+            const xpage = a?.closest?.("x-page") || path.find(element => element === this || element?.localName === "x-page");
+            if (!a || xpage !== this ||
                 event.defaultPrevented ||
                 event.button !== 0 ||        
                 event.metaKey || event.ctrlKey || event.shiftKey || event.altKey ||
@@ -66,9 +68,8 @@ class XPage extends HTMLElement {
             if (!href || (href.startsWith("#") && !href.startsWith("#!")) ||
                 /^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(href) || href.startsWith("//")) return;
             // handle navigation
-            const xpage = a.closest("x-page");
             const item = {
-                ...xshell.navigation.parseUrl(href),
+                href,
                 open: "auto",
                 page: xpage.page
             };
@@ -76,7 +77,7 @@ class XPage extends HTMLElement {
             event.preventDefault();
             event.stopPropagation();
             return false;
-        }, true);
+        });
     }
 
 
