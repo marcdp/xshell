@@ -43,10 +43,6 @@ export default {
                         <td>{{state.code}}</td>
                     </tr>
                     <tr>
-                        <td><b>Message:</b></td>
-                        <td>{{state.message}}</td>
-                    </tr>
-                    <tr>
                         <td><b>Page:</b></td>
                         <td>{{state.src}}</td>
                     </tr>
@@ -57,6 +53,14 @@ export default {
                     <tr x-if="state.areaId">
                         <td><b>Area:</b></td>
                         <td>{{state.areaId}}</td>
+                    </tr>
+                    <tr>
+                        <td><b>Message:</b></td>
+                        <td>{{state.message}}</td>
+                    </tr>
+                    <tr class="pre" x-if="state.details">
+                        <td colspan="1"><b>Details:</b><br/></td>
+                        <td><pre>{{state.details}}</pre></td>
                     </tr>
                     <tr class="pre" x-if="state.stack">
                         <td colspan="1"><b>Stack:</b><br/></td>

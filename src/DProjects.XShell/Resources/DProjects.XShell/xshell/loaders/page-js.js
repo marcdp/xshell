@@ -466,7 +466,23 @@ export async function createPageClassFromJsDefinition(src, context, implementati
 export default class LoaderPageJs {
     async load(src, context) {
         // import
-        const module = await import(src);
+        let module = null;
+        try {
+            module = await import(src);
+        } catch (error) {
+            try {
+                const response = await fetch(src, { cache: "no-store" });
+                if (!response.ok) {
+                    error.code = response.status;
+                    error.message = `Failed to fetch ${src}:`;
+                    error.details = await response.text();
+                }
+            } catch {
+                // Network or CORS error
+            }
+            throw error;
+        }
+        // proccess
         let implementation = module.default;
         let contract = module.contract;
         // check if its a promise

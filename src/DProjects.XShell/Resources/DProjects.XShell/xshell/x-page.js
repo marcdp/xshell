@@ -229,6 +229,7 @@ class XPage extends HTMLElement {
                     exception.src = src;
                     exception.areaId = area?.id;
                     exception.moduleId = moduleId;
+                    debugger
                     this.showError( exception );
                 }
             }
@@ -380,6 +381,7 @@ class XPage extends HTMLElement {
     }
     async showError({code, message, src, moduleId, areaId, stack, errors}) {
         // show error
+        debugger
         let name = xshell.config.xshell.ui.component.error;
         const errorCoomponentClass = await xshell.loader.load("component:" + name);
         const errorComponent = new errorCoomponentClass();
@@ -390,6 +392,9 @@ class XPage extends HTMLElement {
         errorComponent.areaId = areaId;
         errorComponent.stack = stack;
         errorComponent.errors = errors;
+        for(const err of errors) {
+            err.cause2 = err.cause;
+        }
         this.replaceChildren(errorComponent);
     }
 }

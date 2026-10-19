@@ -149,7 +149,17 @@ namespace DProjects.XShell.Middlewares {
                         return;
                     }
                     // compile to js
-                    var fileContent = await new Services.ModuleFileCompiler().CompileAsync(moduleJson, file, context.RequestAborted);
+                    Services.ModuleFileCompiler.FileContent fileContent;
+                    try {
+                        fileContent = await new Services.ModuleFileCompiler().CompileAsync(moduleJson, file, context.RequestAborted);
+                    } catch (Exception ex) when (!context.RequestAborted.IsCancellationRequested) {
+                        context.Response.StatusCode = StatusCodes.Status500InternalServerError;
+                        context.Response.ContentType = "text/plain; charset=utf-8";
+                        SetNoCacheHeaders(context.Response);
+                        await context.Response.WriteAsync(ex.ToString(), context.RequestAborted);
+                        return;
+                    }
+                    //var fileContent = await new Services.ModuleFileCompiler().CompileAsync(moduleJson, file, context.RequestAborted);
                     // return response
                     var bytes = Encoding.UTF8.GetBytes(fileContent.Content);
                     SetNoCacheHeaders(context.Response);

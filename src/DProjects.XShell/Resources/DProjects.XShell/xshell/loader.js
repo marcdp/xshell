@@ -155,7 +155,7 @@ export default class Loader {
                         const time = end - start;
                         registryItem.time = time;
                         registryItem.status = "error";
-                        this._bus.emit("xshell:loader:resource:error", {resource, url, path, time});
+                        this._bus.emit("xshell:loader:resource:error", {resource, url, path, time, code: exception.code, message: exception.message, details: exception.details});
                         throw exception;
                     }
                     return value;
@@ -207,7 +207,7 @@ export default class Loader {
                         resources[resultIndex],
                         exception.message, 
                         {
-                            code: (exception.message.indexOf("Failed to fetch") != -1 ? 404 : 500),
+                            code: (exception.code ? exception.code : 500),
                             url: urls[resultIndex],
                             path: paths[resultIndex],
                             cause: exception
@@ -219,11 +219,13 @@ export default class Loader {
         }
         // throw exception if errors
         if (errors.length) {
-            let message = errors.map(error => error.message + " (" + error.code + ")" + (error.path ? " at " + error.path : "") + (error.line ? " at line " + error.line : "") + (error.cause ? " Caused by: " + error.cause : "")).join("; ");
+            //let message = errors.map(error => error.message + " (" + error.code + ")" + (error.path ? " at " + error.path : "") + (error.line ? " at line " + error.line : "") + (error.cause ? " Caused by: " + error.cause : "")).join("; ");
+            //message = message.replaceAll("Caused by", "\nCaused by");
+            let message = errors.map(error => error.message + " (" + error.code + ")").join("; ");
             for (const error of errors) {
                 console.error(error);
             }
-            throw new LoaderException(errors, "Some resources failed: " + message);
+            throw new LoaderException(errors, message);
         }
         // result
         if (isString) {

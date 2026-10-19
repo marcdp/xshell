@@ -32,7 +32,7 @@ export default {
         
 
         /* category */
-        x-anchor[category]::before {content:attr(category); position:absolute; transform:translateY(-1.75em); font-weight:500; font-style:italic; 
+        x-anchor[category]::before {content:attr(category); position:absolute; transform:translateY(-1.6em); font-weight:500;  
             box-sizing:border;
             awidth:100%; 
             display:block;
@@ -93,7 +93,7 @@ export default {
             <span class="label" x-text="state.label"></span>
             <span class="description" x-text="state.description"></span>
         </x-anchor>
-        <slot x-if="state.view == 'details'"></slot>        
+        <slot x-if="state.view == 'details'"></slot>     <  asd> <asd>
     `,
     state: {
         category: "",
