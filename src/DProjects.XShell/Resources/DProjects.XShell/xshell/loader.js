@@ -8,6 +8,7 @@ class ResourceLoadError extends Error {
         this.path = opts.path;
         this.url = opts.url;
         this.code = opts.code;
+        this.details = opts.details;
     }
 }
 class LoaderException extends AggregateError {
@@ -15,7 +16,7 @@ class LoaderException extends AggregateError {
         super(errors, message, { cause: opts.cause });
         this.name = this.constructor.name;
         this.code = opts.code ?? "LOADER_FAILED";
-        this.details = {
+        this.totals = {
             total: errors.length,
             failed: errors.length,
             succeeded: 0
@@ -210,7 +211,8 @@ export default class Loader {
                             code: (exception.code ? exception.code : 500),
                             url: urls[resultIndex],
                             path: paths[resultIndex],
-                            cause: exception
+                            cause: exception,
+                            details: exception.details
                         }
                     );
                     errors.push(error);
@@ -219,13 +221,12 @@ export default class Loader {
         }
         // throw exception if errors
         if (errors.length) {
-            //let message = errors.map(error => error.message + " (" + error.code + ")" + (error.path ? " at " + error.path : "") + (error.line ? " at line " + error.line : "") + (error.cause ? " Caused by: " + error.cause : "")).join("; ");
-            //message = message.replaceAll("Caused by", "\nCaused by");
-            let message = errors.map(error => error.message + " (" + error.code + ")").join("; ");
-            for (const error of errors) {
-                console.error(error);
+            if (errors.length === 1) {
+                throw errors[0];
+            } else {
+                let message = errors.map(error => error.message + " (" + error.code + ")").join("; ");
+                throw new LoaderException(errors, message);
             }
-            throw new LoaderException(errors, message);
         }
         // result
         if (isString) {

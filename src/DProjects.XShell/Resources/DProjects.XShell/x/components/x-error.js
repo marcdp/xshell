@@ -8,6 +8,7 @@ export const contract = {
         src:     {type:"string", default:"", attribute:true, state:true, description:""},
         moduleId:{type:"string", default:"", attribute:true, state:true, description:""},
         areaId:  {type:"string", default:"", attribute:true, state:true, description:""},
+        details: {type:"string", default:"", attribute:true, state:true, description:""},
         stack:   {type:"string", default:"", attribute:true, state:true, description:""},
         errors:  {type:"object", default:null, state:true, description:""}
     },
@@ -25,7 +26,7 @@ export default {
         td {vertical-align:top; padding-right:1em;}
         td:first-child {width:5em;}
         tr.pre td {padding-top:0;}
-        pre { margin-top:0.2em; font-size:0.9em; white-space: pre-wrap; max-width:90%}
+        pre { margin-top:0.2em; font-size:0.9em; wwhite-space: pre-wrap; max-width:90%}
         @media (max-width: 768px) { 
             table {display:block; margin-left:.25em; margin-bottom:.25em;}
             tr {display:block;}
@@ -39,7 +40,7 @@ export default {
             <div >
                 <table>
                     <tr>
-                        <td><b>Error:</b></td>
+                        <td><b>Error&nbsp;code:</b></td>
                         <td>{{state.code}}</td>
                     </tr>
                     <tr>
