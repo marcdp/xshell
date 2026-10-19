@@ -20,7 +20,6 @@ class XShell {
     _areas = null;
     _bus = null;
     _config = null;
-    _container = null;
     _contracts = null;
     _dialog = null;
     _i18n = null;
@@ -39,7 +38,6 @@ class XShell {
     get areas() { return this._areas; }
     get bus() { return this._bus; }
     get config() { return this._config; }
-    get container() { return this._container; }
     get contracts() { return this._contracts; }
     get dialog() { return this._dialog; }
     get i18n() { return this._i18n; }
@@ -53,13 +51,10 @@ class XShell {
 
     //methods
     async init(config) {
-        // validate config
-        await validateConfig("config", config);
         // init
         this._bus = new Bus();
         this._config = config;
         this._areas = new Areas( { bus: this._bus, config: config } );
-        this._container = document.body;
         this._resolver = new Resolver( { config: config } );
         this._loader = new Loader({ bus: this._bus, config: config, resolver: this._resolver });
         this._i18n = new I18n();
@@ -67,7 +62,7 @@ class XShell {
         await this._i18n.init(config.xshell.i18n);
         this._services = new Services( {config, loader: this._loader, contracts: this._contracts, areas: this._areas, bus: this._bus } );
         this._modules = new Modules( { bus: this._bus, config: config, loader: this._loader, resolver: this._resolver, document: document, services: this._services } );
-        this._navigation = new Navigation( { areas: this._areas, bus: this._bus, config: config, container: this._container });
+        this._navigation = new Navigation( { areas: this._areas, bus: this._bus, config: config, container: document.body });
         this._dialog = new Dialog( { config: config, navigation: this._navigation, i18n: this._i18n } );        
         this._runtime = new Runtime();
         // compose contracts list in memory from modules             
@@ -76,7 +71,6 @@ class XShell {
         this._services.register("areas", this._areas, { contractItem: this._contracts.getContractItemById("areas")});
         this._services.register("bus", this._bus, { contractItem: this._contracts.getContractItemById("bus")});
         this._services.register("config", this._config, { contractItem: this._contracts.getContractItemById("config")});
-        this._services.register("container", this._container, { contractItem: this._contracts.getContractItemById("container")});
         this._services.register("dialog", this._dialog, { contractItem: this._contracts.getContractItemById("dialog")});
         this._services.register("i18n", this._i18n, { contractItem: this._contracts.getContractItemById("i18n")});
         this._services.register("loader", this._loader, { contractItem: this._contracts.getContractItemById("loader")});

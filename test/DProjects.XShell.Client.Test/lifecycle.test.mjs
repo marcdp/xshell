@@ -126,6 +126,18 @@ globalThis.document = {
     adoptedStyleSheets: [],
     baseURI: "https://example.test/",
     body: { querySelectorAll() { return []; } },
+    implementation: {
+        createHTMLDocument() {
+            return {
+                createElement(name) {
+                    const element = new FakeElement();
+                    element.localName = name;
+                    element.matches = () => false;
+                    return element;
+                }
+            };
+        }
+    },
     createElement(name) {
         if (name === "x-page") return new (customElements.get(name))();
         const element = new FakeElement();
@@ -146,6 +158,7 @@ const { default: Navigation } = await import("../../src/DProjects.XShell/Resourc
 const { default: xshell } = await import("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/xshell.js");
 const { default: Page } = await import("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/page.js");
 const { default: LoaderPageMd } = await import("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/loaders/page-md.js");
+const { default: Resolver } = await import("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/resolver.js");
 
 test("x-page treats nullish and removed src as empty without loading it", () => {
     const cases = [
@@ -204,6 +217,32 @@ test("Markdown adapter loads its component without fetching, and follows the Pag
     await page.mount({ host });
     assert.equal(host.childNodes.length, 0);
     assert.equal(globalThis.fetch.mock.callCount(), 0);
+});
+
+test("Markdown adapter passes the resolved resource URL instead of the Area-qualified navigation source", async () => {
+    xshell._config = { xshell: { ui: { component: { markdown: "x-markdown" } } } };
+    xshell._loader = { async load() {} };
+    xshell._bus = { emit() {} };
+    const config = {
+        app: { basePath: "/prefix/xshell-docs", baseUrl: "https://example.test/prefix/xshell-docs/" },
+        xshell: { resolver: { page: {
+            "/_assets/xshell-docs/1.0.0.dev/{path}.md": {
+                src: "/_assets/xshell-docs/1.0.0.dev/{path}.md",
+                loader: "page-md",
+                cache: true,
+                cacheMode: "path"
+            }
+        } } }
+    };
+    const resolved = new Resolver({ config }).resolve("page:/_assets/xshell-docs/1.0.0.dev/pages/index.md");
+    const MarkdownPage = await new LoaderPageMd().load(resolved.url, {});
+    const navigationSrc = "/xshell-docs/_assets/xshell-docs/1.0.0.dev/pages/index.md?view=all#section";
+    const page = new MarkdownPage({ src: navigationSrc, context: {} });
+    const host = new FakeNode();
+    await page.load();
+    await page.mount({ host });
+    assert.equal(page.src, navigationSrc);
+    assert.equal(host.firstChild.getAttribute("src"), "https://example.test/prefix/xshell-docs/_assets/xshell-docs/1.0.0.dev/pages/index.md");
 });
 
 test("Markdown adapter propagates component resolution/loading failure", async () => {
@@ -342,6 +381,7 @@ function configureDefinitionLoaders() {
             return resource.startsWith("state-engine:") ? StateEngineFactory : RenderEngineFactory;
         }
     };
+    xshell._modules = { getModuleById() { return { controller: {} }; } };
     xshell._bus = { emit() {} };
 }
 

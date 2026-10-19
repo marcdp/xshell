@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import definition from "../../src/DProjects.XShell/Resources/DProjects.XShell/x/components/x-markdown.js";
 
-const source = "/_assets/xshell-docs/pages/10-architecture/100-services.md";
+const source = "/_assets/xshell-docs/1.0.0.dev/pages/10-architecture/100-services.md";
 globalThis.document = {};
 globalThis.DOMParser = class {};
 
@@ -89,14 +89,14 @@ test("HTTP failures render status text without reading an error body", async t =
 
 test("relative links and media use the Markdown source and preserve URL categories", async t => {
     const cases = [
-        ["a", "href", "30-modules.md", "/_assets/xshell-docs/pages/10-architecture/30-modules.md"],
-        ["a", "href", "../20-components/index.md", "/_assets/xshell-docs/pages/20-components/index.md"],
-        ["img", "src", "../images/services.svg", "/_assets/xshell-docs/pages/images/services.svg"],
-        ["a", "href", "30-modules.md?view=all#section", "/_assets/xshell-docs/pages/10-architecture/30-modules.md?view=all#section"],
+        ["a", "href", "30-modules.md", "/_assets/xshell-docs/1.0.0.dev/pages/10-architecture/30-modules.md"],
+        ["a", "href", "../20-components/index.md", "/_assets/xshell-docs/1.0.0.dev/pages/20-components/index.md"],
+        ["img", "src", "../images/services.svg", "/_assets/xshell-docs/1.0.0.dev/pages/images/services.svg"],
+        ["a", "href", "30-modules.md?view=all#section", "/_assets/xshell-docs/1.0.0.dev/pages/10-architecture/30-modules.md?view=all#section"],
         ["a", "href", "?view=all#section", source + "?view=all#section"],
-        ["source", "src", "./clip.mp4", "/_assets/xshell-docs/pages/10-architecture/clip.mp4"],
-        ["video", "src", "./clip.mp4", "/_assets/xshell-docs/pages/10-architecture/clip.mp4"],
-        ["audio", "src", "../clip.mp3", "/_assets/xshell-docs/pages/clip.mp3"],
+        ["source", "src", "./clip.mp4", "/_assets/xshell-docs/1.0.0.dev/pages/10-architecture/clip.mp4"],
+        ["video", "src", "./clip.mp4", "/_assets/xshell-docs/1.0.0.dev/pages/10-architecture/clip.mp4"],
+        ["audio", "src", "../clip.mp3", "/_assets/xshell-docs/1.0.0.dev/pages/clip.mp3"],
         ...["#section", "/absolute/path", "https://example.com/page", "//cdn.example.com/image.svg", "mailto:user@example.com",
             "tel:+1234", "data:image/png;base64,AA", "blob:https://example.test/id"].map(url => ["a", "href", url, url])
     ];
@@ -105,6 +105,29 @@ test("relative links and media use the Markdown source and preserve URL categori
     component.state.src = source;
     await component.flush();
     for (const [index, [, attribute, , expected]] of cases.entries()) assert.equal(elements[index].getAttribute(attribute), expected);
+});
+
+test("relative links and media preserve a nested application base path", async t => {
+    const nestedSource = "https://example.test/prefix/xshell-docs/_assets/xshell-docs/1.0.0.dev/pages/index.md";
+    const cases = [
+        ["a", "href", "10-architecture/30-modules.md", "/prefix/xshell-docs/_assets/xshell-docs/1.0.0.dev/pages/10-architecture/30-modules.md"],
+        ["a", "href", "./next.md?view=all#section", "/prefix/xshell-docs/_assets/xshell-docs/1.0.0.dev/pages/next.md?view=all#section"],
+        ["img", "src", "images/overview.svg", "/prefix/xshell-docs/_assets/xshell-docs/1.0.0.dev/pages/images/overview.svg"],
+        ...["#section", "/absolute/path?view=all#section", "https://docs.example.com/page?view=all#section"].map(url => ["a", "href", url, url])
+    ];
+    const elements = cases.map(([tag, attribute, value]) => element(tag, { [attribute]: value }));
+    const component = setup(t, { elements, fetch: async () => ({ ok: true, text: async () => "[Modules](10-architecture/30-modules.md)" }) });
+    component.state.src = nestedSource;
+    await component.flush();
+    for (const [index, [, attribute, , expected]] of cases.entries()) assert.equal(elements[index].getAttribute(attribute), expected);
+});
+
+test("parent-relative links preserve a nested application base path", async t => {
+    const anchor = element("a", { href: "../20-components/index.md" });
+    const component = setup(t, { elements: [anchor], fetch: async () => ({ ok: true, text: async () => "[Components](../20-components/index.md)" }) });
+    component.state.src = "https://example.test/prefix/xshell-docs/_assets/xshell-docs/1.0.0.dev/pages/10-architecture/index.md";
+    await component.flush();
+    assert.equal(anchor.getAttribute("href"), "/prefix/xshell-docs/_assets/xshell-docs/1.0.0.dev/pages/20-components/index.md");
 });
 
 test("cross-origin Markdown keeps its origin when resolving relative URLs", async t => {
