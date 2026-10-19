@@ -13,6 +13,10 @@ export default {
 
         <h2>Buttons</h2>
 
+        <a href="02-forms.js">Open the forms examples</a>
+
+        <x-anchor href="02-forms.js">Open the forms examples</x-anchor>
+
         <div>
             <x-button label="Default button"></x-button>
             <x-button class="submit" label="Submit"></x-button>
