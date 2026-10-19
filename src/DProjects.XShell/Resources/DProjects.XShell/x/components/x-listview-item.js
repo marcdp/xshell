@@ -93,7 +93,7 @@ export default {
             <span class="label" x-text="state.label"></span>
             <span class="description" x-text="state.description"></span>
         </x-anchor>
-        <slot x-if="state.view == 'details'"></slot>     <  asd> <asd>
+        <slot x-if="state.view == 'details'"></slot>
     `,
     state: {
         category: "",

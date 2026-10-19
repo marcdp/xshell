@@ -1,6 +1,6 @@
 
-// LoaderException
-class ResourceLoadError extends Error {
+// Exceptions
+class ResourceError extends Error {
     constructor(resource, message, opts = {}) {
         super(message, { cause: opts.cause });
         this.name = this.constructor.name;
@@ -10,19 +10,7 @@ class ResourceLoadError extends Error {
         this.code = opts.code;
         this.details = opts.details;
     }
-}
-class LoaderException extends AggregateError {
-    constructor(errors, message = "Loader failed", opts = {}) {
-        super(errors, message, { cause: opts.cause });
-        this.name = this.constructor.name;
-        this.code = opts.code ?? "LOADER_FAILED";
-        this.totals = {
-            total: errors.length,
-            failed: errors.length,
-            succeeded: 0
-        };
-    }
-}
+} 
 
 
 // loaders
@@ -87,7 +75,7 @@ export default class Loader {
             let name = resource.split(":")[1];
             let definitionObject = this._resolver.resolve(resource);
             if (!definitionObject) {
-                throw new LoaderException([new Error(`Resource not found: ${resource}`)]);
+                throw new ResourceError(`Resource not found: ${resource}`);
             }
             let {definition, url, path} = definitionObject;
             const cacheKey = this._getCacheKey(resource, definition);
@@ -204,11 +192,11 @@ export default class Loader {
                     result[resultIndex] = value;
                 } else if (taskResult.status === 'rejected') {
                     const exception = taskResult.reason instanceof Error ? taskResult.reason : new Error(String(taskResult.reason));
-                    const error = new ResourceLoadError(
+                    const error = new ResourceError(
                         resources[resultIndex],
                         exception.message, 
                         {
-                            code: (exception.code ? exception.code : 500),
+                            code: exception.code ?? 500,
                             url: urls[resultIndex],
                             path: paths[resultIndex],
                             cause: exception,
@@ -225,7 +213,7 @@ export default class Loader {
                 throw errors[0];
             } else {
                 let message = errors.map(error => error.message + " (" + error.code + ")").join("; ");
-                throw new LoaderException(errors, message);
+                throw new AggregateError(message, { cause: errors[0] });
             }
         }
         // result
