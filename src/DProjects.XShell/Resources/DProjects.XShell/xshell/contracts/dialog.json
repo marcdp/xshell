@@ -49,7 +49,10 @@
             "type": "object",
             "properties": {
               "type": {
-                "type": "string"
+                "type": "string",
+                "enum": ["info", "warning", "error", "success"],
+                "default": "info",
+                "description": "Specifies the type of message dialog."
               },
               "title": {
                 "type": "string"
@@ -79,20 +82,29 @@
             "type": "object",
             "properties": {
               "title": {
-                "type": "string"
+                "type": "string",
+                "description": "Specifies the title of the prompt dialog."
               },
               "message": {
-                "type": "string"
+                "type": "string",
+                "description": "Specifies the message of the prompt dialog."
               },
-              "value": {},
+              "value": {
+                "type": "any",
+                "description": "Specifies the default value of the prompt input."
+              },
               "inputType": {
-                "type": "string"
+                "type": "string",
+                "description": "Specifies the type of input for the prompt dialog.",
+                "enum": ["text", "number", "password", "email", "url", "tel"]
               },
               "placeholder": {
-                "type": "string"
+                "type": "string",
+                "description": "Specifies the placeholder text for the prompt input."
               },
               "required": {
-                "type": "boolean"
+                "type": "boolean",
+                "description": "Specifies whether the prompt input is required."
               }
             },
             "additionalProperties": true
@@ -116,24 +128,35 @@
             "type": "object",
             "properties": {
               "title": {
-                "type": "string"
+                "type": "string",
+                "description": "Specifies the title of the picker dialog."
               },
               "message": {
-                "type": "string"
+                "type": "string",
+                "description": "Specifies the message of the picker dialog."
               },
-              "value": {},
+              "value": {
+                "description": "Specifies the default value of the picker input."
+              },
               "inputType": {
-                "type": "string"
+                "type": "string",
+                "description": "Specifies the type of input for the picker dialog.",
+                "enum": ["select", "radios"]
               },
               "placeholder": {
-                "type": "string"
+                "type": "string",
+                "description": "Specifies the placeholder text for the picker input."
               },
-              "domain": {},
+              "domain": {
+                "description": "Specifies the domain of the picker dialog."
+              },
               "multiple": {
-                "type": "boolean"
+                "type": "boolean",
+                "description": "Specifies whether multiple selections are allowed in the picker dialog."
               },
               "required": {
-                "type": "boolean"
+                "type": "boolean",
+                "description": "Specifies whether the picker input is required."
               }
             },
             "additionalProperties": true
@@ -158,16 +181,21 @@
             "properties": {
               "title": {
                 "type": "string",
-                "default": "Select language"
+                "default": "Select language",
+                "description": "Specifies the title of the language picker dialog."
               },
               "message": {
                 "type": "string",
-                "default": "Language"
+                "default": "Language",
+                "description": "Specifies the message of the language picker dialog."
               },
-              "value": {},
+              "value": {
+                "description": "Specifies the currently selected value in the language picker dialog."
+              },
               "required": {
                 "type": "boolean",
-                "default": true
+                "default": true,
+                "description": "Specifies whether the language picker input is required." 
               },
               "current": {
                 "type": "array",

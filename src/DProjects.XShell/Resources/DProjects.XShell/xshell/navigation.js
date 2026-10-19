@@ -35,6 +35,7 @@ export default class Navigation {
     // props
     get mode() { return this._mode; }
     get src() { 
+        if (!this._stack.length) return null;
         this._stack[0].href;
         let xpage = this.getXPage();
         return (xpage ? xpage.src : null);
