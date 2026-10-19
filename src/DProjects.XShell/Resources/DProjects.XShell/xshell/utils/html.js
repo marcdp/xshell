@@ -32,9 +32,10 @@ export function addRewriteRule(selector, attr, type) {
 
 // rewrite a static attribute emitted by a precompiled X template handler
 // inert document used for selector matching without constructing application Web Components
-const matchDocument = document.implementation.createHTMLDocument("");
+let matchDocument = null;
 export function rewriteTemplateAttribute(tag, attrs, attr, value, context) {
     if (!value) return value;
+    matchDocument ??= document.implementation.createHTMLDocument("");
     const element = matchDocument.createElement(tag);
     for (const [name, staticValue] of Object.entries(attrs)) element.setAttribute(name, staticValue);
     for (const rule of rules) {

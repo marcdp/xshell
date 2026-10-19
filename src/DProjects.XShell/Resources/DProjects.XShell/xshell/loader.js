@@ -75,7 +75,7 @@ export default class Loader {
             let name = resource.split(":")[1];
             let definitionObject = this._resolver.resolve(resource);
             if (!definitionObject) {
-                throw new ResourceError(`Resource not found: ${resource}`);
+                throw new ResourceError(resource, `Resource not found: ${resource}`, { code: "RESOURCE_NOT_FOUND" });
             }
             let {definition, url, path} = definitionObject;
             const cacheKey = this._getCacheKey(resource, definition);
@@ -213,7 +213,7 @@ export default class Loader {
                 throw errors[0];
             } else {
                 let message = errors.map(error => error.message + " (" + error.code + ")").join("; ");
-                throw new AggregateError(message, { cause: errors[0] });
+                throw new AggregateError(errors, message);
             }
         }
         // result

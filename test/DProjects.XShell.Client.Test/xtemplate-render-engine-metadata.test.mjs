@@ -6,21 +6,23 @@ globalThis.CSSStyleSheet = class { replaceSync() {} };
 globalThis.customElements = { get() {}, define() {} };
 globalThis.window = { customElements: globalThis.customElements, location: { origin: "https://example.test" } };
 let templateCreationCount = 0;
-globalThis.document = {
-    createElement(tag) {
-        if (tag.toLowerCase() === "template") {
-            templateCreationCount++;
-            throw new Error("Raw XTemplate parsing is forbidden.");
-        }
-        return {
-            tag: tag.toLowerCase(), attrs: {},
-            setAttribute(name, value) { this.attrs[name] = value; },
-            matches(selector) {
-                if (selector === "a" || selector === "img") return this.tag === selector;
-                return selector === "input[type=image]" && this.tag === "input" && this.attrs.type === "image";
-            }
-        };
+const createTestElement = tag => {
+    if (tag.toLowerCase() === "template") {
+        templateCreationCount++;
+        throw new Error("Raw XTemplate parsing is forbidden.");
     }
+    return {
+        tag: tag.toLowerCase(), attrs: {},
+        setAttribute(name, value) { this.attrs[name] = value; },
+        matches(selector) {
+            if (selector === "a" || selector === "img") return this.tag === selector;
+            return selector === "input[type=image]" && this.tag === "input" && this.attrs.type === "image";
+        }
+    };
+};
+globalThis.document = {
+    createElement: createTestElement,
+    implementation: { createHTMLDocument: () => ({ createElement: createTestElement }) }
 };
 
 const { default: createRenderEngineFactoryX } = await import("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/render-engines/x.js");

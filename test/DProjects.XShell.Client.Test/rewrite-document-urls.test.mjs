@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { rewriteDocumentUrls, rewriteTemplateAttribute } from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/utils/html.js";
 
+let inertDocumentCreationCount = 0;
+
 class TestElement {
     constructor(tag, attributes = {}, textContent = "") {
         this.tag = tag;
@@ -29,7 +31,13 @@ function createDocument(...elements) {
     const doc = {
         elements,
         querySelectorAll(selector) { return this.elements.filter(element => element.matches(selector)); },
-        createElement(tag) { return new TestElement(tag); }
+        createElement(tag) { return new TestElement(tag); },
+        implementation: {
+            createHTMLDocument() {
+                inertDocumentCreationCount++;
+                return { createElement: tag => new TestElement(tag) };
+            }
+        }
     };
     for (const element of elements) element.document = doc;
     globalThis.document = doc;
@@ -44,6 +52,14 @@ const context = {
     navigationMode: "hash"
 };
 const resourceBase = "https://example.test/app/_assets/demo/pages/";
+
+test("X Template attribute rewriting lazily creates and reuses its inert document", () => {
+    createDocument();
+    assert.equal(inertDocumentCreationCount, 0);
+    assert.equal(rewriteTemplateAttribute("input", { type: "image" }, "src", "send.png", context), `${resourceBase}send.png`);
+    assert.equal(rewriteTemplateAttribute("img", {}, "src", "image.png", context), `${resourceBase}image.png`);
+    assert.equal(inertDocumentCreationCount, 1);
+});
 
 test("every built-in HTML URL rule rewrites a server-logical URL once", () => {
     const cases = [
