@@ -95,31 +95,40 @@ test("failed cached load is evicted and a later request succeeds", async () => {
     assert.strictEqual(loader._cache["resource:/foo"].value, value);
 });
 
+
 test("failed resource retains its resolved logical path on the error", async t => {
     t.mock.method(console, "error", () => {});
     const { fixture, loader } = await createLoader("error-url");
     fixture.failOnce();
 
     await assert.rejects(() => loader.load("resource:/foo"), error => {
-        assert.equal(error.errors[0].resource, "resource:/foo");
-        assert.equal(error.errors[0].path, "/foo");
-        assert.equal(error.errors[0].url, "https://example.test/foo");
-        assert.equal(Object.hasOwn(error.errors[0], "src"), false);
+        assert.equal(error.name, "ResourceError");
+        assert.equal(error.resource, "resource:/foo");
+        assert.equal(error.path, "/foo");
+        assert.equal(error.url, "https://example.test/foo");
+        assert.equal(Object.hasOwn(error, "src"), false);
+        assert.ok(error.cause);
         return true;
     });
 });
+
+
 
 test("failed absolute URL resource retains its resolved URL on the error", async t => {
     t.mock.method(console, "error", () => {});
-    const { fixture, loader } = await createLoader("error-absolute-url", { src: "https://cdn.example.test/{path}" });
+    const { fixture, loader } = await createLoader("error-absolute-url", {
+        src: "https://cdn.example.test/{path}"
+    });
     fixture.failOnce();
 
     await assert.rejects(() => loader.load("resource:/foo"), error => {
-        assert.equal(error.errors[0].path, null);
-        assert.equal(error.errors[0].url, "https://cdn.example.test/foo");
+        assert.equal(error.name, "ResourceError");
+        assert.equal(error.path, null);
+        assert.equal(error.url, "https://cdn.example.test/foo");
         return true;
     });
 });
+
 
 test("cacheMode path keeps different paths separate", async () => {
     const { fixture, loader } = await createLoader("different-paths", { cacheMode: "path" });
@@ -144,8 +153,11 @@ test("cacheMode path deduplicates concurrent query variants", async () => {
     assert.strictEqual(first, second);
 });
 
+
 test("concurrent failures share one load and a later request retries", async () => {
-    const { fixture, loader } = await createLoader("shared-failure", { cacheMode: "path" });
+    const { fixture, loader } = await createLoader("concurrent-failure", {
+        cacheMode: "path"
+    });
     fixture.failOnce();
     fixture.deferLoads();
 
@@ -155,19 +167,32 @@ test("concurrent failures share one load and a later request retries", async () 
 
     assert.deepEqual(fixture.getRequests(), ["https://example.test/foo"]);
     fixture.releaseLoads();
+
     const [first, second] = await Promise.allSettled([firstPromise, secondPromise]);
 
     assert.equal(first.status, "rejected");
     assert.equal(second.status, "rejected");
-    assert.strictEqual(first.reason.errors[0].cause, second.reason.errors[0].cause);
+
+    // Each call receives a ResourceError, but both share the original failure.
+    assert.equal(first.reason.name, "ResourceError");
+    assert.equal(second.reason.name, "ResourceError");
+    assert.notStrictEqual(first.reason, second.reason);
+    assert.strictEqual(first.reason.cause, second.reason.cause);
+
+    // Failed loads must not remain cached.
     assert.equal(loader._cache["resource:/foo"], undefined);
 
+    // A subsequent request must retry the resource.
     const value = await loader.load("resource:/foo?a=3");
 
     assert.equal(value.requestNumber, 2);
-    assert.deepEqual(fixture.getRequests(), ["https://example.test/foo", "https://example.test/foo"]);
+    assert.deepEqual(fixture.getRequests(), [
+        "https://example.test/foo",
+        "https://example.test/foo"
+    ]);
     assert.equal(loader.registry.length, 2);
 });
+
 
 test("cacheMode path removes only query and preserves fragment identity", async () => {
     const { fixture, loader } = await createLoader("fragments", { cacheMode: "path" });

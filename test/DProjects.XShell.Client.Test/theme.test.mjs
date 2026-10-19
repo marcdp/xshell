@@ -265,7 +265,12 @@ test("settings uses the injected theme service and preserves language selection"
         setMode(mode) { selectedThemes.push(mode); }
     };
     const i18n = {
-        config: { langs: [{ id: "en" }, { id: "es" }] },
+        config: {
+            langs: [
+                { id: "en", label: "EN" },
+                { id: "es", label: "ES" }
+            ]
+        },
         getDefaultLang() { return "es"; },
         setLanguage(language) { selectedLanguages.push(language); }
     };

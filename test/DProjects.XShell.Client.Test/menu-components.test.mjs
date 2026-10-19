@@ -26,10 +26,15 @@ test("x-menuitem exposes tooltip and embedded as public attributes", () => {
     });
 });
 
+
 test("x-menuitem renders tooltip on a normal anchor and an embedded target as an inline Page", () => {
     assert.match(
         menuItemDefinition.template,
-        /<div x-elseif="state\.embedded">\s*<x-page x-attr:src="state\.href" loading="lazy"><\/x-page>\s*<\/div>/
+        /<div x-elseif="state\.embedded">\s*<x-page\s+x-attr:src="state\.href"\s+loading="lazy"><\/x-page>\s*<\/div>/
     );
-    assert.match(menuItemDefinition.template, /<x-anchor x-else[^>]*x-attr:tooltip="state\.tooltip"/);
+
+    assert.match(
+        menuItemDefinition.template,
+        /<x-anchor x-else[^>]*x-attr:tooltip="state\.tooltip"/
+    );
 });

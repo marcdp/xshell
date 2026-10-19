@@ -218,8 +218,6 @@ export async function createPageClassFromJsDefinition(src, context, implementati
             contextProperties.push({ name: propName, property });
         }
     }
-    // modules
-    const moduleInstance = xshell.modules.getModuleById(context.resourceDefinition.moduleId);
     // state engine
     const stateEngineFactoryCreator = await xshell.loader.load("state-engine:" + implementation.meta.stateEngine);
     const stateEngineFactory = new stateEngineFactoryCreator(stateSkeleton, context);
@@ -328,10 +326,10 @@ export async function createPageClassFromJsDefinition(src, context, implementati
                         };
                     } else if (prop == "moduleInstance") {
                         // get module instance
-                        return moduleInstance;
+                        return xshell.modules.getModuleById(context.resourceDefinition.moduleId);
                     } else if (prop == "moduleController") {
                         // get module controller
-                        return moduleInstance.controller;
+                        return xshell.modules.getModuleById(context.resourceDefinition.moduleId).controller;
                     } else {
                         // resolve from services
                         return xshell.services.resolve(prop);                    
