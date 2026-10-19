@@ -73,23 +73,23 @@ class XShell {
         // compose contracts list in memory from modules             
         await this._contracts.init();
         // services
-        this._services.register("areas", this._areas);
-        this._services.register("bus", this._bus);
-        this._services.register("config", this._config);
-        this._services.register("container", this._container);
-        this._services.register("dialog", this._dialog);
-        this._services.register("i18n", this._i18n);
-        this._services.register("loader", this._loader);
-        this._services.register("modules", this._modules);
-        this._services.register("navigation", this._navigation);
-        this._services.register("resolver", this._resolver);
-        this._services.register("runtime", this._runtime);
-        this._services.register("contracts", this._contracts);
-        this._services.register("services", this._services);
+        this._services.register("areas", this._areas, { contractItem: this._contracts.getContractItemById("areas")});
+        this._services.register("bus", this._bus, { contractItem: this._contracts.getContractItemById("bus")});
+        this._services.register("config", this._config, { contractItem: this._contracts.getContractItemById("config")});
+        this._services.register("container", this._container, { contractItem: this._contracts.getContractItemById("container")});
+        this._services.register("dialog", this._dialog, { contractItem: this._contracts.getContractItemById("dialog")});
+        this._services.register("i18n", this._i18n, { contractItem: this._contracts.getContractItemById("i18n")});
+        this._services.register("loader", this._loader, { contractItem: this._contracts.getContractItemById("loader")});
+        this._services.register("modules", this._modules, { contractItem: this._contracts.getContractItemById("modules")});
+        this._services.register("navigation", this._navigation, { contractItem: this._contracts.getContractItemById("navigation")});
+        this._services.register("resolver", this._resolver, { contractItem: this._contracts.getContractItemById("resolver")});
+        this._services.register("runtime", this._runtime, { contractItem: this._contracts.getContractItemById("runtime")});
+        this._services.register("contracts", this._contracts, { contractItem: this._contracts.getContractItemById("contracts")});
+        this._services.register("services", this._services, { contractItem: this._contracts.getContractItemById("services")});
         await this._services.init();
         // modules
         await this._modules.init();  
-        // compose area menus and homes before navigation starts
+        // areas
         this._areas.init({ modules: this._modules });
         // navigation
         await this._navigation.init();
