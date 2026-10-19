@@ -610,12 +610,45 @@ test("fillResolverRules discovers only JSON files inside the contracts directory
     api.fillResolverRules(config);
 
     assert.deepEqual(plain(config.xshell.resolver.contract), {
+        "x:{name}": {
+            src: "/_assets/x/contracts/{name}.json",
+            loader: "object-json",
+            cache: true,
+            moduleId: "x",
+            modulePath: "/_assets/x"
+        },
         toast: {
             src: "/_assets/x/contracts/toast.json",
             loader: "object-json",
             cache: true,
             moduleId: "x",
             modulePath: "/_assets/x"
+        }
+    });
+});
+
+test("fillResolverRules discovers framework contracts from the XShell inventory", () => {
+    const config = {
+        modules: {},
+        xshell: {
+            assets: { path: "/_assets/xshell" },
+            files: [
+                { path: "/_assets/xshell/contracts/temp.json" },
+                { path: "/_assets/xshell/contracts/readme.txt" }
+            ],
+            resolver: {}
+        }
+    };
+
+    api.fillResolverRules(config);
+
+    assert.deepEqual(plain(config.xshell.resolver.contract), {
+        temp: {
+            src: "/_assets/xshell/contracts/temp.json",
+            loader: "object-json",
+            cache: true,
+            moduleId: "xshell",
+            modulePath: "/_assets/xshell"
         }
     });
 });

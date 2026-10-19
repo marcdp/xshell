@@ -88,13 +88,16 @@ See [Modules](30-modules.md), [Module Specification](../50-specifications/module
 
 ## Contract discovery and identity
 
-`/contracts/*.json` resources (including nested paths) enter the module inventory. Bootstrap converts their relative path without `.json` into a
-global id and generates an exact `contract:<id>` rule. Resolver selects `object-json`; Loader reads JSON; Contracts validates it against
-`contract.schema.json` and records physical module ownership. Duplicate global ids or conflicting exact resolver entries fail bootstrap.
+`/contracts/*.json` resources (including nested paths) enter the XShell framework or module inventory. Bootstrap converts their relative path
+without `.json` into a global id and generates an exact `contract:<id>` rule. Resolver selects `object-json`; Loader reads JSON; Contracts validates
+it against `contract.schema.json` and records physical ownership. Duplicate global ids or conflicting exact resolver entries fail bootstrap.
 A module prefix is not required unless it is part of the chosen id. Registration names are independent: multiple services can use one contract.
 
 For example, `x/contracts/toast.json` defines id `toast` and registration `xshell.services.toast.contract = "toast"`.
 The implementation URL is imported through `module:` and must default-export a class.
+
+Framework contracts use the same JSON format and validation. For example, `xshell/contracts/temp.json` defines `temp`; XShell associates it with
+the existing built-in Temp instance rather than declaring a configurable provider.
 
 ## Service contract schema
 
@@ -136,8 +139,9 @@ version negotiation, scopes, or selectable lifetimes.
 ## Resolution validation and core services
 
 Declared methods must resolve to functions. Property validation finds descriptors on the instance/prototype chain, excluding Object.prototype;
-it does not evaluate property getters. Defaults, enums, readonly, and property types are descriptive, as are method parameters/returns and events.
-An implementation must emit any promised events itself.
+it does not evaluate property getters. This validation runs when a configured singleton is constructed and when a directly registered built-in is
+associated with a contract. Defaults, enums, readonly, and property types are descriptive, as are method parameters/returns and events. An
+implementation must emit any promised events itself.
 
 Construction receives a proxy resolving other services by name. Resolving a service already being constructed detects a circular constructor
 dependency and reports the resolution chain. A failed construction/validation resets that record so a later resolve can retry.
@@ -147,6 +151,7 @@ After a configured service is first constructed and validated, XShell emits `xsh
 created event. Consumers can re-read `services.registry` to inspect the current state.
 
 The registered core names are `areas`, `bus`, `config`, `container`, `dialog`, `i18n`, `loader`, `modules`, `navigation`, `resolver`, `runtime`,
-`contracts`, `services`, and `temp`. There is no auth/identity registration. A Diagnostics getter is not a registered service contract.
+`contracts`, `services`, and `temp`. `temp` is the built-in core service currently associated with a formal service contract; it is not configured
+through `xshell.services`. There is no auth/identity registration. A Diagnostics getter is not a registered service contract.
 
 See [Bus](../30-subsystems/20-bus.md), [Dialogs](../30-subsystems/30-dialogs.md), and [Temp](../30-subsystems/50-temp.md).

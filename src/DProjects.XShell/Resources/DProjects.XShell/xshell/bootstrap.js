@@ -411,6 +411,35 @@ async function installServiceWorker(config) {
 function fillResolverRules(config) {
     const resolver = config.xshell.resolver;
     const contractDeclarations = new Map();
+    resolver.contract ??= {};
+    const addContractDeclarations = (ownerType, ownerId, assetsPath, files) => {
+        const contractsPath = assetsPath + "/contracts";
+        for (const file of files ?? []) {
+            if (!file.path.startsWith(contractsPath + "/") || !file.path.endsWith(".json")) continue;
+            const id = file.path.substring(contractsPath.length + 1).replace(/\.json$/, "");
+            const first = contractDeclarations.get(id);
+            if (first) {
+                throw new Error(`Duplicate contract '${id}' declared by ${first.ownerType} '${first.ownerId}' in '${first.path}' `
+                    + `and ${ownerType} '${ownerId}' in '${file.path}'.`);
+            }
+            if (Object.hasOwn(resolver.contract, id)) {
+                throw new Error(`Duplicate contract '${id}' conflicts with an existing resolver entry while processing `
+                    + `${ownerType} '${ownerId}' file '${file.path}'.`);
+            }
+            contractDeclarations.set(id, { ownerType, ownerId, path: file.path });
+            resolver.contract[id] = {
+                src: `${contractsPath}/${id}.json`,
+                loader: "object-json",
+                cache: true,
+                moduleId: ownerId,
+                modulePath: assetsPath
+            };
+        }
+    };
+
+    if (config.xshell.assets?.path) {
+        addContractDeclarations("XShell", "xshell", config.xshell.assets.path, config.xshell.files);
+    }
 
     for (const [moduleId, module] of Object.entries(config.modules)) {
         const moduleAssetsPath = module.assets.path;
@@ -632,7 +661,6 @@ function fillResolverRules(config) {
 
         // contracts
         const moduleAssetsPathContracts = moduleAssetsPath + "/contracts";
-        resolver.contract ??= {};
         resolver.contract[`${moduleId}:{name}`] ??= {
             src: `${moduleAssetsPathContracts}/{name}.json`,
             loader: "object-json",
@@ -640,25 +668,7 @@ function fillResolverRules(config) {
             moduleId,
             modulePath: moduleAssetsPath
         };
-        for (const file of module.files ?? []) {
-            if (!file.path.startsWith(moduleAssetsPathContracts + "/") || !file.path.endsWith(".json")) continue;
-            const id = file.path.substring(moduleAssetsPathContracts.length + 1).replace(/\.json$/, "");
-            const first = contractDeclarations.get(id);
-            if (first) {
-                throw new Error(`Duplicate contract '${id}' declared by module '${first.moduleId}' in '${first.path}' ` + `and module '${moduleId}' in '${file.path}'.`);
-            }
-            if (Object.hasOwn(resolver.contract, id)) {
-                throw new Error(`Duplicate contract '${id}' conflicts with an existing resolver entry while processing ` + `module '${moduleId}' file '${file.path}'.`);
-            }
-            contractDeclarations.set(id, { moduleId, path: file.path });
-            resolver.contract[id] = {
-                src: `${moduleAssetsPathContracts}/${id}.json`,
-                loader: "object-json",
-                cache: true,
-                moduleId,
-                modulePath: moduleAssetsPath
-            };
-        }
+        addContractDeclarations("module", moduleId, moduleAssetsPath, module.files);
     }
 
     return config;

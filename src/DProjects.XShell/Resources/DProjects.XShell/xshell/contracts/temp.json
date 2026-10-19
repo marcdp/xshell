@@ -1,0 +1,48 @@
+{
+  "label": "Temp",
+  "description": "Provides temporary file uploads and resolves temporary file URLs.",
+  "properties": {},
+  "events": {},
+  "methods": {
+    "upload": {
+      "description": "Uploads one or more files to temporary storage in parallel.",
+      "parameters": [
+        {
+          "name": "files",
+          "type": "any",
+          "required": true,
+          "description": "A File object or an iterable collection of File objects."
+        },
+        {
+          "name": "onProgress",
+          "type": "function",
+          "required": false,
+          "description": "Optional callback receiving { name, loaded, total, percent } for length-computable upload progress."
+        }
+      ],
+      "returns": {
+        "type": "array",
+        "description": "A Promise resolving to one string result per input file, in input order. Success values are server response text; failures are prefixed with \"error: \".",
+        "schema": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "getAbsoluteUrl": {
+      "description": "Converts a temp:/ reference to a URL using the configured temporary-storage endpoint.",
+      "parameters": [
+        {
+          "name": "url",
+          "type": "string",
+          "required": true,
+          "description": "Temporary resource reference beginning with temp:/."
+        }
+      ],
+      "returns": {
+        "type": "string",
+        "description": "Resolved temporary-storage URL."
+      }
+    }
+  }
+}

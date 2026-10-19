@@ -1,7 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
+import TempContract from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/contracts/temp.json" with { type: "json" };
 import ToastContract from "../../src/DProjects.XShell/Resources/DProjects.XShell/x/contracts/toast.json" with { type: "json" };
+import Temp from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/temp.js";
 import Toast from "../../src/DProjects.XShell/Resources/DProjects.XShell/x/services/toast-default.js";
 import Contracts from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/contracts.js";
 import Services from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services.js";
@@ -258,6 +260,41 @@ test("service registration is rejected after initialization finalizes the regist
     assert.equal(services.has("late"), false);
 });
 
+test("a directly registered built-in service is associated with and validated against its contract", async () => {
+    const { services } = createServices({}, {}, {});
+    const temp = new Temp({ config: { xshell: { temp: { url: "https://example.test/temp/" } } } });
+    const contractItem = { ...createContractItem("temp"), moduleId: "xshell", contract: TempContract };
+
+    services.register("temp", temp, { contractItem });
+    await services.init();
+
+    assert.strictEqual(services.resolve("temp"), temp);
+    assert.deepEqual(services.getServiceInfo("temp"), {
+        id: "temp",
+        state: "created",
+        contractId: "temp",
+        contractUrl: "/_assets/contracts/temp.json",
+        description: TempContract.description,
+        icon: null,
+        moduleId: null,
+        implementationName: null,
+        url: null,
+        size: null,
+        time: null
+    });
+});
+
+test("direct built-in registration rejects a missing contracted method", () => {
+    const { services } = createServices({}, {}, {});
+    const contractItem = createContractItem("temp", { upload: {}, getAbsoluteUrl: {} });
+
+    assert.throws(
+        () => services.register("temp", { upload() {} }, { contractItem }),
+        /Service 'temp' does not implement required method 'getAbsoluteUrl'\./
+    );
+    assert.equal(services.has("temp"), false);
+});
+
 test("unknown contract references fail before implementation loading", async () => {
     const definitions = { toast: { contract: "toast", implementation: "/_assets/test/services/toast.js" } };
     const { loads, services } = createServices(definitions, {}, {});
@@ -477,6 +514,33 @@ test("Contracts.init ignores lookalike directories and non-JSON files", async ()
     assert.equal(contracts.getContractById("toast").label, "toast");
 });
 
+test("Contracts.init discovers the framework Temp contract", async () => {
+    const loads = [];
+    const contracts = new Contracts({
+        config: {
+            app: { basePath: "/app", baseUrl: "https://example.test/app/" },
+            modules: {},
+            xshell: {
+                assets: { path: "/_assets/xshell" },
+                files: [{ path: "/_assets/xshell/contracts/temp.json", size: 123 }]
+            }
+        },
+        loader: {
+            async load(resource) {
+                loads.push(resource);
+                return TempContract;
+            }
+        }
+    });
+
+    await contracts.init();
+
+    assert.deepEqual(loads, ["contract:temp"]);
+    assert.strictEqual(contracts.getContractById("temp"), TempContract);
+    assert.equal(contracts.getContractItemById("temp").moduleId, "xshell");
+    assert.equal(contracts.getContractItemById("temp").url, "https://example.test/app/_assets/xshell/contracts/temp.json");
+});
+
 test("Contracts.init deeply freezes validated contract documents", async () => {
     const contract = {
         label: "executor",
@@ -571,5 +635,23 @@ test("toast contract is structurally valid and its implementation exposes every 
 
     for (const methodName of Object.keys(ToastContract.methods)) {
         assert.equal(typeof toast[methodName], "function", methodName);
+    }
+});
+
+test("Temp contract is valid and describes the existing public methods", async () => {
+    await validateContract("temp.json", TempContract);
+    const temp = new Temp({ config: { xshell: { temp: { url: "https://example.test/temp" } } } });
+
+    assert.deepEqual(Object.keys(TempContract.methods), ["upload", "getAbsoluteUrl"]);
+    assert.deepEqual(TempContract.methods.upload.parameters.map(parameter => parameter.name), ["files", "onProgress"]);
+    assert.equal(TempContract.methods.upload.parameters[1].required, false);
+    assert.match(TempContract.methods.upload.parameters[1].description, /name, loaded, total, percent/);
+    assert.equal(TempContract.methods.upload.returns.type, "array");
+    assert.match(TempContract.methods.upload.returns.description, /error: /);
+    assert.equal(TempContract.methods.getAbsoluteUrl.parameters[0].type, "string");
+    assert.equal(TempContract.methods.getAbsoluteUrl.returns.type, "string");
+
+    for (const methodName of Object.keys(TempContract.methods)) {
+        assert.equal(typeof temp[methodName], "function", methodName);
     }
 });

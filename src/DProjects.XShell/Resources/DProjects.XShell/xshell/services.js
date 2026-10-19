@@ -73,6 +73,7 @@ export default class Services {
     register(name, instance, { contractItem, implementationItem } =  {}) {
         if (Object.isFrozen(this._items)) throw new Error("Service registry is immutable after initialization.");
         if (Object.hasOwn(this._items, name)) throw new Error(`Service already exists: ${name}`);
+        if (instance != null && contractItem) this._validateImplementation(name, instance, contractItem);
         this._items[name] = { instance, contractItem, implementationItem, state: instance == null ? "registered" : "created" };
     }
     has(name) {

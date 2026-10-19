@@ -35,8 +35,19 @@ export default class Contracts {
 
     // methods
     async init() {
-        // process each module's contracts
+        // process framework and module contracts
         let tasks = [];
+        const frameworkAssetsPath = this._config.xshell?.assets?.path;
+        if (frameworkAssetsPath) {
+            const frameworkContractsPath = frameworkAssetsPath + "/contracts";
+            for (const file of this._config.xshell.files ?? []) {
+                if (file.path.startsWith(frameworkContractsPath + "/") && file.path.endsWith(".json")) {
+                    const contractId = file.path.substring(frameworkContractsPath.length + 1, file.path.length - ".json".length);
+                    const fileUrl = new URL(file.path.replace(/^\/+/, ""),this._config.app.baseUrl).href;
+                    tasks.push(this._processContractFile(contractId, fileUrl, file, "xshell", file.size));
+                }
+            }
+        }
         for (const moduleId of Object.keys(this._config.modules)) {
             const module = this._config.modules[moduleId];
             const moduleContractsPath = module.assets.path + "/contracts";

@@ -2,6 +2,18 @@
 
 The `temp` service uploads files to ASP.NET Temp middleware and returns logical temporary identifiers.
 
+`temp` is built-in XShell infrastructure. Consumers obtain the existing singleton through controller dependency injection; it is not a provider
+configured under `xshell.services`:
+
+```js
+controller({ temp }) {
+    // use temp.upload(...) or temp.getAbsoluteUrl(...)
+}
+```
+
+Its public contract is the framework resource `xshell/contracts/temp.json`, discovered from the XShell file inventory as `contract:temp` and
+associated with the directly constructed built-in instance during startup.
+
 ## Browser API
 
 ```js
@@ -19,8 +31,8 @@ including single
 uploads. Each file uses its own XMLHttpRequest POST with a FormData field `file`; requests run concurrently through `Promise.all`.
 Success entries contain unchanged response text. Each rejected upload becomes `"error: " + message` rather than rejecting the whole batch.
 
-Progress receives `{ loaded, total, percent }` only for length-computable events. It has no file identity and reports each concurrent request
-independently. There is no cancellation argument.
+Progress receives `{ name, loaded, total, percent }` only for length-computable events. `name` is the input file name; each concurrent request
+reports independently. There is no cancellation argument.
 
 `getAbsoluteUrl(resource)` replaces leading `temp:/` with `xshell.temp.url`, preserving path/query. It performs string conversion rather than
 validation or Resolver/Loader processing; call it only on a successful identifier. The host supplies this URL from `Temp.BasePath`.
