@@ -2,8 +2,24 @@
 
 The `temp` service uploads files to ASP.NET Temp middleware and returns logical temporary identifiers.
 
-`temp` is built-in XShell infrastructure. Consumers obtain the existing singleton through controller dependency injection; it is not a provider
-configured under `xshell.services`:
+`temp` is framework-owned XShell infrastructure. The framework default configuration registers it through the standard service architecture:
+
+```jsonc
+"services": {
+    "temp": {
+        "contract": "temp",
+        "implementation": "/temp.js"
+    }
+}
+```
+
+Bootstrap resolves the implementation path relative to the XShell framework assets, so the default implementation remains
+`xshell/temp.js`; it does not belong to the `x` UI module. Its public contract is `xshell/contracts/temp.json`, discovered from the framework file
+inventory as `contract:temp`.
+
+The implementation class and contract are loaded during service initialization. The singleton is constructed lazily on first resolution, receives
+its constructor dependencies through the normal service proxy, and is validated against the `temp` contract. Consumers use standard controller
+dependency injection:
 
 ```js
 controller({ temp }) {
@@ -11,8 +27,9 @@ controller({ temp }) {
 }
 ```
 
-Its public contract is the framework resource `xshell/contracts/temp.json`, discovered from the XShell file inventory as `contract:temp` and
-associated with the directly constructed built-in instance during startup.
+The compatibility accessor `xshell.temp` resolves the same singleton from the service registry. Applications can replace the implementation with
+another class through `xshell.services.temp.implementation`; the replacement uses the same merge, loading, dependency-injection, singleton, and
+contract-validation behavior as every configured service. The `xshell.temp.url` setting remains the endpoint used by the default implementation.
 
 ## Browser API
 

@@ -191,6 +191,7 @@ test("module discovery rejects malformed and reserved external reference ids bef
 test("checked-in assets.basePath resolves for root and subpath hosting", () => {
     const defaults = api.parseJsonc(readFileSync(new URL("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/xshell.jsonc", import.meta.url), "utf8"));
     assert.deepEqual(plain(defaults.xshell.assets), { basePath: "app:/_assets", url: "url:./" });
+    assert.deepEqual(plain(defaults.xshell.services.temp), { contract: "temp", implementation: "/temp.js" });
     assert.deepEqual(plain(defaults.xshell.serviceWorker), {});
     for (const field of ["assetsBasePath", "assetsPath", "assetsUrl"]) assert.equal(Object.hasOwn(defaults.xshell, field), false);
     for (const [basePath, effectiveUrl] of [["", "https://example.test/_assets"], ["/myapp", "https://example.test/myapp/_assets"]]) {
@@ -281,12 +282,36 @@ test("bootstrap loads the authored XShell JSONC source through the canonical run
     const effective = await api.loadConfig();
     assert.equal(effective.app.params, effective.modules.app.params);
     const config = plain(effective);
+    assert.deepEqual(config.xshell.services.temp, {
+        contract: "temp",
+        implementation: "/_assets/xshell/0.9.0.dev/temp.js"
+    });
+    api.fillResolverRules(config);
     const resolver = new Resolver({ config });
     assert.equal(config.xshell.configUrl, xshellUrl);
     assert.equal(config.xshell.resolver["state-engine"]["{name}"].src, "/_assets/xshell/0.9.0.dev/state-engines/{name}.js");
     assert.equal(resolver.resolve("state-engine:proxy").url, "https://example.test/app/_assets/xshell/0.9.0.dev/state-engines/proxy.js");
     assert.equal(resolver.resolve("render-engine:x").url, "https://example.test/app/_assets/xshell/0.9.0.dev/render-engines/x.js");
     assert.equal(resolver.resolve("schema:config.json").url, "https://example.test/app/_assets/xshell/0.9.0.dev/schemas/config.json");
+    const tempImplementation = resolver.resolve("module:" + config.xshell.services.temp.implementation);
+    assert.equal(tempImplementation.url, "https://example.test/app/_assets/xshell/0.9.0.dev/temp.js");
+    assert.equal(tempImplementation.definition.moduleId, "xshell");
+});
+
+test("application configuration can replace the framework Temp implementation through normal merging", async () => {
+    const xshellUrl = "https://example.test/xshell/xshell.json";
+    fetchedResources.set(xshellUrl, api.parseJsonc(readFileSync(new URL("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/xshell.jsonc", import.meta.url), "utf8")));
+    fetchedResources.set(rootUrl, {
+        modules: { app: definition("app") },
+        xshell: { services: { temp: { implementation: "/services/custom-temp.js" } } }
+    });
+
+    const config = plain(await api.loadConfig());
+
+    assert.deepEqual(config.xshell.services.temp, {
+        contract: "temp",
+        implementation: "/_assets/app/1.0.0.dev/services/custom-temp.js"
+    });
 });
 
 test("module URL traversal fails after logical normalization and reports the declaring document", () => {
@@ -651,6 +676,22 @@ test("fillResolverRules discovers framework contracts from the XShell inventory"
             modulePath: "/_assets/xshell"
         }
     });
+});
+
+test("fillResolverRules exposes framework-owned JavaScript through the module loader", () => {
+    const config = {
+        app: { basePath: "/app", baseUrl: "https://example.test/app/" },
+        modules: {},
+        xshell: { assets: { path: "/_assets/xshell" }, files: [], resolver: {} }
+    };
+
+    api.fillResolverRules(config);
+    const result = new Resolver({ config }).resolve("module:/_assets/xshell/temp.js");
+
+    assert.equal(result.url, "https://example.test/app/_assets/xshell/temp.js");
+    assert.equal(result.definition.loader, "module-js");
+    assert.equal(result.definition.moduleId, "xshell");
+    assert.equal(result.definition.modulePath, "/_assets/xshell");
 });
 
 test("fillResolverRules rejects duplicate global contract IDs with both declarations", () => {

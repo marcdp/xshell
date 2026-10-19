@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import test from "node:test";
 
 import TempContract from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/contracts/temp.json" with { type: "json" };
@@ -21,7 +22,7 @@ function createContractItem(id, methods = {}, properties = {}) {
     };
 }
 
-function createServices(definitions, implementations, contractItems) {
+function createServices(definitions, implementations, contractItems, { moduleId = "test", frameworkFiles = [] } = {}) {
     const loads = [];
     const emitted = [];
     const config = {
@@ -31,7 +32,11 @@ function createServices(definitions, implementations, contractItems) {
                 files: Object.values(definitions).map((service, index) => ({ path: service.implementation, size: index + 1 }))
             }
         },
-        xshell: { services: definitions }
+        xshell: {
+            services: definitions,
+            temp: { url: "https://example.test/temp" },
+            files: frameworkFiles
+        }
     };
     const services = new Services({
         config,
@@ -48,12 +53,12 @@ function createServices(definitions, implementations, contractItems) {
         },
         areas: {
             getModuleId() {
-                return "test";
+                return moduleId;
             }
         },
         bus: { emit(type, detail) { emitted.push({ type, detail, state: services.getServiceInfo(detail.id).state }); } }
     });
-    return { loads, services, emitted };
+    return { config, loads, services, emitted };
 }
 
 // build each value descriptor in its contract location
@@ -260,15 +265,25 @@ test("service registration is rejected after initialization finalizes the regist
     assert.equal(services.has("late"), false);
 });
 
-test("a directly registered built-in service is associated with and validated against its contract", async () => {
-    const { services } = createServices({}, {}, {});
-    const temp = new Temp({ config: { xshell: { temp: { url: "https://example.test/temp/" } } } });
+test("the framework Temp service loads lazily, validates its contract, and remains a singleton", async () => {
+    const implementation = "/_assets/xshell/0.9.0.dev/temp.js";
     const contractItem = { ...createContractItem("temp"), moduleId: "xshell", contract: TempContract };
+    const { config, loads, services } = createServices(
+        { temp: { contract: "temp", implementation } },
+        { [`module:${implementation}`]: Temp },
+        { temp: contractItem },
+        { moduleId: "xshell", frameworkFiles: [{ path: implementation, size: 321 }] }
+    );
 
-    services.register("temp", temp, { contractItem });
+    services.register("config", config);
     await services.init();
+    assert.deepEqual(loads, [`module:${implementation}`]);
+    assert.equal(services.getServiceInfo("temp").state, "registered");
+
+    const temp = services.resolve("temp");
 
     assert.strictEqual(services.resolve("temp"), temp);
+    assert.ok(temp instanceof Temp);
     assert.deepEqual(services.getServiceInfo("temp"), {
         id: "temp",
         state: "created",
@@ -276,12 +291,47 @@ test("a directly registered built-in service is associated with and validated ag
         contractUrl: "/_assets/contracts/temp.json",
         description: TempContract.description,
         icon: null,
-        moduleId: null,
-        implementationName: null,
-        url: null,
-        size: null,
-        time: null
+        moduleId: "xshell",
+        implementationName: "Temp",
+        url: "https://example.test/app/_assets/xshell/0.9.0.dev/temp.js",
+        size: 321,
+        time: services.getServiceInfo("temp").time
     });
+});
+
+test("an alternative configured Temp implementation replaces the framework default", async () => {
+    class AlternativeTemp {
+        upload() { return Promise.resolve([]); }
+        getAbsoluteUrl(url) { return `alternative:${url}`; }
+    }
+    const implementation = "/_assets/app/services/temp.js";
+    const { services } = createServices(
+        { temp: { contract: "temp", implementation } },
+        { [`module:${implementation}`]: AlternativeTemp },
+        { temp: { ...createContractItem("temp"), contract: TempContract } }
+    );
+
+    await services.init();
+
+    assert.ok(services.resolve("temp") instanceof AlternativeTemp);
+    assert.equal(services.resolve("temp").getAbsoluteUrl("temp:/file.txt"), "alternative:temp:/file.txt");
+});
+
+test("XShell exposes Temp only through the service registry compatibility accessor", () => {
+    const source = readFileSync(new URL("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/xshell.js", import.meta.url), "utf8");
+
+    assert.doesNotMatch(source, /import Temp from/);
+    assert.doesNotMatch(source, /new Temp\s*\(/);
+    assert.doesNotMatch(source, /register\("temp"/);
+    assert.match(source, /get temp\(\) \{ return this\._services\?\.has\("temp"\) \? this\._services\.resolve\("temp"\) : null; \}/);
+});
+
+test("x-datafield continues to request Temp through controller injection", () => {
+    const source = readFileSync(new URL("../../src/DProjects.XShell/Resources/DProjects.XShell/x/components/x-datafield.js", import.meta.url), "utf8");
+
+    assert.match(source, /controller\(\{[^}]*\btemp\b[^}]*\}\)/s);
+    assert.match(source, /temp\.upload\(/);
+    assert.match(source, /temp\.getAbsoluteUrl\(/);
 });
 
 test("direct built-in registration rejects a missing contracted method", () => {

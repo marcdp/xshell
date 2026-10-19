@@ -59,6 +59,10 @@
 
         // services
         "services": {
+            "temp": {
+                "contract": "temp",
+                "implementation": "/temp.js"
+            }
         },
 
         // service worker defaults

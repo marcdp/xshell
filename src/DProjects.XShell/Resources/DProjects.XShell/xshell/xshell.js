@@ -10,7 +10,6 @@ import Page from "./page.js";
 import Resolver from "./resolver.js";
 import Runtime from "./runtime.js";
 import Services from "./services.js";
-import Temp from "./temp.js";
 import validateConfig from "./validation/config.js";
 import XPage from "./x-page.js";
 
@@ -25,7 +24,6 @@ class XShell {
     _contracts = null;
     _dialog = null;
     _i18n = null;
-    _temp = null;
     _loader = null;
     _modules = null;
     _navigation = null;
@@ -51,7 +49,7 @@ class XShell {
     get resolver() { return this._resolver; }
     get runtime() { return this._runtime; }
     get services() { return this._services; }
-    get temp() { return this._temp; }
+    get temp() { return this._services?.has("temp") ? this._services.resolve("temp") : null; }
 
     //methods
     async init(config) {
@@ -71,7 +69,6 @@ class XShell {
         this._modules = new Modules( { bus: this._bus, config: config, loader: this._loader, resolver: this._resolver, document: document, services: this._services } );
         this._navigation = new Navigation( { areas: this._areas, bus: this._bus, config: config, container: this._container });
         this._dialog = new Dialog( { config: config, navigation: this._navigation, i18n: this._i18n } );        
-        this._temp = new Temp( { config: config } );
         this._runtime = new Runtime();
         // compose contracts list in memory from modules             
         await this._contracts.init();
@@ -89,7 +86,6 @@ class XShell {
         this._services.register("runtime", this._runtime);
         this._services.register("contracts", this._contracts);
         this._services.register("services", this._services);
-        this._services.register("temp", this._temp);
         await this._services.init();
         // modules
         await this._modules.init();  

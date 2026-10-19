@@ -97,7 +97,10 @@ For example, `x/contracts/toast.json` defines id `toast` and registration `xshel
 The implementation URL is imported through `module:` and must default-export a class.
 
 Framework contracts use the same JSON format and validation. For example, `xshell/contracts/temp.json` defines `temp`; XShell associates it with
-the existing built-in Temp instance rather than declaring a configurable provider.
+the framework-owned default provider declared as `xshell.services.temp`, whose implementation is `xshell/temp.js`. Bootstrap normalizes framework
+implementation paths into the framework asset namespace and generates a `module:` resolver rule with `moduleId: "xshell"`, so framework services
+use the same loading and inspection pipeline as module-provided services. Applications may replace the Temp implementation through normal
+configuration merging without assigning it to the `x` module.
 
 ## Service contract schema
 
@@ -150,8 +153,9 @@ Duplicate registrations, including collisions with core names, fail.
 After a configured service is first constructed and validated, XShell emits `xshell:service:created` on the Bus with `{ id }`. Failed attempts emit no
 created event. Consumers can re-read `services.registry` to inspect the current state.
 
-The registered core names are `areas`, `bus`, `config`, `container`, `dialog`, `i18n`, `loader`, `modules`, `navigation`, `resolver`, `runtime`,
-`contracts`, `services`, and `temp`. `temp` is the built-in core service currently associated with a formal service contract; it is not configured
-through `xshell.services`. There is no auth/identity registration. A Diagnostics getter is not a registered service contract.
+The directly registered core names are `areas`, `bus`, `config`, `container`, `dialog`, `i18n`, `loader`, `modules`, `navigation`, `resolver`,
+`runtime`, `contracts`, and `services`. `temp` is a framework-owned configured service registered through `xshell.services`; its compatibility
+`xshell.temp` accessor resolves that same lazy singleton. There is no auth/identity registration. A Diagnostics getter is not a registered service
+contract.
 
 See [Bus](../30-subsystems/20-bus.md), [Dialogs](../30-subsystems/30-dialogs.md), and [Temp](../30-subsystems/50-temp.md).

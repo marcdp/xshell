@@ -438,7 +438,16 @@ function fillResolverRules(config) {
     };
 
     if (config.xshell.assets?.path) {
-        addContractDeclarations("XShell", "xshell", config.xshell.assets.path, config.xshell.files);
+        const frameworkAssetsPath = config.xshell.assets.path;
+        resolver.module ??= {};
+        resolver.module[`${frameworkAssetsPath}/{path}.js`] ??= {
+            src: `${frameworkAssetsPath}/{path}.js`,
+            loader: "module-js",
+            cache: true,
+            moduleId: "xshell",
+            modulePath: frameworkAssetsPath
+        };
+        addContractDeclarations("XShell", "xshell", frameworkAssetsPath, config.xshell.files);
     }
 
     for (const [moduleId, module] of Object.entries(config.modules)) {

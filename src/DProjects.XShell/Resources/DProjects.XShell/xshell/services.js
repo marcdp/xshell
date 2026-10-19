@@ -46,20 +46,14 @@ export default class Services {
                 const moduleId = this._areas.getModuleId(service.implementation);
                 const start = performance.now();
                 const serviceImplementation = await this._loader.load("module:" + service.implementation);
-                let size = 0
-                for (const module of Object.values(this._config.modules)) {
-                    for(const moduleFile of module.files) {
-                        if (moduleFile.path === service.implementation) {
-                            size += moduleFile.size;
-                        }
-                    }
-                }
+                const owner = moduleId === "xshell" ? this._config.xshell : this._config.modules[moduleId];
+                const implementationFile = owner?.files?.find(file => file.path === service.implementation);
                 this.register(serviceName, null, { 
                     contractItem: serviceContractItem, 
                     implementationItem: {
                         class: serviceImplementation,
                         moduleId: moduleId,
-                        size: size,
+                        size: implementationFile?.size ?? 0,
                         time: performance.now() - start,
                         path: service.implementation,
                         url: new URL(service.implementation.replace(/^\/+/, ""), this._config.app.baseUrl).href
