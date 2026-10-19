@@ -1,12 +1,12 @@
 
 // contract
 export const contract = {
-    description: "Displays a form, based on an schema.",
+    description: "Displays an editor for structured data described by an X-Schema document.",
     events: {},
     properties: {
         src: {type:"string", default:null, attribute:true, state:true, description:"The source URL of the schema."},
-        schema: {type:"object", default:null, attribute:false, state:true, description:"The schema of the form."},
-        value: {type:"object", default:null, attribute:false, state:true, description:"The value of the form."}
+        schema: {type:"object", default:null, attribute:false, state:true, description:"The X-Schema document that defines the editor."},
+        value: {type:"object", default:null, attribute:false, state:true, description:"The structured data object being edited."}
     },
     methods: {}
 };

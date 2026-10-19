@@ -1,6 +1,6 @@
 // contract
 export const contract = {
-    description: "XSchema component",
+    description: "X-Schema editor component",
     events: {},
     properties: {},
     methods: {}
@@ -9,10 +9,9 @@ export const contract = {
 // export page
 export default {
     template: `
-        Lorem ipsum
         <x-form>
             <x-datafields>
-                <x-datafield label="This is the form">
+                <x-datafield label="Customer editor">
                     <x-schema-editor 
                         x-prop:schema="state.schema" 
                         x-prop:value="state.value">
@@ -24,39 +23,43 @@ export default {
     `,  
     state: {
         schema: {
-            "$schema": "http://json-schema.org/draft-07/schema#",
-            "$id": "https://json.schemastore.org/vsconfig.json",
-            "properties": {
-                "version": {
-                "description": "The version of the component configuration file format.",
-                "type": "string",
-                "pattern": "^(\\d+\\.)?(\\d+\\.)?(\\d+\\.)?(\\d+)$"
-                },
-                "components": {
-                "type": "array",
-                "description": "An array of Visual Studio component names.",
-                "items": {
-                    "type": "string",
-                    "minLength": 1
-                }
-                },
-                "extensions": {
-                "type": "array",
-                "description": "An array of Visual Studio extensions. These can be URLs to marketplace extensions or paths to private VSIX files.",
-                "items": {
-                    "type": "string",
-                    "minLength": 1
-                }
+            version: "0",
+            root: "Customer",
+            types: {
+                Customer: {
+                    kind: "object",
+                    children: [
+                        {
+                            kind: "field",
+                            bind: "advanced",
+                            dataType: "boolean",
+                            tag: "x-datafield",
+                            props: { type: "checkbox", label: "Advanced mode" },
+                            default: false
+                        },
+                        {
+                            kind: "field",
+                            bind: "name",
+                            dataType: "string",
+                            required: true,
+                            tag: "x-datafield",
+                            props: { type: "text", label: "Name" },
+                            default: ""
+                        },
+                        {
+                            kind: "field",
+                            bind: "email",
+                            dataType: "string",
+                            tag: "x-datafield",
+                            props: { type: "email", label: "Email" },
+                            conditions: { visible: { path: "$root.advanced", equals: true } },
+                            default: ""
+                        }
+                    ]
                 }
             },
-            "required": ["components"],
-            "title": "JSON schema for Visual Studio component configuration files",
-            "type": "object"
-            },
-        value: { 
-            a: 123, 
-            b: "hello world"
-        }
+        },
+        value: { advanced: true, name: "Ada Lovelace", email: "ada@example.test" }
     },
     controller({ }) {
         return {

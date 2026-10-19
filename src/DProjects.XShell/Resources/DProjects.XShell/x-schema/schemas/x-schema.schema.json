@@ -26,10 +26,7 @@
     "node": {
       "description": "Any node allowed in an object or container children collection.",
       "oneOf": [
-        { "$ref": "#/$defs/objectReference" },
-        { "$ref": "#/$defs/fieldNode" },
-        { "$ref": "#/$defs/objectNode" },
-        { "$ref": "#/$defs/arrayNode" },
+        { "$ref": "#/$defs/dataNode" },
         { "$ref": "#/$defs/containerNode" }
       ]
     },
@@ -48,7 +45,7 @@
       "type": "object",
       "additionalProperties": false,
       "required": ["type"],
-      "description": "Reference to a named object type. The referenced type owns its tag, description and children. attrs, props, conditions and meta are shallow-merged with the type defaults, with reference values taking precedence. create, when specified on the reference, replaces the type create value.",
+      "description": "Contextual use of a named object type. The referenced type supplies the reusable object structure; the reference supplies binding, presentation and behavior for this use.",
       "properties": {
         "type": {
           "type": "string",
@@ -63,15 +60,15 @@
         },
         "attrs": {
           "$ref": "#/$defs/attributes",
-          "description": "Context-specific attributes shallow-merged over attributes declared by the referenced object type."
+          "description": "Attributes for this use of the referenced object type."
         },
         "props": {
           "$ref": "#/$defs/properties",
-          "description": "Context-specific properties shallow-merged over properties declared by the referenced object type."
+          "description": "Component properties for this use of the referenced object type."
         },
         "conditions": {
           "$ref": "#/$defs/conditions",
-          "description": "Context-specific conditions shallow-merged by condition name over conditions declared by the referenced object type."
+          "description": "Dynamic conditions for this use of the referenced object type."
         },
         "create": {
           "$ref": "#/$defs/jsonValue",
@@ -79,7 +76,7 @@
         },
         "meta": {
           "$ref": "#/$defs/meta",
-          "description": "Context-specific metadata shallow-merged over metadata declared by the referenced object type."
+          "description": "Metadata for this use of the referenced object type."
         }
       }
     },
@@ -88,31 +85,14 @@
       "type": "object",
       "additionalProperties": false,
       "required": ["kind", "children"],
-      "description": "Named reusable object definition. Its tag, description and children define the object's structural identity. attrs, props, conditions, create and meta provide defaults that may be overridden where supported by an object reference.",
+      "description": "Named reusable object structure. Presentation and contextual behavior belong on object references rather than on the type.",
       "properties": {
         "kind": { "const": "object" },
         "description": { "type": "string" },
-        "tag": {
-          "type": "string",
-          "minLength": 1,
-          "description": "Default DOM/Web Component tag used to render this object type."
-        },
-        "attrs": {
-          "$ref": "#/$defs/attributes",
-          "description": "Default attributes inherited by references to this object type."
-        },
-        "props": {
-          "$ref": "#/$defs/properties",
-          "description": "Default component properties inherited by references to this object type."
-        },
         "children": { "$ref": "#/$defs/children" },
         "create": {
           "$ref": "#/$defs/jsonValue",
           "description": "Default value used when creating an instance of this object type."
-        },
-        "conditions": {
-          "$ref": "#/$defs/conditions",
-          "description": "Default dynamic conditions inherited by references to this object type."
         },
         "meta": { "$ref": "#/$defs/meta" }
       }
@@ -194,7 +174,31 @@
           "$ref": "#/$defs/dataNode",
           "description": "Definition of each array item. Presentation-only container nodes are not valid array items."
         },
-        "array": { "$ref": "#/$defs/arrayOptions" },
+        "allowAdd": {
+          "type": "boolean",
+          "default": true,
+          "description": "Whether users may add array items."
+        },
+        "allowRemove": {
+          "type": "boolean",
+          "default": true,
+          "description": "Whether users may remove array items."
+        },
+        "allowMove": {
+          "type": "boolean",
+          "default": false,
+          "description": "Whether users may reorder array items."
+        },
+        "minItems": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Minimum number of items. When maxItems is also present, minItems must not exceed it; this is enforced by X-Schema semantic validation."
+        },
+        "maxItems": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Maximum number of items. When minItems is also present, it must not exceed maxItems; this is enforced by X-Schema semantic validation."
+        },
         "default": {
           "type": "array",
           "description": "Default array value used when the array has not otherwise been initialized."
@@ -237,39 +241,18 @@
       "enum": ["string", "number", "integer", "boolean", "date", "datetime", "time", "object", "array", "any"]
     },
 
-    "arrayOptions": {
-      "type": "object",
-      "additionalProperties": false,
-      "description": "Array editing behavior. When both minItems and maxItems are present, minItems must not exceed maxItems; this is enforced by X-Schema semantic validation.",
-      "properties": {
-        "allowAdd": { "type": "boolean", "default": true },
-        "allowRemove": { "type": "boolean", "default": true },
-        "allowMove": { "type": "boolean", "default": false },
-        "minItems": { "type": "integer", "minimum": 0 },
-        "maxItems": { "type": "integer", "minimum": 0 }
-      }
-    },
-
     "conditions": {
       "type": "object",
       "additionalProperties": false,
-      "description": "Dynamic node-state rules. Missing positive conditions default to true and missing negative conditions default to false. Effective visibility is visible && !hidden. Effective enabled state is enabled && !disabled.",
+      "description": "Dynamic node-state rules. When absent, visible and enabled default to true, while readonly defaults to false.",
       "properties": {
         "visible": {
           "$ref": "#/$defs/condition",
-          "description": "Positive visibility condition. When absent, visibility defaults to true before applying hidden."
-        },
-        "hidden": {
-          "$ref": "#/$defs/condition",
-          "description": "Negative visibility condition. When true, the node is hidden regardless of visible."
+          "description": "Condition controlling whether the node is visible. When absent, visibility defaults to true."
         },
         "enabled": {
           "$ref": "#/$defs/condition",
-          "description": "Positive enabled condition. When absent, enabled defaults to true before applying disabled."
-        },
-        "disabled": {
-          "$ref": "#/$defs/condition",
-          "description": "Negative enabled condition. When true, the node is disabled regardless of enabled."
+          "description": "Condition controlling whether the node is enabled. When absent, enabled defaults to true."
         },
         "readonly": {
           "$ref": "#/$defs/condition",
@@ -300,10 +283,8 @@
       "properties": {
         "path": { "type": "string", "minLength": 1 },
         "equals": { "$ref": "#/$defs/jsonValue" },
-        "notEquals": { "$ref": "#/$defs/jsonValue" },
         "exists": { "type": "boolean" },
         "in": { "type": "array", "items": { "$ref": "#/$defs/jsonValue" } },
-        "notIn": { "type": "array", "items": { "$ref": "#/$defs/jsonValue" } },
         "greaterThan": { "type": ["number", "string"] },
         "greaterThanOrEqual": { "type": ["number", "string"] },
         "lessThan": { "type": ["number", "string"] },
@@ -344,10 +325,9 @@
       "required": ["source", "key", "label"],
       "properties": {
         "source": {
-          "oneOf": [
-            { "type": "string", "minLength": 1, "description": "Local scoped source such as $root.countries." },
-            { "$ref": "#/$defs/externalReferenceSource" }
-          ]
+          "type": "string",
+          "minLength": 1,
+          "description": "Opaque source locator, such as $root.countries or datasource:countries. X-Schema does not interpret the locator's storage or transport."
         },
         "key": {
           "type": "string",
@@ -360,29 +340,6 @@
           "description": "Property containing the human-readable label presented to the user."
         }
       }
-    },
-
-    "externalReferenceSource": {
-      "oneOf": [
-        {
-          "type": "object",
-          "additionalProperties": false,
-          "required": ["kind", "name"],
-          "properties": {
-            "kind": { "const": "entity" },
-            "name": { "type": "string", "minLength": 1 }
-          }
-        },
-        {
-          "type": "object",
-          "additionalProperties": false,
-          "required": ["kind", "resource"],
-          "properties": {
-            "kind": { "const": "resource" },
-            "resource": { "type": "string", "minLength": 1 }
-          }
-        }
-      ]
     },
 
     "attributes": {
