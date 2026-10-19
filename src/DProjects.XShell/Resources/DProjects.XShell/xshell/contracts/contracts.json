@@ -1,0 +1,47 @@
+{
+  "label": "Contracts",
+  "description": "Discovers, loads, validates, and exposes framework and module contract definitions.",
+  "properties": {
+    "registry": {
+      "type": "array",
+      "readonly": true,
+      "description": "Snapshot of contract metadata, excluding the mutable contract definitions. Each entry contains id, url, path, moduleId, label, description, icon, size, status, and time.",
+      "schema": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": { "type": "string" },
+            "url": { "type": "string" },
+            "path": { "type": "string" },
+            "moduleId": { "type": "string" },
+            "label": { "type": "string" },
+            "description": { "type": "string" },
+            "icon": { "type": ["string", "null"] },
+            "size": { "type": "number" },
+            "status": { "type": "string" },
+            "time": { "type": "number" }
+          },
+          "required": ["id", "url", "path", "moduleId", "label", "description", "icon", "size", "status", "time"]
+        }
+      }
+    }
+  },
+  "events": {},
+  "methods": {
+    "getContractItemById": {
+      "description": "Gets a contract registry record by its ID; returns undefined if not found or before initialization. The record includes the contract definition and metadata.",
+      "parameters": [
+        { "name": "id", "type": "string", "required": true, "description": "Contract ID." }
+      ],
+      "returns": { "type": "any", "description": "The frozen contract registry item, or undefined." }
+    },
+    "getContractById": {
+      "description": "Gets the validated contract definition by ID; returns undefined if not found or before initialization.",
+      "parameters": [
+        { "name": "id", "type": "string", "required": true, "description": "Contract ID." }
+      ],
+      "returns": { "type": "any", "description": "The deep-frozen contract definition, or undefined." }
+    }
+  }
+}

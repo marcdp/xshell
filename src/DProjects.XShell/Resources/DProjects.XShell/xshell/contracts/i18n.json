@@ -1,0 +1,67 @@
+{
+  "label": "I18n",
+  "description": "Provides language metadata, translation lookup, localized text extraction, and date/time formatting.",
+  "properties": {
+    "config": {
+      "type": "object",
+      "readonly": true,
+      "description": "Current internationalization configuration, including lang, langs, datetime, and strings."
+    }
+  },
+  "events": {},
+  "methods": {
+    "getMainLangs": {
+      "description": "Returns language IDs whose configuration entries have a truthy main flag.",
+      "returns": { "type": "array", "schema": { "type": "array", "items": { "type": "string" } } }
+    },
+    "getDefaultLang": {
+      "description": "Returns the configured default language ID (config.lang).",
+      "returns": { "type": "string" }
+    },
+    "getLang": {
+      "description": "Returns the configured language entry for an ID, or null when missing.",
+      "parameters": [
+        { "name": "id", "type": "string", "required": true, "description": "Language ID to look up." }
+      ],
+      "returns": { "type": "any", "description": "Language entry object, or null if not found." }
+    },
+    "getLangLabel": {
+      "description": "Returns the language label for an ID, falling back to the supplied ID.",
+      "parameters": [
+        { "name": "id", "type": "string", "required": true, "description": "Language ID." }
+      ],
+      "returns": { "type": "string" }
+    },
+    "translate": {
+      "description": "Looks up a label in config.strings[config.lang], returning the original label when no translation exists.",
+      "parameters": [
+        { "name": "label", "type": "string", "required": true, "description": "Translation key or fallback label." }
+      ],
+      "returns": { "type": "string" }
+    },
+    "formatText": {
+      "description": "Extracts the text segment matching the requested language from an i18n:lang=... value; returns an empty string if no segment matches.",
+      "parameters": [
+        { "name": "value", "type": "string", "required": true, "description": "Delimited i18n text value." },
+        { "name": "lang", "type": "string", "required": false, "description": "Language ID; defaults to config.lang." }
+      ],
+      "returns": { "type": "string" }
+    },
+    "formatDateTime": {
+      "description": "Formats a date/time using the configured locale and date/time options; format 'iso' returns a UTC ISO-style string.",
+      "parameters": [
+        { "name": "datetime", "type": "any", "required": true, "description": "Date, date-time string, or compatible value; numeric input is explicitly converted to Date for 'iso' format." },
+        { "name": "format", "type": "string", "required": false, "description": "Configured datetime format name, or 'iso'; omitted uses config.datetime.options." },
+        { "name": "opts", "type": "object", "required": false, "description": "Additional Intl.DateTimeFormat options; the current implementation merges configured options into this object." }
+      ],
+      "returns": { "type": "string", "description": "Formatted date/time string; returns an empty string when datetime is an empty string." }
+    },
+    "setLanguage": {
+      "description": "Placeholder method only: currently logs a warning and does not change the language.",
+      "parameters": [
+        { "name": "lang", "type": "string", "required": true, "description": "Requested language ID (currently unused)." }
+      ],
+      "returns": { "type": "any", "description": "Undefined; language switching is not yet implemented." }
+    }
+  }
+}

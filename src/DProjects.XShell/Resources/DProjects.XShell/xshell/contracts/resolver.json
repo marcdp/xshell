@@ -1,0 +1,46 @@
+{
+  "label": "Resolver",
+  "description": "Resolves logical resource identifiers into loader definitions, URLs and resource paths.",
+  "properties": {
+    "registry": {
+      "type": "array",
+      "readonly": true,
+      "description": "A frozen snapshot of resolver rule metadata, excluding mutable regular expressions.",
+      "schema": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "resource": { "type": "string" },
+            "src": { "type": "string" },
+            "loader": { "type": "string" },
+            "cache": { "type": "boolean" },
+            "cacheMode": { "type": "string" }
+          },
+          "required": ["resource", "src"],
+          "additionalProperties": false
+        }
+      }
+    }
+  },
+  "events": {},
+  "methods": {
+    "has": {
+      "description": "Returns whether a resource identifier matches an allowed resolver rule, ignoring its query string and fragment.",
+      "parameters": [
+        { "name": "resource", "type": "string", "required": true, "description": "Logical resource identifier to test." }
+      ],
+      "returns": { "type": "boolean", "description": "True when a matching rule exists and any captured name/path passes validation." }
+    },
+    "resolve": {
+      "description": "Resolves a logical resource identifier to its matching definition, absolute URL and resource path. Returns null if no rule matches.",
+      "parameters": [
+        { "name": "resource", "type": "string", "required": true, "description": "Logical resource identifier; query string and fragment are ignored." }
+      ],
+      "returns": {
+        "type": "any",
+        "description": "An object { definition, url, path } on success or null on failure. The path is null when the definition source is an absolute URL."
+      }
+    }
+  }
+}

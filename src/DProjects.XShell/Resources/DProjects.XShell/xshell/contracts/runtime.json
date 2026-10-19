@@ -1,0 +1,18 @@
+{
+  "label": "Runtime",
+  "description": "Exposes elapsed-time measurements for the current XShell runtime instance.",
+  "properties": {
+    "loadTime": {
+      "type": "number",
+      "readonly": true,
+      "description": "Performance.now() timestamp captured when the Runtime instance was constructed, in milliseconds relative to the browser's performance time origin."
+    },
+    "uptimeMs": {
+      "type": "number",
+      "readonly": true,
+      "description": "Elapsed milliseconds since the Runtime instance was constructed, calculated using performance.now()."
+    }
+  },
+  "events": {},
+  "methods": {}
+}

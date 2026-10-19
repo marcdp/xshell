@@ -1,0 +1,223 @@
+{
+  "label": "Dialog",
+  "description": "Opens configured dialogs through XShell navigation, including confirmation, message, prompt, picker, language picker, and arbitrary page dialogs.",
+  "properties": {},
+  "events": {},
+  "methods": {
+    "confirm": {
+      "description": "Opens the configured confirmation dialog.",
+      "parameters": [
+        {
+          "name": "options",
+          "type": "object",
+          "required": true,
+          "description": "Single destructured options object. Fields correspond to the JavaScript method signature.",
+          "schema": {
+            "type": "object",
+            "properties": {
+              "title": {
+                "type": "string"
+              },
+              "message": {
+                "type": "string"
+              },
+              "variant": {
+                "type": "string",
+                "enum": ["yesno", "yesnocancel", "okcancel", "ok"],
+                "default": "yesno",
+                "description": "Determines which confirmation buttons are displayed."
+              }
+            },
+            "additionalProperties": true
+          }
+        }
+      ],
+      "returns": {
+        "type": "any",
+        "description": "Promise resolving to the value returned by navigation.navigate(); exact result shape is not specified by Dialog."
+      }
+    },
+    "message": {
+      "description": "Opens the configured message dialog.",
+      "parameters": [
+        {
+          "name": "options",
+          "type": "object",
+          "required": true,
+          "description": "Single destructured options object. Fields correspond to the JavaScript method signature.",
+          "schema": {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string"
+              },
+              "title": {
+                "type": "string"
+              },
+              "message": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": true
+          }
+        }
+      ],
+      "returns": {
+        "type": "any",
+        "description": "Promise resolving to the value returned by navigation.navigate(); exact result shape is not specified by Dialog."
+      }
+    },
+    "prompt": {
+      "description": "Opens the configured prompt dialog.",
+      "parameters": [
+        {
+          "name": "options",
+          "type": "object",
+          "required": true,
+          "description": "Single destructured options object. Fields correspond to the JavaScript method signature.",
+          "schema": {
+            "type": "object",
+            "properties": {
+              "title": {
+                "type": "string"
+              },
+              "message": {
+                "type": "string"
+              },
+              "value": {},
+              "inputType": {
+                "type": "string"
+              },
+              "placeholder": {
+                "type": "string"
+              },
+              "required": {
+                "type": "boolean"
+              }
+            },
+            "additionalProperties": true
+          }
+        }
+      ],
+      "returns": {
+        "type": "any",
+        "description": "Promise resolving to the value returned by navigation.navigate(); exact result shape is not specified by Dialog."
+      }
+    },
+    "picker": {
+      "description": "Opens the configured picker dialog.",
+      "parameters": [
+        {
+          "name": "options",
+          "type": "object",
+          "required": true,
+          "description": "Single destructured options object. Fields correspond to the JavaScript method signature.",
+          "schema": {
+            "type": "object",
+            "properties": {
+              "title": {
+                "type": "string"
+              },
+              "message": {
+                "type": "string"
+              },
+              "value": {},
+              "inputType": {
+                "type": "string"
+              },
+              "placeholder": {
+                "type": "string"
+              },
+              "domain": {},
+              "multiple": {
+                "type": "boolean"
+              },
+              "required": {
+                "type": "boolean"
+              }
+            },
+            "additionalProperties": true
+          }
+        }
+      ],
+      "returns": {
+        "type": "any",
+        "description": "Promise resolving to the value returned by navigation.navigate(); exact result shape is not specified by Dialog."
+      }
+    },
+    "language": {
+      "description": "Opens a radio picker of configured languages, excluding language IDs in current.",
+      "parameters": [
+        {
+          "name": "options",
+          "type": "object",
+          "required": false,
+          "description": "Single destructured options object. Fields correspond to the JavaScript method signature.",
+          "schema": {
+            "type": "object",
+            "properties": {
+              "title": {
+                "type": "string",
+                "default": "Select language"
+              },
+              "message": {
+                "type": "string",
+                "default": "Language"
+              },
+              "value": {},
+              "required": {
+                "type": "boolean",
+                "default": true
+              },
+              "current": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "default": []
+              }
+            },
+            "additionalProperties": true
+          }
+        }
+      ],
+      "returns": {
+        "type": "any",
+        "description": "Promise resolving to the value returned by navigation.navigate(); exact result shape is not specified by Dialog."
+      }
+    },
+    "open": {
+      "description": "Opens the specified page as a dialog.",
+      "parameters": [
+        {
+          "name": "options",
+          "type": "object",
+          "required": true,
+          "description": "Single destructured options object. Fields correspond to the JavaScript method signature.",
+          "schema": {
+            "type": "object",
+            "properties": {
+              "href": {
+                "type": "string"
+              },
+              "params": {},
+              "title": {
+                "type": "string"
+              },
+              "breadcrumb": {},
+              "icon": {
+                "type": "string"
+              },
+              "context": {}
+            },
+            "additionalProperties": true
+          }
+        }
+      ],
+      "returns": {
+        "type": "any",
+        "description": "Promise resolving to the value returned by navigation.navigate(); exact result shape is not specified by Dialog."
+      }
+    }
+  }
+}

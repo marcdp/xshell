@@ -1,0 +1,39 @@
+{
+  "label": "Navigation",
+  "description": "Manages application navigation, browser URLs, page stacks, and dialog or embedded page navigation.",
+  "properties": {
+    "mode": { "type": "string", "readonly": true, "description": "Configured browser navigation mode.", "enum": ["hash", "path"] },
+    "src": { "type": "any", "readonly": true, "description": "Source URL of the current top-level x-page, or null if none exists." },
+    "stack": { "type": "array", "readonly": true, "description": "Snapshot of navigation stack entries containing href, params, and nav metadata.", "schema": { 
+      "type": "array", 
+      "items": { 
+        "type": "object", 
+        "properties": { 
+          "href": {"type": "string"}, 
+          "params": {"type": "object"}, 
+          "nav": {"type": "object"} 
+        }, 
+        "required": ["href", "params", "nav"] 
+        } 
+      } 
+    }
+  },
+  "events": {
+    "xshell:navigation:start": { "description": "Bus event emitted when top-level navigation begins.", "detail": { 
+      "src": { "type": "string", "required": true } 
+      } 
+    },
+    "xshell:navigation:end": { "description": "Bus event emitted when the top-level page finishes loading.", "detail": { 
+      "src": { "type": "string", "required": true }, 
+      "id": { "type": "any", "required": true } 
+      } 
+    }
+  },
+  "methods": {
+    "replacePageQuery": { "description": "Patches a page's query parameters, replacing the browser history entry when the page belongs to the navigation stack.", "parameters": [{ "name": "page", "type": "any", "required": true, "description": "Page instance with host and src." }, { "name": "changes", "type": "object", "required": true, "description": "Query changes: scalars set a parameter, null deletes it, and undefined is ignored." }], "returns": { "type": "any", "description": "Updated logical page URL, or null if no page source is available." } },
+    "replacePageHash": { "description": "Replaces a page URL fragment without reloading the page.", "parameters": [{ "name": "page", "type": "any", "required": true }, { "name": "hash", "type": "any", "required": true, "description": "Fragment as a string, or null to remove it.", "schema": { "type": ["string", "null"] } }], "returns": { "type": "any", "description": "Updated logical page URL, or null if unavailable." } },
+    "buildUrlAbsolute": { "description": "Builds an app-base-relative browser URL in path or hash navigation mode, unless the target is an absolute URL.", "parameters": [{ "name": "params", "type": "object", "required": true, "description": "Navigation URL options, including href, params, nav, and optional page." }], "returns": { "type": "string" } },
+    "buildUrl": { "description": "Builds a navigable logical URL, resolving relative href and serializing params and nav metadata.", "parameters": [{ "name": "options", "type": "object", "required": true, "schema": { "type": "object", "properties": { "href": { "type": "string" }, "params": { "type": "object" }, "nav": { "type": "object" }, "page": {} }, "required": ["href"] } }], "returns": { "type": "string" } },
+    "navigate": { "description": "Navigates to a page, stack entry, dialog, or embedded outlet. Dialog mode awaits and returns the dialog result; other modes normally resolve without a value.", "parameters": [{ "name": "options", "type": "object", "required": true, "schema": { "type": "object", "properties": { "href": { "type": "string" }, "params": { "type": "object" }, "nav": { "type": "object" }, "page": {}, "outlet": {}, "open": { "type": "string", "enum": ["auto", "top", "stack", "dialog", "embed"], "default": "auto" }, "context": { "type": "object" }, "replace": { "type": "boolean", "default": false } }, "required": ["href"] } }], "returns": { "type": "any", "description": "Promise; dialog mode resolves to the dialog result." } }
+  }
+}

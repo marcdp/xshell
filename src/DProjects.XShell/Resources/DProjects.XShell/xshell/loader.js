@@ -89,7 +89,7 @@ export default class Loader {
                 throw new LoaderException([new Error(`Resource not found: ${resource}`)]);
             }
             let {definition, url, path} = definitionObject;
-            const cacheKey = this.getCacheKey(resource, definition);
+            const cacheKey = this._getCacheKey(resource, definition);
             urls.push(url);
             paths.push(path);
             // get or load handler
@@ -236,7 +236,7 @@ export default class Loader {
     }    
 
     // private
-    removeQuery(resource) {
+    _removeQuery(resource) {
         // remove only the URL query while preserving the logical resource scheme and fragment
         const queryIndex = resource.indexOf("?");
         const fragmentIndex = resource.indexOf("#");
@@ -245,14 +245,14 @@ export default class Loader {
         }
         return resource.substring(0, queryIndex) + (fragmentIndex === -1 ? "" : resource.substring(fragmentIndex));
     }
-    getCacheKey(resource, definition) {
+    _getCacheKey(resource, definition) {
         // select cache identity without changing the resource passed through resolution and loading
         const cacheMode = definition.cacheMode ?? "full";
         switch (cacheMode) {
             case "full":
                 return resource;
             case "path":
-                return this.removeQuery(resource);
+                return this._removeQuery(resource);
             default:
                 throw new Error(`Unsupported cache mode '${cacheMode}'.`);
         }

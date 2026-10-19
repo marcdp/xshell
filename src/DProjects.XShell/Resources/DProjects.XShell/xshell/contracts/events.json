@@ -1,0 +1,41 @@
+{
+  "label": "Events",
+  "description": "Registers DOM event listeners with optional command dispatch and removes the registered listeners on disposal.",
+  "properties": {},
+  "events": {},
+  "methods": {
+    "on": {
+      "description": "Registers a listener for one or more DOM event names on an element. When listener is a string, creates a callback that passes that command to the handler supplied to the Events constructor. Registrations are tracked for later disposal.",
+      "parameters": [
+        {
+          "name": "element",
+          "type": "object",
+          "required": true,
+          "description": "DOM EventTarget-like element supporting addEventListener and removeEventListener."
+        },
+        {
+          "name": "event",
+          "type": "any",
+          "required": true,
+          "description": "A single event name or an iterable collection of event names.",
+          "schema": {
+            "oneOf": [
+              {"type": "string"},
+              {"type": "array", "items": { "type": "string"}}
+            ]
+          }
+        },
+        {
+          "name": "listener",
+          "type": "any",
+          "required": true,
+          "description": "An event listener function, or a command string dispatched to the constructor-supplied handler."
+        }
+      ],
+      "returns": {
+        "type": "any",
+        "description": "Undefined; listeners are registered for subsequent removal by dispose()."
+      }
+    }
+  }
+}

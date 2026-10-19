@@ -163,11 +163,6 @@ export default class Modules {
         }
         return null;
     }
-    getModuleBySrc(src) {
-        //get module by src
-        const id = this.resolveModuleId(src);
-        return (id ? this.getModuleById(id) : null);
-    }
     getModuleById(id) {
         //get module by id
         for (let module of this._modules) {
@@ -175,6 +170,7 @@ export default class Modules {
                 return module;
             }
         }
+        return null;
     }
 }
 

@@ -1,0 +1,65 @@
+{
+  "label": "Loader",
+  "description": "Resolves and loads XShell resources using registered loader implementations, with optional caching and load diagnostics.",
+  "properties": {
+    "registry": {
+      "type": "array",
+      "readonly": true,
+      "description": "Snapshot of resource load metadata. Entries expose resource, url, path, status, time, moduleId, and description; loaded values are not exposed.",
+      "schema": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "resource": { "type": "string" },
+            "url": { "type": ["string", "null"] },
+            "path": { "type": ["string", "null"] },
+            "status": { "type": "string", "enum": ["pending", "loaded", "error"] },
+            "time": { "type": ["number", "null"] },
+            "moduleId": { "type": ["string", "null"] },
+            "description": { "type": "string" }
+          },
+          "required": ["resource", "status", "description"]
+        }
+      }
+    }
+  },
+  "events": {
+    "xshell:loader:resource:fetch": {
+      "description": "Emitted through the application bus when a resource begins loading.",
+      "detail": {
+        "resource": { "type": "string", "required": true },
+        "url": { "type": "string", "required": true },
+        "path": { "type": "any", "required": true },
+        "moduleId": { "type": "any", "required": false }
+      }
+    },
+    "xshell:loader:resource:loaded": {
+      "description": "Emitted through the application bus after a resource loads successfully.",
+      "detail": {
+        "resource": { "type": "string", "required": true },
+        "url": { "type": "string", "required": true },
+        "path": { "type": "any", "required": true },
+        "time": { "type": "number", "required": true }
+      }
+    },
+    "xshell:loader:resource:error": {
+      "description": "Emitted through the application bus when a resource loader fails.",
+      "detail": {
+        "resource": { "type": "string", "required": true },
+        "url": { "type": "string", "required": true },
+        "path": { "type": "any", "required": true },
+        "time": { "type": "number", "required": true }
+      }
+    }
+  },
+  "methods": {
+    "load": {
+      "description": "Loads one resource, an array of resources, or an object of named resources. Returns a Promise resolving to a single loaded value, an array, or an object with the same keys, respectively. Undefined or empty-string input resolves to null. Failed resources cause a LoaderException (AggregateError). Cached values are reused according to resolver definitions; cloneable loaded values may be cloned on return.",
+      "parameters": [
+        { "name": "resources", "type": "any", "required": false, "description": "Resource identifier string, array of identifiers, or object whose values are resource identifiers." }
+      ],
+      "returns": { "type": "any", "description": "Promise resolving to the loaded value(s), preserving the supplied input shape." }
+    }
+  }
+}

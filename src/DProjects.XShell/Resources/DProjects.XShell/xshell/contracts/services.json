@@ -1,0 +1,153 @@
+{
+  "label": "Services",
+  "description": "Registers framework and configured services, resolves instances lazily, validates their declared contract surface, and exposes service metadata.",
+  "properties": {
+    "registry": {
+      "type": "array",
+      "readonly": true,
+      "description": "Frozen snapshot of service inspection metadata. Entries do not expose service instances or implementation classes.",
+      "schema": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "state": {
+              "type": "string",
+              "enum": [
+                "registered",
+                "creating",
+                "created"
+              ]
+            },
+            "contractId": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "contractUrl": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "description": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "icon": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "moduleId": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "implementationName": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "url": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "size": {
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "time": {
+              "type": [
+                "number",
+                "null"
+              ]
+            }
+          },
+          "required": [
+            "id",
+            "state",
+            "contractId",
+            "contractUrl",
+            "description",
+            "icon",
+            "moduleId",
+            "implementationName",
+            "url",
+            "size",
+            "time"
+          ]
+        }
+      }
+    }
+  },
+  "events": {
+    "xshell:service:created": {
+      "description": "Emitted after a configured service is lazily constructed and its contract surface has been validated.",
+      "detail": {
+        "id": {
+          "type": "string",
+          "required": true,
+          "description": "Registered service name."
+        }
+      }
+    }
+  },
+  "methods": {
+    "has": {
+      "description": "Checks whether a service name is registered without creating its instance.",
+      "parameters": [
+        {
+          "name": "name",
+          "type": "string",
+          "required": true
+        }
+      ],
+      "returns": {
+        "type": "boolean",
+        "description": "True if registered, otherwise false."
+      }
+    },
+    "resolve": {
+      "description": "Returns the registered instance, constructing and contract-validating a configured service on first access. Throws for missing services or circular dependencies.",
+      "parameters": [
+        {
+          "name": "name",
+          "type": "string",
+          "required": true
+        }
+      ],
+      "returns": {
+        "type": "any",
+        "description": "Service instance, or null if registered without an instance or implementation."
+      }
+    },
+    "getServiceInfo": {
+      "description": "Returns a frozen projection of a registered service's metadata without exposing its instance.",
+      "parameters": [
+        {
+          "name": "id",
+          "type": "string",
+          "required": true
+        }
+      ],
+      "returns": {
+        "type": "any",
+        "description": "Service metadata object with id, state, contractId, contractUrl, description, icon, moduleId, implementationName, url, size, and time; undefined if not found."
+      }
+    }
+  }
+}

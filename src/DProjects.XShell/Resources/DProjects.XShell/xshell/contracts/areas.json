@@ -1,0 +1,32 @@
+{
+  "label": "Areas",
+  "description": "Manages application navigation areas, their menus and routes, and global menu definitions.",
+  "properties": {},
+  "events": {
+    "xshell:area:change": {
+      "description": "Emitted on the Bus when navigation changes the current area.",
+      "detail": {
+        "areaId": { "type": "string", "required": true, "description": "Identifier of the newly selected area." }
+      }
+    },
+    "xshell:menus:change": {
+      "description": "Emitted on the Bus when a registered dynamic menu source refreshes and changes its menu items.",
+      "detail": {}
+    }
+  },
+  "methods": {
+    "getAreas": { "description": "Returns the array of configured navigation areas.", "returns": { "type": "array" } },
+    "getArea": { "description": "Returns the area with the specified ID, or null if it is unknown.", "parameters": [{ "name": "id", "type": "string", "required": true }], "returns": { "type": "any" } },
+    "getDefaultArea": { "description": "Returns the default area, falling back to the first area, or null.", "returns": { "type": "any" } },
+    "getCurrentArea": { "description": "Returns the currently selected area or the default area.", "returns": { "type": "any" } },
+    "resolveAreaId": { "description": "Resolves an area ID from an href using the longest matching area prefix; returns null when no area matches.", "parameters": [{ "name": "href", "type": "string", "required": true }], "returns": { "type": "any" } },
+    "resolvePath": { "description": "Finds a menu item by its public path across all areas, or returns null.", "parameters": [{ "name": "path", "type": "string", "required": true }], "returns": { "type": "any" } },
+    "resolveHref": { "description": "Finds the menu item for an href in the specified area or an area inferred from the target/current context.", "parameters": [{ "name": "href", "type": "string", "required": true }, { "name": "areaId", "type": "any", "required": false, "default": null, "description": "Optional area ID; null uses context-based resolution." }], "returns": { "type": "any" } },
+    "getModuleId": { "description": "Extracts the module ID from a URL containing the configured module-assets base path, or returns null.", "parameters": [{ "name": "href", "type": "string", "required": true }], "returns": { "type": "any" } },
+    "getMenus": { "description": "Returns all effective menu arrays for an area, or an empty array.", "parameters": [{ "name": "areaId", "type": "any", "required": false, "default": null }], "returns": { "type": "array" } },
+    "getMenu": { "description": "Returns the named effective menu for an area, or an empty array.", "parameters": [{ "name": "name", "type": "string", "required": true }, { "name": "areaId", "type": "any", "required": false, "default": null }], "returns": { "type": "array" } },
+    "getMenuitemBreadcrumb": { "description": "Returns the ordered menu-item breadcrumb for an href in an area, or null.", "parameters": [{ "name": "href", "type": "string", "required": true }, { "name": "areaId", "type": "any", "required": false, "default": null }], "returns": { "type": "any" } },
+    "registerSource": { "description": "Registers a dynamic menu source with resolve() and optional dependsOn events; installs a refresh() method on the source.", "parameters": [{ "name": "name", "type": "string", "required": true }, { "name": "source", "type": "object", "required": true, "schema": { "type": "object", "properties": { "resolve": {}, "dependsOn": { "type": "array", "items": { "type": "string" } } }, "required": ["resolve"] } }] },
+    "getGlobalMenu": { "description": "Returns the named global menu or null.", "parameters": [{ "name": "name", "type": "string", "required": true }], "returns": { "type": "any" } }
+  }
+}

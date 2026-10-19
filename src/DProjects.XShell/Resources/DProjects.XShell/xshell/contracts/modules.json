@@ -1,0 +1,42 @@
+{
+  "label": "Modules",
+  "description": "Initializes application modules, manages their controller lifecycle, and resolves module records by ID or resource path.",
+  "properties": {
+    "registry": {
+      "type": "array",
+      "readonly": true,
+      "description": "Frozen snapshot of module metadata, excluding controllers and mutable runtime records.",
+      "schema": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "required": ["id", "label", "path", "version", "assets", "builtAt", "configUrl", "icon", "files"],
+          "properties": {
+            "id": {"type": "string"},
+            "label": {"type": "string"},
+            "path": {"type": "string"},
+            "version": {"type": "string"},
+            "assets": {"type": "object", "properties": {"path": {"type": "string"}, "url": {"type": "string"}}},
+            "builtAt": {"type": "string"},
+            "configUrl": {"type": "string"},
+            "icon": {"type": ["string", "null"]},
+            "files": {"type": "array", "items": {"type": "object", "properties": {"path": {"type": "string"}, "size": {"type": "number"}}}}
+          }
+        }
+      }
+    }
+  },
+  "events": {},
+  "methods": {
+    "resolveModuleId": {
+      "description": "Finds the owning module ID for a source path using its module assets-path prefix, or returns null.",
+      "parameters": [{"name": "src", "type": "string", "required": true, "description": "Resource source path."}],
+      "returns": {"type": "any", "description": "Matching module ID string, or null."}
+    },
+    "getModuleById": {
+      "description": "Gets the runtime module record associated with an ID. Returns undefined if no module matches.",
+      "parameters": [{"name": "id", "type": "string", "required": true, "description": "Module ID."}],
+      "returns": {"type": "any", "description": "Runtime module record, or undefined when not found."}
+    }
+  }
+}

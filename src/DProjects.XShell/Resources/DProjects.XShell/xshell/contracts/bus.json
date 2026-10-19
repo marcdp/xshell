@@ -1,0 +1,29 @@
+{
+  "label": "Bus",
+  "description": "Asynchronous application event bus using MessageChannel. Listeners receive event envelopes containing type, ts, and detail.",
+  "properties": {},
+  "events": {},
+  "methods": {
+    "addEventListener": {
+      "description": "Registers a listener for an event name. Use '*' to receive all dispatched events. Listeners receive an event envelope { type, ts, detail }.",
+      "parameters": [
+        { "name": "event", "type": "string", "required": true, "description": "Event name or '*' wildcard." },
+        { "name": "listener", "type": "function", "required": true, "description": "Callback invoked asynchronously with { type, ts, detail }." }
+      ]
+    },
+    "removeEventListener": {
+      "description": "Removes matching listener registrations for the specified event name.",
+      "parameters": [
+        { "name": "event", "type": "string", "required": true, "description": "Event name or '*' wildcard." },
+        { "name": "listener", "type": "function", "required": true, "description": "Previously registered callback to remove." }
+      ]
+    },
+    "emit": {
+      "description": "Posts an event through MessageChannel for asynchronous delivery to named listeners and '*' listeners. The payload must be structured-cloneable.",
+      "parameters": [
+        { "name": "event", "type": "string", "required": true, "description": "Event name, stored in the dispatched envelope's type field." },
+        { "name": "detail", "type": "any", "required": false, "description": "Optional event payload, stored in the dispatched envelope's detail field." }
+      ]
+    }
+  }
+}
