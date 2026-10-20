@@ -764,6 +764,7 @@ class XTemplateInstance {
 	}
 	_diffDomListByKey(vNodesOld, oldStartIndex, oldEndIndex, vNodesNew, newStartIndex, newEndIndex, parent, level) {
 		//get oldKeys and newKeys
+		debugger
 		let oldKeys = [];
 		for (let i = oldStartIndex + 1; i < oldEndIndex; i++) {
 			oldKeys.push(vNodesOld[i].options.key);
