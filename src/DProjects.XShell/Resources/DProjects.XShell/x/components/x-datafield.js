@@ -531,6 +531,7 @@ export default {
         domainNormalized: [],
         selectedOptions: {},
         files: [],
+        filesTemp: [],
         valueOriginal: null,
         inputId: null
     },
@@ -613,8 +614,10 @@ export default {
                         //value changed
                         if (host.isConnected) {
                             this.validate();
-                            host.dispatchEvent(new CustomEvent("change", {detail: {oldValue, newValue}, bubbles: true, composed: false}));
-                            host.dispatchEvent(new CustomEvent("datafield:change", {detail: {oldValue, newValue}, bubbles: true, composed: false}));
+                            if (oldValue != newValue) {
+                                host.dispatchEvent(new CustomEvent("change", {detail: {oldValue, newValue}, bubbles: true, composed: false}));
+                                host.dispatchEvent(new CustomEvent("datafield:change", {detail: {oldValue, newValue}, bubbles: true, composed: false}));
+                            }
                         } else {
                             state.validated =false;
                         }

@@ -15,7 +15,7 @@ export default {
             <x-datafield label="Name" type="text" x-model="state.customer.name"></x-datafield>
 
             <x-datafield label="Addresses" type="list" add x-model="state.customer.addresses" x-prop:item-default="state.addressDefault">
-                <x-datafields x-for="address in state.customer.addresses" class="grid" columns="2" move remove x-key="street">
+                <x-datafields x-for="address in state.customer.addresses" class="grid" columns="2" move remove __x-key="address">
                     <x-datafield label="Street" type="text" x-model="address.street"></x-datafield>
                     <x-datafield label="City" type="text" x-model="address.city" required style="flex:1" placeholder="Enter city"></x-datafield>
                     <x-datafield label="File" type="file" x-model="address.file" style="width:15em;"></x-datafield>

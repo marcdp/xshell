@@ -487,8 +487,10 @@ class XTemplateInstance {
 					el[prop] = propValue;
 				}
 			}
+			el._xTemplateEventHandlers = vNode.events;
 			for (let event in vNode.events) {
 				let eventHandler = vNode.events[event];
+				let nameWithModifiers = event;
 				let name = event;
 				let options = {};
 				if (name.indexOf(".") != -1) {
@@ -521,7 +523,9 @@ class XTemplateInstance {
 						if (options.right && event.key != "ArrowRight") return false;
 					}
 					//invoke                    
-					let result = eventHandler.call(this, event, ...args);
+					//let result = eventHandler.call(this, event, ...args);
+					const currentHandler = el._xTemplateEventHandlers?.[nameWithModifiers];
+					let result = currentHandler?.call(this, event, ...args);
 					//stop, prevent
 					if (options.stop) event.stopPropagation();
 					if (options.prevent) event.preventDefault();
@@ -644,6 +648,7 @@ class XTemplateInstance {
 		if (vNodeNew.options.once) {
 			return;
 		}
+		element._xTemplateEventHandlers = vNodeNew.events;
 		//attrs
 		let validAttrs = [];
 		for (let attr in vNodeNew.attrs) {
