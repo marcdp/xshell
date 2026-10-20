@@ -180,6 +180,9 @@ class XPage extends HTMLElement {
         // unmount current page; disconnection does not imply final destruction
         this.unmount();
     }
+    connectedMoveCallback() {
+        // A state-preserving DOM move keeps the existing Page mounted.
+    }
 
 
     //methods    

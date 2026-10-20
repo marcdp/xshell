@@ -1937,6 +1937,10 @@ Duplicate keys are invalid for reliable keyed reconciliation.
 
 The current runtime warns when duplicate keys are detected.
 
+For retained keys, reconciliation preserves the existing DOM element, its bindings, event handlers, and component instance while updating its
+position and rendered data. When the browser supports `ParentNode.moveBefore()`, keyed reordering uses a state-preserving DOM move. Older browsers
+fall back to `insertBefore()`, which preserves node identity but may invoke normal Custom Element disconnection and reconnection lifecycle callbacks.
+
 ---
 
 ## 35. List region boundaries

@@ -68,6 +68,11 @@ final destruction
 it becomes disconnected or unmounted. In particular, a native `disconnectedCallback()` is not evidence of permanent destruction: the browser can
 reconnect the same custom-element instance later.
 
+Keyed XTemplate reordering uses `ParentNode.moveBefore()` when the browser provides it. Definition-based Components and `x-page` implement an
+empty `connectedMoveCallback()`, so these same-tree moves keep the current render engine, state engine, subscriptions, and Page mount intact. The
+`insertBefore()` compatibility fallback still preserves the element object, but browsers can run the ordinary disconnect/reconnect lifecycle for
+that fallback.
+
 The controller context is stable across these calls. A lifecycle handler can use `this.refresh()` to invoke another controller method, while an
 operation on the underlying custom element must use the injected `host`.
 

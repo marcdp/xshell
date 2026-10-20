@@ -764,11 +764,11 @@ class XTemplateInstance {
 	}
 	_diffDomListByKey(vNodesOld, oldStartIndex, oldEndIndex, vNodesNew, newStartIndex, newEndIndex, parent, level) {
 		//get oldKeys and newKeys
-		debugger
 		let oldKeys = [];
 		for (let i = oldStartIndex + 1; i < oldEndIndex; i++) {
 			oldKeys.push(vNodesOld[i].options.key);
 		}
+		const oldVNodesByKey = new Map(oldKeys.map((key, index) => [key, vNodesOld[oldStartIndex + index + 1]]));
 		let newKeys = [];
 		for (let i = newStartIndex + 1; i < newEndIndex; i++) {
 			newKeys.push(vNodesNew[i].options.key);
@@ -807,18 +807,22 @@ class XTemplateInstance {
 			let newIndex = i;
 			let oldIndex = oldKeys.indexOf(key);
 			if (newIndex != oldIndex) {
-				parent.insertBefore(parent.childNodes[oldStartIndex + oldIndex + 1], parent.childNodes[oldStartIndex + newIndex + 1]);
+				const element = parent.childNodes[newStartIndex + oldIndex + 1];
+				const reference = parent.childNodes[newStartIndex + newIndex + 1];
+				if (typeof (parent.moveBefore) == "function") {
+					parent.moveBefore(element, reference);
+				} else {
+					parent.insertBefore(element, reference);
+				}
 				oldKeys.splice(oldIndex, 1);
 				oldKeys.splice(newIndex, 0, key);
-				let old = vNodesOld.splice(oldStartIndex + 1 + oldIndex, 1);
-				vNodesOld.splice(oldStartIndex + 1 + newIndex, 0, old[0]);
 			}
 		}
 		//for each element in list, apply the differences
 		for (let i = 0; i < newKeys.length; i++) {
 			let key = newKeys[i];
 			if (addedKeys.indexOf(key) == -1) {
-				let vNodeOld = vNodesOld[oldStartIndex + 1 + i];
+				let vNodeOld = oldVNodesByKey.get(key);
 				let vNodeNew = vNodesNew[newStartIndex + 1 + i];
 				let element = parent.childNodes[newStartIndex + 1 + i];
 				this._diffDomElement(vNodeOld, vNodeNew, element, level);

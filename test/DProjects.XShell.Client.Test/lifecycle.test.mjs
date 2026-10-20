@@ -536,6 +536,12 @@ test("component preserves its instance lifetime across reconnects and unloads on
     component.connectedCallback();
     const firstRenderEngine = component._renderEngine;
     component._state.value = 2;
+    component.connectedMoveCallback();
+
+    assert.deepEqual(commands, ["load", "mount"]);
+    assert.equal(component._renderEngine, firstRenderEngine);
+    assert.equal(component._state.value, 2);
+
     component.disconnectedCallback();
 
     assert.deepEqual(commands, ["load", "mount", "unmount"]);
@@ -780,6 +786,10 @@ test("x-page unmounts then unloads a replaced page and only unmounts on disconne
     assert.deepEqual(commands, ["old mount"]);
 
     commands.length = 0;
+    xpage.connectedMoveCallback();
+    assert.deepEqual(commands, []);
+    assert.equal(xpage._connected, true);
+
     await xpage.load();
     assert.deepEqual(commands, ["new load", "old unmount", "old unload", "new mount"]);
 });

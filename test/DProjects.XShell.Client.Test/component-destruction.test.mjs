@@ -7,6 +7,7 @@ class FakeNode {
         this.childNodes = [];
         this.attributes = new Map();
         this.style = { display: "", setProperty() {}, removeProperty() {} };
+        this.moveBeforeCalls = [];
     }
 
     get firstChild() { return this.childNodes[0] ?? null; }
@@ -27,6 +28,14 @@ class FakeNode {
         this.childNodes.splice(index < 0 ? this.childNodes.length : index, 0, child);
         child.parentNode = this;
         return child;
+    }
+    moveBefore(child, before) {
+        const oldIndex = this.childNodes.indexOf(child);
+        if (oldIndex < 0) throw new Error("Node is not a child");
+        this.moveBeforeCalls.push({ child, before });
+        this.childNodes.splice(oldIndex, 1);
+        const index = before ? this.childNodes.indexOf(before) : -1;
+        this.childNodes.splice(index < 0 ? this.childNodes.length : index, 0, child);
     }
     removeChild(child) {
         const index = this.childNodes.indexOf(child);
@@ -88,7 +97,7 @@ globalThis.document = {
 const { default: createRenderEngineFactoryX, XTemplateRuntimeUtils: utils } = await import("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/render-engines/x.js");
 const { RenderEngineHtml } = await import("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/render-engines/html.js");
 const { unloadComponents } = await import("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/utils/components.js");
-const vnode = (tag, index = 0, options = {}, children = []) => utils.createVDOM(tag, null, null, null, null, { index, ...options }, children);
+const vnode = (tag, index = 0, options = {}, children = [], props = null) => utils.createVDOM(tag, null, props, null, null, { index, ...options }, children);
 
 function createXEngine(render, state = {}) {
     const factory = createRenderEngineFactoryX(null, {}, { render, dependencies: [], slots: [] });
@@ -130,6 +139,7 @@ test("keyed XTemplate removal unloads once while reordering preserves instances"
     view.engine.render();
     assert.equal(view.host.childNodes[0], start);
     assert.deepEqual(view.host.childNodes.slice(1, 3), [second, first]);
+    assert.deepEqual(view.host.moveBeforeCalls, [{ child: second, before: first }]);
     assert.equal(first.unloadCalls, 0);
     assert.equal(second.unloadCalls, 0);
 
@@ -140,6 +150,106 @@ test("keyed XTemplate removal unloads once while reordering preserves instances"
     view.engine.unmount();
     assert.equal(first.unloadCalls, 1);
     assert.equal(second.unloadCalls, 1);
+});
+
+test("keyed XTemplate repeatedly reorders existing instances with state-preserving moves", () => {
+    const render = state => [
+        vnode("#comment", 0, { forType: "key" }, "x-for-start"),
+        ...state.items.map((item, index) => vnode("x-child", index + 1, { key: item.id }, [], { value: item.name })),
+        vnode("#comment", state.items.length + 1, {}, "x-for-end")
+    ];
+    const items = [
+        { id: "a", name: "A" },
+        { id: "b", name: "B" },
+        { id: "c", name: "C" },
+        { id: "d", name: "D" }
+    ];
+    const view = createXEngine(render, { items });
+    view.engine.render();
+    const instances = new Map(view.state.items.map((item, index) => [item.id, view.host.childNodes[index + 1]]));
+
+    for (const ids of [
+        ["b", "a", "c", "d"],
+        ["b", "a", "d", "c"],
+        ["d", "b", "a", "c"],
+        ["d", "c", "b", "a"],
+        ["a", "b", "c", "d"]
+    ]) {
+        view.state.items = ids.map(id => ({ id, name: id.toUpperCase() + "!" }));
+        view.engine.render();
+        assert.deepEqual(view.host.childNodes.slice(1, -1), ids.map(id => instances.get(id)));
+        assert.deepEqual(view.host.childNodes.slice(1, -1).map(element => element.value), ids.map(id => id.toUpperCase() + "!"));
+    }
+
+    for (const instance of instances.values()) assert.equal(instance.unloadCalls, 0);
+    assert.ok(view.host.moveBeforeCalls.length > 0);
+});
+
+test("keyed XTemplate add and remove retain surviving nested form component instances", () => {
+    const render = state => [
+        vnode("x-form", 0, {}, state.addresses.length ? [
+            vnode("x-datafield", 0, {}, [
+                vnode("#comment", 0, { forType: "key" }, "x-for-start"),
+                ...state.addresses.map((address, index) => vnode("x-datafields", index + 1, { key: address.id }, [
+                    vnode("x-datafield", 0, {}, [], { value: address.street }),
+                    vnode("x-datafield", 1, {}, [], { value: address.city })
+                ])),
+                vnode("#comment", state.addresses.length + 1, {}, "x-for-end")
+            ], { value: state.addresses })
+        ] : [])
+    ];
+    const a = { id: "a", street: "First", city: "Madrid" };
+    const b = { id: "b", street: "Second", city: "Paris" };
+    const view = createXEngine(render, { addresses: [a, b] });
+    view.engine.render();
+    const list = view.host.firstChild.firstChild;
+    const first = list.childNodes[1];
+    const second = list.childNodes[2];
+    const firstStreet = first.firstChild;
+    const secondStreet = second.firstChild;
+
+    view.state.addresses = [{ ...b, street: "Edited" }, a];
+    view.engine.render();
+    assert.deepEqual(list.childNodes.slice(1, -1), [second, first]);
+    assert.equal(second.firstChild, secondStreet);
+    assert.equal(secondStreet.value, "Edited");
+    assert.equal(first.firstChild, firstStreet);
+
+    const c = { id: "c", street: "Third", city: "Rome" };
+    view.state.addresses = [{ ...b, street: "Edited" }, c, a];
+    view.engine.render();
+    const third = list.childNodes[2];
+    assert.deepEqual(list.childNodes.slice(1, -1), [second, third, first]);
+    assert.equal(first.unloadCalls, 0);
+    assert.equal(second.unloadCalls, 0);
+
+    view.state.addresses = [c, a];
+    view.engine.render();
+    assert.deepEqual(list.childNodes.slice(1, -1), [third, first]);
+    assert.equal(second.unloadCalls, 1);
+    assert.equal(first.unloadCalls, 0);
+    assert.equal(third.unloadCalls, 0);
+});
+
+test("keyed XTemplate falls back to insertBefore when moveBefore is unavailable", () => {
+    const render = state => [
+        vnode("#comment", 0, { forType: "key" }, "x-for-start"),
+        ...state.keys.map((key, index) => vnode("x-child", index + 1, { key })),
+        vnode("#comment", state.keys.length + 1, {}, "x-for-end")
+    ];
+    const view = createXEngine(render, { keys: ["a", "b", "c"] });
+    view.host.moveBefore = undefined;
+    view.engine.render();
+    const [start, first, second, third] = view.host.childNodes;
+
+    view.state.keys = ["c", "a", "b"];
+    view.engine.render();
+
+    assert.equal(view.host.childNodes[0], start);
+    assert.deepEqual(view.host.childNodes.slice(1, 4), [third, first, second]);
+    assert.equal(first.unloadCalls, 0);
+    assert.equal(second.unloadCalls, 0);
+    assert.equal(third.unloadCalls, 0);
 });
 
 test("XTemplate node format retains reused children and unloads only removed children", () => {

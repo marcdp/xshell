@@ -383,6 +383,9 @@ export async function createComponentClassFromJsDefinition(src, context, impleme
             if (this._unloaded) return;
             this._unmount();
         }
+        connectedMoveCallback() {
+            // A state-preserving DOM move keeps the existing connection and render engine.
+        }
         // unload
         async unload() {
             if (this._unloaded) return;
