@@ -178,6 +178,14 @@ namespace DProjects.XShell.Test {
         }
 
         [Fact]
+        public void CompilesKebabCaseItemDefaultBindingToTheComponentProperty() {
+            var javascript = new XTemplateCompiler().Compile("<x-datafield x-prop:item-default=\"state.addressDefault\"></x-datafield>");
+
+            Assert.Contains("itemDefault:utils.expr.member(state, \"addressDefault\")", javascript, StringComparison.Ordinal);
+            Assert.DoesNotContain("item-default", javascript, StringComparison.Ordinal);
+        }
+
+        [Fact]
         public void CompilesImportantAndEmptyLiteralStyles() {
             var important = new XTemplateCompiler().Compile("<div style=\"display:none !important\"></div>");
             var empty = new XTemplateCompiler().Compile("<div style=\"\"></div>");

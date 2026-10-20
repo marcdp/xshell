@@ -496,6 +496,41 @@ The optional `contract` export describes the public interface.
 
 The default export provides the runtime implementation.
 
+## List data-field item defaults
+
+`x-datafield type="list"` accepts the optional `itemDefault` property. Bind an object with `x-prop:item-default`; each Add action deep-clones that
+value before appending it to the list. When the property is omitted or null, the component appends `{}` as before. Nested objects and arrays are
+also cloned, so newly added items do not share mutable values.
+
+```html
+<x-datafield
+    label="Addresses"
+    type="list"
+    add
+    x-model="state.customer.addresses"
+    x-prop:item-default="state.addressDefault">
+
+    <x-datafields x-for="address in state.customer.addresses" move remove>
+        <x-datafield label="Street" type="text" x-model="address.street"></x-datafield>
+        <x-datafield label="City" type="text" x-model="address.city"></x-datafield>
+    </x-datafields>
+</x-datafield>
+```
+
+```js
+state: {
+    customer: { addresses: [] },
+    addressDefault: {
+        street: "",
+        city: "",
+        location: { country: "" }
+    }
+}
+```
+
+Define every property used by an item-level `x-model` binding on the default value. XShell keeps strict assignment semantics and does not create
+missing members automatically.
+
 ## Markdown component inputs
 
 `x-markdown` is a trusted-content renderer and does not sanitize generated HTML. `x-markdown.value` accepts trusted raw Markdown text, and

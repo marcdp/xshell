@@ -10,6 +10,19 @@ export default {
     template: `
         <p>Demonstrates XShell form controls, field types, validation, grouped fields, and wizard forms.</p>
 
+          <h2>List</h2>
+         <x-datafields label="Customer">
+            <x-datafield label="Name" type="text" x-model="state.customer.name"></x-datafield>
+            <x-datafield label="Addresses" type="list" class="list" add x-model="state.customer.addresses" x-prop:item-default="state.addressDefault">
+                <x-datafields x-for="address in state.customer.addresses" columns="2" move remove>
+                    <x-datafield label="Street" type="text" x-model="address.street"></x-datafield>
+                    <x-datafield label="City" type="text" x-model="address.city" required></x-datafield>
+                </x-datafields>
+            </x-datafield>
+        </x-datafields>
+
+        <x-json x-prop:value="state.customer"></x-json>
+        
         <h2>Basic fields</h2>
         <x-form>
             <x-datafields columns="2">
@@ -133,6 +146,19 @@ export default {
             <x-button slot="footer" class="submit" command="submit" label="Finish"></x-button>
         </x-form>
 
+        <h2>List</h2>
+         <x-datafields label="Customer">
+            <x-datafield label="Name" type="text" x-model="state.customer.name"></x-datafield>
+            <x-datafield label="Addresses" type="list" class="list" add x-model="state.customer.addresses" x-prop:item-default="state.addressDefault">
+                <x-datafields x-for="address in state.customer.addresses" columns="2" move remove>
+                    <x-datafield label="Street" type="text" x-model="address.street"></x-datafield>
+                    <x-datafield label="City" type="text" x-model="address.city" required></x-datafield>
+                </x-datafields>
+            </x-datafield>
+        </x-datafields>
+
+        <x-json x-prop:value="state.customer"></x-json>
+
     `,
 
     state: {
@@ -158,7 +184,15 @@ export default {
             { value: "sms", label: "SMS" },
             { value: "push", label: "Push notifications" }
         ],
-        address: {}
+        address: {},
+        customer: {
+            name: "",
+            addresses: [
+                { street: "11", city: "22" },
+                { street: "33", city: "44" }
+            ]
+        },
+        addressDefault: { street: "", city: "" }
     },
 
     controller({ state  }) {

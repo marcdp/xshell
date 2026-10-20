@@ -5,6 +5,14 @@ const getFreeId = function() {return "id" + freeId++;};
 const urlPattern = /^(https?:\/\/)?(www\.)?([a-zA-Z0-9-]+)\.([a-zA-Z]{2,})(\/[a-zA-Z0-9#-]+\/?)*$/;
 const emailPattern = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
 const telPattern = /^(\+?\d{1,3}[-.\s]?)?(\(?\d{3}\)?[-.\s]?)?\d{3}[-.\s]?\d{4,7}$/;
+const cloneListItemDefault = function(value) {
+    try {
+        return structuredClone(value);
+    } catch (error) {
+        if (error?.name !== "DataCloneError") throw error;
+        return JSON.parse(JSON.stringify(value));
+    }
+};
 const formatFileSize = function(bytes) {
     if (bytes === -1) return '';
     if (bytes === 0) return '0 Bytes';
@@ -63,7 +71,8 @@ export const contract = {
         langIndex:      {type:"number", default:0, attribute:true, state:true, description:""},
         errors:         {type:"array", default:[], attribute:true, state:true, description:""},
         validated:      {type:"boolean", default:false, attribute:true, state:true, description:""},
-        add:            {type:"boolean", default:false, attribute:true, state:true, description:""}
+        add:            {type:"boolean", default:false, attribute:true, state:true, description:""},
+        itemDefault:    {type:"any", default:null, attribute:false, state:true, description:"Default value used to initialize newly added list items."}
     },
     methods: {
         validate: {
@@ -741,7 +750,8 @@ export default {
 
             async listAdd(args) {
                 // listAdd
-                state.value = state.value.concat({});
+                const item = cloneListItemDefault(state.itemDefault ?? {});
+                state.value = [...(state.value ?? []), item];
             },
 
             async listEdit(args) {
