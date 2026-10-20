@@ -80,8 +80,8 @@ export default {
             --x-datafield-padding-left: .5em;
             --x-datafield-error-display: none;
         }
-        :host(.grid:first-child) .row .buttons x-button[data-direction='up'] { display:none;}
-        :host(.grid:last-child) .row .buttons x-button[data-direction='down'] {display:none;}
+        :host(.grid:first-child) .row .buttons x-button[data-direction='up']  {_display:none; disabled:true; pointer-events:none; opacity:.25;}
+        :host(.grid:last-child) .row .buttons x-button[data-direction='down'] {_display:none; disabled:true; pointer-events:none; opacity:.25;}
         
     `,
     template: `
