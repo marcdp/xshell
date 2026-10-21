@@ -171,12 +171,7 @@ export default {
 
         <x-form>
             <x-datafields columns="2">
-                <x-datafield
-                    type="x-template"
-                    label="Customer"
-                    x-prop:template="state.customerTemplate"
-                    x-model="state.customer">
-                </x-datafield>
+                <x-datafield type="x-template" label="Customer" x-prop:template="state.customerTemplate" x-model="state.customer"></x-datafield>
             </x-datafields>
 
             <x-button slot="footer" class="submit" command="submit" label="Save"></x-button>

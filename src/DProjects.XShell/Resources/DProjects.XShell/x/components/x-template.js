@@ -21,7 +21,18 @@ export const contract = {
         template: {type: "string", default: "", state: true, attribute: true, description: "The raw XTemplate string."},
         value: {type: "object", default: null, state: true, description: "The object used as the XTemplate state."}
     },
-    methods: {},
+    methods: {
+        validate: {
+            description: "Validates fields and assertions rendered by the dynamic XTemplate.",
+            parameters: [
+                {name: "detail", type: "boolean", description: "Whether to include validation paths."}
+            ],
+            returns: {
+                description: "Validation errors found in the rendered template.",
+                type: "array"
+            }
+        }
+    },
     slots: {}
 };
 
@@ -245,6 +256,22 @@ export default {
                         fail(error);
                     }
                 }
+            },
+            validate(detail = false) {
+                const editor = getEditor();
+                if (!editor) return [];
+
+                const errors = [];
+
+                editor.querySelectorAll("x-datafield, x-form-assert").forEach(element => {
+                    if (typeof element.validate !== "function") return;
+
+                    for (const error of element.validate(detail)) {
+                        errors.push(error);
+                    }
+                });
+
+                return errors;
             }
         };
     }

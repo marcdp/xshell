@@ -210,6 +210,8 @@ export default {
 
         :host .richtext {padding:0;}
 
+        :host .template {padding:0; border:none;}
+
         :host .search {position:relative}
         :host .search x-icon {position:absolute; left:.5em; top:.35em; color:var(--x-datafield-color-placeholder); }
         :host .search:focus-within x-icon {color:var(--x-color-text);}
@@ -244,7 +246,7 @@ export default {
         :host(.segmented) .container input:checked + label {background:var(--x-color-primary); color:var(--x-color-white); border-color:var(--x-color-primary);}
         :host(.segmented) .container input:focus-visible + label {outline:2px solid var(--x-color-primary); outline-offset:2px;}
         :host(.segmented) .container input:disabled + label {opacity:.5; cursor:default;}
-
+        
         `,
     template: `
         <label x-if="state.label" x-attr:for="state.inputId" x-attr:label-mode="state.labelMode" x-class:error="state.errors.length">
@@ -831,7 +833,6 @@ export default {
             },
 
             templateChanged({event}) {
-                debugger;
                 this.validate();
 
                 host.dispatchEvent(new CustomEvent("change", {
@@ -847,7 +848,6 @@ export default {
                 }));
             },
             templateCommand({event}) {
-                debugger;
                 host.dispatchEvent(new CustomEvent("command", {
                     detail: event.detail,
                     bubbles: true,
@@ -945,6 +945,11 @@ export default {
                         result.push({type:"error", label: host.label, message:"Too few items"});
                     } else if (state.value && state.maxlength && state.value.length > state.maxlength) {
                         result.push({type:"error", label: host.label, message:"Too many items"});
+                    }
+                } else if (state.type.endsWith("x-template")) {
+                    const template = host.shadowRoot.querySelector("x-template");
+                    if (template) {
+                        result.push(...template.validate(false));
                     }
                 }
                 //path
