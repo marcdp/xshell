@@ -142,7 +142,6 @@ export default {
                     if (width && width !== "auto") return `${width}`;
                     return "minmax(0, 1fr)";
                 }).join(" ");
-                console.log(gridTemplateColumns)
                 host.style.setProperty("--x-listview-grid-template-columns", gridTemplateColumns);
 
                 // propagate the selected view to every list item
