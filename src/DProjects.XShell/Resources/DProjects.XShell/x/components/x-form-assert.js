@@ -5,8 +5,8 @@ export const contract = {
         "assert:change": {
             description: "Raised when the field value changes for form validation.",
             detail: {
-                oldValue: {type:"any"},
-                newValue: {type:"any"}
+                oldValue: {type:"boolean"},
+                newValue: {type:"boolean"}
             }
         }
     },
@@ -37,21 +37,20 @@ export default {
         :host {
             display: block;
         }
-
-        .error {
-            color: var(--x-datafield-error-color);
+        :host > div.error {
             font-size: var(--x-font-size-small);
-            margin-top: .5em;
+            color: var(--x-datafield-error-color);
+            padding-top: 0.25em;
+            align-items: flex-end;
+            display: var(--x-datafield-error-display, none);
         }
     `,
 
     template: `
-        <x-notice x-if="state.validated && !state.test" type="error">
-            <span x-if="state.message" x-text="state.message"></span>
-            <span x-else>
-                <slot></slot>
-            </span>
-        </x-notice> 
+        <div class="error" x-if="state.validated && !state.test">
+            <x-icon icon="x-error"></x-icon>
+            <span x-text="state.message"></span>
+        </div>
     `,
 
     state: {
@@ -60,31 +59,38 @@ export default {
 
     controller({ events, state, host }) {
         const getMessage = () => {
-            if (state.message) {
-                return state.message;
-            }
-
-            return host.textContent.trim();
+            return state.message || host.textContent.trim();
         };
 
         return {
             load() {
-                // load
-                events.on(state, "change:test", (event)=>{
-                    let oldValue = (event.oldValue === true || event.oldValue == "true" || event.oldValue == "1" || (typeof(event.oldValue) == "number" && event.oldValue != 0) || (typeof(event.oldValue) == "string" && event.oldValue != 0)) ? true : false;
-                    let newValue = (event.newValue === true || event.newValue == "true" || event.newValue == "1" || (typeof(event.newValue) == "number" && event.newValue != 0) || (typeof(event.newValue) == "string" && event.newValue != 0)) ? true : false;
-                    if (oldValue != newValue) {
-                        host.dispatchEvent(new CustomEvent("assert:change", {detail: {oldValue, newValue}, bubbles: true, composed: false}));
+                events.on(state, "change:test", (event) => {
+                    if (event.oldValue !== event.newValue) {
+                        host.dispatchEvent(new CustomEvent("assert:change", {
+                            detail: {
+                                oldValue: event.oldValue,
+                                newValue: event.newValue
+                            },
+                            bubbles: true,
+                            composed: false
+                        }));
                     }
                 });
             },
+
             validate(detail = false) {
-                // validate
                 state.validated = true;
+
                 if (state.test) {
                     return [];
                 }
-                return [{label: state.label, path: state.path, message: getMessage() }];
+
+                return [{
+                    type: "error",
+                    label: state.label,
+                    path: state.path,
+                    message: getMessage()
+                }];
             }
         };
     }
