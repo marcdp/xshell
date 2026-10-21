@@ -1,4 +1,3 @@
-import validateXSchema from "../validation/x-schema.js";
 
 // contract
 export const contract = {
@@ -26,7 +25,7 @@ export default {
         schema: null,
         value:  null
     },
-    controller({ events, state, host }) {
+    controller({ events, state, jsonValidator }) {
         return {
             load() {
                 // load
@@ -44,7 +43,8 @@ export default {
                 // refresh
                 if (state.schema && state.value) {
                     // validate schema
-                    validateXSchema(state.src, state.schema);
+                    //validateXSchema(state.src, state.schema);
+                    // jsonValidator.validate(null, null);
                     // validate value against schema
                     // ...
                     // render the editor based on the schema and value
