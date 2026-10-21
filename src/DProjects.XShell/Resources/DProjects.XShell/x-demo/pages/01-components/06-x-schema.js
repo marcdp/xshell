@@ -14,12 +14,7 @@ export default {
     },
     template: `
         <x-form>
-            <x-datafields>
-                <x-datafield label="Customer editor">
-                    <x-schema-editor x-prop:schema="state.schema" x-prop:value="state.value" x-on:change="valueChanged">
-                    </x-schema-editor>
-                </x-datafield>
-            </x-datafields>
+            <x-schema-editor x-prop:schema="state.schema" x-prop:value="state.value" __x-on:change="valueChanged"></x-schema-editor>
         </x-form>
         <x-json x-prop:value="state.displayValue" indent="2"></x-json>
     `,  

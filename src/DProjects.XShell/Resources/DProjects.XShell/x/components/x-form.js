@@ -199,6 +199,11 @@ export default {
                         this.validate();
                     }
                 });
+                host.shadowRoot.addEventListener("assert:change", () => {
+                    if (state.validated) {
+                        this.validate();
+                    }
+                });
                 host.shadowRoot.addEventListener("keypress", (event) => {
                     if (event.keyCode == 13) {
                         var type = event.target.type;
@@ -240,7 +245,7 @@ export default {
                 let wizardPanelElement = host.querySelector(`:scope > *:nth-child(${ wizardPanel.index })`);
                 //validate errors in current wizard panel
                 let errors = [];
-                wizardPanelElement.querySelectorAll("x-datafield").forEach((element) => {
+                wizardPanelElement.querySelectorAll("x-datafield, x-form-assert").forEach((element) => {
                     for(let error of element.validate(true)) {
                         errors.push(error);
                     }
@@ -260,13 +265,13 @@ export default {
                 if (state.wizard) {
                     let wizardPanel = state.wizardPanels[state.wizardIndex];
                     let wizardPanelElement = host.querySelector(`:scope > *:nth-child(${ wizardPanel.index })`);
-                    wizardPanelElement.querySelectorAll("x-datafield").forEach((element) => {
+                    wizardPanelElement.querySelectorAll("x-datafield, x-form-assert").forEach((element) => {
                         for(let error of element.validate(true)) {
                             errors.push(error);
                         }                    
                     });
                 } else {
-                    host.querySelectorAll("x-datafield").forEach((element) => {
+                    host.querySelectorAll("x-datafield, x-form-assert").forEach((element) => {
                         for(let error of element.validate(true)) {
                             errors.push(error);
                         }

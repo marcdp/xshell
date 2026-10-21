@@ -148,10 +148,26 @@ export default {
             <x-button slot="footer" class="submit" command="submit" label="Finish"></x-button>
         </x-form>
 
+        <x-divider></x-divider>
+
+        <h2>Form with assertionss</h2>
+        <x-form>
+            <x-datafields columns="2">
+                <x-datafield type="text" label="Username" x-model="state.username"></x-datafield>
+                <x-datafield type="password" label="Password" x-model="state.password"></x-datafield>
+            </x-datafields>
+            
+            <x-form-assert path="Lucas" x-prop:test="state.username && state.password" message="Username and password are required">asdad</x-form-assert>
+
+            <x-button slot="footer" class="submit" command="submit" label="Save"></x-button>
+            <x-button slot="cancel" class="cancel" label="Cancel"></x-button>
+        </x-form>
 
     `,
 
     state: {
+        username: "a",
+        password: "b",
         countries: [
             { value: "es", label: "Spain" },
             { value: "fr", label: "France" },
