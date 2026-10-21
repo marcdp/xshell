@@ -59,9 +59,13 @@
 
         // services
         "services": {
+            "jsonValidator": {
+                "contract": "json-validator",
+                "implementation": "/services/json-validator.js"
+            },
             "temp": {
                 "contract": "temp",
-                "implementation": "/temp.js"
+                "implementation": "/services/temp.js"
             }
         },
 

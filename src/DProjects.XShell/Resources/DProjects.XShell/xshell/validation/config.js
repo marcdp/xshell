@@ -1,15 +1,14 @@
 import ConfigSchema from "../schemas/config.schema.json" with { type: "json" };
-import { Validator } from "../vendor/json-schema/4.1.1/json-schema.js"
+import JsonValidator from "../services/json-validator.js"
 import { compileRoute } from "../utils/route.js";
 import { normalizeAreaPrefix } from "../utils/area.js";
 
 // vars
-const validator = new Validator(ConfigSchema, "2020-12");
 
 // export
 export default async function validateConfig(src, config) {
     // validate
-    const result = validator.validate(config);
+    const result = new JsonValidator().validate(config, ConfigSchema);
     if (!result.valid) {
         console.error(`Invalid config: ${src}`, result.errors);
         throw new Error(`Invalid config: ${src}`, { cause: result.errors });

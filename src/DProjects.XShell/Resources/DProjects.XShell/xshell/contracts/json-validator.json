@@ -1,0 +1,36 @@
+
+{
+  "label": "JSON Validator",
+  "description": "Validates JavaScript values against JSON Schema definitions.",
+  "properties": {},
+  "events": {},
+  "methods": {
+    "validate": {
+      "description": "Validates a value against a JSON Schema and returns the validation result without throwing for schema validation errors.",
+      "parameters": [
+        {"name": "data", "type": "any", "required": true, "description": "JavaScript value to validate."},
+        {"name": "schema", "type": "object", "required": true, "description": "JSON Schema definition used for validation."}
+      ],
+      "returns": {
+        "type": "object",
+        "description": "Validation result containing a valid flag and validation errors.",
+        "schema": {
+          "type": "object",
+          "required": ["valid", "errors"],
+          "properties": {
+            "valid": { "type": "boolean", "description": "Whether the value satisfies the schema."},
+            "errors": { "type": "array", "description": "Validation errors. Empty when valid.", "items": {"type": "object"}}
+          }
+        }
+      }
+    },
+    "assert": {
+      "description": "Validates a value against a JSON Schema. Throws an Error containing validation errors in its cause when invalid. Returns the original value when valid.",
+      "parameters": [
+        {"name": "data", "type": "any", "required": true, "description": "JavaScript value to validate."},
+        {"name": "schema", "type": "object", "required": true, "description": "JSON Schema definition used for validation."}
+      ],
+      "returns": {"type": "any", "description": "The original validated value."}
+    }
+  }
+}
