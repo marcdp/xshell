@@ -18,12 +18,36 @@ export default {
         :host {display:block;}
     `,
     template: `
-        This is the x-schema-editor component
+        <x-notice type="error" x-if="!state.validationResult.valid">
+            Error in schema: 
+            <ul>
+                <li x-for="error in state.validationResult.errors">
+                    <b>{{error.instanceLocation}}:</b> {{error.error}} (keyword: {{error.keyword}})                    
+                </li>
+            </ul>
+        </x-notice>
+        <div x-else>
+            ...
+        </div>
     `,
     state: {
         src: null,
         schema: null,
-        value:  null
+        value:  null,
+        validationResult: null /* { valid: false, errors: [
+    {
+        "instanceLocation": "#",
+        "keyword": "additionalProperties",
+        "keywordLocation": "#/additionalProperties",
+        "error": "Property \"meta2\" does not match additional properties schema."
+    },
+    {
+        "instanceLocation": "#/meta2",
+        "keyword": "false",
+        "keywordLocation": "#/meta2",
+        "error": "False boolean schema."
+    }
+]*/
     },
     controller({ events, loader, state, xSchemaValidator }) {
         return {
@@ -42,14 +66,14 @@ export default {
                 // refresh
                 if (state.schema && state.value) {
                     // validate schema
-                    //validateXSchema(state.src, state.schema);
+                    state.validationResult = await xSchemaValidator.validate(state.schema);;
                     debugger
-                    const result = await xSchemaValidator.validate(state.schema);
-                    debugger;
-                    // validate value against schema
-                    // ...
-                    // render the editor based on the schema and value
-                    // ...
+                    // render
+                    if (state.validationResult.valid) {
+                        // render the editor based on the schema and value
+                        // ...
+
+                    }
                 }
             }
         }
