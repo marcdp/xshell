@@ -27,7 +27,7 @@ export const contract = {
     },
     methods: {
         validate: {
-            description: "Validates the form's data fields.",
+            description: "Validates the form's data fields and assertions.",
             parameters: [],
             returns: {
                 description: "The validation errors found in the form.",

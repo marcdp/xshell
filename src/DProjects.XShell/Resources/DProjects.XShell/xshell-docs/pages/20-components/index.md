@@ -17,5 +17,6 @@ Pages reuse the contract and state model with Page-specific query/context initia
 - [Slots](50-slots.md) — Public composition metadata and engine-reported slot validation.
 - [Lifecycle](60-lifecycle.md) — Instance and connection lifetimes.
 - [Rendering Engines](70-rendering.md) — Output ownership and engine selection.
+- [Form Validation](80-forms.md) — Field validation, cross-field assertions, aggregation, and submission.
 
 See [Component Architecture](../10-architecture/60-components.md), [Pages](../10-architecture/70-pages.md), and [X Templates](../40-extensions/x-templates/index.md).

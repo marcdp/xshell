@@ -150,14 +150,16 @@ export default {
 
         <x-divider></x-divider>
 
-        <h2>Form with assertionss</h2>
+        <h2>Form with a cross-field assertion</h2>
         <x-form>
             <x-datafields columns="2">
-                <x-datafield type="text" label="Username" x-model="state.username"></x-datafield>
-                <x-datafield type="password" label="Password" x-model="state.password"></x-datafield>
+                <x-datafield type="number" label="Minimum" x-model="state.min"></x-datafield>
+                <x-datafield type="number" label="Maximum" x-model="state.max"></x-datafield>
             </x-datafields>
-            
-            <x-form-assert path="Lucas" x-prop:test="state.username && state.password" message="Username and password are required">asdad</x-form-assert>
+
+            <x-form-assert x-prop:test="state.min <= state.max" label="Range">
+                Minimum must be less than or equal to maximum.
+            </x-form-assert>
 
             <x-button slot="footer" class="submit" command="submit" label="Save"></x-button>
             <x-button slot="cancel" class="cancel" label="Cancel"></x-button>
@@ -166,8 +168,8 @@ export default {
     `,
 
     state: {
-        username: "a",
-        password: "b",
+        min: 1,
+        max: 10,
         countries: [
             { value: "es", label: "Spain" },
             { value: "fr", label: "France" },

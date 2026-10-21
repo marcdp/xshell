@@ -3,7 +3,7 @@ export const contract = {
     description: "Asserts a form-level validation condition and reports an error when the condition is false.",
     events: {
         "assert:change": {
-            description: "Raised when the field value changes for form validation.",
+            description: "Raised when the assertion test changes for form validation.",
             detail: {
                 oldValue: {type:"boolean"},
                 newValue: {type:"boolean"}
@@ -49,7 +49,8 @@ export default {
     template: `
         <div class="error" x-if="state.validated && !state.test">
             <x-icon icon="x-error"></x-icon>
-            <span x-text="state.message"></span>
+            <span x-if="state.message" x-text="state.message"></span>
+            <slot x-else></slot>
         </div>
     `,
 
@@ -58,10 +59,6 @@ export default {
     },
 
     controller({ events, state, host }) {
-        const getMessage = () => {
-            return state.message || host.textContent.trim();
-        };
-
         return {
             load() {
                 events.on(state, "change:test", (event) => {
@@ -89,7 +86,7 @@ export default {
                     type: "error",
                     label: state.label,
                     path: state.path,
-                    message: getMessage()
+                    message: state.message || host.textContent.trim()
                 }];
             }
         };
