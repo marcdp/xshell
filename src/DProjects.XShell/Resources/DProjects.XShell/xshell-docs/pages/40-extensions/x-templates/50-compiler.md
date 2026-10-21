@@ -55,6 +55,12 @@ The render function produces XShell virtual nodes. The runtime creates DOM on th
 implementation backend, not a requirement for every XTemplate implementation; compiler authors targeting the current XShell runtime should use
 the ABI requirements in the specification.
 
+XShell also provides the opt-in `x-client` render engine for raw templates that cannot be ahead-of-time compiled. It uses the browser HTML parser once
+when the render-engine factory is created, parses the restricted XTemplate expressions into data-only ASTs, and interprets those ASTs on each render.
+It does not generate or execute JavaScript source. The resulting `{ render, dependencies, slots }` artifact is passed to the same `x.js` runtime as an
+ahead-of-time artifact, so VDOM creation, DOM reconciliation, keyed moves, event modifiers, model DOM behavior, and component unloading remain owned by
+one runtime. Select it with `meta.renderEngine: "x-client"`; the component or Page `template` is authoritative and no `templateRenderer` is required.
+
 Custom-element dependency discovery is also an implementation concern. The current compiler discovers applicable component dependencies so the
 general loader can load them before rendering.
 
@@ -83,7 +89,7 @@ and optional `style` properties into that definition, and continues through the 
 module script. An explicitly authored module script must still contain a default-exported object literal; an empty or otherwise invalid script is a
 compilation error.
 
-Current ahead-of-time compilation removes browser template compilation and supports strict CSP. The historical browser compiler's
+The default ahead-of-time path removes browser template compilation and supports strict CSP. The historical browser compiler's
 `new Function(...)` mechanism is absent from the V0 execution path.
 
 The conforming path parses every expression on the server and emits JavaScript only from the validated XTemplate expression AST. Generated renderers
@@ -103,8 +109,9 @@ The common render-engine factory signature remains `(template, context, template
 scanning DOM. Slots remain static metadata even below lazy or structural directives. Descendants of `x-pre` are opaque and contribute neither kind of
 metadata.
 
-The browser runtime requires the complete artifact; renderer-function-only artifacts fail with a compatibility error and must be regenerated. It has
-no raw-XTemplate `template.innerHTML` path, source compiler, expression parser, `eval`, or `new Function` fallback. URL-bearing attributes are rewritten
+The `x` browser runtime requires the complete artifact; renderer-function-only artifacts fail with a compatibility error and must be regenerated. It has
+no raw-XTemplate `template.innerHTML` path, source compiler, expression parser, `eval`, or `new Function` fallback. The separate `x-client` frontend is
+the only raw-template path and delegates its interpreted artifact back to `x.js`. URL-bearing attributes are rewritten
 by generated `utils.rewriteAttribute(...)` calls using their static sibling attributes, not by mutating a temporary template DOM. This keeps the normal
 browser path compatible with `script-src 'self'`, `style-src 'self'`, and `style-src-attr 'none'` without `unsafe-eval` or `unsafe-inline`.
 
