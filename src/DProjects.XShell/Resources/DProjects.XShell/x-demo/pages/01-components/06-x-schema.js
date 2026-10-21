@@ -16,16 +16,17 @@ export default {
         <x-form>
             <x-datafields>
                 <x-datafield label="Customer editor">
-                    <x-schema-editor x-prop:schema="state.schema" x-prop:value="state.value">
+                    <x-schema-editor x-prop:schema="state.schema" x-prop:value="state.value" x-on:change="valueChanged">
                     </x-schema-editor>
                 </x-datafield>
             </x-datafields>
         </x-form>
-        <x-json x-prop:value="state.value" indent="2"></x-json>
+        <x-json x-prop:value="state.displayValue" indent="2"></x-json>
     `,  
     state: {
         schema: null,
-        value: null
+        value: null,
+        displayValue: null
     },
     controller({ state, dependencies }) {
         return {
@@ -33,6 +34,10 @@ export default {
                 // mount
                 state.schema = dependencies.schema;
                 state.value = dependencies.value;
+                state.displayValue = structuredClone(dependencies.value);
+            },
+            valueChanged({event}) {
+                state.displayValue = structuredClone(event.detail.value);
             }
         };
     }

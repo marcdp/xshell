@@ -17,9 +17,21 @@ structured value + X-Schema
     rendered editor
 ```
 
-`<x-schema-editor>` accepts the X-Schema document through its `schema` property and the structured object through its `value` property. Its current
-repository implementation exposes this contract, but rendering behavior is still a placeholder; the format contract is defined by the canonical
-schema rather than by inferred editor behavior.
+`<x-schema-editor>` accepts the X-Schema document through its `schema` property and the structured object through its `value` property. After
+validation, it renders the root type's children as DOM and XShell Web Components. Component tags are loaded through XShell's normal component
+loader, `attrs` are applied as DOM attributes, and `props` are assigned through the component's public properties.
+
+Fields bind through a component's public `value` property and `change` event. An edit mutates the corresponding location in the existing root
+value and raises an editor-level `change` event with `path`, `oldValue`, `newValue`, and `value`. Objects and arrays establish recursive data
+contexts; containers preserve the surrounding context. Array add, remove, and move actions use the documented creation values and X components.
+
+The renderer implements the V0 condition model and refreshes all registered conditions after a bound value changes. A container's disabled or
+readonly state is combined with each descendant field's own state. Fields without `tag` fail with a rendering error because V0 defines no fallback
+component.
+
+Local references whose source is a scoped path such as `$root.countries` are mapped to a field component's public `domain` property. Opaque
+external sources such as `datasource:statuses` remain presentation-neutral unless a separate, supported source integration supplies them; X-Schema
+does not invent a datasource protocol.
 
 ## Minimal example
 
