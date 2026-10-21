@@ -36,6 +36,14 @@ export default  {
     style: `
         :host {display:block; width:100%; height:100%; }
         :host > div {width:100%; height:100%;}
+        .ͼ1 .cm-content {padding:0;}
+        .ͼ2 .cm-gutters {background:var(--x-datafield-background)!important; border-right:var(--x-code-border);}
+        .ͼ2 .cm-activeLineGutter {background:light-dark(#eeeeee, #303030);}
+        .ͼ2 .cm-activeLine {background:light-dark(#eeeeee, #303030);}
+        .ͼ1 .cm-scroller {
+            scrollbar-width: var(--x-scrollbar-width);
+            __scrollbar-gutter: var(--x-scrollbar-gutter);
+        }
     `,
     template: ``,
     state: {

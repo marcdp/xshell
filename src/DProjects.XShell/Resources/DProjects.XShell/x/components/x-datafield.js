@@ -234,10 +234,11 @@ export default {
 
         /* segmented */
         :host(.segmented) .container {display:flex; flex-wrap:wrap; gap:.2em; padding:0; border:none; background:none;}
-        :host(.segmented) .container > div {position:relative; flex:1;}
+        :host(.segmented) .container > div {position:relative; }
         :host(.segmented) .container input[type="radio"] {position:absolute; opacity:0; width:100%; height:100%; margin:0; cursor:pointer;}
         :host(.segmented) .container input[type="checkbox"] {position:absolute; opacity:0; width:100%; height:100%; margin:0; cursor:pointer;}
         :host(.segmented) .container div label {display:block; text-align:center; padding:.275em .7em; border:var(--x-datafield-border); border-radius:var(--x-datafield-border-radius); cursor:pointer; line-height: var(--x-datafield-line-height); white-space: nowrap;}
+        :host(.segmented) .container input + label {background:var(--x-datafield-background); }
         :host(.segmented) .container input:checked + label {background:var(--x-color-primary); color:var(--x-color-white); border-color:var(--x-color-primary);}
         :host(.segmented) .container input:focus-visible + label {outline:2px solid var(--x-color-primary); outline-offset:2px;}
         :host(.segmented) .container input:disabled + label {opacity:.5; cursor:default;}

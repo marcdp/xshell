@@ -11,11 +11,13 @@ export const contract = {
 // implementation
 export default {
     style: `
-        :host {display:block;}
+        :host {display:block; position:absolute; top:.5em; right:.5em;}
         summary:hover {text-decoration:underline; cursor:pointer;}
         x-icon {vertical-align:bottom;}
     `,
     template: `
+        <x-icon icon="x-page"></x-icon>
+        <!--
         <x-details x-if="state.visible">
             <div slot="summary">
                 <x-icon icon="x-page"></x-icon>
@@ -23,6 +25,7 @@ export default {
             </div>
             <x-object x-prop:value="state" expanded="true"></x-object>
         </x-details>
+        -->
     `,
     state: {
         id: "",

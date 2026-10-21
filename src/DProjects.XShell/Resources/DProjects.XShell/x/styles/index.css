@@ -182,7 +182,6 @@ x-markdown a:hover {text-decoration:underline;}
 x-markdown pre code {display:block;font-size:inherit;color:inherit;white-space:pre-wrap;background-color:var(--x-markdown-pre-background);border-radius:var(--x-datafield-border-radius);border:var(--x-datafield-border);padding:1em;}
 x-markdown table {width:100%; border-collapse:collapse; margin:1em 0; }
 x-markdown table th, x-markdown table td {border:1px solid var(--x-color-gray); padding:.5em; text-align:left;}
-___x-page[layout='main'] > x-markdown:first-child > h1:first-child {display:none;}
 
 .x-toast-container {position: absolute; top: 1em; right: 1em; width: min(30em, calc(100vw - 2em)); z-index: 1000; pointer-events: none;}
 .x-toast-container > x-notice { pointer-events: auto;}
@@ -209,7 +208,6 @@ ___x-page[layout='main'] > x-markdown:first-child > h1:first-child {display:none
     --x-button-background-active: light-dark(#D1F1FF, #204A70);
     --x-button-background-hover-light: light-dark(var(--x-color-background-x-gray), #303134);
     --x-button-background-active-light: light-dark(var(--x-color-background-x-gray), #3A3A3A);
-    
     
     /* x-card */
     --x-card-border-radius: .75em;

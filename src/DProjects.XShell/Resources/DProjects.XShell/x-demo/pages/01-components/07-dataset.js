@@ -110,9 +110,7 @@ export default {
                 }
 
                 try {
-                    state.statuses = await loader.load(
-                        "dataset:static:A=Active|I=Inactive|S=Suspended"
-                    );
+                    state.statuses = await loader.load("dataset:static:A=Active|I=Inactive|S=Suspended");
                 } catch (error) {
                     state.statusesError = error.message || String(error);
                 }
