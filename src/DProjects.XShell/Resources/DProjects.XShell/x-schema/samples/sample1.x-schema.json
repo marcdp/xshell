@@ -1,0 +1,104 @@
+{
+  "version": "0",
+  "meta": {"name": "Complete X-Schema V0 Example", "description": "Exercises the complete V0 schema surface."},
+  "root": "Root",
+  "types": {
+    "Root": {
+      "kind": "object",
+      "description": "Root editor type.",
+      "create": {"name": "", "age": 18, "active": true, "score": 0, "birthDate": null, "lastLogin": null, "startTime": null, "settings": {}, "tags": [], "misc": null, "countryId": null, "status": "A", "profile": {"nickname": ""}, "billingAddress": {"street": "", "city": "", "country": ""}, "addresses": [], "aliases": [], "matrix": []},
+      "meta": {"category": "sample"},
+      "children": [
+        {
+          "kind": "field", "bind": "name", "required": true, "description": "String field exercising presentation properties.", "dataType": "string", "tag": "x-datafield",
+          "attrs": {"id": "name", "tabindex": 1, "hidden": false, "data-extra": null},
+          "props": {"label": "Name", "placeholder": "Enter a name", "maxLength": 100},
+          "default": "",
+          "conditions": {
+            "visible": {"all": [{"path": "$current.active", "equals": true}, {"path": "$current.name", "exists": true}]},
+            "enabled": {"any": [{"path": "$root.status", "equals": "A"}, {"path": "$root.status", "equals": "S"}]},
+            "readonly": {"not": {"path": "$root.status", "in": ["A", "I"]}},
+            "required": {"path": "$current.age", "greaterThan": 17}
+          },
+          "meta": {"example": "complete-field"}
+        },
+        {"kind": "field", "bind": "score", "description": "Number field.", "dataType": "number", "tag": "x-datafield", "props": {"label": "Score", "type": "number", "min": 0, "max": 100}, "default": 0},
+        {"kind": "field", "bind": "age", "dataType": "integer", "tag": "x-datafield", "props": {"label": "Age", "type": "number"}, "default": 18},
+        {"kind": "field", "bind": "active", "dataType": "boolean", "tag": "x-datafield", "props": {"label": "Active", "type": "checkbox"}, "default": true},
+        {"kind": "field", "bind": "birthDate", "dataType": "date", "tag": "x-datafield", "props": {"label": "Birth date", "type": "date"}, "default": null},
+        {"kind": "field", "bind": "lastLogin", "dataType": "datetime", "tag": "x-datafield", "props": {"label": "Last login", "type": "datetime-local"}, "default": null},
+        {"kind": "field", "bind": "startTime", "dataType": "time", "tag": "x-datafield", "props": {"label": "Start time", "type": "time"}, "default": null},
+        {"kind": "field", "bind": "settings", "dataType": "object", "tag": "x-json-editor", "props": {"label": "Settings"}, "default": {}},
+        {"kind": "field", "bind": "tags", "dataType": "array", "tag": "x-json-editor", "props": {"label": "Tags"}, "default": []},
+        {"kind": "field", "bind": "misc", "dataType": "any", "tag": "x-json-editor", "props": {"label": "Miscellaneous"}, "default": null},
+        {
+          "kind": "field", "bind": "countryId", "dataType": "string", "tag": "x-select", "props": {"label": "Country"},
+          "reference": {"source": "$root.countries", "key": "id", "label": "name"}
+        },
+        {
+          "kind": "field", "bind": "status", "dataType": "string", "tag": "x-select", "props": {"label": "Status"}, "default": "A",
+          "reference": {"source": "datasource:statuses", "key": "id", "label": "name"}
+        },
+        {
+          "kind": "object", "bind": "profile", "required": false, "description": "Inline object.", "tag": "x-panel",
+          "attrs": {"role": "group"}, "props": {"label": "Profile"}, "create": {"nickname": ""},
+          "conditions": {"visible": {"path": "$parent.active", "equals": true}},
+          "meta": {"inline": true},
+          "children": [
+            {"kind": "field", "bind": "nickname", "dataType": "string", "tag": "x-datafield", "props": {"label": "Nickname"}}
+          ]
+        },
+        {
+          "kind": "object", "type": "Address", "bind": "billingAddress", "required": true, "description": "Object using a named type.", "tag": "x-panel",
+          "attrs": {"role": "group"}, "props": {"label": "Billing address"},
+          "conditions": {"enabled": {"path": "$root.age", "greaterThanOrEqual": 18}},
+          "meta": {"usage": "named-type-reference"}
+        },
+        {
+          "kind": "array", "bind": "addresses", "required": false, "description": "Array of named object values.", "tag": "x-array-editor",
+          "attrs": {"data-kind": "addresses"}, "props": {"label": "Addresses"}, "item": {"kind": "object", "type": "Address"},
+          "allowAdd": true, "allowRemove": true, "allowMove": true, "minItems": 0, "maxItems": 10, "default": [],
+          "conditions": {"visible": {"path": "$root.score", "lessThan": 100}},
+          "meta": {"example": "object-array"}
+        },
+        {
+          "kind": "array", "bind": "aliases", "description": "Array whose items are fields.", "tag": "x-array-editor", "props": {"label": "Aliases"},
+          "item": {"kind": "field", "dataType": "string", "tag": "x-datafield", "props": {"label": "Alias"}},
+          "allowAdd": true, "allowRemove": true, "allowMove": false, "minItems": 0, "maxItems": 5, "default": []
+        },
+        {
+          "kind": "array", "bind": "matrix", "description": "Array whose items are arrays.", "tag": "x-array-editor", "props": {"label": "Matrix"},
+          "item": {"kind": "array", "item": {"kind": "field", "dataType": "number", "tag": "x-datafield"}, "allowAdd": true, "allowRemove": true, "allowMove": false, "default": []},
+          "default": []
+        },
+        {
+          "kind": "container", "tag": "x-panel", "description": "Presentation-only container.",
+          "attrs": {"id": "advanced-section"}, "props": {"label": "Advanced"},
+          "conditions": {
+            "visible": {"path": "$root.score", "lessThanOrEqual": 100},
+            "enabled": {"not": {"path": "$root.disabledReason", "exists": true}},
+            "readonly": {"path": "$root.age", "lessThan": 18}
+          },
+          "meta": {"section": "advanced"},
+          "children": [
+            {"kind": "field", "bind": "advancedNote", "dataType": "string", "tag": "x-datafield", "props": {"label": "Advanced note"}},
+            {
+              "kind": "container", "tag": "x-panel", "props": {"label": "Nested presentation container"},
+              "children": [{"kind": "field", "bind": "nestedValue", "dataType": "string", "tag": "x-datafield"}]
+            }
+          ]
+        }
+      ]
+    },
+    "Address": {
+      "kind": "object", "description": "Reusable address editor type.",
+      "create": {"street": "", "city": "", "country": ""},
+      "meta": {"reusable": true},
+      "children": [
+        {"kind": "field", "bind": "street", "required": true, "dataType": "string", "tag": "x-datafield", "props": {"label": "Street"}},
+        {"kind": "field", "bind": "city", "required": true, "dataType": "string", "tag": "x-datafield", "props": {"label": "City"}},
+        {"kind": "field", "bind": "country", "dataType": "string", "tag": "x-datafield", "props": {"label": "Country"}}
+      ]
+    }
+  }
+}

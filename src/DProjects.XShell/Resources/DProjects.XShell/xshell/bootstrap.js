@@ -627,6 +627,23 @@ function fillResolverRules(config) {
             modulePath: moduleAssetsPath
         };
 
+        // object
+        resolver.object ??= {};
+        resolver.object[`${moduleAssetsPath}/{path}`] ??= {
+            src: `${moduleAssetsPath}/{path}`,
+            loader: "object-json",
+            cache: false,
+            moduleId,
+            modulePath: moduleAssetsPath
+        };
+        resolver.object[`${moduleId}:/{path}`] ??= {
+            src: `${moduleAssetsPath}/{path}`,
+            loader: "object-json",
+            cache: false,
+            moduleId,
+            modulePath: moduleAssetsPath
+        };
+
         // bytes
         resolver.bytes ??= {};
         resolver.bytes[`${moduleAssetsPath}/{path}`] ??= {

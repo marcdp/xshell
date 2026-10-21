@@ -1,3 +1,4 @@
+import validateXSchema from "../validation/x-schema.js";
 
 // contract
 export const contract = {
@@ -42,7 +43,12 @@ export default {
             refresh() {
                 // refresh
                 if (state.schema && state.value) {
-                    console.log(JSON.stringify(state))
+                    // validate schema
+                    validateXSchema(state.src, state.schema);
+                    // validate value against schema
+                    // ...
+                    // render the editor based on the schema and value
+                    // ...
                 }
             }
         }

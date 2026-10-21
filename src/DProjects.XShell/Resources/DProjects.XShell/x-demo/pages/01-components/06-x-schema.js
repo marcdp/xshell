@@ -7,64 +7,32 @@ export const contract = {
 };
 
 // export page
-export default {
+export default {    
+    dependencies: {
+        schema: "string:x-schema:/samples/sample1.x-schema.json",
+        value: "object:x-schema:/samples/sample1.json",
+    },
     template: `
         <x-form>
             <x-datafields>
                 <x-datafield label="Customer editor">
-                    <x-schema-editor 
-                        x-prop:schema="state.schema" 
-                        x-prop:value="state.value">
+                    <x-schema-editor x-prop:schema="state.schema" x-prop:value="state.value">
                     </x-schema-editor>
                 </x-datafield>
             </x-datafields>
         </x-form>
-        <x-json x-prop:value="state.value"></x-json>
+        <x-json x-prop:value="state.value" indent="2"></x-json>
     `,  
     state: {
-        schema: {
-            version: "0",
-            root: "Customer",
-            types: {
-                Customer: {
-                    kind: "object",
-                    children: [
-                        {
-                            kind: "field",
-                            bind: "advanced",
-                            dataType: "boolean",
-                            tag: "x-datafield",
-                            props: { type: "checkbox", label: "Advanced mode" },
-                            default: false
-                        },
-                        {
-                            kind: "field",
-                            bind: "name",
-                            dataType: "string",
-                            required: true,
-                            tag: "x-datafield",
-                            props: { type: "text", label: "Name" },
-                            default: ""
-                        },
-                        {
-                            kind: "field",
-                            bind: "email",
-                            dataType: "string",
-                            tag: "x-datafield",
-                            props: { type: "email", label: "Email" },
-                            conditions: { visible: { path: "$root.advanced", equals: true } },
-                            default: ""
-                        }
-                    ]
-                }
-            },
-        },
-        value: { advanced: true, name: "Ada Lovelace", email: "ada@example.test" }
+        schema: null,
+        value: null
     },
-    controller({ }) {
+    controller({ state, dependencies }) {
         return {
-            load() {
-               // load
+            async mount() {
+                // mount
+                state.schema = dependencies.schema;
+                state.value = dependencies.value;
             }
         };
     }
