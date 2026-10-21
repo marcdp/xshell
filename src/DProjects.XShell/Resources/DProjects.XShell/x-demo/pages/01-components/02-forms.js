@@ -165,6 +165,26 @@ export default {
             <x-button slot="cancel" class="cancel" label="Cancel"></x-button>
         </x-form>
 
+        <x-divider></x-divider>
+
+        <h2>Form with template commands</h2>
+
+        <x-form>
+            <x-datafields columns="2">
+                <x-datafield
+                    type="x-template"
+                    label="Customer"
+                    x-prop:template="state.customerTemplate"
+                    x-model="state.customer">
+                </x-datafield>
+            </x-datafields>
+
+            <x-button slot="footer" class="submit" command="submit" label="Save"></x-button>
+
+            <x-json x-prop:value="state.customer" indent="2"></x-json>
+    
+        </x-form>
+
     `,
 
     state: {
@@ -195,12 +215,36 @@ export default {
         address: {},
         customer: {
             name: "",
+            age: 50,
+            active: true,
             addresses: [
                 { street: "11", city: "22", file: null },
                 { street: "33", city: "44", file: null }
             ]
         },
-        addressDefault: { street: "", city: "", file:null }
+        addressDefault: { street: "", city: "", file:null },
+        customerTemplate: `
+            <x-datafields columns="2">
+                <x-datafield
+                    label="Name"
+                    type="text"
+                    required
+                    x-model="state.name">
+                </x-datafield>
+
+                <x-datafield
+                    label="Age"
+                    type="number"
+                    x-model="state.age">
+                </x-datafield>
+
+                <x-datafield
+                    label="Active"
+                    type="checkbox"
+                    x-model="state.active">
+                </x-datafield>
+            </x-datafields>
+        `
     },
 
     controller({ state  }) {

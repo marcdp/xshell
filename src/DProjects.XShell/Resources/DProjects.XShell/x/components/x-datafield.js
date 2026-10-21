@@ -72,7 +72,8 @@ export const contract = {
         errors:         {type:"array", default:[], attribute:true, state:true, description:""},
         validated:      {type:"boolean", default:false, attribute:true, state:true, description:""},
         add:            {type:"boolean", default:false, attribute:true, state:true, description:""},
-        itemDefault:    {type:"any", default:null, attribute:false, state:true, description:"Default value used to initialize newly added list items."}
+        itemDefault:    {type:"any", default:null, attribute:false, state:true, description:"Default value used to initialize newly added list items."},
+        template:       {type:"string", default:"", attribute:true, state:true, description:"XTemplate used when type is 'x-template'."}
     },
     methods: {
         validate: {
@@ -495,6 +496,15 @@ export default {
                 x-attr:readonly="state.readonly"
             />
         </div>
+
+        <div x-elseif="state.type=='x-template'" class="input template">
+            <x-template
+                x-prop:template="state.template"
+                x-prop:value="state.value"
+                x-on:change="templateChanged"
+                x-on:command="templateCommand">
+            </x-template>
+        </div>
         
         <input 
             x-else
@@ -818,6 +828,31 @@ export default {
                     parts.push("i18n:" + i18n.getDefaultLang() + "=");
                 }
                 state.value = parts.join("|");
+            },
+
+            templateChanged({event}) {
+                debugger;
+                this.validate();
+
+                host.dispatchEvent(new CustomEvent("change", {
+                    detail: event.detail,
+                    bubbles: true,
+                    composed: false
+                }));
+
+                host.dispatchEvent(new CustomEvent("datafield:change", {
+                    detail: event.detail,
+                    bubbles: true,
+                    composed: false
+                }));
+            },
+            templateCommand({event}) {
+                debugger;
+                host.dispatchEvent(new CustomEvent("command", {
+                    detail: event.detail,
+                    bubbles: true,
+                    composed: true
+                }));
             },
 
             async searchInput(args) {

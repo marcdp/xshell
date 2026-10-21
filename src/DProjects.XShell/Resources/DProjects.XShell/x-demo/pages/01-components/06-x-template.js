@@ -31,14 +31,14 @@ export default {
             d: "Marc"
         }
     },
-    controller({ state, dependencies }) {
+    controller({  }) {
         return {
             async load() {
                 // load
             },
-            templateCommand(event) {
+            templateCommand({event}) {
                 // Handle commands coming from the x-template component
-                alert("Clicked")
+                alert("Clicked internal command: " + event.detail)
             },
             templateStateChange(event) {
                 alert(123);

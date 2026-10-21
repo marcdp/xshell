@@ -43,12 +43,7 @@ export default {
     `,
 
     template: `
-        <x-notice
-            x-if="state.renderingError"
-            type="error"
-            x-prop:message="state.renderingError">
-        </x-notice>
-
+        <x-notice x-if="state.renderingError" type="error" x-prop:message="state.renderingError"></x-notice>
         <div class="editor"></div>
     `,
 
@@ -97,9 +92,7 @@ export default {
 
         const fail = (error) => {
             unmountRenderer();
-            state.renderingError = error instanceof Error
-                ? error.message
-                : String(error);
+            state.renderingError = error instanceof Error ? error.message : String(error);
         };
 
         const invalidateRenderer = () => {
@@ -130,9 +123,13 @@ export default {
 
         return {
             load() {
-                events.on(state, "change:value", () => {
-                    valueSnapshot = cloneValue(state.value);
-                    this.refresh();
+                events.on(state, "change:value", (event) => {
+                    valueSnapshot = cloneValue(event.newValue);
+                    if (event.oldValue === event.newValue) {
+                        invalidateRenderer();
+                    } else {
+                        this.refresh();
+                    }
                 });
 
                 events.on(state, "change:template", () => {
@@ -204,11 +201,11 @@ export default {
 
                         // Command routing for embedded x-on:* can be decided as
                         // part of the public x-template API later.
-                        handler(command, event) {
+                        handler(command, params) {
                             host.dispatchEvent(new CustomEvent("command", {
                                 detail: {
                                     name: command,
-                                    detail: event?.detail ?? null
+                                    detail: params?.event?.detail ?? null
                                 },
                                 bubbles: true,
                                 composed: true
@@ -229,7 +226,7 @@ export default {
                                     newValue
                                 },
                                 bubbles: true,
-                                composed: true
+                                composed: false
                             }));
                         }
                     });
