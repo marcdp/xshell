@@ -1,0 +1,28 @@
+
+{
+    "label": "X-Schema Validator",
+    "description": "Validates X-Schema definitions against the X-Schema specification.",
+    "properties": {},
+    "events": {},
+    "methods": {
+        "validate": {
+            "description": "Validates an X-Schema definition and returns the validation result.",
+            "parameters": [
+                {"name": "data", "type": "object", "required": true, "description": "X-Schema definition to validate."}
+            ],
+            "returns": {
+                "type": "object",
+                "description": "Validation result containing a valid flag and validation errors.",
+                "schema": {
+                    "type": "object",
+                    "required": ["valid", "errors"],
+                    "properties": {
+                        "valid": {"type": "boolean"},
+                        "errors": {"type": "array", "items": {"type": "object"}
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

@@ -26,7 +26,9 @@ export default {
                 target="_blank"
             >
                 <div>{{ schema.moduleId }}</div>
-                <x-truncate x-prop:text="schema.path"></x-truncate>
+                <x-anchor x-attr:href="schema.url" class="plain" target="_blank">
+                    {{ schema.path }}
+                </x-anchor>
                 <x-file-size x-prop:value="schema.size" style="text-align:right"></x-file-size>
             </x-listview-item>
         </x-listview>
@@ -58,13 +60,10 @@ export default {
 
                     for (const file of moduleConfig.files ?? []) {
                         if (!file.path.startsWith(schemasPath) || !file.path.endsWith(".json")) continue;
-
-                        const id = file.path.substring(schemasPath.length);
-
+                        const id = file.path.substring(schemasPath.length).replace(/\.schema\.json$/, "");
                         if (state.id && !id.includes(state.id)) continue;
                         if (state.moduleId && !moduleId.includes(state.moduleId)) continue;
                         if (state.path && !file.path.includes(state.path)) continue;
-
                         schemas.push({
                             id,
                             moduleId,

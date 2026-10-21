@@ -436,6 +436,28 @@ function fillResolverRules(config) {
             };
         }
     };
+    const addSchemaDeclarations = (ownerType, ownerId, assetsPath, files) => {
+        const schemasPath = assetsPath + "/schemas";
+        for (const file of files ?? []) {
+            if (!file.path.startsWith(schemasPath + "/") || !file.path.endsWith(".schema.json")) continue;
+            const id = file.path.substring(schemasPath.length + 1).replace(/\.schema\.json$/, "");
+            const first = contractDeclarations.get(id);
+            if (first) {
+                throw new Error(`Duplicate schema '${id}' declared by ${first.ownerType} '${first.ownerId}' in '${first.path}' ` + `and ${ownerType} '${ownerId}' in '${file.path}'.`);
+            }
+            if (Object.hasOwn(resolver.schema, id)) {
+                throw new Error(`Duplicate schema '${id}' conflicts with an existing resolver entry while processing ` + `${ownerType} '${ownerId}' file '${file.path}'.`);
+            }
+            contractDeclarations.set(id, { ownerType, ownerId, path: file.path });
+            resolver.schema[id] = {
+                src: `${schemasPath}/${id}.schema.json`,
+                loader: "object-json",
+                cache: true,
+                moduleId: ownerId,
+                modulePath: assetsPath
+            };
+        }
+    };
 
     if (config.xshell.assets?.path) {
         const frameworkAssetsPath = config.xshell.assets.path;
@@ -448,6 +470,9 @@ function fillResolverRules(config) {
             modulePath: frameworkAssetsPath
         };
         addContractDeclarations("XShell", "xshell", frameworkAssetsPath, config.xshell.files);
+
+        resolver.schema ??= {};
+        addSchemaDeclarations("XShell", "xshell", frameworkAssetsPath, config.xshell.files);
     }
 
     for (const [moduleId, module] of Object.entries(config.modules)) {
@@ -684,6 +709,24 @@ function fillResolverRules(config) {
             moduleId,
             modulePath: moduleAssetsPath
         };
+
+        // schemas
+        resolver.schema ??= {}; 
+        resolver.schema[`${moduleId}:{name}`] ??= {
+            src: `${moduleAssetsPath}/schemas/{name}.schema.json`,
+            loader: "object-json",
+            cache: true,
+            moduleId,
+            modulePath: moduleAssetsPath
+        };
+        resolver.schema[`${moduleId}:/{path}`] ??= {
+            src: `${moduleAssetsPath}/{path}`,
+            loader: "object-json",
+            cache: true,
+            moduleId,
+            modulePath: moduleAssetsPath
+        };
+        addSchemaDeclarations("module", moduleId, moduleAssetsPath, module.files);
 
         // contracts
         const moduleAssetsPathContracts = moduleAssetsPath + "/contracts";

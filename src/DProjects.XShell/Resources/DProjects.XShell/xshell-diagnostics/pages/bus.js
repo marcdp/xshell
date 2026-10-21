@@ -17,12 +17,12 @@ export default {
         <p>Shows recent XShell bus events and their timestamps and detail payloads.</p>
         <x-listview ref="listview" view="details" auto-scroll="true">
             <x-datafield slot="column" type="search" x-model="state.query_type" placeholder="Type"></x-datafield>
-            <x-datafield slot="column" type="search" x-model="state.query_ts" placeholder="Time" style="width:13em"></x-datafield>
             <x-datafield slot="column" type="search" x-model="state.query_detail" placeholder="Detail"></x-datafield>
+            <x-datafield slot="column" type="search" x-model="state.query_ts" placeholder="Time" style="width:13em"></x-datafield>
             <x-button slot="column" style="width:2em" class="plain" command="clear" icon="x-clear" title="Clear list contents"></x-button>
             <x-listview-item x-for="item in state.registry" x-attr:label="item.type" icon="x-thunder" x-show="item.show">
-                <x-datetime x-prop:value="item.ts" format="iso" style="width:13em"></x-datetime>
                 <x-object x-prop:value="item.detail"></x-object>
+                <x-datetime x-prop:value="item.ts" format="iso" style="width:13em"></x-datetime>
                 <div></div>
             </x-listview-item>
         </x-listview>        

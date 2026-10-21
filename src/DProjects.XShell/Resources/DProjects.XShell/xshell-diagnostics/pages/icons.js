@@ -14,11 +14,11 @@ export default {
     template: `
         <p>Shows available icons by module together with their size, load time, and status.</p>
         <x-listview view="tiles" views="list,details,tiles,icons">
-            <x-datafield slot="column" style="width:12em" type="search" x-model="state.id" placeholder="Icon"></x-datafield>
-            <x-datafield slot="column" type="search" x-model="state.moduleId" placeholder="Module"></x-datafield>
+            <x-datafield slot="column" type="search" x-model="state.id" placeholder="Icon"></x-datafield>
+            <x-datafield slot="column" style="width:12em" type="search" x-model="state.moduleId" placeholder="Module"></x-datafield>
             <div slot="column" style="width:5em; text-align:right">Size</div>
             <div slot="column" style="width:5em; text-align:right">Time</div>
-            <div slot="column" style="width:5em;">Status</div>
+            <div slot="column" style="width:5em; text-align:right">Status</div>
             <x-listview-item x-for="item in state.items"
                 x-attr:href="item.url" 
                 x-attr:label="item.id"
@@ -30,7 +30,7 @@ export default {
                 <div>{{ item.moduleId }}</div>
                 <x-file-size x-prop:value="item.size" style="text-align:right"></x-file-size>
                 <div style="text-align:right"><x-time-ms x-prop:value="item.time"></x-time-ms></div>
-                <div>{{ item.status }}</div>
+                <div style="text-align:right">{{ item.status }}</div>
             </x-listview-item>
         </x-listview> 
     `,    

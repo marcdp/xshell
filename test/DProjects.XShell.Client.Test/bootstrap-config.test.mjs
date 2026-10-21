@@ -292,7 +292,7 @@ test("bootstrap loads the authored XShell JSONC source through the canonical run
     assert.equal(config.xshell.resolver["state-engine"]["{name}"].src, "/_assets/xshell/0.9.0.dev/state-engines/{name}.js");
     assert.equal(resolver.resolve("state-engine:proxy").url, "https://example.test/app/_assets/xshell/0.9.0.dev/state-engines/proxy.js");
     assert.equal(resolver.resolve("render-engine:x").url, "https://example.test/app/_assets/xshell/0.9.0.dev/render-engines/x.js");
-    assert.equal(resolver.resolve("schema:config.json").url, "https://example.test/app/_assets/xshell/0.9.0.dev/schemas/config.json");
+    assert.equal(resolver.resolve("schema:config").url, "https://example.test/app/_assets/xshell/0.9.0.dev/schemas/config.json");
     const tempImplementation = resolver.resolve("module:" + config.xshell.services.temp.implementation);
     assert.equal(tempImplementation.url, "https://example.test/app/_assets/xshell/0.9.0.dev/temp.js");
     assert.equal(tempImplementation.definition.moduleId, "xshell");

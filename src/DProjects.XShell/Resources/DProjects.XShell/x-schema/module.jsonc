@@ -17,5 +17,15 @@
                 }
             }
         }
+    },
+
+    "xshell": {
+        "services": {
+            "xSchemaValidator": {
+                "contract": "x-schema-validator",
+                "implementation": "/services/x-schema-validator.js"
+            }
+        }
+        
     }
 }

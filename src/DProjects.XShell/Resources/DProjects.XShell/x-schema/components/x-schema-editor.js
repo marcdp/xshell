@@ -25,26 +25,27 @@ export default {
         schema: null,
         value:  null
     },
-    controller({ events, state, jsonValidator }) {
+    controller({ events, loader, state, xSchemaValidator }) {
         return {
             load() {
                 // load
                 events.on(state, "change:value", "refresh");
                 events.on(state, "change:schema", "refresh");
                 events.on(state, "change:src", async () => {
-                    const response = await fetch(state.src);
-                    state.schema = await response.json();
+                    state.schema = await loader.load(state.src);
                 });
             },
             mount() {
                 //mount
             },
-            refresh() {
+            async refresh() {
                 // refresh
                 if (state.schema && state.value) {
                     // validate schema
                     //validateXSchema(state.src, state.schema);
-                    // jsonValidator.validate(null, null);
+                    debugger
+                    const result = await xSchemaValidator.validate(state.schema);
+                    debugger;
                     // validate value against schema
                     // ...
                     // render the editor based on the schema and value

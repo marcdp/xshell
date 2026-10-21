@@ -50,11 +50,7 @@
             },
             "state-engine": {
                 "{name}": {"src": "/state-engines/{name}.js","loader": "module-js", "cache": true}
-            },
-            "schema": {
-                "{name}.json": {"src": "/schemas/{name}.json","loader": "object-json", "cache": true}
             }
-
         },
 
         // services

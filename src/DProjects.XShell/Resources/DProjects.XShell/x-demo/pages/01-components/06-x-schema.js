@@ -9,7 +9,7 @@ export const contract = {
 // export page
 export default {    
     dependencies: {
-        schema: "string:x-schema:/samples/sample1.x-schema.json",
+        schema: "object:x-schema:/samples/sample1.x-schema.json",
         value: "object:x-schema:/samples/sample1.json",
     },
     template: `
