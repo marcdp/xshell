@@ -201,10 +201,11 @@ export default {
         :host .picker x-button {width:3em; margin:-.1em; }
         
         :host .list {}
-        :host .list .list-body {display:flex; flex-direction:column; apadding:var(--x-datafield-padding);}
+        :host .list .list-body {display:flex; flex-direction:column; margin-top:.4em;}
         :host .list .list-body ::slotted(x-datafields) {}
         :host .list .list-body[empty] {padding:.05em; }
-        :host .list .list-buttons {display:flex; justify-content:flex-end; height:2.275em;}
+        :host .list .list-buttons {display:flex; justify-content:flex-end; height:2.175em;}
+        :host .list .list-buttons:first-child {position:absolute; right:var(--x-datafield-padding); margin-right:.15em;}
 
         :host .richtext {padding:0;}
 
@@ -469,6 +470,9 @@ export default {
         </div>
 
         <div x-elseif="state.type=='list'" class="input list">
+            <div class="list-buttons" x-if="state.add">
+                <x-button x-if="state.add" x-on:click="listAdd" icon="x-add" class="plain"></x-button>
+            </div>
             <div class="list-body" x-on:edit="listEdit" x-on:remove="listRemove" x-on:move="listMove" x-attr:empty="!state.hasChilds">
                 <slot x-on:slotchange="slotchange"></slot>
             </div>
