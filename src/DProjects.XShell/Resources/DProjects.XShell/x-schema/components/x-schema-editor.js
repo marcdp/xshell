@@ -34,20 +34,7 @@ export default {
         src: null,
         schema: null,
         value:  null,
-        validationResult: null /* { valid: false, errors: [
-    {
-        "instanceLocation": "#",
-        "keyword": "additionalProperties",
-        "keywordLocation": "#/additionalProperties",
-        "error": "Property \"meta2\" does not match additional properties schema."
-    },
-    {
-        "instanceLocation": "#/meta2",
-        "keyword": "false",
-        "keywordLocation": "#/meta2",
-        "error": "False boolean schema."
-    }
-]*/
+        validationResult: null
     },
     controller({ events, loader, state, xSchemaValidator }) {
         return {
