@@ -14,43 +14,20 @@ export default {
     template: `
         <p>Shows loaded modules, their asset locations, build metadata, resource counts, and status.</p>
         <x-listview view="details">
-            <x-datafield type="search" x-model="state.id" placeholder="Module" slot="column" style="width:12em"></x-datafield>
-            <div slot="column">
-                <x-datafield slot="column" type="search" x-model="state.label" placeholder="Label"></x-datafield>
-            </div>
-            <div slot="column" style="width:5em">
-                Version
-            </div>
-            <div slot="column" style="width:8em">
-                Assets path
-            </div>
-            <div slot="column" style="width:8em">
-                Build at
-            </div>
-            <div slot="column" style="width:6em; text-align:right">
-                Size
-            </div>
-            <div slot="column" style="width:5em; text-align:right">
-                Files
-            </div>
-            <div slot="column" style="width:5em; text-align:right">
-                Pages
-            </div>
-            <div slot="column" style="width:5em; text-align:right">
-                Components
-            </div>
-            <div slot="column" style="width:5em; text-align:right">
-                Services
-            </div>
-            <div slot="column" style="width:5em; text-align:right">
-                Contracts
-            </div>
-            <div slot="column" style="width:5em; text-align:right">
-                Others
-            </div>
-            <div slot="column" style="width:5em; text-align:right">
-                Status
-            </div>
+            <x-datafield slot="column" style="width:12em" type="search" x-model="state.id" placeholder="Module" ></x-datafield>
+            <x-datafield slot="column" type="search" x-model="state.label" placeholder="Label"></x-datafield>
+            <div slot="column" style="width:5em">Version</div>
+            <div slot="column"  >Assets path</div>
+            <div slot="column" style="width:6em; text-align:right">Size</div>
+            <div slot="column" style="width:5em; text-align:right">Files</div>
+            <!--
+            <div slot="column" style="width:5em; text-align:right">Pages</div>
+            <div slot="column" style="width:5em; text-align:right">Components</div>
+            <div slot="column" style="width:5em; text-align:right">Services</div>
+            <div slot="column" style="width:5em; text-align:right">Contracts</div>
+            <div slot="column" style="width:5em; text-align:right">Others</div>
+            -->
+            <div slot="column" style="width:5em; text-align:right">Status</div>
             <x-listview-item 
                 x-for="module in state.modules"
                 x-attr:href="module.configUrl"
@@ -62,14 +39,13 @@ export default {
                 <div>{{ module.label }}</div>
                 <div>{{ module.version }}</div>
                 <div><x-anchor x-attr:href="module.assets.url" target="_blank" class="plain">{{ module.assets.path }}</x-anchor></div>
-                <div>{{ module.builtAt }}</div>
                 <x-file-size x-prop:value="module.size" style="text-align:right"></x-file-size>
                 <div style="text-align:right">{{ module.files.all }}</div>
-                <div style="text-align:right">{{ module.files.pages }}</div>
+                <!--<div style="text-align:right">{{ module.files.pages }}</div>
                 <div style="text-align:right">{{ module.files.components }}</div>
                 <div style="text-align:right">{{ module.files.services }}</div>
                 <div style="text-align:right">{{ module.files.contracts }}</div>
-                <div style="text-align:right">{{ module.files.others }}</div>
+                <div style="text-align:right">{{ module.files.others }}</div>-->
                 <div style="text-align:right">{{ module.status }}</div>
             </x-listview-item>
         </x-listview> 

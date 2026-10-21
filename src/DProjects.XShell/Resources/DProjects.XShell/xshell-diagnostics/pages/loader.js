@@ -15,24 +15,16 @@ export default {
         <p>Shows resources processed by the XShell loader together with their module, size, load time, and status.</p>
         <x-listview view="details" auto-scroll>
             <x-datafield slot="column" type="search" x-model="state.query_resource" placeholder="Resource"></x-datafield>
-            <x-datafield type="search" x-model="state.query_module" placeholder="Module" slot="column" style="width:6em;"></x-datafield>
-            <div slot="column" style="width:4em; text-align:right">
-                Size
-            </div>
-            <div slot="column" style="width:6em; text-align:right;">
-                Time
-            </div>
-            <div slot="column" style="width:4em;">
-                Status
-            </div>
-            <div slot="column">
-                <x-button class="plain" command="clear" icon="x-clear" title="Clear list contents"></x-button>
-            </div>
+            <x-datafield slot="column" style="width:10em;" type="search" x-model="state.query_module" placeholder="Module" ></x-datafield>
+            <div slot="column" style="width:5em; text-align:right">Size</div>
+            <div slot="column" style="width:5em; text-align:right;">Time</div>
+            <div slot="column" style="width:5em; text-align:right">Status</div>
+            <div slot="column"><x-button class="plain" command="clear" icon="x-clear" title="Clear list contents"></x-button></div>
             <x-listview-item x-for="item in state.items" x-attr:label="item.resource" icon="x-file" x-attr:href="item.url" target="_blank">
                 <div>{{ item.moduleId }}</div>
                 <x-file-size x-prop:value="item.size" style="text-align:right"></x-file-size>
                 <div style="text-align:right"><x-time-ms x-prop:value="item.time"></x-time-ms></div>
-                <div>{{ item.status }}</div>
+                <div style="text-align:right">{{ item.status }}</div>
             </x-listview-item>
         </x-listview>        
     `,    

@@ -42,6 +42,7 @@ export default {
         .icons > div .columns {display:none;}
 
         /* details */
+        /*
         .details > div {display:table; table-layout:auto; width:100%; white-space:nowrap;}
         .details > div ::slotted(*) {display:table-row;}
         .details > div ::slotted(*:not([name]):nth-child(even)) {background:var(--x-color-background-alt);}
@@ -49,6 +50,14 @@ export default {
         .details > div .columns ::slotted(*) {display:table-cell; background:none!important; color:var(--x-color-gray); padding-right:.25em; }
         .details > div .columns ::slotted(*:first-child) {padding-left:1.5em; border-box:border;}
         .details > div .columns ::slotted(x-datafield:first-child) {padding-left:0;}
+        */
+        .details > div { width:100%;}
+        .details > div .columns {display:grid; grid-template-columns: var(--x-listview-grid-template-columns);}
+        .details > div .columns ::slotted(*) {display:block; padding-right:.1em; box-sizing:border-box;}
+        .details > div .columns ::slotted(div) {line-height: 2.2em}
+        .details > div .columns ::slotted(x-button) {display:flex;}
+        .details > div ::slotted(*) {display:grid; grid-template-columns: var(--x-listview-grid-template-columns);padding-right:.1em; }
+
 
         /* tiles */
         .tiles > div .columns {display:none;}
@@ -83,7 +92,7 @@ export default {
         <div x-attr:class="state.view">
             <div>
                 <div class="columns">
-                    <slot name="column"></slot>
+                    <slot name="column" x-on:slotchange="refresh"></slot>
                 </div>
                 <slot x-on:slotchange="refresh"></slot>
             </div>
@@ -94,7 +103,6 @@ export default {
     },
     controller({ state, events, host }) {
         const supportedViews = ["list", "details", "tiles", "icons"];
-
         return {
             async load() {
                 // initialize views and react to configuration changes
@@ -111,28 +119,40 @@ export default {
 
             refreshViews() {
                 // parse and validate the configured available views
-                const configuredViews = String(state.views || "")
-                    .split(",")
-                    .map(view => view.trim().toLowerCase())
-                    .filter(view => supportedViews.includes(view));
-
+                const configuredViews = String(state.views || "").split(",").map(view => view.trim().toLowerCase()).filter(view => supportedViews.includes(view));
                 state.availableViews = [...new Set(configuredViews)];
-
                 // keep the current view inside the configured set
                 if (state.availableViews.length && !state.availableViews.includes(state.view)) state.view = state.availableViews[0];
-
+                // refresh
                 this.refresh();
             },
 
             async refresh() {
+                if (!host.shadowRoot) return;
+
+                // resize columns
+                const slotColumn = host.shadowRoot.querySelector("slot[name='column']");
+                if (!slotColumn) return;
+
+                // propagate the current view to all assigned elements
+                const gridTemplateColumns = slotColumn.assignedElements().map(column => {
+                    const { width, maxWidth, flexGrow } = column.style;
+                    if (flexGrow && flexGrow !== "0") return `minmax(0, ${flexGrow}fr)`;                    
+                    if (maxWidth) return `fit-content(${maxWidth})`;
+                    if (width && width !== "auto") return `${width}`;
+                    return "minmax(0, 1fr)";
+                }).join(" ");
+                console.log(gridTemplateColumns)
+                host.style.setProperty("--x-listview-grid-template-columns", gridTemplateColumns);
+
                 // propagate the selected view to every list item
                 const slot = host.shadowRoot.querySelector("slot:not([name])");
                 if (!slot) return;
 
+                // assign category
                 const view = state.view;
                 let lastElement = null;
                 let prevCategory = null;
-
                 slot.assignedElements().forEach(item => {
                     const category = item.getAttribute("category");
                     item.category = prevCategory != category ? category : "";

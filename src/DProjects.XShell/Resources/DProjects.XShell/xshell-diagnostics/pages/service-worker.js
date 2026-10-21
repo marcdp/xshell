@@ -15,68 +15,16 @@ export default {
     template: `
         <p>Shows the Service Worker mappings registered for virtual XShell and module asset paths.</p>
         <x-listview view="details">
-            <x-datafield
-                slot="column"
-                type="search"
-                x-model="state.name"
-                placeholder="Name"
-                style="width:10em"
-            ></x-datafield>
-
-            <x-datafield
-                slot="column"
-                type="search"
-                x-model="state.version"
-                placeholder="Version"
-                style="width:8em"
-            ></x-datafield>
-
-            <x-datafield
-                slot="column"
-                type="search"
-                x-model="state.src"
-                placeholder="Source"
-            ></x-datafield>
-
-            <x-datafield
-                slot="column"
-                type="search"
-                x-model="state.dst"
-                placeholder="Destination"
-            ></x-datafield>
-
-            <div slot="column" style="width:5em; text-align:right">
-                Exceptions
-            </div>
-
-            <x-listview-item
-                x-for="item in state.items"
-                x-attr:label="item.name"
-            >
+            <x-datafield slot="column" type="search" x-model="state.name" placeholder="Name" style="width:10em"></x-datafield>
+            <x-datafield slot="column" type="search" x-model="state.version" placeholder="Version" style="width:6em"></x-datafield>
+            <x-datafield slot="column" type="search" x-model="state.src" placeholder="Source"></x-datafield>
+            <x-datafield slot="column" type="search" x-model="state.dst" placeholder="Destination"></x-datafield>
+            <div slot="column" style="width:5em; text-align:right">Exceptions</div>
+            <x-listview-item x-for="item in state.items" x-attr:label="item.name">
                 <div>{{ item.version }}</div>
-
-                <div>
-                    <x-anchor
-                        class="plain"
-                        x-attr:href="item.src"
-                        target="_blank"
-                    >
-                        {{ item.src }}
-                    </x-anchor>
-                </div>
-
-                <div>
-                    <x-anchor
-                        class="plain"
-                        x-attr:href="item.dst"
-                        target="_blank"
-                    >
-                        {{ item.dst }}
-                    </x-anchor>
-                </div>
-                <div style="text-align:right"  x-attr:title="item.exceptionUrls">
-                    {{ item.exceptionsCount }}
-                </div>
+                <div><x-anchor class="plain" x-attr:href="item.src" target="_blank">{{ item.src }}</x-anchor></div>
+                <div><x-anchor class="plain" x-attr:href="item.dst" target="_blank">{{ item.dst }}</x-anchor></div>
+                <div style="text-align:right"  x-attr:title="item.exceptionUrls">{{ item.exceptionsCount }}</div>
             </x-listview-item>
         </x-listview>
     `,
@@ -111,7 +59,7 @@ export default {
                     .map(mapping => ({
                         name: mapping.name || "",
                         version: mapping.version || "",
-                        src: mapping.src,
+                        src: new URL(mapping.src, config.app.baseUrl).pathname,
                         dst: mapping.dst,
                         exceptions: mapping.exceptions || [],
                         exceptionUrls: (mapping.exceptions || []).join(", "),

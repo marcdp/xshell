@@ -68,13 +68,14 @@ export default {
         :host(.selected) x-anchor.icons::part(a) {color:var(--x-color-primary);}
 
         /* details */
-        x-anchor.details {display:table-cell; padding-right:.5em;} 
+        x-anchor.details {display:inline-flex; padding-right:.5em;} 
         x-anchor.details x-icon {vertical-align:bottom; }
         x-anchor.details .description {color:var(--x-color-text-gray); max-width: 10em; text-overflow:ellipsis; white-space:nowrap; overflow:hidden;}
         x-anchor.details .description:empty {display:none;}
         x-anchor.details .description::before {content:"("; padding-left:.25em;}
         x-anchor.details .description::after {content:")";}
- 
+        x-anchor.details + ::slotted(*) {padding-right:0em;}
+
         /* tiles */
         x-anchor.tiles {display:block; width:var(--x-listview-item-tile-width, 17em); align-items:center; padding-top:0; margin-bottom:.15em; border-radius:var(--x-menuitem-border-radius);}
         x-anchor.tiles x-icon {position:absolute;font-size:24px; padding:.1em; margin-left:.35em; margin-top:.1em;}   

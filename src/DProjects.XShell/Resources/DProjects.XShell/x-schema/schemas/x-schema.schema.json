@@ -7,361 +7,169 @@
   "additionalProperties": false,
   "required": ["version", "types", "root"],
   "properties": {
-    "version": { "type": "string", "const": "0" },
-    "meta": { "$ref": "#/$defs/meta" },
-    "root": {
-      "type": "string",
-      "minLength": 1,
-      "description": "Name of the root object type declared in types. The referenced type must exist; this is enforced by X-Schema semantic validation."
-    },
-    "types": {
-      "type": "object",
-      "minProperties": 1,
-      "description": "Named reusable or recursive object type definitions.",
-      "additionalProperties": { "$ref": "#/$defs/objectType" }
-    }
+    "version": {"type": "string", "const": "0"},
+    "meta": {"type": "object", "additionalProperties": true},
+    "root": {"type": "string", "minLength": 1, "description": "Name of the root object type declared in types. The referenced type must exist; this is enforced by X-Schema semantic validation."},
+    "types": {"type": "object", "minProperties": 1, "propertyNames": {"minLength": 1}, "description": "Named reusable or recursive object type definitions.", "additionalProperties": {"$ref": "#/$defs/type"}}
   },
-
   "$defs": {
-    "node": {
-      "description": "Any node allowed in an object or container children collection.",
-      "oneOf": [
-        { "$ref": "#/$defs/dataNode" },
-        { "$ref": "#/$defs/containerNode" }
-      ]
+    "element": {
+      "description": "Any element allowed in an object or container children collection.",
+      "oneOf": [{"$ref": "#/$defs/data"}, {"$ref": "#/$defs/container"}]
     },
-
-    "dataNode": {
-      "description": "Node representing a data value. Unlike node, this excludes presentation-only containers and is therefore suitable for array items.",
-      "oneOf": [
-        { "$ref": "#/$defs/objectReference" },
-        { "$ref": "#/$defs/fieldNode" },
-        { "$ref": "#/$defs/objectNode" },
-        { "$ref": "#/$defs/arrayNode" }
-      ]
+    "data": {
+      "description": "An element representing a data value. Presentation-only containers are excluded.",
+      "oneOf": [{"$ref": "#/$defs/field"}, {"$ref": "#/$defs/object"}, {"$ref": "#/$defs/array"}]
     },
-
-    "objectReference": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["type"],
-      "description": "Contextual use of a named object type. The referenced type supplies the reusable object structure; the reference supplies binding, presentation and behavior for this use.",
-      "properties": {
-        "type": {
-          "type": "string",
-          "minLength": 1,
-          "description": "Name of an object type declared in the top-level types registry. The referenced type must exist; this is enforced by X-Schema semantic validation."
-        },
-        "bind": { "$ref": "#/$defs/bind" },
-        "required": {
-          "type": "boolean",
-          "default": false,
-          "description": "Static required state for the referenced value. A conditions.required rule, when present, dynamically overrides this value."
-        },
-        "attrs": {
-          "$ref": "#/$defs/attributes",
-          "description": "Attributes for this use of the referenced object type."
-        },
-        "props": {
-          "$ref": "#/$defs/properties",
-          "description": "Component properties for this use of the referenced object type."
-        },
-        "conditions": {
-          "$ref": "#/$defs/conditions",
-          "description": "Dynamic conditions for this use of the referenced object type."
-        },
-        "create": {
-          "$ref": "#/$defs/jsonValue",
-          "description": "Context-specific creation value. When present, replaces the creation value declared by the referenced object type."
-        },
-        "meta": {
-          "$ref": "#/$defs/meta",
-          "description": "Metadata for this use of the referenced object type."
-        }
-      }
-    },
-
-    "objectType": {
+    "type": {
       "type": "object",
       "additionalProperties": false,
       "required": ["kind", "children"],
-      "description": "Named reusable object structure. Presentation and contextual behavior belong on object references rather than on the type.",
+      "description": "Named reusable object editor structure. Presentation and behavior of the object occurrence itself belong on object elements that reference the type.",
       "properties": {
-        "kind": { "const": "object" },
-        "description": { "type": "string" },
-        "children": { "$ref": "#/$defs/children" },
-        "create": {
-          "$ref": "#/$defs/jsonValue",
-          "description": "Default value used when creating an instance of this object type."
-        },
-        "meta": { "$ref": "#/$defs/meta" }
+        "kind": {"const": "object"},
+        "description": {"type": "string"},
+        "children": {"type": "array", "items": {"$ref": "#/$defs/element"}},
+        "create": {"type":"object", "description": "Default value used when creating an instance of this object type."},
+        "meta": {"type": "object", "additionalProperties": true}
       }
     },
-
-    "objectNode": {
+    "object": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["kind", "children"],
-      "description": "Inline object node. When bind is omitted, the object operates on the current data-context value.",
+      "required": ["kind"],
+      "description": "Object value. It is either defined inline with children or references a named type. When bind is omitted, it operates on the current data-context value.",
       "properties": {
-        "kind": { "const": "object" },
-        "bind": { "$ref": "#/$defs/bind" },
-        "required": {
-          "type": "boolean",
-          "default": false,
-          "description": "Static required state for the object value. A conditions.required rule, when present, dynamically overrides this value."
-        },
-        "description": { "type": "string" },
-        "tag": { "type": "string", "minLength": 1 },
-        "attrs": { "$ref": "#/$defs/attributes" },
-        "props": { "$ref": "#/$defs/properties" },
-        "children": { "$ref": "#/$defs/children" },
-        "create": {
-          "$ref": "#/$defs/jsonValue",
-          "description": "Value used when creating or activating this object."
-        },
-        "conditions": { "$ref": "#/$defs/conditions" },
-        "meta": { "$ref": "#/$defs/meta" }
-      }
+        "kind": {"const": "object"},
+        "type": {"type": "string", "minLength": 1, "description": "Name of an object type declared in the top-level types registry. The referenced type must exist; this is enforced by X-Schema semantic validation."},
+        "bind": {"type": "string", "minLength": 1, "description": "Path relative to the current data context. Scoped paths may use $current, $parent or $root. When a data element omits bind, it operates directly on the current data-context value."},
+        "required": {"type": "boolean", "default": false, "description": "Static required state. A conditions.required rule, when present, dynamically overrides this value."},
+        "description": {"type": "string"},
+        "tag": {"type": "string", "minLength": 1},
+        "attrs": {"type": "object", "additionalProperties": {"type": ["string", "number", "boolean", "null"]}},
+        "props": {"type": "object", "additionalProperties": true},
+        "children": {"type": "array", "items": {"$ref": "#/$defs/element"}},
+        "create": {"type":"object", "description": "Value used when creating an inline object."},
+        "conditions": {"$ref": "#/$defs/dataConditions"},
+        "meta": {"type": "object", "additionalProperties": true}
+      },
+      "oneOf": [
+        {"required": ["children"], "not": {"required": ["type"]}},
+        {"required": ["type"], "not": {"anyOf": [{"required": ["children"]}, {"required": ["create"]}]}}
+      ]
     },
-
-    "fieldNode": {
+    "field": {
       "type": "object",
       "additionalProperties": false,
       "required": ["kind"],
       "description": "Editable atomic value. When bind is omitted, the field edits the current data-context value itself.",
       "properties": {
-        "kind": { "const": "field" },
-        "bind": { "$ref": "#/$defs/bind" },
-        "required": {
-          "type": "boolean",
-          "default": false,
-          "description": "Static required state for the field value. A conditions.required rule, when present, dynamically overrides this value."
+        "kind": {"const": "field"},
+        "bind": {"type": "string", "minLength": 1, "description": "Path relative to the current data context. Scoped paths may use $current, $parent or $root. When a data element omits bind, it operates directly on the current data-context value."},
+        "required": {"type": "boolean", "default": false, "description": "Static required state. A conditions.required rule, when present, dynamically overrides this value."},
+        "description": {"type": "string"},
+        "dataType": {"description": "Logical value type edited by a field.", "enum": ["string", "number", "integer", "boolean", "date", "datetime", "time", "object", "array", "any"]},
+        "tag": {"type": "string", "minLength": 1},
+        "attrs": {"type": "object", "additionalProperties": {"type": ["string", "number", "boolean", "null"]}},
+        "props": {"type": "object", "additionalProperties": true},
+        "default": {"description":"Default value used when the field value has not otherwise been initialized."},
+        "reference": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["source", "key", "label"],
+          "properties": {
+            "source": {"type": "string", "minLength": 1, "description": "Opaque source locator, such as $root.countries or datasource:countries."},
+            "key": {"type": "string", "minLength": 1, "description": "Property containing the value stored by the field."},
+            "label": {"type": "string", "minLength": 1, "description": "Property containing the human-readable label presented to the user."}
+          }
         },
-        "description": { "type": "string" },
-        "dataType": { "$ref": "#/$defs/dataType" },
-        "tag": { "type": "string", "minLength": 1 },
-        "attrs": { "$ref": "#/$defs/attributes" },
-        "props": { "$ref": "#/$defs/properties" },
-        "default": {
-          "$ref": "#/$defs/jsonValue",
-          "description": "Default value used when the field value has not otherwise been initialized."
-        },
-        "reference": { "$ref": "#/$defs/dataReference" },
-        "conditions": { "$ref": "#/$defs/conditions" },
-        "meta": { "$ref": "#/$defs/meta" }
+        "conditions": {"$ref": "#/$defs/dataConditions"},
+        "meta": {"type": "object", "additionalProperties": true}
       }
     },
-
-    "arrayNode": {
+    "array": {
       "type": "object",
       "additionalProperties": false,
       "required": ["kind", "item"],
       "description": "Ordered collection of data values. When bind is omitted, the array operates on the current data-context value.",
       "properties": {
-        "kind": { "const": "array" },
-        "bind": { "$ref": "#/$defs/bind" },
-        "required": {
-          "type": "boolean",
-          "default": false,
-          "description": "Static required state for the array value. A conditions.required rule, when present, dynamically overrides this value."
-        },
-        "description": { "type": "string" },
-        "tag": { "type": "string", "minLength": 1 },
-        "attrs": { "$ref": "#/$defs/attributes" },
-        "props": { "$ref": "#/$defs/properties" },
-        "item": {
-          "$ref": "#/$defs/dataNode",
-          "description": "Definition of each array item. Presentation-only container nodes are not valid array items."
-        },
-        "allowAdd": {
-          "type": "boolean",
-          "default": true,
-          "description": "Whether users may add array items."
-        },
-        "allowRemove": {
-          "type": "boolean",
-          "default": true,
-          "description": "Whether users may remove array items."
-        },
-        "allowMove": {
-          "type": "boolean",
-          "default": false,
-          "description": "Whether users may reorder array items."
-        },
-        "minItems": {
-          "type": "integer",
-          "minimum": 0,
-          "description": "Minimum number of items. When maxItems is also present, minItems must not exceed it; this is enforced by X-Schema semantic validation."
-        },
-        "maxItems": {
-          "type": "integer",
-          "minimum": 0,
-          "description": "Maximum number of items. When minItems is also present, it must not exceed maxItems; this is enforced by X-Schema semantic validation."
-        },
-        "default": {
-          "type": "array",
-          "description": "Default array value used when the array has not otherwise been initialized."
-        },
-        "conditions": { "$ref": "#/$defs/conditions" },
-        "meta": { "$ref": "#/$defs/meta" }
+        "kind": {"const": "array"},
+        "bind": {"type": "string", "minLength": 1, "description": "Path relative to the current data context. Scoped paths may use $current, $parent or $root. When a data element omits bind, it operates directly on the current data-context value."},
+        "required": {"type": "boolean", "default": false, "description": "Static required state. A conditions.required rule, when present, dynamically overrides this value."},
+        "description": {"type": "string"},
+        "tag": {"type": "string", "minLength": 1},
+        "attrs": {"type": "object", "additionalProperties": {"type": ["string", "number", "boolean", "null"]}},
+        "props": {"type": "object", "additionalProperties": true},
+        "item": {"$ref": "#/$defs/data", "description": "Definition of each array item."},
+        "allowAdd": {"type": "boolean", "default": true},
+        "allowRemove": {"type": "boolean", "default": true},
+        "allowMove": {"type": "boolean", "default": false},
+        "minItems": {"type": "integer", "minimum": 0},
+        "maxItems": {"type": "integer", "minimum": 0},
+        "default": {"type": "array"},
+        "conditions": {"$ref": "#/$defs/dataConditions"},
+        "meta": {"type": "object", "additionalProperties": true}
       }
     },
-
-    "containerNode": {
+    "container": {
       "type": "object",
       "additionalProperties": false,
       "required": ["kind", "tag", "children"],
-      "description": "Presentation-only node used to compose child nodes. Containers do not bind data and do not establish a new data context.",
+      "description": "Presentation-only element used to compose child elements. Containers do not bind data and do not establish a new data context.",
       "properties": {
-        "kind": { "const": "container" },
-        "description": { "type": "string" },
-        "tag": { "type": "string", "minLength": 1 },
-        "attrs": { "$ref": "#/$defs/attributes" },
-        "props": { "$ref": "#/$defs/properties" },
-        "children": { "$ref": "#/$defs/children" },
-        "conditions": { "$ref": "#/$defs/conditions" },
-        "meta": { "$ref": "#/$defs/meta" }
+        "kind": {"const": "container"},
+        "description": {"type": "string"},
+        "tag": {"type": "string", "minLength": 1},
+        "attrs": {"type": "object", "additionalProperties": {"type": ["string", "number", "boolean", "null"]}},
+        "props": {"type": "object", "additionalProperties": true},
+        "children": {"type": "array", "items": {"$ref": "#/$defs/element"}},
+        "conditions": {"$ref": "#/$defs/conditions"},
+        "meta": {"type": "object", "additionalProperties": true}
       }
     },
-
-    "children": {
-      "type": "array",
-      "items": { "$ref": "#/$defs/node" }
-    },
-
-    "bind": {
-      "type": "string",
-      "minLength": 1,
-      "description": "Path relative to the current data context. Scoped paths may use $current, $parent or $root. When a data node omits bind, it operates directly on the current data-context value."
-    },
-
-    "dataType": {
-      "description": "Logical value type edited by a field. object and array are allowed for field components that edit those values atomically, such as a JSON editor.",
-      "enum": ["string", "number", "integer", "boolean", "date", "datetime", "time", "object", "array", "any"]
-    },
-
     "conditions": {
       "type": "object",
       "additionalProperties": false,
-      "description": "Dynamic node-state rules. When absent, visible and enabled default to true, while readonly defaults to false.",
+      "description": "Dynamic presentation state. On containers, enabled and readonly apply to descendant editable elements.",
       "properties": {
-        "visible": {
-          "$ref": "#/$defs/condition",
-          "description": "Condition controlling whether the node is visible. When absent, visibility defaults to true."
-        },
-        "enabled": {
-          "$ref": "#/$defs/condition",
-          "description": "Condition controlling whether the node is enabled. When absent, enabled defaults to true."
-        },
-        "readonly": {
-          "$ref": "#/$defs/condition",
-          "description": "Condition controlling whether the node is read-only. When absent, read-only defaults to false."
-        },
-        "required": {
-          "$ref": "#/$defs/condition",
-          "description": "Condition that dynamically overrides the node's static required property."
-        }
+        "visible": {"$ref": "#/$defs/condition"},
+        "enabled": {"$ref": "#/$defs/condition"},
+        "readonly": {"$ref": "#/$defs/condition"}
       }
     },
-
-    "condition": {
-      "oneOf": [
-        { "$ref": "#/$defs/pathCondition" },
-        { "$ref": "#/$defs/allCondition" },
-        { "$ref": "#/$defs/anyCondition" },
-        { "$ref": "#/$defs/notCondition" }
-      ]
+    "dataConditions": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "visible": {"$ref": "#/$defs/condition"},
+        "enabled": {"$ref": "#/$defs/condition"},
+        "readonly": {"$ref": "#/$defs/condition"},
+        "required": {"$ref": "#/$defs/condition", "description": "Dynamically overrides the element's static required property."}
+      }
     },
-
+    "condition": {
+      "oneOf": [{"$ref": "#/$defs/pathCondition"}, {"$ref": "#/$defs/allCondition"}, {"$ref": "#/$defs/anyCondition"}, {"$ref": "#/$defs/notCondition"}]
+    },
     "pathCondition": {
       "type": "object",
       "additionalProperties": false,
       "required": ["path"],
       "minProperties": 2,
-      "description": "Condition evaluated against one path. When multiple comparison operators are present, all operators must evaluate to true.",
+      "maxProperties": 2,
+      "description": "Atomic condition evaluated against one path. Exactly one predicate must be specified.",
       "properties": {
-        "path": { "type": "string", "minLength": 1 },
-        "equals": { "$ref": "#/$defs/jsonValue" },
-        "exists": { "type": "boolean" },
-        "in": { "type": "array", "items": { "$ref": "#/$defs/jsonValue" } },
-        "greaterThan": { "type": ["number", "string"] },
-        "greaterThanOrEqual": { "type": ["number", "string"] },
-        "lessThan": { "type": ["number", "string"] },
-        "lessThanOrEqual": { "type": ["number", "string"] }
+        "path": {"type": "string", "minLength": 1},
+        "equals": {},
+        "exists": {"const": true},
+        "in": {"type": "array", "minItems": 1, "items": {}},
+        "greaterThan": {"type": ["number", "string"]},
+        "greaterThanOrEqual": {"type": ["number", "string"]},
+        "lessThan": {"type": ["number", "string"]},
+        "lessThanOrEqual": {"type": ["number", "string"]}
       }
     },
-
-    "allCondition": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["all"],
-      "properties": {
-        "all": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/condition" } }
-      }
-    },
-
-    "anyCondition": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["any"],
-      "properties": {
-        "any": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/condition" } }
-      }
-    },
-
-    "notCondition": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["not"],
-      "properties": {
-        "not": { "$ref": "#/$defs/condition" }
-      }
-    },
-
-    "dataReference": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["source", "key", "label"],
-      "properties": {
-        "source": {
-          "type": "string",
-          "minLength": 1,
-          "description": "Opaque source locator, such as $root.countries or datasource:countries. X-Schema does not interpret the locator's storage or transport."
-        },
-        "key": {
-          "type": "string",
-          "minLength": 1,
-          "description": "Property containing the value stored by the field."
-        },
-        "label": {
-          "type": "string",
-          "minLength": 1,
-          "description": "Property containing the human-readable label presented to the user."
-        }
-      }
-    },
-
-    "attributes": {
-      "type": "object",
-      "description": "DOM attributes applied to the rendered component.",
-      "additionalProperties": { "type": ["string", "number", "boolean", "null"] }
-    },
-
-    "properties": {
-      "type": "object",
-      "description": "DOM/Web Component properties applied directly to the rendered component.",
-      "additionalProperties": true
-    },
-
-    "meta": {
-      "type": "object",
-      "description": "Compiler, source or diagnostic metadata ignored by normal rendering.",
-      "additionalProperties": true
-    },
-
-    "jsonValue": {
-      "description": "Any valid JSON value."
-    }
+    "allCondition": {"type": "object", "additionalProperties": false, "required": ["all"], "properties": {"all": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/condition"}}}},
+    "anyCondition": {"type": "object", "additionalProperties": false, "required": ["any"], "properties": {"any": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/condition"}}}},
+    "notCondition": {"type": "object", "additionalProperties": false, "required": ["not"], "properties": {"not": {"$ref": "#/$defs/condition"}}}
   }
 }

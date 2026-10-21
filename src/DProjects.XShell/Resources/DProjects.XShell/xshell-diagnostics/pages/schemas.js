@@ -15,16 +15,10 @@ export default {
     template: `
         <p>Shows discovered JSON schemas, their owning modules, and file sizes.</p>
         <x-listview view="details">
-            <x-datafield type="search" x-model="state.id" placeholder="Schema" slot="column" style="width:15em"></x-datafield>
-            <div slot="column" style="width:12em">
-                <x-datafield type="search" x-model="state.moduleId" placeholder="Module"></x-datafield>
-            </div>
-            <div slot="column">
-                <x-datafield type="search" x-model="state.path" placeholder="Path"></x-datafield>
-            </div>
-            <div slot="column" style="width:6em; text-align:right">
-                Size
-            </div>
+            <x-datafield slot="column" style="width:17em" type="search" x-model="state.id" placeholder="Schema" ></x-datafield>
+            <x-datafield slot="column" style="width:10em" type="search" x-model="state.moduleId" placeholder="Module"></x-datafield>
+            <x-datafield slot="column" type="search" x-model="state.path" placeholder="Path"></x-datafield>
+            <div slot="column" style="width:5em; text-align:right">Size</div>
             <x-listview-item x-for="schema in state.schemas"
                 x-attr:href="schema.url"
                 x-attr:label="schema.id"
@@ -32,7 +26,7 @@ export default {
                 target="_blank"
             >
                 <div>{{ schema.moduleId }}</div>
-                <div>{{ schema.path }}</div>
+                <x-truncate x-prop:text="schema.path"></x-truncate>
                 <x-file-size x-prop:value="schema.size" style="text-align:right"></x-file-size>
             </x-listview-item>
         </x-listview>

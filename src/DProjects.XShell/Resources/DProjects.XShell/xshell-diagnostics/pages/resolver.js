@@ -29,25 +29,16 @@ export default {
         </div>
 
         <x-listview view="details">
-            <x-datafield slot="column" type="search" x-model="state.query_resource" placeholder="Resource"></x-datafield>
-            <div slot="column">
-                <x-datafield type="search" x-model="state.query_src" placeholder="Source"></x-datafield>
-            </div>
-            <div slot="column" style="width:10em">
-                <x-datafield type="search" x-model="state.query_loader" placeholder="Loader"></x-datafield>
-            </div>
-            <div slot="column" style="width:5em">
-                Cache
-            </div>
-            <div slot="column" style="width:7em">
-                Cache mode
-            </div>
-
+            <x-datafield slot="column"  type="search" x-model="state.query_resource" placeholder="Resource"></x-datafield>
+            <x-datafield slot="column"  type="search" x-model="state.query_src" placeholder="Source"></x-datafield>
+            <x-datafield slot="column" type="search" style="width:10em" x-model="state.query_loader" placeholder="Loader"></x-datafield>
+            <div slot="column" style="width:5em;text-align:right">Cache</div>
+            <div slot="column" style="width:5em;text-align:right">Mode</div>
             <x-listview-item x-for="item in state.items" x-attr:label="item.resource" icon="x-settings">
                 <div>{{ item.src }}</div>
                 <div>{{ item.loader }}</div>
-                <div>{{ item.cache }}</div>
-                <div>{{ item.cacheMode }}</div>
+                <div style="text-align:right">{{ item.cache }}</div>
+                <div style="text-align:right">{{ item.cacheMode }}</div>
             </x-listview-item>
         </x-listview>
     `,

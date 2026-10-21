@@ -14,13 +14,13 @@ export default {
     template: `
         <p>Shows registered services, their modules and contracts, resource metadata, and load status.</p>
         <x-listview view="details">
-            <x-datafield slot="column" style="width:12em" type="search" x-model="state.id" placeholder="Service" ></x-datafield>
-            <x-datafield slot="column" style="width:12em" type="search" x-model="state.moduleId" placeholder="Module"></x-datafield>
-            <x-datafield slot="column" style="width:12em" type="search" x-model="state.contractId" placeholder="Contract"></x-datafield>
-            <x-datafield slot="column" style="width:auto" type="search" x-model="state.description" placeholder="Description"></x-datafield>
-            <div slot="column" style="width:4em; text-align:right">Size</div>
-            <div slot="column" style="width:4em; text-align:right">Time</div>
-            <div slot="column" style="width:5em;">Status</div>
+            <x-datafield slot="column" style="width:10em" type="search" x-model="state.id" placeholder="Service" ></x-datafield>
+            <x-datafield slot="column" style="width:10em" type="search" x-model="state.moduleId" placeholder="Module"></x-datafield>
+            <x-datafield slot="column" style="width:10em" type="search" x-model="state.contractId" placeholder="Contract"></x-datafield>
+            <x-datafield slot="column" type="search" x-model="state.description" placeholder="Description"></x-datafield>
+            <div slot="column" style="width:5em; text-align:right">Size</div>
+            <div slot="column" style="width:5em; text-align:right">Time</div>
+            <div slot="column" style="width:5em; text-align:right">Status</div>
             <x-listview-item x-for="item in state.items" x-attr:href="item.url" x-attr:label="item.serviceId" x-attr:icon="item.icon" target="_blank">
                 <div>{{ item.moduleId }}</div>
                 <div>
@@ -30,9 +30,9 @@ export default {
                     <span x-if="!item.contractUrl">{{ item.contractId }}</span>
                 </div>
                 <x-truncate x-attr:text="item.description"></x-truncate>
-                <x-file-size x-prop:value="item.size" style="text-align:right"></x-file-size>
+                <x-file-size style="text-align:right" x-prop:value="item.size" ></x-file-size>
                 <div style="text-align:right"><x-time-ms x-prop:value="item.time"></x-time-ms></div>
-                <div>{{ item.status }}</div>
+                <div style="text-align:right">{{ item.status }}</div>
             </x-listview-item>
         </x-listview> 
     `,    

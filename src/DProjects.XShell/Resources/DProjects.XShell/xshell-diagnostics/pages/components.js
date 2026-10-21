@@ -14,22 +14,12 @@ export default {
     template: `
         <p>Shows discovered components, their owning modules, load status, size, and load time.</p>
         <x-listview view="details">
-            <x-datafield type="search" x-model="state.id" placeholder="Component" slot="column" style="width:12em"></x-datafield>
-            <div slot="column" style="width:12em">
-                <x-datafield type="search" x-model="state.moduleId" placeholder="Module"></x-datafield>
-            </div>
-            <div slot="column">
-                <x-datafield type="search" x-model="state.description" placeholder="Description"></x-datafield>
-            </div>
-            <div slot="column" style="width:4em; text-align:right">
-                Size
-            </div>
-            <div slot="column" style="width:4em; text-align:right">
-                Time
-            </div>
-            <div slot="column" style="width:4em;">
-                Status
-            </div>
+            <x-datafield slot="column" style="width:12em" type="search" x-model="state.id" placeholder="Component" ></x-datafield>
+            <x-datafield slot="column" style="width:12em" type="search" x-model="state.moduleId" placeholder="Module"></x-datafield>
+            <x-datafield slot="column"                    type="search" x-model="state.description" placeholder="Description"></x-datafield>
+            <div slot="column" style="width:5em; text-align:right">Size</div>
+            <div slot="column" style="width:5em; text-align:right">Time</div>
+            <div slot="column" style="width:5em; text-align:right">Status</div>
             <x-listview-item x-for="component in state.components"
                 x-attr:href="component.url" 
                 x-attr:label="component.id"
@@ -37,10 +27,10 @@ export default {
                 target="_blank"
             >
                 <div>{{ component.moduleId }}</div>
-                <div>{{ component.description }}</div>
-                <x-file-size x-prop:value="component.size" style="text-align:right"></x-file-size>
+                <x-truncate x-attr:text="component.description"></x-truncate>
+                <x-file-size style="text-align:right" x-prop:value="component.size"></x-file-size>
                 <div style="text-align:right"><x-time-ms x-prop:value="component.time"></x-time-ms></div>
-                <div>{{ component.status }}</div>
+                <div style="text-align:right">{{ component.status }}</div>
             </x-listview-item>
         </x-listview> 
     `,    

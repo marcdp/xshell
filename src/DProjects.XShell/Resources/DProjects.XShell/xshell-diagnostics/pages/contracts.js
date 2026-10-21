@@ -14,25 +14,13 @@ export default {
     template: `
         <p>Shows discovered contracts, their owning framework or module package, metadata, size, load time, and status.</p>
         <x-listview view="details">
-            <x-datafield type="search" x-model="state.id" placeholder="Contract" slot="column" style="width:12em"></x-datafield>
-            <div slot="column" style="width:12em">
-                <x-datafield type="search" x-model="state.label" placeholder="Label"></x-datafield>
-            </div>
-            <div slot="column">
-                <x-datafield type="search" x-model="state.description" placeholder="Description"></x-datafield>
-            </div>
-            <div slot="column" style="width:12em">
-                <x-datafield type="search" x-model="state.moduleId" placeholder="Module"></x-datafield>
-            </div>
-            <div slot="column" style="width:4em">
-                Size
-            </div>
-            <div slot="column" style="width:4em">
-                Time
-            </div>
-            <div slot="column" style="width:4em">
-                Status
-            </div>
+            <x-datafield slot="column" style="width:12em" type="search" x-model="state.id" placeholder="Contract" ></x-datafield>
+            <x-datafield slot="column" style="width:12em" type="search" x-model="state.label" placeholder="Label"></x-datafield>
+            <x-datafield slot="column" type="search" x-model="state.description" placeholder="Description"></x-datafield>
+            <x-datafield slot="column" style="width:12em" type="search" x-model="state.moduleId" placeholder="Module"></x-datafield>
+            <div slot="column" style="width:5em; text-align:right">Size</div>
+            <div slot="column" style="width:5em; text-align:right">Time</div>
+            <div slot="column" style="width:5em; text-align:right">Status</div>
             <x-listview-item x-for="contractItem in state.contractItems"
                 x-attr:href="contractItem.url" 
                 x-attr:label="contractItem.id"
@@ -40,11 +28,11 @@ export default {
                 target="_blank"
             >
                 <div>{{ contractItem.label }}</div>
-                <div>{{ contractItem.description }}</div>
+                <x-truncate x-attr:text="contractItem.description"></x-truncate>
                 <div>{{ contractItem.moduleId }}</div>
                 <x-file-size x-prop:value="contractItem.size" style="text-align:right"></x-file-size>
-                <x-time-ms x-prop:value="contractItem.time"></x-time-ms>
-                <div>{{ contractItem.status }}</div>
+                <x-time-ms x-prop:value="contractItem.time" style="text-align:right"></x-time-ms>
+                <div style="text-align:right">{{ contractItem.status }}</div>
             </x-listview-item>
         </x-listview> 
     `,    
