@@ -118,10 +118,10 @@ test("x-datafield declares itemDefault as a state-backed property binding", () =
     });
 });
 
-test("x-datafield declares default as a state-backed property-only binding", () => {
+test("x-datafield declares default as a state-backed attribute binding", () => {
     assert.deepEqual(contract.properties.default, {
         type: "any",
-        attribute: false,
+        attribute: true,
         state: true,
         description: "Value used to initialize the field when value is undefined."
     });
@@ -165,7 +165,7 @@ test("x-datafield deeply clones object and array defaults", async () => {
     assert.notEqual(arrayField.state.value[0], arrayDefault[0]);
 });
 
-test("x-datafield applies a property-bound default at mount without emitting change", async () => {
+test("x-datafield applies an attribute-bound default at mount without emitting change events", async () => {
     const field = createLifecycleController();
     await field.controller.load();
     field.state.default = { enabled: true };
@@ -174,7 +174,8 @@ test("x-datafield applies a property-bound default at mount without emitting cha
     await field.controller.mount({});
 
     assert.deepEqual(field.state.value, { enabled: true });
-    assert.deepEqual(field.dispatched, []);
+    assert.equal(field.dispatched.filter(event => event.type === "change").length, 0);
+    assert.equal(field.dispatched.filter(event => event.type === "datafield:change").length, 0);
 });
 
 test("x-datafield does not reapply default after initialization", async () => {
