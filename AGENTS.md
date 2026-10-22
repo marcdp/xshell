@@ -98,7 +98,6 @@ src/DProjects.XShell/
     ├── codemirror/                 # CodeMirror resources
     ├── x/                          # Core UI module
     ├── x-demo/                     # Demo/sample module
-    ├── x-schema/                   # Schema module
     ├── xshell-diagnostics/         # Diagnostics module
     ├── xshell-docs/                # Canonical documentation
     └── xshell/                     # Browser runtime

@@ -4,7 +4,6 @@ Extensions add optional capabilities on top of XShell. They are not required by 
 
 ## Extensions
 
-- [X-Schema](x-schema/) — A declarative, data-aware UI format for rendering and editing structured object values.
 - [X Templates](x-templates/) — An optional declarative rendering extension that integrates with XShell Components.
 
 ## Related documentation
