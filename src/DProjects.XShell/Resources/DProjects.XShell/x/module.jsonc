@@ -74,7 +74,7 @@
         "services": {
             "theme": {
                 "contract": "theme",
-                "implementation": "/services/theme.js"
+                "implementation": "/services/theme-default.js"
             },
             "toast": {
                 "contract": "toast",

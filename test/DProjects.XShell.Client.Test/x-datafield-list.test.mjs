@@ -29,6 +29,72 @@ function createListController({ value = [], itemDefault = null } = {}) {
     };
 }
 
+function createLifecycleController({ value, defaultValue } = {}) {
+    const listeners = new Map();
+    const dispatched = [];
+    const target = {
+        value,
+        default: defaultValue,
+        type: "",
+        domainNormalized: [],
+        langs: [],
+        langIndex: 0,
+        multiple: false,
+        validated: false,
+        errors: [],
+        autofocus: false
+    };
+    const state = new Proxy(target, {
+        get(object, property) {
+            if (property === "addEventListener") {
+                return (event, listener) => {
+                    const handlers = listeners.get(event) ?? [];
+                    handlers.push(listener);
+                    listeners.set(event, handlers);
+                };
+            }
+            return object[property];
+        },
+        set(object, property, newValue) {
+            const oldValue = object[property];
+            object[property] = newValue;
+            if (!Object.is(oldValue, newValue)) {
+                for (const listener of listeners.get(`change:${String(property)}`) ?? []) {
+                    listener({ prop: property, oldValue, newValue });
+                }
+            }
+            return true;
+        }
+    });
+    const host = {
+        isConnected: false,
+        firstElementChild: null,
+        dispatchEvent(event) { dispatched.push(event); },
+        shadowRoot: { querySelector() { return null; } }
+    };
+    const events = {
+        on(element, eventNames, listener) {
+            for (const eventName of eventNames) element.addEventListener(eventName, listener);
+        }
+    };
+    const controller = datafieldDefinition.controller({
+        state,
+        events,
+        host,
+        timer: { setTimeout() {} },
+        loader: { load() { throw new Error("Unexpected loader call"); } },
+        i18n: {
+            getLangLabel(lang) { return lang; },
+            formatText(text) { return text; },
+            getMainLangs() { return []; }
+        },
+        temp: { getAbsoluteUrl(value) { return value; } },
+        dialog: {}
+    });
+
+    return { controller, dispatched, host, state };
+}
+
 function listEvent(items, index, detail = {}) {
     const children = items.map(() => ({}));
     const target = children[index];
@@ -50,6 +116,79 @@ test("x-datafield declares itemDefault as a state-backed property binding", () =
         state: true,
         description: "Default value used to initialize newly added list items."
     });
+});
+
+test("x-datafield declares default as a state-backed property-only binding", () => {
+    assert.deepEqual(contract.properties.default, {
+        type: "any",
+        attribute: false,
+        state: true,
+        description: "Value used to initialize the field when value is undefined."
+    });
+    assert.equal(contract.properties.value.default, undefined);
+});
+
+test("x-datafield default initializes only an undefined value", async () => {
+    for (const explicitValue of [null, false, 0, "", [], {}]) {
+        const field = createLifecycleController({ value: explicitValue, defaultValue: "fallback" });
+
+        await field.controller.load();
+
+        assert.equal(field.state.value, explicitValue);
+    }
+
+    const field = createLifecycleController({ value: undefined, defaultValue: "fallback" });
+    await field.controller.load();
+    assert.equal(field.state.value, "fallback");
+});
+
+test("x-datafield deeply clones object and array defaults", async () => {
+    const objectDefault = { nested: { values: [1, 2] } };
+    const objectField = createLifecycleController({ defaultValue: objectDefault });
+    const secondObjectField = createLifecycleController({ defaultValue: objectDefault });
+    await objectField.controller.load();
+    await secondObjectField.controller.load();
+
+    assert.deepEqual(objectField.state.value, objectDefault);
+    assert.notEqual(objectField.state.value, objectDefault);
+    assert.notEqual(objectField.state.value, secondObjectField.state.value);
+    assert.notEqual(objectField.state.value.nested, objectDefault.nested);
+    assert.notEqual(objectField.state.value.nested, secondObjectField.state.value.nested);
+    assert.notEqual(objectField.state.value.nested.values, objectDefault.nested.values);
+
+    const arrayDefault = [{ enabled: true }];
+    const arrayField = createLifecycleController({ defaultValue: arrayDefault });
+    await arrayField.controller.load();
+
+    assert.deepEqual(arrayField.state.value, arrayDefault);
+    assert.notEqual(arrayField.state.value, arrayDefault);
+    assert.notEqual(arrayField.state.value[0], arrayDefault[0]);
+});
+
+test("x-datafield applies a property-bound default at mount without emitting change", async () => {
+    const field = createLifecycleController();
+    await field.controller.load();
+    field.state.default = { enabled: true };
+    field.host.isConnected = true;
+
+    await field.controller.mount({});
+
+    assert.deepEqual(field.state.value, { enabled: true });
+    assert.deepEqual(field.dispatched, []);
+});
+
+test("x-datafield does not reapply default after initialization", async () => {
+    const field = createLifecycleController({ defaultValue: "initial" });
+    await field.controller.load();
+    field.host.isConnected = true;
+    await field.controller.mount({});
+
+    field.state.value = "changed";
+    field.state.value = undefined;
+
+    assert.equal(field.state.value, undefined);
+    assert.equal(field.dispatched.length, 4);
+    assert.deepEqual(field.dispatched.map(event => event.type), ["change", "datafield:change", "change", "datafield:change"]);
 });
 
 test("x-datafield list Add appends an empty object when itemDefault is omitted", async () => {

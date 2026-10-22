@@ -5,7 +5,8 @@ const getFreeId = function() {return "id" + freeId++;};
 const urlPattern = /^(https?:\/\/)?(www\.)?([a-zA-Z0-9-]+)\.([a-zA-Z]{2,})(\/[a-zA-Z0-9#-]+\/?)*$/;
 const emailPattern = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
 const telPattern = /^(\+?\d{1,3}[-.\s]?)?(\(?\d{3}\)?[-.\s]?)?\d{3}[-.\s]?\d{4,7}$/;
-const cloneListItemDefault = function(value) {
+const cloneDefaultValue = function(value) {
+    if (value === null || typeof value !== "object") return value;
     try {
         return structuredClone(value);
     } catch (error) {
@@ -63,7 +64,7 @@ export const contract = {
         autofocus:      {type:"boolean", default:false, attribute:true, state:true, description:""},
         autocomplete:   {type:"any", default:null, attribute:true, state:true, description:""},
         domain:         {type:"any", default:null, attribute:true, state:true, description:""},
-        value:          {type:"any", default:null, attribute:true, state:true, description:""},
+        value:          {type:"any", attribute:true, state:true, description:""},
         accept:         {type:"any", default:null, attribute:true, state:true, description:""},
         lang:           {type:"any", default:null, attribute:true, state:true, description:""},
         spellcheck:     {type:"string", default:"true", attribute:true, state:true, description:""},
@@ -72,6 +73,7 @@ export const contract = {
         errors:         {type:"array", default:[], attribute:true, state:true, description:""},
         validated:      {type:"boolean", default:false, attribute:true, state:true, description:""},
         add:            {type:"boolean", default:false, attribute:true, state:true, description:""},
+        default:        {type:"any", attribute:false, state:true, description:"Value used to initialize the field when value is undefined."},
         itemDefault:    {type:"any", default:null, attribute:false, state:true, description:"Default value used to initialize newly added list items."},
         template:       {type:"string", default:"", attribute:true, state:true, description:"XTemplate used when type is 'x-template'."}
     },
@@ -553,6 +555,26 @@ export default {
         inputId: null
     },
     controller({ state, events, timer, loader, i18n, host, temp, dialog }) {
+        let defaultInitialized = false;
+        let applyingDefault = false;
+        const initializeDefault = (finalize = false) => {
+            if (defaultInitialized) return;
+            if (state.value !== undefined) {
+                defaultInitialized = true;
+                return;
+            }
+            if (state.default === undefined) {
+                if (finalize) defaultInitialized = true;
+                return;
+            }
+            defaultInitialized = true;
+            applyingDefault = true;
+            try {
+                state.value = cloneDefaultValue(state.default);
+            } finally {
+                applyingDefault = false;
+            }
+        };
         const updateTemplateState = () => {
             const value = state.value || "";
             const languages = state.langs || [];
@@ -587,7 +609,8 @@ export default {
         return {
             async load() {
                 // load
-                state.inputId = getFreeId();                
+                state.inputId = getFreeId();
+                initializeDefault();
                 events.on(state, ["change:domain", "change:type", "change:required", "change:min", "change:max", "change:minlength", "change:maxlength", "change:pattern", "change:value", "change:langs", "change:langIndex", "change:multiple"], (event) => {
                     let prop = event.prop;
                     let newValue = event.newValue;
@@ -629,7 +652,9 @@ export default {
 
                     } else if (prop == "value") {
                         //value changed
-                        if (host.isConnected) {
+                        if (applyingDefault) {
+                            state.validated = false;
+                        } else if (host.isConnected) {
                             this.validate();
                             if (oldValue != newValue) {
                                 host.dispatchEvent(new CustomEvent("change", {detail: {oldValue, newValue}, bubbles: true, composed: false}));
@@ -646,6 +671,7 @@ export default {
 
             async mount(args) {
                 // mount
+                initializeDefault(true);
                 if (state.autofocus) {
                     timer.setTimeout(25, () => {
                         let element = host.shadowRoot.querySelector(".input");
@@ -770,7 +796,7 @@ export default {
 
             async listAdd(args) {
                 // listAdd
-                const item = cloneListItemDefault(state.itemDefault ?? {});
+                const item = cloneDefaultValue(state.itemDefault ?? {});
                 state.value = [...(state.value ?? []), item];
             },
 
