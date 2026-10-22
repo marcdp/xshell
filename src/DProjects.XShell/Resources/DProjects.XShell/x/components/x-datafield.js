@@ -210,7 +210,7 @@ export default {
 
         :host .richtext {padding:0;}
 
-        :host .template {padding:0; border:none;}
+        :host .template {padding:0; border:none; background:none;}
 
         :host .search {position:relative}
         :host .search x-icon {position:absolute; left:.5em; top:.35em; color:var(--x-datafield-color-placeholder); }
@@ -946,10 +946,16 @@ export default {
                     } else if (state.value && state.maxlength && state.value.length > state.maxlength) {
                         result.push({type:"error", label: host.label, message:"Too many items"});
                     }
-                } else if (state.type.endsWith("x-template")) {
+                } else if (state.type == "x-template") {
                     const template = host.shadowRoot.querySelector("x-template");
                     if (template) {
-                        result.push(...template.validate(false));
+                        const errors = template.validate(detail);
+                        if (detail && host.label) {
+                            for (const error of errors) {
+                                error.path = [host.label, error.path].filter(Boolean).join(" / ");
+                            }
+                        }
+                        result.push(...errors);
                     }
                 }
                 //path
@@ -965,7 +971,7 @@ export default {
                     }
                     path = path.reverse().join(" / ");
                     for(let error of result) {
-                        error.path = path;
+                        error.path = [path, error.path].filter(Boolean).join(" / ");
                     }
                 }
                 // set errors and validated state

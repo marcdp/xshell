@@ -167,7 +167,7 @@ export default {
 
         <x-divider></x-divider>
 
-        <h2>Form with template commands</h2>
+        <h2>Form with XTemplate field</h2>
 
         <x-form>
             <x-datafields columns="2">

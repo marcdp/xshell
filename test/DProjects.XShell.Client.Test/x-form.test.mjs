@@ -118,3 +118,35 @@ test("x-datafield required validation remains field-specific", () => {
     assert.deepEqual(controller.validate(), [{ type: "error", label: "Name", message: "Required" }]);
     assert.equal(state.validated, true);
 });
+
+test("x-datafield x-template validation preserves and prefixes nested paths", () => {
+    const nestedError = { type: "error", label: "City", path: "Address", message: "Required" };
+    const template = validator([nestedError]);
+    const form = { localName: "x-form", parentNode: null };
+    const section = { localName: "x-datafields", label: "Profile", parentNode: form };
+    const host = {
+        label: "Customer",
+        parentNode: section,
+        shadowRoot: { querySelector: selector => selector === "x-template" ? template : null }
+    };
+    const state = { type: "x-template", value: {}, errors: [], validated: false };
+    const controller = datafieldDefinition.controller({ state, host });
+
+    assert.deepEqual(controller.validate(true), [{
+        type: "error", label: "City", path: "Profile / Customer / Address", message: "Required"
+    }]);
+    assert.equal(template.calls, 1);
+});
+
+test("x-datafield delegates only the exact x-template type", () => {
+    const template = validator([{ type: "error", label: "Nested", message: "Failed" }]);
+    const host = {
+        label: "Other",
+        shadowRoot: { querySelector: selector => selector === "x-template" ? template : null }
+    };
+    const state = { type: "custom-x-template", value: {}, errors: [], validated: false };
+    const controller = datafieldDefinition.controller({ state, host });
+
+    assert.deepEqual(controller.validate(true), []);
+    assert.equal(template.calls, 0);
+});

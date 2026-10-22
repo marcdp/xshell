@@ -258,6 +258,10 @@ export default {
                 }
             },
             validate(detail = false) {
+                if (state.renderingError) {
+                    return [{type: "error", label: "", message: state.renderingError}];
+                }
+
                 const editor = getEditor();
                 if (!editor) return [];
 
