@@ -70,6 +70,7 @@ and may contain `description` and `schema`. Example names start with a letter an
 | `default` | Canonical public-property default. State-backed defaults enter the state skeleton. |
 | `state` | `true` connects a Component accessor to state and includes the property in Page state. |
 | `attribute` | Boolean only; `true` observes the derived kebab-case HTML attribute for incoming changes. |
+| `attributeParser` | Optional `"json"` parser for an observed attribute; invalid JSON remains the original string. |
 | `reflect` | Components reflect to kebab-case attributes; Pages reflect query-enabled state properties to the Page query. |
 | `query` | Page-only input binding; requires `state: true` and string/number/integer/boolean type. |
 | `context` | Page-only initialization from creation context, applied after query initialization. |

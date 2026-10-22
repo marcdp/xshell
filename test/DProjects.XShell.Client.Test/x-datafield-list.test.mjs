@@ -108,20 +108,23 @@ function listEvent(items, index, detail = {}) {
     };
 }
 
-test("x-datafield declares itemDefault as a state-backed property binding", () => {
+test("x-datafield declares itemDefault as a JSON-parsed state-backed attribute binding", () => {
     assert.deepEqual(contract.properties.itemDefault, {
         type: "any",
         default: null,
-        attribute: false,
+        attribute: true,
+        attributeParser: "json",
         state: true,
         description: "Default value used to initialize newly added list items."
     });
 });
 
-test("x-datafield declares default as a state-backed attribute binding", () => {
+test("x-datafield declares default as a JSON-parsed state-backed attribute binding", () => {
     assert.deepEqual(contract.properties.default, {
         type: "any",
+        default: null,
         attribute: true,
+        attributeParser: "json",
         state: true,
         description: "Value used to initialize the field when value is undefined."
     });

@@ -73,8 +73,8 @@ export const contract = {
         errors:         {type:"array", default:[], attribute:true, state:true, description:""},
         validated:      {type:"boolean", default:false, attribute:true, state:true, description:""},
         add:            {type:"boolean", default:false, attribute:true, state:true, description:""},
-        default:        {type:"any", attribute:true, state:true, description:"Value used to initialize the field when value is undefined."},
-        itemDefault:    {type:"any", default:null, attribute:false, state:true, description:"Default value used to initialize newly added list items."},
+        default:        {type:"any", default:null, attribute:true, attributeParser:"json", state:true, description:"Value used to initialize the field when value is undefined."},
+        itemDefault:    {type:"any", default:null, attribute:true, attributeParser:"json", state:true, description:"Default value used to initialize newly added list items."},
         template:       {type:"string", default:"", attribute:true, state:true, description:"XTemplate used when type is 'x-template'."}
     },
     methods: {

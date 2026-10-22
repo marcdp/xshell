@@ -173,3 +173,55 @@ test("non-state-backed structured property defaults are instance-owned", async (
     assert.equal(Component.contract.properties.settings.default.nested.count, 1);
     assert.equal(Component.contract.properties.items.default[0].id, 1);
 });
+
+test("property-specific JSON attribute parsing leaves ordinary any attributes and property assignments unchanged", async () => {
+    const Component = await createComponentClassFromJsDefinition("json-attributes.js", context, definition("x-json-attributes-test"), {
+        description: "JSON attribute parsing test.",
+        properties: {
+            default: { type: "any", default: null, state: true, attribute: true, attributeParser: "json" },
+            itemDefault: { type: "any", default: null, state: true, attribute: true, attributeParser: "json" },
+            ordinary: { type: "any", default: null, state: true, attribute: true }
+        },
+        events: {},
+        slots: {},
+        methods: {}
+    });
+
+    const values = [
+        ["Spain", "Spain"],
+        ["10", 10],
+        ["false", false],
+        ["null", null],
+        ['["a","b"]', ["a", "b"]],
+        ['{"active":true}', { active: true }],
+        ['"10"', "10"],
+        ["plain text", "plain text"]
+    ];
+    assert.deepEqual(Component.observedAttributes, ["default", "item-default", "ordinary"]);
+    for (const [attributeValue, expected] of values) {
+        const element = new Component();
+        element.attributeChangedCallback("default", null, attributeValue);
+        assert.deepEqual(element.default, expected, attributeValue);
+    }
+
+    const objectItem = new Component();
+    objectItem.attributeChangedCallback("item-default", null, '{"name":"","active":true}');
+    assert.deepEqual(objectItem.itemDefault, { name: "", active: true });
+
+    const arrayItem = new Component();
+    arrayItem.attributeChangedCallback("item-default", null, "[]");
+    assert.deepEqual(arrayItem.itemDefault, []);
+
+    const assigned = { active: true };
+    const propertyItem = new Component();
+    propertyItem.default = assigned;
+    propertyItem.itemDefault = assigned;
+    assert.equal(propertyItem.default, assigned);
+    assert.equal(propertyItem.itemDefault, assigned);
+
+    const ordinary = new Component();
+    ordinary.attributeChangedCallback("ordinary", null, '{"active":true}');
+    assert.equal(ordinary.ordinary, '{"active":true}');
+    ordinary.attributeChangedCallback("ordinary", null, "10");
+    assert.equal(ordinary.ordinary, "10");
+});

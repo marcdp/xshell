@@ -1008,6 +1008,12 @@ test("Component contract accepts boolean attribute observation and rejects strin
     assert.equal(validator.validate({ properties: { item: { type: "string", attribute: "item-name" } } }).valid, false);
 });
 
+test("Component contract accepts the JSON attribute parser and rejects unknown parsers", () => {
+    const validator = new Validator(ComponentContractSchema, "2020-12");
+    assert.equal(validator.validate({ properties: { item: { type: "any", attribute: true, attributeParser: "json" } } }).valid, true);
+    assert.equal(validator.validate({ properties: { item: { type: "any", attribute: true, attributeParser: "custom" } } }).valid, false);
+});
+
 test("Component value descriptors keep type required and accept optional JSON Schema", () => {
     const validator = new Validator(ComponentContractSchema, "2020-12");
     const contracts = {

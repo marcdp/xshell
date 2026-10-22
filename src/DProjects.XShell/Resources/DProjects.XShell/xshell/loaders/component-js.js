@@ -76,6 +76,14 @@ function isPlainObject(value) {
 }
 function convertAttributeValue(property, value) {
     // convert attribute value based on property type
+    if (property.attributeParser === "json") {
+        if (value === null) return null;
+        try {
+            return JSON.parse(value);
+        } catch {
+            return value;
+        }
+    }
     switch (property.type) {
         case "boolean":
             if (value == "false") return false;

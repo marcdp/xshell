@@ -19,13 +19,17 @@ Attribute conversion handles strings directly, numbers with `Number`, booleans a
 and object/array text with `JSON.parse` (falling back to raw text on failure). Integer/date/function/any labels have no special conversion.
 These conversions do not enforce all contract types on programmatic assignment.
 
+An observed property may opt into `attributeParser: "json"`. That parser applies `JSON.parse` to valid incoming attribute text and falls back to
+the original string when parsing fails. It is property-specific and does not change the default conversion of other `type: "any"` attributes.
+Property assignment, including XTemplate `x-prop` binding, bypasses attribute parsing and preserves the supplied JavaScript value.
+
 Empty-object state entries also enable prefixed attribute maps: for example `settings-color="red"` fills `state.settings.color`.
 For public entries this needs `state: true`, `attribute: true`, and an empty-object default.
 Private empty-object state gets this behavior without descriptor flags. Present map attribute values are strings; removal writes null.
 
-Contract property metadata includes `type`, `default`, `state`, `attribute`, `reflect`, `query`, `context`, `required`, `readonly`, `enum`, and
-`description` where applicable. The shared contract schema validates the metadata shape; Page-specific rules for `query` are enforced by the Page
-loader.
+Contract property metadata includes `type`, `default`, `state`, `attribute`, `attributeParser`, `reflect`, `query`, `context`, `required`,
+`readonly`, `enum`, and `description` where applicable. The shared contract schema validates the metadata shape; Page-specific rules for `query`
+are enforced by the Page loader.
 
 For Components, `reflect: true` writes the derived kebab-case attribute even when incoming observation was not enabled.
 False/null/undefined remove it, true writes an empty attribute, and other values use `setAttribute` coercion, not JSON serialization.
