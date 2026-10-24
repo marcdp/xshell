@@ -21,7 +21,7 @@ export default {
         </p>
 
         <h3>Explorer</h3>
-        <x-filesystem></x-filesystem>
+        <x-filesystem src="mem:"></x-filesystem>
 
         <h3>Components</h3>
         <ul>

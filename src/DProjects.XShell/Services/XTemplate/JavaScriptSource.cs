@@ -397,8 +397,9 @@ namespace DProjects.XShell.Services.XTemplate {
             private static bool CanStartRegex(IReadOnlyList<Token> tokens) {
                 if (tokens.Count == 0) return true;
                 var previous = tokens[^1].Text;
-                if (previous == ">" && tokens.Count > 1 && tokens[^2].Text == "=") return true;
-                return previous is "(" or "[" or "{" or "," or ":" or ";" or "=" or "!" or "?" ||
+                if (previous is "+" or "-" && tokens.Count > 1 && tokens[^2].Text == previous && tokens[^2].End == tokens[^1].Start) return false;
+                return previous is "(" or "[" or "{" or "," or ":" or ";" or "=" or "!" or "?" or
+                    "+" or "-" or "*" or "%" or "&" or "|" or "^" or "~" or "<" or ">" ||
                     previous is "return" or "case" or "throw" or "typeof" or "void" or "delete" or "new" or "in" or "of";
             }
             private static bool IsIdentifierStart(char character) => char.IsLetter(character) || character is '_' or '$';

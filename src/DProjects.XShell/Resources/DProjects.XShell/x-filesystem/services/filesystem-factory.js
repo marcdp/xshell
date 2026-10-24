@@ -1,3 +1,5 @@
+import FilesystemMem from '../js/filesystem-mem.js'
+
 export default class {
 
     // ctor
@@ -6,8 +8,10 @@ export default class {
 
     // methods
     create(url) {
-        // todo ...
         // create a filesystem instance based on the provided URL
+        debugger;
+        if (url == "mem:") return new FilesystemMem();
+        throw new Error(`Unsupported filesystem URL: ${url}`)
     }
 
 }

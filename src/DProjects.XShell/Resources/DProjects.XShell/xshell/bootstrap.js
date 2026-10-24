@@ -528,6 +528,13 @@ function fillResolverRules(config) {
             moduleId,
             modulePath: moduleAssetsPath
         };        
+        resolver.component[`${moduleId}`] ??= {
+            src: `${moduleAssetsPath}/components/${moduleId}.js`,
+            loader: "component-js",
+            cache: true,
+            moduleId,
+            modulePath: moduleAssetsPath
+        };        
         resolver.component[`${moduleId}:${moduleId}-{name}`] ??= {
             src: `${moduleAssetsPath}/components/${moduleId}-{name}.js`,
             loader: "component-js",
