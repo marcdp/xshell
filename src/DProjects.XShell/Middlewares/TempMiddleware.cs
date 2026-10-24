@@ -4,7 +4,6 @@ using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.Net.Http.Headers;
 
 namespace DProjects.XShell.Middlewares {
-
     internal sealed class TempMiddleware : IDisposable {
 
         // vars

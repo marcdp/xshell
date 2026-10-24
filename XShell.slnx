@@ -1,6 +1,10 @@
 <Solution>
   <Folder Name="/libs/">
     <Project Path="../libs/src/DProjects.Commands/DProjects.Commands.csproj" />
+    <Project Path="../libs/src/DProjects.Factories/DProjects.Factories.csproj" />
+    <Project Path="../libs/src/DProjects.Fs.Abstractions/DProjects.Fs.Abstractions.csproj" />
+    <Project Path="../libs/src/DProjects.Fs.Http/DProjects.Fs.Http.csproj" />
+    <Project Path="../libs/src/DProjects.Fs/DProjects.Fs.csproj" />
   </Folder>
   <Folder Name="/src/">
     <Project Path="src/DProjects.XShell/DProjects.XShell.csproj" />

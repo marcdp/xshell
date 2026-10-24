@@ -25,6 +25,10 @@
 
     <ItemGroup>
       <ProjectReference Include="..\..\..\libs\src\DProjects.Commands\DProjects.Commands.csproj" />
+      <ProjectReference Include="..\..\..\libs\src\DProjects.Factories\DProjects.Factories.csproj" />
+      <ProjectReference Include="..\..\..\libs\src\DProjects.Fs.Abstractions\DProjects.Fs.Abstractions.csproj" />
+      <ProjectReference Include="..\..\..\libs\src\DProjects.Fs.Http\DProjects.Fs.Http.csproj" />
+      <ProjectReference Include="..\..\..\libs\src\DProjects.Fs\DProjects.Fs.csproj" />
     </ItemGroup>
 
 </Project>

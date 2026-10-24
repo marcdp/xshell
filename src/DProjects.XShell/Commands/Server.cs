@@ -1,16 +1,22 @@
 using System.Collections;
 using System.Collections.Specialized;
+using System.Reflection.Metadata.Ecma335;
 
 using DProjects.Commands;
 using DProjects.Commands.Attributes;
+using DProjects.Factories;
+using DProjects.Fs;
+using DProjects.Fs.Http;
 using DProjects.XShell.Services;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.DependencyInjection;
 
 
 namespace DProjects.XShell.Commands {
 
     [Description("Launch a web server")]
-    [Example("DProjects.XShell server --app-config-path /_resources/DProjects.XShell/x-demo/module.jsonc --param a=123 --param b=456", "")]
+    [Example("DProjects.XShell server --app-config-path /_resources/DProjects.XShell/x-demo/module.jsonc --param a=123 --param b=456 ", "")]
     public class Server() : ICommand {
 
 
@@ -25,6 +31,8 @@ namespace DProjects.XShell.Commands {
         public Dictionary<string, string> Param { get; init; } = new();
         [Flag('r', "Resources name", "DProjects.XShell")]
         public string ResourcesName { get; init; } = "DProjects.XShell";
+        [Flag('s', "Share connection string", "")]
+        public string[] Share { get; init; } = Array.Empty<string>();
 
 
         //methods
@@ -35,6 +43,10 @@ namespace DProjects.XShell.Commands {
 
             // builder
             var builder = WebApplication.CreateBuilder();
+            builder.Services.AddAuthorization();
+            builder.Services.AddFactoryByUrl<IFilesystem>(config => {
+                config.AddFactoriesFromAssembly<DProjects.Fs.Assembly>();
+            });
 
             // build app
             var app = builder.Build();
@@ -71,10 +83,15 @@ namespace DProjects.XShell.Commands {
                 },
                 Server = new Extensions.ServerConfig {
                     Environment = Environment
+                },
+                Shares = new Extensions.SharesConfig {
+                    BasePath = AppBasePath + "/shares",
+                    Shares = Share.Select((connectionString) =>  {
+                        var options = DProjects.Utils.StringUtils.DeserializeConnectionString<FilesystemHttpMiddleware.Options>(connectionString);
+                        return options;
+                    }).ToArray()
                 }
             };
         }
-
     }
-
 }

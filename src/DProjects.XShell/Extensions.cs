@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.AspNetCore.Http;
 using DProjects.Utils;
+using DProjects.Fs.Http;
 
 namespace DProjects.XShell {
 
@@ -17,7 +18,8 @@ namespace DProjects.XShell {
             public TempConfig Temp { get; init; } = new TempConfig();
             public XShellConfig XShell { get; init; } = new XShellConfig();
             public ResourcesConfig Resources { get; init; } = new ResourcesConfig();
-            public ServerConfig Server { get; init; } = new ServerConfig();            
+            public ServerConfig Server { get; init; } = new ServerConfig();
+            public SharesConfig Shares { get; init; } = new SharesConfig();
         }
         public class ResourcesConfig {
             public string BasePath { get; init; } = "";
@@ -35,7 +37,11 @@ namespace DProjects.XShell {
         public class ServerConfig {
             public string? Environment { get; init; } = null;
             public string ContentSecurityPolicy { get; init; } = "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; ";
-            public string[] UnhandledPrefixes { get; init; } = new string[] { "/_", "/api", "/temp" };
+            public string[] UnhandledPrefixes { get; init; } = new string[] { "/_", "/api", "/temp", "/shares" };
+        }
+        public class SharesConfig {
+            public string BasePath { get; init; } = "/shares";
+            public FilesystemHttpMiddleware.Options[] Shares { get; init; }  = Array.Empty<FilesystemHttpMiddleware.Options>();  
         }
         public class TempConfig {
             public string Path { get; init; } = "";
@@ -75,6 +81,11 @@ namespace DProjects.XShell {
 
             // /_temp
             app.UseMiddleware<Middlewares.TempMiddleware>(config.Temp);
+
+            // /_shares
+            foreach(var shareConfig in config.Shares.Shares) {
+                app.UseMiddleware<FilesystemHttpMiddleware>(shareConfig);
+            }
 
             // redirect canonical base URL
             app.Use(async (context, next) => {

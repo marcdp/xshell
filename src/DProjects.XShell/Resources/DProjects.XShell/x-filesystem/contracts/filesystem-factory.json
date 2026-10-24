@@ -1,0 +1,22 @@
+
+{
+  "label": "Filesystem Factory",
+  "description": "Creates filesystem instances from URLs.",
+  "methods": {
+    "create": {
+      "description": "Creates a filesystem instance based on the provided URL.",
+      "parameters": [
+        {
+          "name": "url",
+          "type": "string",
+          "required": true,
+          "description": "URL identifying the filesystem provider and its configuration."
+        }
+      ],
+      "returns": {
+        "type": "object",
+        "description": "The created filesystem instance."
+      }
+    }
+  }
+}
