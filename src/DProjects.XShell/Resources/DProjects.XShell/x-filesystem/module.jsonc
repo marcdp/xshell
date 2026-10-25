@@ -20,10 +20,11 @@
     },
 
     "xshell": {
-        "services": {
-            "filesystemFactory": {
-                "contract": "filesystem-factory",
-                "implementation": "/services/filesystem-factory.js"
+        "resolver": {
+            "filesystem": {
+                "mem": {"src": "/js/filesystem-mem.js", "loader": "instance-js"},
+                "http:{url}": {"src": "/js/filesystem-http.js", "loader": "instance-js"},
+                "https:{url}": {"src": "/js/filesystem-http.js", "loader": "instance-js"}
             }
         }
     }

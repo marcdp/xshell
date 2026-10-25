@@ -17,9 +17,12 @@ export default {
     style: `
         :host {
             display:flex; 
+            line-height: 2.2em;
+            padding-right: .1em;
+            box-sizing: border-box;
         }
         ::slotted(x-treeview-column[slot="column"]) {width:10em;}
-        ::slotted(x-treeview-column:nth-child(1)) {width:var(--x-treeview-column-width-1); }
+        ::slotted(x-treeview-column:nth-child(1)) {width:var(--x-treeview-column-width-1); padding-left:.5em;}
         ::slotted(x-treeview-column:nth-child(2)) {width:var(--x-treeview-column-width-2); }
         ::slotted(x-treeview-column:nth-child(3)) {width:var(--x-treeview-column-width-3); }
         ::slotted(x-treeview-column:nth-child(4)) {width:var(--x-treeview-column-width-4); }

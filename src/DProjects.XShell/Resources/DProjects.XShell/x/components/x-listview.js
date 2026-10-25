@@ -22,7 +22,7 @@ export const contract = {
 // implementation
 export default {
     style: `
-        :host {display:block; position:relative;}
+        :host {display:block; position:relative; width:100%;}
 
         /* x-dropdown */
         x-dropdown {position:absolute; right:0; z-index:2;}
@@ -42,23 +42,16 @@ export default {
         .icons > div .columns {display:none;}
 
         /* details */
-        /*
-        .details > div {display:table; table-layout:auto; width:100%; white-space:nowrap;}
-        .details > div ::slotted(*) {display:table-row;}
-        .details > div ::slotted(*:not([name]):nth-child(even)) {background:var(--x-color-background-alt);}
-        .details > div .columns {display:table-row; position:sticky; top:0; background:var(--x-color-background-page); z-index:1;}
-        .details > div .columns ::slotted(*) {display:table-cell; background:none!important; color:var(--x-color-gray); padding-right:.25em; }
-        .details > div .columns ::slotted(*:first-child) {padding-left:1.5em; border-box:border;}
-        .details > div .columns ::slotted(x-datafield:first-child) {padding-left:0;}
-        */
         .details > div { width:100%;}
         .details > div .columns {display:grid; grid-template-columns: var(--x-listview-grid-template-columns);}
-        .details > div .columns ::slotted(*) {display:block; padding-right:.1em; box-sizing:border-box;}
+        .details > div .columns ::slotted(*) {display:block; padding-right:.1em; box-sizing:border-box;}      
         .details > div .columns ::slotted(div) {line-height: 2.2em}
-        .details > div .columns ::slotted(x-button) {display:flex;}
+        .details > div .columns ::slotted(x-button) {display:flex;}        
         .details > div ::slotted(*) {display:grid; grid-template-columns: var(--x-listview-grid-template-columns);padding-right:.1em; }
-
-
+        .details > div ::slotted(*:nth-child(odd)) {background-color:var(--x-color-background-alt);}
+        .details > div div.columns ::slotted(*:nth-child(odd)) {background-color:unset;}
+        .details > div div.columns ::slotted(div:first-child) {padding-left:.5em}
+        
         /* tiles */
         .tiles > div .columns {display:none;}
         .tiles > div {display:flex; flex-wrap:wrap; container:items / inline-size;}

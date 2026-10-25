@@ -11,9 +11,10 @@ export const contract = {
         icon:        {type:"string", default:"x-file", attribute:true, state:true, description:""},
         label:       {type:"string", default:"", attribute:true, state:true, description:""},
         description: {type:"string", default:"", attribute:true, state:true, description:""},
-        href:        {type:"string", default:"", attribute:true, state:true, description:""},
-        target:      {type:"string", default:"", attribute:true, state:true, description:""},
+        path:        {type:"string", default:"", attribute:true, state:true, description:""},
+        
         hasChilds:   {type:"boolean", default:false, attribute:true, state:true, description:""},
+        hasChildsForced: {type:"boolean", default:false, attribute:true, state:true, description:""},
         expanded:    {type:"boolean", default:false, attribute:true, state:true, description:""},
         selected:    {type:"boolean", default:false, attribute:true, state:true, description:""},
         index:       {type:"number", default:0, attribute:true, state:true, description:""}
@@ -36,10 +37,9 @@ export default {
         :host {
             display:block;
         }
-
-        :host(.error) .row {color:var(--x-color-error);}
-        
-        .row {display:flex;}
+        .row {
+            display:flex;
+        }
         .row .cell {
             white-space: nowrap;
             box-sizing:border-box;
@@ -48,10 +48,12 @@ export default {
             min-width:var(--x-treeview-column-width-1); 
             display:flex;
             user-select: none;
+            line-height: 1.43em;
+            
         }
-        .row .cell > x-icon {cursor:pointer; display:inline-block; transform:translateY(-.1em); }
-        .row .cell x-anchor {flex:1; }
-        .row .cell x-anchor x-icon {cursor:pointer; display:inline-block; transform:translateY(-.1em);}
+        .row .cell > x-icon {cursor:pointer; display:inline-block; transform:translateY(-.1em);}
+        .row .cell label {flex:1; display:block; cursor:pointer;}
+        .row .cell label x-icon {cursor:pointer; display:inline-block; transform:translateY(-.1em);}
 
         .row.selected {outline: .1em solid var(--x-color-primary); border-radius:.25em;}
         .row.no-childs .cell > x-icon {visibility:hidden;}
@@ -69,14 +71,20 @@ export default {
         ::slotted(div[slot="column"]:nth-child(8)) {width:var(--x-treeview-column-width-9); min-width:var(--x-treeview-column-width-9); }
     `,
     template: `
-        <div class="row" x-class:selected="state.selected" x-class:expanded="state.expanded" x-class:childs="state.hasChilds" x-class:no-childs="!state.hasChilds" x-class:even="(state.index % 2 == 0)">
-            <div class="cell">
+        <div class="row" 
+            x-class:selected="state.selected" 
+            x-class:expanded="state.expanded" 
+            x-class:childs="state.hasChilds || state.hasChildsForced" 
+            x-class:no-childs="!state.hasChilds && !state.hasChildsForced" 
+            x-class:even="(state.index % 2 == 0)"
+        >
+            <div class="cell" x-on:dblclick="toggle">
                 <x-icon icon="x-keyboard-arrow-right" x-on:click="toggle"></x-icon>
-                <x-anchor x-attr:href="state.href ? state.href : false" x-attr:target="state.target" x-attr:title="state.description" x-on:dblclick="toggle">
+                <label x-attr:title="state.description" >
                     <x-icon x-attr:icon="state.icon"></x-icon>
                     <span class="label" x-text="state.label"></span>
                     <span class="description" x-text="state.description"></span>
-                </x-anchor>
+                </label>
             </div>
             <slot name="column"></slot>            
         </div>
@@ -109,9 +117,9 @@ export default {
 
             async expand() {
                 //expand
-                if (state.hasChilds) {
+                if (state.hasChilds || state.hasChildsForced) {
                     state.expanded = true;
-                    host.dispatchEvent(new CustomEvent("toggle", {bubbles: true}));
+                    host.dispatchEvent(new CustomEvent("toggle", {bubbles: true, detail: {path: state.path}}));
                 }
             },
 
@@ -119,7 +127,7 @@ export default {
                 //collapse
                 if (state.expanded) {
                     state.expanded = false;
-                    host.dispatchEvent(new CustomEvent("toggle", {bubbles: true}));
+                    host.dispatchEvent(new CustomEvent("toggle", {bubbles: true, detail: {path: state.path}}));
                 }
             },
 

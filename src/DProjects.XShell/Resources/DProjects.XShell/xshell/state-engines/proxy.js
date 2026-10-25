@@ -32,7 +32,16 @@ export default function createStateEngineFactoryProxy(stateSkeleton, context) {
 				set(target, prop, newValue) {
 					// set value and notify handler
 					const oldValue = target[prop];
-					const changed = !Object.is(oldValue, newValue)|| (newValue !== null && typeof newValue === "object");
+					//const changed = !Object.is(oldValue, newValue) || (newValue !== null && typeof newValue === "object");
+					
+					let changed = false;
+					if (Array.isArray(newValue)) { 
+						changed = true;
+					} else if (typeof(oldValue) === "object" && typeof(newValue) === "object") {
+						changed = !Object.is(oldValue, newValue);
+					} else {
+						changed = oldValue !== newValue;
+					}
 					/*
 					let changed = (oldValue != newValue);
 					if (!changed && oldValue && newValue) {

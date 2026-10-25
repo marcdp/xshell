@@ -4,7 +4,10 @@
 // contract
 export const contract = {
     description: "Provides keyboard navigation and selection for a tree of tree-view items.",
-    events: {},
+    events: {
+        toggle: {description: "Fired when a tree-view item is toggled."},
+        select: {description: "Fired when a tree-view item is selected."}
+    },
     properties: {
         multiple: {type:"boolean", default:false, attribute:true, state:true, description:""}
     },
@@ -99,6 +102,7 @@ export default {
                     if (selected) {
                         if (selected.expanded) {
                             selected.expanded = false;
+                            selected.dispatchEvent(new CustomEvent("toggle", {bubbles: true, detail: {path: selected.path}}));
                         } else if (selected.parentElement && selected.parentElement.localName == "x-treeview-item") {
                             newSelecteds = [selected.parentElement];
                             selected.expanded = false;
@@ -109,7 +113,7 @@ export default {
                     if (selected) {
                         if (!selected.expanded) {
                             selected.expanded = true;
-                            selected.dispatchEvent(new CustomEvent("toggle", {bubbles: true}));
+                            selected.dispatchEvent(new CustomEvent("toggle", {bubbles: true, detail: {path: selected.path}}));
                         } else {
                             let index = items.indexOf(selected);
                             if (index < items.length - 1) newSelecteds = [items[index+1]];
@@ -119,13 +123,14 @@ export default {
                 } else if (event.key == " ") {
                     if (selected) {
                         selected.expanded = !selected.expanded;
-                        selected.dispatchEvent(new CustomEvent("toggle", {bubbles: true}));
+                        selected.dispatchEvent(new CustomEvent("toggle", {bubbles: true, detail: {path: selected.path}}));
                     }
                     event.preventDefault();
                 } else if (event.key == "Enter") {
                     if (selected) {
                         selected.expanded = !selected.expanded;
-                        selected.dispatchEvent(new CustomEvent("toggle", {bubbles: true}));
+                        selected.dispatchEvent(new CustomEvent("toggle", {bubbles: true, detail: {path: selected.path}}));
+                        selected.dispatchEvent(new CustomEvent("select", {bubbles: true, detail: {path: selected.path}}));
                     }
                     event.preventDefault();
                 }
@@ -177,6 +182,7 @@ export default {
                         });
                         item.selected = true;
                     }
+                    item.dispatchEvent(new CustomEvent("select", {bubbles: true, detail: {path: item.path}}));
                 }
                 //focus if required
                 if (!document.activeElement || document.activeElement.localName == "body") {

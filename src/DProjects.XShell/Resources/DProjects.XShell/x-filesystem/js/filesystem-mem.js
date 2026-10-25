@@ -142,6 +142,13 @@ async function readBytes(input, signal) {
 // class
 export default class FilesystemMem extends Filesystem {
 
+
+    // static factory
+    static create(url) {
+        return new FilesystemMem();
+    }
+    
+
     // constructor
     constructor({ isReadonly = false } = {}) {
         super({

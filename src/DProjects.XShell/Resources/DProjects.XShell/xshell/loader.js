@@ -118,6 +118,7 @@ export default class Loader {
                     this._registry.push(registryItem);
                     this._bus.emit("xshell:loader:resource:fetch", {resource, url, path, moduleId: definition.moduleId});
                     const context = {
+                        resource: resource,
                         resourceName: name,
                         resourcePath: path,
                         resourceDefinition: definition,
