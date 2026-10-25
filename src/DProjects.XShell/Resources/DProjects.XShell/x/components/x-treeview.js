@@ -39,30 +39,30 @@ export default {
     controller({ state, events, host }) {
         return {
             async load(args) {
-                //load
+                // load
                 host.addEventListener("keydown", (event) => {this.keydown({event});});
                 host.addEventListener("toggle", (event) => {this.refresh({event});});
                 events.on(state, "change:items", "build-items");
-                //detect changes in light dom
+                // detect changes in light dom
                 this.mutationObserver = new MutationObserver(()=>{
                     this.refresh();
                 });
                 this.mutationObserver.observe(host, {
                     childList: true, // Observe additions/removals of child nodes
-                    attributes: true, // Observe attribute changes
-                    subtree: true // Observe changes in child nodes' children
+                    attributes: false, // Observe attribute changes
+                    subtree: false // Observe changes in child nodes' children
                 });
             },
 
             async unload(args) {
-                //unload
+                // unload
                 this.mutationObserver?.disconnect();
                 delete this.mutationObserver;
             },
 
             async keydown(args) {
                 let event = args.event;
-                //get visible items
+                // get visible items
                 let items = [];
                 let getRecursive = (element) => {
                     for (let child of element.children) {
@@ -74,7 +74,7 @@ export default {
                     }
                 };
                 getRecursive(host);
-                //get selected items
+                // get selected items
                 let selected = null;
                 let selecteds = [];
                 for(let target of items) {
@@ -83,7 +83,7 @@ export default {
                         selected = target;
                     }
                 }
-                //process key
+                // process key
                 let newSelecteds = null;
                 if (event.key == "ArrowUp") {
                     let index = items.indexOf(selected);
@@ -129,7 +129,7 @@ export default {
                     }
                     event.preventDefault();
                 }
-                //reselect
+                // reselect
                 if (newSelecteds) {
                     selecteds.forEach((item) => { item.selected = false; });
                     newSelecteds.forEach((item) => { item.selected = true; });
@@ -150,19 +150,22 @@ export default {
                 };
                 setIndexRecursive(host);
                 // grid-template-columns
-                const gridTemplateColumns = Array.from(host.querySelectorAll(":scope > x-treeview-head > x-treeview-column")).map(column => {
-                    let { width, maxWidth, flexGrow } = column.style;
-                    if (!width) width = column.getAttribute("width");
-                    if (flexGrow && flexGrow !== "0") return `minmax(0, ${flexGrow}fr)`;                    
-                    if (maxWidth) return `fit-content(${maxWidth})`;
-                    if (width && width !== "auto") return `${width}`;
-                    return "minmax(0, 1fr)";
-                }).join(" ");
-                host.style.setProperty("--x-treeview-grid-template-columns", gridTemplateColumns);
+                const columns = host.querySelectorAll(":scope > x-treeview-head > x-treeview-column");
+                const gridTemplateColumns = [...columns]
+                    .map(column =>
+                        column.getAttribute("width")?.trim() ||
+                        "minmax(0, 1fr)"
+                    )
+                    .join(" ");
+                if (gridTemplateColumns) {
+                    host.style.setProperty("--x-treeview-grid-template-columns",gridTemplateColumns);
+                } else {
+                    host.style.removeProperty("--x-treeview-grid-template-columns");
+                }
             },
 
             async click(args) {
-                //click
+                // click
                 let event = args.event;
                 let item = event.target.closest("x-treeview-item");
                 if (item) {
@@ -177,7 +180,7 @@ export default {
                     }
                     item.dispatchEvent(new CustomEvent("select", {bubbles: true, detail: {path: item.path}}));
                 }
-                //focus if required
+                // focus if required
                 if (!document.activeElement || document.activeElement.localName == "body") {
                     host.shadowRoot.querySelector('[ref="div"]').focus();
                 }

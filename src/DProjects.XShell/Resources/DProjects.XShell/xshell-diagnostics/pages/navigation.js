@@ -62,7 +62,7 @@ export default {
         <h2>Page hierarchy</h2>       
         <x-treeview>
             <x-treeview-head>
-                <x-treeview-column label="Page">Hello</x-treeview-column>
+                <x-treeview-column label="Page"></x-treeview-column>
                 <x-treeview-column label="Path"></x-treeview-column>
                 <x-treeview-column label="Layout" width="8%"></x-treeview-column>
                 <x-treeview-column label="Module" width="8%"></x-treeview-column>
