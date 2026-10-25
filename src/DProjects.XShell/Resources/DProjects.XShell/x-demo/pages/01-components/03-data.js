@@ -72,7 +72,7 @@ export default {
         <x-treeview>
 
             <x-treeview-head>
-                <x-treeview-column label="Name" width="16em"></x-treeview-column>
+                <x-treeview-column label="Name"></x-treeview-column>
                 <x-treeview-column label="Type" width="10em"></x-treeview-column>
                 <x-treeview-column label="Size" width="10em"></x-treeview-column>
             </x-treeview-head>

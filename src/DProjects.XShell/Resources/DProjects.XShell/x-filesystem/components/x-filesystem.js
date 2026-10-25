@@ -51,7 +51,7 @@ export default {
             async load(args) {
                 // load
                 events.on(state, "change:src", async (event)=>{
-                    state.filesystem = await loader.load(state.src);
+                    state.filesystem = await loader.load("filesystem:" + state.src);
                 })
             },
             treeSelect({event}) {

@@ -38,21 +38,20 @@ export default {
             display:block;
         }
         .row {
-            display:flex;
+            display:grid; 
+            grid-template-columns: var(--x-treeview-grid-template-columns);
         }
         .row .cell {
             white-space: nowrap;
             box-sizing:border-box;
             padding-left: calc(.5em + var(--x-treeview-indent) * 1.25em);
-            width:var(--x-treeview-column-width-1); 
-            min-width:var(--x-treeview-column-width-1); 
             display:flex;
             user-select: none;
             line-height: 1.43em;
             
         }
         .row .cell > x-icon {cursor:pointer; display:inline-block; transform:translateY(-.1em);}
-        .row .cell label {flex:1; display:block; cursor:pointer;}
+        .row .cell label {flex:1; display:block; cursor:pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
         .row .cell label x-icon {cursor:pointer; display:inline-block; transform:translateY(-.1em);}
 
         .row.selected {outline: .1em solid var(--x-color-primary); border-radius:.25em;}
@@ -60,15 +59,8 @@ export default {
         .row.expanded .cell > x-icon {transform:rotate(90deg);}
         .row.even {background-color:var(--x-color-background-alt);}
 
-        ::slotted(div[slot="column"]) {width:10em; white-space:nowrap; text-overflow:ellipsis; overflow:hidden; }
-        ::slotted(div[slot="column"]:nth-child(1)) {width:var(--x-treeview-column-width-2); min-width:var(--x-treeview-column-width-2); }
-        ::slotted(div[slot="column"]:nth-child(2)) {width:var(--x-treeview-column-width-3); min-width:var(--x-treeview-column-width-3); }
-        ::slotted(div[slot="column"]:nth-child(3)) {width:var(--x-treeview-column-width-4); min-width:var(--x-treeview-column-width-4); }
-        ::slotted(div[slot="column"]:nth-child(4)) {width:var(--x-treeview-column-width-5); min-width:var(--x-treeview-column-width-5); }
-        ::slotted(div[slot="column"]:nth-child(5)) {width:var(--x-treeview-column-width-6); min-width:var(--x-treeview-column-width-6); }
-        ::slotted(div[slot="column"]:nth-child(6)) {width:var(--x-treeview-column-width-7); min-width:var(--x-treeview-column-width-7); }
-        ::slotted(div[slot="column"]:nth-child(7)) {width:var(--x-treeview-column-width-8); min-width:var(--x-treeview-column-width-8); }
-        ::slotted(div[slot="column"]:nth-child(8)) {width:var(--x-treeview-column-width-9); min-width:var(--x-treeview-column-width-9); }
+        .row ::slotted(div) {white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
     `,
     template: `
         <div class="row" 

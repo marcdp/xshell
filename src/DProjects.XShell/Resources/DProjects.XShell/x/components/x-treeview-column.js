@@ -14,7 +14,6 @@ export default {
     style: `
         :host {
             display:block; 
-            width: var(--x-treeview-column-width);
             box-sizing:border-box;
         }
     `,

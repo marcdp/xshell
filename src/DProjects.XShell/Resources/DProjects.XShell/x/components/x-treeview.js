@@ -37,7 +37,6 @@ export default {
     state: {
     },
     controller({ state, events, host }) {
-        let styleSheet = new CSSStyleSheet();
         return {
             async load(args) {
                 //load
@@ -53,10 +52,6 @@ export default {
                     attributes: true, // Observe attribute changes
                     subtree: true // Observe changes in child nodes' children
                 });
-            },
-
-            mount() {
-                host.shadowRoot.adoptedStyleSheets = [...host.shadowRoot.adoptedStyleSheets, styleSheet];
             },
 
             async unload(args) {
@@ -142,9 +137,8 @@ export default {
             },
 
             async refresh(args) {
-                //refresh
+                // set index of items
                 let index = 0;
-                //set index of items
                 let setIndexRecursive = (element) => {
                     for (let child of element.children) {
                         if (child.localName == "x-treeview-item") {
@@ -155,17 +149,16 @@ export default {
                     }
                 };
                 setIndexRecursive(host);
-                //column widths
-                let widths = [];
-                host.querySelectorAll(":scope > x-treeview-head > x-treeview-column").forEach((column) => {
-                    widths.push(column.getAttribute("width"));
-                });
-                let columnStyles = ":host {\n";
-                for(let i = 0; i < widths.length; i++)   {
-                    columnStyles += `    --x-treeview-column-width-${i+1}: ${widths[i]};\n`;
-                }
-                columnStyles += "}\n";
-                styleSheet?.replaceSync(columnStyles);
+                // grid-template-columns
+                const gridTemplateColumns = Array.from(host.querySelectorAll(":scope > x-treeview-head > x-treeview-column")).map(column => {
+                    let { width, maxWidth, flexGrow } = column.style;
+                    if (!width) width = column.getAttribute("width");
+                    if (flexGrow && flexGrow !== "0") return `minmax(0, ${flexGrow}fr)`;                    
+                    if (maxWidth) return `fit-content(${maxWidth})`;
+                    if (width && width !== "auto") return `${width}`;
+                    return "minmax(0, 1fr)";
+                }).join(" ");
+                host.style.setProperty("--x-treeview-grid-template-columns", gridTemplateColumns);
             },
 
             async click(args) {

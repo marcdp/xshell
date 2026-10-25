@@ -62,21 +62,21 @@ export default {
         <h2>Page hierarchy</h2>       
         <x-treeview>
             <x-treeview-head>
-                <x-treeview-column label="Page" width="30%"></x-treeview-column>
+                <x-treeview-column label="Page">Hello</x-treeview-column>
+                <x-treeview-column label="Path"></x-treeview-column>
                 <x-treeview-column label="Layout" width="8%"></x-treeview-column>
                 <x-treeview-column label="Module" width="8%"></x-treeview-column>
                 <x-treeview-column label="Loading" width="8%"></x-treeview-column>
-                <x-treeview-column label="Path" width="20%"></x-treeview-column>
                 <x-treeview-column label="Time" width="5em"></x-treeview-column>
                 <x-treeview-column label="Size" width="5em"></x-treeview-column>
                 <x-treeview-column label="Status" width="5em"></x-treeview-column>
             </x-treeview-head>
             <x-treeview-body>
                 <x-treeview-item x-recursive="item in state.children" x-attr:label="item.label" expanded x-class:error="item.status=='error'">
+                    <div slot="column" x-attr:title="item.src">{{item.src}}</div>
                     <div slot="column">{{item.layout}}</div>
                     <div slot="column">{{item.module}}</div>
                     <div slot="column">{{item.loading}}</div>
-                    <div slot="column" x-attr:title="item.src">{{item.src}}</div>
                     <div slot="column"><x-time-ms x-prop:value="item.time"></x-time-ms></div>
                     <div slot="column"><x-file-size x-prop:value="item.size"></x-file-size></div>
                     <div slot="column">{{item.status}}</div>

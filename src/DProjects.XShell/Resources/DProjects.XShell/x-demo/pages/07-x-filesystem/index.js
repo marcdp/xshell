@@ -21,7 +21,7 @@ export default {
         </p>
 
         <h3>Explorer</h3>
-        <x-filesystem src="filesystem:http://localhost:5000/prefix/shares/marc"></x-filesystem>
+        <x-filesystem src="http://localhost:5000/prefix/shares/marc"></x-filesystem>
 
         <h3>Components</h3>
         <ul>

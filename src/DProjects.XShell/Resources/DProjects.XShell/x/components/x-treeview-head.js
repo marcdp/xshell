@@ -16,21 +16,12 @@ export const contract = {
 export default {
     style: `
         :host {
-            display:flex; 
+            display:grid; 
+            grid-template-columns: var(--x-treeview-grid-template-columns);
             line-height: 2.2em;
             padding-right: .1em;
             box-sizing: border-box;
         }
-        ::slotted(x-treeview-column[slot="column"]) {width:10em;}
-        ::slotted(x-treeview-column:nth-child(1)) {width:var(--x-treeview-column-width-1); padding-left:.5em;}
-        ::slotted(x-treeview-column:nth-child(2)) {width:var(--x-treeview-column-width-2); }
-        ::slotted(x-treeview-column:nth-child(3)) {width:var(--x-treeview-column-width-3); }
-        ::slotted(x-treeview-column:nth-child(4)) {width:var(--x-treeview-column-width-4); }
-        ::slotted(x-treeview-column:nth-child(5)) {width:var(--x-treeview-column-width-5); }
-        ::slotted(x-treeview-column:nth-child(6)) {width:var(--x-treeview-column-width-6); }
-        ::slotted(x-treeview-column:nth-child(7)) {width:var(--x-treeview-column-width-7); }
-        ::slotted(x-treeview-column:nth-child(8)) {width:var(--x-treeview-column-width-8); }
-        ::slotted(x-treeview-column:nth-child(9)) {width:var(--x-treeview-column-width-9); }
     `,
     template: `<slot></slot>`,    
 };
