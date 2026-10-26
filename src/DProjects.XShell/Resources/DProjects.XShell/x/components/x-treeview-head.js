@@ -18,10 +18,11 @@ export default {
         :host {
             display:grid; 
             grid-template-columns: var(--x-treeview-grid-template-columns);
-            line-height: 2.2em;
+            line-height: 1.8em;
             padding-right: .1em;
             box-sizing: border-box;
         }
+        
     `,
     template: `<slot></slot>`,    
 };

@@ -1,5 +1,3 @@
-//import xshell from "xshell";
-//await xshell.loader.load(["component:x-treeview-body", "component:x-treeview-item"]);
 
 // contract
 export const contract = {
@@ -84,6 +82,7 @@ export default {
                     }
                 }
                 // process key
+                let pageSize = 10;
                 let newSelecteds = null;
                 if (event.key == "ArrowUp") {
                     let index = items.indexOf(selected);
@@ -113,6 +112,22 @@ export default {
                             let index = items.indexOf(selected);
                             if (index < items.length - 1) newSelecteds = [items[index+1]];
                         }
+                    }
+                    event.preventDefault();
+                } else if (event.key == "PageUp") {
+                    let inc = pageSize;
+                    let index = items.indexOf(selected);
+                    if (index > 0) {
+                        newSelecteds = [items[Math.max(index-inc, 0)]];
+                        selected.dispatchEvent(new CustomEvent("select", {bubbles: true, detail: {path: items[Math.max(index-inc, 0)].path}}));
+                    }
+                    event.preventDefault();
+                } else if (event.key == "PageDown") {
+                    let inc = pageSize;
+                    let index = items.indexOf(selected);
+                    if (index < items.length - 1) {
+                        newSelecteds = [items[Math.min(index+inc, items.length-1)]];
+                        selected.dispatchEvent(new CustomEvent("select", {bubbles: true, detail: {path: items[Math.min(index+inc, items.length-1)].path}}));
                     }
                     event.preventDefault();
                 } else if (event.key == " ") {

@@ -30,6 +30,10 @@ export default {
             height: 100%;
         }
 
+        :host(:first-child) span {
+            padding-left:.25em;
+        }
+
         ::slotted(*) {
             min-width: 0;
         }

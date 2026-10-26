@@ -47,7 +47,7 @@ export default {
             padding-left: calc(.5em + var(--x-treeview-indent) * 1.25em);
             display:flex;
             user-select: none;
-            line-height: 1.43em;
+            line-height: 1.8em;
             
         }
         .row .cell > x-icon {cursor:pointer; display:inline-block; transform:translateY(-.1em);}

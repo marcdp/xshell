@@ -18,7 +18,7 @@ export default {
         :host {display:block;}
         .container {display:flex; width:100%;}
         .container x-filesystem-tree {flex-shrink: 0; padding:.2em;}
-        .container x-filesystem-list {flex:1; padding:.2em;}
+        .container x-filesystem-list {flex:1; padding:.2em; }
     `,
     template: `
         <x-datafield x-model="state.pathList" type="string" label="" placeholder="path" readonly></x-datafield>
@@ -69,13 +69,11 @@ export default {
                 // handle list select event
                 const path = event.detail.path;
                 console.log("List select:", path);
-                debugger;
             },
             listToggle({ event }) {
                 // handle list toggle event
                 const path = event.detail.path;
                 console.log("List toggle:", path);
-                debugger;
             }
         }
     }   

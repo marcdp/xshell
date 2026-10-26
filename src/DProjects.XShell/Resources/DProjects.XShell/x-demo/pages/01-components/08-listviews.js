@@ -1,7 +1,7 @@
 
 // contract
 export const contract = {
-    description: "Demonstrates the x-listview and x-listview-item components.",
+    description: "Demonstrates the x-listview and x-listview2 component families.",
     events: {},
     properties: {},
     methods: {}
@@ -196,7 +196,6 @@ export default {
             </x-listview-item>
 
             <x-listview-item
-                icon="x-table"
                 label="Data"
                 description="Data component examples"
                 href="03-data.js">
@@ -230,12 +229,125 @@ export default {
 
         </x-listview>
 
+        <x-divider></x-divider>
+
+        <h2>6. x-listview2 selectable views</h2>
+
+        <p>
+            <code>x-listview2</code> uses dedicated head, body, column, and item
+            components. This example switches dynamically between all four views;
+            the selected item remains selected when the presentation changes.
+        </p>
+
+        <x-listview2 view="details" views="list,details,icons,tiles">
+
+            <x-listview2-head>
+                <x-listview2-column label="Name" width="minmax(12em, 2fr)"></x-listview2-column>
+                <x-listview2-column label="Type" width="1fr"></x-listview2-column>
+                <x-listview2-column width="fit-content(15em)">
+                    <span>Size</span>
+                </x-listview2-column>
+            </x-listview2-head>
+
+            <x-listview2-body>
+                <x-listview2-item category="Documents" icon="x-file" label="Architecture.md" description="System design notes" selected>
+                    <div slot="column">Markdown document</div>
+                    <div slot="column">18 KB</div>
+                </x-listview2-item>
+                <x-listview2-item category="Documents" icon="x-file" label="Report.pdf" description="Quarterly report">
+                    <div slot="column">PDF document</div>
+                    <div slot="column">840 KB</div>
+                </x-listview2-item>
+                <x-listview2-item category="Media" icon="x-image" label="Photo.jpg" description="Project photograph">
+                    <div slot="column">JPEG image</div>
+                    <div slot="column">3.2 MB</div>
+                </x-listview2-item>
+                <x-listview2-item category="Folders" icon="x-folder" label="Projects" description="Working files">
+                    <div slot="column">Folder</div>
+                    <div slot="column">—</div>
+                </x-listview2-item>
+                <x-listview2-item category="Folders" icon="x-folder" label="Projects" description="Working files">
+                    <div slot="column">Folder</div>
+                    <div slot="column">—</div>
+                </x-listview2-item>
+                <x-listview2-item category="Folders" icon="x-folder" label="Projects" description="Working files">
+                    <div slot="column">Folder</div>
+                    <div slot="column">—</div>
+                </x-listview2-item>
+                <x-listview2-item category="Folders" icon="x-folder" label="Projects" description="Working files">
+                    <div slot="column">Folder</div>
+                    <div slot="column">—</div>
+                </x-listview2-item>
+                <x-listview2-item category="Folders" icon="x-folder" label="Projects" description="Working files">
+                    <div slot="column">Folder</div>
+                    <div slot="column">—</div>
+                </x-listview2-item>
+                <x-listview2-item category="Folders" icon="x-folder" label="Projects" description="Working files">
+                    <div slot="column">Folder</div>
+                    <div slot="column">—</div>
+                </x-listview2-item>
+            </x-listview2-body>
+
+        </x-listview2>
+
+        <h3>Multiple selection</h3>
+
+        <x-listview2 view="icons" views="icons,tiles" multiple>
+            <x-listview2-head>
+                <x-listview2-column label="Name"></x-listview2-column>
+            </x-listview2-head>
+            <x-listview2-body>
+                <x-listview2-item icon="x-folder" label="Documents"></x-listview2-item>
+                <x-listview2-item icon="x-folder" label="Images"></x-listview2-item>
+                <x-listview2-item icon="x-file" label="Notes.txt"></x-listview2-item>
+                <x-listview2-item icon="x-image" label="Photo.jpg"></x-listview2-item>
+            </x-listview2-body>
+        </x-listview2>
+
+        <h3>Navigation</h3>
+
+        <x-listview2 view="list">
+            <x-listview2-head>
+                <x-listview2-column label="Page"></x-listview2-column>
+            </x-listview2-head>
+            <x-listview2-body>
+                <x-listview2-item icon="x-file" label="Basics" description="Basic component examples" href="01-basics.js"></x-listview2-item>
+                <x-listview2-item icon="x-edit" label="Forms" description="Form component examples" href="02-forms.js"></x-listview2-item>
+                <x-listview2-item icon="x-folder" label="Data" description="Data component examples" href="03-data.js"></x-listview2-item>
+            </x-listview2-body>
+        </x-listview2>
+
+        <h3>Categories and auto-scroll</h3>
+
+        <p>
+            Adding a message grows the light-DOM collection. With
+            <code>auto-scroll</code>, only that growth scrolls to the newest item.
+        </p>
+
+        <x-button label="Add message" icon="x-add" x-on:click="addMessage"></x-button>
+        <x-listview2 view="details" auto-scroll style="max-height:10em; overflow:auto; border:var(--x-datafield-border); padding:.5em;">
+            <x-listview2-head>
+                <x-listview2-column label="Message"></x-listview2-column>
+            </x-listview2-head>
+            <x-listview2-body>
+                <x-listview2-item x-for="message in state.messages" category="Messages" icon="x-file" x-attr:label="message"></x-listview2-item>
+            </x-listview2-body>
+        </x-listview2>
+
     `,
 
-    controller() {
+    state: {
+        messages: ["Message 1", "Message 2", "Message 3"]
+    },
+
+    controller({state}) {
         return {
             load() {
                 // Static component examples.
+            },
+
+            addMessage() {
+                state.messages = [...state.messages, `Message ${state.messages.length + 1}`];
             }
         };
     }

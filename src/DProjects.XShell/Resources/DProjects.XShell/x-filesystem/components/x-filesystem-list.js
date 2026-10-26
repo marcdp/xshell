@@ -18,22 +18,27 @@ export default {
         :host {width:100%;}
     `,
     template: `
-        <x-listview view="details" views="list, details, tiles, icons">
-            <div slot="column" style="">Name</div>
-            <div slot="column" style="width:6em; text-align:right; padding-right:0.5em;">Size</div>
-            <div slot="column" style="width:6em;">Created</div>
-            <div slot="column" style="width:6em;">Modified</div>
-            <x-listview-item x-for="entry in state.entries"
-                x-attr:href="entry.url" 
-                x-attr:label="entry.name"
-                x-attr:icon="entry.icon"
-                target="_blank"
-            >
-                <x-file-size style="text-align:right; padding-right:0.5em" x-prop:value="entry.length"></x-file-size>
-                <x-datetime x-prop:value="entry.created"></x-datetime>
-                <x-datetime x-prop:value="entry.modified"></x-datetime> 
-            </x-listview-item>
-        </x-listview> 
+        <x-listview2 view="details" views="list, details, tiles, icons" x-on:select="select" x-on:activate="activate">
+            <x-listview2-head>
+                <x-listview2-column label="Name"></x-listview2-column>
+                <x-listview2-column label="Size" width="6em" style="text-align:right; padding-right:0.5em;"></x-listview2-column>
+                <x-listview2-column label="Created" width="6em"></x-listview2-column>
+                <x-listview2-column label="Modified" width="6em"></x-listview2-column>
+            </x-listview2-head>
+            <x-listview2-body>
+                <x-listview2-item x-for="entry in state.entries"
+                    x-attr:href="entry.url" 
+                    x-attr:label="entry.name"
+                    x-attr:icon="entry.icon"
+                    x-attr:path="entry.path" 
+                    target="_blank"
+                >
+                    <x-file-size style="text-align:right; padding-right:0.5em" x-prop:value="entry.length"></x-file-size>
+                    <x-datetime x-prop:value="entry.created"></x-datetime>
+                    <x-datetime x-prop:value="entry.modified"></x-datetime> 
+                </x-listview2-item>
+            </x-listview2-body>
+        </x-listview2> 
     `,
     state: {
         filesystem: null,
@@ -69,6 +74,16 @@ export default {
                     // set
                     state.entries = entries;
                 }
+            },
+            async select({event}){
+                // select
+                console.log("Selected: " +  event.detail.path)
+                host.dispatchEvent(new CustomEvent("select", {bubbles: true, detail: {path: event.detail.path}}));
+            },
+            async activate({event}){
+                // activate
+                console.log("Activated: " +  event.detail.path)
+                host.dispatchEvent(new CustomEvent("activate", {bubbles: true, detail: {path: event.detail.path}}));
             }
 
         }
