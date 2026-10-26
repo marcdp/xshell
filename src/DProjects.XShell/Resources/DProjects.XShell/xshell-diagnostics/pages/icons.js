@@ -13,7 +13,7 @@ export default {
     },
     template: `
         <p>Shows available icons by module together with their size, load time, and status.</p>
-        <x-listview2 view="tiles" views="list,details,tiles,icons">
+        <x-listview2 view="details" views="list,details,tiles,icons">
             <x-listview2-head>
                 <x-listview2-column><x-datafield type="search" x-model="state.id" placeholder="Icon"></x-datafield></x-listview2-column>
                 <x-listview2-column width="12em"><x-datafield type="search" x-model="state.moduleId" placeholder="Module"></x-datafield></x-listview2-column>

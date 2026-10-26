@@ -16,9 +16,10 @@ export const contract = {
 // implementation
 export default {
     style: `
-        :host {display: block; box-sizing: border-box; min-width: 0;}
-        .content { display: flex; align-items: center; gap: .25em; min-width: 0; height: 100%; overflow: hidden; }
-        ::slotted(*) {min-width:0;}
+        :host {display: block; box-sizing: border-box; min-width: 0; }
+        .content { display: block; min-width: 0; height: 100%; overflow: hidden; padding-right:.15em; box-sizing: border-box; }
+        ::slotted(*) {min-width:0; line-height:var(--x-datafield-line-height);;}
+        ::slotted(x-datafield:first-child:last-child) {width:100%;}
     `,
     template: `
         <div class="content">

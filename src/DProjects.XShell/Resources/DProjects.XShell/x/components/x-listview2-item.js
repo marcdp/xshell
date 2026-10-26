@@ -38,17 +38,18 @@ export default {
         :host([hidden]) {display:none!important;}
         
         /* category */
-        .category {display: none;box-sizing: border-box;padding: .4em .5em .2em;font-weight: 600;color: var(--x-color-text);background: var(--x-color-background-page);}
+        .category {display: none;box-sizing: border-box; padding-left:2.1em; font-weight: 600; color: var(--x-color-text); }
 
         /* row */
         .row {min-width: 0;box-sizing: border-box;border-radius: var(--x-menuitem-border-radius); user-select: none;}
-        .item-anchor {display: block;min-width: 0;box-sizing: border-box;border-radius: inherit;}
-        .item-anchor::part(a) {display: flex;min-width: 0;box-sizing: border-box;align-items: center;color: var(--x-color-text);}
+        .item-anchor {display: block; min-width: 0;box-sizing: border-box;border-radius: inherit;}
+        .item-anchor::part(a) {display: flex; min-width: 0; box-sizing: border-box;align-items: center;}
+        x-anchor.item-anchor {display:inline-block; }
 
         /* primary */
         .primary {display: flex; align-items:center; gap:.3em; min-width:0; width:100%; box-sizing: border-box;  cursor:pointer;}
         .primary x-icon {display: inline-block; transform: translateY(-.1em);}
-        .primary .text {display: flex;align-items: baseline;gap: .35em;min-width: 0;flex: 1;}
+        .primary .text {display: flex; align-items: baseline; min-width: 0;flex: 1;}
         .primary .label {cursor:pointer;}
         .primary .label, .primary .description {min-width: 0;overflow: hidden;text-overflow: ellipsis;white-space: nowrap;}
         .primary .description {color:var(--x-color-text-gray);}
@@ -59,7 +60,7 @@ export default {
             :host {line-height: 1.8em;}
             .row {padding:0 .5em;}
             x-anchor.item-anchor::part(a) {padding:0em .45em;}
-            .description::before {content:"—"; margin-right:.35em;}
+            .description {display:none;}
             slot {display:none;}
             :host([data-category-visible]) .category {display: block;}
             .category:empty {display:none;}
@@ -70,6 +71,8 @@ export default {
             :host {line-height: 1.8em;}
             .row {display: grid; grid-template-columns: var(--x-listview2-grid-template-columns);padding: 0 .35em; border-radius: 0; width:100%; }
             x-anchor.item-anchor::part(a), ::slotted(*) {padding: 0em .15em; min-width: 0; box-sizing: border-box;}
+            .description::before {content:"("; padding-left:.25em;}
+            .description::after {content:")"}
             slot {display:contents;}
             :host([data-category-visible]) .category {display: block;}
             .category:empty {display:none;}
@@ -93,9 +96,9 @@ export default {
             :host {padding:.12em;}
             .row {min-height:4.2em; height:100%;}
             x-anchor.item-anchor, x-anchor.item-anchor::part(a) {height:100%;}
-            .primary {padding:.55em .7em;}
+            .primary {padding:.55em .7em; }
             .primary > x-icon {font-size:1.8em; flex:0 0 auto;}
-            .text {display:flex; flex-direction:column; align-items:stretch; gap:.05em;}
+            .text {display:flex; flex-direction:column; align-items:stretch; gap:.05em; }
             slot {display:none;}
         }
 
@@ -106,7 +109,7 @@ export default {
     template: `
         <div class="category" x-text="state.category"></div>
         <div class="row" x-class:selected="state.selected">
-            <x-anchor x-if="state.href" data-item-anchor class="item-anchor plain block" x-attr:href="state.href" x-attr:target="state.target" x-attr:open="state.open" x-prop:breadcrumb="state.breadcrumb" x-attr:tooltip="state.description">
+            <x-anchor x-if="state.href" data-item-anchor class="item-anchor plain" x-attr:href="state.href" x-attr:target="state.target" x-attr:open="state.open" x-prop:breadcrumb="state.breadcrumb" x-attr:tooltip="state.description">
                 <div class="primary">
                     <x-icon x-attr:icon="state.icon || 'x-file'"></x-icon>
                     <span class="text">

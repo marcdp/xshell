@@ -29,7 +29,6 @@ export default {
                 display: grid;
                 grid-template-columns: var(--x-listview2-grid-template-columns);
                 line-height: 1.8em;
-                padding: 0 .35em;
             }
         }
 
