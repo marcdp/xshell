@@ -13,14 +13,17 @@ export default {
     },
     template: `
         <p>Shows discovered components, their owning modules, load status, size, and load time.</p>
-        <x-listview view="details">
-            <x-datafield slot="column" style="width:12em" type="search" x-model="state.id" placeholder="Component" ></x-datafield>
-            <x-datafield slot="column" style="width:12em" type="search" x-model="state.moduleId" placeholder="Module"></x-datafield>
-            <x-datafield slot="column"                    type="search" x-model="state.description" placeholder="Description"></x-datafield>
-            <div slot="column" style="width:5em; text-align:right">Size</div>
-            <div slot="column" style="width:5em; text-align:right">Time</div>
-            <div slot="column" style="width:5em; text-align:right">Status</div>
-            <x-listview-item x-for="component in state.components"
+        <x-listview2 view="details">
+            <x-listview2-head>
+                <x-listview2-column width="12em"><x-datafield type="search" x-model="state.id" placeholder="Component"></x-datafield></x-listview2-column>
+                <x-listview2-column width="12em"><x-datafield type="search" x-model="state.moduleId" placeholder="Module"></x-datafield></x-listview2-column>
+                <x-listview2-column><x-datafield type="search" x-model="state.description" placeholder="Description"></x-datafield></x-listview2-column>
+                <x-listview2-column label="Size" width="5em" style="text-align:right"></x-listview2-column>
+                <x-listview2-column label="Time" width="5em" style="text-align:right"></x-listview2-column>
+                <x-listview2-column label="Status" width="5em" style="text-align:right"></x-listview2-column>
+            </x-listview2-head>
+            <x-listview2-body>
+            <x-listview2-item x-for="component in state.components"
                 x-attr:href="component.url" 
                 x-attr:label="component.id"
                 x-attr:icon="component.icon"
@@ -31,8 +34,9 @@ export default {
                 <x-file-size style="text-align:right" x-prop:value="component.size"></x-file-size>
                 <div style="text-align:right"><x-time-ms x-prop:value="component.time"></x-time-ms></div>
                 <div style="text-align:right">{{ component.status }}</div>
-            </x-listview-item>
-        </x-listview> 
+            </x-listview2-item>
+            </x-listview2-body>
+        </x-listview2>
     `,    
     state:{
         id: "",

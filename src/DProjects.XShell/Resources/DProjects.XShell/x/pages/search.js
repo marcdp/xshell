@@ -15,19 +15,22 @@ export default {
         <x-datafields>
 
             <div x-if="state.results.length > 0">
-                <x-listview x-if="state.results.length > 0" view="tiles" title="Search results">
-                    <x-listview-item 
-                        x-for="result in state.results"
-                        x-attr:label="result.label"
-                        x-attr:description="result.description || result.path"
-                        x-attr:icon="result.icon"
-                        x-attr:href="result.path || result.href"
-                        x-attr:target="result.target"
-                        x-attr:category="result.category"                    
-                        tooltip="Lorem ipsum"
-                        open="top"
-                    ></x-listview-item>
-                </x-listview>       
+                <x-listview2 x-if="state.results.length > 0" view="tiles" title="Search results">
+                    <x-listview2-head></x-listview2-head>
+                    <x-listview2-body>
+                        <x-listview2-item
+                            x-for="result in state.results"
+                            x-attr:label="result.label"
+                            x-attr:description="result.description || result.path"
+                            x-attr:icon="result.icon"
+                            x-attr:href="result.path || result.href"
+                            x-attr:target="result.target"
+                            x-attr:category="result.category"
+                            tooltip="Lorem ipsum"
+                            open="top"
+                        ></x-listview2-item>
+                    </x-listview2-body>
+                </x-listview2>
                 <div>
                     <br>
                     <b>{{ state.results.length }}</b> results found for <b>{{state.keyword}}</b>

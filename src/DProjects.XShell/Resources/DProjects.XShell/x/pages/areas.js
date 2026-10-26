@@ -16,17 +16,20 @@ export default {
         <p>
             Please select the area to navigate:
         </p>        
-        <x-listview view="tiles">
-            <x-listview-item 
-                x-for="area in state.areas"
-                x-class:selected="(state.selected == area.id)"
-                x-attr:label="area.label"
-                x-attr:description="area.description"
-                x-attr:icon="area.icon"
-                x-attr:href="area.home"
-                open="top"
-            ></x-listview-item>
-        </x-listview>       
+        <x-listview2 view="tiles">
+            <x-listview2-head></x-listview2-head>
+            <x-listview2-body>
+                <x-listview2-item
+                    x-for="area in state.areas"
+                    x-prop:selected="state.selected == area.id"
+                    x-attr:label="area.label"
+                    x-attr:description="area.description"
+                    x-attr:icon="area.icon"
+                    x-attr:href="area.home"
+                    open="top"
+                ></x-listview2-item>
+            </x-listview2-body>
+        </x-listview2>
     `,    
     state: {
         areas: [],

@@ -82,7 +82,7 @@ function createListView(options = {}) {
             removeProperty(name) { styles.delete(name); }
         },
         shadowRoot: {
-            querySelector(selector) { return selector === "[ref='collection']" ? collection : null; }
+            querySelector(selector) { return selector === '[ref="items"]' ? collection : null; }
         },
         addEventListener(name, listener) { listeners.set(name, listener); },
         removeEventListener(name, listener) {
@@ -168,6 +168,7 @@ test("details grid tracks use declarative widths and the default track", () => {
 test("column headers accept arbitrary default-slot content with a label fallback", () => {
     assert.match(columnDefinition.template, /<slot>[\s\S]*state\.label[\s\S]*<\/slot>/);
     assert.match(columnDefinition.style, /::slotted\(\*\)/);
+    assert.match(columnDefinition.style, /\.content > span \{flex:1/);
 });
 
 test("single selection replaces the previous item and emits useful detail", () => {
@@ -227,9 +228,9 @@ test("nested interactive controls do not change selection", () => {
     assert.equal(item.events.length, 0);
 });
 
-test("details items expose the named column slot without duplicating templates", () => {
-    assert.equal(itemContract.slots.column.description.length > 0, true);
-    assert.equal((itemDefinition.template.match(/<slot name="column"><\/slot>/g) || []).length, 1);
+test("details items expose the default slot for additional cells without duplicating templates", () => {
+    assert.equal(itemContract.slots[""].description.length > 0, true);
+    assert.equal((itemDefinition.template.match(/<slot><\/slot>/g) || []).length, 1);
     assert.equal((itemDefinition.template.match(/class="row"/g) || []).length, 1);
     assert.match(itemDefinition.style, /grid-template-columns: var\(--x-listview2-grid-template-columns\)/);
 });
@@ -256,6 +257,24 @@ test("dynamic insertions and removals refresh indexes and grouping without overw
     observer.callback([{type:"childList"}]);
     await Promise.resolve();
     assert.equal(second.index, 0);
+    await controller.unload();
+});
+
+test("hidden items neither consume category headings nor become auto-scroll targets", async () => {
+    const hidden = createItem("Hidden", {category:"Documents", hidden:""});
+    const visible = createItem("Visible", {category:"Documents"});
+    const items = [hidden, visible];
+    const {controller} = createListView({items, view:"details", autoScroll:true});
+    await controller.load();
+
+    assert.equal(hidden.hasAttribute("data-category-visible"), false);
+    assert.equal(visible.hasAttribute("data-category-visible"), true);
+
+    const anotherHidden = createItem("Also hidden", {hidden:""});
+    items.push(anotherHidden);
+    TestMutationObserver.instances.at(-1).callback([{type:"childList"}]);
+    await new Promise(resolve => setTimeout(resolve, 35));
+    assert.equal(anotherHidden.scrolled, undefined);
     await controller.unload();
 });
 

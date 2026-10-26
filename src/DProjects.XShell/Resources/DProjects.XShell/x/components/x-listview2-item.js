@@ -61,7 +61,7 @@ export default {
             x-anchor.item-anchor::part(a) {padding:0em .45em;}
             .description::before {content:"—"; margin-right:.35em;}
             slot {display:none;}
-            .category {display: block;}
+            :host([data-category-visible]) .category {display: block;}
             .category:empty {display:none;}
         }
 
@@ -71,7 +71,7 @@ export default {
             .row {display: grid; grid-template-columns: var(--x-listview2-grid-template-columns);padding: 0 .35em; border-radius: 0; width:100%; }
             x-anchor.item-anchor::part(a), ::slotted(*) {padding: 0em .15em; min-width: 0; box-sizing: border-box;}
             slot {display:contents;}
-            .category {display: block;}
+            :host([data-category-visible]) .category {display: block;}
             .category:empty {display:none;}
         }
 

@@ -14,26 +14,17 @@ export default {
     template: `
         <p>Shows the current Areas, menus, and page hierarchy used by XShell navigation.</p>
         <h2>Areas</h2>
-        <x-listview view="details">
-            <div slot="column" style="width:10em">
-                Area
-            </div>
-            <div slot="column">
-                Prefix
-            </div>
-            <div slot="column">
-                Label
-            </div>
-            <div slot="column">
-                Default
-            </div>
-            <div slot="column">
-                Home
-            </div>
-            <div slot="column">
-                Modules
-            </div>
-            <x-listview-item x-for="area in state.areas"
+        <x-listview2 view="details">
+            <x-listview2-head>
+                <x-listview2-column label="Area" width="10em"></x-listview2-column>
+                <x-listview2-column label="Prefix"></x-listview2-column>
+                <x-listview2-column label="Label"></x-listview2-column>
+                <x-listview2-column label="Default"></x-listview2-column>
+                <x-listview2-column label="Home"></x-listview2-column>
+                <x-listview2-column label="Modules"></x-listview2-column>
+            </x-listview2-head>
+            <x-listview2-body>
+            <x-listview2-item x-for="area in state.areas"
                 x-attr:href="area.home" 
                 x-attr:label="area.id"
                 x-attr:icon="area.icon || 'x-area'"
@@ -45,18 +36,23 @@ export default {
                 <div>{{ area.home }}</div>
                 <div>{{ area.modules | json_stringify }}</div>
 
-            </x-listview-item>
-        </x-listview> 
+            </x-listview2-item>
+            </x-listview2-body>
+        </x-listview2>
 
         
         <h2>Menus</h2>
-        <x-listview view="details">
-            <div slot="column" style="width:12em">Menu</div>
-            <div slot="column">Menuitems</div>
-            <x-listview-item x-for="menu in state.menus" x-attr:label="menu.id" x-attr:href="menu.path" target="_blank">
-                <x-object x-prop:value="menu.children"></x-object>
-            </x-listview-item>
-        </x-listview>
+        <x-listview2 view="details">
+            <x-listview2-head>
+                <x-listview2-column label="Menu" width="12em"></x-listview2-column>
+                <x-listview2-column label="Menuitems"></x-listview2-column>
+            </x-listview2-head>
+            <x-listview2-body>
+                <x-listview2-item x-for="menu in state.menus" x-attr:label="menu.id" x-attr:href="menu.path" target="_blank">
+                    <x-object x-prop:value="menu.children"></x-object>
+                </x-listview2-item>
+            </x-listview2-body>
+        </x-listview2>
 
 
         <h2>Page hierarchy</h2>       

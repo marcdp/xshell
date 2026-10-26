@@ -13,13 +13,14 @@ export default {
     },
     template: `
         <p>Shows loaded modules, their asset locations, build metadata, resource counts, and status.</p>
-        <x-listview view="details">
-            <x-datafield slot="column" style="width:12em" type="search" x-model="state.id" placeholder="Module" ></x-datafield>
-            <x-datafield slot="column" type="search" x-model="state.label" placeholder="Label"></x-datafield>
-            <div slot="column" style="width:5em">Version</div>
-            <div slot="column"  >Assets path</div>
-            <div slot="column" style="width:6em; text-align:right">Size</div>
-            <div slot="column" style="width:5em; text-align:right">Files</div>
+        <x-listview2 view="details">
+            <x-listview2-head>
+                <x-listview2-column width="12em"><x-datafield type="search" x-model="state.id" placeholder="Module"></x-datafield></x-listview2-column>
+                <x-listview2-column><x-datafield type="search" x-model="state.label" placeholder="Label"></x-datafield></x-listview2-column>
+                <x-listview2-column label="Version" width="5em"></x-listview2-column>
+                <x-listview2-column label="Assets path"></x-listview2-column>
+                <x-listview2-column label="Size" width="6em" style="text-align:right"></x-listview2-column>
+                <x-listview2-column label="Files" width="5em" style="text-align:right"></x-listview2-column>
             <!--
             <div slot="column" style="width:5em; text-align:right">Pages</div>
             <div slot="column" style="width:5em; text-align:right">Components</div>
@@ -27,8 +28,10 @@ export default {
             <div slot="column" style="width:5em; text-align:right">Contracts</div>
             <div slot="column" style="width:5em; text-align:right">Others</div>
             -->
-            <div slot="column" style="width:5em; text-align:right">Status</div>
-            <x-listview-item 
+                <x-listview2-column label="Status" width="5em" style="text-align:right"></x-listview2-column>
+            </x-listview2-head>
+            <x-listview2-body>
+            <x-listview2-item
                 x-for="module in state.modules"
                 x-attr:href="module.configUrl"
                 x-attr:label="module.id"
@@ -47,8 +50,9 @@ export default {
                 <div style="text-align:right">{{ module.files.contracts }}</div>
                 <div style="text-align:right">{{ module.files.others }}</div>-->
                 <div style="text-align:right">{{ module.status }}</div>
-            </x-listview-item>
-        </x-listview> 
+            </x-listview2-item>
+            </x-listview2-body>
+        </x-listview2>
     `,    
     state:{
         id: "",

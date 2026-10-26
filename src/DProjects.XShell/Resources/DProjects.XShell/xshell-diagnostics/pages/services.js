@@ -13,15 +13,18 @@ export default {
     },
     template: `
         <p>Shows registered services, their modules and contracts, resource metadata, and load status.</p>
-        <x-listview view="details">
-            <x-datafield slot="column" style="width:10em" type="search" x-model="state.id" placeholder="Service" ></x-datafield>
-            <x-datafield slot="column" style="width:10em" type="search" x-model="state.moduleId" placeholder="Module"></x-datafield>
-            <x-datafield slot="column" style="width:10em" type="search" x-model="state.contractId" placeholder="Contract"></x-datafield>
-            <x-datafield slot="column" type="search" x-model="state.description" placeholder="Description"></x-datafield>
-            <div slot="column" style="width:5em; text-align:right">Size</div>
-            <div slot="column" style="width:5em; text-align:right">Time</div>
-            <div slot="column" style="width:5em; text-align:right">Status</div>
-            <x-listview-item x-for="item in state.items" x-attr:href="item.url" x-attr:label="item.serviceId" x-attr:icon="item.icon" target="_blank">
+        <x-listview2 view="details">
+            <x-listview2-head>
+                <x-listview2-column width="10em"><x-datafield type="search" x-model="state.id" placeholder="Service"></x-datafield></x-listview2-column>
+                <x-listview2-column width="10em"><x-datafield type="search" x-model="state.moduleId" placeholder="Module"></x-datafield></x-listview2-column>
+                <x-listview2-column width="10em"><x-datafield type="search" x-model="state.contractId" placeholder="Contract"></x-datafield></x-listview2-column>
+                <x-listview2-column><x-datafield type="search" x-model="state.description" placeholder="Description"></x-datafield></x-listview2-column>
+                <x-listview2-column label="Size" width="5em" style="text-align:right"></x-listview2-column>
+                <x-listview2-column label="Time" width="5em" style="text-align:right"></x-listview2-column>
+                <x-listview2-column label="Status" width="5em" style="text-align:right"></x-listview2-column>
+            </x-listview2-head>
+            <x-listview2-body>
+            <x-listview2-item x-for="item in state.items" x-attr:href="item.url" x-attr:label="item.serviceId" x-attr:icon="item.icon" target="_blank">
                 <div>{{ item.moduleId }}</div>
                 <div>
                     <x-anchor x-if="item.contractUrl" x-attr:href="item.contractUrl" target="_blank" class="plain">
@@ -33,8 +36,9 @@ export default {
                 <x-file-size style="text-align:right" x-prop:value="item.size" ></x-file-size>
                 <div style="text-align:right"><x-time-ms x-prop:value="item.time"></x-time-ms></div>
                 <div style="text-align:right">{{ item.status }}</div>
-            </x-listview-item>
-        </x-listview> 
+            </x-listview2-item>
+            </x-listview2-body>
+        </x-listview2>
     `,    
     state:{
         id: "",

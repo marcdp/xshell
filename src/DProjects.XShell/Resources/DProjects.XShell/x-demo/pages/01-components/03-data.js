@@ -17,53 +17,56 @@ export default {
         <h2>List view</h2>
 
         <p>
-            List view supports list, icon, and details presentations.
+            List view supports list, icons, tiles, and details presentations.
         </p>
 
         <h3>List</h3>
 
-        <x-listview view="list">
-
-            <x-listview-item icon="x-file" label="Document.txt" description="Text document"> </x-listview-item>
-            <x-listview-item icon="x-image" label="Photo.jpg" description="Image"> </x-listview-item>
-            <x-listview-item icon="x-folder" label="Projects" description="Folder"> </x-listview-item>
-
-        </x-listview>
+        <x-listview2 view="list">
+            <x-listview2-head></x-listview2-head>
+            <x-listview2-body>
+                <x-listview2-item icon="x-file" label="Document.txt" description="Text document"></x-listview2-item>
+                <x-listview2-item icon="x-image" label="Photo.jpg" description="Image"></x-listview2-item>
+                <x-listview2-item icon="x-folder" label="Projects" description="Folder"></x-listview2-item>
+            </x-listview2-body>
+        </x-listview2>
 
         <h3>Icons</h3>
 
-        <x-listview view="icons">
-
-            <x-listview-item icon="x-file" label="Document"></x-listview-item>
-            <x-listview-item icon="x-image" label="Photo"></x-listview-item>
-            <x-listview-item icon="x-folder" label="Projects"></x-listview-item>
-
-        </x-listview>
+        <x-listview2 view="icons">
+            <x-listview2-head></x-listview2-head>
+            <x-listview2-body>
+                <x-listview2-item icon="x-file" label="Document"></x-listview2-item>
+                <x-listview2-item icon="x-image" label="Photo"></x-listview2-item>
+                <x-listview2-item icon="x-folder" label="Projects"></x-listview2-item>
+            </x-listview2-body>
+        </x-listview2>
 
         <h3>Details</h3>
 
-        <x-listview view="details">
+        <x-listview2 view="details">
+            <x-listview2-head>
+                <x-listview2-column label="Name"></x-listview2-column>
+                <x-listview2-column label="Type"></x-listview2-column>
+                <x-listview2-column label="Size"></x-listview2-column>
+            </x-listview2-head>
+            <x-listview2-body>
+                <x-listview2-item icon="x-file" label="Document.txt">
+                    <span>Text document</span>
+                    <span>24 KB</span>
+                </x-listview2-item>
 
-            <span slot="column">Name</span>
-            <span slot="column">Type</span>
-            <span slot="column">Size</span>
+                <x-listview2-item icon="x-image" label="Photo.jpg">
+                    <span>Image</span>
+                    <span>2.4 MB</span>
+                </x-listview2-item>
 
-            <x-listview-item icon="x-file" label="Document.txt">
-                <span>Text document</span>
-                <span>24 KB</span>
-            </x-listview-item>
-
-            <x-listview-item icon="x-image" label="Photo.jpg">
-                <span>Image</span>
-                <span>2.4 MB</span>
-            </x-listview-item>
-
-            <x-listview-item icon="x-folder" label="Projects">
-                <span>Folder</span>
-                <span>-</span>
-            </x-listview-item>
-
-        </x-listview>
+                <x-listview2-item icon="x-folder" label="Projects">
+                    <span>Folder</span>
+                    <span>-</span>
+                </x-listview2-item>
+            </x-listview2-body>
+        </x-listview2>
 
         <x-divider></x-divider>
 

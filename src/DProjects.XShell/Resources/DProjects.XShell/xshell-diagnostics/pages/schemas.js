@@ -14,12 +14,15 @@ export default {
     },
     template: `
         <p>Shows discovered JSON schemas, their owning modules, and file sizes.</p>
-        <x-listview view="details">
-            <x-datafield slot="column" style="width:17em" type="search" x-model="state.id" placeholder="Schema" ></x-datafield>
-            <x-datafield slot="column" style="width:10em" type="search" x-model="state.moduleId" placeholder="Module"></x-datafield>
-            <x-datafield slot="column" type="search" x-model="state.path" placeholder="Path"></x-datafield>
-            <div slot="column" style="width:5em; text-align:right">Size</div>
-            <x-listview-item x-for="schema in state.schemas"
+        <x-listview2 view="details">
+            <x-listview2-head>
+                <x-listview2-column width="17em"><x-datafield type="search" x-model="state.id" placeholder="Schema"></x-datafield></x-listview2-column>
+                <x-listview2-column width="10em"><x-datafield type="search" x-model="state.moduleId" placeholder="Module"></x-datafield></x-listview2-column>
+                <x-listview2-column><x-datafield type="search" x-model="state.path" placeholder="Path"></x-datafield></x-listview2-column>
+                <x-listview2-column label="Size" width="5em" style="text-align:right"></x-listview2-column>
+            </x-listview2-head>
+            <x-listview2-body>
+            <x-listview2-item x-for="schema in state.schemas"
                 x-attr:href="schema.url"
                 x-attr:label="schema.id"
                 x-attr:icon="schema.icon"
@@ -30,8 +33,9 @@ export default {
                     {{ schema.path }}
                 </x-anchor>
                 <x-file-size x-prop:value="schema.size" style="text-align:right"></x-file-size>
-            </x-listview-item>
-        </x-listview>
+            </x-listview2-item>
+            </x-listview2-body>
+        </x-listview2>
     `,
     state: {
         id: "",

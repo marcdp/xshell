@@ -15,17 +15,29 @@ export default {
     },
     template: `
         <p>Shows recent XShell bus events and their timestamps and detail payloads.</p>
-        <x-listview ref="listview" view="details" auto-scroll="true">
-            <x-datafield slot="column" type="search" x-model="state.query_type" placeholder="Type"></x-datafield>
-            <x-datafield slot="column" type="search" x-model="state.query_detail" placeholder="Detail"></x-datafield>
-            <x-datafield slot="column" type="search" x-model="state.query_ts" placeholder="Time" style="width:13em"></x-datafield>
-            <x-button slot="column" style="width:2em" class="plain" command="clear" icon="x-clear" title="Clear list contents"></x-button>
-            <x-listview-item x-for="item in state.registry" x-attr:label="item.type" icon="x-thunder" x-show="item.show">
-                <x-object x-prop:value="item.detail"></x-object>
-                <x-datetime x-prop:value="item.ts" format="iso" style="width:13em"></x-datetime>
-                <div></div>
-            </x-listview-item>
-        </x-listview>        
+        <x-listview2 ref="listview" view="details" auto-scroll="true">
+            <x-listview2-head>
+                <x-listview2-column>
+                    <x-datafield type="search" x-model="state.query_type" placeholder="Type"></x-datafield>
+                </x-listview2-column>
+                <x-listview2-column>
+                    <x-datafield type="search" x-model="state.query_detail" placeholder="Detail"></x-datafield>
+                </x-listview2-column>
+                <x-listview2-column width="13em">
+                    <x-datafield type="search" x-model="state.query_ts" placeholder="Time"></x-datafield>
+                </x-listview2-column>
+                <x-listview2-column width="2em">
+                    <x-button class="plain" command="clear" icon="x-clear" title="Clear list contents"></x-button>
+                </x-listview2-column>
+            </x-listview2-head>
+            <x-listview2-body>
+                <x-listview2-item x-for="item in state.registry" x-attr:label="item.type" icon="x-thunder" x-show="item.show">
+                    <x-object x-prop:value="item.detail"></x-object>
+                    <x-datetime x-prop:value="item.ts" format="iso" style="width:13em"></x-datetime>
+                    <div></div>
+                </x-listview2-item>
+            </x-listview2-body>
+        </x-listview2>
     `,    
     state:{
         registry: [],
