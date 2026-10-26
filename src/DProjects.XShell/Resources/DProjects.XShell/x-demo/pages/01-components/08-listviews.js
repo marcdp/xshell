@@ -1,7 +1,7 @@
 
 // contract
 export const contract = {
-    description: "Demonstrates the x-listview2 component family.",
+    description: "Demonstrates the x-listview component family.",
     events: {},
     properties: {},
     methods: {}
@@ -12,8 +12,8 @@ export default {
     template: `
 
         <p>
-            The <code>x-listview2</code> component arranges
-            <code>x-listview2-item</code> elements in list, details, tiles, or icons views.
+            The <code>x-listview</code> component arranges
+            <code>x-listview-item</code> elements in list, details, tiles, or icons views.
             Use <code>view</code> to select the current presentation and
             <code>views</code> to enable the built-in view selector.
         </p>
@@ -25,68 +25,68 @@ export default {
             tiles, and icons.
         </p>
 
-        <x-listview2 view="list" views="list,details,tiles,icons">
-            <x-listview2-head>
-                <x-listview2-column label="Name"></x-listview2-column>
-                <x-listview2-column label="Type"></x-listview2-column>
-                <x-listview2-column label="Size"></x-listview2-column>
-            </x-listview2-head>
-            <x-listview2-body>
-            <x-listview2-item
+        <x-listview view="list" views="list,details,tiles,icons">
+            <x-listview-head>
+                <x-listview-column label="Name"></x-listview-column>
+                <x-listview-column label="Type"></x-listview-column>
+                <x-listview-column label="Size"></x-listview-column>
+            </x-listview-head>
+            <x-listview-body>
+            <x-listview-item
                 category="Documents"
                 icon="x-file"
                 label="Architecture.md"
                 description="Markdown document">
                 <span>Markdown</span>
                 <span>18 KB</span>
-            </x-listview2-item>
+            </x-listview-item>
 
-            <x-listview2-item
+            <x-listview-item
                 category="Documents"
                 icon="x-file"
                 label="Notes.txt"
                 description="Text document">
                 <span>Text</span>
                 <span>6 KB</span>
-            </x-listview2-item>
+            </x-listview-item>
 
-            <x-listview2-item
+            <x-listview-item
                 category="Documents"
                 icon="x-file"
                 label="Report.pdf"
                 description="PDF document">
                 <span>PDF</span>
                 <span>840 KB</span>
-            </x-listview2-item>
+            </x-listview-item>
 
-            <x-listview2-item
+            <x-listview-item
                 category="Media"
                 icon="x-image"
                 label="Banner.png"
                 description="Image">
                 <span>PNG image</span>
                 <span>1.8 MB</span>
-            </x-listview2-item>
+            </x-listview-item>
 
-            <x-listview2-item
+            <x-listview-item
                 category="Media"
                 icon="x-image"
                 label="Photo.jpg"
                 description="Image">
                 <span>JPEG image</span>
                 <span>3.2 MB</span>
-            </x-listview2-item>
+            </x-listview-item>
 
-            <x-listview2-item
+            <x-listview-item
                 category="Folders"
                 icon="x-folder"
                 label="Projects"
                 description="Folder">
                 <span>Folder</span>
                 <span>-</span>
-            </x-listview2-item>
-            </x-listview2-body>
-        </x-listview2>
+            </x-listview-item>
+            </x-listview-body>
+        </x-listview>
 
         <x-divider></x-divider>
 
@@ -99,82 +99,82 @@ export default {
 
         <h3>Tiles</h3>
 
-        <x-listview2 view="tiles">
-            <x-listview2-head></x-listview2-head>
-            <x-listview2-body>
-            <x-listview2-item
+        <x-listview view="tiles">
+            <x-listview-head></x-listview-head>
+            <x-listview-body>
+            <x-listview-item
                 icon="x-folder"
                 label="Source"
                 description="Application source">
-            </x-listview2-item>
+            </x-listview-item>
 
-            <x-listview2-item
+            <x-listview-item
                 icon="x-folder"
                 label="Tests"
                 description="Automated tests">
-            </x-listview2-item>
+            </x-listview-item>
 
-            <x-listview2-item
+            <x-listview-item
                 icon="x-file"
                 label="README.md"
                 description="Repository overview">
-            </x-listview2-item>
+            </x-listview-item>
 
-            <x-listview2-item
+            <x-listview-item
                 icon="x-file"
                 label="global.json"
                 description=".NET SDK configuration">
-            </x-listview2-item>
-            </x-listview2-body>
-        </x-listview2>
+            </x-listview-item>
+            </x-listview-body>
+        </x-listview>
 
         <h3>Icons</h3>
 
-        <x-listview2 view="icons">
-            <x-listview2-head></x-listview2-head>
-            <x-listview2-body>
-                <x-listview2-item icon="x-folder" label="Documents"></x-listview2-item>
-                <x-listview2-item icon="x-folder" label="Images"></x-listview2-item>
-                <x-listview2-item icon="x-file" label="Notes.txt"></x-listview2-item>
-                <x-listview2-item icon="x-image" label="Photo.jpg"></x-listview2-item>
-            </x-listview2-body>
-        </x-listview2>
+        <x-listview view="icons">
+            <x-listview-head></x-listview-head>
+            <x-listview-body>
+                <x-listview-item icon="x-folder" label="Documents"></x-listview-item>
+                <x-listview-item icon="x-folder" label="Images"></x-listview-item>
+                <x-listview-item icon="x-file" label="Notes.txt"></x-listview-item>
+                <x-listview-item icon="x-image" label="Photo.jpg"></x-listview-item>
+            </x-listview-body>
+        </x-listview>
 
         <x-divider></x-divider>
 
         <h2>3. Details and columns</h2>
 
         <p>
-            In details view, <code>x-listview2-column</code> elements
+            In details view, <code>x-listview-column</code> elements
             define the column headers.
             Child content inside each item defines the additional cells.
         </p>
 
-        <x-listview2 view="details">
-            <x-listview2-head>
-                <x-listview2-column label="Name" width="14em"></x-listview2-column>
-                <x-listview2-column width="10em">
+        <x-listview view="details">
+            <x-listview-head>
+                <x-listview-column label="Name" width="14em"></x-listview-column>
+                <x-listview-column width="10em">
                     <x-datafield type="search" x-model="state.status" placeholder="Status"></x-datafield>
-                </x-listview2-column>
-                <x-listview2-column label="Owner"></x-listview2-column>
-            </x-listview2-head>
-            <x-listview2-body>
-            <x-listview2-item icon="x-folder" label="Core" x-show="!state.status || state.status == 'Active'">
+                </x-listview-column>
+                <x-listview-column label="Owner"></x-listview-column>
+            </x-listview-head>
+            <x-listview-body>
+            <x-listview-item icon="x-folder" label="Core" x-show="!state.status || state.status == 'Active'">
                 <span>Active</span>
                 <span>Platform</span>
-            </x-listview2-item>
+            </x-listview-item>
 
-            <x-listview2-item icon="x-folder" label="Documentation" x-show="!state.status || state.status == 'Active'">
+            <x-listview-item icon="x-folder" label="Documentation" x-show="!state.status || state.status == 'Active'">
                 <span>Active</span>
                 <span>Developer experience</span>
-            </x-listview2-item>
+            </x-listview-item>
 
-            <x-listview2-item icon="x-folder" label="Samples" x-show="!state.status || state.status == 'Review'">
+            <x-listview-item icon="x-folder" label="Samples" x-show="!state.status || state.status == 'Review'">
                 <span>Review</span>
                 <span>Platform</span>
-            </x-listview2-item>
-            </x-listview2-body>
-        </x-listview2>
+            </x-listview-item>
+            </x-listview-body>
+        </x-listview>
 
         <x-divider></x-divider>
 
@@ -185,30 +185,30 @@ export default {
             the <code>href</code> property.
         </p>
 
-        <x-listview2 view="list">
-            <x-listview2-head></x-listview2-head>
-            <x-listview2-body>
-            <x-listview2-item
+        <x-listview view="list">
+            <x-listview-head></x-listview-head>
+            <x-listview-body>
+            <x-listview-item
                 icon="x-file"
                 label="Basics"
                 description="Basic component examples"
                 href="01-basics.js">
-            </x-listview2-item>
+            </x-listview-item>
 
-            <x-listview2-item
+            <x-listview-item
                 icon="x-edit"
                 label="Forms"
                 description="Form component examples"
                 href="02-forms.js">
-            </x-listview2-item>
+            </x-listview-item>
 
-            <x-listview2-item
+            <x-listview-item
                 label="Data"
                 description="Data component examples"
                 href="03-data.js">
-            </x-listview2-item>
-            </x-listview2-body>
-        </x-listview2>
+            </x-listview-item>
+            </x-listview-body>
+        </x-listview>
 
         <x-divider></x-divider>
 
@@ -219,112 +219,112 @@ export default {
             scrolls to the last item when the list refreshes.
         </p>
 
-        <x-listview2
+        <x-listview
             view="list"
             auto-scroll
             style="max-height:10em; overflow:auto; border:var(--x-datafield-border); padding:.5em;">
 
-            <x-listview2-head></x-listview2-head>
-            <x-listview2-body>
-                <x-listview2-item icon="x-file" label="Message 1"></x-listview2-item>
-                <x-listview2-item icon="x-file" label="Message 2"></x-listview2-item>
-                <x-listview2-item icon="x-file" label="Message 3"></x-listview2-item>
-                <x-listview2-item icon="x-file" label="Message 4"></x-listview2-item>
-                <x-listview2-item icon="x-file" label="Message 5"></x-listview2-item>
-                <x-listview2-item icon="x-file" label="Message 6"></x-listview2-item>
-                <x-listview2-item icon="x-file" label="Message 7"></x-listview2-item>
-                <x-listview2-item icon="x-file" label="Message 8"></x-listview2-item>
-                <x-listview2-item icon="x-file" label="Latest message"></x-listview2-item>
-            </x-listview2-body>
-        </x-listview2>
+            <x-listview-head></x-listview-head>
+            <x-listview-body>
+                <x-listview-item icon="x-file" label="Message 1"></x-listview-item>
+                <x-listview-item icon="x-file" label="Message 2"></x-listview-item>
+                <x-listview-item icon="x-file" label="Message 3"></x-listview-item>
+                <x-listview-item icon="x-file" label="Message 4"></x-listview-item>
+                <x-listview-item icon="x-file" label="Message 5"></x-listview-item>
+                <x-listview-item icon="x-file" label="Message 6"></x-listview-item>
+                <x-listview-item icon="x-file" label="Message 7"></x-listview-item>
+                <x-listview-item icon="x-file" label="Message 8"></x-listview-item>
+                <x-listview-item icon="x-file" label="Latest message"></x-listview-item>
+            </x-listview-body>
+        </x-listview>
 
         <x-divider></x-divider>
 
         <h2>6. Selection and dynamic items</h2>
 
         <p>
-            <code>x-listview2</code> uses dedicated head, body, column, and item
+            <code>x-listview</code> uses dedicated head, body, column, and item
             components. This example switches dynamically between all four views;
             the selected item remains selected when the presentation changes.
         </p>
 
-        <x-listview2 view="details" views="list,details,icons,tiles">
+        <x-listview view="details" views="list,details,icons,tiles">
 
-            <x-listview2-head>
-                <x-listview2-column label="Name" width="minmax(12em, 2fr)"></x-listview2-column>
-                <x-listview2-column label="Type" width="1fr"></x-listview2-column>
-                <x-listview2-column width="fit-content(15em)">
+            <x-listview-head>
+                <x-listview-column label="Name" width="minmax(12em, 2fr)"></x-listview-column>
+                <x-listview-column label="Type" width="1fr"></x-listview-column>
+                <x-listview-column width="fit-content(15em)">
                     <span>Size</span>
-                </x-listview2-column>
-            </x-listview2-head>
+                </x-listview-column>
+            </x-listview-head>
 
-            <x-listview2-body>
-                <x-listview2-item category="Documents" icon="x-file" label="Architecture.md" description="System design notes" selected>
+            <x-listview-body>
+                <x-listview-item category="Documents" icon="x-file" label="Architecture.md" description="System design notes" selected>
                     <div>Markdown document</div>
                     <div>18 KB</div>
-                </x-listview2-item>
-                <x-listview2-item category="Documents" icon="x-file" label="Report.pdf" description="Quarterly report">
+                </x-listview-item>
+                <x-listview-item category="Documents" icon="x-file" label="Report.pdf" description="Quarterly report">
                     <div>PDF document</div>
                     <div>840 KB</div>
-                </x-listview2-item>
-                <x-listview2-item category="Media" icon="x-image" label="Photo.jpg" description="Project photograph">
+                </x-listview-item>
+                <x-listview-item category="Media" icon="x-image" label="Photo.jpg" description="Project photograph">
                     <div>JPEG image</div>
                     <div>3.2 MB</div>
-                </x-listview2-item>
-                <x-listview2-item category="Folders" icon="x-folder" label="Projects" description="Working files">
+                </x-listview-item>
+                <x-listview-item category="Folders" icon="x-folder" label="Projects" description="Working files">
                     <div>Folder</div>
                     <div>—</div>
-                </x-listview2-item>
-                <x-listview2-item category="Folders" icon="x-folder" label="Projects" description="Working files">
+                </x-listview-item>
+                <x-listview-item category="Folders" icon="x-folder" label="Projects" description="Working files">
                     <div>Folder</div>
                     <div>—</div>
-                </x-listview2-item>
-                <x-listview2-item category="Folders" icon="x-folder" label="Projects" description="Working files">
+                </x-listview-item>
+                <x-listview-item category="Folders" icon="x-folder" label="Projects" description="Working files">
                     <div>Folder</div>
                     <div>—</div>
-                </x-listview2-item>
-                <x-listview2-item category="Folders" icon="x-folder" label="Projects" description="Working files">
+                </x-listview-item>
+                <x-listview-item category="Folders" icon="x-folder" label="Projects" description="Working files">
                     <div>Folder</div>
                     <div>—</div>
-                </x-listview2-item>
-                <x-listview2-item category="Folders" icon="x-folder" label="Projects" description="Working files">
+                </x-listview-item>
+                <x-listview-item category="Folders" icon="x-folder" label="Projects" description="Working files">
                     <div>Folder</div>
                     <div>—</div>
-                </x-listview2-item>
-                <x-listview2-item category="Folders" icon="x-folder" label="Projects" description="Working files">
+                </x-listview-item>
+                <x-listview-item category="Folders" icon="x-folder" label="Projects" description="Working files">
                     <div>Folder</div>
                     <div>—</div>
-                </x-listview2-item>
-            </x-listview2-body>
+                </x-listview-item>
+            </x-listview-body>
 
-        </x-listview2>
+        </x-listview>
 
         <h3>Multiple selection</h3>
 
-        <x-listview2 view="icons" views="icons,tiles" multiple>
-            <x-listview2-head>
-                <x-listview2-column label="Name"></x-listview2-column>
-            </x-listview2-head>
-            <x-listview2-body>
-                <x-listview2-item icon="x-folder" label="Documents"></x-listview2-item>
-                <x-listview2-item icon="x-folder" label="Images"></x-listview2-item>
-                <x-listview2-item icon="x-file" label="Notes.txt"></x-listview2-item>
-                <x-listview2-item icon="x-image" label="Photo.jpg"></x-listview2-item>
-            </x-listview2-body>
-        </x-listview2>
+        <x-listview view="icons" views="icons,tiles" multiple>
+            <x-listview-head>
+                <x-listview-column label="Name"></x-listview-column>
+            </x-listview-head>
+            <x-listview-body>
+                <x-listview-item icon="x-folder" label="Documents"></x-listview-item>
+                <x-listview-item icon="x-folder" label="Images"></x-listview-item>
+                <x-listview-item icon="x-file" label="Notes.txt"></x-listview-item>
+                <x-listview-item icon="x-image" label="Photo.jpg"></x-listview-item>
+            </x-listview-body>
+        </x-listview>
 
         <h3>Navigation</h3>
 
-        <x-listview2 view="list">
-            <x-listview2-head>
-                <x-listview2-column label="Page"></x-listview2-column>
-            </x-listview2-head>
-            <x-listview2-body>
-                <x-listview2-item icon="x-file" label="Basics" description="Basic component examples" href="01-basics.js"></x-listview2-item>
-                <x-listview2-item icon="x-edit" label="Forms" description="Form component examples" href="02-forms.js"></x-listview2-item>
-                <x-listview2-item icon="x-folder" label="Data" description="Data component examples" href="03-data.js"></x-listview2-item>
-            </x-listview2-body>
-        </x-listview2>
+        <x-listview view="list">
+            <x-listview-head>
+                <x-listview-column label="Page"></x-listview-column>
+            </x-listview-head>
+            <x-listview-body>
+                <x-listview-item icon="x-file" label="Basics" description="Basic component examples" href="01-basics.js"></x-listview-item>
+                <x-listview-item icon="x-edit" label="Forms" description="Form component examples" href="02-forms.js"></x-listview-item>
+                <x-listview-item icon="x-folder" label="Data" description="Data component examples" href="03-data.js"></x-listview-item>
+            </x-listview-body>
+        </x-listview>
 
         <h3>Categories and auto-scroll</h3>
 
@@ -334,14 +334,14 @@ export default {
         </p>
 
         <x-button label="Add message" icon="x-add" x-on:click="addMessage"></x-button>
-        <x-listview2 view="details" auto-scroll style="max-height:10em; overflow:auto; border:var(--x-datafield-border); padding:.5em;">
-            <x-listview2-head>
-                <x-listview2-column label="Message"></x-listview2-column>
-            </x-listview2-head>
-            <x-listview2-body>
-                <x-listview2-item x-for="message in state.messages" category="Messages" icon="x-file" x-attr:label="message"></x-listview2-item>
-            </x-listview2-body>
-        </x-listview2>
+        <x-listview view="details" auto-scroll style="max-height:10em; overflow:auto; border:var(--x-datafield-border); padding:.5em;">
+            <x-listview-head>
+                <x-listview-column label="Message"></x-listview-column>
+            </x-listview-head>
+            <x-listview-body>
+                <x-listview-item x-for="message in state.messages" category="Messages" icon="x-file" x-attr:label="message"></x-listview-item>
+            </x-listview-body>
+        </x-listview>
 
     `,
 

@@ -13,17 +13,17 @@ export default {
     },
     template: `
         <p>Shows discovered pages, their owning modules, size, load time, and load status.</p>
-        <x-listview2 view="details">
-            <x-listview2-head>
-                <x-listview2-column><x-datafield type="search" x-model="state.id" placeholder="Page"></x-datafield></x-listview2-column>
-                <x-listview2-column width="10em"><x-datafield type="search" x-model="state.moduleId" placeholder="Module"></x-datafield></x-listview2-column>
-                <x-listview2-column width="10em"><x-datafield type="search" x-model="state.description" placeholder="Description"></x-datafield></x-listview2-column>
-                <x-listview2-column label="Size" width="5em" style="text-align:right"></x-listview2-column>
-                <x-listview2-column label="Time" width="5em" style="text-align:right"></x-listview2-column>
-                <x-listview2-column label="Status" width="5em" style="text-align:right"></x-listview2-column>
-            </x-listview2-head>
-            <x-listview2-body>
-            <x-listview2-item x-for="page in state.pages"
+        <x-listview view="details">
+            <x-listview-head>
+                <x-listview-column><x-datafield type="search" x-model="state.id" placeholder="Page"></x-datafield></x-listview-column>
+                <x-listview-column width="10em"><x-datafield type="search" x-model="state.moduleId" placeholder="Module"></x-datafield></x-listview-column>
+                <x-listview-column width="10em"><x-datafield type="search" x-model="state.description" placeholder="Description"></x-datafield></x-listview-column>
+                <x-listview-column label="Size" width="5em" style="text-align:right"></x-listview-column>
+                <x-listview-column label="Time" width="5em" style="text-align:right"></x-listview-column>
+                <x-listview-column label="Status" width="5em" style="text-align:right"></x-listview-column>
+            </x-listview-head>
+            <x-listview-body>
+            <x-listview-item x-for="page in state.pages"
                 x-attr:href="page.url" 
                 x-attr:label="page.id"
                 x-attr:icon="page.icon"
@@ -34,9 +34,9 @@ export default {
                 <x-file-size x-prop:value="page.size" style="text-align:right"></x-file-size>
                 <div style="text-align:right"><x-time-ms x-prop:value="page.time"></x-time-ms></div>
                 <div style="text-align:right">{{ page.status }}</div>
-            </x-listview2-item>
-            </x-listview2-body>
-        </x-listview2>
+            </x-listview-item>
+            </x-listview-body>
+        </x-listview>
     `,    
     state:{
         id: "",

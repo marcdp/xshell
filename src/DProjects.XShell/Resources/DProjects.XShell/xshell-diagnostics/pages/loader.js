@@ -13,25 +13,25 @@ export default {
     },
     template: `
         <p>Shows resources processed by the XShell loader together with their module, size, load time, and status.</p>
-        <x-listview2 view="details" auto-scroll>
-            <x-listview2-head>
-                <x-listview2-column><x-datafield type="search" x-model="state.query_resource" placeholder="Resource"></x-datafield></x-listview2-column>
-                <x-listview2-column width="10em"><x-datafield type="search" x-model="state.query_module" placeholder="Module"></x-datafield></x-listview2-column>
-                <x-listview2-column label="Size" width="5em" style="text-align:right"></x-listview2-column>
-                <x-listview2-column label="Time" width="5em" style="text-align:right"></x-listview2-column>
-                <x-listview2-column label="Status" width="5em" style="text-align:right"></x-listview2-column>
-                <x-listview2-column width="2em"><x-button class="plain" command="clear" icon="x-clear" title="Clear list contents"></x-button></x-listview2-column>
-            </x-listview2-head>
-            <x-listview2-body>
-            <x-listview2-item x-for="item in state.items" x-attr:label="item.resource" icon="x-file" x-attr:href="item.url" target="_blank">
+        <x-listview view="details" auto-scroll>
+            <x-listview-head>
+                <x-listview-column><x-datafield type="search" x-model="state.query_resource" placeholder="Resource"></x-datafield></x-listview-column>
+                <x-listview-column width="10em"><x-datafield type="search" x-model="state.query_module" placeholder="Module"></x-datafield></x-listview-column>
+                <x-listview-column label="Size" width="5em" style="text-align:right"></x-listview-column>
+                <x-listview-column label="Time" width="5em" style="text-align:right"></x-listview-column>
+                <x-listview-column label="Status" width="5em" style="text-align:right"></x-listview-column>
+                <x-listview-column width="2em"><x-button class="plain" command="clear" icon="x-clear" title="Clear list contents"></x-button></x-listview-column>
+            </x-listview-head>
+            <x-listview-body>
+            <x-listview-item x-for="item in state.items" x-attr:label="item.resource" icon="x-file" x-attr:href="item.url" target="_blank">
                 <div>{{ item.moduleId }}</div>
                 <x-file-size x-prop:value="item.size" style="text-align:right"></x-file-size>
                 <div style="text-align:right"><x-time-ms x-prop:value="item.time"></x-time-ms></div>
                 <div style="text-align:right">{{ item.status }}</div>
                 <div></div>
-            </x-listview2-item>
-            </x-listview2-body>
-        </x-listview2>
+            </x-listview-item>
+            </x-listview-body>
+        </x-listview>
     `,    
     state:{
         items: [],

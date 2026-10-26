@@ -1,6 +1,6 @@
 // contract
 export const contract = {
-    description: "Defines a labeled column in an x-listview2 details header.",
+    description: "Defines a labeled column in an x-listview details header.",
     events: {},
     properties: {
         label: {type:"string", default:"", attribute:true, state:true, description:"Fallback header label."},

@@ -1,12 +1,12 @@
 // contract
 export const contract = {
-    description: "Provides the header container for x-listview2 columns.",
+    description: "Provides the header container for x-listview columns.",
     events: {},
     properties: {},
     methods: {},
     slots: {
         "": {
-            description: "Default slot for x-listview2-column elements."
+            description: "Default slot for x-listview-column elements."
         }
     }
 };
@@ -19,26 +19,26 @@ export default {
         :host([hidden]) {display:none!important;}
 
         /* list */
-        @container style(--x-listview2-view: 'list') {
+        @container style(--x-listview-view: 'list') {
             :host {display:none;}
         }
 
         /* details */
-        @container style(--x-listview2-view: 'details') {
+        @container style(--x-listview-view: 'details') {
             :host {
                 display: grid;
-                grid-template-columns: var(--x-listview2-grid-template-columns);
+                grid-template-columns: var(--x-listview-grid-template-columns);
                 line-height: 1.8em;
             }
         }
 
         /* icons */
-        @container style(--x-listview2-view: 'icons') {
+        @container style(--x-listview-view: 'icons') {
             :host {display:none;}
         }
 
         /* tiles */
-        @container style(--x-listview2-view: 'tiles') {
+        @container style(--x-listview-view: 'tiles') {
             :host {display:none;}
 
         }

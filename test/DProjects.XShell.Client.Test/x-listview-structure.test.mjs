@@ -3,7 +3,7 @@ import {readFileSync} from "node:fs";
 import test from "node:test";
 
 const sourceRoot = new URL("../../src/DProjects.XShell/Resources/DProjects.XShell/", import.meta.url);
-const migrationFiles = [
+const structureFiles = [
     "x/pages/areas.js",
     "x/pages/search.js",
     "x-demo/pages/01-components/03-data.js",
@@ -27,32 +27,31 @@ function readSource(path) {
 }
 
 function listViews(source) {
-    return [...source.matchAll(/<x-listview2(?=[\s>])[\s\S]*?<\/x-listview2>/g)].map(match => match[0]);
+    return [...source.matchAll(/<x-listview(?=[\s>])[\s\S]*?<\/x-listview>/g)].map(match => match[0]);
 }
 
-test("migrated application pages contain no legacy listview tags", () => {
-    for (const path of migrationFiles) {
-        const source = readSource(path);
-        assert.doesNotMatch(source, /<\/?x-listview(?:-item)?(?=[\s>])/, path);
+test("application pages contain canonical listview structures", () => {
+    for (const path of structureFiles) {
+        assert.ok(listViews(readSource(path)).length > 0, path);
     }
 });
 
-test("every migrated listview has direct head and body containers", () => {
-    for (const path of migrationFiles) {
+test("every listview has direct head and body containers", () => {
+    for (const path of structureFiles) {
         for (const listView of listViews(readSource(path))) {
-            const openingTag = listView.match(/^<x-listview2\b(?:[^"'<>]|"[^"]*"|'[^']*')*>/);
+            const openingTag = listView.match(/^<x-listview\b(?:[^"'<>]|"[^"]*"|'[^']*')*>/);
             assert.ok(openingTag, path);
-            assert.match(listView.slice(openingTag[0].length), /^\s*<x-listview2-head[\s>]/, path);
-            assert.match(listView, /<\/x-listview2-head>\s*<x-listview2-body[\s>]/, path);
-            assert.match(listView, /<\/x-listview2-body>\s*<\/x-listview2>$/, path);
+            assert.match(listView.slice(openingTag[0].length), /^\s*<x-listview-head[\s>]/, path);
+            assert.match(listView, /<\/x-listview-head>\s*<x-listview-body[\s>]/, path);
+            assert.match(listView, /<\/x-listview-body>\s*<\/x-listview>$/, path);
 
-            const withoutBody = listView.replace(/<x-listview2-body[\s>][\s\S]*<\/x-listview2-body>/, "");
-            assert.doesNotMatch(withoutBody, /<x-listview2-item[\s>]/, path);
+            const withoutBody = listView.replace(/<x-listview-body[\s>][\s\S]*<\/x-listview-body>/, "");
+            assert.doesNotMatch(withoutBody, /<x-listview-item[\s>]/, path);
         }
     }
 });
 
-test("details migrations preserve expected column counts and interactive headers", () => {
+test("details listviews preserve expected column counts and interactive headers", () => {
     const expectedColumns = new Map([
         ["xshell-diagnostics/pages/bus.js", [4]],
         ["xshell-diagnostics/pages/components.js", [6]],
@@ -70,17 +69,17 @@ test("details migrations preserve expected column counts and interactive headers
 
     for (const [path, counts] of expectedColumns) {
         const actual = listViews(readSource(path)).map(listView =>
-            (listView.match(/<x-listview2-column(?=[\s>])/g) || []).length
+            (listView.match(/<x-listview-column(?=[\s>])/g) || []).length
         );
         assert.deepEqual(actual, counts, path);
     }
 
-    assert.match(readSource("xshell-diagnostics/pages/bus.js"), /<x-listview2-column[^>]*>[\s\S]*<x-datafield[^>]*x-model="state\.query_type"/);
-    assert.match(readSource("xshell-diagnostics/pages/bus.js"), /<x-listview2-column[^>]*>[\s\S]*<x-button[^>]*command="clear"/);
-    assert.match(readSource("xshell-diagnostics/pages/loader.js"), /<x-listview2-column[^>]*>[\s\S]*<x-button[^>]*command="clear"/);
+    assert.match(readSource("xshell-diagnostics/pages/bus.js"), /<x-listview-column[^>]*>[\s\S]*<x-datafield[^>]*x-model="state\.query_type"/);
+    assert.match(readSource("xshell-diagnostics/pages/bus.js"), /<x-listview-column[^>]*>[\s\S]*<x-button[^>]*command="clear"/);
+    assert.match(readSource("xshell-diagnostics/pages/loader.js"), /<x-listview-column[^>]*>[\s\S]*<x-button[^>]*command="clear"/);
 });
 
-test("migration preserves dynamic items, navigation, selection, auto-scroll, and treeview", () => {
+test("listview pages preserve dynamic items, navigation, selection, auto-scroll, and treeview", () => {
     const areas = readSource("x/pages/areas.js");
     assert.match(areas, /x-for="area in state\.areas"/);
     assert.match(areas, /x-prop:selected="state\.selected == area\.id"/);
@@ -92,8 +91,8 @@ test("migration preserves dynamic items, navigation, selection, auto-scroll, and
     assert.match(search, /x-for="result in state\.results"/);
     assert.match(search, /x-attr:target="result\.target"/);
 
-    assert.match(readSource("xshell-diagnostics/pages/bus.js"), /<x-listview2[^>]*ref="listview"[^>]*auto-scroll="true"/);
-    assert.match(readSource("xshell-diagnostics/pages/loader.js"), /<x-listview2[^>]*auto-scroll/);
+    assert.match(readSource("xshell-diagnostics/pages/bus.js"), /<x-listview[^>]*ref="listview"[^>]*auto-scroll="true"/);
+    assert.match(readSource("xshell-diagnostics/pages/loader.js"), /<x-listview[^>]*auto-scroll/);
 
     const navigation = readSource("xshell-diagnostics/pages/navigation.js");
     assert.match(navigation, /<x-treeview>/);
@@ -106,7 +105,7 @@ test("demo covers all views, switchable presentation, default-slot cells, and a 
         assert.match(demo, new RegExp(`view="${view}"`));
     }
     assert.match(demo, /views="list,details,tiles,icons"/);
-    assert.match(demo, /<x-listview2-column[^>]*>[\s\S]*x-model="state\.status"/);
+    assert.match(demo, /<x-listview-column[^>]*>[\s\S]*x-model="state\.status"/);
     assert.match(demo, /x-show="!state\.status/);
-    assert.doesNotMatch(demo, /<x-listview2-item[\s\S]*?slot="column"/);
+    assert.doesNotMatch(demo, /<x-listview-item[\s\S]*?slot="column"/);
 });

@@ -13,18 +13,18 @@ export default {
     },
     template: `
         <p>Shows discovered contracts, their owning framework or module package, metadata, size, load time, and status.</p>
-        <x-listview2 view="details">
-            <x-listview2-head>
-                <x-listview2-column width="12em"><x-datafield type="search" x-model="state.id" placeholder="Contract"></x-datafield></x-listview2-column>
-                <x-listview2-column width="12em"><x-datafield type="search" x-model="state.label" placeholder="Label"></x-datafield></x-listview2-column>
-                <x-listview2-column><x-datafield type="search" x-model="state.description" placeholder="Description"></x-datafield></x-listview2-column>
-                <x-listview2-column width="12em"><x-datafield type="search" x-model="state.moduleId" placeholder="Module"></x-datafield></x-listview2-column>
-                <x-listview2-column label="Size" width="5em" style="text-align:right"></x-listview2-column>
-                <x-listview2-column label="Time" width="5em" style="text-align:right"></x-listview2-column>
-                <x-listview2-column label="Status" width="5em" style="text-align:right"></x-listview2-column>
-            </x-listview2-head>
-            <x-listview2-body>
-            <x-listview2-item x-for="contractItem in state.contractItems"
+        <x-listview view="details">
+            <x-listview-head>
+                <x-listview-column width="12em"><x-datafield type="search" x-model="state.id" placeholder="Contract"></x-datafield></x-listview-column>
+                <x-listview-column width="12em"><x-datafield type="search" x-model="state.label" placeholder="Label"></x-datafield></x-listview-column>
+                <x-listview-column><x-datafield type="search" x-model="state.description" placeholder="Description"></x-datafield></x-listview-column>
+                <x-listview-column width="12em"><x-datafield type="search" x-model="state.moduleId" placeholder="Module"></x-datafield></x-listview-column>
+                <x-listview-column label="Size" width="5em" style="text-align:right"></x-listview-column>
+                <x-listview-column label="Time" width="5em" style="text-align:right"></x-listview-column>
+                <x-listview-column label="Status" width="5em" style="text-align:right"></x-listview-column>
+            </x-listview-head>
+            <x-listview-body>
+            <x-listview-item x-for="contractItem in state.contractItems"
                 x-attr:href="contractItem.url" 
                 x-attr:label="contractItem.id"
                 x-attr:icon="contractItem.icon || 'x-contract'"
@@ -36,9 +36,9 @@ export default {
                 <x-file-size x-prop:value="contractItem.size" style="text-align:right"></x-file-size>
                 <x-time-ms x-prop:value="contractItem.time" style="text-align:right"></x-time-ms>
                 <div style="text-align:right">{{ contractItem.status }}</div>
-            </x-listview2-item>
-            </x-listview2-body>
-        </x-listview2>
+            </x-listview-item>
+            </x-listview-body>
+        </x-listview>
     `,    
     state:{
         id: "",

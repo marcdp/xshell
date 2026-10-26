@@ -28,23 +28,23 @@ export default {
             <div x-if="state.test_message">{{ state.test_message }}</div>
         </div>
 
-        <x-listview2 view="details">
-            <x-listview2-head>
-                <x-listview2-column><x-datafield type="search" x-model="state.query_resource" placeholder="Resource"></x-datafield></x-listview2-column>
-                <x-listview2-column><x-datafield type="search" x-model="state.query_src" placeholder="Source"></x-datafield></x-listview2-column>
-                <x-listview2-column width="10em"><x-datafield type="search" x-model="state.query_loader" placeholder="Loader"></x-datafield></x-listview2-column>
-                <x-listview2-column label="Cache" width="5em" style="text-align:right"></x-listview2-column>
-                <x-listview2-column label="Mode" width="5em" style="text-align:right"></x-listview2-column>
-            </x-listview2-head>
-            <x-listview2-body>
-            <x-listview2-item x-for="item in state.items" x-attr:label="item.resource" icon="x-settings">
+        <x-listview view="details">
+            <x-listview-head>
+                <x-listview-column><x-datafield type="search" x-model="state.query_resource" placeholder="Resource"></x-datafield></x-listview-column>
+                <x-listview-column><x-datafield type="search" x-model="state.query_src" placeholder="Source"></x-datafield></x-listview-column>
+                <x-listview-column width="10em"><x-datafield type="search" x-model="state.query_loader" placeholder="Loader"></x-datafield></x-listview-column>
+                <x-listview-column label="Cache" width="5em" style="text-align:right"></x-listview-column>
+                <x-listview-column label="Mode" width="5em" style="text-align:right"></x-listview-column>
+            </x-listview-head>
+            <x-listview-body>
+            <x-listview-item x-for="item in state.items" x-attr:label="item.resource" icon="x-settings">
                 <div>{{ item.src }}</div>
                 <div>{{ item.loader }}</div>
                 <div style="text-align:right">{{ item.cache }}</div>
                 <div style="text-align:right">{{ item.cacheMode }}</div>
-            </x-listview2-item>
-            </x-listview2-body>
-        </x-listview2>
+            </x-listview-item>
+            </x-listview-body>
+        </x-listview>
     `,
     state: {
         test_resource: "",

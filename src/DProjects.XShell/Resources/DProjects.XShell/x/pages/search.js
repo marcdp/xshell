@@ -15,10 +15,10 @@ export default {
         <x-datafields>
 
             <div x-if="state.results.length > 0">
-                <x-listview2 x-if="state.results.length > 0" view="tiles" title="Search results">
-                    <x-listview2-head></x-listview2-head>
-                    <x-listview2-body>
-                        <x-listview2-item
+                <x-listview x-if="state.results.length > 0" view="tiles" title="Search results">
+                    <x-listview-head></x-listview-head>
+                    <x-listview-body>
+                        <x-listview-item
                             x-for="result in state.results"
                             x-attr:label="result.label"
                             x-attr:description="result.description || result.path"
@@ -28,9 +28,9 @@ export default {
                             x-attr:category="result.category"
                             tooltip="Lorem ipsum"
                             open="top"
-                        ></x-listview2-item>
-                    </x-listview2-body>
-                </x-listview2>
+                        ></x-listview-item>
+                    </x-listview-body>
+                </x-listview>
                 <div>
                     <br>
                     <b>{{ state.results.length }}</b> results found for <b>{{state.keyword}}</b>

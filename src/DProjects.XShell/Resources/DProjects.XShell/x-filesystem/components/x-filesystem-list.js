@@ -18,15 +18,15 @@ export default {
         :host {width:100%;}
     `,
     template: `
-        <x-listview2 view="details" views="list, details, tiles, icons" x-on:select="select" x-on:activate="activate">
-            <x-listview2-head>
-                <x-listview2-column label="Name"></x-listview2-column>
-                <x-listview2-column label="Size" width="6em" style="text-align:right; padding-right:0.5em;"></x-listview2-column>
-                <x-listview2-column label="Created" width="6em"></x-listview2-column>
-                <x-listview2-column label="Modified" width="6em"></x-listview2-column>
-            </x-listview2-head>
-            <x-listview2-body>
-                <x-listview2-item x-for="entry in state.entries"
+        <x-listview view="details" views="list, details, tiles, icons" x-on:select="select" x-on:activate="activate">
+            <x-listview-head>
+                <x-listview-column label="Name"></x-listview-column>
+                <x-listview-column label="Size" width="6em" style="text-align:right; padding-right:0.5em;"></x-listview-column>
+                <x-listview-column label="Created" width="6em"></x-listview-column>
+                <x-listview-column label="Modified" width="6em"></x-listview-column>
+            </x-listview-head>
+            <x-listview-body>
+                <x-listview-item x-for="entry in state.entries"
                     x-attr:href="entry.url" 
                     x-attr:label="entry.name"
                     x-attr:icon="entry.icon"
@@ -36,9 +36,9 @@ export default {
                     <x-file-size style="text-align:right; padding-right:0.5em" x-prop:value="entry.length"></x-file-size>
                     <x-datetime x-prop:value="entry.created"></x-datetime>
                     <x-datetime x-prop:value="entry.modified"></x-datetime> 
-                </x-listview2-item>
-            </x-listview2-body>
-        </x-listview2> 
+                </x-listview-item>
+            </x-listview-body>
+        </x-listview>
     `,
     state: {
         filesystem: null,

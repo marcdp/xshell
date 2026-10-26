@@ -15,29 +15,29 @@ export default {
     },
     template: `
         <p>Shows recent XShell bus events and their timestamps and detail payloads.</p>
-        <x-listview2 ref="listview" view="details" auto-scroll="true">
-            <x-listview2-head>
-                <x-listview2-column>
+        <x-listview ref="listview" view="details" auto-scroll="true">
+            <x-listview-head>
+                <x-listview-column>
                     <x-datafield type="search" x-model="state.query_type" placeholder="Type"></x-datafield>
-                </x-listview2-column>
-                <x-listview2-column>
+                </x-listview-column>
+                <x-listview-column>
                     <x-datafield type="search" x-model="state.query_detail" placeholder="Detail"></x-datafield>
-                </x-listview2-column>
-                <x-listview2-column width="13em">
+                </x-listview-column>
+                <x-listview-column width="13em">
                     <x-datafield type="search" x-model="state.query_ts" placeholder="Time"></x-datafield>
-                </x-listview2-column>
-                <x-listview2-column width="2em">
+                </x-listview-column>
+                <x-listview-column width="2em">
                     <x-button class="plain" command="clear" icon="x-clear" title="Clear list contents"></x-button>
-                </x-listview2-column>
-            </x-listview2-head>
-            <x-listview2-body>
-                <x-listview2-item x-for="item in state.registry" x-attr:label="item.type" icon="x-thunder" x-show="item.show">
+                </x-listview-column>
+            </x-listview-head>
+            <x-listview-body>
+                <x-listview-item x-for="item in state.registry" x-attr:label="item.type" icon="x-thunder" x-show="item.show">
                     <x-object x-prop:value="item.detail"></x-object>
                     <x-datetime x-prop:value="item.ts" format="iso" style="width:13em"></x-datetime>
                     <div></div>
-                </x-listview2-item>
-            </x-listview2-body>
-        </x-listview2>
+                </x-listview-item>
+            </x-listview-body>
+        </x-listview>
     `,    
     state:{
         registry: [],

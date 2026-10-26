@@ -1,105 +1,146 @@
 // contract
 export const contract = {
-    description: "Displays one item in a list view.",
+    description: "Displays one selectable item in an x-listview collection.",
     events: {},
     properties: {
-        icon:        {type:"string", default:"", attribute:true, state:true, description:""},
-        label:       {type:"string", default:"", attribute:true, state:true, description:""},
-        breadcrumb:  {type:"boolean", default:false, attribute:true, state:true, description:""},
-        description: {type:"string", default:"", attribute:true, state:true, description:""},
-        category:    {type:"string", default:"", attribute:false, state:true, description:""},
-        categoryVisible: {type:"boolean", default:false, attribute:false, state:true, description:""},
-        href:        {type:"string", default:"", attribute:true, state:true, description:""},
-        target:      {type:"string", default:"", attribute:true, state:true, description:""},
-        open:        {type:"string", default:"", attribute:true, state:true, description:""},
-        view:        {type:"string", default:"list", attribute:true, state:true, description:""}
+        icon:        {type:"string", default:"x-file", attribute:true, state:true, description:"Item icon."},
+        label:       {type:"string", default:"", attribute:true, state:true, description:"Primary item label."},
+        description: {type:"string", default:"", attribute:true, state:true, description:"Secondary item description."},
+        path:        {type:"string", default:"", attribute:true, state:true, description:"Item path within the list."},
+        href:        {type:"string", default:"", attribute:true, state:true, description:"Optional navigation target."},
+        target:      {type:"string", default:"", attribute:true, state:true, description:"Optional browser target for navigation."},
+        open:        {type:"string", default:"auto", attribute:true, state:true, enum:["auto", "top", "dialog", "stack", "embed"], description:"XShell navigation presentation."},
+        breadcrumb:  {type:"boolean", default:false, attribute:true, state:true, description:"Whether navigation contributes the current breadcrumb."},
+        category:    {type:"string", default:"", attribute:true, state:true, description:"Grouping label used in list and details views."},
+        selected:    {type:"boolean", default:false, attribute:true, state:true, description:"Whether the item is selected."},
+        index:       {type:"number", default:0, attribute:false, state:true, description:"Zero-based position assigned by the containing list."}
     },
-    methods: {},
-    slots: {
-        "": {
-            description: "The default slot for list view item content."
+    methods: {
+        activate: {
+            description: "Activates the item's navigation link when one is configured.",
+            returns: {type:"void"}
         }
+    },
+    slots: {
+        "": {description:"Additional details cells, in header-column order after the primary cell."}
     }
 };
-
 
 // implementation
 export default {
     style: `
-        :host {display:block; position:relative}
-        ::slotted(*) {display:var(--x-listview-item-display, table-cell); padding:.1em; padding-right:.5em;}
-        ::slotted(.fill) {width:100%; max-width:0; overflow:hidden;}
+        :host {
+            display: block;
+            position: relative;
+            min-width: 0;
+            box-sizing: border-box;
+        }
         :host([hidden]) {display:none!important;}
         
-
         /* category */
-        x-anchor[category]::before {content:attr(category); position:absolute; transform:translateY(-1.6em); font-weight:500;  
-            box-sizing:border;
-            awidth:100%; 
-            display:block;
-            background:var(--x-color-background-page);
-            left:0;
-            right:0;
-            padding-top:.125em;
-            padding-bottom:.15em;
-            padding-left:1.45em;
-        }
-        x-anchor[category='']:before {display:none;}
-        x-anchor:not([category='']) {padding-top:1.75em;}       
+        .category {display: none;box-sizing: border-box; padding-left:2.1em; font-weight: 600; color: var(--x-color-text); }
+
+        /* row */
+        .row {min-width: 0;box-sizing: border-box;border-radius: var(--x-menuitem-border-radius); user-select: none;}
+        .item-anchor {display: block; min-width: 0;box-sizing: border-box;border-radius: inherit;}
+        .item-anchor::part(a) {display: flex; min-width: 0; box-sizing: border-box;align-items: center;}
+        x-anchor.item-anchor {display:inline-block; }
+
+        /* primary */
+        .primary {display: flex; align-items:center; gap:.3em; min-width:0; width:100%; box-sizing: border-box;  cursor:pointer;}
+        .primary x-icon {display: inline-block; transform: translateY(-.1em);}
+        .primary .text {display: flex; align-items: baseline; min-width: 0;flex: 1;}
+        .primary .label {cursor:pointer;}
+        .primary .label, .primary .description {min-width: 0;overflow: hidden;text-overflow: ellipsis;white-space: nowrap;}
+        .primary .description {color:var(--x-color-text-gray);}
+        .primary .description:empty {display:none;}
 
         /* list */
-        x-anchor.list {display:flex;} 
-        x-anchor.list x-icon {margin-right:.25em;transform:translateY(-.1em);}
-        x-anchor.list::part(a) { display:flex; align-items:center; }
-        x-anchor.list {max-width:100%; text-overflow:ellipsis; white-space:nowrap; overflow:hidden;}
-        x-anchor.list .description {display:none;}
-        :host(.selected) x-anchor.list {font-weight:600;}
-        :host(.selected) x-anchor.list x-anchor::part(a) {color:var(--x-color-primary);}
-        
-        /* icons */
-        x-anchor.icons {display:flex; width:6em; height:6em; border-radius:.5em; padding-top:0;}
-        x-anchor.icons x-icon {font-size:2em; amargin-bottom:.15em;}
-        x-anchor.icons::part(a) { display:flex; flex-direction:column; align-items:center; padding-left:.25em; padding-right:.25em; box-sizing:border-box; justify-content: center; padding-bottom:.75em;}
-        x-anchor.icons :focus { outline:.15em solid var(--x-color-text)!important;}
-        x-anchor.icons::part(a):focus {outline:anone; }
-        x-anchor.icons .label { text-align:center; display:block; width:100%; text-overflow:ellipsis; white-space:nowrap; overflow:hidden;}
-        x-anchor.icons .description {display:none}
-        x-anchor.icons[category]::before {display:none;}
-        :host(.selected) x-anchor.icons {font-weight:600; outline:.15em solid var(--x-color-primary);}
-        :host(.selected) x-anchor.icons::part(a) {color:var(--x-color-primary);}
+        @container style(--x-listview-view: 'list') {
+            :host {line-height: 1.8em;}
+            .row {padding:0 .5em;}
+            x-anchor.item-anchor::part(a) {padding:0em .45em;}
+            .description {display:none;}
+            slot {display:none;}
+            :host([data-category-visible]) .category {display: block;}
+            .category:empty {display:none;}
+        }
 
         /* details */
-        x-anchor.details {display:inline-flex; padding-left:.5em; padding-right:.5em;} 
-        x-anchor.details x-icon {vertical-align:bottom; }
-        x-anchor.details .description {color:var(--x-color-text-gray); max-width: 10em; text-overflow:ellipsis; white-space:nowrap; overflow:hidden;}
-        x-anchor.details .description:empty {display:none;}
-        x-anchor.details .description::before {content:"("; padding-left:.25em;}
-        x-anchor.details .description::after {content:")";}
-        x-anchor.details + ::slotted(*) {padding-right:0em;}
-        
+        @container style(--x-listview-view: 'details') {
+            :host {line-height: 1.8em;}
+            .row {display: grid; grid-template-columns: var(--x-listview-grid-template-columns);padding: 0 .35em; border-radius: 0; width:100%; }
+            x-anchor.item-anchor::part(a), ::slotted(*) {padding: 0em .15em; min-width: 0; box-sizing: border-box;}
+            .description::before {content:"("; padding-left:.25em;}
+            .description::after {content:")"}
+            slot {display:contents;}
+            :host([data-category-visible]) .category {display: block;}
+            .category:empty {display:none;}
+        }
+
+        /* icons */
+        @container style(--x-listview-view: 'icons') {
+            .row {height:6.5em;}
+            x-anchor.item-anchor, x-anchor.item-anchor::part(a) {height:100%;}
+            .primary {flex-direction:column; justify-content:center; padding:.5em;}
+            .primary > x-icon {font-size:2.2em;}
+            .text {display:block; flex:0 1 auto; width:100%; text-align:center;}
+            .label {display:block; width:100%;}
+            slot {display:none;}
+            .description,
+            .supplemental {display:none;}
+        }
 
         /* tiles */
-        x-anchor.tiles {display:block; width:var(--x-listview-item-tile-width, 17em); align-items:center; padding-top:0; margin-bottom:.15em; border-radius:var(--x-menuitem-border-radius);}
-        x-anchor.tiles x-icon {position:absolute;font-size:24px; padding:.1em; margin-left:.35em; margin-top:.1em;}   
-        x-anchor.tiles span {display:block; margin-left:50px; }
-        x-anchor.tiles .label {padding-top:.4em;}
-        x-anchor.tiles .description {color:var(--x-color-text-gray); display:block; max-width: 100%; text-overflow:ellipsis; white-space:nowrap; overflow:hidden; padding-bottom:.4em; height:1.4em;}
-        x-anchor.tiles:hover .description {color:var(--x-color-primary-x-light);}
-        x-anchor.tiles[category]::before {display:none;}
-        :host(.selected) x-anchor.tiles {border:.1em var(--x-color-gray) solid;}
-        :host(.selected) x-anchor.tiles:hover {border:.1em var(--x-color-primary) solid;}
+        @container style(--x-listview-view: 'tiles') {
+            :host {padding:.12em;}
+            .row {min-height:4.2em; height:100%;}
+            x-anchor.item-anchor, x-anchor.item-anchor::part(a) {height:100%;}
+            .primary {padding:.55em .7em; }
+            .primary > x-icon {font-size:1.8em; flex:0 0 auto;}
+            .text {display:flex; flex-direction:column; align-items:stretch; gap:.05em; }
+            slot {display:none;}
+        }
 
+        /* selection */
+        .row.selected {outline: .1em solid var(--x-color-primary); border-radius:.25em!important;}
+        x-anchor.item-anchor::part(a):focus-visible {outline: .1em solid var(--x-color-text); outline-offset: -.2em; border-radius: inherit; border-radius:.25em; }
     `,
     template: `
-        <x-anchor x-attr:href="state.href" x-attr:target="state.target" x-attr:class="'plain block ' + state.view" x-prop:breadcrumb="state.breadcrumb" x-attr:open="state.open" x-attr:category="state.category">
-            <x-icon x-attr:icon="state.icon || 'x-file'"></x-icon>
-            <span class="label" x-text="state.label"></span>
-            <span class="description" x-text="state.description"></span>
-        </x-anchor>
-        <slot x-if="state.view == 'details'"></slot>
+        <div class="category" x-text="state.category"></div>
+        <div class="row" x-class:selected="state.selected">
+            <x-anchor x-if="state.href" data-item-anchor class="item-anchor plain" x-attr:href="state.href" x-attr:target="state.target" x-attr:open="state.open" x-prop:breadcrumb="state.breadcrumb" x-attr:tooltip="state.description">
+                <div class="primary">
+                    <x-icon x-attr:icon="state.icon || 'x-file'"></x-icon>
+                    <span class="text">
+                        <span class="label" x-text="state.label"></span>
+                        <span class="description" x-text="state.description"></span>
+                    </span>
+                </div>
+            </x-anchor>
+            <label x-else data-item-anchor class="item-anchor">
+                <div class="primary">
+                    <x-icon x-attr:icon="state.icon || 'x-file'"></x-icon>
+                    <span class="text">
+                        <span class="label" x-text="state.label"></span>
+                        <span class="description" x-text="state.description"></span>
+                    </span>
+                </div>
+            </label>
+            <slot></slot>
+        </div>
     `,
-    state: {
-        category: "",
+    controller({ state, host }) {
+        return {
+            load() {
+                // load
+            },
+            activate() {
+                // activate
+                if (!state.href) return;
+                const anchor = host.shadowRoot?.querySelector("x-anchor");
+                anchor?.shadowRoot?.querySelector("a")?.click();
+            }
+        };
     }
 };
-
