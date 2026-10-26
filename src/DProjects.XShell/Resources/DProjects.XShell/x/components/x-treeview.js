@@ -152,18 +152,6 @@ export default {
             },
 
             async refresh(args) {
-                // set index of items
-                let index = 0;
-                let setIndexRecursive = (element) => {
-                    for (let child of element.children) {
-                        if (child.localName == "x-treeview-item") {
-                            child.index = index++;
-                            if (!child.expanded) continue;
-                        }
-                        setIndexRecursive(child);
-                    }
-                };
-                setIndexRecursive(host);
                 // grid-template-columns
                 const columns = host.querySelectorAll(":scope > x-treeview-head > x-treeview-column");
                 const gridTemplateColumns = [...columns]

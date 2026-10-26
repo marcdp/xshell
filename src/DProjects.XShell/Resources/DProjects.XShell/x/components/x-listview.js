@@ -42,9 +42,9 @@ export const contract = {
 // implementation
 export default {
     style: `
-        :host { display: block;
-            position:
-            relative;
+        :host { 
+            display: flex;
+            position: relative;
             width: 100%;
             min-width: 0;
             --x-listview-grid-template-columns: minmax(0, 1fr);
@@ -53,15 +53,19 @@ export default {
         :host([hidden]) {display:none!important;}
 
         /* x-dropdown */
-        x-dropdown {position:absolute; right:0; z-index:2;}
+        x-dropdown {}
 
         /* items */
-        .items {}
+        .items {flex:1;}
         .items:focus {outline:none;}
     `,
     template: `
+        <div ref="items" tabIndex="0" class="items" x-attr:aria-multiselectable="state.multiple ? 'true' : null" x-on:click="click" x-on:dblClick="dblClick">
+            <slot x-on:slotchange="refresh" ></slot>
+        </div>
+
         <x-dropdown class="menu left" x-if="state.availableViews.length > 1">
-            <x-button x-attr:icon="'x-listview-' + state.view" class="size-x2 round light" tooltip="Change view"></x-button>
+            <x-button x-attr:icon="'x-listview-' + state.view" class="menuitem" tooltip="Change view"></x-button>
             <div slot="dropdown">
                 <x-menuitem x-for="view in state.availableViews"
                     x-attr:data-view="view"
@@ -74,10 +78,6 @@ export default {
                 ></x-menuitem>
             </div>
         </x-dropdown>
-
-        <div ref="items" tabIndex="0" class="items" x-attr:aria-multiselectable="state.multiple ? 'true' : null" x-on:click="click" x-on:dblClick="dblClick">
-            <slot x-on:slotchange="refresh" ></slot>
-        </div>
     `,
     state: {
         availableViews: []

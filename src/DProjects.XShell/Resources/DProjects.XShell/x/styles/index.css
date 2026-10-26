@@ -255,7 +255,7 @@ x-markdown table th, x-markdown table td {border:1px solid var(--x-color-gray); 
     --x-datafield-border-radius: .5em;
     --x-datafield-border-width: .1em;
     --x-datafield-border: var(--x-datafield-border-width) light-dark(#B4B4BB, #505058) solid;
-    --x-datafield-border-focus: light-dark(#B4B4BB, #888899);
+    --x-datafield-border-focus: light-dark(#444444, #888899);
     
     --x-datafield-error-color:light-dark(#DB0000, #FF6B6B);
     --x-datafield-error-display: block;
@@ -373,7 +373,7 @@ x-markdown table th, x-markdown table td {border:1px solid var(--x-color-gray); 
     --x-skeleton-duration: 1.5s;
 
     /* x-splitter */
-    --x-splitter-background: light-dark(#dddddd, #404040);
+    --x-splitter-background: light-dark(#eeeeee, #202020);
     
     /* x-tooltip */
     --x-tooltip-background: light-dark(#303030, #E8EAED);

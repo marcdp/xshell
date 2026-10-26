@@ -153,6 +153,7 @@ export default {
             padding:.35em;
         }
         :host .input.file {padding:.22em; padding-left:.35em; min-height:2.1em; box-sizing:border-box;}
+        :host .input.file input:focus {border:none; outline:none;}
         :host .input.file ul {margin:0; padding:0;}
         :host .input.file ul li {margin:0; padding:0; list-style:none;}
         :host .input.file x-icon {vertical-align:text-bottom; display:inline-block; margin-top:-.1em;}

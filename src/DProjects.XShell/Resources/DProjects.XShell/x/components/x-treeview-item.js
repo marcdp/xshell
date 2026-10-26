@@ -17,7 +17,6 @@ export const contract = {
         hasChildsForced: {type:"boolean", default:false, attribute:true, state:true, description:""},
         expanded:    {type:"boolean", default:false, attribute:true, state:true, description:""},
         selected:    {type:"boolean", default:false, attribute:true, state:true, description:""},
-        index:       {type:"number", default:0, attribute:true, state:true, description:""}
     },
     methods: {},
     slots: {
@@ -54,10 +53,9 @@ export default {
         .row .cell label {flex:1; display:block; cursor:pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
         .row .cell label x-icon {cursor:pointer; display:inline-block; transform:translateY(-.1em);}
 
-        .row.selected {outline: .1em solid var(--x-color-primary); border-radius:.25em;}
+        .row.selected {background:var(--x-color-background-x-gray); border-radius:.25em;}
         .row.no-childs .cell > x-icon {visibility:hidden;}
         .row.expanded .cell > x-icon {transform:rotate(90deg);}
-        .row.even {background-color:var(--x-color-background-alt);}
 
         .row ::slotted(div) {white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
@@ -68,7 +66,6 @@ export default {
             x-class:expanded="state.expanded" 
             x-class:childs="state.hasChilds || state.hasChildsForced" 
             x-class:no-childs="!state.hasChilds && !state.hasChildsForced" 
-            x-class:even="(state.index % 2 == 0)"
         >
             <div class="cell" x-on:dblclick="toggle">
                 <x-icon icon="x-keyboard-arrow-right" x-on:click="toggle"></x-icon>

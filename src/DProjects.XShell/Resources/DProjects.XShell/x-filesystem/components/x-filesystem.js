@@ -16,12 +16,18 @@ export const contract = {
 export default {
     style: `
         :host {display:block;}
-        .container {display:flex; width:100%;}
-        .container x-filesystem-tree {flex-shrink: 0; padding:.2em;}
-        .container x-filesystem-list {flex:1; padding:.2em; }
+        .container {display:flex; width:100%; margin-top:.5em;}
+        .container x-filesystem-tree {flex-shrink: 0; padding:.5em; padding-top:0;}
+        .container x-filesystem-list {flex:1; padding:.5em; padding-top:0;}
     `,
     template: `
-        <x-datafield x-model="state.pathList" type="string" label="" placeholder="path" readonly></x-datafield>
+        <x-toolbar>
+            <x-button icon="x-arrow-back" x-on:click="back" class="menuitem"></x-button>
+            <x-button icon="x-arrow-forward" x-on:click="forward" class="menuitem"></x-button>
+            <x-button icon="x-arrow-up" x-on:click="up" class="menuitem "></x-button>
+            <x-button icon="x-refresh" x-on:click="refresh" class="menuitem"></x-button>
+            <x-datafield x-model="state.pathList" type="string" label="" placeholder="path" readonly style="flex:1"></x-datafield>        
+        </x-toolbar>
         <div class="container"> 
             <x-filesystem-tree 
                 x-prop:filesystem="state.filesystem" 
@@ -54,6 +60,22 @@ export default {
                     state.filesystem = await loader.load("filesystem:" + state.src);
                 })
             },
+            refresh({event}) {
+                // handle refresh event
+                console.log("Refresh clicked");
+            },
+            back({event}) {
+                // handle back event
+                console.log("Back clicked");
+            },
+            forward({event}) {
+                // handle forward event
+                console.log("Forward clicked");
+            },
+            up({event}) {
+                // handle up event
+                console.log("Up clicked");
+            },
             treeSelect({event}) {
                 // handle tree select event
                 const path = event.detail.path;
@@ -76,6 +98,6 @@ export default {
                 console.log("List toggle:", path);
             }
         }
-    }   
+    }
 };
 

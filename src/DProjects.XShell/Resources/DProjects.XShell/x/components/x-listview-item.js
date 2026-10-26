@@ -103,7 +103,7 @@ export default {
         }
 
         /* selection */
-        .row.selected {outline: .1em solid var(--x-color-primary); border-radius:.25em!important;}
+        .row.selected {border-radius:.25em!important; background:var(--x-color-background-x-gray);}
         x-anchor.item-anchor::part(a):focus-visible {outline: .1em solid var(--x-color-text); outline-offset: -.2em; border-radius: inherit; border-radius:.25em; }
     `,
     template: `
