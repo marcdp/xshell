@@ -18,7 +18,26 @@ export const contract = {
         path: {type: "string", default:"/", attribute: true, state:true, description: "Current path in the filesystem"},
         filesystem: {type: "object", default:null, state:true, description: "Filesystem instance"}
     },
-    methods: {},
+    methods: {
+        select: {
+            description: "Select a tree item by path",
+            parameters: [
+                {name: "path", type: "string", description: "Path of the tree item to select"}
+            ]
+        },
+        expand: {
+            description: "Expand a tree item by path",
+            parameters: [
+                {name: "path", type: "string", description: "Path of the tree item to expand"}
+            ] 
+        }, 
+        collapse: {
+            description: "Collapse a tree item by path",
+            parameters: [
+                {name: "path", type: "string", description: "Path of the tree item to collapse"}
+            ] 
+        }
+    },
     slots: {}
 };
 
@@ -29,7 +48,7 @@ export default {
         :host {width:100%;}
     `,
     template: `
-        <x-treeview x-on:toggle="toggle" x-on:select="select" x-on:contextmenuitem="contextMenuItem">
+        <x-treeview x-on:toggle="toggle" x-on:select="selectTreeviewItem" x-on:contextmenuitem="contextMenuItem" x-on:keydown="keydown">
 
             <x-treeview-head>
                 <x-treeview-column label="Name"></x-treeview-column>
@@ -40,6 +59,7 @@ export default {
                     x-attr:label="entry.name"
                     x-attr:icon="entry.icon"
                     x-attr:path="entry.path"
+                    x-attr:expanded="entry.expanded"
                     x-attr:has-childs-forced="entry.hasChildsForced"                    
                     x-class:loading="entry.loading"
                 >
@@ -51,16 +71,17 @@ export default {
     state: {
         filesystem: null,
         path: "/",        
+        selectedPath: null,
         entries: null
     },
     controller({ state, events, host }) {
         return {
             async load(args) {
                 // load
-                events.on(state, ["change:path", "change:filesystem"], "refresh");
-                this.refresh();
+                events.on(state, ["change:path", "change:filesystem"], "loadRootEntries");
+                this.loadRootEntries();
             },
-            async refresh() {
+            async loadRootEntries() {
                 // refresh
                 if (state.filesystem && state.path) {
                     const entries = [];
@@ -70,7 +91,8 @@ export default {
                             entries.push({
                                 ...entry,
                                 hasChildsForced: true,
-                                children: [],
+                                expanded: false,
+                                children: undefined,
                                 icon: "x-folder"
                             });
                         }
@@ -83,7 +105,7 @@ export default {
                     state.entries = entries;
                 }
             },
-            async refreshPath(path) {
+            async loadChildEntries(path) {
                 // refresh
                 if (state.filesystem && path) {
                     const entry = this.getEntryByPathRecursive(path);
@@ -92,12 +114,13 @@ export default {
                     host.invalidate();
                     // iterate over filesystem entries and collect them into an array
                     const entries = [];
-                    for await (const entry of state.filesystem.getEntries(path)) {
+                    for await (const entry of state.filesystem.getEntries(path, {mode: state.filesystem.constructor.GetModes.Directories})) {
                         if (entry.type === "directory") {
                             entries.push({
                                 ...entry,
                                 hasChildsForced: true,
-                                children: [],
+                                children: undefined,
+                                expanded: false,
                                 icon: "x-folder"
                             });
                         }
@@ -113,14 +136,49 @@ export default {
                     host.invalidate();
                 }
             },
+            async select(path) {
+                // focus the tree item corresponding to the given path
+                const treeview = host.shadowRoot.querySelector("x-treeview");
+                const entry = this.getEntryByPathRecursive(path);
+                if (entry) {
+                    state.selectedPath = path;
+                    if (treeview) treeview.select(path);
+                    host.dispatchEvent(new CustomEvent("select", {bubbles: true, detail: {path: entry.path}}));
+                }
+            },
+            async expand(path) {
+                // only expand if children are not already loaded
+                const entry = this.getEntryByPathRecursive(path);
+                if (entry && !entry.expanded) {
+                    if (entry.children === undefined) {
+                        await this.loadChildEntries(entry.path);
+                    }
+                    entry.expanded = true;
+                    host.invalidate();
+                }
+            },
+            collapse(path) {
+                const entry = this.getEntryByPathRecursive(path);
+                if (entry && entry.expanded) {
+                    entry.expanded = false;
+                    host.invalidate();
+                }
+            },
+
+            /* events */
+            async selectTreeviewItem({event}) {
+                const path = event.detail.path;                
+                this.select(path);
+            },
             async toggle({event}){
                 // toggle
-                await this.refreshPath(event.detail.path);
+                const entry = this.getEntryByPathRecursive(event.detail.path);
+                if (!entry.expanded) {
+                    this.expand(entry.path)
+                } else {
+                    this.collapse(entry.path)
+                }
                 host.dispatchEvent(new CustomEvent("toggle", {bubbles: true, detail: {path: event.detail.path}}));
-            },
-            async select({event}){
-                // select
-                host.dispatchEvent(new CustomEvent("select", {bubbles: true, detail: {path: event.detail.path}}));
             },
             getEntryByPathRecursive(path) {
                 const findEntry = (entries, path) => {
@@ -152,7 +210,14 @@ export default {
                         y: event.detail.y
                     }
                 }));
-            }
+            },
+            async keydown({event}){
+                if (event.key === "Enter" && event.altKey) {
+                    const entry = state.entries.find(e => e.path === state.selectedPath) || null;
+                    host.dispatchEvent(new CustomEvent("properties", {bubbles: true, detail: {path: state.selectedPath, entry}}));
+                    event.preventDefault();
+                }
+            },
 
         }
     }

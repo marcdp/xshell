@@ -6,6 +6,7 @@ export const contract = {
         select: {description: "Fired when an item is selected"},
         activate: {description: "Fired when an item is activated"},
         back: {description: "Fired when the back action is triggered"},
+        properties: {description: "Fired when the properties action is triggered"},
         contextmenuentry: {
             description: "Fired when a context menu entry is requested",
             detail: {
@@ -21,7 +22,9 @@ export const contract = {
         path: {type: "string", default:"/", attribute: true, state:true, description: "Current path in the filesystem"},
         filesystem: {type: "object", default:null, state:true, description: "Filesystem instance"}
     },
-    methods: {},
+    methods: {
+        refresh: {description: "Refresh the list for the current path"},
+    },
     slots: {}
 };
 
@@ -57,7 +60,8 @@ export default {
     state: {
         filesystem: null,
         path: "/",
-        entries: []
+        entries: [],
+        selectedPath: null
     },
     controller({ state, events, host, commands }) {
         return {
@@ -100,17 +104,24 @@ export default {
             },
             async select({event}){
                 // select
+                state.selectedPath = event.detail.path;
                 const entry = state.entries.find(e => e.path === event.detail.path) || null;
                 host.dispatchEvent(new CustomEvent("select", {bubbles: true, detail: {path: event.detail.path, entry}}));
             },
             async activate({event}){
                 // activate
+                state.selectedPath = event.detail.path;
                 const entry = state.entries.find(e => e.path === event.detail.path) || null;
                 host.dispatchEvent(new CustomEvent("activate", {bubbles: true, detail: {path: event.detail.path, entry}}));
-            },
+            }, 
             async keydown({event}){
-                if (event.key === "Backspace") {
-                    host.dispatchEvent(new CustomEvent("back", {bubbles: true, detail: {path: state.path}}));
+                if (event.key === "Enter" && event.altKey) {
+                    const entry = state.entries.find(e => e.path === state.selectedPath) || null;
+                    host.dispatchEvent(new CustomEvent("properties", {bubbles: true, detail: {path: state.selectedPath, entry}}));
+                    event.preventDefault();
+                } else if (event.key === "Backspace") {
+                    const entry = state.entries.find(e => e.path === state.selectedPath) || null;
+                    host.dispatchEvent(new CustomEvent("back", {bubbles: true, detail: {path: state.selectedPath, entry}}));
                     event.preventDefault();
                 }
             },

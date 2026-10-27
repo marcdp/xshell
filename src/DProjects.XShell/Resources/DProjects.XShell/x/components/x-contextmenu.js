@@ -47,7 +47,7 @@ export default {
         }
     `,
     template: `
-        <div x-if="state.visible" tabindex="0" x-style:left="state.x" x-style:top="state.y" x-on:keydown="keydown">
+        <div x-if="state.visible" tabindex="0" x-style:left="state.x" x-style:top="state.y" x-on:keydown="keydown" x-on:command="command">
             <slot></slot>
         </div>
     `,
@@ -83,6 +83,9 @@ export default {
                 document.addEventListener("scroll", scroll, true);
                 // focus the menu after opening
                 commands.enqueue("focus");
+            },
+            command({ event }) {
+                this.close();
             },
             focus() {
                 // focus

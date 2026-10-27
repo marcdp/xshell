@@ -134,6 +134,9 @@ async function delay(ms, signal) {
  */
 export default class Filesystem {
 
+    // static
+    static GetModes = GetModes;
+    
     // ctor
     constructor({ url = "", isReadonly = false } = {}) {
         // 'url' is a SAFE diagnostic identity, never an authenticated URL.

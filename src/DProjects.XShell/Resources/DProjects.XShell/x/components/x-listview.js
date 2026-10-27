@@ -43,7 +43,7 @@ export const contract = {
         autoScroll: {type:"boolean", default:false, attribute:true, state:true, description:"Whether to scroll to the newest item when the collection grows."}
     },
     methods: {
-        focus: {description: "Focuses the list view."}
+        focus: {description: "Focuses the list view."},
     },
     slots: {
         "": {
@@ -129,7 +129,8 @@ export default {
                     }
                     if (!selected && items.length > 0) {
                         items[0].selected = true;
-                        items[0].focus();                    
+                        items[0].focus();        
+                        items[0].dispatchEvent(new CustomEvent("select", {bubbles: true, detail: {path: items[0].path}}));            
                     }
                 }, 100);
             },
@@ -279,7 +280,7 @@ export default {
                         selected.dispatchEvent(new CustomEvent("select", {bubbles: true, detail: {path: items[Math.min(index+inc, items.length-1)].path}}));
                     }
                     event.preventDefault();
-                } else if (event.key == "Enter") {
+                } else if (event.key == "Enter" && !event.altKey) {
                     if (selected) {
                         selected.expanded = !selected.expanded;
                         selected.dispatchEvent(new CustomEvent("activate", {bubbles: true, detail: {path: selected.path}}));
@@ -301,6 +302,7 @@ export default {
                         target.selected = false;
                     }
                     item.selected = true;
+                    item.dispatchEvent(new CustomEvent("select", {bubbles: true, detail: {path: item.path}}));
                     host.invalidate();
                 }
                 host.dispatchEvent(new CustomEvent("contextmenuitem", {

@@ -33,7 +33,8 @@ export default {
                 x-prop:filesystem="state.filesystem" 
                 x-prop:path="state.path" 
                 x-on:select="treeSelect"
-                x-on:toggle="treeToggle"
+                x-on:toggle="treeToggle",
+                x-on:properties="treeProperties"
             ></x-filesystem-tree>
             <x-splitter></x-splitter>
             <x-filesystem-list 
@@ -42,14 +43,17 @@ export default {
                 x-on:select="listSelect"
                 x-on:activate="listActivate"
                 x-on:back="listBack"
+                x-on:properties="listProperties"
             ></x-filesystem-list>
         </div>
 
         <x-contextmenu x-on:command="command">
             <x-menuitem label="Open" icon="x-open" command="open"></x-menuitem>
             <x-menuitem label="Refresh" icon="x-refresh" command="refresh"></x-menuitem>
-            <x-menuitem label="New Folder" icon="x-folder" command="newFolder"></x-menuitem>
-            <x-menuitem label="Delete" icon="x-trash" command="delete"></x-menuitem>
+            <!--
+                <x-menuitem label="New Folder" icon="x-folder" command="newFolder"></x-menuitem>
+                <x-menuitem label="Delete" icon="x-trash" command="delete"></x-menuitem>
+            -->
             <x-menuitem label="-"></x-menuitem>
             <x-menuitem label="Properties" icon="x-wrench" command="properties"></x-menuitem>
         </x-contextmenu>
@@ -59,6 +63,7 @@ export default {
         filesystem: null,
         path: "/",
         pathList: "/",
+        entry: null,
         history: ["/"],
         historyIndex: 0        
     },
@@ -79,14 +84,14 @@ export default {
 
             // command
             command({event}) {
-                debugger;
                 if (event.detail.command === "open") {
+                    this.open();
                 } else if (event.detail.command === "refresh") {
                     this.refresh();
                 } else if (event.detail.command === "newFolder") {
                 } else if (event.detail.command === "delete") {
                 } else if (event.detail.command === "properties") {
-                    alert("properties")
+                    this.properties();
                 }
             },
 
@@ -94,27 +99,42 @@ export default {
             async refresh() {
                 // handle refresh event
                 const list = host.shadowRoot.querySelector("x-filesystem-list");
-                await list?.onCommand("refresh");
+                await list.refresh();
             },
-            back() {
+            async back() {
                 // handle back event
                 if (state.historyIndex > 0) {
                     state.historyIndex--;
                     state.pathList = state.history[state.historyIndex];
+                    const tree = host.shadowRoot.querySelector("x-filesystem-tree");
+                    if (tree) {
+                        await tree.expand(state.pathList);
+                        await tree.select(state.pathList);
+                    }
                 }
             },
-            forward() {
+            async forward() {
                 // handle forward event
                 if (state.historyIndex < state.history.length - 1) {
                     state.historyIndex++;
                     state.pathList = state.history[state.historyIndex];
+                    const tree = host.shadowRoot.querySelector("x-filesystem-tree");
+                    if (tree) {
+                        await tree.expand(state.pathList);
+                        await tree.select(state.pathList);
+                    }
                 }
             },
-            navigateTo(path) {
+            async navigateTo(path, {expand = true, select = true} = {}) {
                 if (typeof path !== "string" || !path || path === state.pathList) return;
                 state.history = [...state.history.slice(0, state.historyIndex + 1), path];
                 state.historyIndex = state.history.length - 1;
                 state.pathList = path;
+                const tree = host.shadowRoot.querySelector("x-filesystem-tree");
+                if (tree) {
+                    if (expand) await tree.expand(path);
+                    if (select) await tree.select(path);
+                }
             },
             up() {
                 // handle up 
@@ -124,7 +144,7 @@ export default {
                     this.navigateTo(newPath);
                 }
             },
-            open(entry) {
+            open(entry = state.entry) {
                 // open
                 if (entry && entry.type === "directory") {
                     this.navigateTo(entry.path);
@@ -141,17 +161,32 @@ export default {
                     });
                 }
             },
-
+            properties(entry = state.entry) {
+                // open
+                const page = getPage();
+                navigation.navigate( {
+                    href: "page:x-filesystem:/pages/properties.js",
+                    page: page,
+                    params: {
+                        src: state.src,
+                        path: entry.path,
+                    },
+                    open: "stack"
+                });
+            },
 
             /* tree */
             treeSelect({event}) {
                 // handle tree select event
-                this.navigateTo(event.detail.path);
+                this.navigateTo(event.detail.path, {expand: false, select: true});
             },
             treeToggle({ event }) {
                 // handle tree toggle event
             },
-
+            treeProperties({event}) {
+                // handle tree properties event
+                this.properties(event.detail.entry);
+            },
 
             /* list */
             listSelect({event}) {
@@ -165,10 +200,15 @@ export default {
                 // handle list back event
                 this.up();
             },
+            listProperties({event}) {
+                // handle list properties event
+                this.properties(event.detail.entry);
+            },
 
-            /* context menu entry */
+            /* context menu */
             contextMenuEntry({event}) {
                 // handle context menu entry event
+                state.entry = event.detail.entry;
                 const contextMenu = host.shadowRoot.querySelector("x-contextmenu");
                 contextMenu.open({x: event.detail.x, y: event.detail.y});
             }
@@ -176,3 +216,4 @@ export default {
     }
 };
 
+    

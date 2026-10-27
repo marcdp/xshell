@@ -20,7 +20,14 @@ export const contract = {
     properties: {
         multiple: {type:"boolean", default:false, attribute:true, state:true, description:""}
     },
-    methods: {},
+    methods: {
+        select: {
+            description: "Select a tree item by path",
+            parameters: [
+                {name: "path", type: "string", description: "Path of the tree item to select"}
+            ]
+        }
+    },
     slots: {
         "": {
             description: "Default slot for tree-view items."
@@ -85,6 +92,13 @@ export default {
                         items[0].focus();                    
                     }
                 }, 100);
+            },
+
+            select(path) {
+                let items = host.querySelectorAll("x-treeview-item");
+                for(let target of items) {
+                    target.selected = (target.path === path);
+                }
             },
 
             async keydown(args) {
@@ -165,7 +179,7 @@ export default {
                         selected.dispatchEvent(new CustomEvent("toggle", {bubbles: true, detail: {path: selected.path}}));
                     }
                     event.preventDefault();
-                } else if (event.key == "Enter") {
+                } else if (event.key == "Enter" && !event.altKey) {
                     if (selected) {
                         selected.expanded = !selected.expanded;
                         selected.dispatchEvent(new CustomEvent("toggle", {bubbles: true, detail: {path: selected.path}}));
