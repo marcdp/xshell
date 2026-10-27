@@ -22,8 +22,8 @@ export default {
     `,
     template: `
         <x-toolbar>
-            <x-button icon="x-arrow-back" x-on:click="back" class="menuitem"></x-button>
-            <x-button icon="x-arrow-forward" x-on:click="forward" class="menuitem"></x-button>
+            <x-button icon="x-arrow-back" x-on:click="back" x-attr:disabled="state.historyIndex <= 0" class="menuitem"></x-button>
+            <x-button icon="x-arrow-forward" x-on:click="forward" x-attr:disabled="state.historyIndex >= state.history.length - 1" class="menuitem"></x-button>
             <x-button icon="x-arrow-up" x-on:click="up" class="menuitem" x-attr:disabled="state.pathList == state.path"></x-button>
             <x-button icon="x-refresh" x-on:click="refresh" class="menuitem" ></x-button>
             <x-datafield x-model="state.pathList" type="string" label="" placeholder="path" readonly style="flex:1"></x-datafield>        
@@ -51,38 +51,59 @@ export default {
         src: null,
         filesystem: null,
         path: "/",
-        pathList: "/"
+        pathList: "/",
+        history: ["/"],
+        historyIndex: 0
         
     },
-    controller({ state, events, loader, navigation, getPage }) {
+    controller({ state, events, loader, navigation, getPage, host }) {
         return {
             async load(args) {
                 // load
+                if (typeof state.pathList === "string" && state.pathList) {
+                    state.history = [state.pathList];
+                    state.historyIndex = 0;
+                }
                 events.on(state, "change:src", async (event)=>{
+                    state.history = [state.pathList];
+                    state.historyIndex = 0;
                     state.filesystem = await loader.load("filesystem:" + state.src);
                 })
             },
 
 
             /* toolbar actions */
-            refresh() {
+            async refresh() {
                 // handle refresh event
-                console.log("Refresh clicked");
+                const list = host.shadowRoot.querySelector("x-filesystem-list");
+                await list?.onCommand("refresh");
             },
             back() {
                 // handle back event
-                console.log("Back clicked");
+                if (state.historyIndex > 0) {
+                    state.historyIndex--;
+                    state.pathList = state.history[state.historyIndex];
+                }
             },
             forward() {
                 // handle forward event
-                console.log("Forward clicked");
+                if (state.historyIndex < state.history.length - 1) {
+                    state.historyIndex++;
+                    state.pathList = state.history[state.historyIndex];
+                }
+            },
+            navigateTo(path) {
+                if (typeof path !== "string" || !path || path === state.pathList) return;
+                state.history = [...state.history.slice(0, state.historyIndex + 1), path];
+                state.historyIndex = state.history.length - 1;
+                state.pathList = path;
             },
             up() {
                 // handle up 
                 const path = state.pathList;
                 if (path != "/") {
                     const newPath = path.split("/").slice(0, -1).join("/") || "/";
-                    state.pathList = newPath;
+                    this.navigateTo(newPath);
                 }
             },
 
@@ -91,7 +112,7 @@ export default {
             treeSelect({event}) {
                 // handle tree select event
                 const path = event.detail.path;
-                state.pathList = path;
+                this.navigateTo(path);
             },
             treeToggle({ event }) {
                 // handle tree toggle event
@@ -109,7 +130,7 @@ export default {
                 const path = event.detail.path;
                 const entry = event.detail.entry;
                 if (path && entry && entry.type === "directory") {
-                    state.pathList = path;
+                    this.navigateTo(path);
                 } else {
                     console.log("List activate:", path);
                     const page = getPage();
