@@ -337,6 +337,43 @@ export default class FilesystemMem extends Filesystem {
             }
         });
     }
+    async getReadUrl(path, { contentType = null, signal } = {}) {
+        validatePath(path);
+        checkAbort(signal);
+        const entry = this._entries.get(path);
+        if (!entry) {throw new Error(`File not found: ${path}`);}
+        if (entry.type !== EntryType.File) {throw new Error(`Cannot create a read URL for a directory: ${path}`);}
+        // Resolve MIME type for browser rendering
+        const mimeTypes = {
+            png: "image/png",
+            jpg: "image/jpeg",
+            jpeg: "image/jpeg",
+            gif: "image/gif",
+            webp: "image/webp",
+            pdf: "application/pdf",
+            txt: "text/plain",
+            mp4: "video/mp4",
+            webm: "video/webm",
+            mp3: "audio/mpeg",
+            wav: "audio/wav"
+        };
+        const extension = pathName(path).split(".").pop().toLowerCase();
+        const mimeType = contentType || mimeTypes[extension] || "application/octet-stream";
+        // Blob snapshots the current file content
+        const blob = new Blob([entry.content], { type: mimeType });
+        checkAbort(signal);
+        const url = URL.createObjectURL(blob);
+        let disposed = false;
+        return {
+            url,
+            expiresAt: null,
+            dispose() {
+                if (disposed) return;
+                disposed = true;
+                URL.revokeObjectURL(url);
+            }
+        };
+    }
 
     // methods LEVEL 2
     async saveFile(path, data, {

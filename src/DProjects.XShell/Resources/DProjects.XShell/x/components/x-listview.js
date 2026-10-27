@@ -57,7 +57,10 @@ export default {
 
         /* items */
         .items {flex:1;}
-        .items:focus {outline:none;}
+        .items:focus {
+            outline:none;
+            --x-listview-item-selected-border: .1em var(--x-color-gray) dotted;
+        }
     `,
     template: `
         <div ref="items" tabIndex="0" class="items" x-attr:aria-multiselectable="state.multiple ? 'true' : null" x-on:click="click" x-on:dblClick="dblClick">
@@ -82,12 +85,13 @@ export default {
     state: {
         availableViews: []
     },
-    controller({ state, events, host }) {
+    controller({ state, events, host, timer }) {
         const supportedViews = ["list", "details", "icons", "tiles"];
         return {
             load() {
                 // load
                 host.addEventListener("keydown", (event) => {this.keydown({event});});
+                host.addEventListener("focusin", (event) => {this.focus();});
                 events.on(state, "change:view", "refreshView");
                 events.on(state, "change:views", "refreshViews");
                 events.on(state, "change:multiple", "multipleChanged");
@@ -101,6 +105,19 @@ export default {
                     attributeFilter: ["width", "category"],
                     subtree: true
                 });
+            },
+            async focus() {
+                timer.setTimeout(() => {
+                    let items = host.querySelectorAll(":scope > x-listview-body > x-listview-item");
+                    let selected = null;
+                    for(let target of items) {
+                        if (target.selected) selected = target;
+                    }
+                    if (!selected && items.length > 0) {
+                        items[0].selected = true;
+                        items[0].focus();                    
+                    }
+                }, 100);
             },
             changeView(args) {
                 const view = args.event.currentTarget.dataset.view;
@@ -129,7 +146,6 @@ export default {
                 }
             },
             refresh(args = {}) {
-                console.log("Refreshing listview2 with view:", state.view)
                 // determine grid template columns for details view
                 const columns = host.querySelectorAll(":scope > x-listview-head > x-listview-column");
                 const gridTemplateColumns = [...columns]
@@ -140,7 +156,7 @@ export default {
                 } else {
                     host.style.removeProperty("--x-listview-grid-template-columns");
                 }
-
+                // view
                 let view = supportedViews.includes(state.view) ? state.view : "list";
                 host.style.setProperty("--x-listview-view", "'" + view + "'");
 
@@ -151,6 +167,7 @@ export default {
                     const category = item.getAttribute("category") ?? item.category ?? "";
                     const categoryVisible = (view === "list" || view === "details") && category !== "" && category !== previousCategory;
                     item.toggleAttribute("data-category-visible", categoryVisible);
+                    item.selected = false;
                     item.index = index;
                     previousCategory = category;
                 });

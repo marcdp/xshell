@@ -21,7 +21,7 @@ export default {
             flex-direction:column;
             position:absolute;
             left:0;
-            top:0;
+            top:var(--x-fill-top, 0);
             right:0;
             bottom:0;
             z-index:0;

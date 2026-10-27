@@ -11,7 +11,7 @@ export const contract = {
 // implementation
 export default {
     style: `
-        :host {display:block; position:absolute; top:.5em; right:.5em;}
+        :host {display:none; position:absolute; top:.5em; right:.5em;}
         summary:hover {text-decoration:underline; cursor:pointer;}
         x-icon {vertical-align:bottom;}
     `,

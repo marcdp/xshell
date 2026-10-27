@@ -88,6 +88,7 @@ export default {
         :host(.cancel) .button:hover {color:var(--x-color-text); background:var(--x-button-background-hover); cursor:pointer; }
         :host(.cancel) .button:active {background:var(--x-button-background-active);}
         :host(.cancel[disabled]) .button {color:var(--x-color-xxx-gray)}
+        :host(.cancel[disabled]) x-icon {color:var(--x-color-xxx-gray)}
 
         :host(.anchor) {display:inline;}
         :host(.anchor) > div {display:inline;}
@@ -99,6 +100,7 @@ export default {
         :host(.anchor.big) .button {padding:.25em .25em;}
         :host(.anchor.big) .button x-icon {font-size:1.1em;}
         :host(.anchor[disabled]) .button {color:var(--x-color-xxx-gray)}
+        :host(.anchor[disabled]) x-icon {color:var(--x-color-xxx-gray)}
 
         :host(.menuitem) {}
         :host(.menuitem) .button {display:flex; padding-left:.6em; padding-right:.6em; text-decoration:none; height:2.1em; outline:none; border:none; background:var(--x-button-background); border-radius:var(--x-menuitem-border-radius); align-items:center;}
@@ -106,6 +108,8 @@ export default {
         :host(.menuitem) .button > div span.label {font-weight: normal; color:var(--x-color-text);}
         :host(.menuitem) .button:hover {background:var(--x-color-background-x-gray); }
         :host(.menuitem) .button:active {background:var(--x-color-background-xx-gray); }
+        :host(.menuitem[disabled]) .button {color:var(--x-color-xxx-gray)}
+        :host(.menuitem[disabled]) x-icon {color:var(--x-color-xxx-gray)}
         
         :host(.round) .button {padding-left:0; padding-right:0; width:100%; width:2.5em; justify-content: center;}
 

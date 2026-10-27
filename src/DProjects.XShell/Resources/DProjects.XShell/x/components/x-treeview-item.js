@@ -53,11 +53,15 @@ export default {
         .row .cell label {flex:1; display:block; cursor:pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
         .row .cell label x-icon {cursor:pointer; display:inline-block; transform:translateY(-.1em);}
 
-        .row.selected {background:var(--x-color-background-x-gray); border-radius:.25em;}
+        .row.selected {background:var(--x-color-background-x-gray); border-radius:.25em; outline:var(--x-treeview-item-selected-border);}
         .row.no-childs .cell > x-icon {visibility:hidden;}
         .row.expanded .cell > x-icon {transform:rotate(90deg);}
 
         .row ::slotted(div) {white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+        x-spinner {display:none; --x-color-primary:var(--x-color-text);}
+        :host(.loading) x-spinner {display:inline-block; transform:translate(-.25em,.25em); margin-right:.075em;}
+        :host(.loading) x-spinner + x-icon {display:none;}
 
     `,
     template: `
@@ -68,6 +72,7 @@ export default {
             x-class:no-childs="!state.hasChilds && !state.hasChildsForced" 
         >
             <div class="cell" x-on:dblclick="toggle">
+                <x-spinner></x-spinner>
                 <x-icon icon="x-keyboard-arrow-right" x-on:click="toggle"></x-icon>
                 <label x-attr:title="state.description" >
                     <x-icon x-attr:icon="state.icon"></x-icon>

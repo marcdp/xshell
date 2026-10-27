@@ -14,7 +14,7 @@ export const contract = {
 export default {
     template: `
         <div class="loader"></div>
-        <span>{{state.message}}</span>
+        <span x-if="state.message">{{state.message}}</span>
     `,
     style:`
         :host {

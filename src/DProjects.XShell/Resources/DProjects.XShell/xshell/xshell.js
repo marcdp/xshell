@@ -62,7 +62,7 @@ class XShell {
         await this._i18n.init(config.xshell.i18n);
         this._services = new Services( {config, loader: this._loader, contracts: this._contracts, areas: this._areas, bus: this._bus } );
         this._modules = new Modules( { bus: this._bus, config: config, loader: this._loader, resolver: this._resolver, document: document, services: this._services } );
-        this._navigation = new Navigation( { areas: this._areas, bus: this._bus, config: config, container: document.body });
+        this._navigation = new Navigation( { areas: this._areas, bus: this._bus, config: config, container: document.body, resolver: this._resolver });
         this._dialog = new Dialog( { config: config, navigation: this._navigation, i18n: this._i18n } );        
         this._runtime = new Runtime();
         // compose contracts list in memory from modules             

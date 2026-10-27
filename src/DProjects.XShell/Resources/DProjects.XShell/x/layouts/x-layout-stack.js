@@ -81,9 +81,14 @@ export default {
         div.panel .header div {flex:1;}
         div.panel .header div h2 {margin:0; flex:1; font-size: var(--x-font-size-subtitle); margin-right:1em;}
         div.panel .header x-button {transform:translateY(-0.2em);}
-        div.panel .body {
-            padding:var(--x-layout-stack-page-padding-vertical) var(--x-layout-stack-page-padding-horizontal) var(--x-layout-stack-page-padding-vertical) var(--x-layout-stack-page-padding-horizontal);
-        }    
+        div.panel .body {padding:0em var(--x-layout-stack-page-padding-horizontal);}    
+
+        @media (min-width: 769px) {
+            :host {
+                --x-fill-top: 4.5em;
+                --x-fill-height: calc(100vh - var(--x-fill-top));
+            }
+        }
         @media (max-width: 768px) {
             :host {
                 --x-layout-stack-width:100vw;

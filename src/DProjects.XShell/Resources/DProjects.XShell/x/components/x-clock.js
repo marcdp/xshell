@@ -23,7 +23,7 @@ export default {
             load() {
                 //load
                 this.refresh();
-                timer.setInterval(1000, "refresh");
+                timer.setInterval("refresh", 1000);
             },
 
             refresh() {

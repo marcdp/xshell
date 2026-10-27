@@ -26,6 +26,9 @@ export default {
             --x-treeview-indent: 0;
         }        
         div:focus {outline:none;}
+        :host div:focus {
+            --x-treeview-item-selected-border: .1em var(--x-color-gray) dotted;
+        }
     `,
     template: `
         <div ref="div" tabindex="0">
@@ -34,12 +37,13 @@ export default {
     `,
     state: {
     },
-    controller({ state, events, host }) {
+    controller({ state, events, host, timer }) {
         return {
             async load(args) {
                 // load
                 host.addEventListener("keydown", (event) => {this.keydown({event});});
                 host.addEventListener("toggle", (event) => {this.refresh({event});});
+                host.addEventListener("focusin", (event) => {this.focusIn({event});});
                 events.on(state, "change:items", "build-items");
                 // detect changes in light dom
                 this.mutationObserver = new MutationObserver(()=>{
@@ -56,6 +60,20 @@ export default {
                 // unload
                 this.mutationObserver?.disconnect();
                 delete this.mutationObserver;
+            },
+
+            async focusIn({event}){
+                timer.setTimeout(() => {
+                    let items = host.querySelectorAll("x-treeview-item");
+                    let selected = null;
+                    for(let target of items) {
+                        if (target.selected) selected = target;
+                    }
+                    if (!selected && items.length > 0) {
+                        items[0].selected = true;
+                        items[0].focus();                    
+                    }
+                }, 100);
             },
 
             async keydown(args) {

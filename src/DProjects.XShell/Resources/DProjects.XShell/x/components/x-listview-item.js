@@ -42,9 +42,10 @@ export default {
 
         /* row */
         .row {min-width: 0;box-sizing: border-box;border-radius: var(--x-menuitem-border-radius); user-select: none;}
+        .row.selected {outline:var(--x-listview-item-selected-border);}
         .item-anchor {display: block; min-width: 0;box-sizing: border-box;border-radius: inherit;}
         .item-anchor::part(a) {display: flex; min-width: 0; box-sizing: border-box;align-items: center;}
-        x-anchor.item-anchor {display:inline-block; }
+        x-anchor.item-anchor {_display:inline-block; }
 
         /* primary */
         .primary {display: flex; align-items:center; gap:.3em; min-width:0; width:100%; box-sizing: border-box;  cursor:pointer;}

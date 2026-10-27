@@ -5,7 +5,7 @@ export const contract = {
     events: {},
     properties: {
         path: {type: "string", default:"/", attribute: true, state:true, description: "Current path in the filesystem"},
-        src: {type: "string", default:"", attribute: true, state:true, description: "Source of the filesystem (e.g., 'mem:')"}
+        src: {type: "string", default:null, attribute: true, state:true, description: "Source of the filesystem (e.g., 'mem:')"}
     },
     methods: {},
     slots: {}
@@ -24,8 +24,8 @@ export default {
         <x-toolbar>
             <x-button icon="x-arrow-back" x-on:click="back" class="menuitem"></x-button>
             <x-button icon="x-arrow-forward" x-on:click="forward" class="menuitem"></x-button>
-            <x-button icon="x-arrow-up" x-on:click="up" class="menuitem "></x-button>
-            <x-button icon="x-refresh" x-on:click="refresh" class="menuitem"></x-button>
+            <x-button icon="x-arrow-up" x-on:click="up" class="menuitem" x-attr:disabled="state.pathList == state.path"></x-button>
+            <x-button icon="x-refresh" x-on:click="refresh" class="menuitem" ></x-button>
             <x-datafield x-model="state.pathList" type="string" label="" placeholder="path" readonly style="flex:1"></x-datafield>        
         </x-toolbar>
         <div class="container"> 
@@ -41,18 +41,20 @@ export default {
                 x-prop:filesystem="state.filesystem" 
                 x-prop:path="state.pathList || state.path" 
                 x-on:select="listSelect"
-                x-on:toggle="listToggle"
+                x-on:activate="listActivate"
+                x-on:back="listBack"
                 style="flex:1"
             ></x-filesystem-list>
         </div>
     `,
     state: {
+        src: null,
         filesystem: null,
         path: "/",
         pathList: "/"
         
     },
-    controller({ state, events, loader }) {
+    controller({ state, events, loader, navigation, getPage }) {
         return {
             async load(args) {
                 // load
@@ -60,42 +62,71 @@ export default {
                     state.filesystem = await loader.load("filesystem:" + state.src);
                 })
             },
-            refresh({event}) {
+
+
+            /* toolbar actions */
+            refresh() {
                 // handle refresh event
                 console.log("Refresh clicked");
             },
-            back({event}) {
+            back() {
                 // handle back event
                 console.log("Back clicked");
             },
-            forward({event}) {
+            forward() {
                 // handle forward event
                 console.log("Forward clicked");
             },
-            up({event}) {
-                // handle up event
-                console.log("Up clicked");
+            up() {
+                // handle up 
+                const path = state.pathList;
+                if (path != "/") {
+                    const newPath = path.split("/").slice(0, -1).join("/") || "/";
+                    state.pathList = newPath;
+                }
             },
+
+
+            /* tree */
             treeSelect({event}) {
                 // handle tree select event
                 const path = event.detail.path;
-                console.log("Tree select:", path);
                 state.pathList = path;
             },
             treeToggle({ event }) {
                 // handle tree toggle event
                 const path = event.detail.path;
-                console.log("Tree toggle:", path);
             },
+
+
+            /* list */
             listSelect({event}) {
                 // handle list select event
                 const path = event.detail.path;
-                console.log("List select:", path);
             },
-            listToggle({ event }) {
-                // handle list toggle event
+            listActivate({event}) {
+                // handle list activate event
                 const path = event.detail.path;
-                console.log("List toggle:", path);
+                const entry = event.detail.entry;
+                if (path && entry && entry.type === "directory") {
+                    state.pathList = path;
+                } else {
+                    console.log("List activate:", path);
+                    const page = getPage();
+                    navigation.navigate( {
+                        href: "page:x-filesystem:/pages/edit.js",
+                        page: page,
+                        params: {
+                            src: state.src,
+                            path: path,
+                        },
+                        open: "stack"
+                    });
+                }
+            },
+            listBack({event}) {
+                // handle list back event
+                this.up();
             }
         }
     }

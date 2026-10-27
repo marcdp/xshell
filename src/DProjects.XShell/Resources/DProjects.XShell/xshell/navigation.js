@@ -13,6 +13,7 @@ export default class Navigation {
     _bus = null;
     _config = null;
     _container = null;
+    _resolver = null;
 
     _mode = ""; 
     _appBasePath = "";
@@ -23,11 +24,12 @@ export default class Navigation {
     _stackToDomTask = Promise.resolve();
     
     // ctor
-    constructor( { areas, bus, config, container} ) {
+    constructor( { areas, bus, config, container, resolver} ) {
         this._areas = areas;
         this._bus = bus;
         this._config = config;
         this._container = container;
+        this._resolver = resolver;
         this._mode = config.xshell.navigation.mode;
         this._appBasePath = config.app.basePath;
         if (this._appBasePath == "/") this._appBasePath = "";
@@ -537,6 +539,10 @@ export default class Navigation {
     }
     _resolveCanonicalHref(href, page) {
         // resolve relative targets and apply the originating navigation context
+        if (href.startsWith("page:")) {
+            const aux = this._resolver.resolve(href);
+            href = aux.path;
+        }
         if (/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(href)) return href;
         if (href.startsWith("#!")) href = href.substring(2);
         href = this._removeAppBasePathFromAssetHref(href);

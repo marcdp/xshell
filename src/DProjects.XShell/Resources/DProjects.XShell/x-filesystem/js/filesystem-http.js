@@ -278,7 +278,16 @@ export default class FilesystemHttp extends Filesystem {
             }
         }));
     }
-
+    async getReadUrl(path, { signal } = {}) {
+        validatePath(path);
+        checkAbort(signal);
+        return {
+            url: this._requestUrl(path).href,
+            expiresAt: null,
+            dispose: null
+        };
+    }
+    
     // loadWriteStream is inherited from Filesystem.
 
     // methods LEVEL 2

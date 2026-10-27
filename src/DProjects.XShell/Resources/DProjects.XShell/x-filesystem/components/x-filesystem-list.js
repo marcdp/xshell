@@ -2,7 +2,12 @@
 // contract
 export const contract = {
     description: "Filesystem list component",
-    events: {},
+    events: {
+        "select": {description: "Fired when an item is selected"},
+        "activate": {description: "Fired when an item is activated"},
+        "back": {description: "Fired when the back action is triggered"}
+
+    },
     properties: {
         path: {type: "string", default:"/", attribute: true, state:true, description: "Current path in the filesystem"},
         filesystem: {type: "object", default:null, state:true, description: "Filesystem instance"}
@@ -18,7 +23,7 @@ export default {
         :host {width:100%;}
     `,
     template: `
-        <x-listview view="details" views="list, details, tiles, icons" x-on:select="select" x-on:activate="activate">
+        <x-listview view="details" views="list, details, tiles, icons" x-on:select="select" x-on:activate="activate" x-on:keydown="keydown">
             <x-listview-head>
                 <x-listview-column label="Name"></x-listview-column>
                 <x-listview-column label="Size" width="6em" style="text-align:right; padding-right:0.5em;"></x-listview-column>
@@ -45,7 +50,7 @@ export default {
         path: "/",
         entries: []
     },
-    controller({ state, events, host }) {
+    controller({ state, events, host, commands }) {
         return {
             async load(args) {
                 // load
@@ -56,9 +61,10 @@ export default {
             async refresh(path) {
                 if (state.filesystem && state.path) {
                     console.log("Refreshing path:", state.path);
-                    
-                    const entries = [];
+                    // check if the host has focus before refreshing
+                    const hasFocus = host.matches(':focus-within');
                     // iterate over filesystem entries and collect them into an array
+                    const entries = [];
                     for await (const entry of state.filesystem.getEntries(state.path)) {
                         entries.push({
                             ...entry,
@@ -73,17 +79,31 @@ export default {
                     });
                     // set
                     state.entries = entries;
+                    // if previously focused, try to restore focus to the list items
+                    if (hasFocus) {
+                        commands.enqueue("focus");                        
+                    }
                 }
+            },
+            async focus() {
+                const listview = host.shadowRoot.querySelector('x-listview');
+                listview.onCommand("focus");
             },
             async select({event}){
                 // select
-                console.log("Selected: " +  event.detail.path)
-                host.dispatchEvent(new CustomEvent("select", {bubbles: true, detail: {path: event.detail.path}}));
+                const entry = state.entries.find(e => e.path === event.detail.path) || null;
+                host.dispatchEvent(new CustomEvent("select", {bubbles: true, detail: {path: event.detail.path, entry}}));
             },
             async activate({event}){
                 // activate
-                console.log("Activated: " +  event.detail.path)
-                host.dispatchEvent(new CustomEvent("activate", {bubbles: true, detail: {path: event.detail.path}}));
+                const entry = state.entries.find(e => e.path === event.detail.path) || null;
+                host.dispatchEvent(new CustomEvent("activate", {bubbles: true, detail: {path: event.detail.path, entry}}));
+            },
+            async keydown({event}){
+                if (event.key === "Backspace") {
+                    host.dispatchEvent(new CustomEvent("back", {bubbles: true, detail: {path: state.path}}));
+                    event.preventDefault();
+                }
             }
 
         }

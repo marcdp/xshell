@@ -29,6 +29,7 @@ export default {
             min-width: 0;
             height: 100%;
         }
+        :host(:first-child) .content span {padding-left:1.65em;}
 
         :host(:first-child) span {
             padding-left:.25em;

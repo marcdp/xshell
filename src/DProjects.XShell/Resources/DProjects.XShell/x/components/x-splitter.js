@@ -56,16 +56,11 @@ export default {
             box-sizing:border-box;
             touch-action:none;
         }
-
-        .handle:focus-visible {
-            background:var(--x-color-primary);
-        }
     `,
     template: `
         <div
             class="handle"
             role="separator"
-            tabindex="0"
             x-attr:aria-orientation="state.orientation"
             x-on:pointerdown="pointerDown"
             x-on:pointermove="pointerMove"

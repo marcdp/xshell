@@ -172,6 +172,10 @@ export default class Filesystem {
         }
         throw new Error("loadReadStream() must be implemented by a filesystem provider");
     }
+    async getReadUrl(path, { expiresIn = 300, disposition = "inline", signal } = {}) {
+        validatePath(path); aborted(signal);
+        throw new Error("getReadUrl() must be implemented by a filesystem provider");
+    }
 
     /**
      * Buffered default matching the intent of C#'s SpongeOutputStream.

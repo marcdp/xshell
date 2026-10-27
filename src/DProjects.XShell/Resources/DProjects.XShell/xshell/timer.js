@@ -23,14 +23,14 @@ export default class Timer {
     }
 
     // methods
-    setTimeout(timeout, listener) {
+    setTimeout(listener, timeout) {
         if (typeof(listener) == "string") {
             const command = listener;
             listener = () => {this._handler(command);}
         }
         this._timeouts.push({ timeout, timeoutId: setTimeout(listener, timeout), listener });
     }
-    setInterval(timeout, listener) {
+    setInterval(listener, timeout) {
         if (typeof(listener) == "string") {
             const command = listener;
             listener = () => {this._handler(command);}

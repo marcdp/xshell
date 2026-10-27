@@ -16,7 +16,6 @@ export const contract = {
 export default {
     style: `
         :host {width:100%;}
-        x-treeview-item {--x-treeview-column-width-1: 100%;}
     `,
     template: `
         <x-treeview x-on:toggle="toggle" x-on:select="select">
@@ -31,6 +30,7 @@ export default {
                     x-attr:icon="entry.icon"
                     x-attr:path="entry.path"
                     x-attr:has-childs-forced="entry.hasChildsForced"                    
+                    x-class:loading="entry.loading"
                 >
                 </x-treeview-item>
             </x-treeview-body>
@@ -76,8 +76,11 @@ export default {
                 // refresh
                 if (state.filesystem && path) {
                     const entry = this.getEntryByPathRecursive(path);
-                    const entries = [];
+                    // loading
+                    entry.loading = true;
+                    host.invalidate();
                     // iterate over filesystem entries and collect them into an array
+                    const entries = [];
                     for await (const entry of state.filesystem.getEntries(path)) {
                         if (entry.type === "directory") {
                             entries.push({
@@ -95,6 +98,7 @@ export default {
                     // set
                     entry.hasChildsForced = entries.length > 0;
                     entry.children = entries;
+                    entry.loading = false;
                     host.invalidate();
                 }
             },
