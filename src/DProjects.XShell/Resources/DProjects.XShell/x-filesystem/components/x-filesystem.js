@@ -16,7 +16,7 @@ export const contract = {
 export default {
     style: `
         :host {display:block;}
-        .container {display:flex; width:100%; margin-top:.5em;}
+        .container {display:flex; width:100%; margin-top:.5em; }
         .container x-filesystem-tree {flex-shrink: 0; padding:.5em; padding-top:0; box-sizing:border-box;}
         .container x-filesystem-list {flex:1; padding:.5em; padding-top:0; box-sizing:border-box;}
     `,

@@ -1,11 +1,4 @@
-
-import Filesystem, {
-    EntryType,
-    Features,
-    GetModes,
-    pathName,
-    validatePath
-} from "./filesystem.js";
+import Filesystem, { EntryType, Features, GetModes, pathName, validatePath } from "./filesystem.js";
 
 // constants
 const READONLY_FLAG = 1;
@@ -38,9 +31,7 @@ function matchesPattern(name, pattern) {
         if (char === "*") expression += ".*";
         else if (char === "?") expression += ".";
         else if (char === "#") expression += "[0-9]";
-        else expression += char.replace(
-            /[\\^$.*+?()[\]{}|]/g, "\\$&"
-        );
+        else expression += char.replace(/[\\^$.*+?()[\]{}|]/g, "\\$&");
     }
 
     return new RegExp(expression + "$").test(name);
@@ -52,16 +43,10 @@ function toBytes(chunk) {
     }
 
     if (ArrayBuffer.isView(chunk)) {
-        return new Uint8Array(
-            chunk.buffer,
-            chunk.byteOffset,
-            chunk.byteLength
-        ).slice();
+        return new Uint8Array(chunk.buffer, chunk.byteOffset, chunk.byteLength).slice();
     }
 
-    throw new TypeError(
-        "File content must be binary data, Blob, string or ReadableStream"
-    );
+    throw new TypeError("File content must be binary data, Blob, string or ReadableStream");
 }
 
 async function readBytes(input, signal) {
@@ -134,35 +119,25 @@ async function readBytes(input, signal) {
         return result;
     }
 
-    throw new TypeError(
-        "Unsupported file content; expected Blob, binary data, string or ReadableStream"
-    );
+    throw new TypeError("Unsupported file content; expected Blob, binary data, string or ReadableStream");
 }
 
 // class
 export default class FilesystemMem extends Filesystem {
-
-
     // static factory
     static create(url) {
         return new FilesystemMem();
     }
-    
+
 
     // constructor
     constructor({ isReadonly = false } = {}) {
-        super({
-            url: "mem://",
-            isReadonly
-        });
+        super({ url: "mem://", isReadonly });
 
         this._entries = new Map();
         this._revision = 0;
 
-        this._entries.set(
-            "/",
-            this._newEntry("/", EntryType.Directory)
-        );
+        this._entries.set("/", this._newEntry("/", EntryType.Directory));
     }
 
     // methods (private)
@@ -178,9 +153,7 @@ export default class FilesystemMem extends Filesystem {
             etag: "",
             flags: 0,
             metadata: new Map(),
-            content: type === EntryType.File
-                ? new Uint8Array(0)
-                : null
+            content: type === EntryType.File ? new Uint8Array(0) : null
         };
     }
 
@@ -193,8 +166,7 @@ export default class FilesystemMem extends Filesystem {
             modified: new Date(entry.modified),
             length: entry.length,
             etag: entry.etag,
-            flags: entry.flags |
-                (this.isReadonly ? READONLY_FLAG : 0)
+            flags: entry.flags | (this.isReadonly ? READONLY_FLAG : 0)
         };
     }
 
@@ -202,8 +174,7 @@ export default class FilesystemMem extends Filesystem {
         entry.modified = new Date(modified);
 
         if (entry.type === EntryType.File) {
-            entry.etag =
-                `mem-${++this._revision}-${entry.length}`;
+            entry.etag = `mem-${++this._revision}-${entry.length}`;
         }
     }
 
@@ -217,11 +188,7 @@ export default class FilesystemMem extends Filesystem {
         return entry ? this._snapshot(entry) : null;
     }
 
-    async *getEntries(path, {
-        mode = GetModes.All,
-        pattern = null,
-        signal
-    } = {}) {
+    async *getEntries(path, { mode = GetModes.All, pattern = null, signal } = {}) {
         validatePath(path);
         checkAbort(signal);
 
@@ -236,34 +203,28 @@ export default class FilesystemMem extends Filesystem {
         }
 
         if (!Object.values(GetModes).includes(mode)) {
-            throw new RangeError(
-                `Invalid entries mode: ${mode}`
-            );
+            throw new RangeError(`Invalid entries mode: ${mode}`);
         }
 
         const prefix = path === "/" ? "/" : `${path}/`;
         const result = [];
 
         for (const entry of this._entries.values()) {
-            if (entry.path === path ||
-                !entry.path.startsWith(prefix)) {
+            if (entry.path === path || !entry.path.startsWith(prefix)) {
                 continue;
             }
 
             const relative = entry.path.slice(prefix.length);
 
-            if (mode !== GetModes.Descendants &&
-                relative.includes("/")) {
+            if (mode !== GetModes.Descendants && relative.includes("/")) {
                 continue;
             }
 
-            if (mode === GetModes.Files &&
-                entry.type !== EntryType.File) {
+            if (mode === GetModes.Files && entry.type !== EntryType.File) {
                 continue;
             }
 
-            if (mode === GetModes.Directories &&
-                entry.type !== EntryType.Directory) {
+            if (mode === GetModes.Directories && entry.type !== EntryType.Directory) {
                 continue;
             }
 
@@ -274,10 +235,7 @@ export default class FilesystemMem extends Filesystem {
             result.push(this._snapshot(entry));
         }
 
-        result.sort((a, b) =>
-            a.path < b.path ? -1 :
-            a.path > b.path ? 1 : 0
-        );
+        result.sort((a, b) => a.path < b.path ? -1 : a.path > b.path ? 1 : 0);
 
         for (const entry of result) {
             checkAbort(signal);
@@ -285,16 +243,11 @@ export default class FilesystemMem extends Filesystem {
         }
     }
 
-    async loadReadStream(path, {
-        offset = 0,
-        length = -1,
-        signal
-    } = {}) {
+    async loadReadStream(path, { offset = 0, length = -1, signal } = {}) {
         validatePath(path);
         checkAbort(signal);
 
-        if (!Number.isSafeInteger(offset) || offset < 0 ||
-            !Number.isSafeInteger(length) || length < -1) {
+        if (!Number.isSafeInteger(offset) || offset < 0 || !Number.isSafeInteger(length) || length < -1) {
             throw new RangeError("Invalid read range");
         }
 
@@ -305,30 +258,21 @@ export default class FilesystemMem extends Filesystem {
         }
 
         if (entry.type !== EntryType.File) {
-            throw new Error(
-                `Cannot read a directory: ${path}`
-            );
+            throw new Error(`Cannot read a directory: ${path}`);
         }
 
-        const end = length === -1
-            ? entry.length
-            : Math.min(entry.length, offset + length);
+        const end = length === -1 ? entry.length : Math.min(entry.length, offset + length);
 
         // Snapshot content so subsequent writes cannot
         // modify an already opened stream.
-        const bytes = entry.content.slice(
-            Math.min(offset, entry.length),
-            end
-        );
+        const bytes = entry.content.slice(Math.min(offset, entry.length), end);
 
         return new ReadableStream({
             start(controller) {
                 try {
                     checkAbort(signal);
 
-                    if (bytes.length > 0) {
-                        controller.enqueue(bytes);
-                    }
+                    if (bytes.length > 0) controller.enqueue(bytes);
 
                     controller.close();
                 } catch (error) {
@@ -341,8 +285,8 @@ export default class FilesystemMem extends Filesystem {
         validatePath(path);
         checkAbort(signal);
         const entry = this._entries.get(path);
-        if (!entry) {throw new Error(`File not found: ${path}`);}
-        if (entry.type !== EntryType.File) {throw new Error(`Cannot create a read URL for a directory: ${path}`);}
+        if (!entry) throw new Error(`File not found: ${path}`);
+        if (entry.type !== EntryType.File) throw new Error(`Cannot create a read URL for a directory: ${path}`);
         // Resolve MIME type for browser rendering
         const mimeTypes = {
             png: "image/png",
@@ -376,34 +320,25 @@ export default class FilesystemMem extends Filesystem {
     }
 
     // methods LEVEL 2
-    async saveFile(path, data, {
-        append = false,
-        signal
-    } = {}) {
+    async saveFile(path, data, { append = false, signal } = {}) {
         validatePath(path);
         this._ensureWritable();
         checkAbort(signal);
 
         if (path === "/") {
-            throw new Error(
-                "Cannot write to the filesystem root"
-            );
+            throw new Error("Cannot write to the filesystem root");
         }
 
         const parent = this._entries.get(parentPath(path));
 
         if (!parent || parent.type !== EntryType.Directory) {
-            throw new Error(
-                `Parent directory not found: ${parentPath(path)}`
-            );
+            throw new Error(`Parent directory not found: ${parentPath(path)}`);
         }
 
         const existing = this._entries.get(path);
 
         if (existing?.type === EntryType.Directory) {
-            throw new Error(
-                `Cannot overwrite a directory: ${path}`
-            );
+            throw new Error(`Cannot overwrite a directory: ${path}`);
         }
 
         const bytes = await readBytes(data, signal);
@@ -413,26 +348,19 @@ export default class FilesystemMem extends Filesystem {
 
         // Recheck after awaiting input.
         if (this._entries.get(parentPath(path)) !== parent) {
-            throw new Error(
-                `Parent directory no longer exists: ${parentPath(path)}`
-            );
+            throw new Error(`Parent directory no longer exists: ${parentPath(path)}`);
         }
 
         const current = this._entries.get(path);
 
         if (current?.type === EntryType.Directory) {
-            throw new Error(
-                `Cannot overwrite a directory: ${path}`
-            );
+            throw new Error(`Cannot overwrite a directory: ${path}`);
         }
 
-        const entry = current ??
-            this._newEntry(path, EntryType.File);
+        const entry = current ?? this._newEntry(path, EntryType.File);
 
         if (append && current) {
-            const combined = new Uint8Array(
-                entry.content.length + bytes.length
-            );
+            const combined = new Uint8Array(entry.content.length + bytes.length);
 
             combined.set(entry.content);
             combined.set(bytes, entry.content.length);
@@ -470,18 +398,10 @@ export default class FilesystemMem extends Filesystem {
 
             if (existing) {
                 if (existing.type !== EntryType.Directory) {
-                    throw new Error(
-                        `Path is a file, not a directory: ${current}`
-                    );
+                    throw new Error(`Path is a file, not a directory: ${current}`);
                 }
             } else {
-                this._entries.set(
-                    current,
-                    this._newEntry(
-                        current,
-                        EntryType.Directory
-                    )
-                );
+                this._entries.set(current, this._newEntry(current, EntryType.Directory));
             }
         }
 
@@ -499,23 +419,18 @@ export default class FilesystemMem extends Filesystem {
         for (const key of [...this._entries.keys()]) {
             checkAbort(signal);
 
-            if (key === path ||
-                key.startsWith(`${path}/`)) {
+            if (key === path || key.startsWith(`${path}/`)) {
                 this._entries.delete(key);
             }
         }
     }
 
-    async touch(path, modified = new Date(), {
-        signal
-    } = {}) {
+    async touch(path, modified = new Date(), { signal } = {}) {
         validatePath(path);
         this._ensureWritable();
         checkAbort(signal);
 
-        const date = modified instanceof Date
-            ? modified
-            : new Date(modified);
+        const date = modified instanceof Date ? modified : new Date(modified);
 
         if (Number.isNaN(date.getTime())) {
             throw new TypeError("Invalid modified date");
@@ -523,9 +438,7 @@ export default class FilesystemMem extends Filesystem {
 
         const entry = this._entries.get(path);
 
-        if (entry) {
-            this._markModified(entry, date);
-        }
+        if (entry) this._markModified(entry, date);
     }
 
     // methods LEVEL 4
@@ -536,17 +449,13 @@ export default class FilesystemMem extends Filesystem {
         const entry = this._entries.get(path);
 
         if (!entry) {
-            throw new Error(
-                `Metadata path not found: ${path}`
-            );
+            throw new Error(`Metadata path not found: ${path}`);
         }
 
         return Object.fromEntries(entry.metadata);
     }
 
-    async setMetadata(path, metadata, {
-        signal
-    } = {}) {
+    async setMetadata(path, metadata, { signal } = {}) {
         validatePath(path);
         this._ensureWritable();
         checkAbort(signal);
@@ -554,49 +463,34 @@ export default class FilesystemMem extends Filesystem {
         const entry = this._entries.get(path);
 
         if (!entry) {
-            throw new Error(
-                `Metadata path not found: ${path}`
-            );
+            throw new Error(`Metadata path not found: ${path}`);
         }
 
         if (!metadata || typeof metadata !== "object") {
-            throw new TypeError(
-                "metadata must be an object or Map"
-            );
+            throw new TypeError("metadata must be an object or Map");
         }
 
         const result = new Map();
 
-        const pairs = metadata instanceof Map
-            ? metadata
-            : Object.entries(metadata);
+        const pairs = metadata instanceof Map ? metadata : Object.entries(metadata);
 
         for (const [rawKey, value] of pairs) {
-            if (typeof rawKey !== "string" ||
-                !rawKey.trim() ||
-                typeof value !== "string") {
-                throw new TypeError(
-                    "Metadata must contain string keys and values"
-                );
+            if (typeof rawKey !== "string" || !rawKey.trim() || typeof value !== "string") {
+                throw new TypeError("Metadata must contain string keys and values");
             }
 
             const key = rawKey.trim().toLowerCase();
 
-            if (!result.has(key)) {
-                result.set(key, value);
-            }
+            if (!result.has(key)) result.set(key, value);
         }
 
         entry.metadata = result;
     }
 
-    async supports(path, feature, {
-        signal
-    } = {}) {
+    async supports(path, feature, { signal } = {}) {
         validatePath(path);
         checkAbort(signal);
 
-        return feature === Features.Touch ||
-            feature === Features.Metadata;
+        return feature === Features.Touch || feature === Features.Metadata;
     }
 }

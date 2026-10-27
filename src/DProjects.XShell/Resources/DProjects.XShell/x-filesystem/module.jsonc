@@ -24,7 +24,9 @@
             "filesystem": {
                 "mem": {"src": "/js/filesystem-mem.js", "loader": "instance-js"},
                 "http:{url}": {"src": "/js/filesystem-http.js", "loader": "instance-js"},
-                "https:{url}": {"src": "/js/filesystem-http.js", "loader": "instance-js"}
+                "https:{url}": {"src": "/js/filesystem-http.js", "loader": "instance-js"},
+                "opfs:{url}": {"src": "/js/filesystem-opfs.js", "loader": "instance-js"}
+
             }
         }
     }
