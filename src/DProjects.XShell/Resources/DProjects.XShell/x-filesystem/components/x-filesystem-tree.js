@@ -2,7 +2,18 @@
 // contract
 export const contract = {
     description: "Filesystem tree component",
-    events: {},
+    events: {
+        contextmenuentry: {
+            description: "Fired when a context menu is requested for an entry",
+            detail: {
+                path: {type: "string", description: "Path of the entry"},
+                entry: {type: "object", description: "Entry object"},
+                source: {type: "string", description: "Source of the event (tree)"},
+                x: {type: "number", description: "X coordinate of the context menu request"},
+                y: {type: "number", description: "Y coordinate of the context menu request"}
+            }
+        }
+    },
     properties: {
         path: {type: "string", default:"/", attribute: true, state:true, description: "Current path in the filesystem"},
         filesystem: {type: "object", default:null, state:true, description: "Filesystem instance"}
@@ -18,7 +29,7 @@ export default {
         :host {width:100%;}
     `,
     template: `
-        <x-treeview x-on:toggle="toggle" x-on:select="select">
+        <x-treeview x-on:toggle="toggle" x-on:select="select" x-on:contextmenuitem="contextMenuItem">
 
             <x-treeview-head>
                 <x-treeview-column label="Name"></x-treeview-column>
@@ -125,7 +136,22 @@ export default {
                     return null;
                 };
                 return findEntry(state.entries, path);  
-                
+            },
+            async contextMenuItem({event}) {
+                const entry = this.getEntryByPathRecursive(event.detail.path);
+                event.preventDefault();
+                host.dispatchEvent(new CustomEvent("contextmenuentry", {
+                    bubbles: true,
+                    composed: true,
+                    cancelable: true,
+                    detail: {
+                        path: event.detail.path,
+                        entry,
+                        source: "list", // or "tree"
+                        x: event.detail.x,
+                        y: event.detail.y
+                    }
+                }));
             }
 
         }

@@ -4,7 +4,18 @@ export const contract = {
     description: "Provides keyboard navigation and selection for a tree of tree-view items.",
     events: {
         toggle: {description: "Fired when a tree-view item is toggled."},
-        select: {description: "Fired when a tree-view item is selected."}
+        select: {description: "Fired when a tree-view item is selected."},
+        contextmenuitem: {
+            description: "Raised when a context menu is requested on an item.",
+            detail: {
+                item: {type:"object", required:true},
+                path: {type:"string", required:true},
+                x: {type:"number", required:true},
+                y: {type:"number", required:true}
+            },
+            bubbles: true,
+            composed: true
+        }
     },
     properties: {
         multiple: {type:"boolean", default:false, attribute:true, state:true, description:""}
@@ -31,8 +42,8 @@ export default {
         }
     `,
     template: `
-        <div ref="div" tabindex="0">
-            <slot x-on:slotchange="refresh" x-on:click="click"></slot>
+        <div ref="div" tabindex="0" x-on:click="click" x-on:contextmenu="contextMenu">
+            <slot x-on:slotchange="refresh" ></slot>
         </div>
     `,
     state: {
@@ -205,6 +216,31 @@ export default {
                 if (!document.activeElement || document.activeElement.localName == "body") {
                     host.shadowRoot.querySelector('[ref="div"]').focus();
                 }
+            },
+            contextMenu({event}) {
+                // show context menu for item
+                const item = event.target.closest("x-treeview-item");
+                if (!item) return;
+                if (!item.selected) {
+                    const items = host.querySelectorAll(":scope > x-treeview-body > x-treeview-item");
+                    for(let target of items) {
+                        target.selected = false;
+                    }
+                    item.selected = true;
+                    host.invalidate();
+                }
+                host.dispatchEvent(new CustomEvent("contextmenuitem", {
+                    bubbles: true,
+                    composed: true,
+                    cancelable: true,
+                    detail: {
+                        item,
+                        path: item.path,
+                        x: event.clientX,
+                        y: event.clientY
+                    }
+                }));
+                event.preventDefault();
             }
         };
     }

@@ -127,7 +127,7 @@ export default {
     state: {
         expanded: false,
     },
-    controller({ state, events, bus, host }) {
+    controller({ state, events, bus, host, commands }) {
         return {
             load() {
                 //load
@@ -155,6 +155,14 @@ export default {
                 //focus-head
                 if (!state.collapseOnClick) {
                     this.expand();
+                }
+            },
+            focus() {
+                //focus on slotted element
+                const slotted = host.querySelector("slot");
+                const assignedElements = slotted ? slotted.assignedElements() : [];
+                if (assignedElements.length > 0) {
+                    assignedElements[0].focus();
                 }
             },
 
@@ -195,6 +203,7 @@ export default {
                 if (!state.expanded) {
                     this._expandedAt = performance.now();
                     state.expanded = true;
+                    commands.enqueue("focus");
                 }
             },
 

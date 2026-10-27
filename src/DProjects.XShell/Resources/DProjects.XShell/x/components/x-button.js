@@ -19,7 +19,11 @@ export const contract = {
         href:      {type:"string", default:"", attribute:true, state:true, description:""},
         autofocus: {type:"boolean", default:false, attribute:true, state:true, description:""}
     },
-    methods: {},
+    methods: {
+        focus:{
+            description: "Sets focus on the button."
+        }
+    },
     slots: {
         "": {
             description: "Default slot for the button content."
@@ -108,6 +112,7 @@ export default {
         :host(.menuitem) .button > div span.label {font-weight: normal; color:var(--x-color-text);}
         :host(.menuitem) .button:hover {background:var(--x-color-background-x-gray); }
         :host(.menuitem) .button:active {background:var(--x-color-background-xx-gray); }
+        :host(.menuitem) .button:focus {outline:none; background:var(--x-color-background-x-gray);}
         :host(.menuitem[disabled]) .button {color:var(--x-color-xxx-gray)}
         :host(.menuitem[disabled]) x-icon {color:var(--x-color-xxx-gray)}
         
@@ -236,7 +241,15 @@ export default {
                         state.forceRight = true;
                     }
                 }
+            },
+
+            focus(){
+                const button = host.shadowRoot.querySelector("button");
+                if (button) {
+                    button.focus();
+                }
             }
+
         }
     }
 };

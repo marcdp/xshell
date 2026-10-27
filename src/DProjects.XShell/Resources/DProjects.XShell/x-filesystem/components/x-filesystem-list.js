@@ -3,10 +3,19 @@
 export const contract = {
     description: "Filesystem list component",
     events: {
-        "select": {description: "Fired when an item is selected"},
-        "activate": {description: "Fired when an item is activated"},
-        "back": {description: "Fired when the back action is triggered"}
-
+        select: {description: "Fired when an item is selected"},
+        activate: {description: "Fired when an item is activated"},
+        back: {description: "Fired when the back action is triggered"},
+        contextmenuentry: {
+            description: "Fired when a context menu entry is requested",
+            detail: {
+                path: {type: "string", description: "Path of the item"},
+                entry: {type: "object", description: "The filesystem entry"},
+                source: {type: "string", description: "Source of the context menu request"},
+                x: {type: "number", description: "X coordinate of the context menu"},
+                y: {type: "number", description: "Y coordinate of the context menu"}
+            }
+        }
     },
     properties: {
         path: {type: "string", default:"/", attribute: true, state:true, description: "Current path in the filesystem"},
@@ -23,7 +32,7 @@ export default {
         :host {width:100%;}
     `,
     template: `
-        <x-listview view="details" views="list, details, tiles, icons" x-on:select="select" x-on:activate="activate" x-on:keydown="keydown">
+        <x-listview view="details" views="list, details, tiles, icons" x-on:select="select" x-on:activate="activate" x-on:keydown="keydown" x-on:contextmenuitem="contextMenuItem">
             <x-listview-head>
                 <x-listview-column label="Name"></x-listview-column>
                 <x-listview-column label="Size" width="6em" style="text-align:right; padding-right:0.5em;"></x-listview-column>
@@ -87,7 +96,7 @@ export default {
             },
             async focus() {
                 const listview = host.shadowRoot.querySelector('x-listview');
-                listview.onCommand("focus");
+                listview.focus();
             },
             async select({event}){
                 // select
@@ -104,6 +113,22 @@ export default {
                     host.dispatchEvent(new CustomEvent("back", {bubbles: true, detail: {path: state.path}}));
                     event.preventDefault();
                 }
+            },
+            async contextMenuItem({event}) {
+                const entry = state.entries.find(e => e.path === event.detail.path) || null;
+                event.preventDefault();
+                host.dispatchEvent(new CustomEvent("contextmenuentry", {
+                    bubbles: true,
+                    composed: true,
+                    cancelable: true,
+                    detail: {
+                        path: event.detail.path,
+                        entry,
+                        source: "list",
+                        x: event.detail.x,
+                        y: event.detail.y
+                    }
+                }));
             }
 
         }

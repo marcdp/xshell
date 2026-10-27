@@ -500,7 +500,8 @@ export async function createComponentClassFromJsDefinition(src, context, impleme
     }
     // add methods
     for (const methodName of Object.keys(contract.methods)) {
-        if (methodName in WebComponent.prototype) {
+        if (methodName == "focus") {
+        } else if (methodName in WebComponent.prototype) {
             throw new Error(`Component '${implementation.meta.id}' cannot expose public method '${methodName}' because it would overwrite a framework or Web Component method.`);
         }
         Object.defineProperty(WebComponent.prototype, methodName, {

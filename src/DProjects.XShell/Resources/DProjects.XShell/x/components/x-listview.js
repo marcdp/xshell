@@ -22,6 +22,18 @@ export const contract = {
             },
             bubbles: true,
             composed: true
+        },
+        contextmenuitem: {
+            description: "Raised when a context menu is requested on an item.",
+            detail: {
+                item: {type:"object", required:true},
+                path: {type:"string", required:true},
+                index: {type:"number", required:true},
+                x: {type:"number", required:true},
+                y: {type:"number", required:true}
+            },
+            bubbles: true,
+            composed: true
         }
     },
     properties: {
@@ -30,7 +42,9 @@ export const contract = {
         multiple:   {type:"boolean", default:false, attribute:true, state:true, description:"Whether more than one item can be selected."},
         autoScroll: {type:"boolean", default:false, attribute:true, state:true, description:"Whether to scroll to the newest item when the collection grows."}
     },
-    methods: {},
+    methods: {
+        focus: {description: "Focuses the list view."}
+    },
     slots: {
         "": {
             description: "A list-view head followed by a list-view body."
@@ -63,7 +77,7 @@ export default {
         }
     `,
     template: `
-        <div ref="items" tabIndex="0" class="items" x-attr:aria-multiselectable="state.multiple ? 'true' : null" x-on:click="click" x-on:dblClick="dblClick">
+        <div ref="items" tabIndex="0" class="items" x-attr:aria-multiselectable="state.multiple ? 'true' : null" x-on:click="click" x-on:dblClick="dblClick" x-on:contextmenu="contextMenu">
             <slot x-on:slotchange="refresh" ></slot>
         </div>
 
@@ -277,6 +291,31 @@ export default {
                     selecteds.forEach((item) => { item.selected = false; });
                     newSelecteds.forEach((item) => { item.selected = true; });
                 }
+            },
+            contextMenu({event}) {
+                const item = this.getEventItem(event);
+                if (!item) return;
+                if (!item.selected) {
+                    const items = host.querySelectorAll(":scope > x-listview-body > x-listview-item");
+                    for(let target of items) {
+                        target.selected = false;
+                    }
+                    item.selected = true;
+                    host.invalidate();
+                }
+                host.dispatchEvent(new CustomEvent("contextmenuitem", {
+                    bubbles: true,
+                    composed: true,
+                    cancelable: true,
+                    detail: {
+                        item,
+                        path: item.path,
+                        index: item.index,
+                        x: event.clientX,
+                        y: event.clientY
+                    }
+                }));
+                event.preventDefault();
             }
         };
     }

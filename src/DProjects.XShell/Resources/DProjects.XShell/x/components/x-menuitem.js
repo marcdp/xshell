@@ -14,7 +14,9 @@ export const contract = {
         embedded:    {type:"boolean", default:false, attribute:true, state:true, description:"Hosts the target Page inline instead of rendering a navigation anchor."},
         tooltip:     {type:"string", default:"", attribute:true, state:true, description:"Optional tooltip text shown on the navigation anchor."},
     },
-    methods: {},
+    methods: {
+        focus: {description: "Focuses the menu item."},
+    },
     slots: {
         "": {
             description: "Default slot for the menu item content."
@@ -149,6 +151,16 @@ export default {
                     // childsLeft
                     let right = rect.left + rect.width * 2.5;
                     state.childsLeft = right > window.innerWidth;
+                }
+            },
+
+            focus() {
+                const button = host.shadowRoot.querySelector("x-button");
+                const anchor = host.shadowRoot.querySelector("x-anchor");
+                if (button) {
+                    button.focus();
+                } else if (anchor) {
+                    anchor.focus();
                 }
             }
         };

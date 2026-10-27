@@ -28,7 +28,7 @@ export default {
             <x-button icon="x-refresh" x-on:click="refresh" class="menuitem" ></x-button>
             <x-datafield x-model="state.pathList" type="string" label="" placeholder="path" readonly style="flex:1"></x-datafield>        
         </x-toolbar>
-        <div class="container"> 
+        <div class="container" x-on:contextmenuentry="contextMenuEntry"> 
             <x-filesystem-tree 
                 x-prop:filesystem="state.filesystem" 
                 x-prop:path="state.path" 
@@ -44,6 +44,15 @@ export default {
                 x-on:back="listBack"
             ></x-filesystem-list>
         </div>
+
+        <x-contextmenu x-on:command="command">
+            <x-menuitem label="Open" icon="x-open" command="open"></x-menuitem>
+            <x-menuitem label="Refresh" icon="x-refresh" command="refresh"></x-menuitem>
+            <x-menuitem label="New Folder" icon="x-folder" command="newFolder"></x-menuitem>
+            <x-menuitem label="Delete" icon="x-trash" command="delete"></x-menuitem>
+            <x-menuitem label="-"></x-menuitem>
+            <x-menuitem label="Properties" icon="x-wrench" command="properties"></x-menuitem>
+        </x-contextmenu>
     `,
     state: {
         src: null,
@@ -51,8 +60,7 @@ export default {
         path: "/",
         pathList: "/",
         history: ["/"],
-        historyIndex: 0
-        
+        historyIndex: 0        
     },
     controller({ state, events, loader, navigation, getPage, host }) {
         return {
@@ -69,6 +77,18 @@ export default {
                 })
             },
 
+            // command
+            command({event}) {
+                debugger;
+                if (event.detail.command === "open") {
+                } else if (event.detail.command === "refresh") {
+                    this.refresh();
+                } else if (event.detail.command === "newFolder") {
+                } else if (event.detail.command === "delete") {
+                } else if (event.detail.command === "properties") {
+                    alert("properties")
+                }
+            },
 
             /* toolbar actions */
             async refresh() {
@@ -104,48 +124,53 @@ export default {
                     this.navigateTo(newPath);
                 }
             },
-
-
-            /* tree */
-            treeSelect({event}) {
-                // handle tree select event
-                const path = event.detail.path;
-                this.navigateTo(path);
-            },
-            treeToggle({ event }) {
-                // handle tree toggle event
-                const path = event.detail.path;
-            },
-
-
-            /* list */
-            listSelect({event}) {
-                // handle list select event
-                const path = event.detail.path;
-            },
-            listActivate({event}) {
-                // handle list activate event
-                const path = event.detail.path;
-                const entry = event.detail.entry;
-                if (path && entry && entry.type === "directory") {
-                    this.navigateTo(path);
+            open(entry) {
+                // open
+                if (entry && entry.type === "directory") {
+                    this.navigateTo(entry.path);
                 } else {
-                    console.log("List activate:", path);
                     const page = getPage();
                     navigation.navigate( {
                         href: "page:x-filesystem:/pages/edit.js",
                         page: page,
                         params: {
                             src: state.src,
-                            path: path,
+                            path: entry.path,
                         },
                         open: "stack"
                     });
                 }
             },
+
+
+            /* tree */
+            treeSelect({event}) {
+                // handle tree select event
+                this.navigateTo(event.detail.path);
+            },
+            treeToggle({ event }) {
+                // handle tree toggle event
+            },
+
+
+            /* list */
+            listSelect({event}) {
+                // handle list select event
+            },
+            listActivate({event}) {
+                // handle list activate event
+                this.open(event.detail.entry)
+            },
             listBack({event}) {
                 // handle list back event
                 this.up();
+            },
+
+            /* context menu entry */
+            contextMenuEntry({event}) {
+                // handle context menu entry event
+                const contextMenu = host.shadowRoot.querySelector("x-contextmenu");
+                contextMenu.open({x: event.detail.x, y: event.detail.y});
             }
         }
     }

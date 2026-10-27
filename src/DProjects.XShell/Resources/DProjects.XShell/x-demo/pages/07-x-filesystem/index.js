@@ -23,12 +23,5 @@ export default {
         <h3>Explorer</h3>
         <x-filesystem src="http://localhost:5000/prefix/shares/marc"></x-filesystem>
 
-        <h3>Components</h3>
-        <ul>
-            <li><code>x-filesystem</code> — complete explorer.</li>
-            <li><code>x-filesystem-tree</code> — folder navigation.</li>
-            <li><code>x-filesystem-list</code> — directory contents.</li>
-            <li><code>x-filesystem-detail</code> — file preview or editor.</li>
-        </ul>
     `
 };

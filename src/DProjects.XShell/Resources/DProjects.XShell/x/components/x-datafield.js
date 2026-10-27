@@ -87,6 +87,9 @@ export const contract = {
                 description: "The validation errors found for the field.",
                 type: "array"
             }
+        },
+        focus: {
+            description: "Focuses the datafield."
         }
     },
     slots: {
@@ -1005,6 +1008,10 @@ export default {
                 state.errors = result;
                 state.validated = true;
                 return result;
+            },
+
+            focus() {
+                host.shadowRoot.querySelector("input, textarea, select")?.focus();
             }
         };
     }

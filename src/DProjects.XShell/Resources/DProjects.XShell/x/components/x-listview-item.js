@@ -109,7 +109,7 @@ export default {
     `,
     template: `
         <div class="category" x-text="state.category"></div>
-        <div class="row" x-class:selected="state.selected">
+        <div class="row" x-class:selected="state.selected" >
             <x-anchor x-if="state.href" data-item-anchor class="item-anchor plain" x-attr:href="state.href" x-attr:target="state.target" x-attr:open="state.open" x-prop:breadcrumb="state.breadcrumb" x-attr:tooltip="state.description">
                 <div class="primary">
                     <x-icon x-attr:icon="state.icon || 'x-file'"></x-icon>
@@ -141,7 +141,7 @@ export default {
                 if (!state.href) return;
                 const anchor = host.shadowRoot?.querySelector("x-anchor");
                 anchor?.shadowRoot?.querySelector("a")?.click();
-            }
+            }            
         };
     }
 };
