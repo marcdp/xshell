@@ -16,9 +16,9 @@ export const contract = {
 export default {
     style: `
         :host {display:block;}
-        .container {display:flex; width:100%; margin-top:.5em; }
-        .container x-filesystem-tree {flex-shrink: 0; padding:.5em; padding-top:0; box-sizing:border-box;}
-        .container x-filesystem-list {flex:1; padding:.5em; padding-top:0; box-sizing:border-box;}
+        .container {display:flex; width:100%; min-width:0; margin-top:.5em; }
+        .container x-filesystem-tree {flex:0 0 20%; min-width:12rem; max-width:calc(100% - 28rem - .15em); padding:.5em; padding-top:0; box-sizing:border-box;}
+        .container x-filesystem-list {flex:1 1 0; min-width:28rem; padding:.5em; padding-top:0; box-sizing:border-box;}
     `,
     template: `
         <x-toolbar>
@@ -34,7 +34,6 @@ export default {
                 x-prop:path="state.path" 
                 x-on:select="treeSelect"
                 x-on:toggle="treeToggle"
-                style="width:20%"
             ></x-filesystem-tree>
             <x-splitter></x-splitter>
             <x-filesystem-list 
@@ -43,7 +42,6 @@ export default {
                 x-on:select="listSelect"
                 x-on:activate="listActivate"
                 x-on:back="listBack"
-                style="width:80%"
             ></x-filesystem-list>
         </div>
     `,
