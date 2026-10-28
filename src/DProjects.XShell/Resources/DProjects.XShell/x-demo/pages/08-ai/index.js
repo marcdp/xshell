@@ -5,7 +5,7 @@ export default {
     },
 
     template: `
-        <p>A local simulated chat; no AI credentials required.</p>
+        <p>Try a simulated chat to explore Component events and message state without AI credentials.</p>
         <x-page-index></x-page-index>        
     `
 };

@@ -119,7 +119,7 @@ const renderEngine = await loader.load(
         <h2>When to override an engine</h2>
         <p>Keep the Module defaults for most Pages and Components. Specify an override when a particular resource needs a different rendering strategy or state implementation.</p>
         <p>Engine overrides belong in the resource definition, while navigation, controller logic, and service injection continue to use the same Page or Component APIs.</p>
-        <p>For more information about resource loading, continue with <x-anchor href="05-loading.js">Resolver and Loader</x-anchor>.</p>
+        <p>For more information about resource loading, continue with <x-anchor href="05-resolver-and-loader.js">Resolver and Loader</x-anchor>.</p>
     `,
 
     state: {

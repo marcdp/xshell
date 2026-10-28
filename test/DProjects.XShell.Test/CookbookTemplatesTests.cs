@@ -3,7 +3,7 @@ using DProjects.XShell.Services.XTemplate;
 
 namespace DProjects.XShell.Test;
 
-public sealed class Demo2TemplatesTests {
+public sealed class CookbookTemplatesTests {
     [Fact]
     public void AllCookbookTemplatesCompile() {
         var root = Path.Combine(AppContext.BaseDirectory, "Resources", "DProjects.XShell", "x-demo");

@@ -7,6 +7,7 @@ export const contract = {
         activate: {description: "Fired when an item is activated"},
         back: {description: "Fired when the back action is triggered"},
         properties: {description: "Fired when the properties action is triggered"},
+        rename: {description: "Fired when the rename action is triggered"},
         contextmenuentry: {
             description: "Fired when a context menu entry is requested",
             detail: {
@@ -33,6 +34,7 @@ export const contract = {
 export default {
     style: `
         :host {width:100%;}
+        x-listview {height:100%;}
     `,
     template: `
         <x-listview view="details" views="list, details, tiles, icons" x-on:select="select" x-on:activate="activate" x-on:keydown="keydown" x-on:contextmenuitem="contextMenuItem">
@@ -73,7 +75,6 @@ export default {
             },
             async refresh(path) {
                 if (state.filesystem && state.path) {
-                    console.log("Refreshing path:", state.path);
                     // check if the host has focus before refreshing
                     const hasFocus = host.matches(':focus-within');
                     // iterate over filesystem entries and collect them into an array
@@ -128,6 +129,10 @@ export default {
                 } else if (event.key === "Backspace") {
                     const entry = state.entries.find(e => e.path === state.selectedPath) || null;
                     host.dispatchEvent(new CustomEvent("back", {bubbles: true, detail: {path: state.selectedPath, entry}}));
+                    event.preventDefault();
+                } else if (event.key === "F2") {
+                    const entry = state.entries.find(e => e.path === state.selectedPath) || null;
+                    host.dispatchEvent(new CustomEvent("rename", {bubbles: true, detail: {path: state.selectedPath, entry}}));
                     event.preventDefault();
                 }
             },

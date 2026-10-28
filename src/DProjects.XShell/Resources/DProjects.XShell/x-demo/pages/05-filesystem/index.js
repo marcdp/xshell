@@ -1,11 +1,11 @@
 export default {
     meta: {
         title: "Filesystem",
-        description: "Browser selection and an optional hosted file share."
+        description: "Browser file selection, an in-memory filesystem, and OPFS storage."
     },
 
     template: `
-        <p>Browser selection and an optional hosted file share.</p>
+        <p>Select browser files, explore an in-memory filesystem, then try persistent browser storage with OPFS where available.</p>
         <x-page-index></x-page-index>        
     `
 };

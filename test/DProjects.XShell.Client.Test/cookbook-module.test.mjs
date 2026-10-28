@@ -44,7 +44,7 @@ test('cookbook navigation derives ordered Pages from the file inventory', () => 
     assert.deepEqual(menu[0].children.map(item => item.label),
         ['Components', 'Pages', 'Navigation', 'Dialogs', 'Filesystem', 'Modules', 'Templates', 'Ai', 'Advanced']);
     assert.deepEqual(menu[0].children[0].children.map(item => item.label),
-        ['Buttons', 'Indicators', 'Forms', 'Data Display', 'Lists', 'Layout', 'Editors', 'Composition', 'Contract', 'Lifecycle']);
+        ['Anchors', 'Buttons', 'Indicators', 'Forms', 'Data Display', 'Listviews', 'Treeviews', 'Layout', 'Editors', 'Composition', 'Contract', 'Lifecycle']);
     assert.deepEqual(menu[0].children[2].children.map(item => item.label),
         ['Basic', 'Areas', 'Stack', 'Embedded', 'Resolution']);
     const visited = new Set();
@@ -60,7 +60,6 @@ test('cookbook navigation derives ordered Pages from the file inventory', () => 
     };
     walk(menu);
     assert.deepEqual([...visited].sort(), files.sort());
-    assert.ok(![...visited].some(file => file.includes('custom-dialog')));
     assert.equal(menu[0].children[1].children[1].href, '/cookbook/_assets/x-demo/pages/02-pages/02-html-page.js');
     assert.equal(config.modules['x-demo'].routes['/hello/{name}'], '/pages/02-pages/03-parameters.js');
 });
@@ -69,16 +68,16 @@ test('cookbook Page links resolve after renaming', () => {
     for (const file of pageFiles(path.join(root, 'pages'))) {
         const sourcePath = path.join(root, file.replace(/02-html-page\.js$/, '02-html-page.html'));
         const source = readFileSync(sourcePath, 'utf8');
-        for (const [, href] of source.matchAll(/<x-anchor href="([^"]+)"/g)) {
+        for (const [, href] of source.matchAll(/<x-(?:anchor|listview-item)\b[^>]*\shref="([^"]+)"/g)) {
             if (href.startsWith('/')) continue;
             const destination = new URL(href.replaceAll('&amp;', '&'), `https://example.test/${file}`).pathname.slice(1);
             assert.ok(existsSync(path.join(root, destination)) ||
                 existsSync(path.join(root, destination.replace(/\.js$/, '.html'))), `${file} -> ${href}`);
         }
     }
-    assert.ok(existsSync(path.join(root, 'dialog-pages/custom-dialog.js')));
+    assert.ok(existsSync(path.join(root, 'pages/04-dialogs/custom-dialog.js')));
     assert.match(readFileSync(path.join(root, 'pages/04-dialogs/05-custom.js'), 'utf8'),
-        /page:x-demo:\/dialog-pages\/custom-dialog\.js/);
+        /page:x-demo:\/pages\/04-dialogs\/custom-dialog\.js/);
 });
 
 test('the counter keeps its public contract separate from private state', async () => {
@@ -124,6 +123,21 @@ test('the cookbook module controller summarizes its effective Page inventory', a
     });
 });
 
+test('the Module Controller Page reads its injected controller', async () => {
+    const { default: example } = await import(new URL(
+        '../../src/DProjects.XShell/Resources/DProjects.XShell/x-demo/pages/06-modules/04-controller.js', import.meta.url));
+    const summary = {
+        id: 'x-demo', label: 'XShell Cookbook', menuSource: '/_assets/x-demo/pages',
+        pageCount: 42, started: true
+    };
+    const state = {};
+    const controller = example.controller({
+        moduleController: { getCookbookSummary() { return summary; } }, state
+    });
+    controller.load();
+    assert.deepEqual(state, summary);
+});
+
 test('path resolution example follows the effective Area menu in both directions', async () => {
     const { default: example } = await import(new URL(
         '../../src/DProjects.XShell/Resources/DProjects.XShell/x-demo/pages/03-navigation/05-resolution.js', import.meta.url));
@@ -146,7 +160,7 @@ test('path resolution example follows the effective Area menu in both directions
 
 test('resolver example inspects without loading and reports a concrete dataset', async () => {
     const { default: example } = await import(new URL(
-        '../../src/DProjects.XShell/Resources/DProjects.XShell/x-demo/pages/90-advanced/05-loading.js', import.meta.url));
+        '../../src/DProjects.XShell/Resources/DProjects.XShell/x-demo/pages/90-advanced/05-resolver-and-loader.js', import.meta.url));
     const state = {};
     let loads = 0;
     const controller = example.controller({
@@ -159,7 +173,7 @@ test('resolver example inspects without loading and reports a concrete dataset',
     assert.equal(state.loaderName, 'dataset-url');
     await controller.loadSelected();
     assert.equal(loads, 1);
-    assert.equal(state.value, '1 dataset rows');
+    assert.equal(state.value, '1 table(s), 1 row(s)');
     assert.equal(state.status, 'Loaded');
 });
 
@@ -185,12 +199,16 @@ test('engine example distinguishes effective Page metadata from module defaults'
         '../../src/DProjects.XShell/Resources/DProjects.XShell/x-demo/pages/90-advanced/03-engines.js', import.meta.url));
     const state = { count: 0 };
     const controller = example.controller({
-        config: { modules: { 'x-demo': { defaults: { page: { renderEngine: 'x', stateEngine: 'proxy' } } } } },
+        config: { modules: { 'x-demo': { defaults: {
+            page: { renderEngine: 'x', stateEngine: 'proxy' },
+            component: { renderEngine: 'x', stateEngine: 'proxy' }
+        } } } },
         dependencies: { clientPage: { implementation: { meta: { renderEngine: 'x-client', stateEngine: 'proxy' } } } },
         implementation: { meta: { renderEngine: 'x', stateEngine: 'proxy' } }, state
     });
     controller.load();
     controller.increase();
-    assert.deepEqual([state.defaultRender, state.currentRender, state.clientRender, state.clientState, state.count],
-        ['x', 'x', 'x-client', 'proxy', 1]);
+    assert.deepEqual([state.defaultPageRender, state.defaultPageState, state.defaultComponentRender,
+        state.currentRender, state.clientRender, state.clientState, state.count],
+        ['x', 'proxy', 'x', 'x', 'x-client', 'proxy', 1]);
 });

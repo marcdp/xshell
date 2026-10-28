@@ -126,9 +126,7 @@ export default {
             },
             unmount() {
                 // try restore previous focus
-                console.log(previousFocus);
                 if (previousFocus?.isConnected) {
-                    console.log("connected");
                     setTimeout(() => {
                         previousFocus.focus({ preventScroll: true });
                     }, 0);

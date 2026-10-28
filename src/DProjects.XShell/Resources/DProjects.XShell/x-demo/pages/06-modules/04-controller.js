@@ -88,11 +88,15 @@ Module shutdown
         <pre x-pre><code>controller({moduleController, state}) {
     return {
         load() {
-            const summary =
-                moduleController.getCookbookSummary();
-
+            this.refresh();
+        },
+        refresh() {
+            const summary = moduleController.getCookbookSummary();
             state.id = summary.id;
+            state.label = summary.label;
+            state.started = summary.started;
             state.pageCount = summary.pageCount;
+            state.menuSource = summary.menuSource;
         }
     };
 }</code></pre>
@@ -117,15 +121,13 @@ Module shutdown
         menuSource: ""
     },
  
-    controller({modules, state}) {
-        const moduleController = modules.getModuleById("x-demo").controller;
+    controller({moduleController, state}) {
         return {
             load() {
                 this.refresh();
             },
 
             refresh() {
-                debugger
                 const summary = moduleController.getCookbookSummary();
 
                 state.id = summary.id;

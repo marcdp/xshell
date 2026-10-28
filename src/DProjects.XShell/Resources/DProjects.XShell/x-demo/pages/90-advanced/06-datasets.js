@@ -125,7 +125,7 @@ const rows = table.rows;</code></pre>
 
         <h2>When to use DataSets</h2>
         <p>Use module-owned DataSets for reusable lookup tables and packaged application data. Use static DataSets for small fixed lists, and URL DataSets for structured JSON supplied by an endpoint.</p>
-        <p>For more about how resources are resolved and loaded, see <x-anchor href="05-loading.js">Resolver and Loader</x-anchor>.</p>
+        <p>For more about how resources are resolved and loaded, see <x-anchor href="05-resolver-and-loader.js">Resolver and Loader</x-anchor>.</p>
     `,
 
     state: {

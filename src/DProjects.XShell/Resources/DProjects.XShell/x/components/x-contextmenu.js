@@ -93,7 +93,7 @@ export default {
             focus() {
                 // focus
                 const div = host.shadowRoot.querySelector("div");
-                div.focus();
+                div?.focus();
             },
             keydown({event}){
                 // keydown

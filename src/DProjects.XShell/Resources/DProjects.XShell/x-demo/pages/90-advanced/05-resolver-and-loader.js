@@ -133,7 +133,7 @@ const dataset = await loader.load("dataset:x-demo:statuses");</code></pre>
         <p>A resolved URL does not guarantee that the resource can be loaded successfully.</p>
 
         <h2>Next steps</h2>
-        <p>For examples of how engines are selected and loaded, see <x-anchor href="03-engines.js">Engines</x-anchor>. To understand how Modules expose resources, see <x-anchor href="../06-modules/04-resources.js">Module Resources</x-anchor>.</p>
+        <p>For examples of how engines are selected and loaded, see <x-anchor href="03-engines.js">Engines</x-anchor>. To understand how Modules expose resources, see <x-anchor href="../06-modules/03-resources.js">Module Resources</x-anchor>.</p>
     `,
 
     state: {

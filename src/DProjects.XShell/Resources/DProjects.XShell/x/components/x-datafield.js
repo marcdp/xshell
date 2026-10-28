@@ -62,6 +62,7 @@ export const contract = {
         required:       {type:"boolean", default:false, attribute:true, state:true, description:""},
         step:           {type:"any", default:null, attribute:true, state:true, description:""},
         autofocus:      {type:"boolean", default:false, attribute:true, state:true, description:""},
+        autoselect:     {type:"boolean", default:false, attribute:true, state:true, description:""},
         autocomplete:   {type:"any", default:null, attribute:true, state:true, description:""},
         domain:         {type:"any", default:null, attribute:true, state:true, description:""},
         value:          {type:"any", attribute:true, state:true, description:""},
@@ -679,7 +680,12 @@ export default {
                 if (state.autofocus) {
                     timer.setTimeout(() => {
                         let element = host.shadowRoot.querySelector(".input");
-                        if (element && element.focus) element.focus();
+                        if (element && element.focus) {
+                            element.focus();
+                            if (state.autoselect) {
+                                element.select();
+                            }
+                        }
                     }, 25);
                 }
                 if (!state.validated) {

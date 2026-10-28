@@ -39,6 +39,7 @@ export default {
                 x-on:select="treeSelect"
                 x-on:toggle="treeToggle",
                 x-on:properties="treeProperties"
+                x-on:rename="treeRename"
                 x-attr:root="state.root"
             ></x-filesystem-tree>
 
@@ -51,6 +52,7 @@ export default {
                 x-on:activate="listActivate"
                 x-on:back="listBack"
                 x-on:properties="listProperties"
+                x-on:rename="listRename"
             ></x-filesystem-list>
 
         </div>
@@ -95,6 +97,7 @@ export default {
 
             // commands
             command({event}) {
+                
                 if (event.detail.command === "open") {
                     this.open();
                 } else if (event.detail.command === "refresh") {
@@ -105,6 +108,8 @@ export default {
                     this.properties();
                 } else if (event.detail.command === "newFile") {
                     this.newFile();
+                } else if (event.detail.command === "rename") {
+                    if (state.entry) this.rename(state.entry.path);
                 } else {
                     alert("UNHANDLED COMMAND: " + event.detail.command)
                 }
@@ -197,11 +202,23 @@ export default {
                         path: state.pathList
                     }
                 });
+            },            
+            async rename(path) {
+                // rename
+                if (path == null || path === state.path) return;
+                const result = await dialog.prompt({
+                    title: "Rename",
+                    label: "New name",
+                    value: path.split("/").pop()
+                });
+                alert(result)
             },
+
 
             /* tree */
             treeSelect({event}) {
                 // handle tree select event
+                if (event.detail.sourceEvent instanceof KeyboardEvent) return
                 this.navigateTo(event.detail.path, {expand: false, select: true});
             },
             treeToggle({ event }) {
@@ -209,7 +226,11 @@ export default {
             },
             treeProperties({event}) {
                 // handle tree properties event
-                this.properties(event.detail.entry);
+                this.properties(event.detail.entry.path);
+            },
+            treeRename({event}) {
+                // handle tree rename event
+                this.rename(event.detail.entry.path);
             },
 
             /* list */
@@ -227,6 +248,10 @@ export default {
             listProperties({event}) {
                 // handle list properties event
                 this.properties(event.detail.entry);
+            },
+            listRename({event}) {
+                // handle list rename event
+                this.rename(event.detail.entry.path);
             },
 
             /* context menu */

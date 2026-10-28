@@ -5,7 +5,7 @@ export default {
     },
 
     template: `
-        <p>Page definitions, public properties, private state, and lifecycle.</p>
+        <p>Build a Page in JavaScript or HTML, then explore route parameters, reactive state, lifecycle hooks, and internationalization.</p>
         <x-page-index></x-page-index>        
     `
 };

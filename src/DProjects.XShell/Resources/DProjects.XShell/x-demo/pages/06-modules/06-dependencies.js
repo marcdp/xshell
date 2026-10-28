@@ -106,7 +106,7 @@ dependencies: {
             <x-datafield label="Service injection">Access an existing runtime capability.</x-datafield>
         </x-datafields>
 
-        <p>For a deeper explanation of resource resolution, caching, and loading, see <x-anchor href="../90-advanced/05-loading.js">Resolver and Loader</x-anchor>.</p>
+        <p>For a deeper explanation of resource resolution, caching, and loading, see <x-anchor href="../90-advanced/05-resolver-and-loader.js">Resolver and Loader</x-anchor>.</p>
     `,
 
     state: {

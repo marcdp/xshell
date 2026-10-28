@@ -148,6 +148,9 @@ export default {
 Here `dependencies` is the resolved declarative-resource object, `navigation` falls through to the XShell service container, and `state`, `query`,
 and `events` are Page-specific values. Destructuring requests the values; it does not make them public Page properties.
 
+Definition-based Pages can also request `moduleInstance` or `moduleController`. These refer to the runtime Module that owns the Page resource and
+its controller, using the Module ID captured when the Page class is loaded. Navigation context is separate from resource ownership.
+
 Names other than the Page-specific values fall through to `xshell.services.resolve(name)`. Core/runtime services are registered during XShell
 initialization, and configured services are registered from `xshell.services`; code can request any registered service naturally, for example
 `controller({ navigation, bus, loader })`. A missing name fails service resolution; Page injection does not manufacture unknown services.

@@ -5,7 +5,7 @@ export default {
     },
 
     template: `
-        <p>Use XShell dialog services and inspect their results.</p>
+        <p>Open message, confirmation, prompt, and picker dialogs, then build a custom Page dialog that returns a result.</p>
         <x-page-index></x-page-index>        
     `
 };

@@ -6,8 +6,7 @@ const sourceRoot = new URL("../../src/DProjects.XShell/Resources/DProjects.XShel
 const structureFiles = [
     "x/pages/areas.js",
     "x/pages/search.js",
-    "x-demo/pages/01-components/03-data.js",
-    "x-demo/pages/01-components/08-listviews.js",
+    "x-demo/pages/01-components/05-listviews.js",
     "xshell-diagnostics/pages/bus.js",
     "xshell-diagnostics/pages/components.js",
     "xshell-diagnostics/pages/contracts.js",
@@ -36,13 +35,12 @@ test("application pages contain canonical listview structures", () => {
     }
 });
 
-test("every listview has direct head and body containers", () => {
+test("every listview has a direct body after its optional head", () => {
     for (const path of structureFiles) {
         for (const listView of listViews(readSource(path))) {
             const openingTag = listView.match(/^<x-listview\b(?:[^"'<>]|"[^"]*"|'[^']*')*>/);
             assert.ok(openingTag, path);
-            assert.match(listView.slice(openingTag[0].length), /^\s*<x-listview-head[\s>]/, path);
-            assert.match(listView, /<\/x-listview-head>\s*<x-listview-body[\s>]/, path);
+            assert.match(listView.slice(openingTag[0].length), /^\s*(?:<x-listview-head[\s>][\s\S]*?<\/x-listview-head>\s*)?<x-listview-body[\s>]/, path);
             assert.match(listView, /<\/x-listview-body>\s*<\/x-listview>$/, path);
 
             const withoutBody = listView.replace(/<x-listview-body[\s>][\s\S]*<\/x-listview-body>/, "");
@@ -99,13 +97,14 @@ test("listview pages preserve dynamic items, navigation, selection, auto-scroll,
     assert.match(navigation, /<x-treeview-item x-recursive=/);
 });
 
-test("demo covers all views, switchable presentation, default-slot cells, and a working header filter", () => {
-    const demo = readSource("x-demo/pages/01-components/08-listviews.js");
+test("demo covers view switching, default-slot cells, selection, and navigation", () => {
+    const demo = readSource("x-demo/pages/01-components/05-listviews.js");
     for (const view of ["list", "details", "tiles", "icons"]) {
-        assert.match(demo, new RegExp(`view="${view}"`));
+        assert.match(demo, new RegExp(`views="[^"]*${view}`));
     }
-    assert.match(demo, /views="list,details,tiles,icons"/);
-    assert.match(demo, /<x-listview-column[^>]*>[\s\S]*x-model="state\.status"/);
-    assert.match(demo, /x-show="!state\.status/);
+    assert.match(demo, /<x-listview[^>]*x-on:select="onSelect"[^>]*x-on:activate="onActivate"/);
+    assert.match(demo, /<x-listview[^>]*multiple[^>]*x-on:select="onMultiSelect"/);
+    assert.match(demo, /<x-listview-item[^>]*href="01-buttons\.js"/);
+    assert.match(demo, /<x-listview-item[^>]*>[\s\S]*?<span>Folder<\/span>/);
     assert.doesNotMatch(demo, /<x-listview-item[\s\S]*?slot="column"/);
 });

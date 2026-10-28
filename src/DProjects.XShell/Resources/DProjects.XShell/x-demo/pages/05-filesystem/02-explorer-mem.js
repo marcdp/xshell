@@ -1,7 +1,7 @@
 
 export default {
     meta: {
-        title: "File Explorer",
+        title: "Memory File Explorer",
         description: "Explore a memory filesystem populated with sample directories and files."
     },
 

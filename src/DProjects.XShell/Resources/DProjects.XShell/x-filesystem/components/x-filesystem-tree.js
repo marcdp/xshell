@@ -3,6 +3,30 @@
 export const contract = {
     description: "Filesystem tree component",
     events: {
+        select: {
+            description: "Fired when a tree item is selected",
+            detail: {
+                path: {type: "string", description: "Path of the entry"},
+                entry: {type: "object", description: "Entry object"},
+                source: {type: "string", description: "Source of the event (tree)"}
+            }
+        },
+        toggle: {
+            description: "Fired when a tree item is toggled (expanded or collapsed)",
+            detail: {
+                path: {type: "string", description: "Path of the entry"},
+                entry: {type: "object", description: "Entry object"},
+                source: {type: "string", description: "Source of the event (tree)"}
+            }
+        },
+        rename: {
+            description: "Fired when the rename action is triggered",
+            detail: {
+                path: {type: "string", description: "Path of the entry"},
+                entry: {type: "object", description: "Entry object"},
+                source: {type: "string", description: "Source of the event (tree)"}
+            }
+        },
         contextmenuentry: {
             description: "Fired when a context menu is requested for an entry",
             detail: {
@@ -186,17 +210,25 @@ export default {
             /* events */
             async selectTreeviewItem({event}) {
                 const path = event.detail.path;                
-                this.select(path);
+                const treeview = host.shadowRoot.querySelector("x-treeview");
+                const entry = this.getEntryByPathRecursive(path);
+                if (entry) {
+                    state.selectedPath = path;
+                    if (treeview) treeview.select(path);
+                    host.dispatchEvent(new CustomEvent("select", {bubbles: true, detail: {path: entry.path, sourceEvent: event.detail.sourceEvent}}));
+                }
             },
             async toggle({event}){
                 // toggle
+                const path = event.detail.path;
+                //this.select(path);
                 const entry = this.getEntryByPathRecursive(event.detail.path);
-                if (!entry.expanded) {
+                if (!entry.expanded) {  
                     this.expand(entry.path)
                 } else {
                     this.collapse(entry.path)
                 }
-                host.dispatchEvent(new CustomEvent("toggle", {bubbles: true, detail: {path: event.detail.path}}));
+                host.dispatchEvent(new CustomEvent("toggle", {bubbles: true, detail: {path: event.detail.path, sourceEvent: event.detail.sourceEvent}}));
             },
             getEntryByPathRecursive(path) {
                 const findEntry = (entries, path) => {
@@ -233,6 +265,10 @@ export default {
                 if (event.key === "Enter" && event.altKey) {
                     const entry = this.getEntryByPathRecursive(state.selectedPath);
                     host.dispatchEvent(new CustomEvent("properties", {bubbles: true, detail: {path: state.selectedPath, entry}}));
+                    event.preventDefault();
+                } else if (event.key === "F2") {
+                    const entry = this.getEntryByPathRecursive(state.selectedPath);
+                    host.dispatchEvent(new CustomEvent("rename", {bubbles: true, detail: {path: state.selectedPath, entry}}));
                     event.preventDefault();
                 }
             },

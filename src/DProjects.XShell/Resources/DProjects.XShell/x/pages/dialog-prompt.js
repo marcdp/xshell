@@ -26,6 +26,8 @@ export default {
                     x-attr:placeholder="state.placeholder"
                     x-attr:required="state.required"
                     x-attr:type="state.inputType"
+                    autofocus
+                    autoselect
                 ></x-datafield>
             </x-datafields>
             <x-button slot="footer" label="Save" command="submit" class="submit"></x-button>            

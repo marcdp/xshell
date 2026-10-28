@@ -178,7 +178,8 @@ function getPageQueryParams(src) {
 // create page class from js implementation
 export async function createPageClassFromJsDefinition(src, context, implementation, contract) {
     // defaults
-    const moduleConfig = xshell.config.modules[context.resourceDefinition.moduleId];
+    const moduleId = context.resourceDefinition.moduleId;
+    const moduleConfig = xshell.config.modules[moduleId];
     if (!contract) contract = {};
     if (!contract.properties) contract.properties = {};
     if (!contract.events) contract.events = {};
@@ -326,10 +327,10 @@ export async function createPageClassFromJsDefinition(src, context, implementati
                         };
                     } else if (prop == "moduleInstance") {
                         // get module instance
-                        return xshell.modules.getModuleById(context.resourceDefinition.moduleId);
+                        return xshell.modules.getModuleById(moduleId);
                     } else if (prop == "moduleController") {
                         // get module controller
-                        return xshell.modules.getModuleById(context.resourceDefinition.moduleId).controller;
+                        return xshell.modules.getModuleById(moduleId).controller;
                     } else {
                         // resolve from services
                         return xshell.services.resolve(prop);                    

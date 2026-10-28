@@ -1,17 +1,24 @@
 
 export default {
     meta: {
-        title: "File Explorer",
-        description: "Explore a memory filesystem populated with sample directories and files."
+        title: "Persistent File Explorer",
+        description: "Explore origin-private browser storage with the filesystem Component."
     },
 
     template: `
-        <p>The <code>mem:</code> filesystem stores directories and files in memory. This example creates a small sample project before displaying the explorer.</p>
+        <p>The <code>opfs:</code> filesystem uses origin-private browser storage. Files persist across Page visits in the same browser and origin.</p>
+        <p x-if="!state.available">OPFS requires browser support and a secure context.</p>
+        <x-filesystem x-if="state.available" root src="opfs:" path="/"></x-filesystem>
+    `,
 
-        <h2>Sample filesystem</h2>
-        <p>The example contains documents, images, source files, and nested directories.</p>
+    state: { available: false },
 
-        <x-filesystem src="opfs:" path="/"></x-filesystem>
-
-    `
+    controller({state}) {
+        return {
+            load() {
+                state.available = window.isSecureContext &&
+                    typeof navigator.storage?.getDirectory === "function";
+            }
+        };
+    }
 };

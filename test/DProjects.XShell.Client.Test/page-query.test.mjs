@@ -78,6 +78,28 @@ async function createPage(properties, src, controller = () => ({})) {
     return new PageClass({ src, context: {} });
 }
 
+test("Page injects its owning Module instance and controller from loader context", async () => {
+    configureDefinitionLoaders();
+    const moduleController = { id: "test-controller" };
+    const moduleInstance = { id: "test", controller: moduleController };
+    xshell._modules = {
+        getModuleById(id) {
+            assert.equal(id, "test");
+            return moduleInstance;
+        }
+    };
+    let injected;
+    const PageClass = await createPageClassFromJsDefinition("/page.js", createContext(),
+        createDefinition(({ moduleInstance, moduleController }) => {
+            injected = { moduleInstance, moduleController };
+            return {};
+        }), {});
+
+    new PageClass({ src: "/page.js", context: { fromNavigation: true } });
+    assert.strictEqual(injected.moduleInstance, moduleInstance);
+    assert.strictEqual(injected.moduleController, moduleController);
+});
+
 test("Page query binding is explicit and uses kebab-case names", async () => {
     const page = await createPage({
         foo: { type: "string", default: "default", state: true, query: true },

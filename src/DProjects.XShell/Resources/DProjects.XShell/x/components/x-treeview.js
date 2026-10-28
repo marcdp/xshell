@@ -141,6 +141,7 @@ export default {
                     if (index > 0) {
                         newSelecteds = [items[index-1]];
                         newSelecteds[0].scrollIntoView({block: "nearest", inline: "nearest", behavior: "instant"});
+                        newSelecteds[0].dispatchEvent(new CustomEvent("select", {bubbles: true, detail: {path: newSelecteds[0].path, sourceEvent: event}}));
                     }
                     event.preventDefault();
                 } else if (event.key == "ArrowDown") {
@@ -148,16 +149,19 @@ export default {
                     if (index < items.length - 1) {
                         newSelecteds = [items[index+1]];
                         newSelecteds[0].scrollIntoView({block: "nearest", inline: "nearest", behavior: "instant"});
+                        newSelecteds[0].dispatchEvent(new CustomEvent("select", {bubbles: true, detail: {path: newSelecteds[0].path, sourceEvent: event}}));
                     }
                     event.preventDefault();
                 } else if (event.key == "ArrowLeft") {
                     if (selected) {
                         if (selected.expanded) {
                             selected.expanded = false;
-                            selected.dispatchEvent(new CustomEvent("toggle", {bubbles: true, detail: {path: selected.path}}));
+                            selected.dispatchEvent(new CustomEvent("toggle", {bubbles: true, detail: {path: selected.path, sourceEvent: event}}));
                         } else if (selected.parentElement && selected.parentElement.localName == "x-treeview-item") {
                             newSelecteds = [selected.parentElement];
                             selected.expanded = false;
+                            newSelecteds[0].scrollIntoView({block: "nearest", inline: "nearest", behavior: "instant"});
+                            newSelecteds[0].dispatchEvent(new CustomEvent("select", {bubbles: true, detail: {path: newSelecteds[0].path, sourceEvent: event}}));
                         }
                     }
                     event.preventDefault();
@@ -165,10 +169,15 @@ export default {
                     if (selected) {
                         if (!selected.expanded) {
                             selected.expanded = true;
-                            selected.dispatchEvent(new CustomEvent("toggle", {bubbles: true, detail: {path: selected.path}}));
+                            selected.scrollIntoView({block: "nearest", inline: "nearest", behavior: "instant"});
+                            selected.dispatchEvent(new CustomEvent("toggle", {bubbles: true, detail: {path: selected.path, sourceEvent: event}}));
                         } else {
                             let index = items.indexOf(selected);
-                            if (index < items.length - 1) newSelecteds = [items[index+1]];
+                            if (index < items.length - 1) {
+                                newSelecteds = [items[index+1]];
+                                newSelecteds[0].scrollIntoView({block: "nearest", inline: "nearest", behavior: "instant"});
+                                newSelecteds[0].dispatchEvent(new CustomEvent("select", {bubbles: true, detail: {path: newSelecteds[0].path, sourceEvent: event}}));
+                            }
                         }
                     }
                     event.preventDefault();
@@ -177,7 +186,7 @@ export default {
                     let index = items.indexOf(selected);
                     if (index > 0) {
                         newSelecteds = [items[Math.max(index-inc, 0)]];
-                        newSelecteds[0].dispatchEvent(new CustomEvent("select", {bubbles: true, detail: {path: items[Math.max(index-inc, 0)].path}}));
+                        newSelecteds[0].dispatchEvent(new CustomEvent("select", {bubbles: true, detail: {path: items[Math.max(index-inc, 0)].path, sourceEvent: event}}));
                         newSelecteds[0].scrollIntoView({block: "nearest", inline: "nearest", behavior: "instant"});
                     }
                     event.preventDefault();
@@ -186,20 +195,20 @@ export default {
                     let index = items.indexOf(selected);
                     if (index < items.length - 1) {
                         newSelecteds = [items[Math.min(index+inc, items.length-1)]];
-                        newSelecteds[0].dispatchEvent(new CustomEvent("select", {bubbles: true, detail: {path: items[Math.min(index+inc, items.length-1)].path}}));
+                        newSelecteds[0].dispatchEvent(new CustomEvent("select", {bubbles: true, detail: {path: items[Math.min(index+inc, items.length-1)].path, sourceEvent: event}}));
                         newSelecteds[0].scrollIntoView({block: "nearest", inline: "nearest", behavior: "instant"});
                     }
                     event.preventDefault();
                 } else if (event.key == " ") {
                     if (selected) {
                         selected.expanded = !selected.expanded;
-                        selected.dispatchEvent(new CustomEvent("toggle", {bubbles: true, detail: {path: selected.path}}));
+                        selected.dispatchEvent(new CustomEvent("toggle", {bubbles: true, detail: {path: selected.path, sourceEvent: event}}));
                     }
                     event.preventDefault();
                 } else if (event.key == "Enter" && !event.altKey) {
                     if (selected) {
-                        selected.expanded = !selected.expanded;
-                        selected.dispatchEvent(new CustomEvent("toggle", {bubbles: true, detail: {path: selected.path}}));
+                        //selected.expanded = !selected.expanded;
+                        //selected.dispatchEvent(new CustomEvent("toggle", {bubbles: true, detail: {path: selected.path, sourceEvent: event}}));
                         selected.dispatchEvent(new CustomEvent("select", {bubbles: true, detail: {path: selected.path}}));
                     }
                     event.preventDefault();

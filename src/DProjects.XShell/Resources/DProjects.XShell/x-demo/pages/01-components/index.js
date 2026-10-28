@@ -5,7 +5,7 @@ export default {
     },
 
     template: `
-        <p>Core UI elements and composition.</p>
+        <p>Explore XShell's UI Components, from anchors and controls to lists and layouts. The final examples show composition, public contracts, and lifecycle hooks.</p>
         <x-page-index></x-page-index>        
     `
 };
