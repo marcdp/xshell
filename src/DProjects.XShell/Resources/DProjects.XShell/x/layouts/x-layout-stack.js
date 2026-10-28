@@ -1,3 +1,4 @@
+import { findFocusableElement, getDeepActiveElement, isDescendantOfElement } from "../utils/dom.js";
 
 // contract
 export const contract = {
@@ -99,11 +100,14 @@ export default {
             div.panel .body {
                 padding-top:1.4em;
             }    
+            div.panel .body:focus  {
+                border:1px red solid;
+            }
         }
     `,
     template: `
         <div class="backdrop" x-class:expanded="state.expanded" x-on:click="queryClose"></div>
-        <div class="panel"    x-class:expanded="state.expanded" x-on:transitionend="transitionEnd">
+        <div class="panel"    x-class:expanded="state.expanded" x-on:transitionend="transitionEnd" x-on:keydown="keydown">
             <x-loading x-if="state.status=='loading'"></x-loading>
             <div class="header">            
                 <div>
@@ -112,30 +116,52 @@ export default {
                 </div>
                 <x-button class="anchor" icon="x-close" x-on:click="queryClose"></x-button>               
             </div>            
-            <div class="body">                
+            <div class="body" tabIndex="1">
                 <slot></slot>
             </div>
         </div>
     `,
-    controller({ state, runtime, host }) {
+    controller({ state, events, runtime, host, commands }) {
         let resolveClose = null;
+        let previousFocus = null;
         return {
             load() {
                 //load
                 if (runtime.uptimeMs < 500) {
                     state.expanded = true;
+
                 } else {
                     setTimeout(() => {
                         state.expanded = true;
+                        commands.enqueue("focus");
                     }, 50);
                 }
             },
-
+            mount() {
+                previousFocus = getDeepActiveElement();
+                //const panel = host.shadowRoot.querySelector(".panel");
+                //panel?.focus({ preventScroll: true });
+            },
+            focus() {
+                // focus the body element within the shadow DOM, if not already focused
+                const hasFocus = host.matches(':focus-within');
+                if (!hasFocus) host.shadowRoot.querySelector(".body")?.focus();
+            },
             transitionEnd({ event }) {
                 //transition end
                 if (!state.expanded && event.target === event.currentTarget && event.propertyName === "transform") {
                     resolveClose?.();
                     resolveClose = null;
+                }
+                if (state.expanded){
+                    this.focus();
+                }
+            },
+
+            keydown({ event }) {
+                // keydown handler for the panel
+                if (event.key === "Escape" && !(event.defaultPrevented || event.isComposing) && state.expanded) {
+                    this.queryClose();
                 }
             },
 
@@ -143,16 +169,25 @@ export default {
                 //query close (send event to host, informing the a page close has been requested)
                 host.dispatchEvent(new CustomEvent("queryClose", { composed: true }));
             },
+
             async close() {
                 // Create the Promise before triggering the transition
                 const transitionCompleted = new Promise(resolve => {
                     resolveClose = resolve;
                 });
 
+                // expand
                 state.expanded = false;
+
+                // try restore previous focus
+                if (previousFocus?.isConnected) {
+                    previousFocus.focus({ preventScroll: true });
+                }
+                previousFocus = null;
 
                 // Wait until transitionEnd resolves the Promise
                 await transitionCompleted;
+
             },            
         }
     }

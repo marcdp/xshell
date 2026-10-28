@@ -254,14 +254,16 @@ export default {
                     let index = items.indexOf(selected);
                     if (index > 0) {
                         newSelecteds = [items[index-1]];
-                        selected.dispatchEvent(new CustomEvent("select", {bubbles: true, detail: {path: items[index-1].path}}));
+                        newSelecteds[0].dispatchEvent(new CustomEvent("select", {bubbles: true, detail: {path: items[index-1].path}}));
+                        newSelecteds[0].scrollIntoView({block: "nearest", inline: "nearest", behavior: "instant"});
                     }
                     event.preventDefault();
                 } else if (event.key == "ArrowDown") {
                     let index = items.indexOf(selected);
                     if (index < items.length - 1) {
                         newSelecteds = [items[index+1]];
-                        selected.dispatchEvent(new CustomEvent("select", {bubbles: true, detail: {path: items[index+1].path}}));
+                        newSelecteds[0].dispatchEvent(new CustomEvent("select", {bubbles: true, detail: {path: items[index+1].path}}));
+                        newSelecteds[0].scrollIntoView({block: "nearest", inline: "nearest", behavior: "instant"});
                     }
                     event.preventDefault();
                 } else if (event.key == "PageUp") {
@@ -269,7 +271,8 @@ export default {
                     let index = items.indexOf(selected);
                     if (index > 0) {
                         newSelecteds = [items[Math.max(index-inc, 0)]];
-                        selected.dispatchEvent(new CustomEvent("select", {bubbles: true, detail: {path: items[Math.max(index-inc, 0)].path}}));
+                        newSelecteds[0].dispatchEvent(new CustomEvent("select", {bubbles: true, detail: {path: items[Math.max(index-inc, 0)].path}}));
+                        newSelecteds[0].scrollIntoView({block: "nearest", inline: "nearest", behavior: "instant"});
                     }
                     event.preventDefault();
                 } else if (event.key == "PageDown") {
@@ -277,7 +280,8 @@ export default {
                     let index = items.indexOf(selected);
                     if (index < items.length - 1) {
                         newSelecteds = [items[Math.min(index+inc, items.length-1)]];
-                        selected.dispatchEvent(new CustomEvent("select", {bubbles: true, detail: {path: items[Math.min(index+inc, items.length-1)].path}}));
+                        newSelecteds[0].dispatchEvent(new CustomEvent("select", {bubbles: true, detail: {path: items[Math.min(index+inc, items.length-1)].path}}));
+                        newSelecteds[0].scrollIntoView({block: "nearest", inline: "nearest", behavior: "instant"});
                     }
                     event.preventDefault();
                 } else if (event.key == "Enter" && !event.altKey) {
