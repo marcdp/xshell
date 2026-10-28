@@ -1,5 +1,9 @@
 export default {
-    meta: { title: "Lists", description: "The list view presents the same items in several supported layouts." },
+    meta: {
+        title: "Lists",
+        description: "The list view presents the same items in several supported layouts."
+    },
+
     template: `
         <p>The list view presents the same items in several supported layouts.</p>
         <x-listview view="list" views="list,details,tiles,icons">

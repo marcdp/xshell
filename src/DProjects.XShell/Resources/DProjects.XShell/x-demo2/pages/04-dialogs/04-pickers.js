@@ -1,13 +1,25 @@
 export default {
-    meta: { title: "Pickers", description: "A picker chooses from a local, deterministic list." },
+    meta: {
+        title: "Pickers",
+        description: "A picker chooses from a local, deterministic list."
+    },
+
     template: `
         <p>A picker chooses from a local, deterministic list.</p>
         <x-button label="Choose a color" command="choose"></x-button>
         <p x-if="state.result">Selected: {{ state.result }}</p>
         
     `,
-    state: { result: "" },
+
+    state: {
+        result: ""
+    },
+
     controller({ dialog, state }) {
-        return { async choose() { state.result = await dialog.picker({ title: "Color", domain: [{ value: "red", label: "Red" }, { value: "blue", label: "Blue" }], inputType: "select" }); } };
+        return {
+            async choose() {
+                state.result = await dialog.picker({ title: "Color", domain: [{ value: "red", label: "Red" }, { value: "blue", label: "Blue" }], inputType: "select" });
+            }
+        };
     }
 };

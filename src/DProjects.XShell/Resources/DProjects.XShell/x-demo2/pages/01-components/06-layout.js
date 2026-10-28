@@ -1,5 +1,9 @@
 export default {
-    meta: { title: "Layouts", description: "Cards, tabs, and accordions arrange content without Page code." },
+    meta: {
+        title: "Layouts",
+        description: "Cards, tabs, and accordions arrange content without Page code."
+    },
+
     template: `
         <p>Cards, tabs, and accordions arrange content without Page code.</p>
         <x-card><h2>Card</h2><p>A bounded content region.</p></x-card>

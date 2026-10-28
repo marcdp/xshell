@@ -1,5 +1,9 @@
 export default {
-    meta: { title: "Indicators", description: "Small components communicate status without custom scripts." },
+    meta: {
+        title: "Indicators",
+        description: "Small components communicate status without custom scripts."
+    },
+
     template: `
         <p>Small components communicate status without custom scripts.</p>
         <p><x-icon icon="x-info"></x-icon> Information <x-badge value="3"></x-badge></p>

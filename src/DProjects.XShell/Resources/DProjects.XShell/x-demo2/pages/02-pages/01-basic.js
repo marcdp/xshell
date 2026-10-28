@@ -1,5 +1,9 @@
 export default {
-    meta: { title: "Basic Page", description: "A Page is a default-exported implementation with a template." },
+    meta: {
+        title: "Basic Page",
+        description: "A Page is a default-exported implementation with a template."
+    },
+
     template: `
         <p>A Page is a default-exported implementation with a template.</p>
         <p>This Page has no state or controller because it needs neither.</p>

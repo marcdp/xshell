@@ -5,7 +5,12 @@ export default {
         <x-button label="Hello" command="choose"></x-button>
         
     `,
+
     controller({ page }) {
-        return { choose() { page.close("Hello"); } };
+        return {
+            choose() {
+                page.close("Hello");
+            }
+        };
     }
 };

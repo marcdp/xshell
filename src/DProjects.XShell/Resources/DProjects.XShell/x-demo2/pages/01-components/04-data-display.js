@@ -1,5 +1,9 @@
 export default {
-    meta: { title: "Data Display", description: "Use display components for simple values and structured data." },
+    meta: {
+        title: "Data Display",
+        description: "Use display components for simple values and structured data."
+    },
+
     template: `
         <p>Use display components for simple values and structured data.</p>
         <x-datafields>
@@ -9,5 +13,8 @@ export default {
         <x-json x-prop:value="state.record"></x-json>
         
     `,
-    state: { record: { name: "Ada", active: true } }
+
+    state: {
+        record: { name: "Ada", active: true }
+    }
 };

@@ -1,5 +1,9 @@
 export default {
-    meta: { title: "Advanced Templates", description: "A nested expression can display a derived value without duplicating state." },
+    meta: {
+        title: "Advanced Templates",
+        description: "A nested expression can display a derived value without duplicating state."
+    },
+
     template: `
         <p>A nested expression can display a derived value without duplicating state.</p>
         <label>First <input x-model="state.first"></label>
@@ -7,5 +11,9 @@ export default {
         <p>{{ state.first + " " + state.last }}</p>
         
     `,
-    state: { first: "Ada", last: "Lovelace" }
+
+    state: {
+        first: "Ada",
+        last: "Lovelace"
+    }
 };

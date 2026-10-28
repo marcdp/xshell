@@ -1,12 +1,21 @@
 export default {
-    meta: { title: "Module Controller", description: "The module controller starts before Area menus are composed." },
+    meta: {
+        title: "Module Controller",
+        description: "The module controller starts before Area menus are composed."
+    },
+
     template: `
         <p>The module controller starts before Area menus are composed.</p>
         <p>Controller label: {{ state.label }}</p>
         <p>Started: {{ state.started }}</p>
         
     `,
-    state: { label: "", started: false },
+
+    state: {
+        label: "",
+        started: false
+    },
+
     controller({ modules, state }) {
         return {
             load() {

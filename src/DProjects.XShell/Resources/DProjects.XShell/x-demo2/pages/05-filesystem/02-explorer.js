@@ -1,5 +1,9 @@
 export default {
-    meta: { title: "File Explorer", description: "The memory filesystem gives the explorer a local source with no server share." },
+    meta: {
+        title: "File Explorer",
+        description: "The memory filesystem gives the explorer a local source with no server share."
+    },
+
     template: `
         <p>The memory filesystem gives the explorer a local source with no server share.</p>
         <x-filesystem src="mem:"></x-filesystem>

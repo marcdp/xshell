@@ -1,5 +1,9 @@
 export default {
-    meta: { title: "Transformers", description: "Pipelines format a value from left to right." },
+    meta: {
+        title: "Transformers",
+        description: "Pipelines format a value from left to right."
+    },
+
     template: `
         <p>Pipelines format a value from left to right.</p>
         <label>Name <input x-model="state.name"></label>
@@ -8,5 +12,8 @@ export default {
         <p>Slug: {{ state.name | slug }}</p>
         
     `,
-    state: { name: "  Ada Lovelace  " }
+
+    state: {
+        name: "  Ada Lovelace  "
+    }
 };
