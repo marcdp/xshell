@@ -3,6 +3,7 @@ import { readFileSync, existsSync, readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import test from 'node:test';
+import Areas from '../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/areas.js';
 
 const root = fileURLToPath(new URL('../../src/DProjects.XShell/Resources/DProjects.XShell/x-demo2/', import.meta.url));
 const config = JSON.parse(readFileSync(path.join(root, 'module.jsonc'), 'utf8').replace(/^\/\/[^\n]*\n/, ''));
@@ -18,33 +19,64 @@ test('x-demo2 is a separate root with resolvable module references', () => {
     }
 });
 
-test('every cookbook Page is reachable from its explicit menu', () => {
-    const visited = new Set();
-    const walk = items => {
-        for (const item of items) {
-            assert.ok(item.label, 'menu labels are explicit');
-            assert.ok(!item.path?.startsWith('/'), 'friendly menu paths stay separate from module URLs');
-            if (item.href) {
-                assert.ok(item.href.startsWith('/pages/'), item.href);
-                const pagePath = item.href.slice(1);
-                assert.ok(existsSync(path.join(root, pagePath)) ||
-                    (pagePath.endsWith('.js') && existsSync(path.join(root, pagePath.replace(/\.js$/, '.html')))), pagePath);
-                visited.add(pagePath);
-            }
-            walk(item.children || []);
-        }
-    };
-    walk(config.modules['x-demo2'].menus.navigation);
-    assert.ok(visited.size > 30);
-    assert.ok(visited.has('pages/index.js'));
-    assert.ok(visited.has('pages/components/contract.js'));
-    assert.ok(visited.has('pages/ai/chat.js'));
-    const pageFiles = directory => readdirSync(directory, { withFileTypes: true }).flatMap(entry => {
+const pageFiles = directory => readdirSync(directory, { withFileTypes: true }).flatMap(entry => {
         const absolute = path.join(directory, entry.name);
         return entry.isDirectory() ? pageFiles(absolute) :
             [path.relative(root, absolute).replaceAll('\\', '/').replace(/\.html$/, '.js')];
+});
+
+test('cookbook navigation derives ordered Pages from the file inventory', () => {
+    assert.equal(config.modules['x-demo2'].menus.navigation, '/pages');
+    const files = pageFiles(path.join(root, 'pages'));
+    const module = { id: 'x-demo2', config: { menus: { navigation: '/_assets/x-demo2/pages' } } };
+    const areas = new Areas({
+        config: {
+            xshell: { assets: { basePath: '/_assets' }, areas: { default: 'cookbook', global: [], definitions: {
+                cookbook: { prefix: '/cookbook', modules: ['x-demo2'] }
+            } } },
+            modules: { 'x-demo2': { label: 'XShell Cookbook', files: files.map(file => ({ path: `/_assets/x-demo2/${file.replace(/\.js$/, file.includes('html-page') ? '.html' : '.js')}` })) } }
+        },
+        bus: { addEventListener() {} }
     });
-    assert.deepEqual([...visited].sort(), pageFiles(path.join(root, 'pages')).sort());
+    areas.init({ modules: { getModuleById() { return module; } } });
+    const menu = areas.getMenu('navigation');
+    assert.equal(areas.getArea('cookbook').home, '/cookbook/');
+    assert.deepEqual(menu[0].children.map(item => item.label),
+        ['Components', 'Pages', 'Navigation', 'Dialogs', 'Filesystem', 'Modules', 'Templates', 'Ai', 'Advanced']);
+    assert.deepEqual(menu[0].children[0].children.map(item => item.label),
+        ['Buttons', 'Indicators', 'Forms', 'Data Display', 'Lists', 'Layout', 'Editors', 'Composition', 'Contract']);
+    const visited = new Set();
+    const walk = items => {
+        for (const item of items) {
+            assert.doesNotMatch(item.label, /^\d+-/);
+            assert.ok(item.href?.startsWith('/cookbook/_assets/x-demo2/pages/'), item.href);
+            const relative = item.href.slice('/cookbook/_assets/x-demo2/'.length);
+            assert.ok(files.includes(relative), relative);
+            visited.add(relative);
+            walk(item.children || []);
+        }
+    };
+    walk(menu);
+    assert.deepEqual([...visited].sort(), files.sort());
+    assert.ok(![...visited].some(file => file.includes('custom-dialog')));
+    assert.equal(menu[0].children[1].children[1].href, '/cookbook/_assets/x-demo2/pages/02-pages/02-html-page.js');
+    assert.equal(config.modules['x-demo2'].routes['/hello/{name}'], '/pages/02-pages/03-parameters.js');
+});
+
+test('cookbook Page links resolve after renaming', () => {
+    for (const file of pageFiles(path.join(root, 'pages'))) {
+        const sourcePath = path.join(root, file.replace(/02-html-page\.js$/, '02-html-page.html'));
+        const source = readFileSync(sourcePath, 'utf8');
+        for (const [, href] of source.matchAll(/<x-anchor href="([^"]+)"/g)) {
+            if (href.startsWith('/')) continue;
+            const destination = new URL(href.replaceAll('&amp;', '&'), `https://example.test/${file}`).pathname.slice(1);
+            assert.ok(existsSync(path.join(root, destination)) ||
+                existsSync(path.join(root, destination.replace(/\.js$/, '.html'))), `${file} -> ${href}`);
+        }
+    }
+    assert.ok(existsSync(path.join(root, 'dialog-pages/custom-dialog.js')));
+    assert.match(readFileSync(path.join(root, 'pages/04-dialogs/05-custom.js'), 'utf8'),
+        /page:x-demo2:\/dialog-pages\/custom-dialog\.js/);
 });
 
 test('the counter keeps its public contract separate from private state', async () => {

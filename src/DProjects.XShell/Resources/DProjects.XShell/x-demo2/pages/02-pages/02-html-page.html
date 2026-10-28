@@ -1,0 +1,8 @@
+<template>
+    <p>This Page keeps its template and implementation in one HTML file.</p>
+    <p>Hello {{ state.name }}.</p>
+    <label>Name <input x-model="state.name"></label>
+</template>
+<script type="module">
+    export default { meta: { title: "HTML Page", description: "This Page keeps its template and implementation in one HTML file." }, state: { name: "Ada" } };
+</script>
