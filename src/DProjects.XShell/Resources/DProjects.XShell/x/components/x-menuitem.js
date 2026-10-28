@@ -16,6 +16,7 @@ export const contract = {
     },
     methods: {
         focus: {description: "Focuses the menu item."},
+        expand: {description: "Handles click events on the menu item."}
     },
     slots: {
         "": {
@@ -41,11 +42,9 @@ export default {
         :host x-anchor x-icon:first-child:last-child {align-self:flex-end;}
         :host x-anchor x-icon + .label {padding-left:.35em;}
         :host x-anchor.selected {font-weight: 600;}
-        :host x-anchor[expanded] {}
-        :host x-anchor[disabled] {pointer-events:none; cursor:default;}
-        :host x-anchor[disabled] x-icon {color:var(--x-color-text-disabled)!important;}
-        :host x-anchor[disabled] span.label {color:var(--x-color-text-disabled)!important; padding-left:0!important;}
-        :host(.selected) x-anchor {background:var(--x-color-background-x-gray);}
+        :host .menuitem[disabled] {pointer-events:none; cursor:default; --x-color-text:var(--x-color-text-disabled);}
+        
+        :host(.selected) .menuitem {background:var(--x-color-background-x-gray);}
         :host HR {border:none; background:var(--x-menuitem-separator-color); height:.1px; margin-top:.15em; margin-bottom:.15em; display:block; box-sizing: border-box; width:100%;}
         
         /* dropdown */
@@ -86,7 +85,7 @@ export default {
         <div x-elseif="state.embedded">
             <x-page  x-attr:src="state.href" loading="lazy"></x-page>
         </div>
-        <x-button x-elseif="state.command" class="menuitem" x-attr:command="state.command" x-attr:label="state.label" x-attr:icon="state.icon" >
+        <x-button x-elseif="state.command" class="menuitem" x-attr:command="state.command" x-attr:label="state.label" x-attr:icon="state.icon" x-attr:disabled="state.disabled" >
         </x-button>
         <x-anchor x-else class="menuitem anchor" x-class:down="state.childsDown" x-attr:href="state.href" x-attr:disabled="state.disabled" x-attr:expanded="state.expanded" x-class:selected="state.selected" x-attr:tooltip="state.tooltip">
             <x-icon x-if="state.checked" icon="x-check"></x-icon>
@@ -95,7 +94,7 @@ export default {
             <span   x-if="state.suffix" class="suffix">{{ state.suffix }}</span>
             <x-icon x-if="state.hasChilds" class="has-childs" x-attr:icon="(state.childsDown ? 'x-keyboard-arrow-down' : 'x-keyboard-arrow-right')"></x-icon>
         </x-anchor>
-        <x-contextmenu x-class:down="state.childsDown" x-class:left="state.childsLeft" x-if="state.hasChilds" x-show="state.expanded">
+        <x-contextmenu submenu x-class:down="state.childsDown" x-class:left="state.childsLeft" x-if="state.hasChilds" x-show="state.expanded">
             <slot x-on:slotchange="refresh"></slot>
         </x-contextmenu>
     `,
@@ -131,11 +130,18 @@ export default {
                     if (host.classList.contains("inline") || horizontal) {
                         state.expanded = !state.expanded;
                         this.refresh();
-                        event.preventDefault();
-                        event.stopPropagation();
+                        event?.preventDefault();
+                        event?.stopPropagation();
                     }
                 });
                 this.refresh();
+            },
+
+            expand(){
+                if (host.parentNode?.localName == "x-contextmenu") {
+                    state.expanded = true;
+                    this.refresh();
+                }
             },
 
             refresh(args) {

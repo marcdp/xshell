@@ -677,10 +677,10 @@ export default {
                 // mount
                 initializeDefault(true);
                 if (state.autofocus) {
-                    timer.setTimeout(25, () => {
+                    timer.setTimeout(() => {
                         let element = host.shadowRoot.querySelector(".input");
                         if (element && element.focus) element.focus();
-                    });
+                    }, 25);
                 }
                 if (!state.validated) {
                     this.validate();

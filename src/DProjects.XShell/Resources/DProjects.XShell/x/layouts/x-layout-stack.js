@@ -139,8 +139,6 @@ export default {
             },
             mount() {
                 previousFocus = getDeepActiveElement();
-                //const panel = host.shadowRoot.querySelector(".panel");
-                //panel?.focus({ preventScroll: true });
             },
             focus() {
                 // focus the body element within the shadow DOM, if not already focused

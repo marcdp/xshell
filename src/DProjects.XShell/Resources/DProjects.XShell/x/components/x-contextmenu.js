@@ -4,7 +4,8 @@ export const contract = {
     description: "Provides a styled container for contextual menu content.",
     events: {},
     properties: {
-        position: {type: "string", description: "The position of the context menu."}
+        submenu: {type: "boolean", default: false, attribute:true, state:true, description: "Whether the context menu is a submenu."},
+        position: {type: "string", default: null, attribute:true, state:true, description: "The position of the context menu."}
     },
     methods: {        
         open: {
@@ -47,14 +48,16 @@ export default {
         }
     `,
     template: `
-        <div x-if="state.visible" tabindex="0" x-style:left="state.x" x-style:top="state.y" x-on:keydown="keydown" x-on:command="command">
+        <div x-if="state.visible || state.submenu" tabindex="0" x-style:left="state.x" x-style:top="state.y" x-on:keydown="keydown" x-on:command="command">
             <slot></slot>
         </div>
     `,
     state: {
+        submenu: false,
         visible: false,
-        x: 0,
-        y:0,
+        open: null,
+        x: undefined,
+        y: undefined,
     },
     controller({ state, host, commands }) {
         const outsideClick = (event) => {
@@ -97,7 +100,7 @@ export default {
                 if (event.key === "ArrowDown") {
                     // down: move focus to next menu item
                     event.preventDefault();
-                    let menuitems = Array.from(host.querySelectorAll("x-menuitem"));
+                    let menuitems = Array.from(host.querySelectorAll(":scope > x-menuitem"));
                     let currentIndex = menuitems.findIndex(item => item.matches(":focus"));
                     while (currentIndex < menuitems.length - 1 && (menuitems[currentIndex + 1].label == "-" || menuitems[currentIndex + 1].disabled)) {
                         currentIndex++;
@@ -108,7 +111,7 @@ export default {
                 } else if (event.key === "ArrowUp") {
                     // up: move focus to previous menu item
                     event.preventDefault();
-                    let menuitems = Array.from(host.querySelectorAll("x-menuitem"));
+                    let menuitems = Array.from(host.querySelectorAll(":scope > x-menuitem"));
                     let currentIndex = menuitems.findIndex(item => item.matches(":focus"));
                     while (currentIndex > 0 && (menuitems[currentIndex - 1].label == "-" || menuitems[currentIndex - 1].disabled)) {
                         currentIndex--;
@@ -119,16 +122,24 @@ export default {
                 } else if (event.key === "PageUp") {
                     // page up: move focus to the first menu item
                     event.preventDefault();
-                    let menuitems = Array.from(host.querySelectorAll("x-menuitem"));
+                    let menuitems = Array.from(host.querySelectorAll(":scope > x-menuitem"));
                     if (menuitems.length > 0) {
                         menuitems[0].focus();
                     }
                 } else if (event.key === "PageDown") {
                     // page down: move focus to the last menu item
                     event.preventDefault();
-                    let menuitems = Array.from(host.querySelectorAll("x-menuitem"));
+                    let menuitems = Array.from(host.querySelectorAll(":scope > x-menuitem"));
                     if (menuitems.length > 0) {
                         menuitems[menuitems.length - 1].focus();
+                    }
+                } else if (event.key === "Enter" || event.key === "ArrowRight") {
+                    // enter or right arrow: activate the focused menu item (show submenu if available)
+                    event.preventDefault();
+                    let menuitems = Array.from(host.querySelectorAll(":scope > x-menuitem"));
+                    let currentIndex = menuitems.findIndex(item => item.matches(":focus"));
+                    if (currentIndex >= 0) {
+                        menuitems[currentIndex].expand();
                     }
                 } else if (event.key === "Escape") {
                     // close

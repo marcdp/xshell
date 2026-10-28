@@ -26,6 +26,9 @@ export const contract = {
             parameters: [
                 {name: "path", type: "string", description: "Path of the tree item to select"}
             ]
+        },
+        clear: {
+            description: "Clear all tree items"
         }
     },
     slots: {
@@ -98,6 +101,12 @@ export default {
                 let items = host.querySelectorAll("x-treeview-item");
                 for(let target of items) {
                     target.selected = (target.path === path);
+                }
+            },
+            clear() {
+                let items = host.querySelectorAll("x-treeview-item");
+                for(let target of items) {
+                    target.selected = false;
                 }
             },
 
@@ -242,9 +251,8 @@ export default {
             contextMenu({event}) {
                 // show context menu for item
                 const item = event.target.closest("x-treeview-item");
-                if (!item) return;
-                if (!item.selected) {
-                    const items = host.querySelectorAll(":scope > x-treeview-body > x-treeview-item");
+                if (item && !item.selected) {
+                    const items = host.querySelectorAll(":scope x-treeview-item");
                     for(let target of items) {
                         target.selected = false;
                     }
@@ -257,7 +265,7 @@ export default {
                     cancelable: true,
                     detail: {
                         item,
-                        path: item.path,
+                        path: item?.path,
                         x: event.clientX,
                         y: event.clientY
                     }

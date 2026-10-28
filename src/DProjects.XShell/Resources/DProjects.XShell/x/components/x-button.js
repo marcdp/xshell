@@ -171,12 +171,12 @@ export default {
             mount(args) {
                 // mount
                 if (state.autofocus) {
-                    timer.setTimeout(25, () => {
+                    timer.setTimeout(() => {
                         let focusable = host.shadowRoot.querySelector("a.button");
                         if (focusable) {
                             focusable.focus();
                         }
-                    });
+                    }, 25);
                 }
             },
 

@@ -17,7 +17,12 @@ export const contract = {
         replace:    {type:"boolean", default:false, attribute:true, state:true, description:""},
         tooltip:     {type:"string", default:"", attribute:true, state:true, description:""}
     },
-    methods: {},
+    methods: {
+        focus: {
+            description: "Focuses the anchor element."
+        }
+
+    },
     slots: {
         "": {
             description: "Default slot for the anchor content."
@@ -34,7 +39,10 @@ export default {
         :host a[disabled] { pointer-events: none; color:var(--x-color-gray);}
         
         :host(.menuitem) {}
-        :host(.menuitem) a {display:flex; padding-left:.6em; padding-right:.6em; text-decoration:none; height:2.1em;}
+        :host(.menuitem) a {display:flex; padding-left:.6em; padding-right:.6em; text-decoration:none; height:2.1em; border-radius:var(--x-menuitem-border-radius); }
+        :host(.menuitem) a:hover {color:var(--x-color-primary);}
+        :host(.menuitem) a:active {color:var(--x-color-primary-dark)}
+        :host(.menuitem) a:focus {outline:none; background: var(--x-color-background-x-gray); }
 
         :host(.block) {}
         :host(.block) a {display:block;}
@@ -52,7 +60,7 @@ export default {
     state: {
         hrefReal: null
     },
-    controller({ state, navigation, getPage }) {
+    controller({ state, navigation, getPage, host }) {
         return {
             load(params) {
                 // load
@@ -77,6 +85,12 @@ export default {
                     // set real href
                     state.hrefReal = href;
                 }
+            },
+
+            focus() {
+                const a = host.shadowRoot.querySelector("a");
+                if (!a.tabIndex) a.tabIndex = 0;
+                a.focus();
             },
 
             click(params) {

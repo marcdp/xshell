@@ -1,3 +1,5 @@
+import { findFocusableElement, getDeepActiveElement, isDescendantOfElement } from "../utils/dom.js";
+
 // contract
 export const contract = {
     description: "Layout for a dialog page.",
@@ -38,6 +40,7 @@ export default {
             transition: background-color var(--x-transition-duration) ease;  
             
         }
+        dialog:focus {outline:none;}
         dialog.opened::backdrop {
             background-color: var(--x-layout-dialog-backdrop);
         }
@@ -92,12 +95,16 @@ export default {
 
     `,
     controller({ state, events, bus, getPage, host, commands }) {
+        let previousFocus = null;
         return {
             load() {
                 //load
                 events.on(bus, "xshell:page:load", "refresh");
                 commands.enqueue("open");
                 this.refresh();
+            },
+            mount() {
+                previousFocus = getDeepActiveElement();
             },
             open() {
                 const dialog = host.shadowRoot.querySelector("dialog");
@@ -116,7 +123,18 @@ export default {
                 //query close
                 args.event.preventDefault();
                 host.dispatchEvent(new CustomEvent("queryClose", { composed: true }));
+            },
+            unmount() {
+                // try restore previous focus
+                console.log(previousFocus);
+                if (previousFocus?.isConnected) {
+                    console.log("connected");
+                    setTimeout(() => {
+                        previousFocus.focus({ preventScroll: true });
+                    }, 0);
+                }                
             }
+
         }
     }
 };

@@ -303,8 +303,7 @@ export default {
             },
             contextMenu({event}) {
                 const item = this.getEventItem(event);
-                if (!item) return;
-                if (!item.selected) {
+                if (item && !item.selected) {
                     const items = host.querySelectorAll(":scope > x-listview-body > x-listview-item");
                     for(let target of items) {
                         target.selected = false;
@@ -319,8 +318,8 @@ export default {
                     cancelable: true,
                     detail: {
                         item,
-                        path: item.path,
-                        index: item.index,
+                        path: item?.path,
+                        index: item?.index,
                         x: event.clientX,
                         y: event.clientY
                     }

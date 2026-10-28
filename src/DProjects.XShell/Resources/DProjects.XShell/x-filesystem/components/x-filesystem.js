@@ -6,7 +6,8 @@ export const contract = {
     properties: {
         path: {type: "string", default:"/", attribute: true, state:true, description: "Current path in the filesystem"},
         src: {type: "string", default:null, attribute: true, state:true, description: "Source of the filesystem (e.g., 'mem:')"},
-        filesystem: {type: "object", default:null, attribute: false, state:true, description: "Filesystem instance"}
+        filesystem: {type: "object", default:null, attribute: false, state:true, description: "Filesystem instance"},
+        root: {type:"boolean", default:false, attribute: true, state: true, description: "Indicates if the root folder should be displayed"}
     },
     methods: {},
     slots: {}
@@ -29,15 +30,20 @@ export default {
             <x-button icon="x-refresh" x-on:click="refresh" class="menuitem" ></x-button>
             <x-datafield x-model="state.pathList" type="string" label="" placeholder="path" readonly style="flex:1"></x-datafield>        
         </x-toolbar>
+
         <div class="container" x-on:contextmenuentry="contextMenuEntry"> 
+
             <x-filesystem-tree 
                 x-prop:filesystem="state.filesystem" 
                 x-prop:path="state.path" 
                 x-on:select="treeSelect"
                 x-on:toggle="treeToggle",
                 x-on:properties="treeProperties"
+                x-attr:root="state.root"
             ></x-filesystem-tree>
+
             <x-splitter></x-splitter>
+
             <x-filesystem-list 
                 x-prop:filesystem="state.filesystem" 
                 x-prop:path="state.pathList || state.path" 
@@ -46,17 +52,20 @@ export default {
                 x-on:back="listBack"
                 x-on:properties="listProperties"
             ></x-filesystem-list>
+
         </div>
 
         <x-contextmenu x-on:command="command">
-            <x-menuitem label="Open" icon="x-open" command="open"></x-menuitem>
-            <x-menuitem label="Refresh" icon="x-refresh" command="refresh"></x-menuitem>
-            <!--
-                <x-menuitem label="New Folder" icon="x-folder" command="newFolder"></x-menuitem>
-                <x-menuitem label="Delete" icon="x-trash" command="delete"></x-menuitem>
-            -->
-            <x-menuitem label="-"></x-menuitem>
-            <x-menuitem label="Properties" icon="x-wrench" command="properties"></x-menuitem>
+            <x-menuitem label="Open" icon="x-open" command="open" x-attr:disabled="!state.entry"></x-menuitem>
+            <x-menuitem label="-" ></x-menuitem>
+            <x-menuitem label="New File ..." icon="x-file" command="newFile"></x-menuitem>
+            <x-menuitem label="New Folder ..." icon="x-folder" command="newFolder"></x-menuitem>
+            <!--<x-menuitem label="Refresh" icon="x-refresh" command="refresh" x-attr:disabled="!state.entry && state.entry.type == 'directory'"></x-menuitem>-->
+            <x-menuitem label="-" ></x-menuitem>
+            <x-menuitem label="Rename" icon="x-rename" command="rename" x-attr:disabled="!state.entry"></x-menuitem>
+            <x-menuitem label="Delete" icon="x-trash" command="delete" x-attr:disabled="!state.entry"></x-menuitem>
+            <x-menuitem label="-" ></x-menuitem>
+            <x-menuitem label="Properties" icon="x-wrench" command="properties" x-attr:disabled="!state.entry"></x-menuitem>
         </x-contextmenu>
     `,
     state: {
@@ -66,9 +75,10 @@ export default {
         pathList: "/",
         entry: null,
         history: ["/"],
-        historyIndex: 0        
+        historyIndex: 0,
+        root: false
     },
-    controller({ state, events, loader, navigation, getPage, host }) {
+    controller({ state, events, loader, navigation, getPage, host, dialog}) {
         return {
             async load(args) {
                 // load
@@ -83,7 +93,7 @@ export default {
                 })
             },
 
-            // command
+            // commands
             command({event}) {
                 if (event.detail.command === "open") {
                     this.open();
@@ -93,10 +103,12 @@ export default {
                 } else if (event.detail.command === "delete") {
                 } else if (event.detail.command === "properties") {
                     this.properties();
+                } else if (event.detail.command === "newFile") {
+                    this.newFile();
+                } else {
+                    alert("UNHANDLED COMMAND: " + event.detail.command)
                 }
             },
-
-            /* toolbar actions */
             async refresh() {
                 // handle refresh event
                 const list = host.shadowRoot.querySelector("x-filesystem-list");
@@ -173,6 +185,17 @@ export default {
                         path: entry.path,
                     },
                     open: "stack"
+                });
+            },
+            async newFile() {
+                // async open({ href, params, title, breadcrumb, icon, context }) {
+                const result = await dialog.open({
+                    href: "page:x-filesystem:/pages/new-file.js",
+                    params: {},
+                    context: {
+                        src: state.src,
+                        path: state.pathList
+                    }
                 });
             },
 

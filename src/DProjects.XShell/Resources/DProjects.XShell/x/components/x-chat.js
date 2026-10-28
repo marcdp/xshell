@@ -393,10 +393,10 @@ export default {
             async mount(args) {
                 //mount
                 if (state.autofocus) {
-                    timer.setTimeout(25, () => {
+                    timer.setTimeout(() => {
                         let element = host.shadowRoot.querySelector("textarea");
                         if (element && element.focus) element.focus();
-                    });
+                    }, 25);
                 }
             },
 

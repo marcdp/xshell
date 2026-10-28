@@ -11,7 +11,7 @@ export default {
         <h2>Sample filesystem</h2>
         <p>The example contains documents, images, source files, and nested directories.</p>
 
-        <x-filesystem x-prop:filesystem="state.filesystem" x-prop:path="state.path"></x-filesystem>
+        <x-filesystem root x-prop:filesystem="state.filesystem" x-prop:path="state.path"></x-filesystem>
 
     `,
 

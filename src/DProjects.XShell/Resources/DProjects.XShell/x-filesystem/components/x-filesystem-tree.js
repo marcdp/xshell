@@ -16,7 +16,8 @@ export const contract = {
     },
     properties: {
         path: {type: "string", default:"/", attribute: true, state:true, description: "Current path in the filesystem"},
-        filesystem: {type: "object", default:null, state:true, description: "Filesystem instance"}
+        filesystem: {type: "object", default:null, state:true, description: "Filesystem instance"},
+        root: {type:"boolean", default:false, attribute: true, state: true, description: "Indicates if the root folder should be displayed"}
     },
     methods: {
         select: {
@@ -72,14 +73,17 @@ export default {
         filesystem: null,
         path: "/",        
         selectedPath: null,
-        entries: null
+        entries: null,
+        root: false
     },
     controller({ state, events, host }) {
         return {
             async load(args) {
                 // load
-                events.on(state, ["change:path", "change:filesystem"], "loadRootEntries");
-                this.loadRootEntries();
+                events.on(state, ["change:path", "change:filesystem", "change:root"], "loadRootEntries");                
+            },
+            async mount(){
+                await this.loadRootEntries();
             },
             async loadRootEntries() {
                 // refresh
@@ -102,7 +106,17 @@ export default {
                         return a.name.localeCompare(b.name);
                     });
                     // set
-                    state.entries = entries;
+                    if (state.root) {
+                        const root = { 
+                            expanded:true, 
+                            icon: "x-root", 
+                            children: entries,
+                            ... await state.filesystem.getEntry(state.path) 
+                        };
+                        state.entries = [root];
+                    } else {
+                        state.entries = entries;
+                    }
                 }
             },
             async loadChildEntries(path) {
@@ -164,6 +178,10 @@ export default {
                     host.invalidate();
                 }
             },
+            async clear() {
+                const treeview = host.shadowRoot.querySelector('x-treeview');
+                if (treeview) treeview.clear();
+            },
 
             /* events */
             async selectTreeviewItem({event}) {
@@ -213,7 +231,7 @@ export default {
             },
             async keydown({event}){
                 if (event.key === "Enter" && event.altKey) {
-                    const entry = state.entries.find(e => e.path === state.selectedPath) || null;
+                    const entry = this.getEntryByPathRecursive(state.selectedPath);
                     host.dispatchEvent(new CustomEvent("properties", {bubbles: true, detail: {path: state.selectedPath, entry}}));
                     event.preventDefault();
                 }
