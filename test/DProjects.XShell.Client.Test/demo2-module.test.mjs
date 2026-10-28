@@ -44,7 +44,9 @@ test('cookbook navigation derives ordered Pages from the file inventory', () => 
     assert.deepEqual(menu[0].children.map(item => item.label),
         ['Components', 'Pages', 'Navigation', 'Dialogs', 'Filesystem', 'Modules', 'Templates', 'Ai', 'Advanced']);
     assert.deepEqual(menu[0].children[0].children.map(item => item.label),
-        ['Buttons', 'Indicators', 'Forms', 'Data Display', 'Lists', 'Layout', 'Editors', 'Composition', 'Contract']);
+        ['Buttons', 'Indicators', 'Forms', 'Data Display', 'Lists', 'Layout', 'Editors', 'Composition', 'Contract', 'Lifecycle']);
+    assert.deepEqual(menu[0].children[2].children.map(item => item.label),
+        ['Basic', 'Areas', 'Stack', 'Embedded', 'Resolution']);
     const visited = new Set();
     const walk = items => {
         for (const item of items) {
@@ -102,4 +104,93 @@ test('the cookbook module controller exposes its startup state', async () => {
     controller.start();
     assert.equal(controller.started, true);
     assert.equal(controller.label, 'XShell Cookbook');
+});
+
+test('the cookbook module controller summarizes its effective Page inventory', async () => {
+    const { default: ModuleController } = await import(new URL(
+        '../../src/DProjects.XShell/Resources/DProjects.XShell/x-demo2/module.js', import.meta.url));
+    const controller = new ModuleController({ moduleConfig: {
+        id: 'x-demo2', label: 'XShell Cookbook', menus: { navigation: '/_assets/x-demo2/pages' },
+        assets: { path: '/_assets/x-demo2' }, files: [
+            { path: '/_assets/x-demo2/pages/index.js' },
+            { path: '/_assets/x-demo2/pages/01-components/01-buttons.js' },
+            { path: '/_assets/x-demo2/datasets/statuses.json' }
+        ]
+    } });
+    controller.start();
+    assert.deepEqual(controller.getCookbookSummary(), {
+        id: 'x-demo2', label: 'XShell Cookbook', menuSource: '/_assets/x-demo2/pages',
+        pageCount: 2, started: true
+    });
+});
+
+test('path resolution example follows the effective Area menu in both directions', async () => {
+    const { default: example } = await import(new URL(
+        '../../src/DProjects.XShell/Resources/DProjects.XShell/x-demo2/pages/03-navigation/05-resolution.js', import.meta.url));
+    const href = '/cookbook/_assets/x-demo2/pages/03-navigation/05-resolution.js';
+    const item = { path: '/cookbook/navigation/resolution', href };
+    const state = {};
+    const controller = example.controller({
+        areas: {
+            resolveAreaId(src) { assert.equal(src, href); return 'cookbook'; },
+            resolveHref(src, areaId) { assert.equal(areaId, 'cookbook'); assert.equal(src, href); return item; },
+            resolvePath(path) { assert.equal(path, item.path); return item; }
+        },
+        page: { src: href }, state
+    });
+    controller.load();
+    assert.equal(state.path, item.path);
+    assert.equal(state.href, href);
+    assert.equal(state.resolved, href);
+});
+
+test('resolver example inspects without loading and reports a concrete dataset', async () => {
+    const { default: example } = await import(new URL(
+        '../../src/DProjects.XShell/Resources/DProjects.XShell/x-demo2/pages/90-advanced/05-loading.js', import.meta.url));
+    const state = {};
+    let loads = 0;
+    const controller = example.controller({
+        resolver: { resolve(resource) { return { definition: { resource: 'dataset:x-demo2:{name}', loader: 'dataset-url' }, url: `https://example.test/${resource}` }; } },
+        loader: { async load(resource) { loads++; assert.equal(resource, 'dataset:x-demo2:statuses'); return { tables: [{ rows: [{ code: 'A' }] }] }; } },
+        state
+    });
+    controller.inspectDataset();
+    assert.equal(loads, 0);
+    assert.equal(state.loaderName, 'dataset-url');
+    await controller.loadSelected();
+    assert.equal(loads, 1);
+    assert.equal(state.value, '1 dataset rows');
+    assert.equal(state.status, 'Loaded');
+});
+
+test('component lifecycle probe reports supported hooks in order', async () => {
+    const { contract, default: implementation } = await import(new URL(
+        '../../src/DProjects.XShell/Resources/DProjects.XShell/x-demo2/components/x-demo2-lifecycle.js', import.meta.url));
+    const { default: validateContract } = await import(new URL(
+        '../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/validation/component.contract.js', import.meta.url));
+    const { default: validateComponent } = await import(new URL(
+        '../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/validation/component.js', import.meta.url));
+    await validateContract('x-demo2-lifecycle', contract);
+    await validateComponent('x-demo2-lifecycle', implementation);
+    const stages = [];
+    const controller = implementation.controller({ bus: {
+        emit(name, detail) { assert.equal(name, 'x-demo2:component-lifecycle'); stages.push(detail.stage); }
+    } });
+    for (const hook of ['load', 'mount', 'unmount', 'unload']) controller[hook]();
+    assert.deepEqual(stages, ['load', 'mount', 'unmount', 'unload']);
+});
+
+test('engine example distinguishes effective Page metadata from module defaults', async () => {
+    const { default: example } = await import(new URL(
+        '../../src/DProjects.XShell/Resources/DProjects.XShell/x-demo2/pages/90-advanced/03-engines.js', import.meta.url));
+    const state = { count: 0 };
+    const controller = example.controller({
+        config: { modules: { 'x-demo2': { defaults: { page: { renderEngine: 'x', stateEngine: 'proxy' } } } } },
+        dependencies: { clientPage: { implementation: { meta: { renderEngine: 'x-client', stateEngine: 'proxy' } } } },
+        implementation: { meta: { renderEngine: 'x', stateEngine: 'proxy' } }, state
+    });
+    controller.load();
+    controller.increase();
+    assert.deepEqual([state.defaultRender, state.currentRender, state.clientRender, state.clientState, state.count],
+        ['x', 'x', 'x-client', 'proxy', 1]);
 });

@@ -1,36 +1,32 @@
 export default {
     meta: {
         title: "Declarative Dependencies",
-        description: "The loader resolves dependencies before constructing this Page controller."
+        description: "Inspect resources loaded before this Page controller is constructed."
     },
 
-    dependencies: { button: "component:x-button" },
+    dependencies: {
+        button: "component:x-button",
+        fileIcon: "icon:x-file"
+    },
+
     template: `
-        <p>The loader resolves dependencies before constructing this Page controller.</p>
-        <p>Loaded button component: {{ state.loaded }}</p>
-        <pre x-pre><code>export default {
-    dependencies: { button: "component:x-button" },
-    template: &#96;&lt;p&gt;Loaded button component: {{ state.loaded }}&lt;/p&gt;&#96;,
-    state: { loaded: "" },
-    controller({ dependencies, state }) {
-        return {
-            load() {
-                state.loaded = dependencies.button?.name || typeof dependencies.button;
-            }
-        };
-    }
-};</code></pre>
-        
+        <p>This Page declares two resources from the referenced <code>x</code> Module. The Page loader resolves and loads them before constructing this controller.</p>
+        <pre x-pre><code>dependencies: {
+    button: "component:x-button",
+    fileIcon: "icon:x-file"
+}</code></pre>
+        <p>Loaded Component class: {{ state.button }}</p>
+        <p>Loaded icon element: {{ state.icon }}</p>
+        <p>The module reference lets bootstrap discover <code>x</code>. These resource dependencies use the normal Resolver → Loader pipeline. Neither mechanism creates another runtime Module instance.</p>
     `,
 
-    state: {
-        loaded: ""
-    },
+    state: { button: "", icon: "" },
 
     controller({ dependencies, state }) {
         return {
             load() {
-                state.loaded = dependencies.button?.name || typeof dependencies.button;
+                state.button = dependencies.button?.name || "Missing";
+                state.icon = dependencies.fileIcon?.nodeName || "Missing";
             }
         };
     }
