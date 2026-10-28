@@ -1,8 +1,12 @@
 {
     "profiles": {
-        "DProjects.XShell server": {
+        "DProjects.XShell x-demo": {
             "commandName": "Project",
             "commandLineArgs": "server  --app-base-path /prefix --app-config-path /prefix/_resources/DProjects.XShell/x-demo/module.jsonc --environment Development --resources-name DProjects.XShell --param aaa=123 --param bbb=123123 --share \"urlPath=/prefix/shares/marc;filesystemUrl=file://D:/Reps/zzzz/fontawesome-free-6.5.2-web;allowAnonymous=true\""
+        },
+        "DProjects.XShell x-demo2": {
+            "commandName": "Project",
+            "commandLineArgs": "server --app-config-path /_resources/DProjects.XShell/x-demo2/module.jsonc --environment Development --resources-name DProjects.XShell"
         },
         "DProjects.XShell server --environment Production": {
             "commandName": "Project",

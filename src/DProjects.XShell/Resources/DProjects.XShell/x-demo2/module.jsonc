@@ -1,0 +1,368 @@
+// x-demo2 is a separate application root. Launch it with the x-demo2 profile.
+{
+    "modules": {
+        "x-demo2": {
+            "label": "XShell Cookbook",
+            "version": "1.0.0",
+            "icon": "",
+            "copyright": "",
+            "defaults": {
+                "component": {
+                    "renderEngine": "x",
+                    "stateEngine": "proxy"
+                },
+                "page": {
+                    "renderEngine": "x",
+                    "stateEngine": "proxy"
+                }
+            },
+            "menus": {
+                "navigation": [
+                    {
+                        "label": "XShell Cookbook",
+                        "path": "home",
+                        "href": "/pages/index.js",
+                        "default": true,
+                        "children": [
+                            {
+                                "label": "Components",
+                                "path": "components",
+                                "href": "/pages/components/index.js",
+                                "children": [
+                                    {
+                                        "label": "Buttons",
+                                        "path": "components/buttons",
+                                        "href": "/pages/components/buttons.js"
+                                    },
+                                    {
+                                        "label": "Indicators",
+                                        "path": "components/indicators",
+                                        "href": "/pages/components/indicators.js"
+                                    },
+                                    {
+                                        "label": "Form Inputs",
+                                        "path": "components/forms",
+                                        "href": "/pages/components/forms.js"
+                                    },
+                                    {
+                                        "label": "Data Display",
+                                        "path": "components/data-display",
+                                        "href": "/pages/components/data-display.js"
+                                    },
+                                    {
+                                        "label": "Lists",
+                                        "path": "components/lists",
+                                        "href": "/pages/components/lists.js"
+                                    },
+                                    {
+                                        "label": "Layouts",
+                                        "path": "components/layout",
+                                        "href": "/pages/components/layout.js"
+                                    },
+                                    {
+                                        "label": "Editors",
+                                        "path": "components/editors",
+                                        "href": "/pages/components/editors.js"
+                                    },
+                                    {
+                                        "label": "Composition",
+                                        "path": "components/composition",
+                                        "href": "/pages/components/composition.js"
+                                    },
+                                    {
+                                        "label": "Component Contract",
+                                        "path": "components/contract",
+                                        "href": "/pages/components/contract.js"
+                                    }
+                                ]
+                            },
+                            {
+                                "label": "Pages",
+                                "path": "pages",
+                                "href": "/pages/pages/index.js",
+                                "children": [
+                                    {
+                                        "label": "Basic Page",
+                                        "path": "pages/basic",
+                                        "href": "/pages/pages/basic.js"
+                                    },
+                                    {
+                                        "label": "HTML Page",
+                                        "path": "pages/html-page",
+                                        "href": "/pages/pages/html-page.js"
+                                    },
+                                    {
+                                        "label": "Page Parameters",
+                                        "path": "pages/parameters",
+                                        "href": "/pages/pages/parameters.js"
+                                    },
+                                    {
+                                        "label": "Page State",
+                                        "path": "pages/state",
+                                        "href": "/pages/pages/state.js"
+                                    },
+                                    {
+                                        "label": "Page Lifecycle",
+                                        "path": "pages/lifecycle",
+                                        "href": "/pages/pages/lifecycle.js"
+                                    },
+                                    {
+                                        "label": "Internationalization",
+                                        "path": "pages/internationalization",
+                                        "href": "/pages/pages/internationalization.js"
+                                    }
+                                ]
+                            },
+                            {
+                                "label": "Navigation",
+                                "path": "navigation",
+                                "href": "/pages/navigation/index.js",
+                                "children": [
+                                    {
+                                        "label": "Navigation Actions",
+                                        "path": "navigation/basic",
+                                        "href": "/pages/navigation/basic.js"
+                                    },
+                                    {
+                                        "label": "Areas and Menus",
+                                        "path": "navigation/areas",
+                                        "href": "/pages/navigation/areas.js"
+                                    },
+                                    {
+                                        "label": "Page Stack",
+                                        "path": "navigation/stack",
+                                        "href": "/pages/navigation/stack.js"
+                                    },
+                                    {
+                                        "label": "Embedded Pages",
+                                        "path": "navigation/embedded",
+                                        "href": "/pages/navigation/embedded.js"
+                                    }
+                                ]
+                            },
+                            {
+                                "label": "Dialogs",
+                                "path": "dialogs",
+                                "href": "/pages/dialogs/index.js",
+                                "children": [
+                                    {
+                                        "label": "Messages",
+                                        "path": "dialogs/messages",
+                                        "href": "/pages/dialogs/messages.js"
+                                    },
+                                    {
+                                        "label": "Confirmations",
+                                        "path": "dialogs/confirmations",
+                                        "href": "/pages/dialogs/confirmations.js"
+                                    },
+                                    {
+                                        "label": "Prompts",
+                                        "path": "dialogs/prompts",
+                                        "href": "/pages/dialogs/prompts.js"
+                                    },
+                                    {
+                                        "label": "Pickers",
+                                        "path": "dialogs/pickers",
+                                        "href": "/pages/dialogs/pickers.js"
+                                    },
+                                    {
+                                        "label": "Custom Dialog",
+                                        "path": "dialogs/custom",
+                                        "href": "/pages/dialogs/custom.js"
+                                    },
+                                    {
+                                        "label": "Dialog Page",
+                                        "path": "dialogs/custom-dialog",
+                                        "href": "/pages/dialogs/custom-dialog.js"
+                                    }
+                                ]
+                            },
+                            {
+                                "label": "Filesystem",
+                                "path": "filesystem",
+                                "href": "/pages/filesystem/index.js",
+                                "children": [
+                                    {
+                                        "label": "File Selection",
+                                        "path": "filesystem/selection",
+                                        "href": "/pages/filesystem/selection.js"
+                                    },
+                                    {
+                                        "label": "File Explorer",
+                                        "path": "filesystem/explorer",
+                                        "href": "/pages/filesystem/explorer.js"
+                                    }
+                                ]
+                            },
+                            {
+                                "label": "X Templates",
+                                "path": "templates",
+                                "href": "/pages/templates/index.js",
+                                "children": [
+                                    {
+                                        "label": "Text Binding",
+                                        "path": "templates/basics",
+                                        "href": "/pages/templates/basics.js"
+                                    },
+                                    {
+                                        "label": "Attributes and Properties",
+                                        "path": "templates/bindings",
+                                        "href": "/pages/templates/bindings.js"
+                                    },
+                                    {
+                                        "label": "Conditions",
+                                        "path": "templates/conditionals",
+                                        "href": "/pages/templates/conditionals.js"
+                                    },
+                                    {
+                                        "label": "Loops",
+                                        "path": "templates/loops",
+                                        "href": "/pages/templates/loops.js"
+                                    },
+                                    {
+                                        "label": "Events and Models",
+                                        "path": "templates/events",
+                                        "href": "/pages/templates/events.js"
+                                    },
+                                    {
+                                        "label": "Styles",
+                                        "path": "templates/styles",
+                                        "href": "/pages/templates/styles.js"
+                                    },
+                                    {
+                                        "label": "Transformers",
+                                        "path": "templates/transformers",
+                                        "href": "/pages/templates/transformers.js"
+                                    },
+                                    {
+                                        "label": "Advanced Templates",
+                                        "path": "templates/advanced",
+                                        "href": "/pages/templates/advanced.js"
+                                    }
+                                ]
+                            },
+                            {
+                                "label": "Modules",
+                                "path": "modules",
+                                "href": "/pages/modules/index.js",
+                                "children": [
+                                    {
+                                        "label": "Module Definition",
+                                        "path": "modules/definition",
+                                        "href": "/pages/modules/definition.js"
+                                    },
+                                    {
+                                        "label": "Module References",
+                                        "path": "modules/references",
+                                        "href": "/pages/modules/references.js"
+                                    },
+                                    {
+                                        "label": "Declarative Dependencies",
+                                        "path": "modules/dependencies",
+                                        "href": "/pages/modules/dependencies.js"
+                                    },
+                                    {
+                                        "label": "Module Resources",
+                                        "path": "modules/resources",
+                                        "href": "/pages/modules/resources.js"
+                                    },
+                                    {
+                                        "label": "Module Controller",
+                                        "path": "modules/controller",
+                                        "href": "/pages/modules/controller.js"
+                                    },
+                                    {
+                                        "label": "Menu Contributions",
+                                        "path": "modules/menus",
+                                        "href": "/pages/modules/menus.js"
+                                    }
+                                ]
+                            },
+                            {
+                                "label": "Advanced Runtime",
+                                "path": "advanced",
+                                "href": "/pages/advanced/index.js",
+                                "children": [
+                                    {
+                                        "label": "Injected Services",
+                                        "path": "advanced/services",
+                                        "href": "/pages/advanced/services.js"
+                                    },
+                                    {
+                                        "label": "Event Bus",
+                                        "path": "advanced/bus",
+                                        "href": "/pages/advanced/bus.js"
+                                    },
+                                    {
+                                        "label": "Engine Selection",
+                                        "path": "advanced/engines",
+                                        "href": "/pages/advanced/engines.js"
+                                    },
+                                    {
+                                        "label": "Client Renderer",
+                                        "path": "advanced/client-renderer",
+                                        "href": "/pages/advanced/client-renderer.js"
+                                    },
+                                    {
+                                        "label": "Resolver and Loader",
+                                        "path": "advanced/loading",
+                                        "href": "/pages/advanced/loading.js"
+                                    },
+                                    {
+                                        "label": "Module Dataset",
+                                        "path": "advanced/datasets",
+                                        "href": "/pages/advanced/datasets.js"
+                                    },
+                                    {
+                                        "label": "Static Dataset",
+                                        "path": "advanced/static-dataset",
+                                        "href": "/pages/advanced/static-dataset.js"
+                                    }
+                                ]
+                            },
+                            {
+                                "label": "AI",
+                                "path": "ai",
+                                "href": "/pages/ai/index.js",
+                                "children": [
+                                    {
+                                        "label": "Simulated Chat",
+                                        "path": "ai/chat",
+                                        "href": "/pages/ai/chat.js"
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                ]
+            },
+            "routes": {
+                "/hello/{name}": "/pages/pages/parameters.js"
+            }
+        },
+        "x": {
+            "configUrl": "url:../x/module.jsonc"
+        },
+        "x-filesystem": {
+            "configUrl": "url:../x-filesystem/module.jsonc"
+        },
+        "xshell-docs": {
+            "configUrl": "url:../xshell-docs/module.jsonc"
+        }
+    },
+    "xshell": {
+        "areas": {
+            "default": "cookbook",
+            "definitions": {
+                "cookbook": {
+                    "prefix": "cookbook",
+                    "label": "Cookbook",
+                    "description": "Focused examples of XShell features",
+                    "modules": [
+                        "x-demo2"
+                    ]
+                }
+            }
+        }
+    }
+}

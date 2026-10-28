@@ -1,0 +1,7 @@
+{
+    "tables": [{
+        "name": "statuses",
+        "columns": [{ "name": "code", "type": "string" }, { "name": "label", "type": "string" }],
+        "rows": [{ "code": "A", "label": "Active" }, { "code": "I", "label": "Inactive" }]
+    }]
+}

@@ -53,7 +53,7 @@ export default {
         .primary .text {display: flex; align-items: baseline; min-width: 0;flex: 1;}
         .primary .label {cursor:pointer;}
         .primary .label, .primary .description {min-width: 0;overflow: hidden;text-overflow: ellipsis;white-space: nowrap;}
-        .primary .description {color:var(--x-color-text-gray);}
+        .primary .description {}
         .primary .description:empty {display:none;}
 
         /* list */
@@ -99,7 +99,8 @@ export default {
             x-anchor.item-anchor, x-anchor.item-anchor::part(a) {height:100%;}
             .primary {padding:.55em .7em; }
             .primary > x-icon {font-size:1.8em; flex:0 0 auto;}
-            .text {display:flex; flex-direction:column; align-items:stretch; gap:.05em; }
+            .primary .text {display:flex; flex-direction:column; align-items:stretch; gap:.05em; }
+            .primary .description {  width:100%; display:block;}
             slot {display:none;}
         }
 
@@ -131,10 +132,14 @@ export default {
             <slot></slot>
         </div>
     `,
+    state:{
+        selected: false,
+    },
     controller({ state, host }) {
         return {
             load() {
                 // load
+
             },
             activate() {
                 // activate

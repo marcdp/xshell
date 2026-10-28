@@ -251,7 +251,7 @@ export default {
                     item.selected = true;
                     host.invalidate();
                 }
-                host.dispatchEvent(new CustomEvent("contextmenuitem", {
+                const customEvent = new CustomEvent("contextmenuitem", {
                     bubbles: true,
                     composed: true,
                     cancelable: true,
@@ -261,8 +261,9 @@ export default {
                         x: event.clientX,
                         y: event.clientY
                     }
-                }));
-                event.preventDefault();
+                });
+                host.dispatchEvent(customEvent);
+                if (customEvent.defaultPrevented) event.preventDefault();
             }
         };
     }

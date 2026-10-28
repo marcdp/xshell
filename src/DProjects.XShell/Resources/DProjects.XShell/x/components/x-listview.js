@@ -44,6 +44,7 @@ export const contract = {
     },
     methods: {
         focus: {description: "Focuses the list view."},
+        clear: {description: "Clears the selection."}
     },
     slots: {
         "": {
@@ -110,13 +111,13 @@ export default {
                 events.on(state, "change:views", "refreshViews");
                 events.on(state, "change:multiple", "multipleChanged");
                 // detect changes in light dom
-                this.mutationObserver = new MutationObserver(()=>{
+                this.mutationObserver = new MutationObserver((event)=>{
                     this.refresh();
                 });
                 this.mutationObserver.observe(host, {
                     childList: true,
                     attributes: true,
-                    attributeFilter: ["width", "category"],
+                    attributeFilter: ["width", "category", "selected"],
                     subtree: true
                 });
             },
@@ -133,6 +134,10 @@ export default {
                         items[0].dispatchEvent(new CustomEvent("select", {bubbles: true, detail: {path: items[0].path}}));            
                     }
                 }, 100);
+            },
+            clear() {
+                const items = [...host.querySelectorAll(":scope > x-listview-body > x-listview-item")];
+                items.forEach(item => { item.selected = false; });
             },
             changeView(args) {
                 const view = args.event.currentTarget.dataset.view;
@@ -182,7 +187,6 @@ export default {
                     const category = item.getAttribute("category") ?? item.category ?? "";
                     const categoryVisible = (view === "list" || view === "details") && category !== "" && category !== previousCategory;
                     item.toggleAttribute("data-category-visible", categoryVisible);
-                    item.selected = false;
                     item.index = index;
                     previousCategory = category;
                 });
@@ -309,7 +313,7 @@ export default {
                     item.dispatchEvent(new CustomEvent("select", {bubbles: true, detail: {path: item.path}}));
                     host.invalidate();
                 }
-                host.dispatchEvent(new CustomEvent("contextmenuitem", {
+                const customEvent = new CustomEvent("contextmenuitem", {
                     bubbles: true,
                     composed: true,
                     cancelable: true,
@@ -320,8 +324,9 @@ export default {
                         x: event.clientX,
                         y: event.clientY
                     }
-                }));
-                event.preventDefault();
+                });
+                host.dispatchEvent(customEvent);
+                if (customEvent.defaultPrevented) event.preventDefault();
             }
         };
     }

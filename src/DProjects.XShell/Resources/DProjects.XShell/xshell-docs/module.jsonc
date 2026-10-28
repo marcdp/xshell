@@ -29,7 +29,7 @@
             "definitions": {
                 "xshell-docs": {
                     "prefix": "xshell-docs",
-                    "label": "XShell docs",
+                    "label": "Documentation",
                     "description": "Documentation for XShell",
                     "icon": "xshell-docs",
                     "modules": [ "xshell-docs" ]

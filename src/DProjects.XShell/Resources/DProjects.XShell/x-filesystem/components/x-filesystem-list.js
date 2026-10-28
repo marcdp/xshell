@@ -92,6 +92,8 @@ export default {
                     });
                     // set
                     state.entries = entries;
+                    // clear selection
+                    this.clear();
                     // if previously focused, try to restore focus to the list items
                     if (hasFocus) {
                         commands.enqueue("focus");                        
@@ -101,6 +103,10 @@ export default {
             async focus() {
                 const listview = host.shadowRoot.querySelector('x-listview');
                 listview.focus();
+            },
+            async clear() {
+                const listview = host.shadowRoot.querySelector('x-listview');
+                listview.clear();
             },
             async select({event}){
                 // select
