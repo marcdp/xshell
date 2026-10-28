@@ -1,57 +1,51 @@
+// x-demo is a separate application root. Launch it with the x-demo profile.
 {
-    // module
     "modules": {
         "x-demo": {
-            "label": "x-demo app",
+            "label": "XShell Cookbook",
             "version": "1.0.0",
             "icon": "",
             "copyright": "",
             "defaults": {
-                "component": { 
+                "component": {
                     "renderEngine": "x",
                     "stateEngine": "proxy"
                 },
-                "page": { 
+                "page": {
                     "renderEngine": "x",
                     "stateEngine": "proxy"
                 }
             },
-            "contract": {
-                "events": {}
+            "menus": {
+                "navigation": "/pages"
             },
-            "menus":{
-                "navigation": "/pages",
-                "tools": [
-                    { "label": "My things 2-2", "href": "/pages/index.js?a=2-2"},
-                    { "label": "My things 1111", "href": "/pages/01-components/index.js?a=1"}
-                ]
-            },
-            "routes":{
-                "/something": "/pages/index.js",
-                "/repository/{repositoryId}/projects/{projectId}/items": "/pages/index.js"
+            "routes": {
+                "/hello/{name}": "/pages/02-pages/03-parameters.js"
             }
         },
-        // references
-        "x":                    { "configUrl": "url:../x/module.jsonc" },
-        "x-filesystem":         { "configUrl": "url:../x-filesystem/module.jsonc" },
-        "xshell-diagnostics":   { "configUrl": "url:../xshell-diagnostics/module.jsonc" },
-        "xshell-docs":          { "configUrl": "url:../xshell-docs/module.jsonc" }
+        "x": {
+            "configUrl": "url:../x/module.jsonc"
+        },
+        "x-filesystem": {
+            "configUrl": "url:../x-filesystem/module.jsonc"
+        },
+        "xshell-docs": {
+            "configUrl": "url:../xshell-docs/module.jsonc"
+        }
     },
-
-    // xshell 
     "xshell": {
         "areas": {
-            "default": "demo",
+            "default": "cookbook",
             "definitions": {
-                "demo": {
-                    "prefix": "demo",
-                    "label": "Demo",
-                    "description": "Demo area for the x-demo app",
-                    "icon": "",
-                    "modules": [ "x-demo" ]
+                "cookbook": {
+                    "prefix": "cookbook",
+                    "label": "Cookbook",
+                    "description": "Focused examples of XShell features",
+                    "modules": [
+                        "x-demo"
+                    ]
                 }
             }
         }
     }
-
 }

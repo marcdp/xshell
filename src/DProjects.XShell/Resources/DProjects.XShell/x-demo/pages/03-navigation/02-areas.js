@@ -1,89 +1,115 @@
-// contract
-export const contract = {
-    description: "Area navigation contexts",
-    events: {},
-    properties: {},
-    methods: {}
-};
 
-// page
 export default {
+    meta: {
+        title: "Areas and Menus",
+        description: "Demonstrates Area configuration, participating Modules, and generated navigation menus."
+    },
+
     template: `
-        <h2>Areas</h2>
+        <p>An Area defines a navigation context by grouping participating Modules. Areas do not create additional Module instances; they organize existing Modules and their navigation resources.</p>
 
-        <p>
-            An Area is a navigation and application-composition context. A Module contributes reusable Pages and menu definitions; an Area selects
-            participating modules, composes their menus, and applies a navigation prefix. It does not create a second module instance or duplicate
-            the module's resources.
-        </p>
+        <h2>Area configuration</h2>
+        <p>Areas are configured under <code>xshell.areas</code>. The cookbook defines a default Area with a URL prefix and a list of participating Modules.</p>
+        <pre x-pre><code>"xshell": {
+    "areas": {
+        "default": "cookbook",
+        "definitions": {
+            "cookbook": {
+                "prefix": "cookbook",
+                "label": "Cookbook",
+                "modules": ["x-demo"]
+            }
+        }
+    }
+}</code></pre>
 
-        <h3>Current runtime context</h3>
-
-        <x-datafields>
-            <x-datafield label="Area id"><span>{{ state.current.id }}</span></x-datafield>
-            <x-datafield label="Area label"><span>{{ state.current.label }}</span></x-datafield>
-            <x-datafield label="Area prefix"><code>{{ state.current.prefix }}</code></x-datafield>
-            <x-datafield label="Current Page src"><code>{{ state.pageSrc }}</code></x-datafield>
+        <h2>Current Area</h2>
+        <p>The <code>areas</code> service provides information about the active navigation context.</p>
+        <x-datafields columns="2">
+            <x-datafield label="Area ID">{{ state.id }}</x-datafield>
+            <x-datafield label="Label">{{ state.label }}</x-datafield>
+            <x-datafield label="URL prefix">{{ state.prefix }}</x-datafield>
+            <x-datafield label="Participating Modules">{{ state.modules }}</x-datafield>
         </x-datafields>
+        <pre x-pre><code>const area = areas.getCurrentArea();
 
-        <p>
-            The current application configures one useful Area. The list below is read from the public <code>areas</code> service rather than from a
-            hard-coded example.
-        </p>
+area.id
+area.label
+area.prefix
+area.modules</code></pre>
 
-        <ul>
-            <li x-for="area in state.areas" x-key="id">
-                <strong>{{ area.label }}</strong> — prefix <code>{{ area.prefix }}</code>, modules <code>{{ area.modules }}</code>.
-                <x-anchor x-attr:href="area.home">Open Area home</x-anchor>
-            </li>
-        </ul>
+        <h2>Module menus</h2>
+        <p>Modules contribute menu definitions through their configuration. The cookbook uses <code>/pages</code> as its navigation menu source.</p>
+        <pre x-pre><code>"modules": {
+    "x-demo": {
+        "menus": {
+            "navigation": "/pages"
+        }
+    }
+}</code></pre>
+        <p>Effective menu source: <strong>{{ state.source }}</strong></p>
+        <p>The <code>/pages</code> source refers to the Module's Page inventory. XShell uses this inventory to generate navigation items from the Page hierarchy.</p>
 
-        <h3>Prefix versus resource owner</h3>
+        <h2>Generated navigation menu</h2>
+        <p>The <code>areas.getMenu()</code> method returns the composed menu for an Area. Each item contains navigation information and may contain child items.</p>
+        <x-datafields label="Navigation items" columns="1">
+            <x-datafield x-for="item in state.items" x-attr:label="item.label">
+                <p>Path: <code>{{ item.path }}</code></p>
+                <p>Child Pages: {{ item.children }}</p>
+            </x-datafield>
+        </x-datafields>
+        <pre x-pre><code>const menu = areas.getMenu("navigation", area.id);
+const items = menu[0]?.children || [];</code></pre>
 
-        <p>
-            This Page's canonical destination is
-            <code>{{ state.pageSrc }}</code>:
-        </p>
+        <h2>Menu paths and Page resources</h2>
+        <p>A menu item distinguishes the friendly navigation path from the canonical resource href used to load a Page.</p>
+        <x-datafields columns="1">
+            <x-datafield label="Friendly path">{{ state.examplePath }}</x-datafield>
+            <x-datafield label="Canonical href">{{ state.exampleHref }}</x-datafield>
+        </x-datafields>
+        <pre x-pre><code>const areaId = areas.resolveAreaId(page.src);
+const item = areas.resolveHref(page.src, areaId);
 
-        <ul>
-            <li><code>/demo</code> is the Area navigation context.</li>
-            <li><code>/_assets/x-demo/&lt;generation&gt;/...</code> identifies the effective generation of the resource owned by the <code>x-demo</code> Module.</li>
-        </ul>
+item.path
+item.href</code></pre>
+        <p>The <code>areas</code> service resolves navigation paths, while the Page loader uses the resolved resource to load the Page.</p>
+        <p><x-anchor href="05-resolution.js">Explore Path Resolution</x-anchor></p>
 
-        <p>
-            <x-anchor href="02-areas.js">Open this canonical Area-aware href</x-anchor>
-        </p>
-
+        <h2>Relationship between Areas and Modules</h2>
+        <p>A Module defines resources and navigation contributions. An Area combines participating Modules into a navigation context with its own URL prefix. The same Module can participate in multiple Areas without being instantiated again.</p>
     `,
 
     state: {
-        current: {
-            id: "",
-            label: "",
-            prefix: ""
-        },
-        areas: [],
-        pageSrc: ""
+        id: "",
+        label: "",
+        prefix: "",
+        modules: "",
+        source: "",
+        items: [],
+        examplePath: "",
+        exampleHref: ""
     },
 
-    controller({ state, areas, page }) {
+    controller({areas, config, page, state}) {
         return {
             load() {
-                // expose the configured Area data through simple template values
-                const current = areas.getCurrentArea();
-                state.current = {
-                    id: current?.id ?? "",
-                    label: current?.label ?? "",
-                    prefix: current?.prefix || "/"
-                };
-                state.areas = areas.getAreas().map(area => ({
-                    id: area.id,
-                    label: area.label,
-                    prefix: area.prefix || "/",
-                    modules: area.modules.join(", "),
-                    home: area.home
+                const area = areas.getCurrentArea();
+                const menu = areas.getMenu("navigation", area?.id);
+                const areaId = areas.resolveAreaId(page.src);
+                const item = areas.resolveHref(page.src, areaId);
+
+                state.id = area?.id || "";
+                state.label = area?.label || "";
+                state.prefix = area?.prefix || "/";
+                state.modules = area?.modules?.join(", ") || "";
+                state.source = config.modules["x-demo"].menus.navigation;
+                state.items = (menu[0]?.children || []).map(item => ({
+                    label: item.label,
+                    path: item.path,
+                    children: item.children?.length || 0
                 }));
-                state.pageSrc = page.src;
+                state.examplePath = item?.path || "No friendly path";
+                state.exampleHref = item?.href || "No menu item";
             }
         };
     }

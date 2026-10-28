@@ -1,122 +1,65 @@
-// contract
-export const contract = {
-    description: "Basic Page navigation",
-    events: {},
-    properties: {},
-    methods: {}
-};
 
-// page
 export default {
+    meta: {
+        title: "Navigation Actions",
+        description: "Demonstrates declarative navigation, relative and absolute paths, and controller-driven navigation."
+    },
+
     template: `
-        <h2>Basic navigation</h2>
+        <p>XShell provides declarative navigation through <code>x-anchor</code> and programmatic navigation through the <code>navigation</code> service.</p>
 
+        <h2>Declarative navigation</h2>
+        <p>Use <code>x-anchor</code> for ordinary Page links. XShell handles navigation within the active Area.</p>
+        <p><x-anchor href="../02-pages/01-basic.js">Open Basic Page</x-anchor></p>
+        <p><x-anchor href="../02-pages/04-state.js">Open Page State</x-anchor></p>
+        <pre x-pre><code>&lt;x-anchor href="../02-pages/01-basic.js"&gt;Open Basic Page&lt;/x-anchor&gt;</code></pre>
+
+        <h2>Relative paths</h2>
+        <p>Relative paths are resolved from the current Page. Use <code>..</code> to navigate to a sibling Page directory.</p>
+        <p><x-anchor href="../02-pages/03-parameters.js">Open Page Parameters</x-anchor></p>
+        <pre x-pre><code>&lt;x-anchor href="../02-pages/03-parameters.js"&gt;Page Parameters&lt;/x-anchor&gt;</code></pre>
+
+        <h2>Absolute paths</h2>
+        <p>Absolute navigation paths use the active Area's prefix. The cookbook Area uses <code>/cookbook</code>.</p>
+        <p><x-anchor href="/cookbook/hello/Ada">Open Hello Ada</x-anchor></p>
+        <p><x-anchor href="/cookbook/hello/Grace">Open Hello Grace</x-anchor></p>
+        <pre x-pre><code>&lt;x-anchor href="/cookbook/hello/Ada"&gt;Hello Ada&lt;/x-anchor&gt;
+&lt;x-anchor href="/cookbook/hello/Grace"&gt;Hello Grace&lt;/x-anchor&gt;</code></pre>
+        <p>The <code>/hello/{name}</code> route is defined in the cookbook Module configuration and resolves to the Page Parameters example.</p>
+
+        <h2>Programmatic navigation</h2>
+        <p>Use the injected <code>navigation</code> service when navigation is triggered by controller logic rather than a direct link.</p>
         <p>
-            Use <code>x-anchor</code> for declarative navigation. XShell handles an ordinary primary click and asks Navigation to open the
-            destination; the generated link still behaves like a normal link for modifier keys and other browser features.
+            <x-button label="Open Page State" command="openState"></x-button>
+            <x-button label="Open Hello Grace" command="openGrace"></x-button>
         </p>
-
-        <p>
-            <x-anchor href="./index.js" open="auto">Open the Navigation demos</x-anchor>
-        </p>
-
-        <pre x-pre><code>&lt;x-anchor href="./index.js" open="auto"&gt;
-    Open the Navigation demos
-&lt;/x-anchor&gt;</code></pre>
-
-        <p>
-            <code>open="auto"</code> lets Navigation choose from the current Page context. From this root Page it navigates the top-level destination;
-            from a Page already in the stack it updates that stack position.
-        </p>
-
-        <h3>Query parameters</h3>
-
-        <p>
-            Object properties support state-map attributes. Here <code>query-name</code> and <code>query-count</code> populate
-            <code>x-anchor.query</code>, which the component passes to Navigation as query parameters.
-        </p>
-
-        <p>
-            <x-anchor href="../02-pages/04-query-parameters.js" query-name="lucas" query-count="123">Open the query demo with values</x-anchor>
-        </p>
-
-        <pre x-pre><code>&lt;x-anchor
-    href="../02-pages/04-query-parameters.js"
-    query-name="lucas"
-    query-count="123"&gt;
-    Open the query demo with values
-&lt;/x-anchor&gt;</code></pre>
-
-        <p>
-            The destination declares query-backed contract properties, so the Page loader converts these values into its typed state. A controller
-            that needs raw query access can instead inject <code>query</code>, a <code>URLSearchParams</code> instance for that Page's own source:
-        </p>
-
-        <pre x-pre><code>controller({ query }) {
+        <pre x-pre><code>controller({navigation, page}) {
     return {
-        load() {
-            const name = query.get("name");
+        openState() {
+            navigation.navigate({href:"../02-pages/04-state.js", page, open:"auto"});
+        },
+        openGrace() {
+            navigation.navigate({href:"/cookbook/hello/Grace", page, open:"auto"});
         }
     };
 }</code></pre>
 
-        <p>Neither approach parses the browser location directly.</p>
+        <h2>Choosing an approach</h2>
+        <p>Prefer <code>x-anchor</code> for visible navigation links. Use <code>navigation.navigate()</code> when a controller decides where or when to navigate.</p>
+        <p>Both approaches use XShell's navigation system and resolve destinations within the configured Area.</p>
 
-        <h3>Programmatic navigation</h3>
-
+        <h2>Related examples</h2>
         <p>
-            Use the injected Navigation service when a controller decision triggers navigation.
-        </p>
-
-        <p>
-            <x-button label="Navigate from the controller" command="navigateProgrammatically"></x-button>
-        </p>
-
-        <pre x-pre><code>controller({ navigation, page }) {
-    return {
-        navigateProgrammatically() {
-            navigation.navigate({
-                href: "../02-pages/04-query-parameters.js",
-                page,
-                open: "auto"
-            });
-        }
-    };
-}</code></pre>
-
-        <p>
-            <code>x-anchor</code> is the declarative choice; <code>navigation.navigate(...)</code> is the programmatic choice. This application
-            currently runs Navigation in <strong>{{ state.mode }}</strong> mode, and both examples use the same API.
-        </p>
-
-        <h3>Friendly path and canonical href</h3>
-
-        <p>
-            A menu item can expose a friendly <code>path</code>, such as <code>/demo/pages/query-parameters</code>, while its <code>href</code> remains
-            the canonical XShell Page destination under <code>/_assets/x-demo/&lt;generation&gt;/...</code>. Areas composes both values and Navigation resolves menu
-            paths; <code>x-anchor</code> does not perform that lookup itself.
+            <x-anchor href="02-areas.js">Areas and Menus</x-anchor> explains navigation contexts.
+            <x-anchor href="03-stack.js">Page Stack</x-anchor> demonstrates stacked navigation.
+            <x-anchor href="04-embedded.js">Embedded Pages</x-anchor> demonstrates embedded destinations.
         </p>
     `,
 
-    state: {
-        mode: ""
-    },
-
-    controller({ state, navigation, page }) {
+    controller({navigation, page}) {
         return {
-            load() {
-                // show the active browser navigation mode
-                state.mode = navigation.mode;
-            },
-
-            navigateProgrammatically() {
-                // navigate with the controller API
-                navigation.navigate({
-                    href: "../02-pages/04-query-parameters.js",
-                    page,
-                    open: "auto"
-                });
-            }
+            openState() {navigation.navigate({href:"../02-pages/04-state.js", page, open:"auto"});},
+            openGrace() {navigation.navigate({href:"/cookbook/hello/Grace", page, open:"auto"});}
         };
     }
 };

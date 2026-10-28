@@ -5,15 +5,15 @@ import path from 'node:path';
 import test from 'node:test';
 import Areas from '../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/areas.js';
 
-const root = fileURLToPath(new URL('../../src/DProjects.XShell/Resources/DProjects.XShell/x-demo2/', import.meta.url));
+const root = fileURLToPath(new URL('../../src/DProjects.XShell/Resources/DProjects.XShell/x-demo/', import.meta.url));
 const config = JSON.parse(readFileSync(path.join(root, 'module.jsonc'), 'utf8').replace(/^\/\/[^\n]*\n/, ''));
 
-test('x-demo2 is a separate root with resolvable module references', () => {
-    assert.deepEqual(Object.keys(config.modules).filter(id => !config.modules[id].configUrl), ['x-demo2']);
+test('x-demo is a separate root with resolvable module references', () => {
+    assert.deepEqual(Object.keys(config.modules).filter(id => !config.modules[id].configUrl), ['x-demo']);
     assert.equal(config.xshell.areas.default, 'cookbook');
-    assert.deepEqual(config.xshell.areas.definitions.cookbook.modules, ['x-demo2']);
+    assert.deepEqual(config.xshell.areas.definitions.cookbook.modules, ['x-demo']);
     for (const [id, module] of Object.entries(config.modules)) {
-        if (id === 'x-demo2') continue;
+        if (id === 'x-demo') continue;
         assert.match(module.configUrl, /^url:\.\.\//);
         assert.ok(existsSync(path.resolve(root, module.configUrl.slice(4))), id);
     }
@@ -26,15 +26,15 @@ const pageFiles = directory => readdirSync(directory, { withFileTypes: true }).f
 });
 
 test('cookbook navigation derives ordered Pages from the file inventory', () => {
-    assert.equal(config.modules['x-demo2'].menus.navigation, '/pages');
+    assert.equal(config.modules['x-demo'].menus.navigation, '/pages');
     const files = pageFiles(path.join(root, 'pages'));
-    const module = { id: 'x-demo2', config: { menus: { navigation: '/_assets/x-demo2/pages' } } };
+    const module = { id: 'x-demo', config: { menus: { navigation: '/_assets/x-demo/pages' } } };
     const areas = new Areas({
         config: {
             xshell: { assets: { basePath: '/_assets' }, areas: { default: 'cookbook', global: [], definitions: {
-                cookbook: { prefix: '/cookbook', modules: ['x-demo2'] }
+                cookbook: { prefix: '/cookbook', modules: ['x-demo'] }
             } } },
-            modules: { 'x-demo2': { label: 'XShell Cookbook', files: files.map(file => ({ path: `/_assets/x-demo2/${file.replace(/\.js$/, file.includes('html-page') ? '.html' : '.js')}` })) } }
+            modules: { 'x-demo': { label: 'XShell Cookbook', files: files.map(file => ({ path: `/_assets/x-demo/${file.replace(/\.js$/, file.includes('html-page') ? '.html' : '.js')}` })) } }
         },
         bus: { addEventListener() {} }
     });
@@ -51,8 +51,8 @@ test('cookbook navigation derives ordered Pages from the file inventory', () => 
     const walk = items => {
         for (const item of items) {
             assert.doesNotMatch(item.label, /^\d+-/);
-            assert.ok(item.href?.startsWith('/cookbook/_assets/x-demo2/pages/'), item.href);
-            const relative = item.href.slice('/cookbook/_assets/x-demo2/'.length);
+            assert.ok(item.href?.startsWith('/cookbook/_assets/x-demo/pages/'), item.href);
+            const relative = item.href.slice('/cookbook/_assets/x-demo/'.length);
             assert.ok(files.includes(relative), relative);
             visited.add(relative);
             walk(item.children || []);
@@ -61,8 +61,8 @@ test('cookbook navigation derives ordered Pages from the file inventory', () => 
     walk(menu);
     assert.deepEqual([...visited].sort(), files.sort());
     assert.ok(![...visited].some(file => file.includes('custom-dialog')));
-    assert.equal(menu[0].children[1].children[1].href, '/cookbook/_assets/x-demo2/pages/02-pages/02-html-page.js');
-    assert.equal(config.modules['x-demo2'].routes['/hello/{name}'], '/pages/02-pages/03-parameters.js');
+    assert.equal(menu[0].children[1].children[1].href, '/cookbook/_assets/x-demo/pages/02-pages/02-html-page.js');
+    assert.equal(config.modules['x-demo'].routes['/hello/{name}'], '/pages/02-pages/03-parameters.js');
 });
 
 test('cookbook Page links resolve after renaming', () => {
@@ -78,18 +78,18 @@ test('cookbook Page links resolve after renaming', () => {
     }
     assert.ok(existsSync(path.join(root, 'dialog-pages/custom-dialog.js')));
     assert.match(readFileSync(path.join(root, 'pages/04-dialogs/05-custom.js'), 'utf8'),
-        /page:x-demo2:\/dialog-pages\/custom-dialog\.js/);
+        /page:x-demo:\/dialog-pages\/custom-dialog\.js/);
 });
 
 test('the counter keeps its public contract separate from private state', async () => {
     const { contract, default: implementation } = await import(new URL(
-        '../../src/DProjects.XShell/Resources/DProjects.XShell/x-demo2/components/x-demo2-counter.js', import.meta.url));
+        '../../src/DProjects.XShell/Resources/DProjects.XShell/x-demo/components/x-demo-counter.js', import.meta.url));
     const { default: validateContract } = await import(new URL(
         '../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/validation/component.contract.js', import.meta.url));
     const { default: validateComponent } = await import(new URL(
         '../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/validation/component.js', import.meta.url));
-    await validateContract('x-demo2-counter', contract);
-    await validateComponent('x-demo2-counter', implementation);
+    await validateContract('x-demo-counter', contract);
+    await validateComponent('x-demo-counter', implementation);
     assert.deepEqual(Object.keys(contract.properties), ['label']);
     assert.deepEqual(Object.keys(contract.methods), ['reset']);
     assert.deepEqual(Object.keys(contract.slots), ['hint']);
@@ -98,8 +98,8 @@ test('the counter keeps its public contract separate from private state', async 
 
 test('the cookbook module controller exposes its startup state', async () => {
     const { default: ModuleController } = await import(new URL(
-        '../../src/DProjects.XShell/Resources/DProjects.XShell/x-demo2/module.js', import.meta.url));
-    const controller = new ModuleController({ moduleConfig: config.modules['x-demo2'] });
+        '../../src/DProjects.XShell/Resources/DProjects.XShell/x-demo/module.js', import.meta.url));
+    const controller = new ModuleController({ moduleConfig: config.modules['x-demo'] });
     assert.equal(controller.started, false);
     controller.start();
     assert.equal(controller.started, true);
@@ -108,26 +108,26 @@ test('the cookbook module controller exposes its startup state', async () => {
 
 test('the cookbook module controller summarizes its effective Page inventory', async () => {
     const { default: ModuleController } = await import(new URL(
-        '../../src/DProjects.XShell/Resources/DProjects.XShell/x-demo2/module.js', import.meta.url));
+        '../../src/DProjects.XShell/Resources/DProjects.XShell/x-demo/module.js', import.meta.url));
     const controller = new ModuleController({ moduleConfig: {
-        id: 'x-demo2', label: 'XShell Cookbook', menus: { navigation: '/_assets/x-demo2/pages' },
-        assets: { path: '/_assets/x-demo2' }, files: [
-            { path: '/_assets/x-demo2/pages/index.js' },
-            { path: '/_assets/x-demo2/pages/01-components/01-buttons.js' },
-            { path: '/_assets/x-demo2/datasets/statuses.json' }
+        id: 'x-demo', label: 'XShell Cookbook', menus: { navigation: '/_assets/x-demo/pages' },
+        assets: { path: '/_assets/x-demo' }, files: [
+            { path: '/_assets/x-demo/pages/index.js' },
+            { path: '/_assets/x-demo/pages/01-components/01-buttons.js' },
+            { path: '/_assets/x-demo/datasets/statuses.json' }
         ]
     } });
     controller.start();
     assert.deepEqual(controller.getCookbookSummary(), {
-        id: 'x-demo2', label: 'XShell Cookbook', menuSource: '/_assets/x-demo2/pages',
+        id: 'x-demo', label: 'XShell Cookbook', menuSource: '/_assets/x-demo/pages',
         pageCount: 2, started: true
     });
 });
 
 test('path resolution example follows the effective Area menu in both directions', async () => {
     const { default: example } = await import(new URL(
-        '../../src/DProjects.XShell/Resources/DProjects.XShell/x-demo2/pages/03-navigation/05-resolution.js', import.meta.url));
-    const href = '/cookbook/_assets/x-demo2/pages/03-navigation/05-resolution.js';
+        '../../src/DProjects.XShell/Resources/DProjects.XShell/x-demo/pages/03-navigation/05-resolution.js', import.meta.url));
+    const href = '/cookbook/_assets/x-demo/pages/03-navigation/05-resolution.js';
     const item = { path: '/cookbook/navigation/resolution', href };
     const state = {};
     const controller = example.controller({
@@ -146,12 +146,12 @@ test('path resolution example follows the effective Area menu in both directions
 
 test('resolver example inspects without loading and reports a concrete dataset', async () => {
     const { default: example } = await import(new URL(
-        '../../src/DProjects.XShell/Resources/DProjects.XShell/x-demo2/pages/90-advanced/05-loading.js', import.meta.url));
+        '../../src/DProjects.XShell/Resources/DProjects.XShell/x-demo/pages/90-advanced/05-loading.js', import.meta.url));
     const state = {};
     let loads = 0;
     const controller = example.controller({
-        resolver: { resolve(resource) { return { definition: { resource: 'dataset:x-demo2:{name}', loader: 'dataset-url' }, url: `https://example.test/${resource}` }; } },
-        loader: { async load(resource) { loads++; assert.equal(resource, 'dataset:x-demo2:statuses'); return { tables: [{ rows: [{ code: 'A' }] }] }; } },
+        resolver: { resolve(resource) { return { definition: { resource: 'dataset:x-demo:{name}', loader: 'dataset-url' }, url: `https://example.test/${resource}` }; } },
+        loader: { async load(resource) { loads++; assert.equal(resource, 'dataset:x-demo:statuses'); return { tables: [{ rows: [{ code: 'A' }] }] }; } },
         state
     });
     controller.inspectDataset();
@@ -165,16 +165,16 @@ test('resolver example inspects without loading and reports a concrete dataset',
 
 test('component lifecycle probe reports supported hooks in order', async () => {
     const { contract, default: implementation } = await import(new URL(
-        '../../src/DProjects.XShell/Resources/DProjects.XShell/x-demo2/components/x-demo2-lifecycle.js', import.meta.url));
+        '../../src/DProjects.XShell/Resources/DProjects.XShell/x-demo/components/x-demo-lifecycle.js', import.meta.url));
     const { default: validateContract } = await import(new URL(
         '../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/validation/component.contract.js', import.meta.url));
     const { default: validateComponent } = await import(new URL(
         '../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/validation/component.js', import.meta.url));
-    await validateContract('x-demo2-lifecycle', contract);
-    await validateComponent('x-demo2-lifecycle', implementation);
+    await validateContract('x-demo-lifecycle', contract);
+    await validateComponent('x-demo-lifecycle', implementation);
     const stages = [];
     const controller = implementation.controller({ bus: {
-        emit(name, detail) { assert.equal(name, 'x-demo2:component-lifecycle'); stages.push(detail.stage); }
+        emit(name, detail) { assert.equal(name, 'x-demo:component-lifecycle'); stages.push(detail.stage); }
     } });
     for (const hook of ['load', 'mount', 'unmount', 'unload']) controller[hook]();
     assert.deepEqual(stages, ['load', 'mount', 'unmount', 'unload']);
@@ -182,10 +182,10 @@ test('component lifecycle probe reports supported hooks in order', async () => {
 
 test('engine example distinguishes effective Page metadata from module defaults', async () => {
     const { default: example } = await import(new URL(
-        '../../src/DProjects.XShell/Resources/DProjects.XShell/x-demo2/pages/90-advanced/03-engines.js', import.meta.url));
+        '../../src/DProjects.XShell/Resources/DProjects.XShell/x-demo/pages/90-advanced/03-engines.js', import.meta.url));
     const state = { count: 0 };
     const controller = example.controller({
-        config: { modules: { 'x-demo2': { defaults: { page: { renderEngine: 'x', stateEngine: 'proxy' } } } } },
+        config: { modules: { 'x-demo': { defaults: { page: { renderEngine: 'x', stateEngine: 'proxy' } } } } },
         dependencies: { clientPage: { implementation: { meta: { renderEngine: 'x-client', stateEngine: 'proxy' } } } },
         implementation: { meta: { renderEngine: 'x', stateEngine: 'proxy' } }, state
     });

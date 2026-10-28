@@ -6,7 +6,7 @@ namespace DProjects.XShell.Test;
 public sealed class Demo2TemplatesTests {
     [Fact]
     public void AllCookbookTemplatesCompile() {
-        var root = Path.Combine(AppContext.BaseDirectory, "Resources", "DProjects.XShell", "x-demo2");
+        var root = Path.Combine(AppContext.BaseDirectory, "Resources", "DProjects.XShell", "x-demo");
         Assert.True(Directory.Exists(root), $"Missing cookbook resources: {root}");
         var compiled = 0;
 

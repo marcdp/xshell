@@ -247,12 +247,6 @@ Run the demo:
 dotnet run --project src/DProjects.XShell -- server
 ```
 
-Run the independent, focused cookbook (`x-demo2`) with the `DProjects.XShell x-demo2` launch profile or:
-
-```bash
-dotnet run --project src/DProjects.XShell -- server --app-config-path /_resources/DProjects.XShell/x-demo2/module.jsonc
-```
-
 The cookbook's file explorer uses the in-memory filesystem and needs no hosted share.
 
 ## Documentation

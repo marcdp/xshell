@@ -1,28 +1,11 @@
-// contract
-export const contract = {
-    description: "Index page",
-    events: {},
-    properties: {},
-    methods: {}
-};
-
-// export page
 export default {
-    style: `
-        P {display:block; border:1px red dotted}
-    `,
+    meta: {
+        title: "XShell Cookbook",
+        description: "Choose one focused, executable example. Each file can be read on its own."
+    },
+
     template: `
-        <p>
-            this is the index page
-        </p>
-    `,    
-    controller({ state, loader }) {
-        return {
-            async load(params) {
-               // load
-               //var aux = await loader.load("dataset:static:a=1|b=2|c=3");
-               var countries = await loader.load("dataset:x-demo:countries");
-            }
-        };
-    }
-}
+        <p>Choose one focused, executable example. Each file can be read on its own.</p>
+        <x-page-index></x-page-index>        
+    `
+};
