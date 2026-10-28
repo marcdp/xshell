@@ -84,7 +84,7 @@
     --x-layout-dialog-shadow:0 4px 15px light-dark(rgba(0, 0, 0, 0.1), rgba(0, 0, 0, .45));
     --x-layout-dialog-page-padding-vertical: 1em;
     --x-layout-dialog-page-padding-horizontal: 1.5em;
-    --x-layout-dialog-backdrop: light-dark(rgba(0,0,0,.1), rgba(0, 0, 0, .45));
+    --x-layout-dialog-backdrop: light-dark(rgba(0,0,0,.1), rgba(0, 0, 0, .6));
 
     /* x-markdown */
     --x-markdown-blockquote-background:light-dark(#F0F0F0, #242424);

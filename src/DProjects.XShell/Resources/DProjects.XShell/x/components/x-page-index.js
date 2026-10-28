@@ -13,7 +13,7 @@ export default {
     template: `
         <nav x-if="state.items.length" aria-label="Pages in this section">
             <ul>
-                <li x-for="item in state.items" x-key="href">
+                <li x-for="item in state.items">
                     <x-anchor x-attr:href="item.path || item.href">
                         {{ item.label }}
                     </x-anchor>

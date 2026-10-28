@@ -1,4 +1,6 @@
 export default class {
+
+    // ctor
     constructor({ moduleConfig }) {
         this.id = moduleConfig.id;
         this.label = moduleConfig.label;
@@ -9,14 +11,13 @@ export default class {
         this.started = false;
     }
 
+    // start the module
     start() {
-        this.pageCount = this.files.filter(file =>
-            file.path.startsWith(this.assetsPath + "/pages/") &&
-            /\.(js|html)$/.test(file.path)
-        ).length;
+        this.pageCount = this.files.filter(file => file.path.startsWith(this.assetsPath + "/pages/") && /\.(js|html)$/.test(file.path)).length;
         this.started = true;
     }
 
+    // get the cookbook summary
     getCookbookSummary() {
         return {
             id: this.id,

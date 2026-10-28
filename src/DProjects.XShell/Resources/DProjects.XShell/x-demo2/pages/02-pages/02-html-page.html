@@ -1,8 +1,52 @@
+
 <template>
-    <p>This Page keeps its template and implementation in one HTML file.</p>
-    <p>Hello {{ state.name }}.</p>
-    <label>Name <input x-model="state.name"></label>
+    <p>An HTML Page keeps its template and implementation in a single <code>.html</code> file. It provides an alternative to JavaScript Pages without changing the Page lifecycle.</p>
+
+    <h2>HTML Page structure</h2>
+    <p>The <code>&lt;template&gt;</code> element defines the Page content, while <code>&lt;script type="module"&gt;</code> exports its implementation.</p>
+    <pre x-pre><code>&lt;template&gt;
+    &lt;p&gt;Hello world!&lt;/p&gt;
+&lt;/template&gt;
+
+&lt;script type="module"&gt;
+    export default {
+        meta: { title: "Hello" }
+    };
+&lt;/script&gt;</code></pre>
+
+    <h2>Reactive state</h2>
+    <p>HTML Pages support the same state bindings and controller features as JavaScript Pages.</p>
+    <x-datafields columns="2">
+        <x-datafield type="text" label="Name" placeholder="Enter your name" x-model="state.name"></x-datafield>
+    </x-datafields>
+    <p>Hello <strong>{{ state.name }}</strong>!</p>
+    <pre x-pre><code>&lt;template&gt;
+    &lt;x-datafield type="text" label="Name" x-model="state.name"&gt;&lt;/x-datafield&gt;
+    &lt;p&gt;Hello {{ state.name }}!&lt;/p&gt;
+&lt;/template&gt;
+
+&lt;script type="module"&gt;
+    export default {
+        state: { name: "Ada" }
+    };
+&lt;/script&gt;</code></pre>
+
+    <h2>When to use HTML Pages</h2>
+    <p>HTML Pages are useful when the Page is primarily markup. JavaScript Pages provide the same capabilities and may be more convenient when implementation logic is substantial.</p>
+
+    <h2>Related examples</h2>
+    <p><x-anchor href="01-basic.js">Basic Page</x-anchor> shows the equivalent JavaScript format, while <x-anchor href="04-state.js">Page State</x-anchor> demonstrates more reactive behavior.</p>
 </template>
+
 <script type="module">
-    export default { meta: { title: "HTML Page", description: "This Page keeps its template and implementation in one HTML file." }, state: { name: "Ada" } };
+    export default {
+        meta: {
+            title: "HTML Page",
+            description: "Demonstrates HTML Page structure, metadata, and reactive state."
+        },
+
+        state: {
+            name: "Ada"
+        }
+    };
 </script>

@@ -5,7 +5,8 @@ export const contract = {
     events: {},
     properties: {
         path: {type: "string", default:"/", attribute: true, state:true, description: "Current path in the filesystem"},
-        src: {type: "string", default:null, attribute: true, state:true, description: "Source of the filesystem (e.g., 'mem:')"}
+        src: {type: "string", default:null, attribute: true, state:true, description: "Source of the filesystem (e.g., 'mem:')"},
+        filesystem: {type: "object", default:null, attribute: false, state:true, description: "Filesystem instance"}
     },
     methods: {},
     slots: {}

@@ -102,11 +102,11 @@ export default {
             },
             async focus() {
                 const listview = host.shadowRoot.querySelector('x-listview');
-                listview.focus();
+                if (listview) listview.focus();
             },
             async clear() {
                 const listview = host.shadowRoot.querySelector('x-listview');
-                listview.clear();
+                if (listview) listview.clear();
             },
             async select({event}){
                 // select

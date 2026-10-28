@@ -13,7 +13,6 @@ export default {
         <h2>List</h2>
         <x-datafields label="Customer">
             <x-datafield label="Name" type="text" x-model="state.customer.name"></x-datafield>
-
             <x-datafield label="Addresses" type="list" add x-model="state.customer.addresses" x-prop:item-default="state.addressDefault">
                 <x-datafields x-for="address in state.customer.addresses" class="grid" columns="2" move remove __x-key="address">
                     <x-datafield label="Street" type="text" x-model="address.street"></x-datafield>
