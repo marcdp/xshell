@@ -46,6 +46,7 @@ const MIME_TYPES = Object.freeze({
     jpg: "image/jpeg",
     jpeg: "image/jpeg",
     gif: "image/gif",
+    svg: "image/svg+xml",
     webp: "image/webp",
     pdf: "application/pdf",
     txt: "text/plain",
@@ -64,6 +65,7 @@ const MIME_TYPES = Object.freeze({
  */
 export default class FilesystemOpfs extends Filesystem {
 
+    // create
     static create(url) {
         if (url && url !== "opfs" && url !== "opfs:") {
             throw new TypeError(`Unsupported OPFS filesystem URL: ${url}`);
@@ -71,64 +73,12 @@ export default class FilesystemOpfs extends Filesystem {
         return new FilesystemOpfs();
     }
 
+    // ctor
     constructor({ isReadonly = false } = {}) {
         super({ url: "opfs:", isReadonly });
         this._rootPromise = null;
     }
 
-    async _root(signal) {
-        checkAbort(signal);
-        if (!globalThis.navigator?.storage?.getDirectory) {
-            throw new Error("Origin Private File System is unavailable (requires browser support and a secure context)");
-        }
-        if (!this._rootPromise) {
-            this._rootPromise = globalThis.navigator.storage.getDirectory();
-        }
-        try {
-            const root = await this._rootPromise;
-            checkAbort(signal);
-            return root;
-        } catch (error) {
-            this._rootPromise = null;
-            throw error;
-        }
-    }
-
-    async _directory(path, { create = false, signal } = {}) {
-        validatePath(path);
-        let directory = await this._root(signal);
-        if (path === "/") return directory;
-        for (const name of path.slice(1).split("/")) {
-            checkAbort(signal);
-            directory = await directory.getDirectoryHandle(name, { create });
-        }
-        checkAbort(signal);
-        return directory;
-    }
-
-    async _file(path, { create = false, signal } = {}) {
-        validatePath(path);
-        if (path === "/") throw new Error("Cannot access the filesystem root as a file");
-        const parent = await this._directory(parentPath(path), { signal });
-        checkAbort(signal);
-        return parent.getFileHandle(pathName(path), { create });
-    }
-
-    async _snapshot(path, handle, signal) {
-        checkAbort(signal);
-        const file = handle.kind === "file" ? await handle.getFile() : null;
-        checkAbort(signal);
-        return {
-            path,
-            name: pathName(path),
-            type: file ? EntryType.File : EntryType.Directory,
-            created: null,
-            modified: file ? new Date(file.lastModified) : null,
-            length: file ? file.size : 0,
-            etag: "",
-            flags: this.isReadonly ? READONLY_FLAG : 0
-        };
-    }
 
     // LEVEL 0: provider primitives
     async getEntry(path, { signal } = {}) {
@@ -316,4 +266,60 @@ export default class FilesystemOpfs extends Filesystem {
 
     // Unsupported: touch(), metadata, watchers, synchronization.
     // The base class provides copy/move through the stream API.
+
+    
+    // privatemethods
+    async _root(signal) {
+        checkAbort(signal);
+        if (!globalThis.navigator?.storage?.getDirectory) {
+            throw new Error("Origin Private File System is unavailable (requires browser support and a secure context)");
+        }
+        if (!this._rootPromise) {
+            this._rootPromise = globalThis.navigator.storage.getDirectory();
+        }
+        try {
+            const root = await this._rootPromise;
+            checkAbort(signal);
+            return root;
+        } catch (error) {
+            this._rootPromise = null;
+            throw error;
+        }
+    }
+
+    async _directory(path, { create = false, signal } = {}) {
+        validatePath(path);
+        let directory = await this._root(signal);
+        if (path === "/") return directory;
+        for (const name of path.slice(1).split("/")) {
+            checkAbort(signal);
+            directory = await directory.getDirectoryHandle(name, { create });
+        }
+        checkAbort(signal);
+        return directory;
+    }
+
+    async _file(path, { create = false, signal } = {}) {
+        validatePath(path);
+        if (path === "/") throw new Error("Cannot access the filesystem root as a file");
+        const parent = await this._directory(parentPath(path), { signal });
+        checkAbort(signal);
+        return parent.getFileHandle(pathName(path), { create });
+    }
+
+    async _snapshot(path, handle, signal) {
+        checkAbort(signal);
+        const file = handle.kind === "file" ? await handle.getFile() : null;
+        checkAbort(signal);
+        return {
+            path,
+            name: pathName(path),
+            type: file ? EntryType.File : EntryType.Directory,
+            created: null,
+            modified: file ? new Date(file.lastModified) : null,
+            length: file ? file.size : 0,
+            etag: "",
+            flags: this.isReadonly ? READONLY_FLAG : 0
+        };
+    }
 }

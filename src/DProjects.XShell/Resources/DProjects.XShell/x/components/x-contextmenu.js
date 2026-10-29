@@ -46,6 +46,9 @@ export default {
             box-shadow:var(--x-contextmenu-shadow); 
             border:var(--x-contextmenu-border); 
         }
+        :host div:focus {
+            outline: none;
+        }
     `,
     template: `
         <div x-if="state.visible || state.submenu" tabindex="0" x-style:left="state.x" x-style:top="state.y" x-on:keydown="keydown" x-on:command="command">

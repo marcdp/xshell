@@ -55,6 +55,11 @@ async function readBytes(input, signal) {
     if (typeof input === "string") {
         return new TextEncoder().encode(input);
     }
+    
+    if (input?.isFile && typeof input.file === "function") {
+        input = await new Promise((resolve, reject) => input.file(resolve, reject));
+        checkAbort(signal);
+    }
 
     if (typeof Blob !== "undefined" && input instanceof Blob) {
         const result = new Uint8Array(await input.arrayBuffer());

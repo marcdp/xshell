@@ -1,3 +1,4 @@
+import * as PathUtils from "../utils/path.js";
 
 // contract
 export const contract = {
@@ -24,22 +25,23 @@ export default {
     `,
     template: `
         <x-toolbar>
-            <x-button icon="x-arrow-back" x-on:click="back" x-attr:disabled="state.historyIndex <= 0" class="menuitem"></x-button>
-            <x-button icon="x-arrow-forward" x-on:click="forward" x-attr:disabled="state.historyIndex >= state.history.length - 1" class="menuitem"></x-button>
-            <x-button icon="x-arrow-up" x-on:click="up" class="menuitem" x-attr:disabled="state.pathList == state.path"></x-button>
-            <x-button icon="x-refresh" x-on:click="refresh" class="menuitem" ></x-button>
+            <x-button icon="x-arrow-back" x-on:click="onBack" x-attr:disabled="state.historyIndex <= 0" class="menuitem"></x-button>
+            <x-button icon="x-arrow-forward" x-on:click="onForward" x-attr:disabled="state.historyIndex >= state.history.length - 1" class="menuitem"></x-button>
+            <x-button icon="x-arrow-up" x-on:click="onUp" class="menuitem" x-attr:disabled="state.pathList == state.path"></x-button>
+            <x-button icon="x-refresh" x-on:click="onRefresh" class="menuitem" ></x-button>
             <x-datafield x-model="state.pathList" type="string" label="" placeholder="path" readonly style="flex:1"></x-datafield>        
         </x-toolbar>
 
-        <div class="container" x-on:contextmenuentry="contextMenuEntry"> 
+        <div class="container" x-on:contextmenuentry="onContextMenuEntry"> 
 
             <x-filesystem-tree 
                 x-prop:filesystem="state.filesystem" 
                 x-prop:path="state.path" 
-                x-on:select="treeSelect"
-                x-on:toggle="treeToggle",
-                x-on:properties="treeProperties"
-                x-on:rename="treeRename"
+                x-on:select="onTreeSelect"
+                x-on:toggle="onTreeToggle"
+                x-on:properties="onTreeProperties"
+                x-on:rename="onTreeRename"
+                x-on:delete="onTreeDelete"
                 x-attr:root="state.root"
             ></x-filesystem-tree>
 
@@ -48,24 +50,28 @@ export default {
             <x-filesystem-list 
                 x-prop:filesystem="state.filesystem" 
                 x-prop:path="state.pathList || state.path" 
-                x-on:select="listSelect"
-                x-on:activate="listActivate"
-                x-on:back="listBack"
-                x-on:properties="listProperties"
-                x-on:rename="listRename"
+                x-on:select="onListSelect"
+                x-on:activate="onListActivate"
+                x-on:back="onListBack"
+                x-on:properties="onListProperties"
+                x-on:rename="onListRename"
+                x-on:delete="onListDelete"
+                x-on:upload="onListUpload"
             ></x-filesystem-list>
 
         </div>
 
-        <x-contextmenu x-on:command="command">
+        <x-contextmenu x-on:command="onCommand">        
             <x-menuitem label="Open" icon="x-open" command="open" x-attr:disabled="!state.entry"></x-menuitem>
             <x-menuitem label="-" ></x-menuitem>
-            <x-menuitem label="New File ..." icon="x-file" command="newFile"></x-menuitem>
-            <x-menuitem label="New Folder ..." icon="x-folder" command="newFolder"></x-menuitem>
+            <x-menuitem label="New File ..." icon="x-file" command="newFile" x-attr:disabled="(state.entry && state.entry.type != 'directory' ? true : false)"></x-menuitem>
+            <x-menuitem label="New Folder ..." icon="x-folder" command="newFolder" x-attr:disabled="(state.entry && state.entry.type != 'directory' ? true : false)"></x-menuitem>
+            
             <!--<x-menuitem label="Refresh" icon="x-refresh" command="refresh" x-attr:disabled="!state.entry && state.entry.type == 'directory'"></x-menuitem>-->
+            <x-menuitem label="Upload Files ..." icon="x-file" command="uploadFiles" x-attr:disabled="(state.entry && state.entry.type != 'directory' ? true : false)"></x-menuitem>
             <x-menuitem label="-" ></x-menuitem>
-            <x-menuitem label="Rename" icon="x-rename" command="rename" x-attr:disabled="!state.entry"></x-menuitem>
-            <x-menuitem label="Delete" icon="x-trash" command="delete" x-attr:disabled="!state.entry"></x-menuitem>
+            <x-menuitem label="Rename" icon="x-rename" command="rename" x-attr:disabled="(!state.entry || state.entry.path == state.path ? true : false)"></x-menuitem>
+            <x-menuitem label="Delete" icon="x-trash" command="delete" x-attr:disabled="(!state.entry || state.entry.path == state.path ? true : false)"></x-menuitem>
             <x-menuitem label="-" ></x-menuitem>
             <x-menuitem label="Properties" icon="x-wrench" command="properties" x-attr:disabled="!state.entry"></x-menuitem>
         </x-contextmenu>
@@ -96,52 +102,13 @@ export default {
             },
 
             // commands
-            command({event}) {
-                
-                if (event.detail.command === "open") {
-                    this.open();
-                } else if (event.detail.command === "refresh") {
-                    this.refresh();
-                } else if (event.detail.command === "newFolder") {
-                } else if (event.detail.command === "delete") {
-                } else if (event.detail.command === "properties") {
-                    this.properties();
-                } else if (event.detail.command === "newFile") {
-                    this.newFile();
-                } else if (event.detail.command === "rename") {
-                    if (state.entry) this.rename(state.entry.path);
-                } else {
-                    alert("UNHANDLED COMMAND: " + event.detail.command)
-                }
-            },
-            async refresh() {
+            async refresh( options = {} ) {
                 // handle refresh event
+                console.log("refresh");
                 const list = host.shadowRoot.querySelector("x-filesystem-list");
-                await list.refresh();
-            },
-            async back() {
-                // handle back event
-                if (state.historyIndex > 0) {
-                    state.historyIndex--;
-                    state.pathList = state.history[state.historyIndex];
-                    const tree = host.shadowRoot.querySelector("x-filesystem-tree");
-                    if (tree) {
-                        await tree.expand(state.pathList);
-                        await tree.select(state.pathList);
-                    }
-                }
-            },
-            async forward() {
-                // handle forward event
-                if (state.historyIndex < state.history.length - 1) {
-                    state.historyIndex++;
-                    state.pathList = state.history[state.historyIndex];
-                    const tree = host.shadowRoot.querySelector("x-filesystem-tree");
-                    if (tree) {
-                        await tree.expand(state.pathList);
-                        await tree.select(state.pathList);
-                    }
-                }
+                const tree = host.shadowRoot.querySelector("x-filesystem-tree");
+                if (list) await list.refresh( options ); 
+                if (tree) await tree.refresh( options );
             },
             async navigateTo(path, {expand = true, select = true} = {}) {
                 if (typeof path !== "string" || !path || path === state.pathList) return;
@@ -152,14 +119,6 @@ export default {
                 if (tree) {
                     if (expand) await tree.expand(path);
                     if (select) await tree.select(path);
-                }
-            },
-            up() {
-                // handle up 
-                const path = state.pathList;
-                if (path != "/") {
-                    const newPath = path.split("/").slice(0, -1).join("/") || "/";
-                    this.navigateTo(newPath);
                 }
             },
             open(entry = state.entry) {
@@ -192,72 +151,257 @@ export default {
                     open: "stack"
                 });
             },
-            async newFile() {
+            async newFile(path) {
+                // newFile
+                if (!path) return;
+                const result = await dialog.prompt({
+                    title: "New file",
+                    label: "New name",
+                    message: "Create a new file in " + path,
+                    value: "New file.txt"
+                });
+                if (result) {
+                    if (!await this.validateName(result)) return;
+                    const newPath = PathUtils.combine(path, result);
+                    const exists = await state.filesystem.exists(newPath);
+                    if (exists) {
+                        dialog.message({title: "Error", type:"error", message: "A file with the name " + result + " already exists."});
+                        return;
+                    }
+                    // create the new file
+                    await state.filesystem.saveFile(newPath, "");
+                    // refresh the view
+                    this.refresh( { selectedPath: newPath } );
+                }
+            },
+            async newFolder(path) {
+                // newFolder
+                if (!path) return;
+                const result = await dialog.prompt({
+                    title: "New Folder",
+                    label: "New name",
+                    message: "Create a new folder in " + path,
+                    value: "New Folder"
+                });
+                if (result) {
+                    if (!await this.validateName(result)) return;
+                    const newPath = PathUtils.combine(path, result);
+                    const exists = await state.filesystem.exists(newPath);
+                    if (exists) {
+                        dialog.message({title: "Error", type:"error", message: "A folder with the name " + result + " already exists."});
+                        return;
+                    }
+                    // create the new directory
+                    await state.filesystem.createDirectory(newPath);
+                    // refresh the view
+                    this.refresh( { selectedPath: newPath } );
+                }
+            },
+            async uploadFiles(path, files) {
                 // async open({ href, params, title, breadcrumb, icon, context }) {
+                if (!path) return;
                 const result = await dialog.open({
-                    href: "page:x-filesystem:/pages/new-file.js",
+                    href: "page:x-filesystem:/pages/upload.js",
                     params: {},
                     context: {
+                        filesystem: state.filesystem,
                         src: state.src,
-                        path: state.pathList
+                        path: state.pathList,
+                        filePath: path,
+                        files: files || []
                     }
                 });
-            },            
+                // refresh the view
+                if (result) {
+                    for (const item of result) {
+                        if (item.status === "ok") {
+                            this.refresh( { selectedPath: item.path } );
+                            break;
+                        }
+                    }
+                }
+            },
             async rename(path) {
                 // rename
                 if (path == null || path === state.path) return;
+                const name = path.split("/").pop();
                 const result = await dialog.prompt({
                     title: "Rename",
                     label: "New name",
-                    value: path.split("/").pop()
+                    message: "Rename " + path,
+                    value: name
                 });
-                alert(result)
+                if (result && result !== name) {
+                    // validate
+                    if (!await this.validateName(result)) return;
+                    // check if the new path already exists
+                    const newPath = path.split("/").slice(0, -1).concat(result).join("/");
+                    const exists = await state.filesystem.exists(newPath);
+                    if (exists) {
+                        dialog.message({title: "Error", type:"error", message: "A file or folder with the name " + result + " already exists."});
+                        return;
+                    }
+                    // move the file to the new path
+                    await state.filesystem.move(path, newPath);
+                    // change from historic
+                    for(var i = state.history.length - 1; i >= 0; i--) {
+                        if (state.history[i] === path) {
+                            state.history[i] = newPath;
+                        }
+                    }
+                    // refresh the view after moving the file
+                    this.refresh( { selectedPath: newPath } );
+                }
+            },
+            async delete(path) {
+                // delete
+                if (path == null || path === state.path) return;
+                const result = await dialog.confirm({
+                    title: "Delete",
+                    message: "Are you sure you want to delete " + path + "?"
+                });
+                if (result) {
+                    // delete
+                    await state.filesystem.delete(path);
+                    // remove from historic
+                    for(var i = state.history.length - 1; i >= 0; i--) {
+                        if (state.history[i] === path) {
+                            state.history.splice(i, 1);
+                            if (state.historyIndex >= state.history.length) {
+                                state.historyIndex = state.history.length - 1;
+                            }
+                        }
+                    }
+                    // refresh
+                    this.refresh();
+                }
+            },
+            async validateName(path) {
+                // validate the name
+                try {
+                    PathUtils.validateName(path);
+                } catch (error) {
+                    await dialog.message({title: "Invalid name", type:"error", message: error.message});
+                    return false;
+                }
+                return true;
             },
 
 
+            /* commands */
+            onCommand({event}) {                
+                if (event.detail.command === "open") {
+                    this.open();
+                } else if (event.detail.command === "refresh") {
+                    this.refresh( {selectedPath: state.pathList} );
+                } else if (event.detail.command === "delete") {
+                    if (state.entry) this.delete(state.entry.path);
+                } else if (event.detail.command === "properties") {
+                    this.properties();
+                } else if (event.detail.command === "newFile") {
+                    this.newFile(state.entry?.path ?? state.pathList);
+                } else if (event.detail.command === "newFolder") {
+                    this.newFolder(state.entry?.path ?? state.pathList);
+                } else if (event.detail.command === "uploadFiles") {
+                    this.uploadFiles(state.entry?.path ?? state.pathList);
+                } else if (event.detail.command === "rename") {
+                    if (state.entry) this.rename(state.entry.path);
+                } else {
+                    alert("UNHANDLED COMMAND: " + event.detail.command)
+                }
+            },
+            onRefresh({event}) {
+                this.refresh( {selectedPath: state.pathList} );
+            },
+            async onBack() {
+                // handle back event
+                if (state.historyIndex > 0) {
+                    state.historyIndex--;
+                    state.pathList = state.history[state.historyIndex];
+                    const tree = host.shadowRoot.querySelector("x-filesystem-tree");
+                    if (tree) {
+                        await tree.expand(state.pathList);
+                        await tree.select(state.pathList);
+                    }
+                }
+            },
+            async onForward() {
+                // handle forward event
+                if (state.historyIndex < state.history.length - 1) {
+                    state.historyIndex++;
+                    state.pathList = state.history[state.historyIndex];
+                    const tree = host.shadowRoot.querySelector("x-filesystem-tree");
+                    if (tree) {
+                        await tree.expand(state.pathList);
+                        await tree.select(state.pathList);
+                    }
+                }
+            },
+            onUp() {
+                // handle up 
+                const path = state.pathList;
+                if (path != "/") {
+                    const newPath = path.split("/").slice(0, -1).join("/") || "/";
+                    this.navigateTo(newPath);
+                }
+            },
+
             /* tree */
-            treeSelect({event}) {
+            onTreeSelect({event}) {
                 // handle tree select event
                 if (event.detail.sourceEvent instanceof KeyboardEvent) return
                 this.navigateTo(event.detail.path, {expand: false, select: true});
             },
-            treeToggle({ event }) {
+            onTreeToggle({ event }) {
                 // handle tree toggle event
             },
-            treeProperties({event}) {
+            onTreeProperties({event}) {
                 // handle tree properties event
                 this.properties(event.detail.entry.path);
             },
-            treeRename({event}) {
+            onTreeRename({event}) {
                 // handle tree rename event
                 this.rename(event.detail.entry.path);
             },
+            onTreeDelete({event}) {
+                // handle tree delete event
+                this.delete(event.detail.entry.path);
+            },
 
             /* list */
-            listSelect({event}) {
+            onListSelect({event}) {
                 // handle list select event
             },
-            listActivate({event}) {
+            onListActivate({event}) {
                 // handle list activate event
                 this.open(event.detail.entry)
             },
-            listBack({event}) {
+            onListBack({event}) {
                 // handle list back event
-                this.up();
+                this.onUp({event});
             },
-            listProperties({event}) {
+            onListProperties({event}) {
                 // handle list properties event
                 this.properties(event.detail.entry);
             },
-            listRename({event}) {
+            onListRename({event}) {
                 // handle list rename event
                 this.rename(event.detail.entry.path);
             },
+            onListDelete({event}) {
+                // handle list delete event
+                this.delete(event.detail.entry.path);
+            },
+            onListUpload({event}) {
+                // handle list upload event
+                this.uploadFiles(event.detail.path, event.detail.files);
+            },
 
             /* context menu */
-            contextMenuEntry({event}) {
+            onContextMenuEntry({event}) {
                 // handle context menu entry event
                 state.entry = event.detail.entry;
+                console.log(state.entry);
                 const contextMenu = host.shadowRoot.querySelector("x-contextmenu");
                 contextMenu.open({x: event.detail.x, y: event.detail.y});
             }

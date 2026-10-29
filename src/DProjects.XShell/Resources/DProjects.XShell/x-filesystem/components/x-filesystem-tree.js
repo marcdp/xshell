@@ -27,6 +27,14 @@ export const contract = {
                 source: {type: "string", description: "Source of the event (tree)"}
             }
         },
+        delete: {
+            description: "Fired when the delete action is triggered",
+            detail: {
+                path: {type: "string", description: "Path of the entry"},
+                entry: {type: "object", description: "Entry object"},
+                source: {type: "string", description: "Source of the event (tree)"}
+            }
+        },
         contextmenuentry: {
             description: "Fired when a context menu is requested for an entry",
             detail: {
@@ -48,6 +56,12 @@ export const contract = {
             description: "Select a tree item by path",
             parameters: [
                 {name: "path", type: "string", description: "Path of the tree item to select"}
+            ]
+        },
+        refresh: {
+            description: "Refresh the tree view",
+            parameters: [
+                {name: "options", type: "object", description: "Options for refreshing the tree"}
             ]
         },
         expand: {
@@ -73,7 +87,7 @@ export default {
         :host {width:100%;}
     `,
     template: `
-        <x-treeview x-on:toggle="toggle" x-on:select="selectTreeviewItem" x-on:contextmenuitem="contextMenuItem" x-on:keydown="keydown">
+        <x-treeview x-on:toggle="onToggle" x-on:select="onSelectTreeviewItem" x-on:contextmenuitem="onContextMenuItem" x-on:keydown="onKeydown">
 
             <x-treeview-head>
                 <x-treeview-column label="Name"></x-treeview-column>
@@ -100,7 +114,7 @@ export default {
         entries: null,
         root: false
     },
-    controller({ state, events, host }) {
+    controller({ state, events, host, commands }) {
         return {
             async load(args) {
                 // load
@@ -179,9 +193,46 @@ export default {
                 const treeview = host.shadowRoot.querySelector("x-treeview");
                 const entry = this.getEntryByPathRecursive(path);
                 if (entry) {
+                    const selectedPathChanged = state.selectedPath !== path;
                     state.selectedPath = path;
                     if (treeview) treeview.select(path);
-                    host.dispatchEvent(new CustomEvent("select", {bubbles: true, detail: {path: entry.path}}));
+                    if (selectedPathChanged) {
+                        host.dispatchEvent(new CustomEvent("select", {bubbles: true, detail: {path: entry.path}}));
+                    }
+                }
+            },
+            async refresh({ selectedPath = state.selectedPath } = {}) {
+                if (!state.filesystem || !state.path) return;
+                // Reload root entries from the filesystem.
+                await this.loadRootEntries();
+                if (!selectedPath) return;
+                // Ensure the selected path belongs to this tree.
+                const rootPath = state.path;
+                if (selectedPath !== rootPath &&
+                    !selectedPath.startsWith(rootPath === "/" ? "/" : rootPath + "/")) {
+                    return;
+                }
+                // Expand each directory from the root to the selected path.
+                // expand() loads children from the filesystem when necessary.
+                const relativePath = selectedPath.slice(rootPath.length);
+                let path = rootPath;
+                if (state.root) {
+                    await this.expand(path);
+                }
+                for (const segment of relativePath.split("/").filter(Boolean)) {
+                    path = path === "/" ? "/" + segment : path + "/" + segment;
+                    const entry = this.getEntryByPathRecursive(path);
+                    if (!entry) break;
+                    await this.expand(path);
+                }
+                // select
+                if (selectedPath) {
+                    const entry = this.getEntryByPathRecursive(selectedPath);
+                    if (entry) {
+                        state.selectedPath = selectedPath;
+                        //host.dispatchEvent(new CustomEvent("select", {bubbles: true, detail: {path: selectedPath, entry}}));
+                        commands.enqueue("select", selectedPath);
+                    }
                 }
             },
             async expand(path) {
@@ -196,6 +247,7 @@ export default {
                 }
             },
             collapse(path) {
+                // collapse
                 const entry = this.getEntryByPathRecursive(path);
                 if (entry && entry.expanded) {
                     entry.expanded = false;
@@ -203,33 +255,10 @@ export default {
                 }
             },
             async clear() {
+                // clear selection
                 const treeview = host.shadowRoot.querySelector('x-treeview');
                 if (treeview) treeview.clear();
-            },
-
-            /* events */
-            async selectTreeviewItem({event}) {
-                const path = event.detail.path;                
-                const treeview = host.shadowRoot.querySelector("x-treeview");
-                const entry = this.getEntryByPathRecursive(path);
-                if (entry) {
-                    state.selectedPath = path;
-                    if (treeview) treeview.select(path);
-                    host.dispatchEvent(new CustomEvent("select", {bubbles: true, detail: {path: entry.path, sourceEvent: event.detail.sourceEvent}}));
-                }
-            },
-            async toggle({event}){
-                // toggle
-                const path = event.detail.path;
-                //this.select(path);
-                const entry = this.getEntryByPathRecursive(event.detail.path);
-                if (!entry.expanded) {  
-                    this.expand(entry.path)
-                } else {
-                    this.collapse(entry.path)
-                }
-                host.dispatchEvent(new CustomEvent("toggle", {bubbles: true, detail: {path: event.detail.path, sourceEvent: event.detail.sourceEvent}}));
-            },
+            },            
             getEntryByPathRecursive(path) {
                 const findEntry = (entries, path) => {
                     for (const entry of entries) {
@@ -245,7 +274,31 @@ export default {
                 };
                 return findEntry(state.entries, path);  
             },
-            async contextMenuItem({event}) {
+
+            /* events */
+            async onSelectTreeviewItem({event}) {
+                const path = event.detail.path;                
+                const treeview = host.shadowRoot.querySelector("x-treeview");
+                const entry = this.getEntryByPathRecursive(path);
+                if (entry) {
+                    state.selectedPath = path;
+                    if (treeview) treeview.select(path);
+                    host.dispatchEvent(new CustomEvent("select", {bubbles: true, detail: {path: entry.path, sourceEvent: event.detail.sourceEvent}}));
+                }
+            },
+            async onToggle({event}){
+                // toggle
+                const path = event.detail.path;
+                //this.select(path);
+                const entry = this.getEntryByPathRecursive(event.detail.path);
+                if (!entry.expanded) {  
+                    this.expand(entry.path)
+                } else {
+                    this.collapse(entry.path)
+                }
+                host.dispatchEvent(new CustomEvent("toggle", {bubbles: true, detail: {path: event.detail.path, sourceEvent: event.detail.sourceEvent}}));
+            },
+            async onContextMenuItem({event}) {
                 const entry = this.getEntryByPathRecursive(event.detail.path);
                 event.preventDefault();
                 host.dispatchEvent(new CustomEvent("contextmenuentry", {
@@ -261,7 +314,7 @@ export default {
                     }
                 }));
             },
-            async keydown({event}){
+            async onKeydown({event}){
                 if (event.key === "Enter" && event.altKey) {
                     const entry = this.getEntryByPathRecursive(state.selectedPath);
                     host.dispatchEvent(new CustomEvent("properties", {bubbles: true, detail: {path: state.selectedPath, entry}}));
@@ -269,6 +322,10 @@ export default {
                 } else if (event.key === "F2") {
                     const entry = this.getEntryByPathRecursive(state.selectedPath);
                     host.dispatchEvent(new CustomEvent("rename", {bubbles: true, detail: {path: state.selectedPath, entry}}));
+                    event.preventDefault();
+                } else if (event.key === "Delete") {
+                    const entry = this.getEntryByPathRecursive(state.selectedPath);
+                    host.dispatchEvent(new CustomEvent("delete", {bubbles: true, detail: {path: state.selectedPath, entry}}));
                     event.preventDefault();
                 }
             },

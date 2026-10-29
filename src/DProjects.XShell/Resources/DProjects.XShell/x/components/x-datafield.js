@@ -76,7 +76,9 @@ export const contract = {
         add:            {type:"boolean", default:false, attribute:true, state:true, description:""},
         default:        {type:"any", default:null, attribute:true, attributeParser:"json", state:true, description:"Value used to initialize the field when value is undefined."},
         itemDefault:    {type:"any", default:null, attribute:true, attributeParser:"json", state:true, description:"Default value used to initialize newly added list items."},
-        template:       {type:"string", default:"", attribute:true, state:true, description:"XTemplate used when type is 'x-template'."}
+        template:       {type:"string", default:"", attribute:true, state:true, description:"XTemplate used when type is 'x-template'."},
+        collapsed:      {type:"boolean", default:false, attribute:true, state:true, description:""},
+        collapsible:    {type:"boolean", default:false, attribute:true, state:true, description:""},
     },
     methods: {
         validate: {
@@ -112,6 +114,7 @@ export default {
         :host label {display:var(--x-datafield-label-display, none); padding-bottom:.5em; width:100%; font-weight:bold;}
         :host label span.label {font-weight:600; }
         :host label span.required {}
+        :host label .icon-collapsible {display:none;}
 
         :host label span.langs {float:right; display:inline-flex; gap:.15em}
         :host label span.langs div {display:flex; gap:.15em}
@@ -151,8 +154,13 @@ export default {
         label.error ~ .input::placeholder {color:var(--x-datafield-error-color); opacity:.5;}
         label.error ~ .container div label {color:var(--x-datafield-error-color)}
         label.error ~ select.input {color:var(--x-color-text);}
-        
-        
+
+        label.collapsed {}
+        label.collapsed ~ .input {display:none;}
+        label.collapsible span.caption {cursor:pointer}
+        label.collapsible .icon-collapsible {display:inline-block;}
+        label.collapsible:not(.collapsed) .icon-collapsible {transform: rotate(90deg);}
+                
         :host > input[type='file'] {
             padding:.35em;
         }
@@ -256,9 +264,12 @@ export default {
         
         `,
     template: `
-        <label x-if="state.label" x-attr:for="state.inputId" x-attr:label-mode="state.labelMode" x-class:error="state.errors.length">
-            <span class="label" x-if="state.label" x-text="state.label"></span>
-            <span class="required" x-if="state.required">*</span>
+        <label x-if="state.label" x-attr:for="state.inputId" x-attr:label-mode="state.labelMode" x-class:error="state.errors.length" x-class:collapsed="state.collapsed" x-class:collapsible="state.collapsible">
+            <span class="caption" x-on:click="toggleCollapse">
+                <span class="label" x-if="state.label" x-text="state.label"></span>
+                <span class="required" x-if="state.required">*</span>
+                <x-icon class="icon-collapsible" icon="x-keyboard-arrow-right"></x-icon>
+            </span>
             <span class="langs" x-if="state.isI18n" >
                 <div x-if="state.type!='text_i18n' && state.type!='textarea_i18n'">
                     <x-button 
@@ -694,6 +705,9 @@ export default {
                 state.hasChilds = (host.firstElementChild != null);
             },
 
+            toggleCollapse(args) {
+                state.collapsed = !state.collapsed;
+            },
             async slotchange(args) {
                 // slotchange
                 state.hasChilds = (host.firstElementChild != null);

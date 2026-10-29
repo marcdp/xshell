@@ -44,7 +44,8 @@ export const contract = {
     },
     methods: {
         focus: {description: "Focuses the list view."},
-        clear: {description: "Clears the selection."}
+        clear: {description: "Clears the selection."},
+        select: {description: "Selects an item."}
     },
     slots: {
         "": {
@@ -69,6 +70,21 @@ export default {
 
         /* x-dropdown */
         x-dropdown {}
+
+        /* drag-over */
+        :host(.drag-over) {
+            outline: .125em dashed var(--x-color-gray);
+            outline-offset: .2em;
+            border-radius: var(--x-datafield-border-radius);            
+        }
+        :host(.drag-over) > div {opacity:.25}
+        :host(.drag-over)::before {
+            content: 'Drop files here';
+            flex:1; position:absolute;
+            top:50%; left:50%;
+            color:var(--x-color-gray);
+            transform: translate(-50%, -50%);
+        }
 
         /* items */
         .items {flex:1;}
@@ -139,8 +155,12 @@ export default {
                 const items = [...host.querySelectorAll(":scope > x-listview-body > x-listview-item")];
                 items.forEach(item => { item.selected = false; });
             },
-            changeView(args) {
-                const view = args.event.currentTarget.dataset.view;
+            select(path) {
+                const items = [...host.querySelectorAll(":scope > x-listview-body > x-listview-item")];
+                items.forEach(item => { item.selected = (item.path === path); });
+            },
+            changeView( { event }) {
+                const view = event.currentTarget.dataset.view;
                 if (state.availableViews.includes(view)) state.view = view;
             },
             refreshViews() {

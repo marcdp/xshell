@@ -172,10 +172,7 @@ export default {
                 // mount
                 if (state.autofocus) {
                     timer.setTimeout(() => {
-                        let focusable = host.shadowRoot.querySelector("a.button");
-                        if (focusable) {
-                            focusable.focus();
-                        }
+                        this.focus();
                     }, 25);
                 }
             },
