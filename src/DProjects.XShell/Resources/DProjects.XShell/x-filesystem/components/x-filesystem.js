@@ -197,6 +197,15 @@ export default {
                     this.refresh( { selectedPath: newPath } );
                 }
             },
+            async showUploadFiles(path) {
+                if (!path) return;
+                const handles = await window.showOpenFilePicker({multiple:true});
+                for (const handle of handles) {
+                    const file = await handle.getFile();
+                    console.log(file.name);
+                }
+                await this.uploadFiles(path, handles);
+            },
             async uploadFiles(path, files) {
                 // async open({ href, params, title, breadcrumb, icon, context }) {
                 if (!path) return;
@@ -303,7 +312,7 @@ export default {
                 } else if (event.detail.command === "newFolder") {
                     this.newFolder(state.entry?.path ?? state.pathList);
                 } else if (event.detail.command === "uploadFiles") {
-                    this.uploadFiles(state.entry?.path ?? state.pathList);
+                    this.showUploadFiles(state.entry?.path ?? state.pathList);
                 } else if (event.detail.command === "rename") {
                     if (state.entry) this.rename(state.entry.path);
                 } else {
