@@ -89,19 +89,33 @@ export default {
         }
     },
     controller({ state, page, loader }) {
-        async function getFileEntrySize(entry) {
-            const file = await new Promise((resolve, reject) => entry.file(resolve, reject));
-            return file.size;
+        const isNativeFile = entry => typeof File !== "undefined" && entry instanceof File;
+        const isFileEntry = entry => isNativeFile(entry) || entry?.isFile === true || entry?.kind === "file";
+        const isDirectoryEntry = entry => entry?.isDirectory === true || entry?.kind === "directory";
+        async function getFile(entry) {
+            if (isNativeFile(entry)) return entry;
+            if (entry?.kind === "file") return await entry.getFile();
+            if (entry?.isFile === true) return await new Promise((resolve, reject) => entry.file(resolve, reject));
+            throw new TypeError("Unsupported upload file input");
         }
-        const getEntries =  async function* (entry, basePath = "") {
-            const path = basePath + "/" + entry.name;
+        const getEntries = async function* (entry, basePath = "", signal) {
+            signal?.throwIfAborted();
+            if (!isFileEntry(entry) && !isDirectoryEntry(entry)) throw new TypeError("Unsupported upload input");
+            const path = PathUtils.combine(basePath || "/", entry.name);
             yield {entry, path};
-            if (entry.isDirectory) {
+            if (entry?.kind === "directory") {
+                for await (const child of entry.values()) {
+                    signal?.throwIfAborted();
+                    yield* getEntries(child, path, signal);
+                }
+            } else if (entry?.isDirectory === true) {
                 const reader = entry.createReader();
                 while (true) {
+                    signal?.throwIfAborted();
                     const children = await new Promise((resolve, reject) => reader.readEntries(resolve, reject));
+                    signal?.throwIfAborted();
                     if (!children.length) break;
-                    for (const child of children) yield* getEntries(child, path);
+                    for (const child of children) yield* getEntries(child, path, signal);
                 }
             }
         }
@@ -111,44 +125,51 @@ export default {
                 this.abortController = new AbortController();
             },
             async mount() {
-                // mount
-                if (state.src && state.path) {
-                    state.filesystem = await loader.load("filesystem:" + state.src);
-                }
-                // expand directories files
-                state.summary.path= "Scanning files ...";
-                const files = []
-                for(const file of state.files) {
-                    if (file.isDirectory) {
-                        for await (const {entry: child, path} of getEntries(file)) {
-                            files.push({entry: child, path});
-                        }
-                    } else {
-                        files.push({entry: file, path: file.fullPath});
-                    }   
-                }
-                // create upload tasks
+                const signal = this.abortController.signal;
                 const tasks = [];
-                for(const f of files) {
-                    const file = (f.entry.isDirectory ? null : await new Promise((resolve, reject) => f.entry.file(resolve, reject)));
-                    state.summary.bytesTotal += file?.size ?? 0;
-                    const task = {
-                        type: f.entry.isDirectory ? "directory" : "file",                        
-                        entry: f.entry,
-                        file: file,
-                        size: file?.size,
-                        path: PathUtils.combine(state.path, f.path),
-                        status: "pending"
+                try {
+                    // mount
+                    if (state.src && state.path) {
+                        state.filesystem = await loader.load("filesystem:" + state.src);
                     }
-                    tasks.push(task);
-                    state.summary.total++;                    
-                    // update progress
-                    page.invalidate();
+                    // expand directories and create upload tasks
+                    state.summary.path= "Scanning files ...";
+                    for(const entry of state.files) {
+                        signal.throwIfAborted();
+                        for await (const {entry: child, path} of getEntries(entry, "", signal)) {
+                            signal.throwIfAborted();
+                            const type = isDirectoryEntry(child) ? "directory" : "file";
+                            const file = type === "file" ? await getFile(child) : null;
+                            signal.throwIfAborted();
+                            state.summary.bytesTotal += file?.size ?? 0;
+                            const task = {
+                                type,
+                                entry: child,
+                                file,
+                                size: file?.size,
+                                path: PathUtils.combine(state.path, path),
+                                status: "pending"
+                            }
+                            tasks.push(task);
+                            state.summary.total++;
+                            // update progress
+                            page.invalidate();
+                        }
+                    }
+                    // set tasks
+                    state.tasks = tasks;
+                    signal.throwIfAborted();
+                    // start processing tasks
+                    this.processTasks();
+                } catch (error) {
+                    if (!signal.aborted) throw error;
+                    state.tasks = tasks;
+                    page.close(tasks.map(task => ({
+                        path: task.path,
+                        status: task.status,
+                        error: task.error,
+                    })));
                 }
-                // set tasks
-                state.tasks = tasks;
-                // start processing tasks
-                this.processTasks();
             },
             
             async processTasks() {
