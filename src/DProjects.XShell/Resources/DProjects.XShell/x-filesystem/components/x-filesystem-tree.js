@@ -7,7 +7,7 @@ export const contract = {
             description: "Fired when a tree item is selected",
             detail: {
                 path: {type: "string", description: "Path of the entry"},
-                entry: {type: "object", description: "Entry object"},
+                paths: {type: "array", description: "Paths of the selected entries"},
                 source: {type: "string", description: "Source of the event (tree)"}
             }
         },
@@ -15,7 +15,6 @@ export const contract = {
             description: "Fired when a tree item is toggled (expanded or collapsed)",
             detail: {
                 path: {type: "string", description: "Path of the entry"},
-                entry: {type: "object", description: "Entry object"},
                 source: {type: "string", description: "Source of the event (tree)"}
             }
         },
@@ -39,7 +38,9 @@ export const contract = {
             description: "Fired when a context menu is requested for an entry",
             detail: {
                 path: {type: "string", description: "Path of the entry"},
+                paths: {type: "array", description: "Paths of the selected entries"},
                 entry: {type: "object", description: "Entry object"},
+                entries: {type: "array", description: "Entry objects of the selected entries"},
                 source: {type: "string", description: "Source of the event (tree)"},
                 x: {type: "number", description: "X coordinate of the context menu request"},
                 y: {type: "number", description: "Y coordinate of the context menu request"}
@@ -197,7 +198,7 @@ export default {
                     state.selectedPath = path;
                     if (treeview) treeview.select(path);
                     if (selectedPathChanged) {
-                        host.dispatchEvent(new CustomEvent("select", {bubbles: true, detail: {path: entry.path}}));
+                        host.dispatchEvent(new CustomEvent("select", {bubbles: true, detail: {path: entry.path, paths: [entry.path]}}));
                     }
                 }
             },
@@ -230,7 +231,6 @@ export default {
                     const entry = this.getEntryByPathRecursive(selectedPath);
                     if (entry) {
                         state.selectedPath = selectedPath;
-                        //host.dispatchEvent(new CustomEvent("select", {bubbles: true, detail: {path: selectedPath, entry}}));
                         commands.enqueue("select", selectedPath);
                     }
                 }
@@ -283,7 +283,7 @@ export default {
                 if (entry) {
                     state.selectedPath = path;
                     if (treeview) treeview.select(path);
-                    host.dispatchEvent(new CustomEvent("select", {bubbles: true, detail: {path: entry.path, sourceEvent: event.detail.sourceEvent}}));
+                    host.dispatchEvent(new CustomEvent("select", {bubbles: true, detail: {path: entry.path, paths: [entry.path], sourceEvent: event.detail.sourceEvent}}));
                 }
             },
             async onToggle({event}){
@@ -307,7 +307,9 @@ export default {
                     cancelable: true,
                     detail: {
                         path: event.detail.path,
+                        paths: [event.detail.path],
                         entry,
+                        entries: [entry],
                         source: "list", // or "tree"
                         x: event.detail.x,
                         y: event.detail.y

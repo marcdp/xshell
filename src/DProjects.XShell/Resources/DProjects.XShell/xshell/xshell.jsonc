@@ -59,6 +59,10 @@
                 "contract": "json-validator",
                 "implementation": "/services/json-validator.js"
             },
+            "tasks":{
+                "contract": "tasks",
+                "implementation": "/services/tasks.js"
+            },
             "temp": {
                 "contract": "temp",
                 "implementation": "/services/temp.js"

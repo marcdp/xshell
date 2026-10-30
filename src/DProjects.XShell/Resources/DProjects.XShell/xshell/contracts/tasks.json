@@ -1,0 +1,73 @@
+
+{
+  "label": "Tasks",
+  "description": "Manages asynchronous background tasks, including execution, progress reporting, cancellation, and status monitoring.",
+  "properties": {
+    "tasks": {
+      "type": "array",
+      "readonly": true,
+      "description": "Snapshot of registered tasks.",
+      "schema": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": { "type": "number" },
+            "name": { "type": "string" },
+            "description": { "type": "string" },
+            "status": {"type": "string", "enum": ["running", "ok", "error", "aborted"]},
+            "progress": { "type": ["number", "null"] },
+            "error": { "type": ["string", "null"] },
+            "started": { "type": "number" },
+            "finished": { "type": ["number", "null"] }
+          },
+          "required": ["id", "name", "description", "status"]
+        }
+      }
+    }
+  },
+  "events": {
+    "xshell:tasks:change": {
+      "description": "Emitted through the application bus when a task is added, updated, completed, aborted, or removed.",
+      "detail": {
+        "id": { "type": "number", "required": true },
+        "status": { "type": "string", "required": true }
+      }
+    }
+  },
+  "methods": {
+    "run": {
+      "description": "Starts an asynchronous task and returns its task object. The action receives a context containing signal, setDescription, and setProgress.",
+      "parameters": [
+        { "name": "name", "type": "string", "required": true },
+        { "name": "description", "type": "string", "required": true },
+        { "name": "action", "type": "function", "required": true }
+      ],
+      "returns": {
+        "type": "object",
+        "description": "Task object containing id, status, and a promise for the asynchronous result."
+      }
+    },
+    "getTasks": {
+      "description": "Returns snapshots of all registered tasks.",
+      "returns": { "type": "array" }
+    },
+    "getTask": {
+      "description": "Returns a task snapshot by ID, or null when not found.",
+      "parameters": [
+        { "name": "id", "type": "number", "required": true }
+      ],
+      "returns": { "type": "any" }
+    },
+    "abort": {
+      "description": "Requests cancellation of a running task through its AbortController.",
+      "parameters": [
+        { "name": "id", "type": "number", "required": true }
+      ]
+    },
+    "clear": {
+      "description": "Removes completed, failed, and aborted tasks. Running tasks are retained."
+      
+    }
+  }
+}

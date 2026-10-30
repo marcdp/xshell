@@ -8,7 +8,11 @@ export const contract = {
         expanded:       {type:"boolean", default:false, attribute:true, state:true, description:""},
         collapseOnClick:{type:"boolean", default:false, attribute:true, state:true, description:""}
     },
-    methods: {},
+    methods: {
+        expand: {description: "Expands the dropdown panel."},
+        collapse: {description: "Collapses the dropdown panel."}
+        
+    },
     slots: {
         "": {
             description: "Default slot for the dropdown content."

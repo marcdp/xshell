@@ -104,18 +104,21 @@ configuration merging without assigning it to the `x` module.
 
 ## Service contract schema
 
-A contract requires string `label`; optional top-level fields are `icon`, `description`, `properties`, `events`, and `methods`.
+A contract requires string `label`; optional top-level fields are `icon`, `description`, `types`, `properties`, `events`, and `methods`.
 Additional fields are rejected. Type labels are `string`, `number`, `integer`, `boolean`, `object`, `array`, `function`, `date`, and `any`
 (there is no `void` label in this schema).
 
-- Properties require `type`; optional fields are `description`, `default`, `readonly`, and unique string `enum`.
-- Events accept `description` and a `detail` field map; each detail entry requires `type` with optional `description`/`required`.
-- Methods accept `description`, `parameters`, and `returns`. Parameters require `name`/`type` and may set `description`, `required`, `enum`, `default`.
-  Returns require `type` and may set `description`.
+- `types` maps nonempty, contract-local names to reusable definitions. Each definition requires `type` and may set `description` and `schema`.
+- Properties require exactly one of `type` or `ref`; optional fields are `description`, `default`, `readonly`, and unique string `enum`.
+- Events accept `description` and a `detail` field map; each detail entry requires exactly one of `type` or `ref`, with optional
+  `description`/`required`.
+- Methods accept `description`, `parameters`, and `returns`. Parameters require `name` and exactly one of `type` or `ref`, and may set
+  `description`, `required`, `enum`, or `default`. Returns require exactly one of `type` or `ref` and may set `description`.
 
-For every value descriptor above, `type` is required and declares the XShell value category. Optional `schema` contains additional JSON Schema
-Draft 2020-12 constraints. It may be a JSON Schema object or boolean. Existing compact metadata such as `required`, `default`, `readonly`, and
-`enum` remains outside `schema`.
+For every value descriptor above, `type` directly declares the XShell value category, while `ref` names a definition in the same contract's
+`types` map. References cannot resolve against another contract. A descriptor cannot combine `type` with `ref`, or `ref` with `schema`.
+For direct `type` descriptors and named type definitions, optional `schema` contains additional JSON Schema Draft 2020-12 constraints. It may be
+a JSON Schema object or boolean. Existing compact metadata such as `required`, `default`, `readonly`, and `enum` remains outside `schema`.
 
 ```json
 { "type": "string", "enum": [ "safe", "fast" ] }
@@ -135,9 +138,33 @@ Nested objects and arrays use standard JSON Schema under `schema`, not a custom 
 }
 ```
 
-The contract validator checks the outer descriptor shape, including `type` and the object/boolean form of `schema`. It does not validate runtime
-property values, method arguments or returns, or event payloads against these constraints. There are no generics, inheritance, parameter checks,
-version negotiation, scopes, or selectable lifetimes.
+A named type can be reused throughout one service contract:
+
+```json
+{
+    "label": "Tasks",
+    "types": {
+        "task": { "type": "object", "description": "A task record" }
+    },
+    "properties": {
+        "selectedTask": { "ref": "task", "readonly": true }
+    },
+    "methods": {
+        "save": {
+            "parameters": [{ "name": "task", "ref": "task" }],
+            "returns": { "ref": "task" }
+        }
+    },
+    "events": {
+        "changed": { "detail": { "task": { "ref": "task", "required": true } } }
+    }
+}
+```
+
+The contract validator checks the outer descriptor shape, the object/boolean form of `schema`, and that every `ref` names a type in that contract.
+Named types and references are descriptive metadata. They do not validate runtime property values, method arguments or returns, or event payloads.
+There is no recursive reference resolution, cross-contract type lookup, type generation, generics, inheritance, parameter checking, version
+negotiation, scopes, or selectable lifetimes.
 
 ## Resolution validation and core services
 

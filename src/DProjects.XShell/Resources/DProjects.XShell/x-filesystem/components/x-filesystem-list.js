@@ -5,11 +5,25 @@ export const contract = {
     description: "Filesystem list component",
     events: {
         select: {description: "Fired when an item is selected"},
-        activate: {description: "Fired when an item is activated"},
+        activate: {
+            description: "Fired when an item is activated",
+            detail: {
+                path: {type: "string", description: "Path of the activated item"},
+                entry: {type: "object", description: "The activated filesystem entry"},
+                paths: {type: "array", description: "Paths of the activated items"},
+                entries: {type: "array", description: "The activated filesystem entries"}
+            }
+        },
         back: {description: "Fired when the back action is triggered"},
         properties: {description: "Fired when the properties action is triggered"},
         rename: {description: "Fired when the rename action is triggered"},
-        delete: {description: "Fired when the delete action is triggered"},
+        delete: {
+            description: "Fired when the delete action is triggered",
+            detail: {
+                path: {type: "string", description: "Path of the item to delete"},
+                paths: {type: "array", description: "Paths of the items to delete"}
+            }
+        },
         upload: {
             description: "Fired when files are uploaded",
             detail: {
@@ -21,7 +35,9 @@ export const contract = {
             description: "Fired when a context menu entry is requested",
             detail: {
                 path: {type: "string", description: "Path of the item"},
+                paths: {type: "array", description: "Paths of the items"},
                 entry: {type: "object", description: "The filesystem entry"},
+                entries: {type: "array", description: "Filesystem entries"},
                 source: {type: "string", description: "Source of the context menu request"},
                 x: {type: "number", description: "X coordinate of the context menu"},
                 y: {type: "number", description: "Y coordinate of the context menu"}
@@ -56,7 +72,7 @@ export default {
         x-listview {height:100%;}
     `,
     template: `
-        <x-listview view="details" views="list, details, tiles, icons" x-class:drag-over="state.dragOver" x-on:select="onSelect" x-on:activate="onActivate" x-on:keydown="onKeydown" x-on:contextmenuitem="onContextMenuItem" x-on:dragenter="onDragEnter" x-on:dragover="onDragOver" x-on:dragleave="onDragLeave" x-on:dragend="onDraEnd" x-on:drop="onDrop" >
+        <x-listview multiple view="details" views="list, details, tiles, icons" x-class:drag-over="state.dragOver" x-on:select="onSelect" x-on:activate="onActivate" x-on:keydown="onKeydown" x-on:contextmenuitem="onContextMenuItem" x-on:dragenter="onDragEnter" x-on:dragover="onDragOver" x-on:dragleave="onDragLeave" x-on:dragend="onDraEnd" x-on:drop="onDrop" >
             <x-listview-head>
                 <x-listview-column label="Name"></x-listview-column>
                 <x-listview-column label="Size" width="6em" style="text-align:right; padding-right:0.5em;"></x-listview-column>
@@ -83,11 +99,12 @@ export default {
         path: "/",
         entries: [],
         selectedPath: null,
+        selectedPaths: [],
         dragOver: false,
     },
     controller({ state, events, host, commands }) {
         return {
-            async load(args) {
+            async load() {
                 // load
                 events.on(state, ["change:path", "change:filesystem"], "refresh");
                 events.on(state, ["change:search_name"], "filter");
@@ -120,6 +137,7 @@ export default {
                         const entry = state.entries.find(e => e.path === selectedPath) || null;
                         if (entry) {
                             state.selectedPath = selectedPath;
+                            state.selectedPaths = [selectedPath];
                             host.dispatchEvent(new CustomEvent("select", {bubbles: true, detail: {path: selectedPath, entry}}));
                             commands.enqueue("select", selectedPath);
                         }
@@ -147,14 +165,17 @@ export default {
             async onSelect({event}){
                 // select
                 state.selectedPath = event.detail.path;
+                state.selectedPaths = event.detail.paths;
                 const entry = state.entries.find(e => e.path === event.detail.path) || null;
                 host.dispatchEvent(new CustomEvent("select", {bubbles: true, detail: {path: event.detail.path, entry}}));
             },
             async onActivate({event}){
                 // activate
                 state.selectedPath = event.detail.path;
+                state.selectedPaths = event.detail.paths;
                 const entry = state.entries.find(e => e.path === event.detail.path) || null;
-                host.dispatchEvent(new CustomEvent("activate", {bubbles: true, detail: {path: event.detail.path, entry}}));
+                const entries = state.entries.filter(e => state.selectedPaths.includes(e.path));
+                host.dispatchEvent(new CustomEvent("activate", {bubbles: true, detail: {path: event.detail.path, entry, paths: state.selectedPaths, entries}}));
             }, 
             async onKeydown({event}){
                 if (event.key === "Enter" && event.altKey) {
@@ -170,14 +191,14 @@ export default {
                     host.dispatchEvent(new CustomEvent("rename", {bubbles: true, detail: {path: state.selectedPath, entry}}));
                     event.preventDefault();
                 } else if (event.key === "Delete") {
-                    const entry = state.entries.find(e => e.path === state.selectedPath) || null;
-                    host.dispatchEvent(new CustomEvent("delete", {bubbles: true, detail: {path: state.selectedPath, entry}}));
+                    host.dispatchEvent(new CustomEvent("delete", {bubbles: true, detail: {path: state.selectedPath, paths: state.selectedPaths}}));
                     event.preventDefault();
                 }
             },
             async onContextMenuItem({event}) {
                 // handle context menu item selection
                 const entry = state.entries.find(e => e.path === event.detail.path) || null;
+                const entries = state.entries.filter(e => state.selectedPaths.includes(e.path));
                 event.preventDefault();
                 host.dispatchEvent(new CustomEvent("contextmenuentry", {
                     bubbles: true,
@@ -185,7 +206,9 @@ export default {
                     cancelable: true,
                     detail: {
                         path: event.detail.path,
+                        paths: state.selectedPaths,
                         entry,
+                        entries,
                         source: "list",
                         x: event.detail.x,
                         y: event.detail.y
@@ -216,15 +239,11 @@ export default {
                 state.dragOver = false;
                 if (!state.filesystem || state.filesystem.isReadonly) return;
                 if (!event.dataTransfer.types.includes("Files")) return;
-
                 event.preventDefault();
                 event.stopPropagation();
-
                 const items = [...event.dataTransfer.items].filter(item => item.kind === "file");
                 const files = items.map(item => item.webkitGetAsEntry?.() || item.getAsFile()).filter(Boolean);
-
                 host.dispatchEvent(new CustomEvent("upload", {bubbles: true, detail: {path: state.path, files}}));
-                
             }
 
         }

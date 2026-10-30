@@ -20,7 +20,8 @@ export default  {
             background-color:var(--x-color-primary); 
             color:var(--x-color-white);
             padding:.225em .5em .175em .5em; 
-            font-size:var(--x-font-size-small); 
+            font-size:var(--x-font-size-x-small); 
+            line-height:calc(var(--x-font-size-x-small) + .25em);
             font-weight:600; 
             text-align:center;
             min-width:1.75em;

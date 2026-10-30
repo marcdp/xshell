@@ -69,7 +69,7 @@ const valueDescriptorContracts = {
     returnValue: descriptor => ({ label: "Example", methods: { read: { returns: descriptor } } })
 };
 
-test("service value descriptors retain required type and accept optional JSON Schema constraints", async () => {
+test("service value descriptors retain direct types and accept optional JSON Schema constraints", async () => {
     const nestedSchema = {
         type: "object",
         properties: {
@@ -89,13 +89,92 @@ test("service value descriptors retain required type and accept optional JSON Sc
     await validateContract("boolean-false.json", valueDescriptorContracts.returnValue({ type: "any", schema: false }));
 });
 
-test("service value descriptors reject schema without type and removed recursive properties", async () => {
+test("service value descriptors reject schema without type or ref and removed recursive properties", async () => {
     for (const [name, createContract] of Object.entries(valueDescriptorContracts)) {
         await assert.rejects(validateContract(`${name}-missing-type.json`, createContract({ schema: { type: "object" } })), /Invalid contract/);
         await assert.rejects(validateContract(`${name}-old-properties.json`, createContract({ type: "object", properties: { id: { type: "string" } } })), /Invalid contract/);
     }
 
     await assert.rejects(validateContract("invalid-schema.json", valueDescriptorContracts.methodParameter({ type: "object", schema: "object" })), /Invalid contract/);
+});
+
+test("service contracts accept contract-local named type references in every descriptor location", async () => {
+    await validateContract("named-types.json", {
+        label: "Tasks",
+        types: {
+            task: { type: "object", description: "A task record", schema: { required: ["id"] } }
+        },
+        properties: {
+            selected: { ref: "task" },
+            fallback: { ref: "task", readonly: true }
+        },
+        methods: {
+            save: {
+                parameters: [{ name: "task", ref: "task", required: true }],
+                returns: { ref: "task" }
+            }
+        },
+        events: {
+            changed: { detail: { task: { ref: "task", required: true } } }
+        }
+    });
+});
+
+test("service contracts without named types remain valid", async () => {
+    await validateContract("legacy.json", {
+        label: "Legacy",
+        properties: { value: { type: "string" } },
+        methods: { read: { returns: { type: "string" } } }
+    });
+});
+
+test("service contract named type references must resolve locally with useful diagnostics", async () => {
+    const owner = { label: "Owner", types: { task: { type: "object" } }, properties: { task: { ref: "task" } } };
+    const consumer = { label: "Consumer", properties: { task: { ref: "task" } } };
+    const unresolvedContracts = {
+        property: [valueDescriptorContracts.property({ ref: "missing" }), "properties.value.ref"],
+        parameter: [valueDescriptorContracts.methodParameter({ ref: "missing" }), "methods.update.parameters[0].ref"],
+        returnValue: [valueDescriptorContracts.returnValue({ ref: "missing" }), "methods.read.returns.ref"],
+        eventDetail: [valueDescriptorContracts.eventDetailProperty({ ref: "missing" }), "events.changed.detail.value.ref"]
+    };
+
+    await validateContract("owner.json", owner);
+    for (const [name, [contract, location]] of Object.entries(unresolvedContracts)) {
+        const original = structuredClone(contract);
+        await assert.rejects(
+            validateContract(`${name}.json`, contract),
+            error => error.message.includes("'missing'") && error.message.includes(`'${location}'`)
+        );
+        assert.deepEqual(contract, original);
+    }
+    await assert.rejects(validateContract("consumer.json", consumer), /Undefined type reference 'task'/);
+});
+
+test("service contract named type references reject invalid descriptor combinations", async () => {
+    for (const [name, descriptor] of Object.entries({
+        empty: { ref: "" },
+        both: { type: "object", ref: "task" },
+        neither: { description: "Missing type metadata" },
+        schema: { ref: "task", schema: { type: "object" } }
+    })) {
+        await assert.rejects(validateContract(`${name}.json`, {
+            label: "Invalid",
+            types: { task: { type: "object" } },
+            properties: { task: descriptor }
+        }), /Invalid contract/);
+    }
+});
+
+test("service contract named type definitions require a nonempty name and valid value type", async () => {
+    for (const [name, types] of Object.entries({
+        emptyName: { "": { type: "object" } },
+        missingType: { task: { description: "Missing value type" } },
+        invalidType: { task: { type: "record" } },
+        invalidSchema: { task: { type: "object", schema: "object" } },
+        additionalField: { task: { type: "object", required: true } }
+    })) {
+        await assert.rejects(validateContract(`${name}.json`, { label: "Invalid", types }), /Invalid contract/);
+    }
 });
 
 test("service value descriptors preserve compact API metadata", async () => {

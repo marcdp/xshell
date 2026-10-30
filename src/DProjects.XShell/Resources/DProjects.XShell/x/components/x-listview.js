@@ -5,10 +5,8 @@ export const contract = {
         select: {
             description: "Raised when an item's selected state changes through list interaction.",
             detail: {
-                item: {type:"object", required:true},
-                index: {type:"number", required:true},
-                selected: {type:"boolean", required:true},
-                selectedItems: {type:"array", required:true}
+                path: {type:"string", required:true},
+                paths: {type:"array", required:true},
             },
             bubbles: true,
             composed: true
@@ -16,9 +14,8 @@ export const contract = {
         activate: {
             description: "Raised when an item is activated by Enter, a link click, or a double click.",
             detail: {
-                item: {type:"object", required:true},
-                index: {type:"number", required:true},
-                source: {type:"string", required:true}
+                path: {type:"string", required:true},
+                paths: {type:"array", required:true},
             },
             bubbles: true,
             composed: true
@@ -118,6 +115,7 @@ export default {
     },
     controller({ state, events, host, timer }) {
         const supportedViews = ["list", "details", "icons", "tiles"];
+        let selectionAnchor  = null;
         return {
             load() {
                 // load
@@ -229,25 +227,43 @@ export default {
                 let event = args.event;
                 let item = event.target.closest("x-listview-item");
                 if (item) {
-                    item.dispatchEvent(new CustomEvent("activate", {bubbles: true, detail: {path: item.path}}));
+                    item.dispatchEvent(new CustomEvent("activate", {bubbles: true, detail: {path: item.path, paths: [item.path]}}));
                 }
             },
             async click(args) {
-                // click
+                // click                
                 let event = args.event;
                 let item = event.target.closest("x-listview-item");
                 if (item) {
-                    if (state.multiple) {
+                    if (state.multiple && event.ctrlKey) {
+                        // multiple selection with Ctrl key
                         item.selected = !item.selected;
-                    } else {
+                    } else if (state.multiple && event.shiftKey) {
+                        // multiple selection with Shift key
+                        const items = Array.from(host.querySelectorAll("x-listview-item"));
+                        const anchor = items.indexOf(selectionAnchor);
+                        const target = items.indexOf(item);
+                        if (anchor !== -1) {
+                            const start = Math.min(anchor, target);
+                            const end = Math.max(anchor, target);
+                            items.forEach((item, index) => {
+                                item.selected = item.selected || index >= start && index <= end;
+                            });
+                        } else {
+                            item.selected = true;
+                        }
+                    } else {                        
                         let items = host.querySelectorAll("x-listview-item");
                         items.forEach((item) => {
                             item.selected = false;
                         });
                         item.selected = true;
                     }
-                    item.dispatchEvent(new CustomEvent("select", {bubbles: true, detail: {path: item.path}}));
+                    let paths = Array.from(host.querySelectorAll("x-listview-item")).filter(item => item.selected).map(item => item.path);
+                    item.dispatchEvent(new CustomEvent("select", {bubbles: true, detail: {path: item.path, paths}}));  
                 }
+                // set selection anchor
+                if (!event.shiftKey || !selectionAnchor) selectionAnchor = item;
                 // focus if required
                 if (!document.activeElement || document.activeElement.localName == "body") {
                     host.shadowRoot.querySelector('[ref="items"]').focus();
@@ -263,56 +279,84 @@ export default {
                 // get visible items
                 const items = [...host.querySelectorAll(":scope > x-listview-body > x-listview-item")];
                 // get selected items
-                let selected = null;
+                let firstSelected = null;
+                let lastSelected = null;
                 let selecteds = [];
                 for(let target of items) {
                     if (target.selected) {
                         selecteds.push(target);
-                        selected = target;
+                        firstSelected = firstSelected || target;
+                        lastSelected = target;
                     }
                 }
                 let pageSize = 10;
                 // process key
                 let newSelecteds = null;
                 if (event.key == "ArrowUp") {
-                    let index = items.indexOf(selected);
+                    let index = items.indexOf(firstSelected);
                     if (index > 0) {
-                        newSelecteds = [items[index-1]];
-                        newSelecteds[0].dispatchEvent(new CustomEvent("select", {bubbles: true, detail: {path: items[index-1].path}}));
-                        newSelecteds[0].scrollIntoView({block: "nearest", inline: "nearest", behavior: "instant"});
+                        if (event.shiftKey) {
+                            newSelecteds = [...selecteds, items[index-1]];
+                            let paths = newSelecteds.map(item => item.path);
+                            newSelecteds[newSelecteds.length-1].dispatchEvent(new CustomEvent("select", {bubbles: true, detail: {path: items[index-1].path, paths}}));
+                            newSelecteds[newSelecteds.length-1].scrollIntoView({block: "nearest", inline: "nearest", behavior: "instant"});
+                        } else {
+                            newSelecteds = [items[index-1]];
+                            newSelecteds[0].dispatchEvent(new CustomEvent("select", {bubbles: true, detail: {path: items[index-1].path, paths:[items[index-1].path]}}));
+                            newSelecteds[0].scrollIntoView({block: "nearest", inline: "nearest", behavior: "instant"});
+                        }
                     }
                     event.preventDefault();
                 } else if (event.key == "ArrowDown") {
-                    let index = items.indexOf(selected);
+                    let index = items.indexOf(lastSelected);
                     if (index < items.length - 1) {
-                        newSelecteds = [items[index+1]];
-                        newSelecteds[0].dispatchEvent(new CustomEvent("select", {bubbles: true, detail: {path: items[index+1].path}}));
-                        newSelecteds[0].scrollIntoView({block: "nearest", inline: "nearest", behavior: "instant"});
+                        if (event.shiftKey) {
+                            newSelecteds = [...selecteds, items[index+1]];
+                            let paths = newSelecteds.map(item => item.path);
+                            newSelecteds[newSelecteds.length-1].dispatchEvent(new CustomEvent("select", {bubbles: true, detail: {path: items[index+1].path, paths}}));
+                            newSelecteds[newSelecteds.length-1].scrollIntoView({block: "nearest", inline: "nearest", behavior: "instant"});
+                        } else {
+                            newSelecteds = [items[index+1]];
+                            newSelecteds[0].dispatchEvent(new CustomEvent("select", {bubbles: true, detail: {path: items[index+1].path, paths:[items[index+1].path]}}));
+                            newSelecteds[0].scrollIntoView({block: "nearest", inline: "nearest", behavior: "instant"});
+                        }
                     }
                     event.preventDefault();
                 } else if (event.key == "PageUp") {
                     let inc = pageSize;
-                    let index = items.indexOf(selected);
+                    let index = items.indexOf(firstSelected);
                     if (index > 0) {
-                        newSelecteds = [items[Math.max(index-inc, 0)]];
-                        newSelecteds[0].dispatchEvent(new CustomEvent("select", {bubbles: true, detail: {path: items[Math.max(index-inc, 0)].path}}));
-                        newSelecteds[0].scrollIntoView({block: "nearest", inline: "nearest", behavior: "instant"});
+                        if (event.shiftKey) {
+                            newSelecteds = [...selecteds, items[Math.max(index-inc, 0)]];
+                            let paths = newSelecteds.map(item => item.path);
+                            newSelecteds[newSelecteds.length-1].dispatchEvent(new CustomEvent("select", {bubbles: true, detail: {path: items[Math.max(index-inc, 0)].path, paths}}));
+                            newSelecteds[newSelecteds.length-1].scrollIntoView({block: "nearest", inline: "nearest", behavior: "instant"});
+                        } else {
+                            newSelecteds = [items[Math.max(index-inc, 0)]];
+                            newSelecteds[0].dispatchEvent(new CustomEvent("select", {bubbles: true, detail: {path: items[Math.max(index-inc, 0)].path, paths:[items[Math.max(index-inc, 0)].path]}}));
+                            newSelecteds[0].scrollIntoView({block: "nearest", inline: "nearest", behavior: "instant"});
+                        }
                     }
                     event.preventDefault();
                 } else if (event.key == "PageDown") {
                     let inc = pageSize;
-                    let index = items.indexOf(selected);
+                    let index = items.indexOf(lastSelected);
                     if (index < items.length - 1) {
-                        newSelecteds = [items[Math.min(index+inc, items.length-1)]];
-                        newSelecteds[0].dispatchEvent(new CustomEvent("select", {bubbles: true, detail: {path: items[Math.min(index+inc, items.length-1)].path}}));
-                        newSelecteds[0].scrollIntoView({block: "nearest", inline: "nearest", behavior: "instant"});
+                        if (event.shiftKey) {
+                            newSelecteds = [...selecteds, items[Math.min(index+inc, items.length-1)]];
+                            let paths = newSelecteds.map(item => item.path);
+                            newSelecteds[newSelecteds.length-1].dispatchEvent(new CustomEvent("select", {bubbles: true, detail: {path: items[Math.min(index+inc, items.length-1)].path, paths}}));
+                            newSelecteds[newSelecteds.length-1].scrollIntoView({block: "nearest", inline: "nearest", behavior: "instant"});
+                        } else {
+                            newSelecteds = [items[Math.min(index+inc, items.length-1)]];
+                            newSelecteds[0].dispatchEvent(new CustomEvent("select", {bubbles: true, detail: {path: items[Math.min(index+inc, items.length-1)].path, paths:[items[Math.min(index+inc, items.length-1)].path]}}));
+                            newSelecteds[0].scrollIntoView({block: "nearest", inline: "nearest", behavior: "instant"});
+                        }
                     }
                     event.preventDefault();
                 } else if (event.key == "Enter" && !event.altKey) {
-                    if (selected) {
-                        selected.expanded = !selected.expanded;
-                        selected.dispatchEvent(new CustomEvent("activate", {bubbles: true, detail: {path: selected.path}}));
-                    }
+                    let paths = selecteds.map(item => item.path);
+                    firstSelected.dispatchEvent(new CustomEvent("activate", {bubbles: true, detail: {path: firstSelected.path, paths}}));
                     event.preventDefault();
                 }
                 // reselect
@@ -329,7 +373,8 @@ export default {
                         target.selected = false;
                     }
                     item.selected = true;
-                    item.dispatchEvent(new CustomEvent("select", {bubbles: true, detail: {path: item.path}}));
+                    let paths = Array.from(host.querySelectorAll("x-listview-item")).filter(item => item.selected).map(item => item.path);
+                    item.dispatchEvent(new CustomEvent("select", {bubbles: true, detail: {path: item.path, paths}}));
                     host.invalidate();
                 }
                 const customEvent = new CustomEvent("contextmenuitem", {

@@ -244,6 +244,12 @@ export default {
             <div class="spacer"></div>
 
             <div class="shortcuts">
+
+                <x-dropdown class="tasks popover left">
+                    <x-button class="round light" icon="x-tasks" tooltip="Background tasks" x-attr:badge="state.runningTasks > 0 ? state.runningTasks : ''"></x-button>
+                    <x-page slot="dropdown" src="/pages/tasks.js" loading="lazy"></x-page>
+                </x-dropdown>
+
                 <div x-for="menuitem in state.menuShortcuts">
                     <div x-if="menuitem.href">
                         <x-anchor x-attr:href="menuitem.href" x-attr:title="menuitem.tooltip" class="plain">
@@ -296,13 +302,13 @@ export default {
     state: {
         menuNavigation:  null,
         menuTools:       null,
+        runningTasks:    0,
     },
-    controller({ state, events, areas, bus, getPage, host }) {
+    controller({ state, events, areas, bus, getPage, host, tasks }) {
         return {
             async load(params) {
                 // toggled
-                state.toggled = false; //xshell.settings.getItem("x-layout-main.toggled", false);
-                //state.toggled = localStorage.getItem("xshell.toggled");
+                state.toggled = localStorage.getItem("xshell.toggled") == "true";
 
                 // auto close menu on navigation start (mobile)
                 events.on(bus, "xshell:navigation:start", (e) => {
@@ -317,6 +323,8 @@ export default {
                 events.on(bus, "xshell:menus:change", "refresh")
                 // bind search
                 events.on(state, "change:keyword", "search");
+                // bind tasks change
+                events.on(bus, "xshell:tasks:change", "refreshTasks");
             },
 
             async mount(params) {
@@ -347,6 +355,16 @@ export default {
                 document.documentElement.style.setProperty('--x-scrollbar-width-pixels', `${Math.max(0,scrollbarWidth)}px`);
             },
             
+            refreshTasks() {
+                // refresh the count of running tasks
+                const runningTasksBefore = state.runningTasks;
+                state.runningTasks = tasks.getTasks().filter(task => task.status === "running").length;
+                if (runningTasksBefore == 0 && state.runningTasks > 0) {
+                    const dropdown = host.shadowRoot.querySelector("x-dropdown.tasks");
+                    dropdown.expand();
+                }
+            },
+
             async refresh(params) {
                 //refresh
                 const page  = getPage();
@@ -379,7 +397,7 @@ export default {
             async toggleMenu(params) {
                 //toggle-menu
                 state.toggled = !state.toggled;
-                //settings.setItem("x-layout-main.toggled", state.toggled);
+                localStorage.setItem("xshell.toggled", state.toggled);
             },
 
             async search(params) {

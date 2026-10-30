@@ -1,4 +1,5 @@
 import * as PathUtils from "../utils/path.js";
+import {createZip} from "../utils/zip.js";
 
 // contract
 export const contract = {
@@ -64,11 +65,10 @@ export default {
         <x-contextmenu x-on:command="onCommand">        
             <x-menuitem label="Open" icon="x-open" command="open" x-attr:disabled="!state.entry"></x-menuitem>
             <x-menuitem label="-" ></x-menuitem>
-            <x-menuitem label="New File ..." icon="x-file" command="newFile" x-attr:disabled="(state.entry && state.entry.type != 'directory' ? true : false)"></x-menuitem>
-            <x-menuitem label="New Folder ..." icon="x-folder" command="newFolder" x-attr:disabled="(state.entry && state.entry.type != 'directory' ? true : false)"></x-menuitem>
-            
-            <!--<x-menuitem label="Refresh" icon="x-refresh" command="refresh" x-attr:disabled="!state.entry && state.entry.type == 'directory'"></x-menuitem>-->
-            <x-menuitem label="Upload Files ..." icon="x-file" command="uploadFiles" x-attr:disabled="(state.entry && state.entry.type != 'directory' ? true : false)"></x-menuitem>
+            <x-menuitem label="New file ..." icon="x-file" command="newFile" x-attr:disabled="(state.entry && state.entry.type != 'directory' ? true : false)"></x-menuitem>
+            <x-menuitem label="New folder ..." icon="x-folder" command="newFolder" x-attr:disabled="(state.entry && state.entry.type != 'directory' ? true : false)"></x-menuitem>
+            <x-menuitem label="Upload files ..." icon="x-file" command="uploadFiles" x-attr:disabled="(state.entry && state.entry.type != 'directory' ? true : false)"></x-menuitem>
+            <x-menuitem label="Download files ..." icon="x-download" command="downloadFiles" x-attr:disabled="!state.entry"></x-menuitem>
             <x-menuitem label="-" ></x-menuitem>
             <x-menuitem label="Rename" icon="x-rename" command="rename" x-attr:disabled="(!state.entry || state.entry.path == state.path ? true : false)"></x-menuitem>
             <x-menuitem label="Delete" icon="x-trash" command="delete" x-attr:disabled="(!state.entry || state.entry.path == state.path ? true : false)"></x-menuitem>
@@ -82,11 +82,12 @@ export default {
         path: "/",
         pathList: "/",
         entry: null,
+        entries: [],
         history: ["/"],
         historyIndex: 0,
         root: false
     },
-    controller({ state, events, loader, navigation, getPage, host, dialog}) {
+    controller({ state, events, loader, navigation, getPage, host, dialog, tasks}) {
         return {
             async load(args) {
                 // load
@@ -121,11 +122,15 @@ export default {
                     if (select) await tree.select(path);
                 }
             },
-            open(entry = state.entry) {
+            open(entries = state.entries) {
                 // open
-                if (entry && entry.type === "directory") {
-                    this.navigateTo(entry.path);
-                } else {
+                for(const entry of entries) {
+                    if (entry.type === "directory") {
+                        this.navigateTo(entry.path);
+                        return;
+                    }
+                }
+                for(const entry of entries) {
                     const page = getPage();
                     navigation.navigate( {
                         href: "page:x-filesystem:/pages/edit.js",
@@ -138,18 +143,20 @@ export default {
                     });
                 }
             },
-            properties(entry = state.entry) {
+            properties(entries = state.entries) {
                 // open
                 const page = getPage();
-                navigation.navigate( {
-                    href: "page:x-filesystem:/pages/properties.js",
-                    page: page,
-                    params: {
-                        src: state.src,
-                        path: entry.path,
-                    },
-                    open: "stack"
-                });
+                for(const entry of entries) {
+                    navigation.navigate( {
+                        href: "page:x-filesystem:/pages/properties.js",
+                        page: page,
+                        params: {
+                            src: state.src,
+                            path: entry.path,
+                        },
+                        open: "stack"
+                    });
+                }                
             },
             async newFile(path) {
                 // newFile
@@ -230,6 +237,26 @@ export default {
                     }
                 }
             },
+            async downloadFiles(paths) {
+                const task = tasks.run("download", "Downloading files", async ({ signal, setDescription, setProgress }) => {
+                    
+                    const blob = await createZip(state.filesystem, paths);
+
+                    // sleep 10 seconds
+                    setProgress(50);
+                    await new Promise(resolve => setTimeout(resolve, 5000));
+
+                    const url = URL.createObjectURL(blob);
+                    const link = document.createElement("a");
+                    link.href = url;
+                    link.download = "archive.zip";
+                    link.click();
+
+                    setTimeout(() => URL.revokeObjectURL(url), 60000);
+
+                    return "completed";
+                });
+            },
             async rename(path) {
                 // rename
                 if (path == null || path === state.path) return;
@@ -262,22 +289,24 @@ export default {
                     this.refresh( { selectedPath: newPath } );
                 }
             },
-            async delete(path) {
+            async delete(paths) {
                 // delete
-                if (path == null || path === state.path) return;
+                if (!paths || paths.length === 0) return;
                 const result = await dialog.confirm({
                     title: "Delete",
-                    message: "Are you sure you want to delete " + path + "?"
+                    message: "Are you sure you want to delete " + paths.join(", ") + "?"
                 });
-                if (result) {
+                if (result == "yes") {
                     // delete
-                    await state.filesystem.delete(path);
-                    // remove from historic
-                    for(var i = state.history.length - 1; i >= 0; i--) {
-                        if (state.history[i] === path) {
-                            state.history.splice(i, 1);
-                            if (state.historyIndex >= state.history.length) {
-                                state.historyIndex = state.history.length - 1;
+                    for (const path of paths) {
+                        await state.filesystem.delete(path);
+                        // remove from historic
+                        for(var i = state.history.length - 1; i >= 0; i--) {
+                            if (state.history[i] === path) {
+                                state.history.splice(i, 1);
+                                if (state.historyIndex >= state.history.length) {
+                                    state.historyIndex = state.history.length - 1;
+                                }
                             }
                         }
                     }
@@ -301,10 +330,9 @@ export default {
             onCommand({event}) {                
                 if (event.detail.command === "open") {
                     this.open();
-                } else if (event.detail.command === "refresh") {
-                    this.refresh( {selectedPath: state.pathList} );
                 } else if (event.detail.command === "delete") {
-                    if (state.entry) this.delete(state.entry.path);
+                    const paths = state.entries.map(e => e.path);
+                    if (paths.length) this.delete(paths);
                 } else if (event.detail.command === "properties") {
                     this.properties();
                 } else if (event.detail.command === "newFile") {
@@ -313,6 +341,9 @@ export default {
                     this.newFolder(state.entry?.path ?? state.pathList);
                 } else if (event.detail.command === "uploadFiles") {
                     this.showUploadFiles(state.entry?.path ?? state.pathList);
+                } else if (event.detail.command === "downloadFiles") {
+                    const paths = state.entries.map(e => e.path);
+                    if (paths.length) this.downloadFiles(paths);
                 } else if (event.detail.command === "rename") {
                     if (state.entry) this.rename(state.entry.path);
                 } else {
@@ -383,7 +414,7 @@ export default {
             },
             onListActivate({event}) {
                 // handle list activate event
-                this.open(event.detail.entry)
+                this.open(event.detail.entries)
             },
             onListBack({event}) {
                 // handle list back event
@@ -399,7 +430,7 @@ export default {
             },
             onListDelete({event}) {
                 // handle list delete event
-                this.delete(event.detail.entry.path);
+                this.delete(event.detail.paths);
             },
             onListUpload({event}) {
                 // handle list upload event
@@ -410,7 +441,7 @@ export default {
             onContextMenuEntry({event}) {
                 // handle context menu entry event
                 state.entry = event.detail.entry;
-                console.log(state.entry);
+                state.entries = event.detail.entries;
                 const contextMenu = host.shadowRoot.querySelector("x-contextmenu");
                 contextMenu.open({x: event.detail.x, y: event.detail.y});
             }
