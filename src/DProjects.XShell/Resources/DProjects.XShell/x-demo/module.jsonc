@@ -29,6 +29,9 @@
         "x-filesystem": {
             "configUrl": "url:../x-filesystem/module.jsonc"
         },
+        "xshell-diagnostics": {
+            "configUrl": "url:../xshell-diagnostics/module.jsonc"
+        },
         "xshell-docs": {
             "configUrl": "url:../xshell-docs/module.jsonc"
         }

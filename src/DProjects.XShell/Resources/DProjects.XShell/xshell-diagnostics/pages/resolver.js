@@ -22,6 +22,7 @@ export default {
             <x-toolbar>
                 <x-datafield type="text" x-model="state.test_resource" placeholder="Resource, e.g. component:x-button"></x-datafield>
                 <x-button label="Resolve" command="resolve"></x-button>
+                <x-button label="Load" command="resolveAndLoad"></x-button>
             </x-toolbar>
 
             <x-object x-if="state.test_result" x-prop:value="state.test_result" expanded="true"></x-object>
@@ -55,7 +56,7 @@ export default {
         query_loader: "",
         items: []
     },
-    controller({ state, events, resolver }) {
+    controller({ state, events, resolver, loader }) {
         return {
             load() {
                 // load
@@ -98,6 +99,10 @@ export default {
                     cache: result.definition.cache ?? false,
                     cacheMode: result.definition.cacheMode ?? "full"
                 };
+            },
+            async resolveAndLoad() {
+                const result = await loader.load(state.test_resource);
+                state.test_result = result;
             },
             refresh() {
                 // refresh

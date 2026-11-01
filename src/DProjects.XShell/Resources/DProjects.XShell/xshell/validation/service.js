@@ -1,14 +1,18 @@
-import ContractServiceSchema from "../schemas/contract.service.schema.json" with { type: "json" };
-import ContractSchema from "../schemas/contract.schema.json" with { type: "json" };
 import JsonValidator from "../services/json-validator.js"
+import xshell from "../xshell.js"
 
 // export
 export default async function validateServiceContract(src, definition) {
+
+    // use loader to load schema
+    const contractServiceSchema = await xshell.loader.load("schema:contract.service");
+
     // validate
+    if (src.indexOf("areas") != -1) {
+        debugger;
+    }
     const definitionObject = Object.fromEntries(Object.entries(definition).map(([key, value]) => [key, typeof value === "function" ? {} : value]));
-    const result = new JsonValidator().validate(definitionObject, ContractServiceSchema, {
-        "./contract.schema.json": ContractSchema
-    });
+    const result = new JsonValidator().validate(definitionObject, contractServiceSchema);
     if (!result.valid) {
         console.error(`Invalid contract: ${src}`, result.errors);
         throw new Error(`Invalid contract: ${src}`, { cause: result.errors });

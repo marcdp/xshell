@@ -14,7 +14,7 @@
       "detail": {}
     }
   },
-  "methods": {
+  "methods2": {
     "getAreas": { "description": "Returns the array of configured navigation areas.", "returns": { "type": "array" } },
     "getArea": { "description": "Returns the area with the specified ID, or null if it is unknown.", "parameters": [{ "name": "id", "type": "string", "required": true }], "returns": { "type": "any" } },
     "getDefaultArea": { "description": "Returns the default area, falling back to the first area, or null.", "returns": { "type": "any" } },

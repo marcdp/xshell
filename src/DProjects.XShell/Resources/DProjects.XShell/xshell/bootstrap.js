@@ -451,7 +451,7 @@ function fillResolverRules(config) {
             contractDeclarations.set(id, { ownerType, ownerId, path: file.path });
             resolver.schema[id] = {
                 src: `${schemasPath}/${id}.schema.json`,
-                loader: "object-json",
+                loader: "schema-json",
                 cache: true,
                 moduleId: ownerId,
                 modulePath: assetsPath
@@ -721,14 +721,14 @@ function fillResolverRules(config) {
         resolver.schema ??= {}; 
         resolver.schema[`${moduleId}:{name}`] ??= {
             src: `${moduleAssetsPath}/schemas/{name}.schema.json`,
-            loader: "object-json",
+            loader: "schema-json",
             cache: true,
             moduleId,
             modulePath: moduleAssetsPath
         };
         resolver.schema[`${moduleId}:/{path}`] ??= {
             src: `${moduleAssetsPath}/{path}`,
-            loader: "object-json",
+            loader: "schema-json",
             cache: true,
             moduleId,
             modulePath: moduleAssetsPath
