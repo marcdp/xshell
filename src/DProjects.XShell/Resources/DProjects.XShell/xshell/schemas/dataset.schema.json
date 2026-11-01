@@ -6,6 +6,7 @@
   "type": "object",
   "required": ["tables"],
   "properties": {
+    "$schema": { "type": "string", "format": "uri-reference", "description": "URI of the JSON Schema used to validate this DataSet." },
     "tables": {
       "type": "array",
       "description": "Ordered collection of tables. The first table is the default table.",

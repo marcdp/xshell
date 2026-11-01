@@ -6,6 +6,7 @@
   "type": "object",
   "additionalProperties": false,
   "properties": {
+    "$schema": { "type": "string", "format": "uri-reference", "description": "URI of the JSON Schema used to validate this component." },
     "dependencies": {
       "type": "object",
       "description": "Declarative dependencies resolved before the component controller is created. Each property name becomes an injected controller dependency.",

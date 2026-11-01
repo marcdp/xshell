@@ -166,6 +166,7 @@ export default {
                 // select
                 state.selectedPath = event.detail.path;
                 state.selectedPaths = event.detail.paths;
+                if (state.selectedPaths == undefined) debugger;
                 const entry = state.entries.find(e => e.path === event.detail.path) || null;
                 host.dispatchEvent(new CustomEvent("select", {bubbles: true, detail: {path: event.detail.path, entry}}));
             },
@@ -173,6 +174,7 @@ export default {
                 // activate
                 state.selectedPath = event.detail.path;
                 state.selectedPaths = event.detail.paths;
+                if (state.selectedPaths == undefined) debugger;
                 const entry = state.entries.find(e => e.path === event.detail.path) || null;
                 const entries = state.entries.filter(e => state.selectedPaths.includes(e.path));
                 host.dispatchEvent(new CustomEvent("activate", {bubbles: true, detail: {path: event.detail.path, entry, paths: state.selectedPaths, entries}}));

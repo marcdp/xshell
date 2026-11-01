@@ -6,7 +6,7 @@ import XModule from "../../src/DProjects.XShell/Resources/DProjects.XShell/x/mod
 import settingsDefinition from "../../src/DProjects.XShell/Resources/DProjects.XShell/x/pages/settings.js";
 import Theme from "../../src/DProjects.XShell/Resources/DProjects.XShell/x/services/theme.js";
 import Services from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services.js";
-import validateContract from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/validation/contract.js";
+import validateServiceContract from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/validation/service.js";
 
 const stylesDirectory = new URL("../../src/DProjects.XShell/Resources/DProjects.XShell/x/styles/", import.meta.url);
 const css = readFileSync(new URL("index.css", stylesDirectory), "utf8");
@@ -184,7 +184,7 @@ test("invalid and repeated modes do not apply or emit notifications", async () =
 });
 
 test("theme contract validates and the configured service resolves as a singleton", async () => {
-    await validateContract("theme.json", ThemeContract);
+    await validateServiceContract("theme.json", ThemeContract);
     assert.deepEqual(ThemeContract.events["x:theme:changed"], {
         description: "Emitted on the Bus when the selected theme mode changes.",
         detail: {

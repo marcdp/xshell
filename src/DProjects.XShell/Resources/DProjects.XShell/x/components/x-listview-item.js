@@ -22,7 +22,9 @@ export const contract = {
         }
     },
     slots: {
-        "": {description:"Additional details cells, in header-column order after the primary cell."}
+        "": {description:"Additional details cells, in header-column order after the primary cell."},
+        "bottom": {description:"Content to be displayed in the bottom slot of the item."},
+        "right": {description:"Content to be displayed in the right slot of the item."}
     }
 };
 
@@ -53,18 +55,22 @@ export default {
         .primary .text {display: flex; align-items: baseline; min-width: 0;flex: 1;}
         .primary .label {cursor:pointer;}
         .primary .label, .primary .description {min-width: 0;overflow: hidden;text-overflow: ellipsis;white-space: nowrap;}
-        .primary .description {}
         .primary .description:empty {display:none;}
 
         /* list */
         @container style(--x-listview-view: 'list') {
             :host {line-height: 1.8em;}
-            .row {padding:0 .5em;}
+            .row {padding:0 .5em; padding-right:0;}
             x-anchor.item-anchor::part(a) {padding:0em .45em;}
-            .description {display:none;}
-            slot {display:none;}
+            
             :host([data-category-visible]) .category {display: block;}
             .category:empty {display:none;}
+            
+            .primary .text {flex-wrap: wrap; padding-right:.5em;}
+            .primary .text .description {display:none;}            
+            slot[name="bottom"] { display:block; width:100%;}
+            slot[name="right"]  { display:block; }
+            slot {display:none;}
         }
 
         /* details */
@@ -85,23 +91,26 @@ export default {
             x-anchor.item-anchor, x-anchor.item-anchor::part(a) {height:100%;}
             .primary {flex-direction:column; justify-content:center; padding:.5em;}
             .primary > x-icon {font-size:2.2em;}
-            .text {display:block; flex:0 1 auto; width:100%; text-align:center;}
-            .label {display:block; width:100%;}
+            .primary .text {display:block; flex:0 1 auto; width:100%; text-align:center;}
+            .primary .label {display:block; width:100%;}
+            .primary .description {display:none;}
+            slot[name="bottom"] { display:block; width:100%;}
             slot {display:none;}
-            .description,
-            .supplemental {display:none;}
         }
 
         /* tiles */
         @container style(--x-listview-view: 'tiles') {
             :host {padding:.12em;}
-            .row {min-height:4.2em; height:100%;}
+            .row {__min-height:4.2em; height:100%;}
             x-anchor.item-anchor, x-anchor.item-anchor::part(a) {height:100%;}
-            .primary {padding:.55em .7em; }
-            .primary > x-icon {font-size:1.8em; flex:0 0 auto;}
+            .primary {padding:.7em .7em; }
+            .primary > x-icon { margin-right:.5em; margin-left:.1em; align-self:start;}
             .primary .text {display:flex; flex-direction:column; align-items:stretch; gap:.05em; }
-            .primary .description {  width:100%; display:block;}
-            slot {display:none;}
+            .primary .text .label { font-weight:500; }
+            .primary .text .description { width:100%; display:block; font-size:var(--x-font-size-small); color: var(--x-color-gray);}
+            slot[name="bottom"] { display:block; padding-right:1em;}
+            slot[name="right"] { display:block; }
+            slot { display:none; }
         }
 
         /* selection */
@@ -117,7 +126,9 @@ export default {
                     <span class="text">
                         <span class="label" x-text="state.label"></span>
                         <span class="description" x-text="state.description"></span>
+                        <slot name="bottom"></slot>
                     </span>
+                    <slot name="right"></slot>
                 </div>
             </x-anchor>
             <label x-else data-item-anchor class="item-anchor">
@@ -126,7 +137,9 @@ export default {
                     <span class="text">
                         <span class="label" x-text="state.label"></span>
                         <span class="description" x-text="state.description"></span>
+                        <slot name="bottom"></slot>
                     </span>
+                    <slot name="right"></slot>
                 </div>
             </label>
             <slot></slot>

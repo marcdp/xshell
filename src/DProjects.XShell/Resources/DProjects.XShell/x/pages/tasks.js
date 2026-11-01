@@ -1,5 +1,5 @@
 
-// contract
+ // contract
 export const contract = {
     description: "Background tasks page",
     events: {},
@@ -13,73 +13,108 @@ export default {
         title: "Tasks"
     },
     style: `
-        :scope {display:block;}
-        .toolbar {display:flex; justify-content:flex-end; margin-bottom:1em;}
-        .tasks {display:flex; flex-direction:column; gap:.5em;}
-        .task {display:flex; align-items:center; gap:1em; padding:.75em; border:var(--x-card-border); border-radius:var(--x-card-border-radius);}
-        .task .content {flex:1; min-width:0;}
-        .task .name {font-weight:600;}
-        .task .description {font-size:.9em; color:var(--x-color-gray); overflow-wrap:anywhere;}
-        .task .status {font-size:.8em; color:var(--x-color-gray);}
-        .task x-progress {display:block; margin-top:.5em;}
     `,
     template: `
-
-        <div x-if="state.tasks.length == 0">
-            No background tasks.
-        </div>
+        <x-empty x-if="state.tasks.length == 0" icon="x-tasks" label="No background tasks" message="No background tasks are currently running."></x-empty>
 
         <x-form x-if="state.tasks.length > 0">
-            <div class="tasks">
-                <div class="task" x-for="task in state.tasks" x-attr:key="task.id">
-                    <x-icon x-if="task.status == 'ok'" icon="x-check"></x-icon>
-                    <x-icon x-elseif="task.status == 'error'" icon="x-error"></x-icon>
-                    <x-icon x-elseif="task.status == 'aborted'" icon="x-error"></x-icon>
-                    <x-icon x-else icon="x-file"></x-icon>
 
-                    <div class="content">
-                        <div class="name">{{task.name}} ({{task.status}})</div>
-                        <div class="description">{{task.description}}</div>
-                        
-                        <x-progress x-if="task.status == 'running' && task.progress != null" x-attr:value="task.progress" max="100"></x-progress>
+            <x-listview view="tiles">
+                <x-listview-head>
+                    <x-listview-column>Name</x-listview-column>
+                </x-listview-head>
+                <x-listview-body>
+                    <x-listview-item x-for="task in state.tasks" x-attr:key="task.id"
+                        x-attr:label="task.title + ' (' + task.status + ')'"
+                        x-attr:description="task.description"
+                        x-attr:status="task.status"
+                        x-attr:icon="task.status == 'finished' ? 'x-check' : (task.status == 'error' ? 'x-error' : (task.status == 'canceled' ? 'x-error' : 'x-file'))"
+                    >
+                        <div class="status" x-if="task.error">
+                            {{task.error.message}}
+                        </div>
+                        <x-progress
+                            slot="bottom"
+                            x-if="task.status == 'running'"
+                            x-attr:unknown="(task.progress ? false : true)"
+                            x-attr:value="task.progress.value"
+                            x-attr:max="task.progress.max">
+                        </x-progress>
 
-                        <div class="status" x-if="task.error">{{task.error}}</div>
-                    </div>
+                        <x-button
+                            slot="right"
+                            class="plain"
+                            x-if="task.status == 'pending' || task.status == 'running'"
+                            tooltip="Cancel"
+                            icon="x-close"
+                            x-attr:data-id="task.id"
+                            x-on:click="onCancel">
+                        </x-button>
 
-                    <x-button class="plain" x-if="task.status == 'running'" tooltip="Abort" icon="x-close" x-attr:data-id="task.id" x-on:click="onAbort"></x-button>
-                </div>
-            </div>
-            <x-button slot="footer" label="Clear completed" icon="x-trash" x-on:click="onClear" x-attr:disabled="state.completed == 0"></x-button>
+                    </x-listview-item>
+                </x-listview-body>
+            </x-listview>
+
+            <x-button
+                slot="footer"
+                label="Clear completed"
+                icon="x-trash"
+                x-on:click="onClear"
+                x-attr:disabled="state.completed == 0">
+            </x-button>
         </x-form>
-
-
     `,
     state: {
         tasks: [],
         running: 0,
-        completed: 0,
+        completed: 0
     },
-    controller({state, events, bus, tasks}) {
+    controller({state, page, events, bus, tasks}) {
         return {
             load() {
-                // load current tasks
+                // load
+                events.on(bus, "xshell:tasks:added", "refresh");
+                events.on(bus, "xshell:tasks:updated", "refresh");
+                events.on(bus, "xshell:tasks:removed", "refresh");
                 this.refresh();
-                // listen for changes
-                events.on(bus, "xshell:tasks:change", "refresh");
             },
+
+            // methods            
             refresh() {
-                // update tasks snapshot
-                state.tasks = tasks.getTasks();
-                state.running = state.tasks.filter(t => t.status == 'running').length;
-                state.completed = state.tasks.filter(t => t.status == 'ok' || t.status == 'error' || t.status == 'aborted').length;
+                // Project live Task objects into X Template-friendly data
+                state.tasks = tasks.list().map(task => ({
+                    id: task.id,
+                    title: task.title,
+                    description: task.description,
+                    status: task.status,
+                    progress: task.progress,
+                    error: task.error
+                }));
+
+                state.running = state.tasks.filter(
+                    t => t.status == "pending" || t.status == "running"
+                ).length;
+
+                state.completed = state.tasks.filter(
+                    t => t.status == "finished" ||
+                        t.status == "error" ||
+                        t.status == "canceled"
+                ).length;
+
+                page.invalidate();
             },
-            onAbort({event}) {
-                // abort running task
-                const id = Number(event.currentTarget.dataset.id);
-                tasks.abort(id);
+
+
+            // events
+            async onCancel({event}) {
+                const id = event.currentTarget.dataset.id;
+                const task = tasks.get(id);
+                if (task) {
+                    await task.cancel();
+                }
             },
             onClear() {
-                // remove completed tasks
+                // Remove terminal tasks
                 tasks.clear();
                 this.refresh();
             }

@@ -68,7 +68,7 @@ export default {
             <x-menuitem label="New file ..." icon="x-file" command="newFile" x-attr:disabled="(state.entry && state.entry.type != 'directory' ? true : false)"></x-menuitem>
             <x-menuitem label="New folder ..." icon="x-folder" command="newFolder" x-attr:disabled="(state.entry && state.entry.type != 'directory' ? true : false)"></x-menuitem>
             <x-menuitem label="Upload files ..." icon="x-file" command="uploadFiles" x-attr:disabled="(state.entry && state.entry.type != 'directory' ? true : false)"></x-menuitem>
-            <x-menuitem label="Download files ..." icon="x-download" command="downloadFiles" x-attr:disabled="!state.entry"></x-menuitem>
+            <x-menuitem label="Download" icon="x-download" command="downloadFiles" x-attr:disabled="!state.entry"></x-menuitem>
             <x-menuitem label="-" ></x-menuitem>
             <x-menuitem label="Rename" icon="x-rename" command="rename" x-attr:disabled="(!state.entry || state.entry.path == state.path ? true : false)"></x-menuitem>
             <x-menuitem label="Delete" icon="x-trash" command="delete" x-attr:disabled="(!state.entry || state.entry.path == state.path ? true : false)"></x-menuitem>
@@ -238,25 +238,51 @@ export default {
                 }
             },
             async downloadFiles(paths) {
-                const task = tasks.run("download", "Downloading files", async ({ signal, setDescription, setProgress }) => {
-                    
-                    const blob = await createZip(state.filesystem, paths);
-
-                    // sleep 10 seconds
-                    setProgress(50);
-                    await new Promise(resolve => setTimeout(resolve, 5000));
-
-                    const url = URL.createObjectURL(blob);
-                    const link = document.createElement("a");
-                    link.href = url;
-                    link.download = "archive.zip";
-                    link.click();
-
-                    setTimeout(() => URL.revokeObjectURL(url), 60000);
-
-                    return "completed";
+                let filename = "archive.zip"; 
+                if (paths.length === 1) {
+                    // single file download
+                    const entry = state.filesystem.getEntry(paths[0]);
+                    if (entry.type == "file") {
+                        filename = paths[0].split("/").pop();
+                        const url = state.filesystem.getReadUrl(paths[0]);
+                        const link = document.createElement("a");
+                        link.href = url;
+                        link.download = filename;
+                        link.click();
+                        setTimeout(() => URL.revokeObjectURL(url), 60000);
+                    }
+                }
+                // create a zip archive for multiple files
+                if (paths.length === 1) {
+                    filename = paths[0].split("/").pop() + ".zip";
+                }
+                return tasks.run({
+                    title: "Download",
+                    handler: async ({signal, setDescription}) => {
+                        // log
+                        setDescription("Creating zip archive ...");
+                        // create a zip archive of the selected files
+                        const blob = await createZip(state.filesystem, paths);
+                        signal.throwIfAborted();
+                        // create a URL for the blob and trigger the download
+                        const url = URL.createObjectURL(blob);
+                        const link = document.createElement("a");
+                        link.href = url;
+                        link.download = filename;
+                        link.click();
+                        // update the task description
+                        setDescription("Zip file created")
+                        // revoke the object URL after a minute to free up memory
+                        setTimeout(() => URL.revokeObjectURL(url), 60000);
+                        //result
+                        return {
+                            type: "url",
+                            result: url
+                        };
+                    }
                 });
             },
+           
             async rename(path) {
                 // rename
                 if (path == null || path === state.path) return;

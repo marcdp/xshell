@@ -5,6 +5,7 @@
   "type": "object",
   "required": ["app", "modules", "xshell"],
   "properties": {
+    "$schema": { "type": "string", "format": "uri-reference", "description": "URI of the JSON Schema used to validate this configuration." },
     "app": {"$ref": "#/$defs/app", "description": "Effective application view constructed by bootstrap from the selected root module and deployment values; never an authored top-level object."},
     "modules": {
       "type": "object",

@@ -1,73 +1,355 @@
-
 {
+  "$schema": "../schemas/contract.schema.json",
   "label": "Tasks",
-  "description": "Manages asynchronous background tasks, including execution, progress reporting, cancellation, and status monitoring.",
-  "properties": {
-    "tasks": {
+  "description": "Manages asynchronous tasks, execution, progress, output, results and cancellation. Tasks expose live handles independently of their execution backend.",
+
+  "types": {
+    "taskId": {
+      "type": "string",
+      "description": "Automatically generated unique task identifier."
+    },
+
+    "taskStatus": {
+      "type": "string",
+      "description": "Current task execution state.",
+      "schema": {
+        "type": "string",
+        "enum": [
+          "pending",
+          "running",
+          "finished",
+          "error",
+          "canceled"
+        ]
+      }
+    },
+
+    "taskOptions": {
+      "type": "object",
+      "description": "Options used to create and execute a task.",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 1
+          },
+          "description": {
+            "type": "string"
+          },
+          "handler": {
+            "description": "Async function receiving a taskContext and returning the task result."
+          },
+          "data": {
+            "description": "Optional input data passed to the handler through context.data."
+          }
+        },
+        "required": ["title", "handler"]
+      }
+    },
+
+    "taskContext": {
+      "type": "object",
+      "description": "Execution context passed to the task handler.",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "description": "Input supplied through taskOptions.data."
+          },
+          "signal": {
+            "description": "AbortSignal used for cooperative cancellation."
+          },
+          "setDescription": {
+            "description": "Function setDescription(description) updating the task description."
+          },
+          "setProgress": {
+            "description": "Function setProgress(value, max = 100). Passing null makes progress indeterminate."
+          },
+          "write": {
+            "description": "Function write(text), equivalent to out(text)."
+          },
+          "out": {
+            "description": "Function out(text) writing to stdout."
+          },
+          "err": {
+            "description": "Function err(text) writing to stderr without automatically failing the task."
+          }
+        },
+        "required": [
+          "signal",
+          "setDescription",
+          "setProgress",
+          "write",
+          "out",
+          "err"
+        ]
+      }
+    },
+
+    "taskOutput": {
+      "type": "object",
+      "description": "One entry in a task's output stream.",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "timestamp": {
+            "description": "Timestamp of the output entry."
+          },
+          "channel": {
+            "type": "string",
+            "enum": ["stdout", "stderr"]
+          },
+          "text": {
+            "type": "string"
+          }
+        },
+        "required": ["timestamp", "channel", "text"]
+      }
+    },
+
+    "taskOutputPage": {
+      "type": "object",
+      "description": "Page of output entries returned by task.getOutput().",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "entries": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "An entry conforming to taskOutput."
+            }
+          },
+          "nextCursor": {
+            "type": "string",
+            "description": "Cursor for retrieving subsequent output."
+          }
+        },
+        "required": ["entries"]
+      }
+    },
+
+    "task": {
+      "type": "object",
+      "description": "Live observable Task object. References remain stable while the task is registered.",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Unique task identifier."
+          },
+          "title": {
+            "type": "string",
+            "description": "Display title."
+          },
+          "description": {
+            "type": "string",
+            "description": "Current description."
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "running",
+              "finished",
+              "error",
+              "canceled"
+            ]
+          },
+          "progress": {
+            "description": "null for indeterminate progress, otherwise an object with value and max.",
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "value": {
+                    "type": "number"
+                  },
+                  "max": {
+                    "type": "number",
+                    "exclusiveMinimum": 0
+                  }
+                },
+                "required": ["value", "max"]
+              }
+            ]
+          },
+          "error": {
+            "description": "Failure details, or null.",
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "code": {
+                    "type": ["string", "number"]
+                  },
+                  "message": {
+                    "type": "string"
+                  },
+                  "stack": {
+                    "type": "string"
+                  }
+                },
+                "required": ["message"]
+              }
+            ]
+          },
+          "createdAt": {
+            "description": "Date when the task was registered."
+          },
+          "startedAt": {
+            "description": "Date when execution started, or null."
+          },
+          "endedAt": {
+            "description": "Date when execution ended, or null."
+          },
+          "getOutput": {
+            "description": "Async method getOutput({cursor?, limit?}) returning a taskOutputPage. Output may be retrieved from local memory or a remote server."
+          },
+          "getResult": {
+            "description": "Async method getResult() returning the task's result. Waits for successful completion and rejects on error or cancellation. Results may be strings, objects, URLs or file references."
+          },
+          "wait": {
+            "description": "Async method wait() resolving when the task reaches finished, error or canceled. Does not reject merely because the task failed."
+          },
+          "cancel": {
+            "description": "Async method cancel() requesting cancellation. Resolves when the cancellation request has been processed."
+          },
+          "addEventListener": {
+            "description": "Registers a listener for changes to this task."
+          },
+          "removeEventListener": {
+            "description": "Removes a previously registered task listener."
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "description",
+          "status",
+          "progress",
+          "error",
+          "createdAt",
+          "startedAt",
+          "endedAt",
+          "getOutput",
+          "getResult",
+          "wait",
+          "cancel"
+        ]
+      }
+    },
+
+    "taskList": {
       "type": "array",
-      "readonly": true,
-      "description": "Snapshot of registered tasks.",
+      "description": "Snapshot array of references to live Task objects.",
       "schema": {
         "type": "array",
         "items": {
           "type": "object",
-          "properties": {
-            "id": { "type": "number" },
-            "name": { "type": "string" },
-            "description": { "type": "string" },
-            "status": {"type": "string", "enum": ["running", "ok", "error", "aborted"]},
-            "progress": { "type": ["number", "null"] },
-            "error": { "type": ["string", "null"] },
-            "started": { "type": "number" },
-            "finished": { "type": ["number", "null"] }
-          },
-          "required": ["id", "name", "description", "status"]
+          "description": "Live Task object conforming to the task type."
         }
       }
     }
   },
+
+  "properties": {},
+
   "events": {
-    "xshell:tasks:change": {
-      "description": "Emitted through the application bus when a task is added, updated, completed, aborted, or removed.",
+    "xshell:tasks:added": {
+      "description": "Emitted on the application bus when a task is registered.",
       "detail": {
-        "id": { "type": "number", "required": true },
-        "status": { "type": "string", "required": true }
+        "id": {
+          "ref": "taskId",
+          "required": true
+        }
+      }
+    },
+
+    "xshell:tasks:updated": {
+      "description": "Emitted on the application bus when a task's state, description, progress or output changes.",
+      "detail": {
+        "id": {
+          "ref": "taskId",
+          "required": true
+        },
+        "status": {
+          "ref": "taskStatus",
+          "required": true
+        }
+      }
+    },
+
+    "xshell:tasks:removed": {
+      "description": "Emitted on the application bus when a task is removed.",
+      "detail": {
+        "id": {
+          "ref": "taskId",
+          "required": true
+        }
       }
     }
   },
+
   "methods": {
     "run": {
-      "description": "Starts an asynchronous task and returns its task object. The action receives a context containing signal, setDescription, and setProgress.",
+      "description": "Creates and starts a task. Executes options.handler(context) asynchronously and immediately returns a live Task object. A returned value becomes the result; an exception marks the task as failed.",
       "parameters": [
-        { "name": "name", "type": "string", "required": true },
-        { "name": "description", "type": "string", "required": true },
-        { "name": "action", "type": "function", "required": true }
+        {
+          "name": "options",
+          "ref": "taskOptions",
+          "required": true
+        }
       ],
       "returns": {
-        "type": "object",
-        "description": "Task object containing id, status, and a promise for the asynchronous result."
+        "ref": "task",
+        "description": "The newly created live Task object."
       }
     },
-    "getTasks": {
-      "description": "Returns snapshots of all registered tasks.",
-      "returns": { "type": "array" }
-    },
-    "getTask": {
-      "description": "Returns a task snapshot by ID, or null when not found.",
+
+    "get": {
+      "description": "Returns the registered live Task object by ID, or undefined if not found.",
       "parameters": [
-        { "name": "id", "type": "number", "required": true }
+        {
+          "name": "id",
+          "ref": "taskId",
+          "required": true
+        }
       ],
-      "returns": { "type": "any" }
+      "returns": {
+        "ref": "task",
+        "description": "The live Task object, or undefined."
+      }
     },
-    "abort": {
-      "description": "Requests cancellation of a running task through its AbortController.",
-      "parameters": [
-        { "name": "id", "type": "number", "required": true }
-      ]
+
+    "list": {
+      "description": "Returns a snapshot array containing references to all registered live Task objects.",
+      "returns": {
+        "ref": "taskList"
+      }
     },
+
     "clear": {
-      "description": "Removes completed, failed, and aborted tasks. Running tasks are retained."
-      
+      "description": "Removes finished, failed and canceled tasks from the registry. Running tasks are retained."
+    },
+
+    "remove": {
+      "description": "Removes a terminal task from the registry without deleting any files or results produced by the task.",
+      "parameters": [
+        {
+          "name": "id",
+          "ref": "taskId",
+          "required": true
+        }
+      ]
     }
   }
 }

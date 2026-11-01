@@ -6,6 +6,7 @@
   "type": "object",
   "additionalProperties": false,
   "properties": {
+    "$schema": { "type": "string", "format": "uri-reference", "description": "URI of the JSON Schema used to validate this component contract." },
     "description": { "type": "string", "description": "Human-readable description of the component." },
     "properties": { "type": "object", "description": "Public properties exposed by the component.", "additionalProperties": { "$ref": "#/$defs/property" } },
     "events": { "type": "object", "description": "Events emitted by the component.", "additionalProperties": { "$ref": "#/$defs/event" } },

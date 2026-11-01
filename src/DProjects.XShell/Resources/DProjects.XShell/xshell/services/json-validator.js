@@ -6,26 +6,24 @@ export default class JsonValidator {
     _validators = new WeakMap();
 
     // methods
-    validate(data, schema) {
+    validate(data, schema, schemas) {
         let validator = this._validators.get(schema);
-
         if (!validator) {
             validator = new Validator(schema, "2020-12");
             this._validators.set(schema, validator);
         }
-
+        if (schemas) {
+            for (const [path, referencedSchema] of Object.entries(schemas)) {
+                validator.addSchema(referencedSchema, new URL(path, schema.$id).href);
+            }
+        }
         return validator.validate(data);
     }
-
     assert(data, schema) {
         const result = this.validate(data, schema);
-
         if (!result.valid) {
-            throw new Error("JSON Schema validation failed", {
-                cause: result.errors
-            });
+            throw new Error("JSON Schema validation failed", {cause: result.errors});
         }
-
         return data;
     }
 }

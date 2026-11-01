@@ -7,18 +7,14 @@ export const contract = {
             detail: {
                 path: {type:"string", required:true},
                 paths: {type:"array", required:true},
-            },
-            bubbles: true,
-            composed: true
+            }
         },
         activate: {
             description: "Raised when an item is activated by Enter, a link click, or a double click.",
             detail: {
                 path: {type:"string", required:true},
                 paths: {type:"array", required:true},
-            },
-            bubbles: true,
-            composed: true
+            }
         },
         contextmenuitem: {
             description: "Raised when a context menu is requested on an item.",
@@ -28,9 +24,7 @@ export const contract = {
                 index: {type:"number", required:true},
                 x: {type:"number", required:true},
                 y: {type:"number", required:true}
-            },
-            bubbles: true,
-            composed: true
+            }
         }
     },
     properties: {
@@ -145,7 +139,7 @@ export default {
                     if (!selected && items.length > 0) {
                         items[0].selected = true;
                         items[0].focus();        
-                        items[0].dispatchEvent(new CustomEvent("select", {bubbles: true, detail: {path: items[0].path}}));            
+                        items[0].dispatchEvent(new CustomEvent("select", {bubbles: true, detail: {path: items[0].path, paths: [items[0].path]}}));            
                     }
                 }, 100);
             },

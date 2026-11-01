@@ -8,7 +8,7 @@ import Temp from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/t
 import Toast from "../../src/DProjects.XShell/Resources/DProjects.XShell/x/services/toast-default.js";
 import Contracts from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/contracts.js";
 import Services from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services.js";
-import validateContract from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/validation/contract.js";
+import validateServiceContract from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/validation/service.js";
 
 function createContractItem(id, methods = {}, properties = {}) {
     return {
@@ -81,12 +81,12 @@ test("service value descriptors retain direct types and accept optional JSON Sch
     };
 
     for (const [name, createContract] of Object.entries(valueDescriptorContracts)) {
-        await validateContract(`${name}-compact.json`, createContract({ type: "string" }));
-        await validateContract(`${name}-structured.json`, createContract({ type: "object", schema: nestedSchema }));
+        await validateServiceContract(`${name}-compact.json`, createContract({ type: "string" }));
+        await validateServiceContract(`${name}-structured.json`, createContract({ type: "object", schema: nestedSchema }));
     }
 
-    await validateContract("boolean-true.json", valueDescriptorContracts.property({ type: "any", schema: true }));
-    await validateContract("boolean-false.json", valueDescriptorContracts.returnValue({ type: "any", schema: false }));
+    await validateServiceContract("boolean-true.json", valueDescriptorContracts.property({ type: "any", schema: true }));
+    await validateServiceContract("boolean-false.json", valueDescriptorContracts.returnValue({ type: "any", schema: false }));
 });
 
 test("service value descriptors reject schema without type or ref and removed recursive properties", async () => {

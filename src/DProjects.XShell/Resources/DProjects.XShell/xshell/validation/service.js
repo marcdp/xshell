@@ -1,11 +1,14 @@
+import ContractServiceSchema from "../schemas/contract.service.schema.json" with { type: "json" };
 import ContractSchema from "../schemas/contract.schema.json" with { type: "json" };
 import JsonValidator from "../services/json-validator.js"
 
 // export
-export default async function validateContract(src, definition) {
+export default async function validateServiceContract(src, definition) {
     // validate
     const definitionObject = Object.fromEntries(Object.entries(definition).map(([key, value]) => [key, typeof value === "function" ? {} : value]));
-    const result = new JsonValidator().validate(definitionObject, ContractSchema);
+    const result = new JsonValidator().validate(definitionObject, ContractServiceSchema, {
+        "./contract.schema.json": ContractSchema
+    });
     if (!result.valid) {
         console.error(`Invalid contract: ${src}`, result.errors);
         throw new Error(`Invalid contract: ${src}`, { cause: result.errors });

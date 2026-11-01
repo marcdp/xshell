@@ -1,4 +1,4 @@
-import validateContract from "./validation/contract.js";
+import validateServiceContract from "./validation/service.js";
 import { deepFreeze } from "./utils/object.js";
 
 // class
@@ -84,7 +84,7 @@ export default class Contracts {
     async _processContractFile(id, url, file, moduleId, size) {
         const start = performance.now();
         const contract = await this._loader.load("contract:" + id);
-        await validateContract(url, contract);
+        await validateServiceContract(url, contract);
         deepFreeze(contract);
         return {
             id: id,

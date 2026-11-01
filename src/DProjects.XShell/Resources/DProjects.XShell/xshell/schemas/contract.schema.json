@@ -2,11 +2,11 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://xshell.dev/schemas/contract.schema.json",
   "title": "XShell Contract",
-  "description": "Describes the public contract of an XShell service.",
+  "description": "Describes the common public contract of an XShell element.",
   "type": "object",
-  "additionalProperties": false,
   "required": [ "label" ],
   "properties": {
+    "$schema": { "type": "string", "format": "uri-reference", "description": "URI of the JSON Schema used to validate this contract." },
     "label": { "type": "string", "description": "Human-readable label of the contract." },
     "icon": { "type": "string", "description": "Icon representing the contract." },
     "description": { "type": "string", "description": "Human-readable description of the contract." },
@@ -25,13 +25,16 @@
     "typeReference": { "type": "string", "minLength": 1, "description": "References a named type declared in this contract's types collection." },
     "typeDescriptor": {
       "type": "object",
-      "properties": {
-        "type": { "$ref": "#/$defs/valueType" },
-        "ref": { "$ref": "#/$defs/typeReference" }
-      },
       "oneOf": [
-        { "required": [ "type" ], "not": { "required": [ "ref" ] } },
-        { "required": [ "ref" ], "not": { "anyOf": [ { "required": [ "type" ] }, { "required": [ "schema" ] } ] } }
+        {"required": ["type"], "not": { "required": ["ref"] }},
+        { "required": ["ref"],
+          "not": {
+            "anyOf": [
+              { "required": ["type"] },
+              { "required": ["schema"] }
+            ]
+          }
+        }
       ]
     },
     "typeDefinition": {
@@ -48,7 +51,6 @@
     "property": {
       "type": "object",
       "description": "Describes a property and its runtime behavior.",
-      "additionalProperties": false,
       "properties": {
         "description": { "type": "string", "description": "Human-readable description of the property." },
         "type": { "$ref": "#/$defs/valueType", "description": "Value type accepted by the property." },
@@ -107,12 +109,18 @@
       "required": [ "name" ],
       "allOf": [{ "$ref": "#/$defs/typeDescriptor" }]
     },
+    "returnType": {
+      "anyOf": [
+        { "$ref": "#/$defs/valueType" },
+        { "const": "void" }
+      ]
+    },
     "returnValue": {
       "type": "object",
       "additionalProperties": false,
       "properties": {
         "description": { "type": "string" },
-        "type": { "$ref": "#/$defs/valueType" },
+        "type": { "$ref": "#/$defs/returnType" },
         "ref": { "$ref": "#/$defs/typeReference" },
         "schema": { "$ref": "#/$defs/jsonSchema" }
       },

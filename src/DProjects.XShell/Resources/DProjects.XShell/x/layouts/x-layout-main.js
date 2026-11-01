@@ -245,7 +245,7 @@ export default {
 
             <div class="shortcuts">
 
-                <x-dropdown class="tasks popover left">
+                <x-dropdown class="tasks popover left" collapse-on-click>
                     <x-button class="round light" icon="x-tasks" tooltip="Background tasks" x-attr:badge="state.runningTasks > 0 ? state.runningTasks : ''"></x-button>
                     <x-page slot="dropdown" src="/pages/tasks.js" loading="lazy"></x-page>
                 </x-dropdown>
@@ -324,7 +324,7 @@ export default {
                 // bind search
                 events.on(state, "change:keyword", "search");
                 // bind tasks change
-                events.on(bus, "xshell:tasks:change", "refreshTasks");
+                events.on(bus, ["xshell:tasks:added", "xshell:tasks:updated", "xshell:tasks:removed"], "refreshTasks");
             },
 
             async mount(params) {
@@ -358,7 +358,7 @@ export default {
             refreshTasks() {
                 // refresh the count of running tasks
                 const runningTasksBefore = state.runningTasks;
-                state.runningTasks = tasks.getTasks().filter(task => task.status === "running").length;
+                state.runningTasks = tasks.list().filter(task => task.status === "running").length;
                 if (runningTasksBefore == 0 && state.runningTasks > 0) {
                     const dropdown = host.shadowRoot.querySelector("x-dropdown.tasks");
                     dropdown.expand();
