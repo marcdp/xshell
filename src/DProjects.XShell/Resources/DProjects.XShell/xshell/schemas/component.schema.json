@@ -6,9 +6,44 @@
   "type": "object",
   "additionalProperties": false,
   "properties": {
-    "$schema": { "type": "string", "format": "uri-reference", "description": "URI of the JSON Schema used to validate this component." },
-    "contract": { "type": "object", "description": "Optional component contract defining the component's public API." },
-    "dependencies": { "type": "object", "description": "Declarative dependencies resolved before the component controller is created. Each property name becomes an injected controller dependency.", "required": [ ], "additionalProperties": true},
+    "$schema": { "type": "string", "format": "uri-reference", "description": "URI of the JSON Schema used to validate this component." },   
+    "contract": {
+      "$ref": "./contract.schema.json",
+      "description": "Public contract of the Component or Page.",
+      "properties": {
+        "properties": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "./contract.schema.json#/$defs/property",
+            "properties": {
+              "attribute": { "type": "boolean", "description": "Whether the corresponding HTML attribute is observed." },
+              "attributeParser": { "type": "string", "enum": ["json"], "description": "Parser for incoming attribute values." },
+              "state": { "type": "boolean", "description": "Whether the property is backed by component state." },
+              "reflect": { "type": "boolean", "description": "Whether changes are reflected to the attribute." }
+            },
+            "unevaluatedProperties": false
+          }
+        },
+        "slots": {
+          "type": "object",
+          "description": "Slots exposed by the component.",
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "description": { "type": "string" },
+              "required": { "type": "boolean" }
+            }
+          }
+        }
+      },
+      "unevaluatedProperties": false
+    },
+    "dependencies": { 
+      "type": "object", 
+      "description": "Declarative dependencies resolved before the component controller is created. Each property name becomes an injected controller dependency.", 
+      "required": [ ], 
+      "additionalProperties": true},
     "meta": {
       "type": "object",
       "description": "Component meta information.",

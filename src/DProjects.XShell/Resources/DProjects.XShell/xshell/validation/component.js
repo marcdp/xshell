@@ -16,11 +16,11 @@ export default async function validateComponent(src, definition) {
     }
 
     //  validate contract of the component
-    const contractComponentSchema = await xshell.loader.load("schema:contract.component");
-    const contractResult = new JsonValidator().validate(definitionObject.contract, contractComponentSchema);
-    if (!contractResult.valid) {
-        console.error(`Invalid component contract: ${src}`, contractResult.errors);
-        throw new Error(`Invalid component contract: ${src}`, { cause: contractResult.errors });
-    }
+    //const contractComponentSchema = await xshell.loader.load("schema:contract.component");
+    //const contractResult = new JsonValidator().validate(definitionObject.contract, contractComponentSchema);
+    //if (!contractResult.valid) {
+    //    console.error(`Invalid component contract: ${src}`, contractResult.errors);
+    //    throw new Error(`Invalid component contract: ${src}`, { cause: contractResult.errors });
+    //}
 
 }

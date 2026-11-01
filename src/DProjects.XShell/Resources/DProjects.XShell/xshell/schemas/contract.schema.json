@@ -13,7 +13,8 @@
     "types": { "type": "object", "description": "Reusable named types scoped to this contract.", "propertyNames": { "minLength": 1 }, "additionalProperties": { "$ref": "#/$defs/typeDefinition" } },
     "properties": { "type": "object", "description": "Public properties exposed.", "additionalProperties": { "$ref": "#/$defs/property" } },
     "events": { "type": "object", "description": "Events emitted.", "additionalProperties": { "$ref": "#/$defs/event" } },
-    "methods": { "type": "object", "description": "Public methods exposed.", "additionalProperties": { "$ref": "#/$defs/method" } }
+    "methods": { "type": "object", "description": "Public methods exposed.", "additionalProperties": { "$ref": "#/$defs/method" } },
+    "examples": { "type": "array", "description": "Usage examples for documentation and tooling.", "items": { "$ref": "#/$defs/example" } }
   },
   "$defs": {
     "valueType": {
@@ -126,6 +127,17 @@
         "schema": { "$ref": "#/$defs/jsonSchema" }
       },
       "allOf": [{ "$ref": "#/$defs/typeDescriptor" }]
+    },
+    "example": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": { "type": "string", "minLength": 1, "pattern": "^[A-Za-z][A-Za-z0-9_-]*$" },
+        "description": { "type": "string" },
+        "template": { "type": "string", "minLength": 1 },
+        "state": { "type": "object" }
+      },
+      "required": [ "name", "template" ]
     }
   }
 }
