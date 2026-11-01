@@ -237,8 +237,9 @@ export default {
             async downloadFiles(paths) {
                 let filename = "archive.zip"; 
                 if (paths.length === 1) {
+                    debugger
                     // single file download
-                    const entry = state.filesystem.getEntry(paths[0]);
+                    const entry = await state.filesystem.getEntry(paths[0]);
                     if (entry.type == "file") {
                         filename = paths[0].split("/").pop();
                         const url = state.filesystem.getReadUrl(paths[0]);
@@ -247,6 +248,7 @@ export default {
                         link.download = filename;
                         link.click();
                         setTimeout(() => URL.revokeObjectURL(url), 60000);
+                        return;
                     }
                 }
                 // create a zip archive for multiple files

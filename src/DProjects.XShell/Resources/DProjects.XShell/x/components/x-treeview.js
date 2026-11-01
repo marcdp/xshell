@@ -13,9 +13,7 @@ export default {
                     path: {type:"string", required:true},
                     x: {type:"number", required:true},
                     y: {type:"number", required:true}
-                },
-                bubbles: true,
-                composed: true
+                }
             }
         },
         properties: {

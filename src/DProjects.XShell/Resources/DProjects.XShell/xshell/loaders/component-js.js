@@ -1,7 +1,7 @@
 import Timer from "../timer.js"
 import Events from "../events.js"
 import xshell from "../xshell.js";
-import validateComponent from "../validation/component.js";
+import JsonValidator from "../services/json-validator.js"
 import { processStyle } from "../utils/style.js";
 import { deepFreeze } from "../utils/object.js";
 
@@ -129,7 +129,16 @@ function validateSlots(slots, definition, componentId) {
         }
     }
 }
-
+async function validateComponent(src, definition) {
+    // validate
+    const definitionObject = Object.fromEntries(Object.entries(definition).map(([key, value]) => [key, typeof value === "function" ? {} : value]));
+    const componentSchema = await xshell.loader.load("schema:component");
+    const result = new JsonValidator().validate(definitionObject, componentSchema);
+    if (!result.valid) {
+        console.error(`Invalid component: ${src}`, result.errors);
+        throw new Error(`Invalid component: ${src}`, { cause: result.errors });
+    }
+}
 
 // create web component from js implementation
 export async function createComponentClassFromJsDefinition(src, context, definition) {

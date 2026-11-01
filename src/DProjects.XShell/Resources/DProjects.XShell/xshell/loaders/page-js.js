@@ -2,7 +2,7 @@ import Page from "../page.js"
 import Timer from "../timer.js"
 import Events from "../events.js"
 import xshell from "../xshell.js";
-import validatePage from "../validation/page.js";
+import JsonValidator from "../services/json-validator.js"
 import { processStyle } from "../utils/style.js";
 import { deepFreeze } from "../utils/object.js";
 
@@ -76,7 +76,7 @@ function validateSlots(slots, pageName) {
         throw new Error(`Page '${pageName}' template declares slot '${displayName}', but pages cannot declare slots.`);
     }
 }
-function validatePageQueryProperties(definition, pageName) {
+function validateQueryProperties(definition, pageName) {
     // validate Page-specific query metadata
     const supportedTypes = new Set(["string", "number", "integer", "boolean"]);
     for (const [propertyName, property] of Object.entries(definition.contract.properties || {})) {
@@ -130,6 +130,16 @@ function parseQueryPropertyValue(propertyName, property, value) {
         }
         default:
             throw new Error(`Page property '${propertyName}' declares query:true with unsupported type '${property.type}'.`);
+    }
+}
+async function validatePage(src, definition) {
+    // validate
+    const componentSchema = await xshell.loader.load("schema:page");
+    const definitionObject = Object.fromEntries(Object.entries(definition).map(([key, value]) => [key, typeof value === "function" ? {} : value]));
+    const result = new JsonValidator().validate(definitionObject, componentSchema);
+    if (!result.valid) {
+        console.error(`Invalid component: ${src}`, result.errors);
+        throw new Error(`Invalid component: ${src}`, { cause: result.errors });
     }
 }
 function serializeQueryPropertyValue(propertyName, property, value) {
@@ -195,7 +205,7 @@ export async function createPageClassFromJsDefinition(src, context, definition) 
     // freeze implementation and contract
     definition = deepFreeze(definition);
     // validate
-    validatePageQueryProperties(definition, definition.meta?.name || src);
+    validateQueryProperties(definition, definition.meta?.name || src);
     await validatePage(src, definition);
     // process definition CSS before Page scoping and instance construction
     const style = definition.style ? await processStyle({ src, context, css: definition.style }) : "";

@@ -1,0 +1,84 @@
+
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://xshell.dev/schemas/page.schema.json",
+  "title": "XShell Page Implementation",
+  "description": "Describes the implementation object of an XShell Page.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "$schema": { "type": "string", "format": "uri-reference", "description": "URI of the JSON Schema used to validate this page." },
+    "contract": {
+      "$ref": "./contract.schema.json",
+      "description": "Public contract of the Page.",
+      "properties": {
+        "properties": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "./contract.schema.json#/$defs/property",
+            "properties": {
+              "query": { "type": "boolean", "description": "Whether the property may be initialized from the Page URL query string." },
+              "context": { "type": "boolean", "description": "Whether the property may be initialized from Page context." },
+              "state": { "type": "boolean", "description": "Whether the property is backed by Page state." },
+              "reflect": { "type": "boolean", "description": "Whether property changes are reflected to enabled external representations." }
+            },
+            "unevaluatedProperties": false
+          }
+        },
+        "slots": {
+          "type": "object",
+          "description": "Slots declared by the Page.",
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "description": { "type": "string" },
+              "required": { "type": "boolean" }
+            }
+          }
+        }
+      },
+      "unevaluatedProperties": false
+    },
+    "dependencies": {
+      "type": "object",
+      "description": "Declarative dependencies resolved before the Page controller is created. Each property name becomes an injected controller dependency.",
+      "required": [],
+      "additionalProperties": true
+    },
+    "meta": {
+      "type": "object",
+      "description": "Page meta information.",
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "description": "The id of the Page." },
+        "title": { "type": "string", "minLength": 1, "description": "The title of the Page." },
+        "description": { "type": "string", "minLength": 1, "description": "The description of the Page." },
+        "icon": { "type": "string", "minLength": 1, "description": "The icon of the Page." },
+        "renderEngine": { "type": "string", "minLength": 1, "description": "The rendering engine used by the Page." },
+        "stateEngine": { "type": "string", "minLength": 1, "description": "The state management engine used by the Page." },
+        "shadowRootOptions": { "type": "object", "description": "Options for the Page's shadow root." }
+      },
+      "required": ["id"],
+      "additionalProperties": false
+    },
+    "style": {
+      "type": "string",
+      "description": "Page CSS source."
+    },
+    "template": {
+      "type": "string",
+      "description": "Declarative Page template source."
+    },
+    "templateRenderer": {
+      "description": "Optional generated or prepared executable representation of the template."
+    },
+    "state": {
+      "type": "object",
+      "description": "Initial private Page state.",
+      "additionalProperties": true
+    },
+    "controller": {
+      "description": "Controller factory called by XShell with Page runtime services and resolved dependencies."
+    }
+  }
+}
