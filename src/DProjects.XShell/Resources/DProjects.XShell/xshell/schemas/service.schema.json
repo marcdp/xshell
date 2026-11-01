@@ -1,7 +1,7 @@
 
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://xshell.dev/schemas/service.contract.schema.json",
+  "$id": "https://xshell.dev/schemas/service.schema.json",
   "title": "XShell Service Contract",
   "description": "Describes the public contract of an XShell service.",
   "$ref": "./contract.schema.json",

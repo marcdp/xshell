@@ -24,7 +24,7 @@
     "defaults": {"$ref": "#/$defs/moduleDefaults", "description": "Defaults for that module."},
     "contract": {
       "$ref": "./contract.schema.json",
-      "description": "Public contract of the Component or Page.",
+      "description": "Public contract of the Module.",
       "unevaluatedProperties": false
     },
     "files": {"type": "array", "items": {"$ref": "#/$defs/file"}, "description": "Normalized virtual resource inventory for the module."}
