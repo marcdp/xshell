@@ -1,18 +1,15 @@
-// contract
-export const contract = {
-    description: "Displays a placeholder while content is loading.",
-    events: {},
-    properties: {
-        width:  {type:"string", default:"100%", attribute:true, state:true, description:"The width of the skeleton placeholder."},
-        height: {type:"string", default:"1em", attribute:true, state:true, description:"The height of the skeleton placeholder."},
-        radius: {type:"string", default:".25em", attribute:true, state:true, description:"The border radius of the skeleton placeholder."}
-    },
-    methods: {}
-};
-
-
-// implementation
+// component
 export default {
+    contract: {
+        description: "Displays a placeholder while content is loading.",
+        events: {},
+        properties: {
+            width:  {type:"string", default:"100%", attribute:true, state:true, description:"The width of the skeleton placeholder."},
+            height: {type:"string", default:"1em", attribute:true, state:true, description:"The height of the skeleton placeholder."},
+            radius: {type:"string", default:".25em", attribute:true, state:true, description:"The border radius of the skeleton placeholder."}
+        },
+        methods: {}
+    },
     style: `
         :host {
             display:block;

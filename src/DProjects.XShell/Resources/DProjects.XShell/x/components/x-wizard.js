@@ -1,25 +1,22 @@
-// contract
-export const contract = {
-    description: "Displays wizard panels with previous and next navigation controls.",
-    events: {},
-    properties: {
-        index:  {type:"number", default:0, attribute:true, state:true, description:""},
-        panels: {type:"array", default:[], state:true, description:""}
-    },
-    methods: {},
-    slots: {
-        "":{
-            description: "Slot for providing wizard panels."
-        },
-        "buttons":{
-            description: "Slot for providing buttons."
-        }
-    }
-};
-
-
-// implementation
+// component
 export default {
+    contract: {
+        description: "Displays wizard panels with previous and next navigation controls.",
+        events: {},
+        properties: {
+            index:  {type:"number", default:0, attribute:true, state:true, description:""},
+            panels: {type:"array", default:[], state:true, description:""}
+        },
+        methods: {},
+        slots: {
+            "":{
+                description: "Slot for providing wizard panels."
+            },
+            "buttons":{
+                description: "Slot for providing buttons."
+            }
+        }
+    },
     style: `
         :host {display:block;}
 

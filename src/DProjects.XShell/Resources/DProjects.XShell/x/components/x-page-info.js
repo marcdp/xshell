@@ -1,15 +1,12 @@
 
-// contract
-export const contract = {
-    description: "Displays diagnostic information about the current Page",
-    events: {},
-    properties: {},
-    methods: {}
-};
-
-
-// implementation
+// component
 export default {
+    contract: {
+        description: "Displays diagnostic information about the current Page",
+        events: {},
+        properties: {},
+        methods: {}
+    },
     style: `
         :host {display:none; position:absolute; top:.5em; right:.5em;}
         summary:hover {text-decoration:underline; cursor:pointer;}

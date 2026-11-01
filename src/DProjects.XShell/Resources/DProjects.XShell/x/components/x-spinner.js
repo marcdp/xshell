@@ -1,17 +1,14 @@
 
-// contract
-export const contract = {
-    description: "Displays a spinner with an optional message.",
-    events: {},
-    properties: {
-        message: {type:"string", default:"", attribute:true, state:true, description:""}
-    },
-    methods: {}
-};
-
-
-// implementation
+// component
 export default {
+    contract: {
+        description: "Displays a spinner with an optional message.",
+        events: {},
+        properties: {
+            message: {type:"string", default:"", attribute:true, state:true, description:""}
+        },
+        methods: {}
+    },
     template: `
         <div class="loader"></div>
         <span x-if="state.message">{{state.message}}</span>

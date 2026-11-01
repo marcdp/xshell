@@ -1,36 +1,33 @@
-// contract
-export const contract = {
-    description: "Provides a draggable splitter between two adjacent panes.",
-    events: {
-        resize: {
-            description: "Raised after the splitter changes the size of the preceding pane."
-        }
-    },
-    properties: {
-        orientation: {
-            type: "string",
-            default: "vertical",
-            attribute: true,
-            state: true,
-            reflect: true,
-            enum: ["vertical", "horizontal"],
-            description: "Splitter orientation."
-        },
-        disabled: {
-            type: "boolean",
-            default: false,
-            attribute: true,
-            state: true,
-            reflect: true,
-            description: "Whether resizing is disabled."
-        }
-    },
-    methods: {}
-};
-
-
-// implementation
+// component
 export default {
+    contract: {
+        description: "Provides a draggable splitter between two adjacent panes.",
+        events: {
+            resize: {
+                description: "Raised after the splitter changes the size of the preceding pane."
+            }
+        },
+        properties: {
+            orientation: {
+                type: "string",
+                default: "vertical",
+                attribute: true,
+                state: true,
+                reflect: true,
+                enum: ["vertical", "horizontal"],
+                description: "Splitter orientation."
+            },
+            disabled: {
+                type: "boolean",
+                default: false,
+                attribute: true,
+                state: true,
+                reflect: true,
+                description: "Whether resizing is disabled."
+            }
+        },
+        methods: {}
+    },
     style: `
         :host {
             display:block;

@@ -1,44 +1,41 @@
-// contract
-export const contract = {
-    description: "Renders a dynamic XTemplate using an object as its state.",
-    events: {
-        change: {
-            description: "Raised when the rendered XTemplate changes the value.",
-            detail: {
-                oldValue: {type: "any"},
-                newValue: {type: "any"}
+// component
+export default {
+    contract: {
+        description: "Renders a dynamic XTemplate using an object as its state.",
+        events: {
+            change: {
+                description: "Raised when the rendered XTemplate changes the value.",
+                detail: {
+                    oldValue: {type: "any"},
+                    newValue: {type: "any"}
+                }
+            },
+            command: {
+                description: "Raised when the dynamic XTemplate invokes a command.",
+                detail: {
+                    name: {type: "string"},
+                    detail: {type: "any"}
+                }
+            }
+        },    
+        properties: {
+            template: {type: "string", default: "", state: true, attribute: true, description: "The raw XTemplate string."},
+            value: {type: "object", default: null, state: true, description: "The object used as the XTemplate state."}
+        },
+        methods: {
+            validate: {
+                description: "Validates fields and assertions rendered by the dynamic XTemplate.",
+                parameters: [
+                    {name: "detail", type: "boolean", description: "Whether to include validation paths."}
+                ],
+                returns: {
+                    description: "Validation errors found in the rendered template.",
+                    type: "array"
+                }
             }
         },
-        command: {
-            description: "Raised when the dynamic XTemplate invokes a command.",
-            detail: {
-                name: {type: "string"},
-                detail: {type: "any"}
-            }
-        }
-    },    
-    properties: {
-        template: {type: "string", default: "", state: true, attribute: true, description: "The raw XTemplate string."},
-        value: {type: "object", default: null, state: true, description: "The object used as the XTemplate state."}
+        slots: {}
     },
-    methods: {
-        validate: {
-            description: "Validates fields and assertions rendered by the dynamic XTemplate.",
-            parameters: [
-                {name: "detail", type: "boolean", description: "Whether to include validation paths."}
-            ],
-            returns: {
-                description: "Validation errors found in the rendered template.",
-                type: "array"
-            }
-        }
-    },
-    slots: {}
-};
-
-
-// implementation
-export default {
     dependencies: {
         renderEngineXClient: "render-engine:x-client"
     },

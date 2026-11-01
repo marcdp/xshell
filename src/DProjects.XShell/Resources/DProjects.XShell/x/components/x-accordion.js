@@ -1,29 +1,26 @@
 
 
-// contract
-export const contract = {
-    description: "Groups accordion panels and keeps only the expanded panel active.",
-    events: {},
-    properties: {
-        selectedIndex: {type:"number", default:0, attribute:true, state:true, description:""}
-    },
-    methods: {},
-    slots: {
-        "": {
-            description: "The default slot for accordion panels."
-        }
-    },
-    examples: [
-        {
-            name: "Basic",
-            template: `<x-accordion></x-accordion>`
-        },
-    ]
-};
-
-
-// implementation
+// component
 export default {
+    contract: {
+        description: "Groups accordion panels and keeps only the expanded panel active.",
+        events: {},
+        properties: {
+            selectedIndex: {type:"number", default:0, attribute:true, state:true, description:""}
+        },
+        methods: {},
+        slots: {
+            "": {
+                description: "The default slot for accordion panels."
+            }
+        },
+        examples: [
+            {
+                name: "Basic",
+                template: `<x-accordion></x-accordion>`
+            },
+        ]
+    },
     style: `
         :host {
             display:block; 

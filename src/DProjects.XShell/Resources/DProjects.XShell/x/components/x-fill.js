@@ -1,20 +1,17 @@
 
-// contract
-export const contract = {
-    description: "Provides a flexible element that fills available layout space.",
-    events: {},
-    properties: {},
-    methods: {},
-    slots: {
-        "": {
-            description: "Content for the fill element"
-        }
-    }
-};
-
-
-// implementation
+// component
 export default {
+    contract: {
+        description: "Provides a flexible element that fills available layout space.",
+        events: {},
+        properties: {},
+        methods: {},
+        slots: {
+            "": {
+                description: "Content for the fill element"
+            }
+        }
+    },
     style: `
         :host {
             display:flex; 

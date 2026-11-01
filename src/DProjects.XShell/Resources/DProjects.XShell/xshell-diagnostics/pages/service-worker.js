@@ -1,13 +1,11 @@
-// contract
-export const contract = {
-    description: "Service Worker mappings",
-    events: {},
-    properties: {},
-    methods: {}
-};
-
-// export page
+// page
 export default {
+    contract: {
+        description: "Service Worker mappings",
+        events: {},
+        properties: {},
+        methods: {}
+    },
     meta: {
         title: "Service Worker"
     },

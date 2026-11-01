@@ -1,89 +1,86 @@
 
-// contract
-export const contract = {
-    description: "Filesystem tree component",
-    events: {
-        select: {
-            description: "Fired when a tree item is selected",
-            detail: {
-                path: {type: "string", description: "Path of the entry"},
-                paths: {type: "array", description: "Paths of the selected entries"},
-                source: {type: "string", description: "Source of the event (tree)"}
-            }
-        },
-        toggle: {
-            description: "Fired when a tree item is toggled (expanded or collapsed)",
-            detail: {
-                path: {type: "string", description: "Path of the entry"},
-                source: {type: "string", description: "Source of the event (tree)"}
-            }
-        },
-        rename: {
-            description: "Fired when the rename action is triggered",
-            detail: {
-                path: {type: "string", description: "Path of the entry"},
-                entry: {type: "object", description: "Entry object"},
-                source: {type: "string", description: "Source of the event (tree)"}
-            }
-        },
-        delete: {
-            description: "Fired when the delete action is triggered",
-            detail: {
-                path: {type: "string", description: "Path of the entry"},
-                entry: {type: "object", description: "Entry object"},
-                source: {type: "string", description: "Source of the event (tree)"}
-            }
-        },
-        contextmenuentry: {
-            description: "Fired when a context menu is requested for an entry",
-            detail: {
-                path: {type: "string", description: "Path of the entry"},
-                paths: {type: "array", description: "Paths of the selected entries"},
-                entry: {type: "object", description: "Entry object"},
-                entries: {type: "array", description: "Entry objects of the selected entries"},
-                source: {type: "string", description: "Source of the event (tree)"},
-                x: {type: "number", description: "X coordinate of the context menu request"},
-                y: {type: "number", description: "Y coordinate of the context menu request"}
-            }
-        }
-    },
-    properties: {
-        path: {type: "string", default:"/", attribute: true, state:true, description: "Current path in the filesystem"},
-        filesystem: {type: "object", default:null, state:true, description: "Filesystem instance"},
-        root: {type:"boolean", default:false, attribute: true, state: true, description: "Indicates if the root folder should be displayed"}
-    },
-    methods: {
-        select: {
-            description: "Select a tree item by path",
-            parameters: [
-                {name: "path", type: "string", description: "Path of the tree item to select"}
-            ]
-        },
-        refresh: {
-            description: "Refresh the tree view",
-            parameters: [
-                {name: "options", type: "object", description: "Options for refreshing the tree"}
-            ]
-        },
-        expand: {
-            description: "Expand a tree item by path",
-            parameters: [
-                {name: "path", type: "string", description: "Path of the tree item to expand"}
-            ] 
-        }, 
-        collapse: {
-            description: "Collapse a tree item by path",
-            parameters: [
-                {name: "path", type: "string", description: "Path of the tree item to collapse"}
-            ] 
-        }
-    },
-    slots: {}
-};
-
-
-// implementation
+// component
 export default {
+    contract: {
+        description: "Filesystem tree component",
+        events: {
+            select: {
+                description: "Fired when a tree item is selected",
+                detail: {
+                    path: {type: "string", description: "Path of the entry"},
+                    paths: {type: "array", description: "Paths of the selected entries"},
+                    source: {type: "string", description: "Source of the event (tree)"}
+                }
+            },
+            toggle: {
+                description: "Fired when a tree item is toggled (expanded or collapsed)",
+                detail: {
+                    path: {type: "string", description: "Path of the entry"},
+                    source: {type: "string", description: "Source of the event (tree)"}
+                }
+            },
+            rename: {
+                description: "Fired when the rename action is triggered",
+                detail: {
+                    path: {type: "string", description: "Path of the entry"},
+                    entry: {type: "object", description: "Entry object"},
+                    source: {type: "string", description: "Source of the event (tree)"}
+                }
+            },
+            delete: {
+                description: "Fired when the delete action is triggered",
+                detail: {
+                    path: {type: "string", description: "Path of the entry"},
+                    entry: {type: "object", description: "Entry object"},
+                    source: {type: "string", description: "Source of the event (tree)"}
+                }
+            },
+            contextmenuentry: {
+                description: "Fired when a context menu is requested for an entry",
+                detail: {
+                    path: {type: "string", description: "Path of the entry"},
+                    paths: {type: "array", description: "Paths of the selected entries"},
+                    entry: {type: "object", description: "Entry object"},
+                    entries: {type: "array", description: "Entry objects of the selected entries"},
+                    source: {type: "string", description: "Source of the event (tree)"},
+                    x: {type: "number", description: "X coordinate of the context menu request"},
+                    y: {type: "number", description: "Y coordinate of the context menu request"}
+                }
+            }
+        },
+        properties: {
+            path: {type: "string", default:"/", attribute: true, state:true, description: "Current path in the filesystem"},
+            filesystem: {type: "object", default:null, state:true, description: "Filesystem instance"},
+            root: {type:"boolean", default:false, attribute: true, state: true, description: "Indicates if the root folder should be displayed"}
+        },
+        methods: {
+            select: {
+                description: "Select a tree item by path",
+                parameters: [
+                    {name: "path", type: "string", description: "Path of the tree item to select"}
+                ]
+            },
+            refresh: {
+                description: "Refresh the tree view",
+                parameters: [
+                    {name: "options", type: "object", description: "Options for refreshing the tree"}
+                ]
+            },
+            expand: {
+                description: "Expand a tree item by path",
+                parameters: [
+                    {name: "path", type: "string", description: "Path of the tree item to expand"}
+                ] 
+            }, 
+            collapse: {
+                description: "Collapse a tree item by path",
+                parameters: [
+                    {name: "path", type: "string", description: "Path of the tree item to collapse"}
+                ] 
+            }
+        },
+        slots: {}
+    },
     style: `
         :host {width:100%;}
     `,

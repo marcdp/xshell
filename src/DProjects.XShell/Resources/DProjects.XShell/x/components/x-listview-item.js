@@ -1,35 +1,33 @@
-// contract
-export const contract = {
-    description: "Displays one selectable item in an x-listview collection.",
-    events: {},
-    properties: {
-        icon:        {type:"string", default:"x-file", attribute:true, state:true, description:"Item icon."},
-        label:       {type:"string", default:"", attribute:true, state:true, description:"Primary item label."},
-        description: {type:"string", default:"", attribute:true, state:true, description:"Secondary item description."},
-        path:        {type:"string", default:"", attribute:true, state:true, description:"Item path within the list."},
-        href:        {type:"string", default:"", attribute:true, state:true, description:"Optional navigation target."},
-        target:      {type:"string", default:"", attribute:true, state:true, description:"Optional browser target for navigation."},
-        open:        {type:"string", default:"auto", attribute:true, state:true, enum:["auto", "top", "dialog", "stack", "embed"], description:"XShell navigation presentation."},
-        breadcrumb:  {type:"boolean", default:false, attribute:true, state:true, description:"Whether navigation contributes the current breadcrumb."},
-        category:    {type:"string", default:"", attribute:true, state:true, description:"Grouping label used in list and details views."},
-        selected:    {type:"boolean", default:false, attribute:true, state:true, description:"Whether the item is selected."},
-        index:       {type:"number", default:0, attribute:false, state:true, description:"Zero-based position assigned by the containing list."}
-    },
-    methods: {
-        activate: {
-            description: "Activates the item's navigation link when one is configured.",
-            returns: {type:"void"}
+// component
+export default {
+    contract: {
+        description: "Displays one selectable item in an x-listview collection.",
+        events: {},
+        properties: {
+            icon:        {type:"string", default:"x-file", attribute:true, state:true, description:"Item icon."},
+            label:       {type:"string", default:"", attribute:true, state:true, description:"Primary item label."},
+            description: {type:"string", default:"", attribute:true, state:true, description:"Secondary item description."},
+            path:        {type:"string", default:"", attribute:true, state:true, description:"Item path within the list."},
+            href:        {type:"string", default:"", attribute:true, state:true, description:"Optional navigation target."},
+            target:      {type:"string", default:"", attribute:true, state:true, description:"Optional browser target for navigation."},
+            open:        {type:"string", default:"auto", attribute:true, state:true, enum:["auto", "top", "dialog", "stack", "embed"], description:"XShell navigation presentation."},
+            breadcrumb:  {type:"boolean", default:false, attribute:true, state:true, description:"Whether navigation contributes the current breadcrumb."},
+            category:    {type:"string", default:"", attribute:true, state:true, description:"Grouping label used in list and details views."},
+            selected:    {type:"boolean", default:false, attribute:true, state:true, description:"Whether the item is selected."},
+            index:       {type:"number", default:0, attribute:false, state:true, description:"Zero-based position assigned by the containing list."}
+        },
+        methods: {
+            activate: {
+                description: "Activates the item's navigation link when one is configured.",
+                returns: {type:"void"}
+            }
+        },
+        slots: {
+            "": {description:"Additional details cells, in header-column order after the primary cell."},
+            "bottom": {description:"Content to be displayed in the bottom slot of the item."},
+            "right": {description:"Content to be displayed in the right slot of the item."}
         }
     },
-    slots: {
-        "": {description:"Additional details cells, in header-column order after the primary cell."},
-        "bottom": {description:"Content to be displayed in the bottom slot of the item."},
-        "right": {description:"Content to be displayed in the right slot of the item."}
-    }
-};
-
-// implementation
-export default {
     style: `
         :host {
             display: block;

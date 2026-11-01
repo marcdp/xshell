@@ -1,15 +1,11 @@
-// contract
-export const contract = {
-    description: "Bus",
-    events: {},
-    properties: {},
-    methods: {}
-};
-
-const MAX_EVENTS = 1000;
-
-// export page
+// page
 export default {
+    contract: {
+        description: "Bus",
+        events: {},
+        properties: {},
+        methods: {}
+    },
     meta: {
         title: "Bus"
     },

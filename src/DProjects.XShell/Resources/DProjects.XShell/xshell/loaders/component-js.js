@@ -1,7 +1,6 @@
 import Timer from "../timer.js"
 import Events from "../events.js"
 import xshell from "../xshell.js";
-import validateComponentContract from "../validation/component.contract.js";
 import validateComponent from "../validation/component.js";
 import { processStyle } from "../utils/style.js";
 import { deepFreeze } from "../utils/object.js";
@@ -43,12 +42,12 @@ function areDeclarativeValuesEqual(left, right) {
     }
     return leftKeys.every(key => Object.prototype.hasOwnProperty.call(right, key) && areDeclarativeValuesEqual(left[key], right[key]));
 }
-function createStateSkeleton(src, implementation, contract) {
+function createStateSkeleton(src, definition) {
     // build state with contract defaults as the canonical values for public properties
     const stateSkeleton = {};
-    const properties = contract.properties || {};
-    const state = implementation.state || {};
-    const name = implementation.meta?.name || src;
+    const properties = definition.contract.properties || {};
+    const state = definition.state || {};
+    const name = definition.meta?.name || src;
     for (const [propName, property] of Object.entries(properties)) {
         if (property.state === true) {
             stateSkeleton[propName] = property.default;
@@ -61,10 +60,10 @@ function createStateSkeleton(src, implementation, contract) {
             continue;
         }
         if (property.state !== true) {
-            throw new Error(`Component '${name}' declares public property '${stateName}' in implementation.state, but the contract property is not state-backed.`);
+            throw new Error(`Component '${name}' declares public property '${stateName}' in implementation.state, but the definition.contract property is not state-backed.`);
         }
         if (!areDeclarativeValuesEqual(property.default, value)) {
-            throw new Error(`Component '${name}' declares different defaults for public property '${stateName}' in contract.properties and implementation.state.`);
+            throw new Error(`Component '${name}' declares different defaults for public property '${stateName}' in definition.contract.properties and implementation.state.`);
         }
     }
     return stateSkeleton;
@@ -121,46 +120,39 @@ function findClosestXPage(element) {
     }
     return null;
 }
-function validateSlots(slots, contract, componentId) {
-    const contractSlots = contract.slots || {};
+function validateSlots(slots, definition, componentId) {
+    const contractSlots = definition.contract.slots || {};
     for (const slotName of slots) {
         if (!Object.prototype.hasOwnProperty.call(contractSlots, slotName)) {
             const displayName = slotName || "(default)";
-            throw new Error(`Component '${componentId}' template declares slot '${displayName}', but it is not declared in contract.slots.`);
+            throw new Error(`Component '${componentId}' template declares slot '${displayName}', but it is not declared in definition.contract.slots.`);
         }
     }
 }
 
 
 // create web component from js implementation
-export async function createComponentClassFromJsDefinition(src, context, implementation, contract) {
+export async function createComponentClassFromJsDefinition(src, context, definition) {
     // defaults
-    if (!contract) contract = {};
-    if (!contract.properties) contract.properties = {};
-    if (!contract.events) contract.events = {};
-    if (!contract.slots) contract.slots = {};
-    if (!contract.methods) contract.methods = {};
-    if (!implementation.meta) implementation.meta = {};
-    if (!implementation.meta.renderEngine) implementation.meta.renderEngine = xshell.config.modules[context.resourceDefinition.moduleId].defaults.component.renderEngine;
-    if (!implementation.meta.stateEngine) implementation.meta.stateEngine = xshell.config.modules[context.resourceDefinition.moduleId].defaults.component.stateEngine;
-    if (!implementation.dependencies) implementation.dependencies = {};
-    if (!implementation.state) implementation.state = {};
-    if (!implementation.style) implementation.style = "";
-    if (!implementation.template) implementation.template = "";
-    if (!implementation.controller) implementation.controller = () => ({});
-    // validate contract
-    if (contract) {
-        await validateComponentContract(src, contract);
-    }
-    // validateComponent implementation against contract
-    if (implementation) {
-        await validateComponent(src, implementation);
-    }
+    if (!definition.contract) definition.contract = {};
+    if (!definition.contract.properties) definition.contract.properties = {};
+    if (!definition.contract.events) definition.contract.events = {};
+    if (!definition.contract.slots) definition.contract.slots = {};
+    if (!definition.contract.methods) definition.contract.methods = {};
+    if (!definition.meta) definition.meta = {};
+    if (!definition.meta.renderEngine) definition.meta.renderEngine = xshell.config.modules[context.resourceDefinition.moduleId].defaults.component.renderEngine;
+    if (!definition.meta.stateEngine) definition.meta.stateEngine = xshell.config.modules[context.resourceDefinition.moduleId].defaults.component.stateEngine;
+    if (!definition.dependencies) definition.dependencies = {};
+    if (!definition.state) definition.state = {};
+    if (!definition.style) definition.style = "";
+    if (!definition.template) definition.template = "";
+    if (!definition.controller) definition.controller = () => ({});
+    // validateComponent 
+    await validateComponent(src, definition);
     // freeze and seal the implementation and contract to prevent further modifications
-    implementation = deepFreeze(implementation);
-    contract = deepFreeze(contract);
+    definition = deepFreeze(definition);
     // process definition CSS once before creating Component instances
-    const style = implementation.style ? await processStyle({ src, context, css: implementation.style }) : "";
+    const style = definition.style ? await processStyle({ src, context, css: definition.style }) : "";
     // stylesheets
     const stylesheets = []
     if (style) {
@@ -169,10 +161,10 @@ export async function createComponentClassFromJsDefinition(src, context, impleme
         stylesheets.push(stylesheet);
     }
     // state skeleton
-    const stateSkeleton = createStateSkeleton(src, implementation, contract);
+    const stateSkeleton = createStateSkeleton(src, definition);
     // non-state-backed property defaults
     const serializedPropertyDefaults = Object.create(null);;
-    for (const [propName, property] of Object.entries(contract.properties)) {
+    for (const [propName, property] of Object.entries(definition.contract.properties)) {
         const defaultValue = property.default;
         if (property.state !== true && defaultValue !== null && typeof(defaultValue) === "object" && (Array.isArray(defaultValue) || isPlainObject(defaultValue))) {
             serializedPropertyDefaults[propName] = JSON.stringify(defaultValue);
@@ -181,7 +173,7 @@ export async function createComponentClassFromJsDefinition(src, context, impleme
     const propertyAttributeNames = [];
     const reflectedPropertyNames = [];
     const stateMapAttributes = [];
-    for (const [propName, property] of Object.entries(contract.properties)) {
+    for (const [propName, property] of Object.entries(definition.contract.properties)) {
         if (property.attribute === true) {
             propertyAttributeNames.push(camelToKebab(propName));
         }
@@ -192,8 +184,8 @@ export async function createComponentClassFromJsDefinition(src, context, impleme
             stateMapAttributes.push({ attributePrefix: camelToKebab(propName) + "-", stateName: propName });
         }
     }
-    for (const [stateName, value] of Object.entries(implementation.state)) {
-        if (Object.prototype.hasOwnProperty.call(contract.properties, stateName)) {
+    for (const [stateName, value] of Object.entries(definition.state)) {
+        if (Object.prototype.hasOwnProperty.call(definition.contract.properties, stateName)) {
             continue;
         }
         if (isEmptyPlainObject(value)) {
@@ -201,21 +193,21 @@ export async function createComponentClassFromJsDefinition(src, context, impleme
         }
     }
     // state engine
-    const stateEngineFactoryCreator = await xshell.loader.load("state-engine:" + implementation.meta.stateEngine);
+    const stateEngineFactoryCreator = await xshell.loader.load("state-engine:" + definition.meta.stateEngine);
     const stateEngineFactory = new stateEngineFactoryCreator(stateSkeleton, context);
     // render engine
-    const renderEngineFactoryCreator = await xshell.loader.load("render-engine:" + implementation.meta.renderEngine);
-    const renderEngineFactory = new renderEngineFactoryCreator(implementation.template, context, implementation.templateRenderer);
+    const renderEngineFactoryCreator = await xshell.loader.load("render-engine:" + definition.meta.renderEngine);
+    const renderEngineFactory = new renderEngineFactoryCreator(definition.template, context, definition.templateRenderer);
     // validate compiled template slots through the render-engine factory contract
-    validateSlots(renderEngineFactory.slots, contract, implementation.meta.id || "unknown");
+    validateSlots(renderEngineFactory.slots, definition, definition.meta.id || "unknown");
     // load render engine dependencies
     if (renderEngineFactory.dependencies.length) {
         await xshell.loader.load(renderEngineFactory.dependencies);
     }    
     // load component dependencies
     let dependencies = {};
-    if (implementation.dependencies && Object.keys(implementation.dependencies).length) {
-        dependencies = await xshell.loader.load(implementation.dependencies);
+    if (definition.dependencies && Object.keys(definition.dependencies).length) {
+        dependencies = await xshell.loader.load(definition.dependencies);
     }
     // init 
     await renderEngineFactory.init();
@@ -242,7 +234,7 @@ export async function createComponentClassFromJsDefinition(src, context, impleme
             return true;
         }
         static get contract() { 
-            return contract;
+            return definition.contract;
         }
         get controller() {
             return this._controller;
@@ -252,7 +244,7 @@ export async function createComponentClassFromJsDefinition(src, context, impleme
             super();
             const self = this;
             //shadowRoot
-            this.attachShadow(implementation.meta.shadowRootOptions || {mode: "open"});
+            this.attachShadow(definition.meta.shadowRootOptions || {mode: "open"});
             this.shadowRoot.adoptedStyleSheets.push(...stylesheets);
             // state
             this._state = stateEngineFactory.create({
@@ -265,7 +257,7 @@ export async function createComponentClassFromJsDefinition(src, context, impleme
                 }
             });
             this._properties = {};
-            for (const [propName, property] of Object.entries(contract.properties)) {
+            for (const [propName, property] of Object.entries(definition.contract.properties)) {
                 if (property.state !== true) {
                     this._properties[propName] = Object.hasOwn(serializedPropertyDefaults, propName) ? JSON.parse(serializedPropertyDefaults[propName]) : property.default;
                 }
@@ -273,12 +265,9 @@ export async function createComponentClassFromJsDefinition(src, context, impleme
             // services provider
             const servicesProvider = new Proxy({}, {
                 get: (obj, prop) => {
-                    if (prop == "implementation") {
-                        // implementation of component
-                        return implementation;
-                    } else if (prop == "contract") {
-                        // contract of component
-                        return contract;
+                    if (prop == "definition") {
+                        // definition of component
+                        return definition;
                     } else if (prop == "state") {
                         // state
                         return self._state;
@@ -326,12 +315,12 @@ export async function createComponentClassFromJsDefinition(src, context, impleme
                 }
             });
             // controller
-            this._controller = implementation.controller(servicesProvider) ?? {};
+            this._controller = definition.controller(servicesProvider) ?? {};
             // validate public contract methods
-            for (const methodName of Object.keys(contract.methods ?? {})) {
+            for (const methodName of Object.keys(definition.contract.methods ?? {})) {
                 const method = this._controller[methodName];
                 if (typeof(method) !== "function") {
-                    throw new Error(`Component '${implementation.meta.id}' declares public method '${methodName}' in contract.methods but controller.${methodName} is not a function.`);
+                    throw new Error(`Component '${definition.meta.id}' declares public method '${methodName}' in definition.contract.methods but controller.${methodName} is not a function.`);
                 }
             }
             // attribute mutation observer (listen for changes in attributes that start with state map attribute names)
@@ -371,7 +360,7 @@ export async function createComponentClassFromJsDefinition(src, context, impleme
         attributeChangedCallback(name, oldValue, newValue) {
             if (this._reflectingAttributes.has(name)) return;
             const propName = kebabToCamel(name);
-            const property = contract.properties[propName];
+            const property = definition.contract.properties[propName];
             if (!property || property.attribute !== true) return;
             this[propName] = convertAttributeValue(property, newValue);
         }
@@ -476,7 +465,7 @@ export async function createComponentClassFromJsDefinition(src, context, impleme
         }        
     };
     // add properties
-    for (const [propName, property] of Object.entries(contract.properties)) {
+    for (const [propName, property] of Object.entries(definition.contract.properties)) {
         Object.defineProperty(WebComponent.prototype, propName, {
             get() {
                 return property.state === true ? this._state[propName] : this._properties[propName];
@@ -499,10 +488,10 @@ export async function createComponentClassFromJsDefinition(src, context, impleme
         });
     }
     // add methods
-    for (const methodName of Object.keys(contract.methods)) {
+    for (const methodName of Object.keys(definition.contract.methods)) {
         if (methodName == "focus") {
         } else if (methodName in WebComponent.prototype) {
-            throw new Error(`Component '${implementation.meta.id}' cannot expose public method '${methodName}' because it would overwrite a framework or Web Component method.`);
+            throw new Error(`Component '${definition.meta.id}' cannot expose public method '${methodName}' because it would overwrite a framework or Web Component method.`);
         }
         Object.defineProperty(WebComponent.prototype, methodName, {
             value: function(...args) {
@@ -513,7 +502,7 @@ export async function createComponentClassFromJsDefinition(src, context, impleme
         });
     }
     // register
-    const id = implementation.meta.id;
+    const id = definition.meta.id;
     if (window.customElements.get(id)) {
         throw new Error(`Component '${id}' from '${src}' cannot be registered because that id is already registered.`);
     }
@@ -542,25 +531,24 @@ export default class LoaderComponentJs {
             }
             throw error;
         }
-        // proccess
-        let implementation = module.default;
-        let contract = module.contract;
+        // process
+        let definition = module.default;
         // check if its a promise
-        if (typeof(implementation) === "object" && typeof(implementation.then) === "function") {
-            implementation = await implementation;
+        if (typeof(definition) === "object" && typeof(definition.then) === "function") {
+            definition = await definition;
         }
         // check if its a class
-        if (typeof(implementation) === "function"  && /^class\s/.test(Function.prototype.toString.call(implementation))) {
-            return implementation;
+        if (typeof(definition) === "function"  && /^class\s/.test(Function.prototype.toString.call(definition))) {
+            return definition;
         }
         // else, asume its a implementation object
-        if (!implementation.meta) implementation.meta = {};
-        if (!implementation.meta.id) {
+        if (!definition.meta) definition.meta = {};
+        if (!definition.meta.id) {
             let aux = src.split("?")[0];
             aux = aux.substring(aux.lastIndexOf("/")+1).split(".")[0];
-            implementation.meta.id = aux;
+            definition.meta.id = aux;
         }
         // create class implementation
-        return await createComponentClassFromJsDefinition(src, context, implementation, contract);        
+        return await createComponentClassFromJsDefinition(src, context, definition);        
     }
 };

@@ -1,19 +1,16 @@
-// contract
-export const contract = {
-    description: "Provides the presentation container for x-listview items.",
-    events: {},
-    properties: {},
-    methods: {},
-    slots: {
-        "": {
-            description: "Default slot for x-listview-item elements."
-        }
-    }
-};
-
-
-// implementation
+// component
 export default {
+    contract: {
+        description: "Provides the presentation container for x-listview items.",
+        events: {},
+        properties: {},
+        methods: {},
+        slots: {
+            "": {
+                description: "Default slot for x-listview-item elements."
+            }
+        }
+    },
     style: `
         :host {display: block;min-width: 0;}
         :host([hidden]) {display:none!important;}

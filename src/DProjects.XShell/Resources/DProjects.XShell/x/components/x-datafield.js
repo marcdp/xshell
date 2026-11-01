@@ -24,87 +24,84 @@ const formatFileSize = function(bytes) {
     return `${formattedSize} ${sizes[i]}`;
 }
 
-// contract
-export const contract = {
-    description: "Renders and validates an editable form field.",
-    events: {
-        change: {
-            description: "Raised when the field value changes.",
-            detail: {
-                oldValue: {type:"any"},
-                newValue: {type:"any"}
-            }
-        },
-        "datafield:change": {
-            description: "Raised when the field value changes for form validation.",
-            detail: {
-                oldValue: {type:"any"},
-                newValue: {type:"any"}
-            }
-        }
-    },
-    properties: {
-        label:          {type:"string", default:"", attribute:true, state:true, description:""},
-        labelMode:      {type:"string", default:"auto", attribute:true, state:true, description:""},
-        description:    {type:"string", default:"", attribute:true, state:true, description:""},
-        labelSecondary: {type:"string", default:"", attribute:true, state:true, description:""},
-        message:        {type:"string", default:"", attribute:true, state:true, description:""},
-        type:           {type:"string", default:"", attribute:true, state:true, description:""},
-        placeholder:    {type:"string", default:"", attribute:true, state:true, description:""},
-        disabled:       {type:"boolean", default:false, attribute:true, state:true, description:""},
-        readonly:       {type:"boolean", default:false, attribute:true, state:true, description:""},
-        min:            {type:"any", default:null, attribute:true, state:true, description:""},
-        max:            {type:"any", default:null, attribute:true, state:true, description:""},
-        minlength:      {type:"any", default:null, attribute:true, state:true, description:""},
-        maxlength:      {type:"any", default:null, attribute:true, state:true, description:""},
-        multiple:       {type:"boolean", default:false, attribute:true, state:true, description:""},
-        pattern:        {type:"any", default:null, attribute:true, state:true, description:""},
-        required:       {type:"boolean", default:false, attribute:true, state:true, description:""},
-        step:           {type:"any", default:null, attribute:true, state:true, description:""},
-        autofocus:      {type:"boolean", default:false, attribute:true, state:true, description:""},
-        autoselect:     {type:"boolean", default:false, attribute:true, state:true, description:""},
-        autocomplete:   {type:"any", default:null, attribute:true, state:true, description:""},
-        domain:         {type:"any", default:null, attribute:true, state:true, description:""},
-        value:          {type:"any", attribute:true, state:true, description:""},
-        accept:         {type:"any", default:null, attribute:true, state:true, description:""},
-        lang:           {type:"any", default:null, attribute:true, state:true, description:""},
-        spellcheck:     {type:"string", default:"true", attribute:true, state:true, description:""},
-        langs:          {type:"array", default:[], attribute:true, state:true, description:""},
-        langIndex:      {type:"number", default:0, attribute:true, state:true, description:""},
-        errors:         {type:"array", default:[], attribute:true, state:true, description:""},
-        validated:      {type:"boolean", default:false, attribute:true, state:true, description:""},
-        add:            {type:"boolean", default:false, attribute:true, state:true, description:""},
-        default:        {type:"any", default:null, attribute:true, attributeParser:"json", state:true, description:"Value used to initialize the field when value is undefined."},
-        itemDefault:    {type:"any", default:null, attribute:true, attributeParser:"json", state:true, description:"Default value used to initialize newly added list items."},
-        template:       {type:"string", default:"", attribute:true, state:true, description:"XTemplate used when type is 'x-template'."},
-        collapsed:      {type:"boolean", default:false, attribute:true, state:true, description:""},
-        collapsible:    {type:"boolean", default:false, attribute:true, state:true, description:""},
-    },
-    methods: {
-        validate: {
-            description: "Validates the field and returns its validation errors.",
-            parameters: [
-                {name:"detail", type:"boolean", description:"Whether to include the field path in each error."}
-            ],
-            returns: {
-                description: "The validation errors found for the field.",
-                type: "array"
-            }
-        },
-        focus: {
-            description: "Focuses the datafield."
-        }
-    },
-    slots: {
-        "": {
-            description: "Default slot for the datafield content."
-        }
-    } 
-};
-
-
-// implementation
+// component
 export default {
+    contract: {
+        description: "Renders and validates an editable form field.",
+        events: {
+            change: {
+                description: "Raised when the field value changes.",
+                detail: {
+                    oldValue: {type:"any"},
+                    newValue: {type:"any"}
+                }
+            },
+            "datafield:change": {
+                description: "Raised when the field value changes for form validation.",
+                detail: {
+                    oldValue: {type:"any"},
+                    newValue: {type:"any"}
+                }
+            }
+        },
+        properties: {
+            label:          {type:"string", default:"", attribute:true, state:true, description:""},
+            labelMode:      {type:"string", default:"auto", attribute:true, state:true, description:""},
+            description:    {type:"string", default:"", attribute:true, state:true, description:""},
+            labelSecondary: {type:"string", default:"", attribute:true, state:true, description:""},
+            message:        {type:"string", default:"", attribute:true, state:true, description:""},
+            type:           {type:"string", default:"", attribute:true, state:true, description:""},
+            placeholder:    {type:"string", default:"", attribute:true, state:true, description:""},
+            disabled:       {type:"boolean", default:false, attribute:true, state:true, description:""},
+            readonly:       {type:"boolean", default:false, attribute:true, state:true, description:""},
+            min:            {type:"any", default:null, attribute:true, state:true, description:""},
+            max:            {type:"any", default:null, attribute:true, state:true, description:""},
+            minlength:      {type:"any", default:null, attribute:true, state:true, description:""},
+            maxlength:      {type:"any", default:null, attribute:true, state:true, description:""},
+            multiple:       {type:"boolean", default:false, attribute:true, state:true, description:""},
+            pattern:        {type:"any", default:null, attribute:true, state:true, description:""},
+            required:       {type:"boolean", default:false, attribute:true, state:true, description:""},
+            step:           {type:"any", default:null, attribute:true, state:true, description:""},
+            autofocus:      {type:"boolean", default:false, attribute:true, state:true, description:""},
+            autoselect:     {type:"boolean", default:false, attribute:true, state:true, description:""},
+            autocomplete:   {type:"any", default:null, attribute:true, state:true, description:""},
+            domain:         {type:"any", default:null, attribute:true, state:true, description:""},
+            value:          {type:"any", attribute:true, state:true, description:""},
+            accept:         {type:"any", default:null, attribute:true, state:true, description:""},
+            lang:           {type:"any", default:null, attribute:true, state:true, description:""},
+            spellcheck:     {type:"string", default:"true", attribute:true, state:true, description:""},
+            langs:          {type:"array", default:[], attribute:true, state:true, description:""},
+            langIndex:      {type:"number", default:0, attribute:true, state:true, description:""},
+            errors:         {type:"array", default:[], attribute:true, state:true, description:""},
+            validated:      {type:"boolean", default:false, attribute:true, state:true, description:""},
+            add:            {type:"boolean", default:false, attribute:true, state:true, description:""},
+            default:        {type:"any", default:null, attribute:true, attributeParser:"json", state:true, description:"Value used to initialize the field when value is undefined."},
+            itemDefault:    {type:"any", default:null, attribute:true, attributeParser:"json", state:true, description:"Default value used to initialize newly added list items."},
+            template:       {type:"string", default:"", attribute:true, state:true, description:"XTemplate used when type is 'x-template'."},
+            collapsed:      {type:"boolean", default:false, attribute:true, state:true, description:""},
+            collapsible:    {type:"boolean", default:false, attribute:true, state:true, description:""},
+        },
+        methods: {
+            validate: {
+                description: "Validates the field and returns its validation errors.",
+                parameters: [
+                    {name:"detail", type:"boolean", description:"Whether to include the field path in each error."}
+                ],
+                returns: {
+                    description: "The validation errors found for the field.",
+                    type: "array"
+                }
+            },
+            focus: {
+                description: "Focuses the datafield."
+            }
+        },
+        slots: {
+            "": {
+                description: "Default slot for the datafield content."
+            }
+        } 
+    },
     style: `
         :host {display:block; position:relative; -webkit-appearance: none!important;}
         :host input,select,textarea {display:block; width:100%; resize: none;}

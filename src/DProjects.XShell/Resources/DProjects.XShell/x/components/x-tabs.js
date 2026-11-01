@@ -1,24 +1,21 @@
 
-// contract
-export const contract = {
-    description: "Displays tab headers and the selected tab panel.",
-    events: {},
-    properties: {
-        selectedIndex: {type:"number", default:0, attribute:true, state:true, description:""},
-        selectedHash:  {type:"string", default:"", attribute:true, state:true, description:""},
-        useHash:       {type:"boolean", default:false, attribute:true, state:true, description:"Whether to use the hash in the URL to track the selected tab."}
-    },
-    methods: {},
-    slots: {
-        "": {
-            description: "Content for the tab panels"
-        }
-    }
-};
-
-
-// implementation
+// component
 export default {
+    contract: {
+        description: "Displays tab headers and the selected tab panel.",
+        events: {},
+        properties: {
+            selectedIndex: {type:"number", default:0, attribute:true, state:true, description:""},
+            selectedHash:  {type:"string", default:"", attribute:true, state:true, description:""},
+            useHash:       {type:"boolean", default:false, attribute:true, state:true, description:"Whether to use the hash in the URL to track the selected tab."}
+        },
+        methods: {},
+        slots: {
+            "": {
+                description: "Content for the tab panels"
+            }
+        }
+    },
     style: `
         :host {display:block; }
         

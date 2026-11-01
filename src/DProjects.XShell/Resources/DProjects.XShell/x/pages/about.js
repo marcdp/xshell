@@ -1,12 +1,11 @@
 
-export const contract = {
-    description: "About XShell",
-    events: {},
-    properties: {},
-    methods: {}
-};
-
 export default {
+    contract: {
+        description: "About XShell",
+        events: {},
+        properties: {},
+        methods: {}
+    },
     meta: {
         title: "About XShell"
     },

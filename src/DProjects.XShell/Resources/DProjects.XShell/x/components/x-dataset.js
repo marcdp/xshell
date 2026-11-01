@@ -1,15 +1,14 @@
 
-export const contract = {
-    description: "Displays the tables of a DataSet using a tabbed interface.",
-    events: {},
-    properties: {
-        value: {type: "object", default: null, state: true, description: "DataSet object to display."},
-        src: {type: "string", attribute:true, state:true, default: "", description: "Source URL for the dataset."}
-    },
-    methods: {}
-};
-
 export default {
+    contract: {
+        description: "Displays the tables of a DataSet using a tabbed interface.",
+        events: {},
+        properties: {
+            value: {type: "object", default: null, state: true, description: "DataSet object to display."},
+            src: {type: "string", attribute:true, state:true, default: "", description: "Source URL for the dataset."}
+        },
+        methods: {}
+    },
     style: `
         :host {
             display: block;

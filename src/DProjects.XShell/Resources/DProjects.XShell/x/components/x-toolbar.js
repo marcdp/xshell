@@ -1,19 +1,16 @@
-// contract
-export const contract = {
-    description: "Provides a flexible toolbar container.",
-    events: {},
-    properties: {},
-    methods: {},
-    slots: {
-        "": {
-            description: "Default slot for the toolbar content."
-        }
-    } 
-};
-
-
-// implementation
+// component
 export default {
+    contract: {
+        description: "Provides a flexible toolbar container.",
+        events: {},
+        properties: {},
+        methods: {},
+        slots: {
+            "": {
+                description: "Default slot for the toolbar content."
+            }
+        } 
+    },
     style: `
         :host {display:flex; align-items:center; gap:.2em; position:relative; flex-wrap:wrap; }
     `,

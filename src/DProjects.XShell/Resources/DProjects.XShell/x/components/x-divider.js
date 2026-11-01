@@ -1,15 +1,12 @@
 
-// contract
-export const contract = {
-    description: "Renders a visual divider.",
-    events: {},
-    properties: {},
-    methods: {}
-};
-
-
-// implementation
+// component
 export default {
+    contract: {
+        description: "Renders a visual divider.",
+        events: {},
+        properties: {},
+        methods: {}
+    },
     style: `
         :host {display:block;}
         :host hr {border:var(--x-divider-border); margin-left:0; margin-right:0;}

@@ -1,22 +1,20 @@
 import * as PathUtils from "../utils/path.js";
 
-// contract
-export const contract = {
-    description: "Upload page",
-    events: {},
-    properties: {
-        message: { type: "string", description: "The message to display on the upload page", context:true},
-        src: { type: "string", description: "The filesystem src", context:true },
-        path: { type: "string", description: "The filesystem base path", context:true },
-        filesPath: { type: "string", description: "The file path for the upload", context:true },
-        files: { type: "array", description: "The files to upload", context:true },
-        filesystem: { type: "object", description: "The filesystem instance", context:true }
-    },
-    methods: {}
-};
-
-// export page
+// page
 export default {
+    contract: {
+        description: "Upload page",
+        events: {},
+        properties: {
+            message: { type: "string", description: "The message to display on the upload page", context:true},
+            src: { type: "string", description: "The filesystem src", context:true },
+            path: { type: "string", description: "The filesystem base path", context:true },
+            filesPath: { type: "string", description: "The file path for the upload", context:true },
+            files: { type: "array", description: "The files to upload", context:true },
+            filesystem: { type: "object", description: "The filesystem instance", context:true }
+        },
+        methods: {}
+    },
     meta: {
         title: "Upload files"
     },

@@ -11,19 +11,16 @@ function formatFileSize(bytes) {
     return `${formattedSize} ${sizes[i]}`;
 }
 
-// contract
-export const contract = {
-    description: "Formats and displays a byte count.",
-    events: {},
-    properties: {
-        value: {type:"number", default:0, attribute:true, state:true, description:""}
-    },
-    methods: {}
-};
-
-
-// implementation
+// component
 export default {
+    contract: {
+        description: "Formats and displays a byte count.",
+        events: {},
+        properties: {
+            value: {type:"number", default:0, attribute:true, state:true, description:""}
+        },
+        methods: {}
+    },
     template: `
         {{ state.valueFormatted || ''}}
     `,

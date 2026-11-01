@@ -1,27 +1,24 @@
-// contract
-export const contract = {
-    description: "Displays pagination controls and emits requested page changes.",
-    events: {
-        change: {
-            description: "Raised when the previous or next page is requested.",
-            detail: {
-                index: {type:"number"},
-                size: {type:"number"}
-            }
-        }
-    },
-    properties: {
-        total: {type:"number", default:0, attribute:true, state:true, description:""},
-        index: {type:"number", default:0, attribute:true, state:true, description:""},
-        size:  {type:"number", default:20, attribute:true, state:true, description:""},
-        label: {type:"string", default:"records", attribute:true, state:true, description:""}
-    },
-    methods: {}
-};
-
-
-// implementation
+// component
 export default {
+    contract: {
+        description: "Displays pagination controls and emits requested page changes.",
+        events: {
+            change: {
+                description: "Raised when the previous or next page is requested.",
+                detail: {
+                    index: {type:"number"},
+                    size: {type:"number"}
+                }
+            }
+        },
+        properties: {
+            total: {type:"number", default:0, attribute:true, state:true, description:""},
+            index: {type:"number", default:0, attribute:true, state:true, description:""},
+            size:  {type:"number", default:20, attribute:true, state:true, description:""},
+            label: {type:"string", default:"records", attribute:true, state:true, description:""}
+        },
+        methods: {}
+    },
     style: `
         :host {
             display:flex;

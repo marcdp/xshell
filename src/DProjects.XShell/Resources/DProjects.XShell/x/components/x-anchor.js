@@ -1,38 +1,35 @@
 
-// contract
-export const contract = {
-    description: "Renders a navigation link handled by the XShell navigation service.",
-    events: {},
-    properties: {
-        href:       {type:"string", default:"", attribute:true, state:true, description:""},
-        open:       {type:"string", default:"auto", attribute:true, state:true, description:"", enum: ["auto","top","dialog","stack","embed"]},
-        query:      {type:"object", default:{}, attribute:true, state:true, description:""},
-        breadcrumb: {type:"boolean", default:false, attribute:true, state:true, description:""},
-        title:      {type:"string", default:null, attribute:true, state:true, description:""},
-        icon:       {type:"string", default:null, attribute:true, state:true, description:""},
-        disabled:   {type:"boolean", default:false, attribute:true, state:true, description:""},
-        target:     {type:"string", default:null, attribute:true, state:true, description:""},
-        outlet:     {type:"string", default:null, attribute:true, state:true, description:""},
-        rel:        {type:"string", default:null, attribute:true, state:true, description:"", reflect:true},
-        replace:    {type:"boolean", default:false, attribute:true, state:true, description:""},
-        tooltip:     {type:"string", default:"", attribute:true, state:true, description:""}
-    },
-    methods: {
-        focus: {
-            description: "Focuses the anchor element."
-        }
-
-    },
-    slots: {
-        "": {
-            description: "Default slot for the anchor content."
-        }
-    }
-};
-
-
-// implementation
+// component
 export default {
+    contract: {
+        description: "Renders a navigation link handled by the XShell navigation service.",
+        events: {},
+        properties: {
+            href:       {type:"string", default:"", attribute:true, state:true, description:""},
+            open:       {type:"string", default:"auto", attribute:true, state:true, description:"", enum: ["auto","top","dialog","stack","embed"]},
+            query:      {type:"object", default:{}, attribute:true, state:true, description:""},
+            breadcrumb: {type:"boolean", default:false, attribute:true, state:true, description:""},
+            title:      {type:"string", default:null, attribute:true, state:true, description:""},
+            icon:       {type:"string", default:null, attribute:true, state:true, description:""},
+            disabled:   {type:"boolean", default:false, attribute:true, state:true, description:""},
+            target:     {type:"string", default:null, attribute:true, state:true, description:""},
+            outlet:     {type:"string", default:null, attribute:true, state:true, description:""},
+            rel:        {type:"string", default:null, attribute:true, state:true, description:"", reflect:true},
+            replace:    {type:"boolean", default:false, attribute:true, state:true, description:""},
+            tooltip:     {type:"string", default:"", attribute:true, state:true, description:""}
+        },
+        methods: {
+            focus: {
+                description: "Focuses the anchor element."
+            }
+
+        },
+        slots: {
+            "": {
+                description: "Default slot for the anchor content."
+            }
+        }
+    },
     style: `
         :host {}
         :host a {display:inline; align-items:center; width:100%; }

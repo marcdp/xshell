@@ -1,26 +1,23 @@
-// contract
-export const contract = {
-    description: "Displays an empty-state message when no content is available.",
-    events: {},
-    properties: {
-        icon:    {type:"string", default:"", attribute:true, state:true, description:"The icon displayed for the empty state."},
-        label:   {type:"string", default:"", attribute:true, state:true, description:"The primary empty-state label."},
-        message: {type:"string", default:"", attribute:true, state:true, description:"Additional information about the empty state."}
-    },
-    methods: {},
-    slots: {
-        "": {
-            description: "Optional additional empty-state content."
-        },
-        "actions": {
-            description: "Optional actions displayed below the empty-state message."
-        }
-    }
-};
-
-
-// implementation
+// component
 export default {
+    contract: {
+        description: "Displays an empty-state message when no content is available.",
+        events: {},
+        properties: {
+            icon:    {type:"string", default:"", attribute:true, state:true, description:"The icon displayed for the empty state."},
+            label:   {type:"string", default:"", attribute:true, state:true, description:"The primary empty-state label."},
+            message: {type:"string", default:"", attribute:true, state:true, description:"Additional information about the empty state."}
+        },
+        methods: {},
+        slots: {
+            "": {
+                description: "Optional additional empty-state content."
+            },
+            "actions": {
+                description: "Optional actions displayed below the empty-state message."
+            }
+        }
+    },
     style: `
         :host {
             display:block;

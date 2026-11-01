@@ -1,12 +1,11 @@
 
-export const contract = {
-    properties: {
-        name: {type:"string", default:"Ada", query:true, state:true},
-        count: {type:"number", default:1, query:true, state:true, reflect:true}
-    }
-};
-
 export default {
+    contract: {
+        properties: {
+            name: {type:"string", default:"Ada", query:true, state:true},
+            count: {type:"number", default:1, query:true, state:true, reflect:true}
+        }
+    },
     meta: {
         title: "Page Parameters",
         description: "Demonstrates public Page properties, query parameters, defaults, and route parameters."

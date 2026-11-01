@@ -1,53 +1,50 @@
-// contract
-export const contract = {
-    description: "Displays and manages a selectable flat collection in list, details, icons, or tiles view.",
-    events: {
-        select: {
-            description: "Raised when an item's selected state changes through list interaction.",
-            detail: {
-                path: {type:"string", required:true},
-                paths: {type:"array", required:true},
-            }
-        },
-        activate: {
-            description: "Raised when an item is activated by Enter, a link click, or a double click.",
-            detail: {
-                path: {type:"string", required:true},
-                paths: {type:"array", required:true},
-            }
-        },
-        contextmenuitem: {
-            description: "Raised when a context menu is requested on an item.",
-            detail: {
-                item: {type:"object", required:true},
-                path: {type:"string", required:true},
-                index: {type:"number", required:true},
-                x: {type:"number", required:true},
-                y: {type:"number", required:true}
-            }
-        }
-    },
-    properties: {
-        view:       {type:"string", default:"list", attribute:true, state:true, enum:["list", "details", "icons", "tiles"], description:"Current presentation view."},
-        views:      {type:"string", default:"", attribute:true, state:true, description:"Comma-separated list of views available in the built-in selector."},
-        multiple:   {type:"boolean", default:false, attribute:true, state:true, description:"Whether more than one item can be selected."},
-        autoScroll: {type:"boolean", default:false, attribute:true, state:true, description:"Whether to scroll to the newest item when the collection grows."}
-    },
-    methods: {
-        focus: {description: "Focuses the list view."},
-        clear: {description: "Clears the selection."},
-        select: {description: "Selects an item."}
-    },
-    slots: {
-        "": {
-            description: "A list-view head followed by a list-view body."
-        }
-    }
-};
-
-
-// implementation
+// component
 export default {
+    contract: {
+        description: "Displays and manages a selectable flat collection in list, details, icons, or tiles view.",
+        events: {
+            select: {
+                description: "Raised when an item's selected state changes through list interaction.",
+                detail: {
+                    path: {type:"string", required:true},
+                    paths: {type:"array", required:true},
+                }
+            },
+            activate: {
+                description: "Raised when an item is activated by Enter, a link click, or a double click.",
+                detail: {
+                    path: {type:"string", required:true},
+                    paths: {type:"array", required:true},
+                }
+            },
+            contextmenuitem: {
+                description: "Raised when a context menu is requested on an item.",
+                detail: {
+                    item: {type:"object", required:true},
+                    path: {type:"string", required:true},
+                    index: {type:"number", required:true},
+                    x: {type:"number", required:true},
+                    y: {type:"number", required:true}
+                }
+            }
+        },
+        properties: {
+            view:       {type:"string", default:"list", attribute:true, state:true, enum:["list", "details", "icons", "tiles"], description:"Current presentation view."},
+            views:      {type:"string", default:"", attribute:true, state:true, description:"Comma-separated list of views available in the built-in selector."},
+            multiple:   {type:"boolean", default:false, attribute:true, state:true, description:"Whether more than one item can be selected."},
+            autoScroll: {type:"boolean", default:false, attribute:true, state:true, description:"Whether to scroll to the newest item when the collection grows."}
+        },
+        methods: {
+            focus: {description: "Focuses the list view."},
+            clear: {description: "Clears the selection."},
+            select: {description: "Selects an item."}
+        },
+        slots: {
+            "": {
+                description: "A list-view head followed by a list-view body."
+            }
+        }
+    },
     style: `
         :host { 
             display: flex;

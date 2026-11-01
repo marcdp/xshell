@@ -1,19 +1,17 @@
-// contract
-export const contract = {
-    description: "Layout for a default page.",
-    events: {},
-    properties: {},
-    methods: {},
-    slots: {
-        "": {
-            description: "Default slot for the layout content."
-        }
-    }
-};
 
-
-// implementation
+// layout
 export default {
+    contract: {
+        description: "Layout for a default page.",
+        events: {},
+        properties: {},
+        methods: {},
+        slots: {
+            "": {
+                description: "Default slot for the layout content."
+            }
+        }
+    },
     meta: {
         renderEngine: "x",
         stateEngine: "proxy"

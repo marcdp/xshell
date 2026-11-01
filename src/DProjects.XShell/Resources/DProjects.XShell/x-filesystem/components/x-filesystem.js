@@ -1,23 +1,20 @@
 import * as PathUtils from "../utils/path.js";
 import {createZip} from "../utils/zip.js";
 
-// contract
-export const contract = {
-    description: "Filesystem component",
-    events: {},
-    properties: {
-        path: {type: "string", default:"/", attribute: true, state:true, description: "Current path in the filesystem"},
-        src: {type: "string", default:null, attribute: true, state:true, description: "Source of the filesystem (e.g., 'mem:')"},
-        filesystem: {type: "object", default:null, attribute: false, state:true, description: "Filesystem instance"},
-        root: {type:"boolean", default:false, attribute: true, state: true, description: "Indicates if the root folder should be displayed"}
-    },
-    methods: {},
-    slots: {}
-};
-
-
-// implementation
+// component
 export default {
+    contract: {
+        description: "Filesystem component",
+        events: {},
+        properties: {
+            path: {type: "string", default:"/", attribute: true, state:true, description: "Current path in the filesystem"},
+            src: {type: "string", default:null, attribute: true, state:true, description: "Source of the filesystem (e.g., 'mem:')"},
+            filesystem: {type: "object", default:null, attribute: false, state:true, description: "Filesystem instance"},
+            root: {type:"boolean", default:false, attribute: true, state: true, description: "Indicates if the root folder should be displayed"}
+        },
+        methods: {},
+        slots: {}
+    },
     style: `
         :host {display:block;}
         .container {display:flex; width:100%; min-width:0; margin-top:.5em; }

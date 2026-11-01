@@ -1,19 +1,16 @@
-// contract
-export const contract = {
-    description: "Lazily activates and loads dependencies for its slotted content.",
-    events: {},
-    properties: {},
-    methods: {},
-    slots: {
-        "": {
-            description: "Default slot for the lazy-loaded content."
-        }
-    } 
-};
-
-
-// implementation
+// component
 export default {
+    contract: {
+        description: "Lazily activates and loads dependencies for its slotted content.",
+        events: {},
+        properties: {},
+        methods: {},
+        slots: {
+            "": {
+                description: "Default slot for the lazy-loaded content."
+            }
+        } 
+    },
     style: `
         :host {display:inline;}
         :host(.no-spinner) x-spinner {display:none;}

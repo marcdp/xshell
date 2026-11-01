@@ -1,8 +1,7 @@
-export const contract = {
-    description: "A lifecycle probe that reports its controller hooks to the cookbook Page."
-};
-
 export default {
+    contract: {
+        description: "A lifecycle probe that reports its controller hooks to the cookbook Page."
+    },
     template: `<p>Lifecycle probe is mounted.</p>`,
 
     controller({ bus }) {

@@ -1,23 +1,20 @@
-// contract
-export const contract = {
-    description: "Displays an error code, message, source, module, and stack trace.",
-    events: {},
-    properties: {
-        code:    {type:"number", default:0, attribute:true, state:true, description:""},
-        message: {type:"string", default:"", attribute:true, state:true, description:""},
-        src:     {type:"string", default:"", attribute:true, state:true, description:""},
-        moduleId:{type:"string", default:"", attribute:true, state:true, description:""},
-        areaId:  {type:"string", default:"", attribute:true, state:true, description:""},
-        details: {type:"string", default:"", attribute:true, state:true, description:""},
-        stack:   {type:"string", default:"", attribute:true, state:true, description:""},
-        errors:  {type:"object", default:null, state:true, description:""}
-    },
-    methods: {}
-};
-
-
-// implementation
+// component
 export default {
+    contract: {
+        description: "Displays an error code, message, source, module, and stack trace.",
+        events: {},
+        properties: {
+            code:    {type:"number", default:0, attribute:true, state:true, description:""},
+            message: {type:"string", default:"", attribute:true, state:true, description:""},
+            src:     {type:"string", default:"", attribute:true, state:true, description:""},
+            moduleId:{type:"string", default:"", attribute:true, state:true, description:""},
+            areaId:  {type:"string", default:"", attribute:true, state:true, description:""},
+            details: {type:"string", default:"", attribute:true, state:true, description:""},
+            stack:   {type:"string", default:"", attribute:true, state:true, description:""},
+            errors:  {type:"object", default:null, state:true, description:""}
+        },
+        methods: {}
+    },
     style: `
         table {
             width: 100%;

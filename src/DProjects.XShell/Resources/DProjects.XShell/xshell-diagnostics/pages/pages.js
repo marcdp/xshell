@@ -1,13 +1,11 @@
-// contract
-export const contract = {
-    description: "Pages",
-    events: {},
-    properties: {},
-    methods: {}
-};
-
-// export page
+// page
 export default {
+    contract: {
+        description: "Pages",
+        events: {},
+        properties: {},
+        methods: {}
+    },
     meta: {
         title: "Pages"
     },

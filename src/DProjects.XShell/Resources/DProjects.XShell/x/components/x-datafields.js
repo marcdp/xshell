@@ -1,39 +1,36 @@
-// contract
-export const contract = {
-    description: "Provides a layout and action controls for a group of data fields.",
-    events: {
-        move: {
-            description: "Raised when the field is moved.",
-            detail: {
-                direction: { type: "string" }
+// component
+export default {
+    contract: {
+        description: "Provides a layout and action controls for a group of data fields.",
+        events: {
+            move: {
+                description: "Raised when the field is moved.",
+                detail: {
+                    direction: { type: "string" }
+                }
+            },
+            edit: {
+                description: "Raised when the field is edited."
+            },
+            remove: {
+                description: "Raised when the field is removed."
             }
         },
-        edit: {
-            description: "Raised when the field is edited."
+        properties: {
+            label:      {type:"string", default:"", attribute:true, state:true, description:""},
+            message:    {type:"string", default:"", attribute:true, state:true, description:""},
+            columns:    {type:"number", default:2, attribute:true, state:true, description:""},
+            remove:     {type:"boolean", default:false, attribute:true, state:true, description:""},
+            move:       {type:"boolean", default:false, attribute:true, state:true, description:""},
+            edit:       {type:"boolean", default:false, attribute:true, state:true, description:""}
         },
-        remove: {
-            description: "Raised when the field is removed."
+        methods: {},
+        slots: {
+            "": {
+                description: "The default slot for data fields."
+            }
         }
     },
-    properties: {
-        label:      {type:"string", default:"", attribute:true, state:true, description:""},
-        message:    {type:"string", default:"", attribute:true, state:true, description:""},
-        columns:    {type:"number", default:2, attribute:true, state:true, description:""},
-        remove:     {type:"boolean", default:false, attribute:true, state:true, description:""},
-        move:       {type:"boolean", default:false, attribute:true, state:true, description:""},
-        edit:       {type:"boolean", default:false, attribute:true, state:true, description:""}
-    },
-    methods: {},
-    slots: {
-        "": {
-            description: "The default slot for data fields."
-        }
-    }
-}
-
-
-// implementation
-export default {
     style: `
         :host {
             display:block;

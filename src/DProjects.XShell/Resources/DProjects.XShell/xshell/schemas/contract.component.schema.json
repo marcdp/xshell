@@ -1,0 +1,36 @@
+
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://xshell.dev/schemas/contract.component.schema.json",
+  "title": "XShell Component Contract",
+  "description": "Describes the public contract of an XShell Component or Page.",
+  "$ref": "./contract.schema.json",
+  "properties": {
+    "properties": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "./contract.schema.json#/$defs/property",
+        "properties": {
+          "attribute": { "type": "boolean", "description": "Whether the corresponding HTML attribute is observed." },
+          "attributeParser": { "type": "string", "enum": ["json"], "description": "Parser for incoming attribute values." },
+          "state": { "type": "boolean", "description": "Whether the property is backed by component state." },
+          "reflect": { "type": "boolean", "description": "Whether property changes are reflected to the attribute." }
+        },
+        "unevaluatedProperties": false
+      }
+    },
+    "slots": { "type": "object", "description": "Slots exposed by the component.", "additionalProperties": { "$ref": "#/$defs/slot" } }
+  },
+  "unevaluatedProperties": false,
+  "$defs": {
+    "slot": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "description": { "type": "string" },
+        "required": { "type": "boolean" }
+      }
+    }
+  }
+}
+

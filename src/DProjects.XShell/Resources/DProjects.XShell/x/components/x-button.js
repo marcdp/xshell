@@ -1,40 +1,37 @@
 
-// contract
-export const contract = {
-    description: "Renders a button or navigation link and can emit a command.",
-    events: {
-        command: {
-            description: "Raised when a configured button command is invoked.",
-            detail: {
-                command: {type:"string"},
-                data: {type:"object"}
-            }
-        }
-    },
-    properties: {
-        icon:      {type:"string", default:"", attribute:true, state:true, description:""},
-        label:     {type:"string", default:"", attribute:true, state:true, description:""},
-        message:   {type:"string", default:"", attribute:true, state:true, description:""},
-        badge:     {type:"string", default:"", attribute:true, state:true, description:""},
-        command:   {type:"string", default:"", attribute:true, state:true, description:""},
-        href:      {type:"string", default:"", attribute:true, state:true, description:""},
-        autofocus: {type:"boolean", default:false, attribute:true, state:true, description:""}
-    },
-    methods: {
-        focus:{
-            description: "Sets focus on the button."
-        }
-    },
-    slots: {
-        "": {
-            description: "Default slot for the button content."
-        }
-    } 
-};
-
-
-// implementation
+// component
 export default {
+    contract: {
+        description: "Renders a button or navigation link and can emit a command.",
+        events: {
+            command: {
+                description: "Raised when a configured button command is invoked.",
+                detail: {
+                    command: {type:"string"},
+                    data: {type:"object"}
+                }
+            }
+        },
+        properties: {
+            icon:      {type:"string", default:"", attribute:true, state:true, description:""},
+            label:     {type:"string", default:"", attribute:true, state:true, description:""},
+            message:   {type:"string", default:"", attribute:true, state:true, description:""},
+            badge:     {type:"string", default:"", attribute:true, state:true, description:""},
+            command:   {type:"string", default:"", attribute:true, state:true, description:""},
+            href:      {type:"string", default:"", attribute:true, state:true, description:""},
+            autofocus: {type:"boolean", default:false, attribute:true, state:true, description:""}
+        },
+        methods: {
+            focus:{
+                description: "Sets focus on the button."
+            }
+        },
+        slots: {
+            "": {
+                description: "Default slot for the button content."
+            }
+        } 
+    },
     style: `
         :host {position:relative; display:inline-flex;}
         :host > div {display:flex; flex:1;  }

@@ -1,22 +1,19 @@
-// contract
-export const contract = {
-    description: "Displays a compact labeled item that can optionally be removed.",
-    events: {
-        remove: {
-            description: "Raised when the remove action is invoked."
-        }
-    },
-    properties: {
-        label:     {type:"string", default:"", attribute:true, state:true, description:"The chip label."},
-        icon:      {type:"string", default:"", attribute:true, state:true, description:"The optional icon displayed before the label."},
-        removable: {type:"boolean", default:false, attribute:true, state:true, description:"Indicates whether the chip can be removed."}
-    },
-    methods: {}
-};
-
-
-// implementation
+// component
 export default {
+    contract: {
+        description: "Displays a compact labeled item that can optionally be removed.",
+        events: {
+            remove: {
+                description: "Raised when the remove action is invoked."
+            }
+        },
+        properties: {
+            label:     {type:"string", default:"", attribute:true, state:true, description:"The chip label."},
+            icon:      {type:"string", default:"", attribute:true, state:true, description:"The optional icon displayed before the label."},
+            removable: {type:"boolean", default:false, attribute:true, state:true, description:"Indicates whether the chip can be removed."}
+        },
+        methods: {}
+    },
     style: `
         :host {
             display:inline-flex;

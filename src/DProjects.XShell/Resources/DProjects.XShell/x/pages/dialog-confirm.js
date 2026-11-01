@@ -1,17 +1,14 @@
-// contract
-export const contract = {
-    description: "Shows a confirmation dialog with various button options.",
-    events: {},
-    properties: {
-        message: {type:"string", default:"", state:true, description:"The message to display in the confirmation dialog.", context:true},
-        variant: {type:"string", default:"yesno", state:true, enum:["yesno","yesnocancel","okcancel","ok"], description:"The type of confirmation dialog to display.", context:true},
-    },
-    methods: {}
-};
-
-
-// implementation
+// page
 export default {
+    contract: {
+        description: "Shows a confirmation dialog with various button options.",
+        events: {},
+        properties: {
+            message: {type:"string", default:"", state:true, description:"The message to display in the confirmation dialog.", context:true},
+            variant: {type:"string", default:"yesno", state:true, enum:["yesno","yesnocancel","okcancel","ok"], description:"The type of confirmation dialog to display.", context:true},
+        },
+        methods: {}
+    },
     template: `
         <x-form>
             <p>

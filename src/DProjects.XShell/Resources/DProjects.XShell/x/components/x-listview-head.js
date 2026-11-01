@@ -1,19 +1,16 @@
-// contract
-export const contract = {
-    description: "Provides the header container for x-listview columns.",
-    events: {},
-    properties: {},
-    methods: {},
-    slots: {
-        "": {
-            description: "Default slot for x-listview-column elements."
-        }
-    }
-};
-
-
-// implementation
+// component
 export default {
+    contract: {
+        description: "Provides the header container for x-listview columns.",
+        events: {},
+        properties: {},
+        methods: {},
+        slots: {
+            "": {
+                description: "Default slot for x-listview-column elements."
+            }
+        }
+    },
     style: `
         :host {display: block; min-width: 0; box-sizing: border-box; }
         :host([hidden]) {display:none!important;}

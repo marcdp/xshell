@@ -1,15 +1,12 @@
 
-// contract
-export const contract = {
-    description: "Displays the main menu for the current page.",
-    events: {},
-    properties: {},
-    methods: {}
-};
-
-
-// implementation
+// component
 export default {
+    contract: {
+        description: "Displays the main menu for the current page.",
+        events: {},
+        properties: {},
+        methods: {}
+    },
     style: `
         :host {display:block; }
         ul {margin:0; padding:0;}

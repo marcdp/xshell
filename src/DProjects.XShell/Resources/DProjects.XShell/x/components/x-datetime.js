@@ -1,18 +1,15 @@
-// contract
-export const contract = {
-    description: "Formats a date/time value, showing the time when it is today and the date otherwise.",
-    events: {},
-    properties: {
-        datetime: {type:"string", default:"", attribute:true, state:true, description:""},
-        value:    {type:"string", default:"", attribute:true, state:true, description:""},
-        format:   {type:"string", default:"", attribute:true, state:true, description:"Optional format override."}
-    },
-    methods: {}
-};
-
-
-// implementation
+// component
 export default {
+    contract: {
+        description: "Formats a date/time value, showing the time when it is today and the date otherwise.",
+        events: {},
+        properties: {
+            datetime: {type:"string", default:"", attribute:true, state:true, description:""},
+            value:    {type:"string", default:"", attribute:true, state:true, description:""},
+            format:   {type:"string", default:"", attribute:true, state:true, description:"Optional format override."}
+        },
+        methods: {}
+    },
     template: `
         <span x-attr:title="state.formattedValueFull">
             {{ state.formattedValue }}

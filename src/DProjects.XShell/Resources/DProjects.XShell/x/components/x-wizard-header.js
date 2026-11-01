@@ -1,24 +1,21 @@
-// contract
-export const contract = {
-    description: "Displays wizard progress and allows navigation to completed panels.",
-    events: {
-        "index-set": {
-            description: "Raised when a completed wizard panel is selected.",
-            detail: {
-                index: {type:"number"}
-            }
-        }
-    },
-    properties: {
-        index:  {type:"number", default:0, attribute:true, state:true, description:""},
-        panels: {type:"array", default:[], attribute:true, state:true, description:""}
-    },
-    methods: {}
-};
-
-
-// implementation
+// component
 export default {
+    contract: {
+        description: "Displays wizard progress and allows navigation to completed panels.",
+        events: {
+            "index-set": {
+                description: "Raised when a completed wizard panel is selected.",
+                detail: {
+                    index: {type:"number"}
+                }
+            }
+        },
+        properties: {
+            index:  {type:"number", default:0, attribute:true, state:true, description:""},
+            panels: {type:"array", default:[], attribute:true, state:true, description:""}
+        },
+        methods: {}
+    },
     style: `
         :host {display:block;}
         

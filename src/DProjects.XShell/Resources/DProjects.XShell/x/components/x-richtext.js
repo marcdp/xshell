@@ -1,34 +1,31 @@
-// contract
-export const contract = {
-    description: "Provides a rich-text editor with formatting controls.",
-    events: {
-        change: {
-            description: "Raised when the editor content changes.",
-            detail: {
-                oldValue: {type:"string"},
-                newValue: {type:"string"}
-            }
-        }
-    },
-    properties: {
-        value:      {type:"string", default:"", attribute:true, state:true, description:""},
-        lang:       {type:"string", default:"", attribute:true, state:true, description:""},
-        spellcheck: {type:"string", default:"true", attribute:true, state:true, description:""}
-    },
-    methods: {},
-    slots: {
-        "": {
-            description: "Default slot for the rich-text editor content."
-        },
-        "toolbar": {
-            description: "Default slot for the rich-text editor toolbar content."
-        }
-    } 
-};
-
-
-// implementation
+// component
 export default {
+    contract: {
+        description: "Provides a rich-text editor with formatting controls.",
+        events: {
+            change: {
+                description: "Raised when the editor content changes.",
+                detail: {
+                    oldValue: {type:"string"},
+                    newValue: {type:"string"}
+                }
+            }
+        },
+        properties: {
+            value:      {type:"string", default:"", attribute:true, state:true, description:""},
+            lang:       {type:"string", default:"", attribute:true, state:true, description:""},
+            spellcheck: {type:"string", default:"true", attribute:true, state:true, description:""}
+        },
+        methods: {},
+        slots: {
+            "": {
+                description: "Default slot for the rich-text editor content."
+            },
+            "toolbar": {
+                description: "Default slot for the rich-text editor toolbar content."
+            }
+        } 
+    },
     style: `
         :host(.standalone) {
             display:block;

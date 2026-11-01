@@ -1,38 +1,35 @@
 
-// contract
-export const contract = {
-    description: "Provides a styled container for contextual menu content.",
-    events: {},
-    properties: {
-        submenu: {type: "boolean", default: false, attribute:true, state:true, description: "Whether the context menu is a submenu."},
-        position: {type: "string", default: null, attribute:true, state:true, description: "The position of the context menu."}
-    },
-    methods: {        
-        open: {
-            description: "Opens the context menu.",
-            parameters: [
-                {name: "options", type: "object", description: "The options for opening the context menu, including x and y coordinates.", schema: {
-                    type: "object",
-                    properties: {
-                        x: {type: "number", description: "The x-coordinate for the context menu."},
-                        y: {type: "number", description: "The y-coordinate for the context menu."}
-                    },
-                    required: ["x", "y"]
-                }}
-            ]
-        },
-        close: {description: "Closes the context menu."}
-    },
-    slots: {
-        "": {
-            description: "Default slot for the context menu content."
-        }
-    }    
-};
-
-
-// implementation
+// component
 export default {
+    contract: {
+        description: "Provides a styled container for contextual menu content.",
+        events: {},
+        properties: {
+            submenu: {type: "boolean", default: false, attribute:true, state:true, description: "Whether the context menu is a submenu."},
+            position: {type: "string", default: null, attribute:true, state:true, description: "The position of the context menu."}
+        },
+        methods: {        
+            open: {
+                description: "Opens the context menu.",
+                parameters: [
+                    {name: "options", type: "object", description: "The options for opening the context menu, including x and y coordinates.", schema: {
+                        type: "object",
+                        properties: {
+                            x: {type: "number", description: "The x-coordinate for the context menu."},
+                            y: {type: "number", description: "The y-coordinate for the context menu."}
+                        },
+                        required: ["x", "y"]
+                    }}
+                ]
+            },
+            close: {description: "Closes the context menu."}
+        },
+        slots: {
+            "": {
+                description: "Default slot for the context menu content."
+            }
+        }    
+    },
     style: `
         :host div {
             background:var(--x-contextmenu-background);

@@ -51,19 +51,16 @@ function colorize(html) {
     return result.join("");
 }
 
-// contract
-export const contract = {
-    description: "Displays syntax-highlighted HTML source.",
-    events: {},
-    properties: {
-        value: {type:"string", default:"", attribute:true, state:true, description:""}
-    },
-    methods: {}
-};
-
-
-// implementation
+// component
 export default {
+    contract: {
+        description: "Displays syntax-highlighted HTML source.",
+        events: {},
+        properties: {
+            value: {type:"string", default:"", attribute:true, state:true, description:""}
+        },
+        methods: {}
+    },
     style:`
         :host {}
         pre {

@@ -1,48 +1,46 @@
-// contract
-export const contract = {
-    description: "Reusable conversation interface with streaming support.",
-    events: {
-        send: {
-            description: "Raised when the user submits a message.",
-            detail: {
-                content: { type: "string" }
-            }
-        },
-        stop: {
-            description: "Raised when the user requests generation to stop.",
-            detail: {}
-        },
-        retry: {
-            description: "Raised when the user requests a response retry.",
-            detail: {
-                messageId: { type: "string" }
-            }
-        }
-    },
-    properties: {
-        messages: {type: "array", default: [], state: true, description: "Conversation messages."},
-        value: {type: "string", default: "", state: true, description: "Current composer text."},
-        loading: { type: "boolean", default: false, attribute: true, state: true, description: "Whether a response is being generated."},
-        disabled: { type: "boolean", default: false, attribute: true, state: true, description: "Disables message submission."},
-        placeholder: { type: "string", default: "Send a message...", attribute: true, state: true, description: "Composer placeholder."},
-        autofocus: { type: "boolean", default: false, attribute: true, state: true, description: "Automatically focuses the message composer on mount." }
-    },
-    methods: {
-        setFocus: {
-            description: "Focuses the message composer."
-        },
-        clear: {
-            description: "Clears the composer text."
-        },
-        scrollToBottom: {
-            description: "Scrolls to the newest message."
-        }
-    },
-    slots: {}
-};
-
-// implementation
+// component
 export default {
+    contract: {
+        description: "Reusable conversation interface with streaming support.",
+        events: {
+            send: {
+                description: "Raised when the user submits a message.",
+                detail: {
+                    content: { type: "string" }
+                }
+            },
+            stop: {
+                description: "Raised when the user requests generation to stop.",
+                detail: {}
+            },
+            retry: {
+                description: "Raised when the user requests a response retry.",
+                detail: {
+                    messageId: { type: "string" }
+                }
+            }
+        },
+        properties: {
+            messages: {type: "array", default: [], state: true, description: "Conversation messages."},
+            value: {type: "string", default: "", state: true, description: "Current composer text."},
+            loading: { type: "boolean", default: false, attribute: true, state: true, description: "Whether a response is being generated."},
+            disabled: { type: "boolean", default: false, attribute: true, state: true, description: "Disables message submission."},
+            placeholder: { type: "string", default: "Send a message...", attribute: true, state: true, description: "Composer placeholder."},
+            autofocus: { type: "boolean", default: false, attribute: true, state: true, description: "Automatically focuses the message composer on mount." }
+        },
+        methods: {
+            setFocus: {
+                description: "Focuses the message composer."
+            },
+            clear: {
+                description: "Clears the composer text."
+            },
+            scrollToBottom: {
+                description: "Scrolls to the newest message."
+            }
+        },
+        slots: {}
+    },
     meta: {
         renderEngine: "x",
         stateEngine: "proxy"

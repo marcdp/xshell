@@ -7,12 +7,8 @@
   "additionalProperties": false,
   "properties": {
     "$schema": { "type": "string", "format": "uri-reference", "description": "URI of the JSON Schema used to validate this component." },
-    "dependencies": {
-      "type": "object",
-      "description": "Declarative dependencies resolved before the component controller is created. Each property name becomes an injected controller dependency.",
-      "required": [ ],
-      "additionalProperties": true
-    },
+    "contract": { "type": "object", "description": "Optional component contract defining the component's public API." },
+    "dependencies": { "type": "object", "description": "Declarative dependencies resolved before the component controller is created. Each property name becomes an injected controller dependency.", "required": [ ], "additionalProperties": true},
     "meta": {
       "type": "object",
       "description": "Component meta information.",

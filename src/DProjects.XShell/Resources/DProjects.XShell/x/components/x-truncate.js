@@ -1,17 +1,14 @@
-// contract
-export const contract = {
-    description: "Displays text truncated with an ellipsis when it exceeds the available space.",
-    events: {},
-    properties: {
-        text:  {type:"string", default:"", attribute:true, state:true, description:"The text to display."},
-        lines: {type:"number", default:1, attribute:true, state:true, description:"The maximum number of visible lines."}
-    },
-    methods: {}
-};
-
-
-// implementation
+// component
 export default {
+    contract: {
+        description: "Displays text truncated with an ellipsis when it exceeds the available space.",
+        events: {},
+        properties: {
+            text:  {type:"string", default:"", attribute:true, state:true, description:"The text to display."},
+            lines: {type:"number", default:1, attribute:true, state:true, description:"The maximum number of visible lines."}
+        },
+        methods: {}
+    },
     style: `
         :host {
             display:block;

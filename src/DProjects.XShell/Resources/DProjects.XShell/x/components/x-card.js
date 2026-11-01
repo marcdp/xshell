@@ -1,26 +1,23 @@
 
-// contract
-export const contract = {
-    description: "Provides a styled card container with header, body, and footer slots.",
-    events: {},
-    properties: {},
-    methods: {},
-    slots: {
-        "": {
-            description: "Main content of the card"
-        },
-        header: {
-            description: "Content for the card header"
-        },
-        footer: {
-            description: "Content for the card footer"
-        }
-    }
-};
-
-
-// implementation
+// component
 export default {
+    contract: {
+        description: "Provides a styled card container with header, body, and footer slots.",
+        events: {},
+        properties: {},
+        methods: {},
+        slots: {
+            "": {
+                description: "Main content of the card"
+            },
+            header: {
+                description: "Content for the card header"
+            },
+            footer: {
+                description: "Content for the card footer"
+            }
+        }
+    },
     style: `
         :host {
             display:block; 

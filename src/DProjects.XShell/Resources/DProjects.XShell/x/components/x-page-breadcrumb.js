@@ -1,16 +1,13 @@
 
 
-// contract
-export const contract = {
-    description: "Displays the current page breadcrumb.",
-    events: {},
-    properties: {},
-    methods: {}
-};
-
-
-// implementation
+// component
 export default {
+    contract: {
+        description: "Displays the current page breadcrumb.",
+        events: {},
+        properties: {},
+        methods: {}
+    },
     style: `
         :host {display:block;}
         ul {margin:0; padding:0; display: flex; align-items:center; box-sizing: border-box;}

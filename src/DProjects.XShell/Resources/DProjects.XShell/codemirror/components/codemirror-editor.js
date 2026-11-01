@@ -9,30 +9,27 @@ import {  EditorState,
     markdown} from "../vendor/codemirror/6.0.2/codemirror.js";
 
 
-// contract
-export const contract = {
-    description: "Displays a code mirror editor.",
-    events: {        
-        change: {
-            detail: { 
-                value: {
-                    type: "string",
-                    description: "The new value of the editor."
-                }
+// component
+export default {
+    contract: {
+        description: "Displays a code mirror editor.",
+        events: {        
+            change: {
+                detail: { 
+                    value: {
+                        type: "string",
+                        description: "The new value of the editor."
+                    }
+                },
+                description: "Fired when the content of the editor changes."
             },
-            description: "Fired when the content of the editor changes."
         },
+        properties: {
+            value: {type:"string", default:"", attribute:true, state:true, description:""},
+            mode: {type:"string", default:"", attribute:true, state:true, description:"", enum:["javascript", "json", "html", "css"]}
+        },
+        methods: {}
     },
-    properties: {
-        value: {type:"string", default:"", attribute:true, state:true, description:""},
-        mode: {type:"string", default:"", attribute:true, state:true, description:"", enum:["javascript", "json", "html", "css"]}
-    },
-    methods: {}
-};
-
-
-// implementation
-export default  {
     style: `
         :host {display:block; width:100%; height:100%; }
         :host > div {width:100%; height:100%;}

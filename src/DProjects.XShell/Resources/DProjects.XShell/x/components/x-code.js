@@ -1,26 +1,23 @@
-// contract
-export const contract = {
-    description: "Displays read-only preformatted code with optional copy functionality.",
-    events: {
-        copy: {
-            description: "Raised after the code has been copied to the clipboard.",
-            detail: {
-                value: {type:"string"}
-            }
-        }
-    },
-    properties: {
-        value:    {type:"string", default:"", attribute:true, state:true, description:"The code to display."},
-        language: {type:"string", default:"", attribute:true, state:true, description:"Optional language identifier associated with the code."},
-        wrap:     {type:"boolean", default:false, attribute:true, state:true, description:"Indicates whether long lines should wrap."},
-        copyable: {type:"boolean", default:true, attribute:true, state:true, description:"Indicates whether the copy action is displayed."}
-    },
-    methods: {}
-};
-
-
-// implementation
+// component
 export default {
+    contract: {
+        description: "Displays read-only preformatted code with optional copy functionality.",
+        events: {
+            copy: {
+                description: "Raised after the code has been copied to the clipboard.",
+                detail: {
+                    value: {type:"string"}
+                }
+            }
+        },
+        properties: {
+            value:    {type:"string", default:"", attribute:true, state:true, description:"The code to display."},
+            language: {type:"string", default:"", attribute:true, state:true, description:"Optional language identifier associated with the code."},
+            wrap:     {type:"boolean", default:false, attribute:true, state:true, description:"Indicates whether long lines should wrap."},
+            copyable: {type:"boolean", default:true, attribute:true, state:true, description:"Indicates whether the copy action is displayed."}
+        },
+        methods: {}
+    },
     style: `
         :host {
             display:block;

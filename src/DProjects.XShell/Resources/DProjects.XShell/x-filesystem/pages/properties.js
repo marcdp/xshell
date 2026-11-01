@@ -1,16 +1,14 @@
-// contract
-export const contract = {
-    description: "Properties page",
-    events: {},
-    properties: {
-        src: {type: "string", default:null, state:true, query:true, description: "Source of the filesystem (e.g., 'mem:')"},
-        path: {type: "string", default:null, state:true, query:true, description: "Path within the filesystem"}
-    },
-    methods: {}
-};
-
-// export page
+// page
 export default {
+    contract: {
+        description: "Properties page",
+        events: {},
+        properties: {
+            src: {type: "string", default:null, state:true, query:true, description: "Source of the filesystem (e.g., 'mem:')"},
+            path: {type: "string", default:null, state:true, query:true, description: "Path within the filesystem"}
+        },
+        methods: {}
+    },
     meta: {
         title: "Properties Page"
     },

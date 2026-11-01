@@ -1,26 +1,4 @@
-// contract
-export const contract = {
-    description: "Displays a single expandable disclosure section.",
-    events: {
-        toggle: {
-            description: "Raised when the open state changes."
-        }
-    },
-    properties: {
-        label: {type: "string", default: "", attribute: true, state: true, description: "Text displayed in the disclosure header."},
-        open: {type: "boolean",default: false,attribute: true,state: true,description: "Whether the disclosure content is expanded."},
-        disabled: {type: "boolean",default: false,attribute: true,state: true,description: "Whether the disclosure can be toggled by the user."}
-    },
-    methods: {
-        toggle: {description: "Toggles the disclosure state."},
-        expand: {description: "Expands the disclosure."},
-        collapse: {description: "Collapses the disclosure."}
-    },
-    slots: {
-        "": {description: "Disclosure body content."},
-        summary: {description: "Optional custom summary content. Replaces the label when provided."}
-    }    
-};
+// component
 
 
 // docs
@@ -47,6 +25,28 @@ export const docs = {
 
 // implementation
 export default {
+    contract: {
+        description: "Displays a single expandable disclosure section.",
+        events: {
+            toggle: {
+                description: "Raised when the open state changes."
+            }
+        },
+        properties: {
+            label: {type: "string", default: "", attribute: true, state: true, description: "Text displayed in the disclosure header."},
+            open: {type: "boolean",default: false,attribute: true,state: true,description: "Whether the disclosure content is expanded."},
+            disabled: {type: "boolean",default: false,attribute: true,state: true,description: "Whether the disclosure can be toggled by the user."}
+        },
+        methods: {
+            toggle: {description: "Toggles the disclosure state."},
+            expand: {description: "Expands the disclosure."},
+            collapse: {description: "Collapses the disclosure."}
+        },
+        slots: {
+            "": {description: "Disclosure body content."},
+            summary: {description: "Optional custom summary content. Replaces the label when provided."}
+        }    
+    },
 
     // style
     style: `

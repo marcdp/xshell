@@ -1,12 +1,11 @@
 
-export const contract = {
-    description: "Application settings",
-    events: {},
-    properties: {},
-    methods: {}
-};
-
 export default {
+    contract: {
+        description: "Application settings",
+        events: {},
+        properties: {},
+        methods: {}
+    },
     meta: { title: "Settings" },
     style: `
         :scope {display:block;}

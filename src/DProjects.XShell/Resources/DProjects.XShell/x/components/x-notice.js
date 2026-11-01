@@ -1,24 +1,21 @@
-// contract
-export const contract = {
-    description: "Displays a dismissible status notice.",
-    events: {},
-    properties: {
-        type:    {type:"string", default:"info", attribute:true, state:true, description:""},
-        label:   {type:"string", default:"", attribute:true, state:true, description:""},
-        message: {type:"string", default:"", attribute:true, state:true, description:""},
-        visible: {type:"boolean", default:true, attribute:true, state:true, description:""}
-    },
-    methods: {},
-    slots: {
-        "": {
-            description: "The default slot for notice content."
-        }
-    }
-};
-
-
-// implementation
+// component
 export default {
+    contract: {
+        description: "Displays a dismissible status notice.",
+        events: {},
+        properties: {
+            type:    {type:"string", default:"info", attribute:true, state:true, description:""},
+            label:   {type:"string", default:"", attribute:true, state:true, description:""},
+            message: {type:"string", default:"", attribute:true, state:true, description:""},
+            visible: {type:"boolean", default:true, attribute:true, state:true, description:""}
+        },
+        methods: {},
+        slots: {
+            "": {
+                description: "The default slot for notice content."
+            }
+        }
+    },
     style: `
         :host {display:block;}
 

@@ -1,20 +1,17 @@
-// contract
-export const contract = {
-    description: "Defines a labeled column in an x-listview details header.",
-    events: {},
-    properties: {
-        label: {type:"string", default:"", attribute:true, state:true, description:"Fallback header label."},
-        width: {type:"string", default:"minmax(0, 1fr)", attribute:true, state:true, description:"CSS Grid track size shared by the header and item rows."}
-    },
-    methods: {},
-    slots: {
-        "": {description:"Custom column header content. Overrides the fallback label when provided."}
-    }
-};
-
-
-// implementation
+// component
 export default {
+    contract: {
+        description: "Defines a labeled column in an x-listview details header.",
+        events: {},
+        properties: {
+            label: {type:"string", default:"", attribute:true, state:true, description:"Fallback header label."},
+            width: {type:"string", default:"minmax(0, 1fr)", attribute:true, state:true, description:"CSS Grid track size shared by the header and item rows."}
+        },
+        methods: {},
+        slots: {
+            "": {description:"Custom column header content. Overrides the fallback label when provided."}
+        }
+    },
     style: `
         :host {display: block; box-sizing: border-box; min-width: 0; }
         .content { display: block; min-width: 0; height: 100%; overflow: hidden; padding-right:.15em; box-sizing: border-box; }

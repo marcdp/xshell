@@ -1,72 +1,69 @@
 
 
-// contract
-export const contract = {
-    description: "Filesystem list component",
-    events: {
-        select: {description: "Fired when an item is selected"},
-        activate: {
-            description: "Fired when an item is activated",
-            detail: {
-                path: {type: "string", description: "Path of the activated item"},
-                entry: {type: "object", description: "The activated filesystem entry"},
-                paths: {type: "array", description: "Paths of the activated items"},
-                entries: {type: "array", description: "The activated filesystem entries"}
-            }
-        },
-        back: {description: "Fired when the back action is triggered"},
-        properties: {description: "Fired when the properties action is triggered"},
-        rename: {description: "Fired when the rename action is triggered"},
-        delete: {
-            description: "Fired when the delete action is triggered",
-            detail: {
-                path: {type: "string", description: "Path of the item to delete"},
-                paths: {type: "array", description: "Paths of the items to delete"}
-            }
-        },
-        upload: {
-            description: "Fired when files are uploaded",
-            detail: {
-                path: {type: "string", description: "Path where files are uploaded"},
-                files: {type: "array", description: "List of uploaded files"}
-            }
-        },
-        contextmenuentry: {
-            description: "Fired when a context menu entry is requested",
-            detail: {
-                path: {type: "string", description: "Path of the item"},
-                paths: {type: "array", description: "Paths of the items"},
-                entry: {type: "object", description: "The filesystem entry"},
-                entries: {type: "array", description: "Filesystem entries"},
-                source: {type: "string", description: "Source of the context menu request"},
-                x: {type: "number", description: "X coordinate of the context menu"},
-                y: {type: "number", description: "Y coordinate of the context menu"}
-            }
-        }
-    },
-    properties: {
-        path: {type: "string", default:"/", attribute: true, state:true, description: "Current path in the filesystem"},
-        filesystem: {type: "object", default:null, state:true, description: "Filesystem instance"}
-    },
-    methods: {
-        refresh: {
-            description: "Refresh the list for the current path",
-            parameters: [
-                { name: "options", type: "object", description: "Options for refreshing the list", schema: {
-                    type: "object",
-                    properties: {
-                        selectedPath: {type: "string", description: "Path of the selected item"}                        
-                    }
-                }}
-            ]
-        },
-    },
-    slots: {}
-};
-
-
-// implementation
+// component
 export default {
+    contract: {
+        description: "Filesystem list component",
+        events: {
+            select: {description: "Fired when an item is selected"},
+            activate: {
+                description: "Fired when an item is activated",
+                detail: {
+                    path: {type: "string", description: "Path of the activated item"},
+                    entry: {type: "object", description: "The activated filesystem entry"},
+                    paths: {type: "array", description: "Paths of the activated items"},
+                    entries: {type: "array", description: "The activated filesystem entries"}
+                }
+            },
+            back: {description: "Fired when the back action is triggered"},
+            properties: {description: "Fired when the properties action is triggered"},
+            rename: {description: "Fired when the rename action is triggered"},
+            delete: {
+                description: "Fired when the delete action is triggered",
+                detail: {
+                    path: {type: "string", description: "Path of the item to delete"},
+                    paths: {type: "array", description: "Paths of the items to delete"}
+                }
+            },
+            upload: {
+                description: "Fired when files are uploaded",
+                detail: {
+                    path: {type: "string", description: "Path where files are uploaded"},
+                    files: {type: "array", description: "List of uploaded files"}
+                }
+            },
+            contextmenuentry: {
+                description: "Fired when a context menu entry is requested",
+                detail: {
+                    path: {type: "string", description: "Path of the item"},
+                    paths: {type: "array", description: "Paths of the items"},
+                    entry: {type: "object", description: "The filesystem entry"},
+                    entries: {type: "array", description: "Filesystem entries"},
+                    source: {type: "string", description: "Source of the context menu request"},
+                    x: {type: "number", description: "X coordinate of the context menu"},
+                    y: {type: "number", description: "Y coordinate of the context menu"}
+                }
+            }
+        },
+        properties: {
+            path: {type: "string", default:"/", attribute: true, state:true, description: "Current path in the filesystem"},
+            filesystem: {type: "object", default:null, state:true, description: "Filesystem instance"}
+        },
+        methods: {
+            refresh: {
+                description: "Refresh the list for the current path",
+                parameters: [
+                    { name: "options", type: "object", description: "Options for refreshing the list", schema: {
+                        type: "object",
+                        properties: {
+                            selectedPath: {type: "string", description: "Path of the selected item"}                        
+                        }
+                    }}
+                ]
+            },
+        },
+        slots: {}
+    },
     style: `
         :host {width:100%;}
         x-listview {height:100%;}

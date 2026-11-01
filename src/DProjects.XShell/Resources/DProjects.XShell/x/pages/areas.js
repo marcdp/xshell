@@ -1,14 +1,11 @@
-// contract
-export const contract = {
-    description: "Shows the available areas for navigation.",
-    events: {},
-    properties: {},
-    methods: {}
-};
-
-
-// implementation
+// page
 export default {
+    contract: {
+        description: "Shows the available areas for navigation.",
+        events: {},
+        properties: {},
+        methods: {}
+    },
     meta: {
         title: "Areas selector"
     },

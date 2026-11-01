@@ -1,25 +1,22 @@
-import { findFocusableElement, getDeepActiveElement, isDescendantOfElement } from "../utils/dom.js";
+import { getDeepActiveElement } from "../utils/dom.js";
 
-// contract
-export const contract = {
-    description: "Layout for a dialog page.",
-    events: {},
-    properties: {
-        label: { type: "boolean", default: false, attribute: true, state: true, description: "" },
-        status: { type: "string", default: "", attribute: true, state: true, description: "" },
-        opened: { type: "boolean", default: false, attribute: true, state: true, description: "" }
-    },
-    methods: {},
-    slots: {
-        "": {
-            description: "Default slot for the layout content."
-        }
-    }
-};
-
-
-// implementation
+// layout
 export default {
+    contract: {
+        description: "Layout for a dialog page.",
+        events: {},
+        properties: {
+            label: { type: "boolean", default: false, attribute: true, state: true, description: "" },
+            status: { type: "string", default: "", attribute: true, state: true, description: "" },
+            opened: { type: "boolean", default: false, attribute: true, state: true, description: "" }
+        },
+        methods: {},
+        slots: {
+            "": {
+                description: "Default slot for the layout content."
+            }
+        }
+    },
     meta: {
         renderEngine: "x",
         stateEngine: "proxy"

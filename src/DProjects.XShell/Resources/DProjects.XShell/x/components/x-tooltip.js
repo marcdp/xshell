@@ -1,22 +1,19 @@
-// contract
-export const contract = {
-    description: "Displays contextual information when the user hovers or focuses its content.",
-    events: {},
-    properties: {
-        text:     {type:"string", default:"",    attribute:true, state:true, description:"The tooltip text."},
-        position: {type:"string", default:"top", attribute:true, state:true, description:"The tooltip position: top, bottom, left, or right."}
-    },
-    methods: {},
-    slots: {
-        "": {
-            description: "The element or content associated with the tooltip."
-        }
-    }
-};
-
-
-// implementation
+// component
 export default {
+    contract: {
+        description: "Displays contextual information when the user hovers or focuses its content.",
+        events: {},
+        properties: {
+            text:     {type:"string", default:"",    attribute:true, state:true, description:"The tooltip text."},
+            position: {type:"string", default:"top", attribute:true, state:true, description:"The tooltip position: top, bottom, left, or right."}
+        },
+        methods: {},
+        slots: {
+            "": {
+                description: "The element or content associated with the tooltip."
+            }
+        }
+    },
     style: `
         :host {
             display:inline-block;

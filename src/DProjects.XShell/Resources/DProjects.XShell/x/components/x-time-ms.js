@@ -8,19 +8,16 @@ function formatMilliseconds(ms) {
     return `${ms.toFixed(0)} ms`;
 }
 
-// contract
-export const contract = {
-    description: "Formats and displays a duration in milliseconds.",
-    events: {},
-    properties: {
-        value: {type:"number", default:0, attribute:true, state:true, description:""}
-    },
-    methods: {}
-};
-
-
-// implementation
+// component
 export default {
+    contract: {
+        description: "Formats and displays a duration in milliseconds.",
+        events: {},
+        properties: {
+            value: {type:"number", default:0, attribute:true, state:true, description:""}
+        },
+        methods: {}
+    },
     template: `
         {{ state.valueFormatted || ''}}
     `,

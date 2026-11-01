@@ -1,46 +1,43 @@
 
-// contract
-export const contract = {
-    description: "Provides keyboard navigation and selection for a tree of tree-view items.",
-    events: {
-        toggle: {description: "Fired when a tree-view item is toggled."},
-        select: {description: "Fired when a tree-view item is selected."},
-        contextmenuitem: {
-            description: "Raised when a context menu is requested on an item.",
-            detail: {
-                item: {type:"object", required:true},
-                path: {type:"string", required:true},
-                x: {type:"number", required:true},
-                y: {type:"number", required:true}
-            },
-            bubbles: true,
-            composed: true
-        }
-    },
-    properties: {
-        multiple: {type:"boolean", default:false, attribute:true, state:true, description:""}
-    },
-    methods: {
-        select: {
-            description: "Select a tree item by path",
-            parameters: [
-                {name: "path", type: "string", description: "Path of the tree item to select"}
-            ]
-        },
-        clear: {
-            description: "Clear all tree items"
-        }
-    },
-    slots: {
-        "": {
-            description: "Default slot for tree-view items."
-        }
-    }
-};
-
-
-// implementation
+// component
 export default {
+    contract: {
+        description: "Provides keyboard navigation and selection for a tree of tree-view items.",
+        events: {
+            toggle: {description: "Fired when a tree-view item is toggled."},
+            select: {description: "Fired when a tree-view item is selected."},
+            contextmenuitem: {
+                description: "Raised when a context menu is requested on an item.",
+                detail: {
+                    item: {type:"object", required:true},
+                    path: {type:"string", required:true},
+                    x: {type:"number", required:true},
+                    y: {type:"number", required:true}
+                },
+                bubbles: true,
+                composed: true
+            }
+        },
+        properties: {
+            multiple: {type:"boolean", default:false, attribute:true, state:true, description:""}
+        },
+        methods: {
+            select: {
+                description: "Select a tree item by path",
+                parameters: [
+                    {name: "path", type: "string", description: "Path of the tree item to select"}
+                ]
+            },
+            clear: {
+                description: "Clear all tree items"
+            }
+        },
+        slots: {
+            "": {
+                description: "Default slot for tree-view items."
+            }
+        }
+    },
     style: `
         :host {
             display:block; 

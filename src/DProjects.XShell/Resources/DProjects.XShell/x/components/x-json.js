@@ -22,20 +22,17 @@ function syntaxHighlight(json) {
     });
 }
 
-// contract
-export const contract = {
-    description: "Displays syntax-highlighted JSON source.",
-    events: {},
-    properties: {
-        value: {type:"object", default:null, state:true, description:"Object to be displayed as syntax-highlighted JSON."},
-        indent: {type:"number", default:0, state:true, attribute:true, description:"Indentation level for JSON formatting."}
-    },
-    methods: {}
-};
-
-
-// implementation
+// component
 export default {
+    contract: {
+        description: "Displays syntax-highlighted JSON source.",
+        events: {},
+        properties: {
+            value: {type:"object", default:null, state:true, description:"Object to be displayed as syntax-highlighted JSON."},
+            indent: {type:"number", default:0, state:true, attribute:true, description:"Indentation level for JSON formatting."}
+        },
+        methods: {}
+    },
     style:`
         :host {}
         pre {

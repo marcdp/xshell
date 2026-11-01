@@ -1,16 +1,13 @@
-// contract
-export const contract = {
-    description: "Renders menu data as menu items.",
-    events: {},
-    properties: {
-        menu: {type:"array", default:null, attribute:false, state:true, description:""},
-    },
-    methods: {}
-};
-
-
-// implementation
+// component
 export default {
+    contract: {
+        description: "Renders menu data as menu items.",
+        events: {},
+        properties: {
+            menu: {type:"array", default:null, attribute:false, state:true, description:""},
+        },
+        methods: {}
+    },
     style: `
         :host {display: block;}
         :host(.horizontal) {display:flex; align-items:center; }

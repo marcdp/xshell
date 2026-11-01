@@ -1,37 +1,34 @@
-// contract
-export const contract = {
-    description: "Displays a selectable, expandable item in a tree view.",
-    events: {
-        toggle: {
-            description: "Raised when the item expansion state changes."
-        }
-    },
-    properties: {
-        indent:      {type:"number", default:0, attribute:true, state:true, description:""},
-        icon:        {type:"string", default:"x-file", attribute:true, state:true, description:""},
-        label:       {type:"string", default:"", attribute:true, state:true, description:""},
-        description: {type:"string", default:"", attribute:true, state:true, description:""},
-        path:        {type:"string", default:"", attribute:true, state:true, description:""},
-        
-        hasChilds:   {type:"boolean", default:false, attribute:true, state:true, description:""},
-        hasChildsForced: {type:"boolean", default:false, attribute:true, state:true, description:""},
-        expanded:    {type:"boolean", default:false, attribute:true, state:true, description:""},
-        selected:    {type:"boolean", default:false, attribute:true, state:true, description:""},
-    },
-    methods: {},
-    slots: {
-        "": {
-            description: "Default slot for tree-view item content."
-        },
-        "column": {
-            description: "Slot for column content."
-        }
-    }
-};
-
-
-// implementation
+// component
 export default {
+    contract: {
+        description: "Displays a selectable, expandable item in a tree view.",
+        events: {
+            toggle: {
+                description: "Raised when the item expansion state changes."
+            }
+        },
+        properties: {
+            indent:      {type:"number", default:0, attribute:true, state:true, description:""},
+            icon:        {type:"string", default:"x-file", attribute:true, state:true, description:""},
+            label:       {type:"string", default:"", attribute:true, state:true, description:""},
+            description: {type:"string", default:"", attribute:true, state:true, description:""},
+            path:        {type:"string", default:"", attribute:true, state:true, description:""},
+        
+            hasChilds:   {type:"boolean", default:false, attribute:true, state:true, description:""},
+            hasChildsForced: {type:"boolean", default:false, attribute:true, state:true, description:""},
+            expanded:    {type:"boolean", default:false, attribute:true, state:true, description:""},
+            selected:    {type:"boolean", default:false, attribute:true, state:true, description:""},
+        },
+        methods: {},
+        slots: {
+            "": {
+                description: "Default slot for tree-view item content."
+            },
+            "column": {
+                description: "Slot for column content."
+            }
+        }
+    },
     style: `
         :host {
             display:block;

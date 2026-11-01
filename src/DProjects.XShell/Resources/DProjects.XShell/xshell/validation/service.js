@@ -8,9 +8,6 @@ export default async function validateServiceContract(src, definition) {
     const contractServiceSchema = await xshell.loader.load("schema:contract.service");
 
     // validate
-    if (src.indexOf("areas") != -1) {
-        debugger;
-    }
     const definitionObject = Object.fromEntries(Object.entries(definition).map(([key, value]) => [key, typeof value === "function" ? {} : value]));
     const result = new JsonValidator().validate(definitionObject, contractServiceSchema);
     if (!result.valid) {

@@ -1,38 +1,35 @@
-// contract
-export const contract = {
-    description: "Asserts a form-level validation condition and reports an error when the condition is false.",
-    events: {
-        "assert:change": {
-            description: "Raised when the assertion test changes for form validation.",
-            detail: {
-                oldValue: {type:"boolean"},
-                newValue: {type:"boolean"}
+// component
+export default {
+    contract: {
+        description: "Asserts a form-level validation condition and reports an error when the condition is false.",
+        events: {
+            "assert:change": {
+                description: "Raised when the assertion test changes for form validation.",
+                detail: {
+                    oldValue: {type:"boolean"},
+                    newValue: {type:"boolean"}
+                }
+            }
+        },
+        properties: {
+            test: {type: "boolean",default: true,attribute: true,state: true,description: "Condition that must evaluate to true for the assertion to pass."},
+            label: {type: "string",default: "",attribute: true,state: true,description: "Optional label associated with the validation error."},
+            path: {type: "string",default: "",attribute: true,state: true,description: "Optional path associated with the validation error."},
+            message: {type: "string",default: "",attribute: true,state: true,description: "Optional validation message. When omitted, the component content is used."}
+        },
+        methods: {
+            validate: {
+                description: "Validates the assertion and returns any validation errors.",
+                parameters: [],
+                returns: {type: "array", description: "The validation errors produced by the assertion."}
+            }
+        },
+        slots: {
+            "": {
+                description: "Validation message content used when message is not specified."
             }
         }
     },
-    properties: {
-        test: {type: "boolean",default: true,attribute: true,state: true,description: "Condition that must evaluate to true for the assertion to pass."},
-        label: {type: "string",default: "",attribute: true,state: true,description: "Optional label associated with the validation error."},
-        path: {type: "string",default: "",attribute: true,state: true,description: "Optional path associated with the validation error."},
-        message: {type: "string",default: "",attribute: true,state: true,description: "Optional validation message. When omitted, the component content is used."}
-    },
-    methods: {
-        validate: {
-            description: "Validates the assertion and returns any validation errors.",
-            parameters: [],
-            returns: {type: "array", description: "The validation errors produced by the assertion."}
-        }
-    },
-    slots: {
-        "": {
-            description: "Validation message content used when message is not specified."
-        }
-    }
-};
-
-
-// implementation
-export default {
     style: `
         :host {
             display: block;

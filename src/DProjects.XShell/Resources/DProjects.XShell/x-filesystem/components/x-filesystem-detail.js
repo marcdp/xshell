@@ -1,16 +1,13 @@
 
-// contract
-export const contract = {
-    description: "Filesystem detail component",
-    events: {},
-    properties: {},
-    methods: {},
-    slots: {}
-};
-
-
-// implementation
+// component
 export default {
+    contract: {
+        description: "Filesystem detail component",
+        events: {},
+        properties: {},
+        methods: {},
+        slots: {}
+    },
     style: `
         :host {display:flex;}
     `,

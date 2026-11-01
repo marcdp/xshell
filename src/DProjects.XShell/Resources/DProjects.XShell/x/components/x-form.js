@@ -1,77 +1,74 @@
 // constants
 const inputTypesThatAcceptsEnters = ["text", "password", "number", "date", "datetime-local", "time", "week", "month", "url", "email", "phone", "search"];
 
-// contract
-export const contract = {
-    description: "Coordinates data-field validation, submission, loading state, and wizard navigation.",
-    events: {
-        command: {
-            description: "Raised when the form submits successfully.",
-            detail: {
-                command: {type:"string"},
-                data: {type:"object"}
-            }
-        }
-    },
-    properties: {
-        wizard:         {type:"boolean", default:false, attribute:true, state:true, description:""},
-        wizardDirection:{type:"string", default:"", attribute:true, state:true, description:""},
-        wizardIndex:    {type:"number", default:0, attribute:true, state:true, description:""},
-        wizardPanels:   {type:"array", default:[], attribute:true, state:true, description:""},
-        validated:      {type:"boolean", default:false, attribute:true, state:true, description:""},
-        command:        {type:"string", default:"submit", attribute:true, state:true, description:""},
-        errors:         {type:"array", default:[], attribute:true, state:true, description:""},
-        loading:        {type:"boolean", default:false, attribute:true, state:true, description:""},
-        loadingLabel:   {type:"string", default:"Working", attribute:true, state:true, description:""},
-        loadingMessage: {type:"string", default:"Please wait...", attribute:true, state:true, description:""},
-    },
-    methods: {
-        validate: {
-            description: "Validates the form's data fields and assertions.",
-            parameters: [],
-            returns: {
-                description: "The validation errors found in the form.",
-                type: "array"
-            }
-        },
-        showLoading: {
-            description: "Shows the loading notice and optionally updates its text.",
-            parameters: [
-                {name:"options", type:"object", description:"Optional label and message values for the loading notice."}
-            ],
-            returns: {
-                description: "Does not return a value.",
-                type: "void"
-            }
-        },
-        hideLoading: {
-            description: "Hides the loading notice.",
-            parameters: [],
-            returns: {
-                description: "Does not return a value.",
-                type: "void"
-            }
-        }
-    }, 
-    slots: {
-        "": {
-            description: "The default slot for form content."
-        },
-        "header": {
-            description: "The slot for the form header content."
-        },
-        "cancel":{
-            description: "The slot for the form cancel button content."
-        },
-        "footer": {
-            description: "The slot for the form footer content."
-        }
-    }
-};
-
-
-// implementation
+// component
 export default {
+    contract: {
+        description: "Coordinates data-field validation, submission, loading state, and wizard navigation.",
+        events: {
+            command: {
+                description: "Raised when the form submits successfully.",
+                detail: {
+                    command: {type:"string"},
+                    data: {type:"object"}
+                }
+            }
+        },
+        properties: {
+            wizard:         {type:"boolean", default:false, attribute:true, state:true, description:""},
+            wizardDirection:{type:"string", default:"", attribute:true, state:true, description:""},
+            wizardIndex:    {type:"number", default:0, attribute:true, state:true, description:""},
+            wizardPanels:   {type:"array", default:[], attribute:true, state:true, description:""},
+            validated:      {type:"boolean", default:false, attribute:true, state:true, description:""},
+            command:        {type:"string", default:"submit", attribute:true, state:true, description:""},
+            errors:         {type:"array", default:[], attribute:true, state:true, description:""},
+            loading:        {type:"boolean", default:false, attribute:true, state:true, description:""},
+            loadingLabel:   {type:"string", default:"Working", attribute:true, state:true, description:""},
+            loadingMessage: {type:"string", default:"Please wait...", attribute:true, state:true, description:""},
+        },
+        methods: {
+            validate: {
+                description: "Validates the form's data fields and assertions.",
+                parameters: [],
+                returns: {
+                    description: "The validation errors found in the form.",
+                    type: "array"
+                }
+            },
+            showLoading: {
+                description: "Shows the loading notice and optionally updates its text.",
+                parameters: [
+                    {name:"options", type:"object", description:"Optional label and message values for the loading notice."}
+                ],
+                returns: {
+                    description: "Does not return a value.",
+                    type: "void"
+                }
+            },
+            hideLoading: {
+                description: "Hides the loading notice.",
+                parameters: [],
+                returns: {
+                    description: "Does not return a value.",
+                    type: "void"
+                }
+            }
+        }, 
+        slots: {
+            "": {
+                description: "The default slot for form content."
+            },
+            "header": {
+                description: "The slot for the form header content."
+            },
+            "cancel":{
+                description: "The slot for the form cancel button content."
+            },
+            "footer": {
+                description: "The slot for the form footer content."
+            }
+        }
+    },
     style: `
         :host {display:block;}
 

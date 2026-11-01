@@ -1,21 +1,19 @@
-// contract
-export const contract = {
-    description: "Layout for an embedded page.",
-    events: {},
-    properties: {
-        status: { type: "string", default: "", attribute: true, state: true, description: "" },
-    },
-    methods: {},
-    slots: {
-        "": {
-            description: "Default slot for the layout content."
-        }
-    }
-};
 
-
-// implementation
+// layout
 export default {
+    contract: {
+        description: "Layout for an embedded page.",
+        events: {},
+        properties: {
+            status: { type: "string", default: "", attribute: true, state: true, description: "" },
+        },
+        methods: {},
+        slots: {
+            "": {
+                description: "Default slot for the layout content."
+            }
+        }
+    },
     meta: {
         renderEngine: "x",
         stateEngine: "proxy"

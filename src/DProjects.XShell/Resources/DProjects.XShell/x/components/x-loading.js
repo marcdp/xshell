@@ -1,15 +1,12 @@
 
-// contract
-export const contract = {
-    description: "Displays a loading indicator.",
-    events: {},
-    properties: {},
-    methods: {}
-};
-
-
-// implementation
+// component
 export default {
+    contract: {
+        description: "Displays a loading indicator.",
+        events: {},
+        properties: {},
+        methods: {}
+    },
     style: `
         :host {
             display:block;

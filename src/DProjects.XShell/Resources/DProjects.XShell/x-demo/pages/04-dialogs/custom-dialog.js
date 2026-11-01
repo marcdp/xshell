@@ -1,12 +1,11 @@
 
-export const contract = {
-    properties: {
-        message: {type:"string", default:"", state:true, context:true},
-        value: {type:"string", default:"", state:true, context:true}
-    }
-};
-
 export default {
+    contract: {
+        properties: {
+            message: {type:"string", default:"", state:true, context:true},
+            value: {type:"string", default:"", state:true, context:true}
+        }
+    },
     meta: {
         title: "Custom Dialog",
         description: "A custom dialog Page that receives context and returns a result."

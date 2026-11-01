@@ -1,31 +1,28 @@
 import { findFocusableElement, getDeepActiveElement, isDescendantOfElement } from "../utils/dom.js";
 
-// contract
-export const contract = {
-    description: "Displays slotted content in an expandable dropdown panel.",
-    events: {},
-    properties: {
-        expanded:       {type:"boolean", default:false, attribute:true, state:true, description:""},
-        collapseOnClick:{type:"boolean", default:false, attribute:true, state:true, description:""}
-    },
-    methods: {
-        expand: {description: "Expands the dropdown panel."},
-        collapse: {description: "Collapses the dropdown panel."}
-        
-    },
-    slots: {
-        "": {
-            description: "Default slot for the dropdown content."
-        },
-        "dropdown": {
-            description: "Slot for the dropdown panel content."
-        }
-    } 
-};
-
-
-// implementation
+// component
 export default {
+    contract: {
+        description: "Displays slotted content in an expandable dropdown panel.",
+        events: {},
+        properties: {
+            expanded:       {type:"boolean", default:false, attribute:true, state:true, description:""},
+            collapseOnClick:{type:"boolean", default:false, attribute:true, state:true, description:""}
+        },
+        methods: {
+            expand: {description: "Expands the dropdown panel."},
+            collapse: {description: "Collapses the dropdown panel."}
+        
+        },
+        slots: {
+            "": {
+                description: "Default slot for the dropdown content."
+            },
+            "dropdown": {
+                description: "Slot for the dropdown panel content."
+            }
+        } 
+    },
     style: `
         :host {display:inline-block; position:relative;}
         :host .header {cursor:pointer; }

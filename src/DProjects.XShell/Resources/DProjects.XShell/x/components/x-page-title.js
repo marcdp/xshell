@@ -1,15 +1,12 @@
 
-// contract
-export const contract = {
-    description: "Displays the current page title.",
-    events: {},
-    properties: {},
-    methods: {}
-};
-
-
-// implementation
+// component
 export default {
+    contract: {
+        description: "Displays the current page title.",
+        events: {},
+        properties: {},
+        methods: {}
+    },
     style: ``,
     template: `{{ state.label }}`,
     state: {

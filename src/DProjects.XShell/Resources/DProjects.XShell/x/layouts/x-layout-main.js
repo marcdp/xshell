@@ -1,30 +1,27 @@
 import { probablyPhone, getScrollbarWidth } from "../utils/dom.js";
 import { findObjectsPath } from "../utils/object.js";
 
-// contract
-export const contract = {
-    description: "Main layout.",
-    events: {},
-    properties: {
-        status: { type:"string", default: "", attribute: true, state: true, description: "" },
-        appIcon: { type: "string", default: "", state: true, description: "" },
-        appLabel: { type: "string", default: "", state: true, description: "" },
-        appBasePath: { type: "string", default: "", state: true, description: "" },
-        toggled: { type: "boolean", default: false, state: true, description: "" },
-        keyword: { type: "string", default: "", state: true, description: "" },
-        shellDebug: { type: "boolean", default: false, state: true, description: "" },
-    },
-    methods: {},
-    slots: {
-        "": {
-            description: "Default slot for the layout content."
-        }
-    }
-};
-
-
-// implementation
+// layout
 export default {
+    contract: {
+        description: "Main layout.",
+        events: {},
+        properties: {
+            status: { type:"string", default: "", attribute: true, state: true, description: "" },
+            appIcon: { type: "string", default: "", state: true, description: "" },
+            appLabel: { type: "string", default: "", state: true, description: "" },
+            appBasePath: { type: "string", default: "", state: true, description: "" },
+            toggled: { type: "boolean", default: false, state: true, description: "" },
+            keyword: { type: "string", default: "", state: true, description: "" },
+            shellDebug: { type: "boolean", default: false, state: true, description: "" },
+        },
+        methods: {},
+        slots: {
+            "": {
+                description: "Default slot for the layout content."
+            }
+        }
+    },
     meta: {
         renderEngine: "x",
         stateEngine:  "proxy"

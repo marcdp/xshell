@@ -1,14 +1,12 @@
 
  // contract
-export const contract = {
-    description: "Background tasks page",
-    events: {},
-    properties: {},
-    methods: {}
-};
-
-// page
 export default {
+    contract: {
+        description: "Background tasks page",
+        events: {},
+        properties: {},
+        methods: {}
+    },
     meta: {
         title: "Tasks"
     },

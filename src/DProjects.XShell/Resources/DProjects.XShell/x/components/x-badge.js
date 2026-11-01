@@ -1,17 +1,14 @@
 
-// contract
-export const contract = {
-    description: "Displays a short badge value.",
-    events: {},
-    properties: {
-        value: {type:"string", default:"", attribute:true, state:true, description:""}
+// component
+export default {
+    contract: {
+        description: "Displays a short badge value.",
+        events: {},
+        properties: {
+            value: {type:"string", default:"", attribute:true, state:true, description:""}
+        },
+        methods: {}
     },
-    methods: {}
-};
-
-
-// implementation
-export default  {
     style: `
         :host {}
         :host .message {

@@ -1,33 +1,30 @@
-// contract
-export const contract = {
-    description: "Displays a menu item with optional nested menu content.",
-    events: {},
-    properties: {
-        icon:        {type:"string", default:"", attribute:true, state:true, description:""},
-        label:       {type:"string", default:"", attribute:true, state:true, description:""},
-        href:        {type:"string", default:"", attribute:true, state:true, description:""},
-        suffix:      {type:"string", default:"", attribute:true, state:true, description:""},
-        command:     {type:"string", default:"", attribute:true, state:true, description:""},
-        selected:    {type:"boolean", default:false, attribute:true, state:true, description:""},
-        checked:     {type:"boolean", default:false, attribute:true, state:true, description:""},
-        disabled:    {type:"boolean", default:false, attribute:true, state:true, description:""},
-        embedded:    {type:"boolean", default:false, attribute:true, state:true, description:"Hosts the target Page inline instead of rendering a navigation anchor."},
-        tooltip:     {type:"string", default:"", attribute:true, state:true, description:"Optional tooltip text shown on the navigation anchor."},
-    },
-    methods: {
-        focus: {description: "Focuses the menu item."},
-        expand: {description: "Handles click events on the menu item."}
-    },
-    slots: {
-        "": {
-            description: "Default slot for the menu item content."
-        }
-    }
-};
-
-
-// implementation
+// component
 export default {
+    contract: {
+        description: "Displays a menu item with optional nested menu content.",
+        events: {},
+        properties: {
+            icon:        {type:"string", default:"", attribute:true, state:true, description:""},
+            label:       {type:"string", default:"", attribute:true, state:true, description:""},
+            href:        {type:"string", default:"", attribute:true, state:true, description:""},
+            suffix:      {type:"string", default:"", attribute:true, state:true, description:""},
+            command:     {type:"string", default:"", attribute:true, state:true, description:""},
+            selected:    {type:"boolean", default:false, attribute:true, state:true, description:""},
+            checked:     {type:"boolean", default:false, attribute:true, state:true, description:""},
+            disabled:    {type:"boolean", default:false, attribute:true, state:true, description:""},
+            embedded:    {type:"boolean", default:false, attribute:true, state:true, description:"Hosts the target Page inline instead of rendering a navigation anchor."},
+            tooltip:     {type:"string", default:"", attribute:true, state:true, description:"Optional tooltip text shown on the navigation anchor."},
+        },
+        methods: {
+            focus: {description: "Focuses the menu item."},
+            expand: {description: "Handles click events on the menu item."}
+        },
+        slots: {
+            "": {
+                description: "Default slot for the menu item content."
+            }
+        }
+    },
     style: `
         :host {display:flex; position:relative; box-sizing:border-box; flex-direction:column; margin-bottom:.15em;}
         

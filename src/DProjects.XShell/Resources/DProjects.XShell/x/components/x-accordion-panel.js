@@ -1,31 +1,28 @@
 
-// contract
-export const contract = {
-    description: "Displays a collapsible accordion section.",
-    events: {
-        toggle: {
-            description: "Raised when the panel expansion state changes."
-        }
-    },
-    properties: {
-        label:    {type:"string",  default:"",    attribute:true, state:true, description:""},
-        icon:     {type:"string",  default:"",    attribute:true, state:true, description:""},
-        expanded: {type:"boolean", default:false, attribute:true, state:true, description:""}
-    },
-    methods: {},
-    slots: {
-        "": {
-            description: "Content for the accordion panel body"
-        },
-        toolbar: {
-            description: "Content for the accordion panel toolbar"
-        }
-    }
-};
-
-
-// implementation
+// component
 export default {
+    contract: {
+        description: "Displays a collapsible accordion section.",
+        events: {
+            toggle: {
+                description: "Raised when the panel expansion state changes."
+            }
+        },
+        properties: {
+            label:    {type:"string",  default:"",    attribute:true, state:true, description:""},
+            icon:     {type:"string",  default:"",    attribute:true, state:true, description:""},
+            expanded: {type:"boolean", default:false, attribute:true, state:true, description:""}
+        },
+        methods: {},
+        slots: {
+            "": {
+                description: "Content for the accordion panel body"
+            },
+            toolbar: {
+                description: "Content for the accordion panel toolbar"
+            }
+        }
+    },
     style: `
         :host {display:block;}
         .header {display:flex; height:2.5em; align-items:center; padding:0 .5em 0 1em; cursor:pointer; user-select: none;}

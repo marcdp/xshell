@@ -1,19 +1,16 @@
-// contract
-export const contract = {
-    description: "Displays the progress of an operation.",
-    events: {},
-    properties: {
-        value: {type:"number", default:0,   attribute:true, state:true, description:"The current value of the progress bar."},
-        min:   {type:"number", default:0,   attribute:true, state:true, description:"The minimum value of the progress bar."},
-        max:   {type:"number", default:100, attribute:true, state:true, description:"The maximum value of the progress bar."},
-        unknown: {type:"boolean", default:false, attribute:true, state:true, description:"Displays an animated progress bar when progress is unknown."}
-    },
-    methods: {}
-};
-
-
-// implementation
+// component
 export default {
+    contract: {
+        description: "Displays the progress of an operation.",
+        events: {},
+        properties: {
+            value: {type:"number", default:0,   attribute:true, state:true, description:"The current value of the progress bar."},
+            min:   {type:"number", default:0,   attribute:true, state:true, description:"The minimum value of the progress bar."},
+            max:   {type:"number", default:100, attribute:true, state:true, description:"The maximum value of the progress bar."},
+            unknown: {type:"boolean", default:false, attribute:true, state:true, description:"Displays an animated progress bar when progress is unknown."}
+        },
+        methods: {}
+    },
     style: `
         :host {
             display:block;

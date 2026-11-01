@@ -1,47 +1,44 @@
-// contract
-export const contract = {
-    description: "Displays a JavaScript value as an expandable object tree.",
-    events: {},
-    properties: {
-        value: {
-            type: "any",
-            default: null,
-            attribute: false,
-            state: true,
-            description: "Value to display."
-        },
-        name: {
-            type: "string",
-            default: "",
-            attribute: true,
-            state: true,
-            description: "Optional property name displayed before the value."
-        },
-        expanded: {
-            type: "boolean",
-            default: false,
-            attribute: true,
-            state: true,
-            description: "Whether this object node is expanded."
-        }
-    },
-    methods: {
-        expand: {
-            description: "Expands the current node."
-        },
-        collapse: {
-            description: "Collapses the current node."
-        },
-        toggle: {
-            description: "Toggles the current node."
-        }
-    },
-    slots: {}
-};
-
-
-// implementation
+// component
 export default {
+    contract: {
+        description: "Displays a JavaScript value as an expandable object tree.",
+        events: {},
+        properties: {
+            value: {
+                type: "any",
+                default: null,
+                attribute: false,
+                state: true,
+                description: "Value to display."
+            },
+            name: {
+                type: "string",
+                default: "",
+                attribute: true,
+                state: true,
+                description: "Optional property name displayed before the value."
+            },
+            expanded: {
+                type: "boolean",
+                default: false,
+                attribute: true,
+                state: true,
+                description: "Whether this object node is expanded."
+            }
+        },
+        methods: {
+            expand: {
+                description: "Expands the current node."
+            },
+            collapse: {
+                description: "Collapses the current node."
+            },
+            toggle: {
+                description: "Toggles the current node."
+            }
+        },
+        slots: {}
+    },
     style: `
         :host {
             display:block;

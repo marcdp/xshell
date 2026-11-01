@@ -1,34 +1,31 @@
-// contract
-export const contract = {
-    description: "Displays a compact preview of a value and opens the full value in a new browser tab.",
-    events: {
-        open: {
-            description: "Raised when the full value is opened.",
-            detail: {
-                value: {type:"any"}
-            }
-        }
-    },
-    properties: {
-        value: {
-            type: "any",
-            default: null,
-            attribute: false,
-            state: true,
-            description: "Value to preview."
-        }
-    },
-    methods: {
-        open: {
-            description: "Opens the full value in a new browser tab."
-        }
-    },
-    slots: {}
-};
-
-
-// implementation
+// component
 export default {
+    contract: {
+        description: "Displays a compact preview of a value and opens the full value in a new browser tab.",
+        events: {
+            open: {
+                description: "Raised when the full value is opened.",
+                detail: {
+                    value: {type:"any"}
+                }
+            }
+        },
+        properties: {
+            value: {
+                type: "any",
+                default: null,
+                attribute: false,
+                state: true,
+                description: "Value to preview."
+            }
+        },
+        methods: {
+            open: {
+                description: "Opens the full value in a new browser tab."
+            }
+        },
+        slots: {}
+    },
     style: `
         :host {
             min-width:0;

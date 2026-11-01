@@ -1,19 +1,16 @@
-// contract
-export const contract = {
-    description: "Provides the header container for tree-view columns.",
-    events: {},
-    properties: {},
-    methods: {},
-    slots: {
-        "": {
-            description: "Default slot for tree-view columns."
-        }
-    }
-};
-
-
-// implementation
+// component
 export default {
+    contract: {
+        description: "Provides the header container for tree-view columns.",
+        events: {},
+        properties: {},
+        methods: {},
+        slots: {
+            "": {
+                description: "Default slot for tree-view columns."
+            }
+        }
+    },
     style: `
         :host {
             display:grid; 

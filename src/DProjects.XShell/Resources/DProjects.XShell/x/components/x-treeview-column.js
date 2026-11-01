@@ -1,20 +1,17 @@
-// contract
-export const contract = {
-    description: "Defines a labeled column in a tree view.",
-    events: {},
-    properties: {
-        label: {type:"string", default:"", attribute:true, state:true, description:""},
-        width: {type:"string", default:"minmax(0, 1fr)", attribute:true, state:true, description:""},
-    },
-    methods: {},
-    slots: {
-        "": {description: "Custom column header content. Overrides the default label if provided."}
-    }
-};
-
-
-// implementation
+// component
 export default {
+    contract: {
+        description: "Defines a labeled column in a tree view.",
+        events: {},
+        properties: {
+            label: {type:"string", default:"", attribute:true, state:true, description:""},
+            width: {type:"string", default:"minmax(0, 1fr)", attribute:true, state:true, description:""},
+        },
+        methods: {},
+        slots: {
+            "": {description: "Custom column header content. Overrides the default label if provided."}
+        }
+    },
     style: `
         :host {
             display: block;

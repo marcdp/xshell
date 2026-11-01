@@ -1,14 +1,12 @@
 
  // contract
-export const contract = {
-    description: "XChat basic usage",
-    events: {},
-    properties: {},
-    methods: {}
-};
-
-// page
 export default {
+    contract: {
+        description: "XChat basic usage",
+        events: {},
+        properties: {},
+        methods: {}
+    },
     meta: {
         title: "AI Chat"
     },

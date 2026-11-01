@@ -1,9 +1,8 @@
 
-export const contract = {
-    description: "Displays the child navigation items of the containing Page."
-};
-
 export default {
+    contract: {
+        description: "Displays the child navigation items of the containing Page."
+    },
     style: `
         :host {
             display: block;

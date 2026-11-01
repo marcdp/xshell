@@ -1,14 +1,11 @@
-// contract
-export const contract = {
-    description: "Displays the current local time.",
-    events: {},
-    properties: {},
-    methods: {}
-};
-
-
-// implementation
+// component
 export default {
+    contract: {
+        description: "Displays the current local time.",
+        events: {},
+        properties: {},
+        methods: {}
+    },
     style: `
         :host {border:1px solid var(--x-clock-border-color); display:inline-block; padding:10px;}
     `,
