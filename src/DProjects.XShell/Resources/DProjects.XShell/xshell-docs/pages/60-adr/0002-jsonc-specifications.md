@@ -2,8 +2,8 @@
 
 ## Status
 
-Accepted for JSONC authoring, nested composition, and effective-configuration schema validation. V0 module contracts declare descriptive event
-metadata only; module actions and intents are outside V0.
+Accepted for JSONC authoring, nested composition, and effective-configuration schema validation. Module contracts use the common descriptive
+contract model; module actions and intents are outside V0.
 
 ## Context
 
@@ -27,9 +27,9 @@ Bootstrap parses JSONC, validates local and referenced module identities, dedupl
 and cycles, and merges nested data in deterministic dependency-first order with the root last. Development middleware and Pack generate
 descriptor-embedded inventories; bootstrap normalizes them during configuration preparation. After worker mapping and resolver generation,
 bootstrap awaits XShell's effective schema validation, deeply freezes the object, and calls init. Init validates again before runtime
-services are constructed. The X module currently has no module controller; validation is not environment-gated. The canonical schema is
+services are constructed. The X module currently includes a `module.js` controller; validation is not environment-gated. The canonical schema is
 `xshell/schemas/config.schema.json`; it requires module defaults for definition-based Page and Component engines and defines XShell UI defaults
-for layouts, lazy/error/Markdown components, and standard dialog pages, plus descriptive module `contract.events`. The server default points to
+for layouts, lazy/error/Markdown components, and standard dialog pages, plus descriptive common Module contract metadata. The server default points to
 `x-demo/module.jsonc`. Browser JSONC supports comments and trailing commas, matching server/build descriptor parsing.
 
 See [Configuration](../10-architecture/20-configuration.md) and [Specifications](../50-specifications/).

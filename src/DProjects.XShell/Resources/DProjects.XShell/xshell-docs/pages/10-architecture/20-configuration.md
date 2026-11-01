@@ -179,7 +179,7 @@ descriptor-embedded inventories before bootstrap. Bootstrap normalizes them with
 rules from the effective inventory after Service Worker initialization.
 It imports XShell, awaits `xshell.validateConfig(config)` for the complete enriched object, and then deeply freezes it.
 `xshell.init(config)` validates again before constructing runtime services. Validation errors abort startup; there is no environment gate.
-The X module currently has no module controller; configuration validation occurs during bootstrap and initialization.
+The X module currently includes a `module.js` controller; configuration validation remains a separate bootstrap and initialization responsibility.
 `xshell.ui.component.markdown` selects the Component used by `page-md` for Markdown Pages; the current X module sets it to `x-markdown`.
 The required `xshell.i18n` section supplies the current language, available languages, date/time formats, and translation dictionaries. The X module
 provides the baseline values, and application composition may override them through the normal merge precedence.

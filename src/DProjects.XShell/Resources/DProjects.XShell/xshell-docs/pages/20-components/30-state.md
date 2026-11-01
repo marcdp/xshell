@@ -12,10 +12,10 @@ A non-state-backed public property cannot appear in implementation state.
 State entries are ordinary values, not descriptors with `type`, `attr`, `prop`, or `reflect` flags. Public-property behavior belongs to the contract.
 
 ```js
-export const contract = {
-    properties: { count: { type: "integer", default: 0, state: true } }
-};
 export default {
+    contract: {
+        properties: { count: { type: "integer", default: 0, state: true } }
+    },
     template: '<span x-text="state.count"></span>',
     state: { busy: false },
     controller({ state }) {

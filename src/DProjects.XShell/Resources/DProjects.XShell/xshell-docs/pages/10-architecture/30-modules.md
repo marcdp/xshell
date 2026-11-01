@@ -24,6 +24,14 @@ definitions. The `modules` object is both the module identity registry and the d
             "defaults": {
                 "page": { "renderEngine": "x", "stateEngine": "proxy" },
                 "component": { "renderEngine": "x", "stateEngine": "proxy" }
+            },
+            "contract": {
+                "label": "Orders",
+                "methods": {
+                    "refresh": {
+                        "description": "Refreshes module-owned data."
+                    }
+                }
             }
         },
         "x": {
@@ -116,6 +124,54 @@ configured lazy service.
 resources loaded through Resolver and Loader, and from `controller({ serviceName })`, which resolves an existing service for runtime use. See
 [Services](100-services.md).
 
+## Module contract
+
+A local Module definition may include an inline `contract` using the shared contract model:
+
+```jsonc
+{
+    "modules": {
+        "orders": {
+            "label": "Orders",
+            "version": "1.0.0",
+            "copyright": "",
+            "icon": "",
+            "defaults": {
+                "page": { "renderEngine": "x", "stateEngine": "proxy" },
+                "component": { "renderEngine": "x", "stateEngine": "proxy" }
+            },
+            "contract": {
+                "label": "Orders Module",
+                "properties": {
+                    "status": { "type": "string", "readonly": true }
+                },
+                "events": {
+                    "changed": {
+                        "detail": {
+                            "entityId": { "type": "string", "required": true }
+                        }
+                    }
+                },
+                "methods": {
+                    "refresh": {
+                        "returns": { "type": "void" }
+                    }
+                }
+            }
+        }
+    }
+}
+```
+
+`module.schema.json` reuses `contract.schema.json`, so Module contracts may describe labels, descriptions, icons, local named types, public
+properties, events, methods, and examples. The contract is validated as part of the normalized effective configuration. Bootstrap supplies an
+empty contract and `events` map when they are omitted.
+
+The contract describes the Module's intended public surface; it is not a service registration or a controller implementation. The current Module
+runtime does not compare contract properties or methods with the optional `module.js` controller, validate event payloads, or dispatch declared
+events. In particular, a declared method does not create a controller method. Contract-local `ref` values receive structural schema validation,
+but Module validation does not currently perform the service-contract registry's extra check that each reference names a declared type.
+
 ## Module controller and runtime instance
 
 `Modules.init()` iterates the effective `config.modules` map once. It creates one record per canonical id, loads styles and an optional controller,
@@ -140,6 +196,9 @@ Module controllers start sequentially in dependency order: referenced dependenci
 sequentially in reverse dependency order. If startup fails, controllers that already started successfully are stopped in reverse successful-start
 order before the original startup error is rethrown. Ordering between modules with no dependency relationship is deterministic but does not imply
 dependency semantics. Controller constructors are created while iterating the effective module map, not on service lookup.
+The optional controller is discovered by convention only when `<module assets path>/module.js` appears in the generated file inventory. It must
+default-export a class. Its optional `start()` and `stop()` methods participate in Module lifecycle, independently of any names in
+`moduleConfig.contract`.
 The optional module-wide `/styles/index.css` is loaded only when its path appears in the module inventory. `Modules` requests it as a `style:`
 resource through Resolver → Loader → `style-css`, retains the resulting `CSSStyleSheet` in `module.styles`, and adopts it after successful startup.
 Loader caching ensures the conventional stylesheet is fetched once per module. Relative CSS `@import` and `url(...)` references resolve against the

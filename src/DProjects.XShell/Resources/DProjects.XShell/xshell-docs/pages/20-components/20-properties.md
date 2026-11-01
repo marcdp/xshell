@@ -27,9 +27,9 @@ Empty-object state entries also enable prefixed attribute maps: for example `set
 For public entries this needs `state: true`, `attribute: true`, and an empty-object default.
 Private empty-object state gets this behavior without descriptor flags. Present map attribute values are strings; removal writes null.
 
-Contract property metadata includes `type`, `default`, `state`, `attribute`, `attributeParser`, `reflect`, `query`, `context`, `required`,
-`readonly`, `enum`, and `description` where applicable. The shared contract schema validates the metadata shape; Page-specific rules for `query`
-are enforced by the Page loader.
+Component contract property metadata combines common fields such as `label`, `description`, `type` or `ref`, `schema`, `default`,
+`required`, `readonly`, and `enum` with Component-specific `state`, `attribute`, `attributeParser`, and `reflect`. The embedded contract is
+validated through `component.schema.json`. Page-only `query` and `context` fields are not accepted by the Component schema.
 
 For Components, `reflect: true` writes the derived kebab-case attribute even when incoming observation was not enabled.
 False/null/undefined remove it, true writes an empty attribute, and other values use `setAttribute` coercion, not JSON serialization.
@@ -54,8 +54,8 @@ properties retain their contract default independently of internal state.
 
 ## Query-string initialization
 
-`query: true` is an explicit opt-in used only by the Page loader. It allows the initial value of a state-backed property to be supplied by the query
-string in the Page `src`; normal Components accept the metadata but do not read browser or Page URL query values.
+`query: true` is Page-specific metadata. It allows the initial value of a state-backed Page property to be supplied by the query string in the
+Page `src`; it is not part of a Component contract.
 
 The query parameter name is the property name converted from camelCase to kebab-case. For example, `customerId` maps to `customer-id` and
 `pageIndex` maps to `page-index`. A query value overrides the contract default before the controller is created and before its `load()` handler runs.
@@ -67,16 +67,19 @@ valid for strings; malformed numeric or boolean values reject Page creation. If 
 For example, a reflected query-backed Page property follows this lifecycle:
 
 ```js
-export const contract = {
-    properties: {
-        pageIndex: {
-            type: "integer",
-            default: 0,
-            state: true,
-            query: true,
-            reflect: true
+export default {
+    contract: {
+        properties: {
+            pageIndex: {
+                type: "integer",
+                default: 0,
+                state: true,
+                query: true,
+                reflect: true
+            }
         }
-    }
+    },
+    template: `<p>{{ state.pageIndex }}</p>`
 };
 ```
 
@@ -90,8 +93,7 @@ state.pageIndex = 0    →  /page.js
 the contract default removes the query parameter.
 
 Query initialization does not imply `attribute` or `reflect`. With `reflect: true`, later state changes patch the Page's own query parameters using
-replacement semantics; properties without `reflect: true` remain input-only. This behavior is Page-specific and normal Components continue to ignore
-`query` at runtime.
+replacement semantics; properties without `reflect: true` remain input-only. This behavior is Page-specific.
 
 ## Related documentation
 

@@ -1,18 +1,31 @@
 # Component Events
 
-Components emit standard DOM CustomEvents. `contract.events` describes public events and payloads but does not emit them or validate detail.
-Flags such as `bubbles`, `composed`, and `cancelable` must be set by the implementation:
+Components emit standard DOM CustomEvents. Inline `contract.events` metadata describes public events and their `detail` fields but does not emit
+them or validate payload values. Each detail field uses a direct `type` or contract-local `ref` and may add `description`, `schema`, and
+`required`. Flags such as `bubbles`, `composed`, and `cancelable` are not contract fields and must be set by the implementation:
 
 ```js
-controller({ host }) {
-    return {
-        changed(value) {
-            host.dispatchEvent(new CustomEvent("change", {
-                detail: { value }, bubbles: true, composed: true
-            }));
+export default {
+    contract: {
+        events: {
+            change: {
+                description: "Raised when the value changes.",
+                detail: {
+                    value: { type: "string", required: true }
+                }
+            }
         }
-    };
-}
+    },
+    controller({ host }) {
+        return {
+            changed(value) {
+                host.dispatchEvent(new CustomEvent("change", {
+                    detail: { value }, bubbles: true, composed: true
+                }));
+            }
+        };
+    }
+};
 ```
 
 DOM events propagate according to those flags. [Bus events](../30-subsystems/20-bus.md) are asynchronous application messages delivered to listeners.

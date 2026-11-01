@@ -4,18 +4,21 @@ Component contracts may declare the slots exposed by a Web Component. This descr
 
 ## Contract metadata
 
-Use the optional `slots` section of the named `contract` export:
+Use the optional `slots` section of the default export's inline `contract`:
 
 ```js
-export const contract = {
-    slots: {
-        "": {
-            description: "Default slot."
-        },
-        "header": {
-            description: "Content displayed in the component header."
+export default {
+    contract: {
+        slots: {
+            "": {
+                description: "Default slot."
+            },
+            "header": {
+                description: "Content displayed in the component header."
+            }
         }
-    }
+    },
+    template: `<slot></slot><slot name="header"></slot>`
 };
 ```
 
@@ -31,37 +34,34 @@ corresponding named key.
 For example, this contract and template agree:
 
 ```js
-export const contract = {
-    slots: {
-        "": {
-            description: "Default content"
-        },
-        actions: {
-            description: "Action buttons"
+export default {
+    contract: {
+        slots: {
+            "": {
+                description: "Default content"
+            },
+            actions: {
+                description: "Action buttons"
+            }
         }
-    }
+    },
+    template: `<slot></slot><slot name="actions"></slot>`
 };
-```
-
-```html
-<slot></slot>
-<slot name="actions"></slot>
 ```
 
 With the `x` engine, this template is invalid because `actions` is absent from the public component contract:
 
 ```js
-export const contract = {
-    slots: {
-        "": {
-            description: "Default content"
+export default {
+    contract: {
+        slots: {
+            "": {
+                description: "Default content"
+            }
         }
-    }
+    },
+    template: `<slot name="actions"></slot>`
 };
-```
-
-```html
-<slot name="actions"></slot>
 ```
 
 Component loading fails when factory metadata reports a slot not declared in `contract.slots`. Duplicate occurrences of the same slot name

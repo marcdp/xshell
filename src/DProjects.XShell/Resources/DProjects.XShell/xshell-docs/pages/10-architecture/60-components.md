@@ -34,63 +34,60 @@ In this case the component provides its own implementation and registration; the
 
 If the default export is an object, XShell considers it to be a Web Component definition.
 
-A component file can then contain two separate parts:
+A component definition contains two separate concerns in one default-exported object:
 
 ```text
-contract
+default.contract
     public interface
 
-default export
+remaining default-export fields
     implementation
 ```
 
 For example:
 
 ```js
-// contract
-export const contract = {
-    description: "Provides a layout and action controls for a group of data fields.",
+export default {
+    contract: {
+        description: "Provides a layout and action controls for a group of data fields.",
 
-    events: {
-        move: {
-            description: "Raised when the field is moved.",
-            detail: {
-                direction: { type: "string" }
+        events: {
+            move: {
+                description: "Raised when the field is moved.",
+                detail: {
+                    direction: { type: "string" }
+                }
+            },
+
+            edit: {
+                description: "Raised when the field is edited."
+            },
+
+            remove: {
+                description: "Raised when the field is removed."
             }
         },
 
-        edit: {
-            description: "Raised when the field is edited."
+        properties: {
+            label:   { type: "string",  default: "",    attribute: true, state: true },
+            message: { type: "string",  default: "",    attribute: true, state: true },
+            columns: { type: "number",  default: 2,     attribute: true, state: true },
+            remove:  { type: "boolean", default: false, attribute: true, state: true },
+            move:    { type: "boolean", default: false, attribute: true, state: true },
+            edit:    { type: "boolean", default: false, attribute: true, state: true }
         },
 
-        remove: {
-            description: "Raised when the field is removed."
+        methods: {},
+
+        slots: {
+            "": {
+                description: "Default slot."
+            },
+            "header": {
+                description: "Content displayed in the component header."
+            }
         }
     },
-
-    properties: {
-        label:   { type: "string",  default: "",    attribute: true, state: true },
-        message: { type: "string",  default: "",    attribute: true, state: true },
-        columns: { type: "number",  default: 2,     attribute: true, state: true },
-        remove:  { type: "boolean", default: false, attribute: true, state: true },
-        move:    { type: "boolean", default: false, attribute: true, state: true },
-        edit:    { type: "boolean", default: false, attribute: true, state: true }
-    },
-
-    methods: {},
-
-    slots: {
-        "": {
-            description: "Default slot."
-        },
-        "header": {
-            description: "Content displayed in the component header."
-        }
-    }
-};
-
-// implementation
-export default {
     style: `
         :host {
             display: block;
@@ -135,14 +132,15 @@ export default {
 
 ## Contract
 
-The optional named `contract` export describes the public interface of the component.
+The optional inline `contract` property describes the public interface of the component.
 
 It can describe:
 
 ```text
-description
-events
+label + description + icon
+types
 properties
+events
 methods
 slots
 examples
@@ -151,35 +149,40 @@ examples
 For example:
 
 ```js
-export const contract = {
-    description: "A sample component.",
+export default {
+    contract: {
+        label: "Sample Component",
+        description: "A sample component.",
 
-    events: {
-        change: {
-            description: "Raised when the value changes."
-        }
-    },
-
-    properties: {
-        value: {
-            type: "string",
-            default: "",
-            attribute: true,
-            state: true,
-            description: "Current value."
-        }
-    },
-
-    methods: {},
-
-    slots: {
-        "": {
-            description: "Default slot."
+        events: {
+            change: {
+                description: "Raised when the value changes."
+            }
         },
-        "header": {
-            description: "Content displayed in the component header."
+
+        properties: {
+            value: {
+                type: "string",
+                default: "",
+                attribute: true,
+                state: true,
+                description: "Current value."
+            }
+        },
+
+        methods: {},
+
+        slots: {
+            "": {
+                description: "Default slot."
+            },
+            "header": {
+                description: "Content displayed in the component header."
+            }
         }
-    }
+    },
+
+    template: `<slot></slot>`
 };
 ```
 
@@ -194,10 +197,13 @@ of a slot are allowed, and a declared slot does not have to appear in the templa
 
 It is separate from the runtime implementation.
 
-`query` is valid property metadata in the shared contract. The Page loader may use `query: true` to initialize state-backed public properties from
-the Page `src` query string; generic Component loading accepts the metadata but does not read or rewrite query strings. Component `reflect: true`
-writes a kebab-case attribute even without `attribute: true`, which controls incoming observation.
-Page reflection requires `query: true` and does not reflect HTML attributes. See [Properties](../20-components/20-properties.md).
+Component property metadata adds `attribute`, `attributeParser`, `state`, and `reflect` to the common property descriptor. Component
+`reflect: true` writes a kebab-case attribute even without `attribute: true`, which controls incoming observation. Page-only `query` and
+`context` metadata is not accepted by the Component schema. See [Properties](../20-components/20-properties.md).
+
+The common contract also supports contract-local named `types` and either direct `type` descriptors or `ref` descriptors. Additional structured
+constraints belong in the descriptor's JSON Schema Draft 2020-12 `schema`. See
+[Component Contract](../20-components/10-manifest.md#shared-contract-model).
 
 When the component definition is loaded, the component loader validates render-factory slot metadata against the contract before registering the
 component.
@@ -302,8 +308,8 @@ class?
 
 For definition-based components, `component-js`:
 
-1. imports the module and reads its contract/default implementation;
-2. normalizes defaults and validates both schemas and property/state consistency;
+1. imports the module and reads its default export;
+2. normalizes defaults and validates the complete definition, including its inline contract, plus property/state consistency;
 3. selects state/render engines and creates the render factory;
 4. checks factory-reported slots against `contract.slots`;
 5. loads render-factory dependencies and then implementation `dependencies`, and initializes the render factory;
@@ -355,15 +361,15 @@ Controller methods always execute with the controller object as `this`. A contro
 request the injected `host` dependency; XShell does not inject `shadowRoot` separately.
 
 ```js
-export const contract = {
-    methods: {
-        validate: {
-            description: "Validates the component."
-        }
-    }
-};
-
 export default {
+    contract: {
+        methods: {
+            validate: {
+                description: "Validates the component."
+            }
+        }
+    },
+
     template: '<div class="content"></div>',
     controller({ state, host }) {
         return {
@@ -468,31 +474,24 @@ one component
 one JavaScript file
 ```
 
-That file can export:
-
-```text
-optional contract
-    +
-default implementation
-```
-
-and the default implementation is either:
+Its default export is either:
 
 ```text
 Web Component class
 ```
 
-or:
+or a:
 
 ```text
 Web Component definition object
+    └─ optional inline contract
     ↓
 component-js
     ↓
 Web Component class
 ```
 
-The optional `contract` export describes the public interface.
+The optional inline `contract` property describes the public interface.
 
 The default export provides the runtime implementation.
 
@@ -570,5 +569,6 @@ retain their `.md` URLs and resolve through the generic [Markdown Page adapter](
 * [X Templates](../40-extensions/x-templates/)
 
 Implementation fields also include `meta` and compiler-generated `templateRenderer`.
-Loader-derived `meta.id` is required by the implementation schema, alongside optional `title` and engine overrides.
+The loader derives `meta.id` from the resource filename when a definition omits it, before validating the Component implementation schema.
+The schema requires the resulting id and also accepts optional title, description, icon, shadow-root, and engine metadata.
 Contract enforcement and metadata limits are detailed in [Component Contract](../20-components/10-manifest.md).

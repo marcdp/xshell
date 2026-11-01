@@ -9,10 +9,10 @@ The validation boundary is the complete effective configuration after discovery,
 mapping, and resolver generation. Bootstrap imports XShell and awaits `xshell.validateConfig(config)` against
 `xshell/schemas/config.schema.json` before deep freeze and `xshell.init(config)`. Init validates again before runtime service construction. Failure
 aborts startup in every environment.
-The X module has no module controller; XShell validates configuration during bootstrap and initialization.
+The X module currently includes a `module.js` controller; configuration validation remains a separate bootstrap and initialization responsibility.
 
 The schema defines `app`, `modules`, and `xshell`, including module `configUrl`, nested `assets`, defaults, menus, optional service `requires`, optional
-declarative routes, descriptive module `contract.events`, named `xshell.services`, and the required `xshell.i18n` language, formatting,
+declarative routes, optional common Module contracts, named `xshell.services`, and the required `xshell.i18n` language, formatting,
 and translation configuration.
 
 Every resolved module requires **module defaults** at `modules.<id>.defaults`: both `page` and `component` require non-empty render-engine and
@@ -24,7 +24,9 @@ See [Configuration](../10-architecture/20-configuration.md) and [ADR-0002](../60
 
 ## Public contract schemas
 
-[Component Contract](../20-components/10-manifest.md) describes `component.contract.schema.json`.
-[Services](../10-architecture/100-services.md) describes the distinct `contract.schema.json` service contract.
-[Component Architecture](../10-architecture/60-components.md) describes the default implementation checked by `component.schema.json`.
+[Component Contract](../20-components/10-manifest.md) describes the shared `contract.schema.json` architecture and its Component/Page specializations.
+[Services](../10-architecture/100-services.md) describes `service.schema.json` and service contract registration.
+[Component Architecture](../10-architecture/60-components.md) describes the inline contract and implementation checked by `component.schema.json`.
+[Pages](../10-architecture/70-pages.md) describes the inline Page contract checked by `page.schema.json`.
+[Module](module.md#module-contract) describes the optional inline contract checked through `module.schema.json`.
 [DataSet JSON](dataset.md) describes the tabular object shape in `dataset.schema.json` and its current runtime validation boundary.

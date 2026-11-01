@@ -10,6 +10,54 @@ The state engine owns reactive state only, and the render engine owns rendered o
 properties marked `query: true` are initialized from query values by `page-js`, and `query: true` plus `reflect: true` enables replacement-style query
 reflection for later state changes.
 
+Definition-based Pages declare their public contract inline:
+
+```js
+export default {
+    contract: {
+        label: "Search",
+        properties: {
+            queryText: {
+                type: "string",
+                default: "",
+                state: true,
+                query: true,
+                context: true,
+                reflect: true
+            }
+        },
+        methods: {
+            clear: { description: "Clears the search text." }
+        }
+    },
+
+    template: `<p>{{ state.queryText }}</p>`,
+
+    controller({ state }) {
+        return {
+            clear() {
+                state.queryText = "";
+            }
+        };
+    }
+};
+```
+
+`page.schema.json` embeds the common contract from `contract.schema.json` and extends public property descriptors with Page-specific `query`,
+`context`, `state`, and `reflect` flags. The common contract fields—label, description, icon, named types, properties, events, methods, and
+examples—retain the meanings described in [Component Contract](../20-components/10-manifest.md#shared-contract-model). A separate named
+`contract` export is not read.
+
+| Page property field | Runtime behavior |
+| --- | --- |
+| `state: true` | Adds the public property's `default` to the Page state skeleton. |
+| `query: true` | Initializes that state entry from the Page `src` query. It requires `state: true` and a direct `string`, `number`, `integer`, or `boolean` type. |
+| `context: true` | Copies a same-named creation-context value into state after query initialization, without type validation. The loader does not require `state: true`, though both should be declared for a public state-backed value. |
+| `reflect: true` | For a `query: true` property, reflects notified state changes to the Page's query. It has no separate HTML-attribute behavior. Returning to the contract default removes the parameter. |
+
+The loader performs these Page-specific checks and conversions in addition to JSON Schema validation. Common `required`, `readonly`, `enum`,
+`ref`, and `schema` metadata does not validate Page runtime assignments.
+
 ```text
 browser URL + query → Navigation → canonical Area-aware href → x-page → module resource → Loader → Page state → render engine
 ```
@@ -103,9 +151,8 @@ available under the single `dependencies` value described in [Declarative depend
 
 The Page-specific values are:
 
-* `implementation` — the frozen and sealed Page definition object used to create the Page class. This is shared definition metadata/context rather than
+* `definition` — the frozen Page definition object used to create the Page class. This is shared definition metadata/context rather than
   Page-instance state and normally is not needed by Page code. Modifying it is not supported.
-* `contract` — the validated public contract metadata shared by the generated Page class.
 * `commands` — exposes `enqueue(command, ...params)` for dispatch after the next render.
 * `state` — the Page-instance state object created by the configured state engine and consumed by the render engine/template. State is private
   implementation data unless a value is explicitly exposed through the Page contract; public properties and private state are not interchangeable.
@@ -222,21 +269,22 @@ Repeated parameters are preserved and all values remain strings. In contrast, a 
 before controller creation and is converted and validated as an integer:
 
 ```js
-export const contract = {
-    properties: {
-        count: {
-            type: "integer",
-            default: 0,
-            state: true,
-            query: true
+export default {
+    contract: {
+        properties: {
+            count: {
+                type: "integer",
+                default: 0,
+                state: true,
+                query: true
+            }
         }
-    }
+    },
+    template: `<p>{{ state.count }}</p>`
 };
 ```
 
-The current raw `query` accessor constructs `URLSearchParams` from the segment selected by `self.src.split("?")[1]`; it does not remove a trailing
-`#fragment`. Contract-property binding does remove that fragment before parsing. Page destinations normally carry the Page source and query without
-a fragment, but this is a current edge-case difference between the two mechanisms.
+Both raw `query` access and contract-property binding read the Page instance's own `src` and exclude any trailing fragment from the query text.
 
 ## Page lifecycle
 
@@ -284,11 +332,13 @@ that flag, so author both when context should initialize a declared public state
 
 Only declared `contract.methods` are exposed, with callable-controller/collision checks. The current Page method bridge forwards one parameter;
 additional arguments are lost. Parameter/return metadata is descriptive.
-Page injection supplies `implementation`, not `definition`; it does not supply Component-only `host`, `module`, or `moduleConfig` aliases.
+Page injection supplies `definition`; it does not supply Component-only `host`, `module`, or `moduleConfig` aliases.
 Use `page.host` for the mounted host and a registered service for other capabilities.
 
-Implementation meta accepts `id`, `title`, `renderEngine`, and `stateEngine`; loaders derive id from the resource filename when omitted.
-Although Page runtime reads description/icon metadata, the shared implementation schema rejects those meta fields.
+Implementation meta accepts `id`, `title`, `description`, `icon`, `renderEngine`, `stateEngine`, and `shadowRootOptions`. When `meta.id`
+is omitted, `page-js` derives it from the resource filename before creating the Page class; the Page schema therefore does not require authors to
+provide it. `title`, `description`, and `icon` initialize Page presentation metadata; engine names select the implementations described above.
+`shadowRootOptions` is schema-accepted metadata but is not consumed by the current Page loader.
 
 Pages reject render-factory-reported slots. The built-in definition render engines are `html` and `x`; `html` reports no slots, so that check is not a
 raw template scan.

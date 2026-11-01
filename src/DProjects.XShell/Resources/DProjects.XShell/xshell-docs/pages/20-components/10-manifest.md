@@ -1,92 +1,138 @@
 # Component Contract
 
-A definition-based Component or Page may export `contract` alongside its default implementation:
+A definition-based Component or Page declares its public contract inline in its default-exported implementation object:
 
 ```js
-export const contract = {
-    description: "Provides a counter API.",
-    properties: { count: { type: "integer", default: 0, state: true } },
-    methods: { reset: { description: "Resets the count.", returns: { type: "void" } } },
-    events: { change: { detail: { count: { type: "integer", required: true } }, bubbles: true } },
-    slots: {},
-    examples: [{ name: "basic", template: "<example-counter></example-counter>" }]
-};
 export default {
-    meta: { renderEngine: "html", stateEngine: "proxy" },
-    template: "<span>Counter</span>",
+    contract: {
+        label: "Example Component",
+        properties: {
+            value: {
+                type: "string",
+                default: "",
+                state: true,
+                attribute: true
+            }
+        }
+    },
+
+    template: `<p>{{ state.value }}</p>`,
+
     controller({ state }) {
-        return { reset() { state.count = 0; } };
+        return {};
     }
 };
 ```
 
-The contract schema validates metadata shape before the generated class is returned. The loader also validates the implementation schema and
-property/state consistency. Class default exports bypass definition processing and provide their own registration and API.
+The Component and Page loaders validate the complete default export against `component.schema.json` or `page.schema.json`. A separate named
+`contract` export is not read. A default-exported class bypasses definition processing and supplies its own registration and public API.
 
-## Schema surface
+## Shared contract model
 
-`component.contract.schema.json` accepts only these top-level fields; none is required:
+`contract.schema.json` defines the common contract vocabulary used by Services, Components, Pages, and Modules. Every top-level field is optional:
 
 | Field | Shape and role |
 | --- | --- |
-| `description` | String for documentation. |
-| `properties` | Map of public property descriptions. Each entry requires `type`. |
-| `events` | Map of events with `description`, `detail`, `bubbles`, `composed`, and `cancelable`. |
-| `methods` | Map of methods with `description`, `parameters`, and `returns`. |
-| `slots` | Map of slot names with `description` and `required`; `""` is the default slot. |
-| `examples` | Array with required `name` and nonempty `template`, optional `description` and `state`. |
+| `label` | Human-readable contract label. |
+| `description` | Human-readable explanation of the element or capability. |
+| `icon` | Icon identifier or resource description. |
+| `types` | Contract-local reusable named types. |
+| `properties` | Public property descriptors. |
+| `events` | Public events and their `detail` fields. |
+| `methods` | Public methods, parameters, and return values. |
+| `examples` | Documentation/tooling examples with required `name` and `template`. |
 
-Value types are `string`, `number`, `integer`, `boolean`, `object`, `array`, `function`, `any`, and `date`. Method return types allow all value
-types plus `void`; `void` is not valid for properties, event detail fields, or method parameters. Every value descriptor requires `type` and may
-include `schema` for additional JSON Schema Draft 2020-12 constraints. `type` remains the XShell runtime category. Nested objects and arrays are
-described inside `schema` using standard JSON Schema keywords, and boolean schemas (`true` and `false`) are accepted.
+Value types are `string`, `number`, `integer`, `boolean`, `object`, `array`, `function`, `date`, and `any`. Method returns also accept
+`void`. A value descriptor selects exactly one of:
 
-Compact scalar descriptors need only the type: `{ type: "string" }`. A structured property can add a schema:
+- `type`, which declares an XShell value category directly; or
+- `ref`, which names an entry in the same contract's `types` map.
+
+A descriptor using `ref` cannot also declare `type` or `schema`. A direct `type` descriptor and a named type definition may add `schema`,
+whose value is a JSON Schema Draft 2020-12 object or boolean. Nested object and array constraints use standard JSON Schema keywords inside
+`schema`:
 
 ```js
 {
     type: "object",
     schema: {
         type: "object",
-        properties: { items: { type: "array", items: { type: "string" } } }
+        properties: {
+            items: { type: "array", items: { type: "string" } }
+        }
     }
 }
 ```
 
-`schema` is descriptive metadata in V0. It does not validate property assignments, state values, method arguments or returns, or event payloads
-at runtime. It does not change attribute or Page query conversion, apply JSON Schema defaults, or change state initialization. Component-specific
-metadata such as `default`, `state`, `query`, and `attribute` remains on the descriptor outside `schema`.
+Named types are local to one contract:
 
-Event `detail` maps field names to entries with required `type`, optional `description`, `required`, and `schema`.
-Method parameters require `name` and `type`, with optional `description`, `required`, `default`, and `schema`. A `returns` entry requires `type`
-and may contain `description` and `schema`. Example names start with a letter and then use letters, digits, `_`, or `-`.
+```js
+export default {
+    contract: {
+        types: {
+            task: {
+                type: "object",
+                schema: {
+                    type: "object",
+                    required: ["id"],
+                    properties: { id: { type: "string" } }
+                }
+            }
+        },
+        properties: {
+            selectedTask: { ref: "task", readonly: true }
+        },
+        methods: {
+            save: {
+                parameters: [{ name: "task", ref: "task", required: true }],
+                returns: { ref: "task" }
+            }
+        }
+    }
+};
+```
 
-## Property metadata and runtime behavior
+The shared schema validates descriptor shape and JSON Schema placement. Service contract registration additionally verifies that every `ref` in a
+property, event detail field, method parameter, or return value names a declared local type. Component, Page, and Module validation currently does
+not perform that extra reference-existence pass. None of these schemas validates runtime property values, event payloads, method arguments, or
+method results against `type`, `ref`, or `schema`.
 
-| Field | V0 behavior |
+## Specialized contracts
+
+Specialized schemas reuse the shared definitions and then apply element-specific rules:
+
+- `service.schema.json` accepts the common contract surface and closes its top-level shape.
+- `component.schema.json` embeds the contract in the implementation object, adds Component property metadata and `slots`, and rejects unsupported
+  Component contract fields.
+- `page.schema.json` embeds the contract in the Page implementation object, adds Page property metadata and `slots`, and rejects unsupported Page
+  contract fields. The loader separately rejects slots reported by the selected Page render engine.
+- `module.schema.json` accepts an optional common contract in the effective Module configuration. It does not add Component/Page metadata.
+
+## Component-specific surface
+
+Component properties extend the common property descriptor with:
+
+| Field | Runtime behavior |
 | --- | --- |
-| `type` | Required type label; used for attribute/Page query conversion, without general assignment validation. |
-| `schema` | Optional JSON Schema Draft 2020-12 constraints for documentation and tooling; no V0 runtime value validation. |
-| `default` | Canonical public-property default. State-backed defaults enter the state skeleton. |
-| `state` | `true` connects a Component accessor to state and includes the property in Page state. |
-| `attribute` | Boolean only; `true` observes the derived kebab-case HTML attribute for incoming changes. |
-| `attributeParser` | Optional `"json"` parser for an observed attribute; invalid JSON remains the original string. |
-| `reflect` | Components reflect to kebab-case attributes; Pages reflect query-enabled state properties to the Page query. |
-| `query` | Page-only input binding; requires `state: true` and string/number/integer/boolean type. |
-| `context` | Page-only initialization from creation context, applied after query initialization. |
-| `required`, `readonly`, `enum` | Descriptive metadata; no assignment, presence, or mutability enforcement. |
-| `description` | Documentation metadata. |
+| `attribute` | `true` observes the derived kebab-case HTML attribute. |
+| `attributeParser` | Optional `"json"` parser for incoming observed attribute text. |
+| `state` | `true` backs the public property with Component state. |
+| `reflect` | `true` reflects property changes to the derived HTML attribute. |
 
-Component `reflect: true` emits an attribute even
-without `attribute: true`; that flag controls incoming observation. State-backed reflection requires an engine change notification.
-Pages do not install Component-style public property accessors or HTML attribute bindings. See [Properties](20-properties.md) and
-[Pages](../10-architecture/70-pages.md) for conversions and query/context behavior.
+The common `default` is the canonical public-property default. `required`, `readonly`, `enum`, `label`, `description`, and JSON Schema
+constraints remain metadata; they do not add general assignment or presence checks. Page-only `query` and `context` metadata is not part of a
+Component contract.
 
-Public methods require callable controller methods with the same names and cannot collide with framework/native members. Parameter and return
-metadata does not add runtime checking. Component proxies forward all arguments; the current Page command bridge forwards only its first parameter.
+`contract.slots` maps public slot names to optional `description` and `required` metadata. The empty key `""` represents the default slot.
+Slot metadata documents composition and is checked against render-factory slot metadata; it does not create `<slot>` elements or require
+consumers to supply content.
 
-Event metadata does not dispatch CustomEvents, validate payloads, or configure emitted flags. Slots are checked against `factory.slots`:
-`x` reports compiler-produced slot names, while `html` currently reports none. Slot `required` does not enforce supplied content.
-Examples are documentation/tooling data.
+Public methods must have same-named controller functions and cannot collide with framework or native members. Undeclared controller functions stay
+private implementation behavior. Event metadata describes event names and `detail`; it does not dispatch `CustomEvent` objects or configure
+`bubbles`, `composed`, or `cancelable`.
 
-See [State](30-state.md), [Events](40-events.md), [Slots](50-slots.md), and [Services](../10-architecture/100-services.md) for the separate service contract.
+Examples are documentation/tooling data. Each requires a name beginning with a letter and using only letters, digits, `_`, or `-`, plus a
+nonempty template; `description` and `state` are optional.
+
+See [Properties](20-properties.md), [State](30-state.md), [Events](40-events.md), [Slots](50-slots.md),
+[Pages](../10-architecture/70-pages.md), and [Services](../10-architecture/100-services.md).

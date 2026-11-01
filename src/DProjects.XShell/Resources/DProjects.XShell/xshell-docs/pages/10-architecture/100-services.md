@@ -14,6 +14,12 @@ concrete ES module class selected by `xshell.services`.
 }
 ```
 
+These are three separate objects:
+
+- the **service contract** is a JSON document discovered from an inventoried `contracts/*.json` resource;
+- the **service registration** is the `xshell.services.<name>` entry that selects a contract id and implementation resource; and
+- the **service implementation** is the default-exported class loaded from that resource.
+
 During startup, XShell discovers and validates contracts, registers its core/runtime service instances, and calls `Services.init()`. That method
 validates every configured contract reference, eagerly loads each configured implementation class, registers the implementation metadata, and then
 finalizes the registry. Configured service instances are not constructed during initialization.
@@ -90,7 +96,8 @@ See [Modules](30-modules.md), [Module Specification](../50-specifications/module
 
 `/contracts/*.json` resources (including nested paths) enter the XShell framework or module inventory. Bootstrap converts their relative path
 without `.json` into a global id and generates an exact `contract:<id>` rule. Resolver selects `object-json`; Loader reads JSON; Contracts validates
-it against `contract.schema.json` and records physical ownership. Duplicate global ids or conflicting exact resolver entries fail bootstrap.
+it against `service.schema.json`, which reuses `contract.schema.json`, and records physical ownership. Duplicate global ids or conflicting exact
+resolver entries fail bootstrap.
 A module prefix is not required unless it is part of the chosen id. Registration names are independent: multiple services can use one contract.
 
 For example, `x/contracts/toast.json` defines id `toast` and registration `xshell.services.toast.contract = "toast"`.
@@ -104,39 +111,23 @@ configuration merging without assigning it to the `x` module.
 
 ## Service contract schema
 
-A contract requires string `label`; optional top-level fields are `icon`, `description`, `types`, `properties`, `events`, and `methods`.
-Additional fields are rejected. Type labels are `string`, `number`, `integer`, `boolean`, `object`, `array`, `function`, `date`, and `any`
-(there is no `void` label in this schema).
+`service.schema.json` specializes the common contract by referencing `contract.schema.json` and closing the top-level object. The common
+`label`, `description`, `icon`, `types`, `properties`, `events`, `methods`, and `examples` fields are all optional. The accepted value
+types are `string`, `number`, `integer`, `boolean`, `object`, `array`, `function`, `date`, and `any`; method returns additionally
+accept `void`.
 
-- `types` maps nonempty, contract-local names to reusable definitions. Each definition requires `type` and may set `description` and `schema`.
-- Properties require exactly one of `type` or `ref`; optional fields are `description`, `default`, `readonly`, and unique string `enum`.
-- Events accept `description` and a `detail` field map; each detail entry requires exactly one of `type` or `ref`, with optional
-  `description`/`required`.
-- Methods accept `description`, `parameters`, and `returns`. Parameters require `name` and exactly one of `type` or `ref`, and may set
-  `description`, `required`, `enum`, or `default`. Returns require exactly one of `type` or `ref` and may set `description`.
+- `types` maps nonempty, contract-local names to reusable definitions. Each definition requires `type` and may set `description` and
+  JSON Schema Draft 2020-12 `schema`.
+- Properties select exactly one of direct `type` or local `ref`, and can describe labels, defaults, required/read-only status, string enums, and
+  additional JSON Schema constraints.
+- Events describe labels, descriptions, and a `detail` field map. Each detail field selects exactly one of `type` or `ref`.
+- Methods describe labels, parameters, and returns. Each parameter requires a nonempty `name` and selects exactly one of `type` or `ref`;
+  a return does the same.
+- Examples require a valid `name` and nonempty `template`, with optional `description` and `state`.
 
-For every value descriptor above, `type` directly declares the XShell value category, while `ref` names a definition in the same contract's
-`types` map. References cannot resolve against another contract. A descriptor cannot combine `type` with `ref`, or `ref` with `schema`.
-For direct `type` descriptors and named type definitions, optional `schema` contains additional JSON Schema Draft 2020-12 constraints. It may be
-a JSON Schema object or boolean. Existing compact metadata such as `required`, `default`, `readonly`, and `enum` remains outside `schema`.
-
-```json
-{ "type": "string", "enum": [ "safe", "fast" ] }
-```
-
-Nested objects and arrays use standard JSON Schema under `schema`, not a custom XShell recursive property syntax:
-
-```json
-{
-    "type": "object",
-    "schema": {
-        "type": "object",
-        "properties": {
-            "items": { "type": "array", "items": { "type": "object", "properties": { "id": { "type": "string" } } } }
-        }
-    }
-}
-```
+`type` declares an XShell value category directly. `ref` names a definition in the same contract's `types` map and cannot be combined with
+`type` or `schema`. A direct type descriptor or named type definition may add a JSON Schema object or boolean in `schema`; nested object and
+array constraints use standard JSON Schema keywords there.
 
 A named type can be reused throughout one service contract:
 
@@ -144,7 +135,15 @@ A named type can be reused throughout one service contract:
 {
     "label": "Tasks",
     "types": {
-        "task": { "type": "object", "description": "A task record" }
+        "task": {
+            "type": "object",
+            "description": "A task record",
+            "schema": {
+                "type": "object",
+                "required": ["id"],
+                "properties": { "id": { "type": "string" } }
+            }
+        }
     },
     "properties": {
         "selectedTask": { "ref": "task", "readonly": true }
@@ -161,10 +160,13 @@ A named type can be reused throughout one service contract:
 }
 ```
 
-The contract validator checks the outer descriptor shape, the object/boolean form of `schema`, and that every `ref` names a type in that contract.
+Contract registration checks the schema shape, the object/boolean form of `schema`, and that every property, event-detail, parameter, and return
+`ref` names a type in that same contract.
 Named types and references are descriptive metadata. They do not validate runtime property values, method arguments or returns, or event payloads.
 There is no recursive reference resolution, cross-contract type lookup, type generation, generics, inheritance, parameter checking, version
 negotiation, scopes, or selectable lifetimes.
+
+See [Shared contract model](../20-components/10-manifest.md#shared-contract-model) for the common descriptor grammar used by other XShell elements.
 
 ## Resolution validation and core services
 
@@ -180,7 +182,7 @@ Duplicate registrations, including collisions with core names, fail.
 After a configured service is first constructed and validated, XShell emits `xshell:service:created` on the Bus with `{ id }`. Failed attempts emit no
 created event. Consumers can re-read `services.registry` to inspect the current state.
 
-The directly registered core names are `areas`, `bus`, `config`, `container`, `dialog`, `i18n`, `loader`, `modules`, `navigation`, `resolver`,
+The directly registered core names are `areas`, `bus`, `config`, `dialog`, `i18n`, `loader`, `modules`, `navigation`, `resolver`,
 `runtime`, `contracts`, and `services`. `temp` is a framework-owned configured service registered through `xshell.services`; its compatibility
 `xshell.temp` accessor resolves that same lazy singleton. There is no auth/identity registration. A Diagnostics getter is not a registered service
 contract.

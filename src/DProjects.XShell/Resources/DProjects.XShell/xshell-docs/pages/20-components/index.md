@@ -1,7 +1,7 @@
 # Components
 
-XShell V0 loads native Web Component classes or definition objects. For definitions, `component-js` validates the named `contract` export and
-the default implementation, selects engines, loads dependencies, and constructs and registers an `HTMLElement` subclass.
+XShell V0 loads native Web Component classes or definition objects. For definitions, `component-js` validates the default implementation and its
+inline `contract`, selects engines, loads dependencies, and constructs and registers an `HTMLElement` subclass.
 
 The contract supplies public-property defaults and accessors, state-backed properties, observed attributes, reflection, public method exposure,
 and validation of engine-reported slots. Descriptive metadata does not enforce values or emit events.
