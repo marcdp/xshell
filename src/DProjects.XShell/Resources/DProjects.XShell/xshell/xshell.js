@@ -12,7 +12,6 @@ import Runtime from "./runtime.js";
 import Services from "./services.js";
 import XPage from "./x-page.js";
 import JsonValidator from "./services/json-validator.js";
-import ConfigSchema from "./schemas/config.schema.json" with { type: "json" };
 import { normalizeAreaPrefix } from "./utils/area.js";
 import { compileRoute } from "./utils/route.js";
 
@@ -56,10 +55,13 @@ class XShell {
     async init(config) {
         // init
         this._bus = new Bus();
-        this._config = config;
-        this._areas = new Areas( { bus: this._bus, config: config } );
+        this._config = config;        
+        // init basic validateConfig
         this._resolver = new Resolver( { config: config } );
         this._loader = new Loader({ bus: this._bus, config: config, resolver: this._resolver });
+        await this.validateConfig(config);
+        // initialize rest of the services
+        this._areas = new Areas( { bus: this._bus, config: config } );
         this._i18n = new I18n();
         this._contracts = new Contracts( { config: config, loader: this._loader } );
         await this._i18n.init(config.xshell.i18n);
@@ -90,10 +92,12 @@ class XShell {
         this._areas.init({ modules: this._modules });
         // navigation
         await this._navigation.init();
+        
     }   
     async validateConfig(config) {
         // validate
-        const result = new JsonValidator().validate(config, ConfigSchema);
+        const configSchema = await this.loader.load("schema:config");
+        const result = new JsonValidator().validate(config, configSchema);
         if (!result.valid) {
             console.error(`Invalid config:`, result.errors);
             throw new Error(`Invalid config:`, { cause: result.errors });

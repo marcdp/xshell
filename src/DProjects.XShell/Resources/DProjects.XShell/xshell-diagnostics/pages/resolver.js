@@ -24,7 +24,14 @@ export default {
             </x-toolbar>
 
             <x-object x-if="state.test_result" x-prop:value="state.test_result" expanded="true"></x-object>
-            <div x-if="state.test_message">{{ state.test_message }}</div>
+
+            <x-notice type="info" x-if="state.test_info">
+                {{ state.test_info }}
+            </x-notice>
+            <x-notice type="error" x-if="state.test_error">
+                {{ state.test_error }}
+            </x-notice>
+
         </div>
 
         <x-listview view="details">
@@ -48,7 +55,8 @@ export default {
     state: {
         test_resource: "",
         test_result: null,
-        test_message: "",
+        test_info: "",
+        test_error: "",
         query_resource: "",
         query_src: "",
         query_loader: "",
@@ -67,26 +75,23 @@ export default {
                 // resolve
                 const resource = state.test_resource.trim();
                 state.test_result = null;
-                state.test_message = "";
-
+                state.test_info = "";
+                state.test_error = "";
                 if (!resource) {
-                    state.test_message = "Enter a resource to resolve.";
+                    state.test_error = "Enter a resource to resolve.";
                     return;
                 }
-
                 // Resolver.resolve() ignores query and fragment when matching.
                 const normalizedResource = resource.split("#")[0].split("?")[0];
                 if (!resolver.has(normalizedResource)) {
-                    state.test_message = "No resolver rule matched the resource.";
+                    state.test_error = "No resolver rule matched the resource: " + resource;
                     return;
                 }
-
                 const result = resolver.resolve(resource);
                 if (!result) {
-                    state.test_message = "Unable to resolve the resource.";
+                    state.test_error = "Unable to resolve the resource: " + resource;
                     return;
                 }
-
                 state.test_result = {
                     resource: resource,
                     rule: result.definition.resource,
@@ -99,8 +104,20 @@ export default {
                 };
             },
             async resolveAndLoad() {
-                const result = await loader.load(state.test_resource);
-                state.test_result = result;
+                try {
+                    state.test_result = null;
+                    state.test_info = "";
+                    state.test_error = "";
+                    const result = await loader.load(state.test_resource);
+                    // check if its a class
+                    if (typeof result === "function" && /^class\s/.test(Function.prototype.toString.call(result))) {
+                        state.test_info = "Loaded resource is a class.";
+                    } else {
+                        state.test_result = result;
+                    }
+                } catch (error) {
+                    state.test_error = `Error loading resource: ${state.test_resource}, ${error.message}`;
+                }
             },
             refresh() {
                 // refresh

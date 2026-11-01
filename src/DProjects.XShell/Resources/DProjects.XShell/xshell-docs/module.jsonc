@@ -4,7 +4,7 @@
     "modules": {
         "xshell-docs": {
             "label": "XShell docs",
-            "version": "1.0.0",
+            "version": "0.9.0",
             "icon": "xshell-docs",
             "copyright": "",
             "defaults": {

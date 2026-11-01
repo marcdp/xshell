@@ -53,6 +53,7 @@
       "type": "object",
       "description": "Describes a property and its runtime behavior.",
       "properties": {
+        "label": { "type": "string", "description": "Human-readable label of the property." },
         "description": { "type": "string", "description": "Human-readable description of the property." },
         "type": { "$ref": "#/$defs/valueType", "description": "Value type accepted by the property." },
         "ref": { "$ref": "#/$defs/typeReference" },
@@ -69,6 +70,7 @@
       "description": "Describes an event emitted.",
       "additionalProperties": false,
       "properties": {
+        "label": { "type": "string", "description": "Human-readable label of the event." },
         "description": { "type": "string", "description": "Human-readable description of when and why the event is emitted." },
         "detail": { "type": "object", "description": "Structure of the event's detail payload.", "additionalProperties": { "$ref": "#/$defs/eventDetailProperty" } }
       }
@@ -90,7 +92,8 @@
       "type": "object",
       "additionalProperties": false,
       "properties": {
-        "description": { "type": "string" },
+        "label": { "type": "string", "description": "Human-readable label of the method." },
+        "description": { "type": "string", "description": "Human-readable description of the method." },
         "parameters": { "type": "array", "items": { "$ref": "#/$defs/methodParameter" } },
         "returns": { "$ref": "#/$defs/returnValue" }
       }

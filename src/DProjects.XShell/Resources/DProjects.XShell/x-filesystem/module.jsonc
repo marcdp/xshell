@@ -3,7 +3,7 @@
     "modules": {
         "x-filesystem": {
             "label": "x-filesystem",
-            "version": "1.0.0",
+            "version": "0.9.0",
             "icon": "",
             "copyright": "",
             "defaults": {

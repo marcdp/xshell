@@ -1,4 +1,5 @@
 
+// module
 export default class Module {
 
     // ctor
@@ -8,6 +9,11 @@ export default class Module {
 
     // start
     async start() {
+    }
+
+    // methods
+    doSomething() {
+        alert("something")
     }
 
 }

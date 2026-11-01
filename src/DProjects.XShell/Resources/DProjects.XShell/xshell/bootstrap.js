@@ -753,16 +753,11 @@ function fillResolverRules(config) {
 // xshell initialization functions
 async function initializeXShell(config, loadXShellModule = url => import(url)) {
     console.log("bootstrap: loading xshell ...");
-
     const authoredSrc = config.xshell.resolver.module.xshell.src;
     const xshellUrl = new URL(authoredSrc.startsWith("/") ? authoredSrc.substring(1) : authoredSrc, appBaseUrl).href;
     const xshell = (await loadXShellModule(xshellUrl)).default;
-
-    console.log("bootstrap: validating xshell config ...");
-    await xshell.validateConfig(config);
-
+    
     console.log("bootstrap: initializing xshell ...");
-
     await xshell.init(deepFreeze(config));
 }
 
