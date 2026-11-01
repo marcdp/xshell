@@ -58,7 +58,7 @@
         "stateEngine": { "type": "string", "minLength": 1, "description": "The state management engine used by the Page." },
         "shadowRootOptions": { "type": "object", "description": "Options for the Page's shadow root." }
       },
-      "required": ["id"],
+      "required": [],
       "additionalProperties": false
     },
     "style": {

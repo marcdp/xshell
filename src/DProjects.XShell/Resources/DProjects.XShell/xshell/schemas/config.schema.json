@@ -31,7 +31,7 @@
         "baseUrl": {"type": "string", "description": "Fully qualified absolute application base-directory URL; ends with / for normal URL resolution."},
         "params": {"type": "object", "additionalProperties": true, "description": "Application-specific parameters."}
       },
-      "required": ["id", "label", "version", "copyright", "icon", "basePath", "baseUrl", "params"],
+      "required": ["label", "version", "copyright", "icon", "basePath", "baseUrl", "params"],
       "additionalProperties": false,
       "description": "Runtime projection of the selected root module metadata and bootstrap deployment values."
     },    
