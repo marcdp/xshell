@@ -112,6 +112,19 @@ Shorthand `:name`, `:`, `.name`, and `@event` bindings are unsupported. Use the 
 `x-on:event` binds a named command. `x-class:name` conditionally adds a class. `x-show` keeps the element in the rendered structure while
 using `display: none` for a falsy expression and restoring the prior inline display value when it becomes truthy.
 
+## Dynamic elements
+
+```html
+<div x-is="state.componentName" x-prop:value="state.value"></div>
+```
+
+`x-is` evaluates a restricted XTemplate expression and uses its string result as the actual native or custom-element tag. Names are normalized to
+lowercase; `null` falls back to the authored tag. Invalid, empty, non-string, void, `script`, and `style` results are errors. A changed tag unloads and
+replaces the DOM element, while an unchanged tag preserves it. `x-is` composes with structural directives and bindings, but not with `x-model`.
+
+Dynamic custom elements are not discoverable as static template dependencies. Declare every possible component through the Page or Component
+definition's normal `dependencies` map (or load it through another existing loader path) before it can be selected.
+
 ## Structure
 
 ```html
@@ -143,6 +156,7 @@ Use `x-if`, `x-elseif`, and `x-else` for conditional structural rendering. Use `
 ```
 
 `x-model` provides read/write model binding. `x-once` preserves content after its first render, and `x-pre` produces x-pre raw content from its literal child subtree.
+An `x-is` inside that literal `x-pre` subtree remains literal and is not evaluated; `x-once` also preserves the initially resolved dynamic tag.
 
 ## Related documentation
 

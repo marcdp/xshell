@@ -43,10 +43,12 @@ export default {
     style: `
         :host {
             display: block;
+            flex:1;
         }
 
         .editor {
             display: block;
+            flex:1;
         }
     `,
 

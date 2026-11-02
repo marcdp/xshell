@@ -182,6 +182,53 @@ namespace DProjects.XShell.Test {
             Assert.DoesNotContain("x-", html, StringComparison.Ordinal);
         }
 
+        [Fact]
+        public void ResolvesDynamicElementNamesWithFallbackNormalizationAndBindings() {
+            var state = new { tag = "X-Card", value = "hello", visible = true };
+
+            var html = Render("<div x-is=\"state.tag\" x-if=\"state.visible\" x-attr:data-value=\"state.value\" x-class:active=\"true\"><span>{{ state.value }}</span></div><p x-is=\"state.missing\">fallback</p>", state);
+
+            Assert.Equal("<x-card data-value=\"hello\" class=\"active\"><span>hello</span></x-card><p>fallback</p>", html);
+            Assert.DoesNotContain("x-is", html, StringComparison.Ordinal);
+        }
+
+        [Fact]
+        public void ResolvesDynamicElementNamesInForAndRecursiveScopes() {
+            var state = new {
+                items = new[] { new { tag = "section", label = "A" }, new { tag = "X-Card", label = "B" } },
+                tree = new[] { new { tag = "article", label = "root", children = new[] { new { tag = "x-leaf", label = "child", children = Array.Empty<object>() } } } }
+            };
+
+            var html = Render("<div x-is=\"item.tag\" x-for=\"item in state.items\">{{ item.label }}</div><span x-is=\"item.tag\" x-recursive=\"item in state.tree\">{{ item.label }}</span>", state);
+
+            Assert.Equal("<section>A</section><x-card>B</x-card><article>root<x-leaf>child</x-leaf></article>", html);
+        }
+
+        [Theory]
+        [InlineData("")]
+        [InlineData("1div")]
+        [InlineData("a b")]
+        [InlineData("script")]
+        [InlineData("style")]
+        [InlineData("input")]
+        public void RejectsInvalidForbiddenAndVoidDynamicElementNames(string tag) {
+            Assert.Throws<XTemplateException>(() => Render("<div x-is=\"state.tag\"></div>", new { tag }));
+        }
+
+        [Fact]
+        public void RejectsNonStringDynamicNamesVoidHostsAndModelCombination() {
+            Assert.Throws<XTemplateException>(() => Render("<div x-is=\"state.tag\"></div>", new { tag = 123 }));
+            Assert.Throws<XTemplateException>(() => Render("<input x-is=\"state.tag\">", new { tag = "div" }));
+            Assert.Throws<XTemplateException>(() => Render("<div x-is=\"state.tag\" x-model=\"state.value\"></div>", new { tag = "input", value = "x" }));
+        }
+
+        [Fact]
+        public void KeepsDynamicDirectivesLiteralInsideXPre() {
+            var html = Render("<div x-pre><span x-is=\"state.tag\">{{ state.value }}</span></div>", new { tag = "section", value = "changed" });
+
+            Assert.Equal("<div><span x-is=\"state.tag\">{{ state.value }}</span></div>", html);
+        }
+
         // methods (private)
         private static string Render(string template, object? state = null) => new XTemplateRenderer(new[] { new XTemplateReflectionObjectAdapter() }).Render(template, state ?? new { });
         private sealed class ReadOnlyMap : IReadOnlyDictionary<string, object?> {

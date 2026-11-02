@@ -528,6 +528,7 @@ function parseDomNode(node, allowedIdentifiers) {
     const operations = [];
     let content = null;
     let pre = false;
+    let dynamicTag = null;
     let key = null;
     let recursiveWrapper = null;
     let hasConditionalClass = false;
@@ -540,6 +541,11 @@ function parseDomNode(node, allowedIdentifiers) {
         if (directive === "x-key") { key = value; continue; }
         if (directive === "x-recursive-wrapper") { recursiveWrapper = value; continue; }
         if (directive === "x-pre") { if (value) throw templateError("Directive 'x-pre' cannot have a value.", element); pre = true; continue; }
+        if (directive === "x-is") {
+            if (!value.trim()) throw templateError("Directive 'x-is' requires an expression.", element);
+            dynamicTag = parseScoped(value);
+            continue;
+        }
         if (directive === "x-text" || directive === "x-html" || directive === "x-children") {
             if (!value.trim()) throw templateError(`Directive '${directive}' requires an expression.`, element);
             if (content) throw templateError(`Element cannot combine '${content.kind}' and '${directive}'.`, element);
@@ -620,6 +626,8 @@ function parseDomNode(node, allowedIdentifiers) {
     if (name === "select" && rawAttributes.some(attribute => attribute.name === "multiple") && operations.some(operation => operation.kind === "model")) {
         throw templateError("x-model on select[multiple] is not supported.", element);
     }
+    if (dynamicTag && VOID_ELEMENTS.has(name)) throw templateError(`Directive 'x-is' is not supported on void element <${name}>.`, element);
+    if (dynamicTag && operations.some(operation => operation.kind === "model")) throw templateError("Directives 'x-is' and 'x-model' cannot be combined because x-model behavior depends on the authored element type.", element);
     if (content && element.childNodes.length) throw templateError(`Directive '${content.kind}' requires an empty element.`, element);
     if (pre && content) throw templateError("x-pre cannot be combined with a content directive.", element);
 
@@ -640,7 +648,7 @@ function parseDomNode(node, allowedIdentifiers) {
             if (classIndex >= 0) operations.splice(classIndex, 1);
         }
     }
-    return [{ type: "element", name, operations, staticAttributes, structural, content, pre, rawHtml, children, key, recursiveWrapper, staticClass: hasConditionalClass ? rawAttributes.find(attribute => attribute.name === "class")?.value ?? "" : "" }];
+    return [{ type: "element", name, dynamicTag, operations, staticAttributes, structural, content, pre, rawHtml, children, key, recursiveWrapper, staticClass: hasConditionalClass ? rawAttributes.find(attribute => attribute.name === "class")?.value ?? "" : "" }];
 }
 
 export function parseTemplate(template) {
@@ -700,6 +708,7 @@ function childScope(scope, values) {
 
 function renderBasicElement(node, index, scope, environment, extraOptions = null, recursiveChildren = null) {
     const { utils, i18n, handler, invalidate } = environment;
+    const tag = node.dynamicTag ? utils.expr.elementTag(evaluateExpression(node.dynamicTag, scope, utils, i18n), node.name) : node.name;
     const attrs = {};
     const props = {};
     const styles = {};
@@ -709,7 +718,7 @@ function renderBasicElement(node, index, scope, environment, extraOptions = null
 
     for (const operation of node.operations) {
         switch (operation.kind) {
-            case "static-attr": attrs[operation.name] = utils.rewriteAttribute(node.name, node.staticAttributes, operation.name, operation.value); break;
+            case "static-attr": attrs[operation.name] = utils.rewriteAttribute(tag, node.staticAttributes, operation.name, operation.value); break;
             case "attr-spread": Object.assign(attrs, utils.expr.attributes(evaluateExpression(operation.expression, scope, utils, i18n))); break;
             case "attr": attrs[operation.name] = evaluateExpression(operation.expression, scope, utils, i18n); break;
             case "attr-dynamic": Object.assign(attrs, utils.expr.dynamicArgument(evaluateExpression(operation.name, scope, utils, i18n), evaluateExpression(operation.expression, scope, utils, i18n))); break;
@@ -757,10 +766,10 @@ function renderBasicElement(node, index, scope, environment, extraOptions = null
         else options.format = "node";
     } else if (node.children.length) {
         children = renderChildren(node.children, scope, environment);
-        return utils.createVDOM(node.name, Object.keys(attrs).length ? attrs : null, Object.keys(props).length ? props : null,
+        return utils.createVDOM(tag, Object.keys(attrs).length ? attrs : null, Object.keys(props).length ? props : null,
             Object.keys(styles).length ? styles : null, Object.keys(events).length ? events : null, options, children, recursiveChildren);
     }
-    return utils.createVDOM(node.name, Object.keys(attrs).length ? attrs : null, Object.keys(props).length ? props : null,
+    return utils.createVDOM(tag, Object.keys(attrs).length ? attrs : null, Object.keys(props).length ? props : null,
         Object.keys(styles).length ? styles : null, Object.keys(events).length ? events : null, options, children);
 }
 

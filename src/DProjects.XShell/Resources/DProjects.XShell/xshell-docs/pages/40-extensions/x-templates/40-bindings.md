@@ -42,6 +42,27 @@ The expression must evaluate to an object; each enumerable string-keyed member i
 objects and arrays. In short: `x-attr="..."` expands attributes, while `x-prop="..."` expands properties. `x-prop:[nameExpression]` binds one
 dynamically named property, and the `.name` shorthand is not supported.
 
+## Dynamic element binding
+
+Use `x-is` when the same template structure must render as one of several already available native elements or Web Components:
+
+```html
+<div x-is="state.componentName"
+     x-attr:data-kind="state.kind"
+     x-prop:value="state.value">
+    Shared child content
+</div>
+```
+
+The expression is evaluated once per rendered instance. `null` selects `div`; a valid string is normalized to lowercase and becomes the VDOM/HTML
+tag. Attributes, properties, styles, events, visibility, and children target that resolved element. Changing the tag unloads and replaces it;
+retaining the tag preserves the existing DOM instance. Void and prohibited tags are rejected, and `x-is` cannot be combined with `x-model` because
+model behavior depends on a static control type.
+
+Static dependency discovery sees only authored tag names. Declare all dynamically selectable Web Components with ordinary definition dependencies,
+for example `dependencies: { field: "component:x-datafield", json: "component:x-json" }`. This uses the existing Resolver → Loader pipeline; `x-is`
+does not load components itself.
+
 ## Literal styles
 
 Literal `style="..."` syntax is valid XTemplate source. In the browser target it is compiled to structured styles / `VNode.styles`, applied through CSSOM,

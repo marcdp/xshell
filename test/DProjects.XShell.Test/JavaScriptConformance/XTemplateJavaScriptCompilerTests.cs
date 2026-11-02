@@ -92,6 +92,34 @@ namespace DProjects.XShell.Test {
         }
 
         [Fact]
+        public void CompilesDynamicElementNamesOnceInTheActiveScope() {
+            var javascript = new XTemplateCompiler().Compile("<div x-is=\"item.tag\" x-for=\"item in state.items\" href=\"details\">{{ item.label }}</div>");
+
+            Assert.Contains("(_tag = utils.expr.elementTag(utils.expr.member(item, \"tag\"), \"div\"))", javascript, StringComparison.Ordinal);
+            Assert.Contains("utils.rewriteAttribute(_tag", javascript, StringComparison.Ordinal);
+            Assert.Equal(1, javascript.Split("utils.expr.member(item, \"tag\")", StringSplitOptions.None).Length - 1);
+            Assert.DoesNotContain("\"x-is\":", javascript, StringComparison.Ordinal);
+        }
+
+        [Fact]
+        public void CompilesConditionalAndOnceDynamicTagsLazily() {
+            var conditional = new XTemplateCompiler().Compile("<div x-if=\"state.visible\" x-is=\"state.tag\"></div>");
+            var once = new XTemplateCompiler().Compile("<div x-once x-is=\"state.tag\"></div>");
+
+            Assert.Contains("? [utils.createVDOM((_tag = utils.expr.elementTag", conditional, StringComparison.Ordinal);
+            Assert.Contains("(renderCount==0) ? [utils.createVDOM((_tag = utils.expr.elementTag", once, StringComparison.Ordinal);
+            Assert.Contains(": [utils.createVDOM(\"div\", null, null, null, null, {once:true})]", once, StringComparison.Ordinal);
+        }
+
+        [Theory]
+        [InlineData("<input x-is=\"state.tag\">")]
+        [InlineData("<div x-is=\"state.tag\" x-model=\"state.value\"></div>")]
+        [InlineData("<div x-is></div>")]
+        public void RejectsUnsupportedDynamicElementDeclarations(string template) {
+            Assert.ThrowsAny<Exception>(() => new XTemplateCompiler().Compile(template));
+        }
+
+        [Fact]
         public void CompilesModelWritesAndHiddenAttributeWithoutRawAssignments() {
             var javascript = new XTemplateCompiler().Compile("<input type=\"radio\" value=\"a\" x-model=\"state.choice\"><div x-show=\"state.visible\"></div>");
 

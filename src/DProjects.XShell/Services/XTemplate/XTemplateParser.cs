@@ -151,6 +151,7 @@ namespace DProjects.XShell.Services.XTemplate {
             XTemplateExpression? text = null;
             XTemplateExpression? html = null;
             XTemplateExpression? model = null;
+            XTemplateExpression? elementName = null;
             XTemplateExpression? childrenExpression = null;
             XTemplateForDefinition? loop = null;
             XTemplateRecursiveDefinition? recursive = null;
@@ -168,6 +169,7 @@ namespace DProjects.XShell.Services.XTemplate {
                 else if (string.Equals(directive, "x-html", StringComparison.OrdinalIgnoreCase)) html = ParseExpression(attribute, "x-html");
                 else if (string.Equals(directive, "x-children", StringComparison.OrdinalIgnoreCase)) childrenExpression = ParseExpression(attribute, "x-children");
                 else if (string.Equals(directive, "x-model", StringComparison.OrdinalIgnoreCase)) { model = ParseExpression(attribute, "x-model"); if (!XTemplateExpressions.IsAssignable(model)) throw Error("x-model requires an assignable expression", attribute.Offset); }
+                else if (string.Equals(directive, "x-is", StringComparison.OrdinalIgnoreCase)) elementName = ParseExpression(attribute, "x-is");
                 else if (string.Equals(directive, "x-pre", StringComparison.OrdinalIgnoreCase)) { }
                 else if (string.Equals(directive, "x-attr", StringComparison.OrdinalIgnoreCase)) attributes.Add(new XTemplateAttributeSpread(ParseExpression(attribute, "x-attr"), attribute.Offset));
                 else if (directive.StartsWith("x-attr:[", StringComparison.OrdinalIgnoreCase) && directive.EndsWith(']')) {
@@ -207,7 +209,10 @@ namespace DProjects.XShell.Services.XTemplate {
             if (recursiveWrapper != null && recursive == null) throw Error("Directive 'x-recursive-wrapper' requires x-recursive", element.Offset);
             if (recursive != null) recursive = recursive with { WrapperName = recursiveWrapper };
             if (element.Attributes.Any(attribute => string.Equals(attribute.Name, "x-key", StringComparison.OrdinalIgnoreCase)) && loop == null && recursive == null) throw Error("Directive 'x-key' requires x-for or x-recursive", element.Offset);
-            return new(element.Name, attributes, children, element.Offset, condition, elseIf, isElse, loop, recursive, text, html, model, childrenExpression);
+            if (elementName != null && XTemplateElementNames.IsVoid(element.Name)) throw Error($"Directive 'x-is' is not supported on void element <{element.Name}>", element.Offset);
+            if (elementName != null && element.Name is "script" or "style") throw Error($"Directive 'x-is' is not supported on prohibited element <{element.Name}>", element.Offset);
+            if (elementName != null && model != null) throw Error("Directives 'x-is' and 'x-model' cannot be combined because x-model behavior depends on the authored element type", element.Offset);
+            return new(element.Name, attributes, children, element.Offset, condition, elseIf, isElse, loop, recursive, text, html, model, childrenExpression, elementName);
         }
         private XTemplateForDefinition ParseFor(RawAttribute attribute) {
             if (!attribute.HasValue) throw Error("x-for requires a value", attribute.Offset);

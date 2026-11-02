@@ -19,10 +19,10 @@ export default {
         slots: {}
     },
     style: `
-        :host {display:block}
+        :host {display:block; height:100%; flex:1;}
     `,
     template: `
-        <textarea x-model="state.value"></textarea>
+        <codemirror-editor x-model="state.value"></codemirror-editor>
     `,
     state:{
         value:null

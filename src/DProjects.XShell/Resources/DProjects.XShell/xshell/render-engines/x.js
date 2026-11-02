@@ -55,6 +55,8 @@ class XTemplate {
 // utils
 const emptyObject = {};
 const emptyArray = [];
+const xTemplateVoidElements = new Set(["area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "param", "source", "track", "wbr"]);
+const xTemplateElementName = /^[A-Za-z][A-Za-z0-9:_-]*$/;
 let freeId = 1;
 const isStyleAttribute = (name) => typeof name === "string" && name.toLowerCase() === "style";
 const showDisplays = new WeakMap();
@@ -87,6 +89,15 @@ const utils = new class {
 			return {kind:"locale", name};
 		};
 		const fail = (message) => { throw new Error(`XTemplate runtime error: ${message}`); };
+		const elementTag = (value, fallback) => {
+			if (value === null) return fallback;
+			if (typeof value !== "string") return fail("x-is requires a string or null element name");
+			if (!xTemplateElementName.test(value)) return fail(`Invalid x-is element name '${value}'`);
+			const normalized = value.toLowerCase();
+			if (xTemplateVoidElements.has(normalized)) return fail(`x-is cannot resolve to void element <${normalized}>`);
+			if (normalized === "script" || normalized === "style") return fail(`x-is cannot resolve to prohibited element <${normalized}>`);
+			return normalized;
+		};
 		const number = (value, message = "Numeric operand must be a finite number") => typeof value === "number" && Number.isFinite(value) ? value : fail(message);
 		const normalize = (value) => value === undefined ? null : typeof value === "number" ? number(value, "XTemplate numbers must be finite") : value;
 		const checked = (value) => Number.isFinite(value) ? value : fail("Arithmetic result must be a finite number");
@@ -332,7 +343,7 @@ const utils = new class {
 			return fail(`Unknown transformer '${name}'`);
 		};
 		return {
-			truthy, scalar, style, styles,
+			truthy, scalar, style, styles, elementTag,
 			member: (target, name) => target === null ? null : (typeof target === "string" || Array.isArray(target)) ? name === "length" ? target.length : null : (typeof target === "object" && own(target, name) ? normalize(target[name]) : null),
 			index: (target, index) => target === null ? null : typeof index === "string" ? (typeof target === "string" || Array.isArray(target) ? (index === "length" ? target.length : null) : (typeof target === "object" && own(target, index) ? normalize(target[index]) : null)) : (Number.isInteger(index) && index >= 0 && Array.isArray(target) ? normalize(target[index]) : fail("A collection index must be a non-negative integer number")),
 			assign: (root, path, value) => {
@@ -625,6 +636,8 @@ class XTemplateInstance {
 				this._diffDomListByPosition(vNodesOld, oldStartIndex, oldEndIndex, vNodesNew, newStartIndex, newEndIndex, parent, -999, level + 1);
 				iold += oldEndIndex - oldStartIndex;
 				inew += newEndIndex - newStartIndex;
+			} else if (vNodeNew.options.once) {
+				// x-once freezes the original element even when its dynamic tag expression later changes.
 			} else if (vNodeOld.tag != vNodeNew.tag) {
 				//replace node
 				let element = this._createDomElement(vNodeNew);
@@ -757,7 +770,11 @@ class XTemplateInstance {
 				parent.insertBefore(element, parent.childNodes[newStartIndex + 1 + i + parentChildrenDesp]);
 			} else {
 				let element = parent.childNodes[newStartIndex + 1 + i + parentChildrenDesp];
-				this._diffDomElement(vNodeOld, vNodeNew, element, level + 1);
+				if (vNodeOld.tag !== vNodeNew.tag) {
+					const replacement = this._createDomElement(vNodeNew);
+					unloadComponents(element);
+					parent.replaceChild(replacement, element);
+				} else this._diffDomElement(vNodeOld, vNodeNew, element, level + 1);
 			}        
 		}
 		while (newLength < oldLength) {
@@ -830,7 +847,11 @@ class XTemplateInstance {
 				let vNodeOld = oldVNodesByKey.get(key);
 				let vNodeNew = vNodesNew[newStartIndex + 1 + i];
 				let element = parent.childNodes[newStartIndex + 1 + i];
-				this._diffDomElement(vNodeOld, vNodeNew, element, level);
+				if (vNodeOld.tag !== vNodeNew.tag) {
+					const replacement = this._createDomElement(vNodeNew);
+					unloadComponents(element);
+					parent.replaceChild(replacement, element);
+				} else this._diffDomElement(vNodeOld, vNodeNew, element, level);
 			}
 		}
 	}

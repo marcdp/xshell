@@ -67,6 +67,10 @@ general loader can load them before rendering.
 These are template dependencies: resources discovered from XTemplate structure and carried in `templateRenderer.dependencies`. They are distinct from
 definition dependencies, which are explicitly declared on the Component or Page definition and exposed to its controller.
 
+`x-is` does not change static dependency discovery because its runtime expression cannot generally be enumerated at compile time. Definitions using
+dynamic Web Component names declare every possible component through their ordinary `dependencies` map or arrange loading through another existing
+Resolver → Loader path. Neither browser render engine performs asynchronous component loading while rendering.
+
 ## Ahead-of-time compilation
 
 The development resource middleware and pack command compile XTemplate before browser execution:
@@ -101,6 +105,12 @@ Collection-taking directives use equivalent normalization in the browser `utils.
 `null` normalizes to an empty collection for `x-for`, the root `x-recursive` source, and recursive child sources. Arrays and enumerables yield their
 items, finite non-negative integers yield `1..N`, strings yield Unicode code points, and objects yield exposed member names; booleans, invalid numbers,
 and unsupported values remain errors. Templates therefore use the collection expression directly without a template-side null-coalescing workaround.
+
+For `x-is`, the ahead-of-time compiler emits the validated expression through the same expression AST compiler and passes its single evaluated value
+to the shared runtime element-name resolver. The `x-client` interpreter stores the expression AST and calls that same resolver. Both emit the resolved
+tag into the existing VDOM ABI. Reconciliation compares that tag in ordinary, positional-loop, and keyed-loop paths; a mismatch unloads and replaces
+the element, while a match follows normal diffing. Post-first-render `x-once` nodes bypass tag comparison so their initial element remains frozen.
+The C# renderer applies the equivalent validation and uses one resolved name for both opening and closing tags.
 
 The common render-engine factory signature remains `(template, context, templateRenderer)`. The first argument is retained for consistency with the
 `html` and other configured engines. `x.js` does not parse that source: it interprets the third argument, exposes immutable normalized

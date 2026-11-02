@@ -5,6 +5,11 @@ export default {
         description: "Demonstrates derived expressions, structured bindings, render controls, and recursive rendering."
     },
 
+    dependencies: {
+        dynamicDatafield: "component:x-datafield",
+        dynamicJson: "component:x-json"
+    },
+
     style: `
         .demo-highlight {font-weight:bold; color:var(--x-color-primary);}
         .demo-box {padding:.75rem; margin:.5rem 0; border:1px solid var(--x-color-border); border-radius:.375rem;}
@@ -64,6 +69,18 @@ state: {
         <pre x-pre><code>&lt;p&gt;Reactive: {{ state.onceValue }}&lt;/p&gt;
 &lt;p x-once&gt;Rendered once: {{ state.onceValue }}&lt;/p&gt;</code></pre>
 
+        <h2>Dynamic elements</h2>
+        <p><code>x-is</code> chooses the actual element tag from a restricted expression. Both choices below are declared as Page dependencies before rendering.</p>
+        <p>
+            <x-button label="Use x-datafield" command="showDatafield"></x-button>
+            <x-button label="Use x-json" command="showJson"></x-button>
+        </p>
+        <x-datafield type="text" label="Bound value" x-model="state.dynamicValue"></x-datafield>
+        <div x-is="state.dynamicComponent" x-prop:value="state.dynamicValue"></div>
+        <p>Resolved component: <code>{{ state.dynamicComponent }}</code></p>
+        <pre x-pre><code>&lt;div x-is="state.dynamicComponent"
+     x-prop:value="state.dynamicValue"&gt;&lt;/div&gt;</code></pre>
+
         <h2>Raw template content</h2>
         <p>Use <code>x-pre</code> when template syntax should be displayed literally rather than evaluated.</p>
         <pre x-pre><code>{{ state.first }} {{ state.last }}</code></pre>
@@ -95,6 +112,8 @@ state: {
         attributes: {title:"This tooltip is bound through x-attr."},
         styles: {"background-color":"#e8f0fe"},
         onceValue: "Initial value",
+        dynamicComponent: "x-datafield",
+        dynamicValue: "Hello from x-is",
         tree: [
             {
                 id:1, label:"Documents", children:[
@@ -115,7 +134,9 @@ state: {
     controller({state}) {
         return {
             setNickname() {state.nickname = "Countess of Lovelace";},
-            clearNickname() {state.nickname = null;}
+            clearNickname() {state.nickname = null;},
+            showDatafield() {state.dynamicComponent = "x-datafield";},
+            showJson() {state.dynamicComponent = "x-json";}
         };
     }
 };

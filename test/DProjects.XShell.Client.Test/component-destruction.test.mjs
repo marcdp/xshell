@@ -126,6 +126,60 @@ test("XTemplate conditional removal and tag replacement unload discarded Compone
     assert.equal(view.host.firstChild.tagName, "x-next");
 });
 
+test("dynamic tags preserve unchanged instances and replace positional-loop instances when changed", () => {
+    const render = state => [
+        vnode("#comment", 0, { forType: "position" }, "x-for-start"),
+        ...state.items.map((item, index) => vnode(utils.expr.elementTag(item.tag, "div"), index + 1)),
+        vnode("#comment", state.items.length + 1, {}, "x-for-end")
+    ];
+    const view = createXEngine(render, { items: [{ tag: "x-first" }] });
+    view.engine.render();
+    const first = view.host.childNodes[1];
+
+    view.engine.render();
+    assert.equal(view.host.childNodes[1], first);
+    assert.equal(first.unloadCalls, 0);
+
+    view.state.items[0].tag = "x-second";
+    view.engine.render();
+    assert.equal(first.unloadCalls, 1);
+    assert.equal(view.host.childNodes[1].tagName, "x-second");
+});
+
+test("dynamic tags replace keyed-loop instances without confusing key reuse", () => {
+    const render = state => [
+        vnode("#comment", 0, { forType: "key" }, "x-for-start"),
+        ...state.items.map((item, index) => vnode(utils.expr.elementTag(item.tag, "div"), index + 1, { key: item.id })),
+        vnode("#comment", state.items.length + 1, {}, "x-for-end")
+    ];
+    const view = createXEngine(render, { items: [{ id: "a", tag: "x-first" }] });
+    view.engine.render();
+    const first = view.host.childNodes[1];
+
+    view.state.items = [{ id: "a", tag: "x-second" }];
+    view.engine.render();
+
+    assert.equal(first.unloadCalls, 1);
+    assert.equal(view.host.childNodes[1].tagName, "x-second");
+});
+
+test("x-once freezes the initially resolved dynamic tag", () => {
+    const render = (state, handler, invalidate, runtime, i18n, renderCount) => renderCount === 0
+        ? [vnode(runtime.expr.elementTag(state.tag, "div"), 0, {}, [vnode("#text", 0, {}, state.value)])]
+        : [vnode("div", 0, { once: true })];
+    const view = createXEngine(render, { tag: "x-first", value: "initial" });
+    view.engine.render();
+    const first = view.host.firstChild;
+
+    view.state.tag = "x-second";
+    view.state.value = "changed";
+    view.engine.render();
+
+    assert.equal(view.host.firstChild, first);
+    assert.equal(first.tagName, "x-first");
+    assert.equal(first.unloadCalls, 0);
+});
+
 test("keyed XTemplate removal unloads once while reordering preserves instances", () => {
     const render = state => [
         vnode("#comment", 0, { forType: "key" }, "x-for-start"),

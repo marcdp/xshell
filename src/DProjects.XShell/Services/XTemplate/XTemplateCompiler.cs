@@ -49,9 +49,10 @@ namespace DProjects.XShell.Services.XTemplate {
             CollectMetadata(root, currentComponentName, [], dependencies, slots, new HashSet<string>(StringComparer.Ordinal));
             var body = new List<string> {
                 indent + "    let _ifs = {};",
-                indent + "    let func;",
-                indent + "    return ["
+                indent + "    let func;"
             };
+            if (ContainsDirective(root, "x-is")) body.Add(indent + "    let _tag;");
+            body.Add(indent + "    return [");
             var index = 0;
             var scope = new XTemplateExpressionJavaScriptScope(["state"]);
             foreach (var node in root.Children) {
@@ -86,6 +87,8 @@ namespace DProjects.XShell.Services.XTemplate {
                 CollectMetadata(child, currentComponentName, childAncestors, dependencies, slots, slotNames);
             }
         }
+        private static bool ContainsDirective(ElementNode element, string directive) => element.Children.OfType<ElementNode>().Any(child =>
+            child.HasAttribute(directive) || !child.HasAttribute("x-pre") && ContainsDirective(child, directive));
         private static void ValidateStaticSlotName(ElementNode element) {
             foreach (var attribute in element.Attributes) {
                 if (attribute.Name == "x-attr" || attribute.Name.StartsWith("x-attr:[", StringComparison.Ordinal) || attribute.Name == "x-attr:name") {
@@ -111,7 +114,7 @@ namespace DProjects.XShell.Services.XTemplate {
 
             var element = (ElementNode)node;
             if (element.Name.StartsWith("x:", StringComparison.Ordinal)) throw TemplateError($"Invalid X template node <{element.Name}>.", element);
-            var line = new StringBuilder(indent).Append("utils.createVDOM(").Append(ToJavaScriptString(element.Name));
+            var line = new StringBuilder();
             var postLine = new List<string>();
             var post = new List<string>();
             var attributes = new List<string>();
@@ -131,6 +134,14 @@ namespace DProjects.XShell.Services.XTemplate {
                     : scope.With(loop.Item, loop.Index);
                 childScope = expressionScope;
             }
+            var dynamicTagAttribute = element.Attributes.FirstOrDefault(attribute => attribute.Name == "x-is");
+            if (dynamicTagAttribute != null && VoidElements.Contains(element.Name)) throw TemplateError($"Directive 'x-is' is not supported on void element <{element.Name}>.", element);
+            if (dynamicTagAttribute != null && element.HasAttribute("x-model")) throw TemplateError("Directives 'x-is' and 'x-model' cannot be combined because x-model behavior depends on the authored element type.", element);
+            var elementTag = dynamicTagAttribute == null
+                ? ToJavaScriptString(element.Name)
+                : $"(_tag = utils.expr.elementTag({CompileExpression(dynamicTagAttribute.Value, dynamicTagAttribute.Name, dynamicTagAttribute.Offset, expressionScope)}, {ToJavaScriptString(element.Name)}))";
+            var rewriteTag = dynamicTagAttribute == null ? elementTag : "_tag";
+            line.Append(indent).Append("utils.createVDOM(").Append(elementTag);
             string? text = null;
             string? childrenToAppend = null;
             var staticAttributes = element.Attributes.Where(attribute => IsStaticAttribute(attribute.Name) && attribute.Name != "style").ToArray();
@@ -147,16 +158,16 @@ namespace DProjects.XShell.Services.XTemplate {
             // apply the element structural wrapper once, independently of attribute source order
             switch (structuralDirective.Kind) {
                 case StructuralDirectiveKind.If:
-                    line.Clear().Append(indent).Append($"...((_ifs.c{level} = utils.expr.truthy({CompileExpression(structuralDirective.Attribute!.Value, structuralDirective.Attribute.Name, element.SourceOffset, expressionScope)})) ? [utils.createVDOM({ToJavaScriptString(element.Name)}");
+                    line.Clear().Append(indent).Append($"...((_ifs.c{level} = utils.expr.truthy({CompileExpression(structuralDirective.Attribute!.Value, structuralDirective.Attribute.Name, element.SourceOffset, expressionScope)})) ? [utils.createVDOM({elementTag}");
                     postLine.Add($"] : [utils.createVDOM(\"#comment\", null, null, null, null, {{index: {index}}}, 'x-if')]),");
                     break;
                 case StructuralDirectiveKind.ElseIf:
-                    line.Clear().Append(indent).Append($"...((!_ifs.c{level} && (_ifs.c{level} = utils.expr.truthy({CompileExpression(structuralDirective.Attribute!.Value, structuralDirective.Attribute.Name, element.SourceOffset, expressionScope)}))) ? [utils.createVDOM({ToJavaScriptString(element.Name)}");
+                    line.Clear().Append(indent).Append($"...((!_ifs.c{level} && (_ifs.c{level} = utils.expr.truthy({CompileExpression(structuralDirective.Attribute!.Value, structuralDirective.Attribute.Name, element.SourceOffset, expressionScope)}))) ? [utils.createVDOM({elementTag}");
                     postLine.Add($"] : [utils.createVDOM(\"#comment\", null, null, null, null, {{index: {index}}}, 'x-elseif')]),");
                     break;
                 case StructuralDirectiveKind.Else:
                     if (!string.IsNullOrEmpty(structuralDirective.Attribute!.Value)) throw TemplateError("Directive 'x-else' cannot have a value.", element);
-                    line.Clear().Append(indent).Append($"...(!_ifs.c{level} ? [utils.createVDOM({ToJavaScriptString(element.Name)}");
+                    line.Clear().Append(indent).Append($"...(!_ifs.c{level} ? [utils.createVDOM({elementTag}");
                     postLine.Add($"] : [utils.createVDOM(\"#comment\", null, null, null, null, {{index: {index}}}, 'x-else')]),");
                     break;
                 case StructuralDirectiveKind.For:
@@ -165,7 +176,7 @@ namespace DProjects.XShell.Services.XTemplate {
                     var forType = string.IsNullOrWhiteSpace(forKeyName) ? "position" : "key";
                     var forCollection = CompileExpression(forLoop.Collection, structuralDirective.Attribute.Name, element.SourceOffset, scope);
                     javascript.Add($"{indent}utils.createVDOM(\"#comment\", null, null, null, null, {{index: {index}, forType:'{forType}'}}, 'x-for-start'),");
-                    line.Clear().Append(indent).Append($"...(utils.expr.collection({forCollection}).map(({forLoop.Item}, {forLoop.Index}) => utils.createVDOM({ToJavaScriptString(element.Name)}");
+                    line.Clear().Append(indent).Append($"...(utils.expr.collection({forCollection}).map(({forLoop.Item}, {forLoop.Index}) => utils.createVDOM({elementTag}");
                     postLine.Add(")),");
                     if (!string.IsNullOrWhiteSpace(forKeyName)) options.Add($"\"key\":utils.expr.member({forLoop.Item}, {ToJavaScriptString(ValidateKeyName(forKeyName, element))})");
                     post.Add($"{indent}utils.createVDOM(\"#comment\", null, null, null, null, {{index: {index}, forType:'{forType}'}}, 'x-for-end'),");
@@ -179,7 +190,7 @@ namespace DProjects.XShell.Services.XTemplate {
                     indent += "    ";
                     level++;
                     javascript.Add($"{indent}utils.createVDOM(\"#comment\", null, null, null, null, {{index: {index - 1}, forType:'{recursiveForType}'}}, 'x-for-start'),");
-                    line.Clear().Append(indent).Append($"...(_itemsArray.map(({recursiveLoop.Item}, {recursiveLoop.Index}) => {{ let _result = utils.createVDOM({ToJavaScriptString(element.Name)}");
+                    line.Clear().Append(indent).Append($"...(_itemsArray.map(({recursiveLoop.Item}, {recursiveLoop.Index}) => {{ let _result = utils.createVDOM({elementTag}");
                     postLine.Add($"; {recursiveLoop.AbsoluteIndex}++; return _result;}})),");
                     if (!string.IsNullOrWhiteSpace(recursiveKeyName)) options.Add($"\"key\":utils.expr.member({recursiveLoop.Item}, {ToJavaScriptString(ValidateKeyName(recursiveKeyName, element))})");
                     post.Add($"{indent}utils.createVDOM(\"#comment\", null, null, null, null, {{index: {index - 1}, forType:'{recursiveForType}'}}, 'x-for-end'),");
@@ -189,7 +200,7 @@ namespace DProjects.XShell.Services.XTemplate {
                     break;
                 case StructuralDirectiveKind.Once:
                     if (!string.IsNullOrEmpty(structuralDirective.Attribute!.Value)) throw TemplateError("Directive 'x-once' cannot have a value.", element);
-                    line.Clear().Append(indent).Append($"...((renderCount==0) ? [utils.createVDOM({ToJavaScriptString(element.Name)}");
+                    line.Clear().Append(indent).Append($"...((renderCount==0) ? [utils.createVDOM({elementTag}");
                     postLine.Add($"] : [utils.createVDOM({ToJavaScriptString(element.Name)}, null, null, null, null, {{once:true}})]),");
                     break;
             }
@@ -258,6 +269,8 @@ namespace DProjects.XShell.Services.XTemplate {
                     classes.Add($"(utils.expr.truthy({CompileExpression(value, name, element.SourceOffset, expressionScope)}) ? {ToJavaScriptString(className)} : null)");
                 } else if (name == "x-model") {
                     CompileModel(element, value, properties, events, expressionScope);
+                } else if (name == "x-is") {
+                    continue;
                 } else if (name == "x-pre") {
                     if (!string.IsNullOrEmpty(value)) throw TemplateError("Directive 'x-pre' cannot have a value.", element);
                     EnsureRawContentHasNoInlineStyles(element);
@@ -266,7 +279,7 @@ namespace DProjects.XShell.Services.XTemplate {
                 } else if (name.StartsWith("x-", StringComparison.Ordinal)) {
                     throw TemplateError($"Invalid X template directive '{name}'.", element);
                 } else {
-                    attributes.Add($"{ToJavaScriptString(name)}:utils.rewriteAttribute({ToJavaScriptString(element.Name)}, {staticAttributesJavascript}, {ToJavaScriptString(name)}, {ToJavaScriptString(value)})");
+                    attributes.Add($"{ToJavaScriptString(name)}:utils.rewriteAttribute({rewriteTag}, {staticAttributesJavascript}, {ToJavaScriptString(name)}, {ToJavaScriptString(value)})");
                 }
             }
 

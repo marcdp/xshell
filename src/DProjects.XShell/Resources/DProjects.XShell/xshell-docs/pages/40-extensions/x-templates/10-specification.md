@@ -984,6 +984,7 @@ The following constructs consume the restricted expression grammar:
 | `x-style:css-property` | value | named structured style; CSS property names are not camel-cased |
 | `x-style` | value | whole-object structured style; source must be a non-array object |
 | `x-if`, `x-elseif`, `x-show`, `x-class:name` | condition | XTemplate truthiness |
+| `x-is` | value | resolves the rendered element name under section 8.0 |
 | `x-for` collection | value | evaluated in the enclosing context before loop locals exist |
 | `x-recursive` collection | value | evaluated in the enclosing context; nested content receives recursive locals |
 | `x-model` | assignable expression | restricted further by section 41 |
@@ -1088,6 +1089,31 @@ An HTML single-file component may have separate top-level `<script type="module"
 XTL does not evaluate ordinary attribute text as an expression.
 
 Dynamic values require an XTL binding directive.
+
+### 8.0 Dynamic element names
+
+`x-is="expression"` resolves the rendered element name without introducing a placeholder element:
+
+```html
+<div x-is="state.componentName" x-prop:value="state.value"></div>
+```
+
+The expression MUST use the restricted XTemplate expression language and MUST be evaluated exactly once for each rendered element instance. A `null`
+result selects the authored element name. Any other result MUST be a non-empty string matching `[A-Za-z][A-Za-z0-9:_-]*`; valid results are normalized
+to lowercase. Non-string values, empty or invalid names, void element names, `script`, and `style` are runtime errors. An authored void element MUST NOT
+carry `x-is`. The directive is control metadata and MUST NOT appear in VDOM attributes or serialized HTML.
+
+All ordinary attribute, property, style, event, content, and structural processing applies to the resolved element. `x-is` is evaluated only after its
+conditional branch or loop iteration is selected, and loop/recursive locals are in scope. When the resolved tag changes, browser reconciliation MUST
+unload and replace the old element, including positional and keyed loop paths; an unchanged tag preserves the DOM instance. A post-first-render
+`x-once` placeholder MUST preserve the initially resolved element without reevaluating `x-is`. Descendants of `x-pre` remain literal and are not parsed.
+
+Because `x-model` behavior depends on the statically authored control type, combining `x-is` and `x-model` is invalid. Use explicit `x-prop`, `x-on`,
+and controller logic for a dynamic control.
+
+Dynamic custom-element names do not add statically discoverable template dependencies. Every possible component MUST already be loaded through the
+definition's normal `dependencies` declaration or another existing Resolver → Loader path. Render engines MUST NOT introduce an asynchronous component
+loader for `x-is`.
 
 ### 8.1 Literal inline styles
 
@@ -3955,6 +3981,7 @@ A correct implementation should preserve these semantics even if it uses a compl
 | `x-prop` | Property object expansion | object expression |
 | `x-on:event` | Event command | command name |
 | `x-class:name` | Conditional class | expression |
+| `x-is` | Dynamic rendered element name | expression |
 | `x-if` | Conditional branch | expression |
 | `x-elseif` | Conditional branch | expression |
 | `x-else` | Fallback branch | none |

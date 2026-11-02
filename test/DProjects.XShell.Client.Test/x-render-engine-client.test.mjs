@@ -96,6 +96,15 @@ test("x-client model assignment uses the strict existing-member and collection-b
     assert.throws(() => assignExpression(parseExpression("state.items[2]", ["state"]), scope, "x"), /out of range/);
 });
 
+test("canonical x-is tag resolution normalizes valid names and rejects invalid values", () => {
+    assert.equal(XTemplateRuntimeUtils.expr.elementTag("X-Card", "div"), "x-card");
+    assert.equal(XTemplateRuntimeUtils.expr.elementTag("SECTION", "div"), "section");
+    assert.equal(XTemplateRuntimeUtils.expr.elementTag(null, "div"), "div");
+    for (const value of ["", "1div", "a b", "script", "style", "input", 123, false]) {
+        assert.throws(() => XTemplateRuntimeUtils.expr.elementTag(value, "div"), /XTemplate runtime error: .*x-is/);
+    }
+});
+
 const paritySource = '<section><x-card><slot name="footer"></slot><p x-if="state.ok">{{ state.label | upper }}</p><p x-else>fallback</p><li x-for="item in state.items" x-key="id" x-attr:data-id="item.id">{{ item.label }}</li></x-card></section>';
 fixtures.set(paritySource, () => [element("section", {}, [
     element("x-card", {}, [
@@ -140,6 +149,45 @@ test("x-client parses once, discovers compatible metadata, and emits compiled-re
         assert.deepEqual(interpreted, compiled);
     }
     assert.equal(templateParseCount, before + 1, "rendering must not parse the template again");
+});
+
+const dynamicTagSource = '<div x-is="state.tag" x-attr:data-value="state.value" x-prop:value="state.value" x-style:color="state.color" x-on:click="select"><span>{{ state.value }}</span></div><p x-is="state.fallback">fallback</p><div x-is="item.tag" x-for="item in state.items" x-key="id">{{ item.label }}</div><div x-pre><span x-is="state.ignored">{{ state.ignored }}</span></div>';
+fixtures.set(dynamicTagSource, () => [
+    element("div", { "x-is": "state.tag", "x-attr:data-value": "state.value", "x-prop:value": "state.value", "x-style:color": "state.color", "x-on:click": "select" }, [element("span", {}, [text("{{ state.value }}")])]),
+    element("p", { "x-is": "state.fallback" }, [text("fallback")]),
+    element("div", { "x-is": "item.tag", "x-for": "item in state.items", "x-key": "id" }, [text("{{ item.label }}")]),
+    element("div", { "x-pre": "" }, [element("span", { "x-is": "state.ignored" }, [text("{{ state.ignored }}")])], '<span x-is="state.ignored">{{ state.ignored }}</span>')
+]);
+
+test("x-client resolves x-is in local scopes without leaking the directive or changing static dependency discovery", () => {
+    const renderer = createClientTemplateRenderer(dynamicTagSource, {});
+    assert.deepEqual(renderer.dependencies, []);
+    const state = {
+        tag: "X-Card", fallback: null, value: "hello", color: "red", ignored: "section",
+        items: [{ id: 1, tag: "article", label: "A" }, { id: 2, tag: "X-Item", label: "B" }]
+    };
+    const vdom = renderer.render(state, () => {}, () => {}, renderUtils, null, 0);
+    assert.equal(vdom[0].tag, "x-card");
+    assert.deepEqual(vdom[0].attrs, { "data-value": "hello" });
+    assert.deepEqual(vdom[0].props, { value: "hello" });
+    assert.deepEqual(vdom[0].styles, { color: { value: "red", priority: "" } });
+    assert.equal(vdom[0].children[0].children[0].children, "hello");
+    assert.equal(vdom[1].tag, "p");
+    assert.deepEqual(vdom.slice(3, 5).map(node => node.tag), ["article", "x-item"]);
+    assert.equal(vdom.at(-1).options.format, "html");
+    assert.equal(vdom.at(-1).children, '<span x-is="state.ignored">{{ state.ignored }}</span>');
+});
+
+for (const [source, create] of [
+    ['<input x-is="state.tag">', () => [element("input", { "x-is": "state.tag" }, [])]],
+    ['<div x-is="state.tag" x-model="state.value"></div>', () => [element("div", { "x-is": "state.tag", "x-model": "state.value" }, [])]],
+    ['<div x-is></div>', () => [element("div", { "x-is": "" }, [])]]
+]) fixtures.set(source, create);
+
+test("x-client rejects unsupported x-is declarations", () => {
+    assert.throws(() => createClientTemplateRenderer('<input x-is="state.tag">', {}), /void element/);
+    assert.throws(() => createClientTemplateRenderer('<div x-is="state.tag" x-model="state.value"><\/div>', {}), /x-model behavior/);
+    assert.throws(() => createClientTemplateRenderer('<div x-is><\/div>', {}), /requires an expression/);
 });
 
 const bindingsSource = '<input type="checkbox" x-model="state.checked"><button class="base" x-class:active="state.active" x-style:color="state.color" x-show="state.visible" x-on:click.prevent="save">Go</button>';

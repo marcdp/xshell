@@ -30,7 +30,7 @@ namespace DProjects.XShell.Services.XTemplate {
     internal sealed record XTemplateForDefinition(string ItemName, string IndexName, XTemplateExpression Collection, int Offset);
     internal sealed record XTemplateRecursiveDefinition(string ItemName, string IndexName, string AbsoluteIndexName, XTemplateExpression Collection, XTemplateExpression Children, string? WrapperName, int Offset);
     internal sealed record XTemplateSelectModel(object? Value, int Offset);
-    internal sealed record XTemplateElementNode(string Name, List<XTemplateElementAttribute> Attributes, List<XTemplateNode> Children, int Offset, XTemplateExpression? If, XTemplateExpression? ElseIf, bool IsElse, XTemplateForDefinition? For, XTemplateRecursiveDefinition? Recursive, XTemplateExpression? Text, XTemplateExpression? Html, XTemplateExpression? Model, XTemplateExpression? ChildrenExpression) : XTemplateNode(Offset);
+    internal sealed record XTemplateElementNode(string Name, List<XTemplateElementAttribute> Attributes, List<XTemplateNode> Children, int Offset, XTemplateExpression? If, XTemplateExpression? ElseIf, bool IsElse, XTemplateForDefinition? For, XTemplateRecursiveDefinition? Recursive, XTemplateExpression? Text, XTemplateExpression? Html, XTemplateExpression? Model, XTemplateExpression? ChildrenExpression, XTemplateExpression? ElementName) : XTemplateNode(Offset);
     internal sealed class OrderedAttributes {
         private readonly List<KeyValuePair<string, string?>> _items;
         public List<KeyValuePair<string, string?>> Items => _items;
@@ -184,20 +184,21 @@ namespace DProjects.XShell.Services.XTemplate {
             return indexAbsolute;
         }
         private void RenderElementOnce(XTemplateElementNode element, XTemplateExpressionContext context, StringBuilder result, Action? renderRecursiveChildren, XTemplateSelectModel? selectModel) {
+            var elementName = element.ElementName == null ? element.Name : XTemplateElementNames.Resolve(XTemplateExpressions.Evaluate(element.ElementName, context), element.Name, element.Offset);
             var attributes = BuildAttributes(element, context);
-            var childSelectModel = ApplyModel(element, context, attributes) ?? selectModel;
-            if (element.Name == "option" && selectModel != null) {
+            var childSelectModel = ApplyModel(element, elementName, context, attributes) ?? selectModel;
+            if (elementName == "option" && selectModel != null) {
                 var content = new StringBuilder();
                 RenderElementContent(element, context, content, renderRecursiveChildren, null);
                 ApplyOptionSelection(attributes, selectModel, HtmlTextContent(content.ToString()));
-                AppendElementStart(element, attributes, result);
-                result.Append(content).Append("</").Append(element.Name).Append('>');
+                AppendElementStart(elementName, element, attributes, result);
+                result.Append(content).Append("</").Append(elementName).Append('>');
                 return;
             }
-            AppendElementStart(element, attributes, result);
-            if (VoidElements.Contains(element.Name)) return;
+            AppendElementStart(elementName, element, attributes, result);
+            if (VoidElements.Contains(elementName)) return;
             RenderElementContent(element, context, result, renderRecursiveChildren, childSelectModel);
-            result.Append("</").Append(element.Name).Append('>');
+            result.Append("</").Append(elementName).Append('>');
         }
         private void RenderElementContent(XTemplateElementNode element, XTemplateExpressionContext context, StringBuilder result, Action? renderRecursiveChildren, XTemplateSelectModel? selectModel) {
             if (element.Text != null) result.Append(HtmlText(ScalarString(XTemplateExpressions.Evaluate(element.Text, context), element.Offset)));
@@ -205,8 +206,8 @@ namespace DProjects.XShell.Services.XTemplate {
             else RenderChildren(element.Children, context, result, selectModel);
             renderRecursiveChildren?.Invoke();
         }
-        private void AppendElementStart(XTemplateElementNode element, IEnumerable<KeyValuePair<string, string?>> attributes, StringBuilder result) {
-            result.Append('<').Append(element.Name);
+        private void AppendElementStart(string elementName, XTemplateElementNode element, IEnumerable<KeyValuePair<string, string?>> attributes, StringBuilder result) {
+            result.Append('<').Append(elementName);
             foreach (var attribute in attributes) {
                 EnsureAttributeAllowed(attribute.Key, element.Offset);
                 result.Append(' ').Append(attribute.Key);
@@ -277,15 +278,15 @@ namespace DProjects.XShell.Services.XTemplate {
             else if (hasStylePlaceholder) attributes.Remove("style");
             return attributes.Items;
         }
-        private static XTemplateSelectModel? ApplyModel(XTemplateElementNode element, XTemplateExpressionContext context, List<KeyValuePair<string, string?>> attributes) {
+        private static XTemplateSelectModel? ApplyModel(XTemplateElementNode element, string elementName, XTemplateExpressionContext context, List<KeyValuePair<string, string?>> attributes) {
             if (element.Model == null) return null;
             var modelValue = XTemplateExpressions.Evaluate(element.Model, context);
             var values = new OrderedAttributes(attributes);
-            if (element.Name == "select") {
+            if (elementName == "select") {
                 if (values.Contains("multiple")) throw new XTemplateException("x-model on select[multiple] is not supported by server rendering", element.Offset);
                 return new XTemplateSelectModel(modelValue, element.Offset);
             }
-            if (element.Name != "input") return null;
+            if (elementName != "input") return null;
             var type = values.GetValue("type")?.ToLowerInvariant() ?? "text";
             if (type == "checkbox") { if (IsTruthy(modelValue, element.Offset)) values.Set("checked", null); else values.Remove("checked"); }
             else if (type == "radio") {

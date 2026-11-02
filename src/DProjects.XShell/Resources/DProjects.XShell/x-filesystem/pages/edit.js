@@ -10,23 +10,23 @@ export default {
         methods: {}
     },
 
-    meta: {title:"Edit file"},
+    meta: {
+        title:"Edit file"
+    },
 
     style: `
-        :scope x-template {border:1px red solid;}
+        :scope x-template { height:100%; display:flex;}
+        :scope x-template > * {flex:1;}
     `,
 
     template: `
+        <x-fill>
         <x-template 
             x-prop:template="state.template" 
             x-model="state.value"
             >
         </x-template>
-
-
-        <x-json x-prop:value="state.value"></x-json>
-        {{ state.value | json_stringify }}
-        <x-button label="refresh" x-on:click="something"></x-button>
+        </x-fill>
     `,
 
     state: {
@@ -62,11 +62,6 @@ export default {
                 state.value = {
                     value:text
                 };
-            },
-            something() {
-                var aux = state.value;
-                page.invalidate()
-                //state.value =state.value;
             }
         };
     }
