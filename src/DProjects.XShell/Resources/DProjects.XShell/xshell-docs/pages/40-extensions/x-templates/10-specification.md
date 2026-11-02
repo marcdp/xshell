@@ -1110,10 +1110,10 @@ conditional branch or loop iteration is selected, and loop/recursive locals are 
 unload and replace the old element, including positional and keyed loop paths; an unchanged tag preserves the DOM instance. A post-first-render
 `x-once` placeholder MUST preserve the initially resolved element without reevaluating `x-is`. Descendants of `x-pre` remain literal and are not parsed.
 
-`x-is` and `x-model` are composable in browser renderers. The dynamic element receives the current model through its `value` property. On `change`, XTemplate reads
-`event.target.value`, assigns it to the model expression, and invalidates the renderer. A dynamically selected component used this way MUST expose an
-assignable `value` property, update it before dispatching `change`, and use the standard `change` event. When the selected tag changes, normal VDOM
-reconciliation replaces the element and the new element receives the current model value. A `null` `x-is` result keeps the authored fallback element
+`x-is` and both model forms are composable in browser renderers. The dynamic element receives the current model through its `value` property. On the
+selected `change` or `input` event, XTemplate reads `event.target.value`, assigns it to the model expression, and invalidates the renderer. A dynamically
+selected component used this way MUST expose an assignable `value` property and update it before dispatching the selected event. When the selected tag
+changes, normal VDOM reconciliation replaces the element and the new element receives the current model value. A `null` `x-is` result keeps the authored fallback element
 and the same generic model binding. Server rendering continues to apply its existing native-form serialization rules after resolving the element name;
 it does not serialize custom-element properties.
 
@@ -2157,6 +2157,7 @@ Syntax:
 
 ```html
 <element x-model="assignableExpression"></element>
+<element x-model.input="assignableExpression"></element>
 ```
 
 Example:
@@ -2168,7 +2169,7 @@ Example:
 `x-model` combines:
 
 1. model → element property binding;
-2. element change → model assignment;
+2. element update event → model assignment;
 3. invalidation after assignment.
 
 Conceptually:
@@ -2231,21 +2232,18 @@ collections are not valid scalar comparison values. When selected, write-back as
 
 ## 42. Model update event
 
-The current implementation uses:
+The directive selects the browser event used for model write-back:
 
-```text
-change
-```
+| Directive | Update event |
+|---|---|
+| `x-model` | `change` |
+| `x-model.input` | `input` |
 
-for model updates.
+Both forms use the same model initialization, input-value normalization, validated assignment, and post-assignment invalidation. The generated event
+semantics stop propagation, equivalent to `change.stop` and `input.stop`, respectively. `x-model.input` registers only the `input` handler; it does
+not also write back on `change`.
 
-It does not use the `input` event for text fields.
-
-The generated event semantics include propagation stopping, equivalent to:
-
-```text
-change.stop
-```
+An element MUST NOT contain more than one model directive. `input` is the only supported `x-model` modifier; other modifiers are invalid.
 
 ---
 
@@ -2824,7 +2822,7 @@ recursive-directive
 
 recursive-wrapper = "x-recursive-wrapper", "=", quoted-tag-name ;
 
-model-directive   = "x-model", "=", quoted-assignable-expression ;
+model-directive   = ( "x-model" | "x-model.input" ), "=", quoted-assignable-expression ;
 
 once-directive    = "x-once" ;
 pre-directive     = "x-pre" ;
@@ -4001,6 +3999,7 @@ A correct implementation should preserve these semantics even if it uses a compl
 | `x-recursive` | Recursive repetition | recursive loop expression |
 | `x-recursive-wrapper` | Child-level wrapper | tag name |
 | `x-model` | Two-way model | assignable expression |
+| `x-model.input` | Two-way model updated on `input` | assignable expression |
 | `x-once` | Preserve after first render | none |
 | `x-pre` | Literal child subtree | none |
 

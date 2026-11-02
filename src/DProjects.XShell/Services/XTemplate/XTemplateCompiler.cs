@@ -121,6 +121,7 @@ namespace DProjects.XShell.Services.XTemplate {
             var properties = new List<string>();
             var styles = new List<string>();
             var events = new List<string>();
+            var modelDirectiveCompiled = false;
             var options = new List<string> { $"index:{index}" };
             var classes = new List<string>();
             var childScope = scope;
@@ -266,8 +267,10 @@ namespace DProjects.XShell.Services.XTemplate {
                     var className = name[(name.IndexOf(':') + 1)..];
                     if (string.IsNullOrWhiteSpace(className)) throw TemplateError("Directive 'x-class' requires a class name.", element);
                     classes.Add($"(utils.expr.truthy({CompileExpression(value, name, element.SourceOffset, expressionScope)}) ? {ToJavaScriptString(className)} : null)");
-                } else if (name == "x-model") {
-                    CompileModel(element, value, properties, events, expressionScope);
+                } else if (name is "x-model" or "x-model.input") {
+                    if (modelDirectiveCompiled) throw TemplateError("An element cannot contain more than one model directive.", element);
+                    modelDirectiveCompiled = true;
+                    CompileModel(element, value, name == "x-model.input" ? "input" : "change", properties, events, expressionScope);
                 } else if (name == "x-is") {
                     continue;
                 } else if (name == "x-pre") {
@@ -331,7 +334,7 @@ namespace DProjects.XShell.Services.XTemplate {
             return 1;
         }
 
-        private void CompileModel(ElementNode element, string expression, List<string> properties, List<string> events, XTemplateExpressionJavaScriptScope scope) {
+        private void CompileModel(ElementNode element, string expression, string updateEvent, List<string> properties, List<string> events, XTemplateExpressionJavaScriptScope scope) {
             var model = ParseExpression(expression, "x-model", element.SourceOffset);
             if (!XTemplateExpressions.IsAssignable(model)) throw TemplateError("Directive 'x-model' requires an assignable XTemplate expression.", element);
             var value = _expressionCompiler.Compile(model, scope);
@@ -349,7 +352,7 @@ namespace DProjects.XShell.Services.XTemplate {
                 }
             }
             properties.Add($"{propertyName}:{propertyValue}");
-            events.Add($"'change.stop': (event) => {{ let value = utils.getInputValue(event.target); {assignment}; invalidate(); }}");
+            events.Add($"'{updateEvent}.stop': (event) => {{ let value = utils.getInputValue(event.target); {assignment}; invalidate(); }}");
         }
 
         private static LoopDefinition ParseLoop(string value, string directive, bool recursive, ElementNode element) {

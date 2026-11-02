@@ -111,6 +111,12 @@ namespace DProjects.XShell.Test {
         }
 
         [Fact]
+        public void InputModelModifierPreservesServerModelInitialization() {
+            Assert.Equal("<input value=\"live\">", Render("<input x-model.input=\"state.query\">", new { query = "live" }));
+            Assert.Equal("<x-field></x-field>", Render("<div x-is=\"state.tag\" x-model.input=\"state.value\"></div>", new { tag = "x-field", value = "live" }));
+        }
+
+        [Fact]
         public void RadioModelUsesScalarComparisonAndDoesNotSelectNull() {
             Assert.Equal("<input type=\"radio\" value=\"1\" checked>", Render("<input type=\"radio\" value=\"1\" x-model=\"state.choice\">", new { choice = 1 }));
             Assert.Equal("<input type=\"radio\" value=\"true\" checked>", Render("<input type=\"radio\" value=\"true\" x-model=\"state.choice\">", new { choice = true }));
@@ -127,6 +133,9 @@ namespace DProjects.XShell.Test {
         [Fact]
         public void RejectsInvalidAndAmbiguousModelCases() {
             Assert.Throws<XTemplateException>(() => Render("<input x-model=\"state.a + state.b\">", new { a = 1, b = 2 }));
+            Assert.Throws<XTemplateException>(() => Render("<input x-model.input=\"state.a + state.b\">", new { a = 1, b = 2 }));
+            Assert.Throws<XTemplateException>(() => Render("<input x-model.foo=\"state.a\">", new { a = 1 }));
+            Assert.Throws<XTemplateException>(() => Render("<input x-model=\"state.a\" x-model.input=\"state.a\">", new { a = 1 }));
             Assert.Throws<XTemplateException>(() => Render("<select multiple x-model=\"state.value\"><option value=\"a\">A</option></select>", new { value = "a" }));
             Assert.Throws<XTemplateException>(() => Render("<select multiple x-is=\"state.tag\" x-model=\"state.value\"></select>", new { tag = "x-datafield", value = "a" }));
         }

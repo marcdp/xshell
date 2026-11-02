@@ -120,8 +120,8 @@ using `display: none` for a falsy expression and restoring the prior inline disp
 
 `x-is` evaluates a restricted XTemplate expression and uses its string result as the actual native or custom-element tag. Names are normalized to
 lowercase; `null` falls back to the authored tag. Invalid, empty, non-string, void, `script`, and `style` results are errors. A changed tag unloads and
-replaces the DOM element, while an unchanged tag preserves it. `x-is` composes with structural directives and bindings, including generic `x-model`
-binding through the selected component's `value` property and `change` event.
+replaces the DOM element, while an unchanged tag preserves it. `x-is` composes with structural directives and bindings, including generic model
+binding through the selected component's `value` property and either the `change` event (`x-model`) or `input` event (`x-model.input`).
 
 Dynamic custom elements are not discoverable as static template dependencies. Declare every possible component through the Page or Component
 definition's normal `dependencies` map (or load it through another existing loader path) before it can be selected.
@@ -152,11 +152,13 @@ Use `x-if`, `x-elseif`, and `x-else` for conditional structural rendering. Use `
 
 ```html
 <input x-model="state.query">
+<input x-model.input="state.liveQuery">
 <section x-once>Rendered once</section>
 <code x-pre>{{ literalBraces }}</code>
 ```
 
-`x-model` provides read/write model binding. `x-once` preserves content after its first render, and `x-pre` produces x-pre raw content from its literal child subtree.
+`x-model` provides read/write model binding on `change`; `x-model.input` uses `input` for live updates while typing. `x-once` preserves content after
+its first render, and `x-pre` produces x-pre raw content from its literal child subtree.
 An `x-is` inside that literal `x-pre` subtree remains literal and is not evaluated; `x-once` also preserves the initially resolved dynamic tag.
 
 ## Related documentation

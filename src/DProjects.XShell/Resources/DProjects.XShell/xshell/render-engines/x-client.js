@@ -552,11 +552,12 @@ function parseDomNode(node, allowedIdentifiers) {
             content = { kind: directive, expression: parseScoped(value) };
             continue;
         }
-        if (directive === "x-model") {
-            if (!value.trim()) throw templateError("Directive 'x-model' requires an expression.", element);
+        if (directive === "x-model" || directive === "x-model.input") {
+            if (operations.some(operation => operation.kind === "model")) throw templateError("An element cannot contain more than one model directive.", element);
+            if (!value.trim()) throw templateError(`Directive '${directive}' requires an expression.`, element);
             const expression = parseScoped(value);
-            if (!assignmentPath(expression)) throw templateError("Directive 'x-model' requires an assignable XTemplate expression.", element);
-            operations.push({ kind: "model", expression });
+            if (!assignmentPath(expression)) throw templateError(`Directive '${directive}' requires an assignable XTemplate expression.`, element);
+            operations.push({ kind: "model", expression, updateEvent: directive === "x-model.input" ? "input" : "change" });
             continue;
         }
         if (directive === "x-attr") { operations.push({ kind: "attr-spread", expression: parseScoped(value) }); continue; }
@@ -746,7 +747,7 @@ function renderBasicElement(node, index, scope, environment, extraOptions = null
                     } else propertyValue = evaluateExpression(operation.expression, scope, utils, i18n);
                 } else propertyValue = evaluateExpression(operation.expression, scope, utils, i18n);
                 props[propertyName] = propertyValue;
-                events["change.stop"] = event => {
+                events[`${operation.updateEvent}.stop`] = event => {
                     assignExpression(operation.expression, scope, utils.getInputValue(event.target), utils, i18n);
                     invalidate();
                 };

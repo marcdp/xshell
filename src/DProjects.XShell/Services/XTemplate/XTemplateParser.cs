@@ -168,7 +168,11 @@ namespace DProjects.XShell.Services.XTemplate {
                 else if (string.Equals(directive, "x-text", StringComparison.OrdinalIgnoreCase)) text = ParseExpression(attribute, "x-text");
                 else if (string.Equals(directive, "x-html", StringComparison.OrdinalIgnoreCase)) html = ParseExpression(attribute, "x-html");
                 else if (string.Equals(directive, "x-children", StringComparison.OrdinalIgnoreCase)) childrenExpression = ParseExpression(attribute, "x-children");
-                else if (string.Equals(directive, "x-model", StringComparison.OrdinalIgnoreCase)) { model = ParseExpression(attribute, "x-model"); if (!XTemplateExpressions.IsAssignable(model)) throw Error("x-model requires an assignable expression", attribute.Offset); }
+                else if (string.Equals(directive, "x-model", StringComparison.OrdinalIgnoreCase) || string.Equals(directive, "x-model.input", StringComparison.OrdinalIgnoreCase)) {
+                    if (model != null) throw Error("An element cannot contain more than one model directive", attribute.Offset);
+                    model = ParseExpression(attribute, directive);
+                    if (!XTemplateExpressions.IsAssignable(model)) throw Error($"{directive} requires an assignable expression", attribute.Offset);
+                }
                 else if (string.Equals(directive, "x-is", StringComparison.OrdinalIgnoreCase)) elementName = ParseExpression(attribute, "x-is");
                 else if (string.Equals(directive, "x-pre", StringComparison.OrdinalIgnoreCase)) { }
                 else if (string.Equals(directive, "x-attr", StringComparison.OrdinalIgnoreCase)) attributes.Add(new XTemplateAttributeSpread(ParseExpression(attribute, "x-attr"), attribute.Offset));

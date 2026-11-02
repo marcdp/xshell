@@ -57,6 +57,10 @@ public sealed class XTemplateBindingConformanceTests {
     public void GeneratedJavaScriptEvaluatesNestedAssignmentIndexesOnceFromLeftToRight() {
         Assert.Equal("{\"order\":[\"group\",\"item\"],\"name\":\"updated\"}", ExecuteInstrumentedNestedAssignment());
     }
+    [Fact]
+    public void GeneratedInputModelHandlerUpdatesStateAndInvalidatesWithoutChangeHandler() {
+        Assert.Equal("{\"events\":[\"input.stop\"],\"value\":\"updated\",\"invalidations\":1}", ExecuteInputModelModifier());
+    }
     // methods (private)
     private static string[] ExecuteRadioChecked(IReadOnlyList<RadioCase> cases) {
         var runtimePath = Path.Combine(AppContext.BaseDirectory, "Resources", "DProjects.XShell", "xshell", "render-engines", "x.js");
@@ -170,6 +174,34 @@ public sealed class XTemplateBindingConformanceTests {
             var error = process.StandardError.ReadToEnd();
             process.WaitForExit();
             Assert.True(process.ExitCode == 0, $"JavaScript assignment order runtime failed:{Environment.NewLine}{error}");
+            return output.Trim();
+        } finally {
+            if (File.Exists(modulePath)) File.Delete(modulePath);
+        }
+    }
+    private static string ExecuteInputModelModifier() {
+        var runtimePath = Path.Combine(AppContext.BaseDirectory, "Resources", "DProjects.XShell", "xshell", "render-engines", "x.js");
+        var modulePath = Path.Combine(Path.GetTempPath(), $"xtemplate-model-input-{Guid.NewGuid():N}.mjs");
+        try {
+            var renderer = new XTemplateCompiler().Compile("<div x-is=\"state.tag\" x-model.input=\"state.value\"></div>");
+            File.WriteAllText(modulePath, $$"""
+                globalThis.HTMLElement = class {};
+                globalThis.CSSStyleSheet = class { replaceSync() {} };
+                globalThis.customElements = { get() {}, define() {} };
+                globalThis.window = { customElements: globalThis.customElements };
+                const { XTemplateRuntimeUtils } = await import({{JsonSerializer.Serialize(new Uri(runtimePath).AbsoluteUri)}});
+                const state = { tag: "x-live-field", value: "initial" };
+                let invalidations = 0;
+                const renderer = {{renderer}};
+                const input = renderer(state, null, () => invalidations++, XTemplateRuntimeUtils, { config: { lang: "en-US" } }, 0)[0];
+                input.events["input.stop"]({ target: { localName: "x-live-field", value: "updated" } });
+                console.log(JSON.stringify({ events: Object.keys(input.events), value: state.value, invalidations }));
+                """);
+            using var process = NodeTestRuntime.Start(modulePath);
+            var output = process.StandardOutput.ReadToEnd();
+            var error = process.StandardError.ReadToEnd();
+            process.WaitForExit();
+            Assert.True(process.ExitCode == 0, $"JavaScript input model runtime failed:{Environment.NewLine}{error}");
             return output.Trim();
         } finally {
             if (File.Exists(modulePath)) File.Delete(modulePath);

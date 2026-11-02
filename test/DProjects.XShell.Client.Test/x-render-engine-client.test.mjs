@@ -201,6 +201,7 @@ test("x-client preserves authored slot metadata while allowing only authored slo
 for (const [source, create] of [
     ['<input x-is="state.tag">', () => [element("input", { "x-is": "state.tag" }, [])]],
     ['<div x-is="state.tag" x-model="state.value"></div>', () => [element("div", { "x-is": "state.tag", "x-model": "state.value" }, [])]],
+    ['<div x-is="state.tag" x-model.input="state.value"></div>', () => [element("div", { "x-is": "state.tag", "x-model.input": "state.value" }, [])]],
     ['<div x-is></div>', () => [element("div", { "x-is": "" }, [])]]
 ]) fixtures.set(source, create);
 
@@ -232,6 +233,29 @@ test("x-client composes x-is with generic x-model bindings across selected compo
     assert.deepEqual(vdom[0].props, { value: "Updated" });
 });
 
+test("x-client x-model.input writes on input only and composes with dynamic custom elements", () => {
+    const renderer = createClientTemplateRenderer('<div x-is="state.tag" x-model.input="state.value"><\/div>', {});
+    const state = { tag: "x-live-field", value: "Initial" };
+    let invalidations = 0;
+    const vdom = renderer.render(state, () => {}, () => invalidations++, renderUtils, null, 0);
+
+    assert.deepEqual(vdom[0].props, { value: "Initial" });
+    assert.deepEqual(Object.keys(vdom[0].events), ["input.stop"]);
+    assert.equal(vdom[0].events["change.stop"], undefined);
+    vdom[0].events["input.stop"]({ target: { localName: "x-live-field", value: "Updated" } });
+    assert.equal(state.value, "Updated");
+    assert.equal(invalidations, 1);
+});
+
+for (const [source, attributes, pattern] of [
+    ['<input x-model.input="state.value + 1">', { "x-model.input": "state.value + 1" }, /assignable/],
+    ['<input x-model.foo="state.value">', { "x-model.foo": "state.value" }, /Unsupported XTemplate directive/],
+    ['<input x-model="state.value" x-model.input="state.value">', { "x-model": "state.value", "x-model.input": "state.value" }, /more than one model directive/]
+]) {
+    fixtures.set(source, () => [element("input", attributes, [])]);
+    test(`x-client rejects invalid model declaration: ${source}`, () => assert.throws(() => createClientTemplateRenderer(source, {}), pattern));
+}
+
 test("x-client keeps select multiple model rejection when x-is is also present", () => {
     const source = '<select multiple x-is="state.tag" x-model="state.value"><\/select>';
     fixtures.set(source, () => [element("select", { multiple: "", "x-is": "state.tag", "x-model": "state.value" }, [])]);
@@ -251,6 +275,7 @@ test("x-client emits model, event, class, style, and show data for x.js without 
     let invalidations = 0;
     const vdom = renderer.render(state, (command, event) => commands.push([command, event.type]), () => invalidations++, renderUtils, null, 0);
     assert.equal(vdom[0].props.checked, false);
+    assert.equal(vdom[0].events["input.stop"], undefined);
     assert.equal(vdom[1].attrs.class, "base active");
     assert.deepEqual(vdom[1].styles, { color: { value: "red", priority: "" } });
     assert.equal(vdom[1].options.show, false);

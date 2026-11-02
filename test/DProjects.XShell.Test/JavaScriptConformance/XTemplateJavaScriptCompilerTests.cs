@@ -130,6 +130,25 @@ namespace DProjects.XShell.Test {
         }
 
         [Fact]
+        public void CompilesInputModelModifierWithInputBindingOnly() {
+            var javascript = new XTemplateCompiler().Compile("<input x-model.input=\"state.value\">");
+
+            Assert.Contains("'input.stop': (event) =>", javascript, StringComparison.Ordinal);
+            Assert.DoesNotContain("'change.stop': (event) =>", javascript, StringComparison.Ordinal);
+            Assert.Contains("utils.getInputValue(event.target)", javascript, StringComparison.Ordinal);
+            Assert.Contains("utils.expr.assign(state, [{kind:\"member\", name:\"value\"}], value)", javascript, StringComparison.Ordinal);
+            Assert.Contains("invalidate();", javascript, StringComparison.Ordinal);
+        }
+
+        [Theory]
+        [InlineData("<input x-model.input=\"state.value + 1\">")]
+        [InlineData("<input x-model.foo=\"state.value\">")]
+        [InlineData("<input x-model=\"state.value\" x-model.input=\"state.value\">")]
+        public void RejectsInvalidInputModelDeclarations(string template) {
+            Assert.ThrowsAny<Exception>(() => new XTemplateCompiler().Compile(template));
+        }
+
+        [Fact]
         public void DynamicElementsDoNotBypassUnsupportedSelectMultipleModels() {
             Assert.Throws<InvalidOperationException>(() => new XTemplateCompiler().Compile("<select multiple x-is=\"state.tag\" x-model=\"state.value\"></select>"));
         }

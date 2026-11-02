@@ -56,7 +56,9 @@ Use `x-is` when the same template structure must render as one of several alread
 
 The expression is evaluated once per rendered instance. `null` selects `div`; a valid string is normalized to lowercase and becomes the VDOM/HTML
 tag. Attributes, properties, styles, events, visibility, and children target that resolved element. Changing the tag unloads and replaces it;
-retaining the tag preserves the existing DOM instance. x-is can be combined with x-model to provide two-way binding to dynamically selected Web Components. The selected component must expose a writable value property and dispatch a change event after updating that property. When x-is changes the selected component, the new component receives the current model value.
+retaining the tag preserves the existing DOM instance. `x-is` can be combined with either model form to provide two-way binding to dynamically
+selected Web Components. The selected component must expose a writable `value` property and dispatch the selected `change` or `input` event after
+updating that property. When `x-is` changes the selected component, the new component receives the current model value.
 
 <div x-is="state.componentName" x-model="state.value">
 </div>
@@ -150,12 +152,23 @@ a falsy expression applies `display: none`; when it becomes truthy, the prior in
 
 ## Model binding
 
-`x-model` conceptually reads an assignable expression into a control and writes user changes back before requesting a new render.
+`x-model` conceptually reads an assignable expression into a control and writes user changes back before requesting a new render. The plain form
+writes back on `change`; the `.input` modifier writes back on `input`, which is useful for live text updates.
 
 ```html
 <input x-model="state.query">
 <x-datafield x-model="state.selection"></x-datafield>
 ```
+
+For example, this updates the paragraph as the user types:
+
+```html
+<input type="text" x-model.input="state.search">
+<p>{{ state.search }}</p>
+```
+
+Both forms use the same value normalization and assignment rules. A custom element used with `x-model.input` must update its public `value` property
+before dispatching its `input` event. Only `.input` is supported; other model modifiers and multiple model directives on one element are errors.
 
 Use the specification when working with control-specific behavior, advanced model targets, or compatibility constraints.
 
