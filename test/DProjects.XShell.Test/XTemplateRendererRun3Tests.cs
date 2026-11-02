@@ -128,6 +128,7 @@ namespace DProjects.XShell.Test {
         public void RejectsInvalidAndAmbiguousModelCases() {
             Assert.Throws<XTemplateException>(() => Render("<input x-model=\"state.a + state.b\">", new { a = 1, b = 2 }));
             Assert.Throws<XTemplateException>(() => Render("<select multiple x-model=\"state.value\"><option value=\"a\">A</option></select>", new { value = "a" }));
+            Assert.Throws<XTemplateException>(() => Render("<select multiple x-is=\"state.tag\" x-model=\"state.value\"></select>", new { tag = "x-datafield", value = "a" }));
         }
 
         [Theory]
@@ -216,10 +217,18 @@ namespace DProjects.XShell.Test {
         }
 
         [Fact]
-        public void RejectsNonStringDynamicNamesVoidHostsAndModelCombination() {
+        public void RejectsNonStringDynamicNamesAndVoidHosts() {
             Assert.Throws<XTemplateException>(() => Render("<div x-is=\"state.tag\"></div>", new { tag = 123 }));
             Assert.Throws<XTemplateException>(() => Render("<input x-is=\"state.tag\">", new { tag = "div" }));
-            Assert.Throws<XTemplateException>(() => Render("<div x-is=\"state.tag\" x-model=\"state.value\"></div>", new { tag = "input", value = "x" }));
+        }
+
+        [Fact]
+        public void RendersDynamicElementModelsAfterResolvingTheElementName() {
+            var template = "<div x-is=\"state.tag\" x-model=\"state.value\"><option value=\"a\">A</option><option value=\"b\">B</option></div>";
+
+            Assert.Equal("<select><option value=\"a\">A</option><option value=\"b\" selected>B</option></select>", Render(template, new { tag = "select", value = "b" }));
+            Assert.Equal("<x-datafield><option value=\"a\">A</option><option value=\"b\">B</option></x-datafield>", Render(template, new { tag = "x-datafield", value = "b" }));
+            Assert.Equal("<div><option value=\"a\">A</option><option value=\"b\">B</option></div>", Render(template, new { tag = (string?)null, value = "b" }));
         }
 
         [Theory]

@@ -115,12 +115,13 @@ using `display: none` for a falsy expression and restoring the prior inline disp
 ## Dynamic elements
 
 ```html
-<div x-is="state.componentName" x-prop:value="state.value"></div>
+<div x-is="state.componentName" x-model="state.value"></div>
 ```
 
 `x-is` evaluates a restricted XTemplate expression and uses its string result as the actual native or custom-element tag. Names are normalized to
 lowercase; `null` falls back to the authored tag. Invalid, empty, non-string, void, `script`, and `style` results are errors. A changed tag unloads and
-replaces the DOM element, while an unchanged tag preserves it. `x-is` composes with structural directives and bindings, but not with `x-model`.
+replaces the DOM element, while an unchanged tag preserves it. `x-is` composes with structural directives and bindings, including generic `x-model`
+binding through the selected component's `value` property and `change` event.
 
 Dynamic custom elements are not discoverable as static template dependencies. Declare every possible component through the Page or Component
 definition's normal `dependencies` map (or load it through another existing loader path) before it can be selected.

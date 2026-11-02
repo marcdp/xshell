@@ -206,8 +206,36 @@ for (const [source, create] of [
 
 test("x-client rejects unsupported x-is declarations", () => {
     assert.throws(() => createClientTemplateRenderer('<input x-is="state.tag">', {}), /void element/);
-    assert.throws(() => createClientTemplateRenderer('<div x-is="state.tag" x-model="state.value"><\/div>', {}), /x-model behavior/);
     assert.throws(() => createClientTemplateRenderer('<div x-is><\/div>', {}), /requires an expression/);
+});
+
+test("x-client composes x-is with generic x-model bindings across selected components and fallback", () => {
+    const renderer = createClientTemplateRenderer('<div x-is="state.tag" x-model="state.value"><\/div>', {});
+    const state = { tag: "x-first", value: "Hello" };
+    let invalidations = 0;
+
+    let vdom = renderer.render(state, () => {}, () => invalidations++, renderUtils, null, 0);
+    assert.equal(vdom[0].tag, "x-first");
+    assert.deepEqual(vdom[0].props, { value: "Hello" });
+    vdom[0].events["change.stop"]({ target: { localName: "x-first", value: "Updated" } });
+    assert.equal(state.value, "Updated");
+    assert.equal(invalidations, 1);
+
+    state.tag = "x-second";
+    vdom = renderer.render(state, () => {}, () => invalidations++, renderUtils, null, 1);
+    assert.equal(vdom[0].tag, "x-second");
+    assert.deepEqual(vdom[0].props, { value: "Updated" });
+
+    state.tag = null;
+    vdom = renderer.render(state, () => {}, () => invalidations++, renderUtils, null, 2);
+    assert.equal(vdom[0].tag, "div");
+    assert.deepEqual(vdom[0].props, { value: "Updated" });
+});
+
+test("x-client keeps select multiple model rejection when x-is is also present", () => {
+    const source = '<select multiple x-is="state.tag" x-model="state.value"><\/select>';
+    fixtures.set(source, () => [element("select", { multiple: "", "x-is": "state.tag", "x-model": "state.value" }, [])]);
+    assert.throws(() => createClientTemplateRenderer(source, {}), /select\[multiple\]/);
 });
 
 const bindingsSource = '<input type="checkbox" x-model="state.checked"><button class="base" x-class:active="state.active" x-style:color="state.color" x-show="state.visible" x-on:click.prevent="save">Go</button>';

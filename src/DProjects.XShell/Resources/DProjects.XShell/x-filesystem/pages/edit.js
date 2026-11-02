@@ -20,7 +20,7 @@ export default {
     `,
 
     template: `
-        <!--<div x-is="state.componentName" x-prop:value="state.value" x-on:change="onChange"></div>-->
+        
         <div x-is="state.componentName" x-model="state.value"></div>
         <x-json x-prop:value="state.value"></x-json>
 

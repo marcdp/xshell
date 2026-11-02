@@ -627,7 +627,6 @@ function parseDomNode(node, allowedIdentifiers) {
         throw templateError("x-model on select[multiple] is not supported.", element);
     }
     if (dynamicTag && VOID_ELEMENTS.has(name)) throw templateError(`Directive 'x-is' is not supported on void element <${name}>.`, element);
-    if (dynamicTag && operations.some(operation => operation.kind === "model")) throw templateError("Directives 'x-is' and 'x-model' cannot be combined because x-model behavior depends on the authored element type.", element);
     if (content && element.childNodes.length) throw templateError(`Directive '${content.kind}' requires an empty element.`, element);
     if (pre && content) throw templateError("x-pre cannot be combined with a content directive.", element);
 
@@ -734,7 +733,7 @@ function renderBasicElement(node, index, scope, environment, extraOptions = null
             case "model": {
                 let propertyName = "value";
                 let propertyValue;
-                if (node.name === "input") {
+                if (!node.dynamicTag && node.name === "input") {
                     const type = node.staticAttributes.type;
                     if (type === "range") { propertyName = "valueAsNumber"; propertyValue = evaluateExpression(operation.expression, scope, utils, i18n); }
                     else if (type === "checkbox") { propertyName = "checked"; propertyValue = evaluateExpression(operation.expression, scope, utils, i18n); }

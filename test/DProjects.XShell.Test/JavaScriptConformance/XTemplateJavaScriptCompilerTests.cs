@@ -113,10 +113,25 @@ namespace DProjects.XShell.Test {
 
         [Theory]
         [InlineData("<input x-is=\"state.tag\">")]
-        [InlineData("<div x-is=\"state.tag\" x-model=\"state.value\"></div>")]
         [InlineData("<div x-is></div>")]
         public void RejectsUnsupportedDynamicElementDeclarations(string template) {
             Assert.ThrowsAny<Exception>(() => new XTemplateCompiler().Compile(template));
+        }
+
+        [Fact]
+        public void CompilesDynamicElementModelsWithGenericValueAndChangeBindings() {
+            var javascript = new XTemplateCompiler().Compile("<div x-is=\"state.componentName\" x-model=\"state.value\"></div>");
+
+            Assert.Contains("utils.expr.elementTag(utils.expr.member(state, \"componentName\"), \"div\")", javascript, StringComparison.Ordinal);
+            Assert.Contains("{value:utils.expr.member(state, \"value\")}", javascript, StringComparison.Ordinal);
+            Assert.Contains("'change.stop': (event) =>", javascript, StringComparison.Ordinal);
+            Assert.Contains("utils.getInputValue(event.target)", javascript, StringComparison.Ordinal);
+            Assert.Contains("utils.expr.assign(state, [{kind:\"member\", name:\"value\"}], value)", javascript, StringComparison.Ordinal);
+        }
+
+        [Fact]
+        public void DynamicElementsDoNotBypassUnsupportedSelectMultipleModels() {
+            Assert.Throws<InvalidOperationException>(() => new XTemplateCompiler().Compile("<select multiple x-is=\"state.tag\" x-model=\"state.value\"></select>"));
         }
 
         [Fact]

@@ -211,7 +211,7 @@ namespace DProjects.XShell.Services.XTemplate {
             if (element.Attributes.Any(attribute => string.Equals(attribute.Name, "x-key", StringComparison.OrdinalIgnoreCase)) && loop == null && recursive == null) throw Error("Directive 'x-key' requires x-for or x-recursive", element.Offset);
             if (elementName != null && XTemplateElementNames.IsVoid(element.Name)) throw Error($"Directive 'x-is' is not supported on void element <{element.Name}>", element.Offset);
             if (elementName != null && element.Name is "script" or "style") throw Error($"Directive 'x-is' is not supported on prohibited element <{element.Name}>", element.Offset);
-            if (elementName != null && model != null) throw Error("Directives 'x-is' and 'x-model' cannot be combined because x-model behavior depends on the authored element type", element.Offset);
+            if (model != null && element.Name == "select" && element.Attributes.Any(attribute => string.Equals(attribute.Name, "multiple", StringComparison.OrdinalIgnoreCase))) throw Error("x-model on select[multiple] is not supported", element.Offset);
             return new(element.Name, attributes, children, element.Offset, condition, elseIf, isElse, loop, recursive, text, html, model, childrenExpression, elementName);
         }
         private XTemplateForDefinition ParseFor(RawAttribute attribute) {

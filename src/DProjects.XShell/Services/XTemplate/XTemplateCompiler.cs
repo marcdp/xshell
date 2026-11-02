@@ -136,7 +136,6 @@ namespace DProjects.XShell.Services.XTemplate {
             }
             var dynamicTagAttribute = element.Attributes.FirstOrDefault(attribute => attribute.Name == "x-is");
             if (dynamicTagAttribute != null && VoidElements.Contains(element.Name)) throw TemplateError($"Directive 'x-is' is not supported on void element <{element.Name}>.", element);
-            if (dynamicTagAttribute != null && element.HasAttribute("x-model")) throw TemplateError("Directives 'x-is' and 'x-model' cannot be combined because x-model behavior depends on the authored element type.", element);
             var elementTag = dynamicTagAttribute == null
                 ? ToJavaScriptString(element.Name)
                 : $"(_tag = utils.expr.elementTag({CompileExpression(dynamicTagAttribute.Value, dynamicTagAttribute.Name, dynamicTagAttribute.Offset, expressionScope)}, {ToJavaScriptString(element.Name)}))";
@@ -339,7 +338,8 @@ namespace DProjects.XShell.Services.XTemplate {
             var assignment = _expressionCompiler.CompileAssignment(model, "value", scope);
             var propertyName = "value";
             var propertyValue = value;
-            if (element.Name == "input") {
+            if (element.Name == "select" && element.HasAttribute("multiple")) throw TemplateError("x-model on select[multiple] is not supported.", element);
+            if (!element.HasAttribute("x-is") && element.Name == "input") {
                 var type = element.GetAttribute("type");
                 if (type == "range") propertyName = "valueAsNumber";
                 else if (type == "checkbox") propertyName = "checked";
@@ -347,7 +347,7 @@ namespace DProjects.XShell.Services.XTemplate {
                     propertyName = "checked";
                     propertyValue = $"function() {{ const modelValue = {value}; return modelValue !== null && utils.expr.scalar(modelValue) === utils.expr.scalar(utils.expr.member(this.attrs, \"value\")); }}";
                 }
-            } else if (element.Name == "select" && element.HasAttribute("multiple")) throw TemplateError("x-model on select[multiple] is not supported.", element);
+            }
             properties.Add($"{propertyName}:{propertyValue}");
             events.Add($"'change.stop': (event) => {{ let value = utils.getInputValue(event.target); {assignment}; invalidate(); }}");
         }

@@ -1095,7 +1095,9 @@ Dynamic values require an XTL binding directive.
 `x-is="expression"` resolves the rendered element name without introducing a placeholder element:
 
 ```html
-<div x-is="state.componentName" x-prop:value="state.value"></div>
+<div x-is="state.componentName"
+     x-model="state.value">
+</div>
 ```
 
 The expression MUST use the restricted XTemplate expression language and MUST be evaluated exactly once for each rendered element instance. A `null`
@@ -1108,8 +1110,12 @@ conditional branch or loop iteration is selected, and loop/recursive locals are 
 unload and replace the old element, including positional and keyed loop paths; an unchanged tag preserves the DOM instance. A post-first-render
 `x-once` placeholder MUST preserve the initially resolved element without reevaluating `x-is`. Descendants of `x-pre` remain literal and are not parsed.
 
-Because `x-model` behavior depends on the statically authored control type, combining `x-is` and `x-model` is invalid. Use explicit `x-prop`, `x-on`,
-and controller logic for a dynamic control.
+`x-is` and `x-model` are composable in browser renderers. The dynamic element receives the current model through its `value` property. On `change`, XTemplate reads
+`event.target.value`, assigns it to the model expression, and invalidates the renderer. A dynamically selected component used this way MUST expose an
+assignable `value` property, update it before dispatching `change`, and use the standard `change` event. When the selected tag changes, normal VDOM
+reconciliation replaces the element and the new element receives the current model value. A `null` `x-is` result keeps the authored fallback element
+and the same generic model binding. Server rendering continues to apply its existing native-form serialization rules after resolving the element name;
+it does not serialize custom-element properties.
 
 Dynamic custom-element names do not add statically discoverable template dependencies. Every possible component MUST already be loaded through the
 definition's normal `dependencies` declaration or another existing Resolver → Loader path. Render engines MUST NOT introduce an asynchronous component
