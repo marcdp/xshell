@@ -1,13 +1,36 @@
+function cloneStructuralValue(value) {
+	const json = JSON.stringify(value);
+	return json === undefined ? value : JSON.parse(json);
+}
+
+function areStructurallyEqual(left, right) {
+	if (Object.is(left, right)) return true;
+	if (left === null || right === null || typeof(left) !== "object" || typeof(right) !== "object") return false;
+	if (Array.isArray(left) || Array.isArray(right)) {
+		return Array.isArray(left) && Array.isArray(right) && left.length === right.length
+			&& left.every((value, index) => areStructurallyEqual(value, right[index]));
+	}
+	const leftKeys = Object.keys(left);
+	const rightKeys = Object.keys(right);
+	return leftKeys.length === rightKeys.length
+		&& leftKeys.every(key => Object.prototype.hasOwnProperty.call(right, key) && areStructurallyEqual(left[key], right[key]));
+}
+
 // export
-export default function createStateEngineFactoryProxy(stateSkeleton, context) {
+export default function createStateEngineFactoryProxy(stateSkeleton, context, options = {}) {
 	
 	// init state definition json
 	const stateSkeletonJson = JSON.stringify(stateSkeleton || {});
+	const changeDetection = options.changeDetection || {};
 
 	// returns a state instance factory
 	return {
 		create: (handler) => {
 			const value = JSON.parse(stateSkeletonJson);
+			const structuralSnapshots = {};
+			for (const [prop, mode] of Object.entries(changeDetection)) {
+				if (mode === "structural") structuralSnapshots[prop] = cloneStructuralValue(value[prop]);
+			}
 			let listeners = [];
 			return new Proxy(value, {
 				get: function(target, prop, receiver) {
@@ -31,36 +54,22 @@ export default function createStateEngineFactoryProxy(stateSkeleton, context) {
 				},
 				set(target, prop, newValue) {
 					// set value and notify handler
-					const oldValue = target[prop];
-					//const changed = !Object.is(oldValue, newValue)|| (newValue !== null && typeof newValue === "object");
-					//const aux = Object.is(oldValue, newValue);
-					if (typeof(oldValue) == "object" && typeof(newValue) == "object" && newValue.value && newValue.value.indexOf && newValue.value.indexOf("33")!=-1) {
-						debugger;
-					}
-					let changed = false;
-					if (Array.isArray(newValue)) { 
+					const structural = changeDetection[prop] === "structural";
+					const oldValue = structural ? structuralSnapshots[prop] : target[prop];
+					let changed;
+					if (structural) {
+						changed = !areStructurallyEqual(oldValue, newValue);
+						target[prop] = newValue;
+						structuralSnapshots[prop] = cloneStructuralValue(newValue);
+					} else if (Array.isArray(newValue)) {
 						changed = true;
 					} else if (typeof(oldValue) === "object" && typeof(newValue) === "object") {
 						changed = !Object.is(oldValue, newValue);
 					} else {
 						changed = oldValue !== newValue;
 					}
-					/*
-					let changed = (oldValue != newValue);
-					if (!changed && oldValue && newValue) {
-						if (Array.isArray(newValue)) { 
-							//dirty check: check if number of elements are the same
-							changed = (oldValue.length != newValue.length);
-						} else if (typeof(oldValue) == "object" && typeof(newValue) == "object") { 
-							//supose objects has changed
-							changed = true;
-						} else if (typeof(newValue) == "object") { 
-							//dirty check: check if keyslength  are the same
-							changed = (Object.keys(oldValue).length != Object.keys(newValue).length);
-						}
-					}*/
 					if (changed) {
-						target[prop] = newValue;
+						if (!structural) target[prop] = newValue;
 						for (let listener of listeners) {
 							if (listener.prop === prop) {
 								listener.listener({ prop, newValue, oldValue});

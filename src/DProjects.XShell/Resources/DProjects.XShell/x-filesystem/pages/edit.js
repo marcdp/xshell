@@ -25,6 +25,7 @@ export default {
 
 
         <x-json x-prop:value="state.value"></x-json>
+        {{ state.value | json_stringify }}
         <x-button label="refresh" x-on:click="something"></x-button>
     `,
 
@@ -37,7 +38,7 @@ export default {
         template: null
     },
 
-    controller({state, page, loader, resolver}) {
+    controller({state, page, loader, resolver, events}) {
         return {
             async load() {
                 // load

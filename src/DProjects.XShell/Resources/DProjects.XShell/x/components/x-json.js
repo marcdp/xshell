@@ -28,7 +28,7 @@ export default {
         description: "Displays syntax-highlighted JSON source.",
         events: {},
         properties: {
-            value: {type:"object", default:null, state:true, description:"Object to be displayed as syntax-highlighted JSON."},
+            value: {type:"object", default:null, state:true, changeDetection:"structural", description:"Object to be displayed as syntax-highlighted JSON."},
             indent: {type:"number", default:0, state:true, attribute:true, description:"Indentation level for JSON formatting."}
         },
         methods: {}

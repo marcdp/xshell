@@ -202,8 +202,14 @@ export async function createComponentClassFromJsDefinition(src, context, definit
         }
     }
     // state engine
+    const changeDetection = {};
+    for (const [propName, property] of Object.entries(definition.contract.properties)) {
+        if (property.state === true && property.changeDetection) {
+            changeDetection[propName] = property.changeDetection;
+        }
+    }
     const stateEngineFactoryCreator = await xshell.loader.load("state-engine:" + definition.meta.stateEngine);
-    const stateEngineFactory = new stateEngineFactoryCreator(stateSkeleton, context);
+    const stateEngineFactory = new stateEngineFactoryCreator(stateSkeleton, context, { changeDetection });
     // render engine
     const renderEngineFactoryCreator = await xshell.loader.load("render-engine:" + definition.meta.renderEngine);
     const renderEngineFactory = new renderEngineFactoryCreator(definition.template, context, definition.templateRenderer);

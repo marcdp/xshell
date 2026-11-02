@@ -52,9 +52,10 @@ state.items = [...state.items, newItem];
 state.item = { ...state.item, label: "Updated" };
 ```
 
-The comparison uses loose inequality for scalars, so assigning `"0"` over `0` is ignored, retaining the old value without notification. Object
-reassignment can notify even with the same
-reference; assigning the same array reference with its current length does not detect earlier in-place changes. This is not deep change detection.
+By default, change detection retains the engine's existing assignment comparison. A state-backed Component property can opt into
+`changeDetection: "structural"`; the engine then compares each root assignment with an independent snapshot and can detect object or array changes
+made in place since the previous assignment. Equal contents do not notify. Nested mutation alone still does not notify: the root property must be
+assigned again. This is snapshot comparison at assignment time, not deep reactivity.
 
 The engine exposes `addEventListener("change:<property>", listener)` and corresponding removal.
 Listeners receive `{ prop, newValue, oldValue }`. A detected assignment invokes the loader's change handler and invalidation callback.

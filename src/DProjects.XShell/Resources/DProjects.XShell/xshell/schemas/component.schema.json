@@ -19,6 +19,7 @@
               "attribute": { "type": "boolean", "description": "Whether the corresponding HTML attribute is observed." },
               "attributeParser": { "type": "string", "enum": ["json"], "description": "Parser for incoming attribute values." },
               "state": { "type": "boolean", "description": "Whether the property is backed by component state." },
+              "changeDetection": { "type": "string", "enum": ["identity", "structural"], "description": "Change detection used by state-backed properties." },
               "reflect": { "type": "boolean", "description": "Whether changes are reflected to the attribute." }
             },
             "unevaluatedProperties": false
