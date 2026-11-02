@@ -100,6 +100,12 @@ test("canonical x-is tag resolution normalizes valid names and rejects invalid v
     assert.equal(XTemplateRuntimeUtils.expr.elementTag("X-Card", "div"), "x-card");
     assert.equal(XTemplateRuntimeUtils.expr.elementTag("SECTION", "div"), "section");
     assert.equal(XTemplateRuntimeUtils.expr.elementTag(null, "div"), "div");
+    assert.equal(XTemplateRuntimeUtils.expr.elementTag("slot", "slot"), "slot");
+    assert.equal(XTemplateRuntimeUtils.expr.elementTag("SLOT", "slot"), "slot");
+    assert.equal(XTemplateRuntimeUtils.expr.elementTag("div", "slot"), "div");
+    assert.equal(XTemplateRuntimeUtils.expr.elementTag(null, "slot"), "slot");
+    assert.throws(() => XTemplateRuntimeUtils.expr.elementTag("slot", "div"), /cannot create an undeclared slot element/);
+    assert.throws(() => XTemplateRuntimeUtils.expr.elementTag("SLOT", "div"), /cannot create an undeclared slot element/);
     for (const value of ["", "1div", "a b", "script", "style", "input", 123, false]) {
         assert.throws(() => XTemplateRuntimeUtils.expr.elementTag(value, "div"), /XTemplate runtime error: .*x-is/);
     }
@@ -176,6 +182,20 @@ test("x-client resolves x-is in local scopes without leaking the directive or ch
     assert.deepEqual(vdom.slice(3, 5).map(node => node.tag), ["article", "x-item"]);
     assert.equal(vdom.at(-1).options.format, "html");
     assert.equal(vdom.at(-1).children, '<span x-is="state.ignored">{{ state.ignored }}</span>');
+});
+
+const dynamicSlotSource = '<slot name="header" x-is="state.tag"></slot>';
+fixtures.set(dynamicSlotSource, () => [element("slot", { name: "header", "x-is": "state.tag" }, [])]);
+
+test("x-client preserves authored slot metadata while allowing only authored slots to resolve as slot", () => {
+    const renderer = createClientTemplateRenderer(dynamicSlotSource, {});
+    assert.deepEqual(renderer.slots, ["header"]);
+    for (const [tag, expected] of [["slot", "slot"], ["SLOT", "slot"], ["div", "div"], [null, "slot"]]) {
+        assert.equal(renderer.render({ tag }, () => {}, () => {}, renderUtils, null, 0)[0].tag, expected);
+    }
+    const ordinary = createClientTemplateRenderer(dynamicTagSource, {});
+    assert.deepEqual(ordinary.slots, []);
+    assert.throws(() => ordinary.render({ tag: "slot" }, () => {}, () => {}, renderUtils, null, 0), /cannot create an undeclared slot element/);
 });
 
 for (const [source, create] of [

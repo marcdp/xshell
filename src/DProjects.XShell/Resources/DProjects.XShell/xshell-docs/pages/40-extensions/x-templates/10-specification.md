@@ -1115,6 +1115,10 @@ Dynamic custom-element names do not add statically discoverable template depende
 definition's normal `dependencies` declaration or another existing Resolver → Loader path. Render engines MUST NOT introduce an asynchronous component
 loader for `x-is`.
 
+A dynamic element MAY resolve to `slot` only when its authored element is `<slot>`. Resolving any other authored element to `slot` is an error because
+it would introduce a slot outside the static slot contract. Slot metadata is always derived from authored `<slot>` elements: an authored slot retains
+its static name in metadata even when `x-is` currently renders it as another element, while `x-is` on an ordinary element never contributes metadata.
+
 ### 8.1 Literal inline styles
 
 The literal HTML-style syntax below is valid XTemplate source:

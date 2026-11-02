@@ -20,13 +20,10 @@ export default {
     `,
 
     template: `
-        <x-fill>
-        <x-template 
-            x-prop:template="state.template" 
-            x-model="state.value"
-            >
-        </x-template>
-        </x-fill>
+        <!--<div x-is="state.componentName" x-prop:value="state.value" x-on:change="onChange"></div>-->
+        <div x-is="state.componentName" x-model="state.value"></div>
+        <x-json x-prop:value="state.value"></x-json>
+
     `,
 
     state: {
@@ -35,7 +32,7 @@ export default {
         path:null,
         entry: null,
         value: null,
-        template: null
+        componentName: null
     },
 
     controller({state, page, loader, resolver, events}) {
@@ -55,13 +52,13 @@ export default {
                 // load editor web component
                 let componentName = editorResolverDefinition.path;
                 await loader.load("component:" + componentName);
-                state.template = `<${componentName} x-model="state.value"></${componentName}>`;
+                state.componentName = componentName;
                 // load value
                 const stream = await state.filesystem.loadReadStream(state.path);
-                const text = await new Response(stream).text();
-                state.value = {
-                    value:text
-                };
+                state.value = await new Response(stream).text();
+            },
+            onChange({ event }) {
+                state.value = event.detail.newValue;
             }
         };
     }

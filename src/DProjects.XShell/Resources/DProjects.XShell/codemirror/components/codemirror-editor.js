@@ -89,6 +89,7 @@ export default {
                 });
                 editor.dom.addEventListener("blur", () => {
                     const value = editor.state.doc.toString();
+                    state.value = value;
                     host.dispatchEvent(new CustomEvent("change", {
                         detail: { value },
                         bubbles: true

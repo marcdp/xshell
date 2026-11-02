@@ -16,6 +16,7 @@ namespace DProjects.XShell.Services.XTemplate {
             var normalized = name.ToLowerInvariant();
             if (IsVoid(normalized)) throw new XTemplateException($"x-is cannot resolve to void element <{normalized}>", offset);
             if (normalized is "script" or "style") throw new XTemplateException($"x-is cannot resolve to prohibited element <{normalized}>", offset);
+            if (normalized == "slot" && fallback != "slot") throw new XTemplateException("x-is cannot create an undeclared slot element", offset);
             return normalized;
         }
         public static bool IsValid(string value) => value.Length > 0 && char.IsAsciiLetter(value[0]) && value.All(character => char.IsAsciiLetterOrDigit(character) || character is '-' or '_' or ':');

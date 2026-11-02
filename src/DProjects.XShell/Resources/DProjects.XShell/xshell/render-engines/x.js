@@ -96,6 +96,7 @@ const utils = new class {
 			const normalized = value.toLowerCase();
 			if (xTemplateVoidElements.has(normalized)) return fail(`x-is cannot resolve to void element <${normalized}>`);
 			if (normalized === "script" || normalized === "style") return fail(`x-is cannot resolve to prohibited element <${normalized}>`);
+			if (normalized === "slot" && fallback !== "slot") return fail("x-is cannot create an undeclared slot element");
 			return normalized;
 		};
 		const number = (value, message = "Numeric operand must be a finite number") => typeof value === "number" && Number.isFinite(value) ? value : fail(message);

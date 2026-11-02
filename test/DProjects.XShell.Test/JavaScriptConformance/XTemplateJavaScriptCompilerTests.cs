@@ -273,6 +273,13 @@ namespace DProjects.XShell.Test {
         }
 
         [Fact]
+        public void DynamicTagsPreserveMetadataFromAuthoredSlotsOnly() {
+            var result = new XTemplateCompiler().CompileArtifact("<slot name=\"header\" x-is=\"state.slotTag\"></slot><div x-is=\"state.elementTag\"></div>");
+
+            Assert.Equal(new[] { "header" }, result.Slots);
+        }
+
+        [Fact]
         public void TreatsXPreChildrenAsOpaqueForMetadata() {
             var result = new XTemplateCompiler().CompileArtifact("<x-visible></x-visible><div x-pre><x-fake></x-fake><slot name=\"fake\"></slot></div>");
 

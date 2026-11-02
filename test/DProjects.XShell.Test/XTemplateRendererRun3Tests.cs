@@ -222,6 +222,24 @@ namespace DProjects.XShell.Test {
             Assert.Throws<XTemplateException>(() => Render("<div x-is=\"state.tag\" x-model=\"state.value\"></div>", new { tag = "input", value = "x" }));
         }
 
+        [Theory]
+        [InlineData("slot")]
+        [InlineData("SLOT")]
+        public void RejectsDynamicSlotsFromOrdinaryAuthoredElements(string tag) {
+            var exception = Assert.Throws<XTemplateException>(() => Render("<div x-is=\"state.tag\" name=\"header\"></div>", new { tag }));
+
+            Assert.Contains("cannot create an undeclared slot element", exception.Message, StringComparison.Ordinal);
+        }
+
+        [Theory]
+        [InlineData("slot", "<slot name=\"header\"></slot>")]
+        [InlineData("SLOT", "<slot name=\"header\"></slot>")]
+        [InlineData("div", "<div name=\"header\"></div>")]
+        [InlineData(null, "<slot name=\"header\"></slot>")]
+        public void AllowsAuthoredSlotsToResolveToSupportedElements(string? tag, string expected) {
+            Assert.Equal(expected, Render("<slot name=\"header\" x-is=\"state.tag\"></slot>", new { tag }));
+        }
+
         [Fact]
         public void KeepsDynamicDirectivesLiteralInsideXPre() {
             var html = Render("<div x-pre><span x-is=\"state.tag\">{{ state.value }}</span></div>", new { tag = "section", value = "changed" });
