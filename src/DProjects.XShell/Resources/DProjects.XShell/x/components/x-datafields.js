@@ -48,7 +48,7 @@ export default {
         ::slotted([columns='5']) {grid-column: span 5 / span 1;}
         ::slotted([columns='6']) {grid-column: span 6 / span 1;}
 
-        :host label {font-weight:600; display:inline-block; position:relative; line-height:2em; padding-bottom:.25em;  margin-bottom:1.5em;}
+        :host label {font-weight:600; display:inline-block; position:relative; line-height:2em; padding-bottom:.25em;  margin-bottom:1em; padding-top:.5em;}
         :host label::after {content:""; border-radius:.1em; position:absolute; width:100%; bottom:0; left:0; border:.125em var(--x-color-text) solid;}
         :host p {margin:0; margin-bottom:1.5em;}
 

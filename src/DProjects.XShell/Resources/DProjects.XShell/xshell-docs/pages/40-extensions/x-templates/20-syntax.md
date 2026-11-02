@@ -150,3 +150,8 @@ Use `x-if`, `x-elseif`, and `x-else` for conditional structural rendering. Use `
 - [XTemplate Language Specification](10-specification.md)
 - [Expressions](30-expressions.md)
 - [Bindings](40-bindings.md)
+
+## Working example
+
+When the host application registers the optional `x-demo` module, `page:x-demo:/pages/07-templates/01-basics.js` demonstrates interpolation,
+expressions, and basic state binding. The locator is a Loader input, not a browser-facing navigation URL.

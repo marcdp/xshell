@@ -132,3 +132,8 @@ and maps it to its URL and loader metadata. The Loader then obtains that resourc
 and Loader infrastructure; it is not a separate resolver rule set or dependency-injection system.
 
 See [Configuration](20-configuration.md), [Loaders](90-loaders.md), and [DataSets](95-datasets.md).
+
+## Working example
+
+When the host application registers the optional `x-demo` module, `page:x-demo:/pages/90-advanced/05-resolver-and-loader.js` provides an interactive
+resolver inspector and dynamic loader example. The locator is itself a module-qualified Loader input, not a browser-facing navigation URL.

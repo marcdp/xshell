@@ -65,6 +65,9 @@ item.href</code></pre>
 
         <h2>Area composition versus Module contributions</h2>
         <p>This Page inspects the result of Area composition. To see how <code>x-demo</code> declares its <code>/pages</code> menu source and routes, continue with <x-anchor href="../06-modules/05-menus.js">Module Menus and Routes</x-anchor>.</p>
+
+        <h2>Technical reference</h2>
+        <p>See <x-anchor x-attr:href="state.docsAreas">Areas</x-anchor> for the canonical composition, prefix, menu, and route semantics.</p>
     `,
 
     state: {
@@ -74,10 +77,11 @@ item.href</code></pre>
         modules: "",
         items: [],
         examplePath: "",
-        exampleHref: ""
+        exampleHref: "",
+        docsAreas: ""
     },
 
-    controller({areas, page, state}) {
+    controller({areas, config, page, state}) {
         return {
             load() {
                 const area = areas.getCurrentArea();
@@ -96,6 +100,8 @@ item.href</code></pre>
                 }));
                 state.examplePath = item?.path || "No friendly path";
                 state.exampleHref = item?.href || "No menu item";
+                state.docsAreas = config.modules["xshell-docs"].assets.path +
+                    "/pages/30-subsystems/10-areas.md";
             }
         };
     }

@@ -45,9 +45,25 @@ export default {
         <h2>Next steps</h2>
         <p>Text interpolation is only one form of binding. X Templates also support attributes, properties, conditions, loops, and event handling.</p>
         <p>Continue with <x-anchor href="02-bindings.js">Bindings</x-anchor> to explore additional ways to connect template elements to state.</p>
+
+        <h2>Technical reference</h2>
+        <p>See the canonical <x-anchor x-attr:href="state.docsSyntax">X Template syntax guide</x-anchor> and <x-anchor x-attr:href="state.docsBindings">bindings guide</x-anchor> for the complete supported forms and constraints.</p>
     `,
 
     state: {
-        name: "Ada"
+        name: "Ada",
+        docsSyntax: "",
+        docsBindings: ""
+    },
+
+    controller({config, state}) {
+        return {
+            load() {
+                const docsPath = config.modules["xshell-docs"].assets.path +
+                    "/pages/40-extensions/x-templates";
+                state.docsSyntax = docsPath + "/20-syntax.md";
+                state.docsBindings = docsPath + "/40-bindings.md";
+            }
+        };
     }
 };

@@ -66,3 +66,8 @@ The engine owns state creation, change detection, notification, and invalidation
 rendering, or navigation. The loader coordinates engines, lifecycle, and queued commands.
 
 See [Properties](20-properties.md), [Lifecycle](60-lifecycle.md), [Rendering Engines](70-rendering.md), and [ADR-0004](../60-adr/0004-properties-and-state.md).
+
+## Working example
+
+When the host application registers the optional `x-demo` module, `page:x-demo:/pages/02-pages/04-state.js` demonstrates private Page state,
+controller mutations, derived values, and conditional rendering. The locator is a Loader input, not a browser-facing navigation URL.

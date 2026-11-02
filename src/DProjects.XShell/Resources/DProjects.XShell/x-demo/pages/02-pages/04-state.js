@@ -58,22 +58,28 @@ export default {
         <p>All examples on this Page share the same private state object.</p>
         <x-json x-prop:value="state.snapshot" indent="2"></x-json>
         <p>State is private implementation data. Public Page inputs are properties declared by the Page contract; they are not automatically the same abstraction.</p>
+
+        <h2>Technical reference</h2>
+        <p>See <x-anchor x-attr:href="state.docsState">State</x-anchor> for the canonical property/state boundary, engine selection, and notification behavior.</p>
     `,
 
     state: {
         name: "Ada",
         age: 36,
         showDetails: false,
-        snapshot: {name:"Ada", age:36, showDetails:false}
+        snapshot: {name:"Ada", age:36, showDetails:false},
+        docsState: ""
     },
 
-    controller({state, events}) {
+    controller({config, state, events}) {
         const refresh = () => {
             state.snapshot = {name:state.name, age:state.age, showDetails:state.showDetails};
         };
         return {
             load() {
                 events.on(state, ["change:name", "change:age", "change:showDetails"], refresh);
+                state.docsState = config.modules["xshell-docs"].assets.path +
+                    "/pages/20-components/30-state.md";
             },
             setAda() {state.name="Ada";},
             setGrace() {state.name="Grace";},

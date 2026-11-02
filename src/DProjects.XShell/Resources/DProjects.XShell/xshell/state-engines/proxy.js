@@ -34,6 +34,9 @@ export default function createStateEngineFactoryProxy(stateSkeleton, context) {
 					const oldValue = target[prop];
 					//const changed = !Object.is(oldValue, newValue)|| (newValue !== null && typeof newValue === "object");
 					//const aux = Object.is(oldValue, newValue);
+					if (typeof(oldValue) == "object" && typeof(newValue) == "object" && newValue.value && newValue.value.indexOf && newValue.value.indexOf("33")!=-1) {
+						debugger;
+					}
 					let changed = false;
 					if (Array.isArray(newValue)) { 
 						changed = true;

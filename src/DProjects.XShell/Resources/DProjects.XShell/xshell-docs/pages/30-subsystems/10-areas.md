@@ -146,3 +146,8 @@ Current global composition expects array contributions; registered string source
 Global items do not receive an Area prefix.
 
 See [Bus](20-bus.md) for source refresh events.
+
+## Working example
+
+When the host application registers the optional `x-demo` module, `page:x-demo:/pages/03-navigation/02-areas.js` provides a live Area and composed-menu
+inspector. The locator identifies the cookbook Page through Resolver → Loader; it is not a browser-facing navigation URL.

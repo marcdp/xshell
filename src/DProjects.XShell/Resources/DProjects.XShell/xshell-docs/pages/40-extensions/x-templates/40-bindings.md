@@ -142,3 +142,8 @@ Use the specification when working with control-specific behavior, advanced mode
 - [XTemplate Language Specification](10-specification.md)
 - [Syntax guide](20-syntax.md)
 - [Component Events](../../20-components/40-events.md)
+
+## Working example
+
+When the host application registers the optional `x-demo` module, `page:x-demo:/pages/07-templates/01-basics.js` provides a compact interpolation and
+model-binding example. The locator is a Loader input, not a browser-facing navigation URL.

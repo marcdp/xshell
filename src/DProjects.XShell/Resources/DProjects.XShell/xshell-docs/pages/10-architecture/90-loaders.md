@@ -268,3 +268,12 @@ flowchart LR
 * [Components](60-components.md)
 * [Pages](70-pages.md)
 * [Configuration](20-configuration.md)
+
+## Working examples
+
+When the host application registers the optional `x-demo` module:
+
+- `page:x-demo:/pages/90-advanced/05-resolver-and-loader.js` demonstrates inspection, dynamic loading, keyed resource batches, caching, and failures;
+- `page:x-demo:/pages/06-modules/06-dependencies.js` demonstrates declarative dependency consumption.
+
+These are module-qualified Loader inputs rather than browser-facing navigation URLs.

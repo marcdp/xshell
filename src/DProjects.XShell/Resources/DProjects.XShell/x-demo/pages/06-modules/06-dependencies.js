@@ -80,6 +80,9 @@ dependencies: {
         </x-datafields>
 
         <p>For a deeper explanation of resource resolution, caching, and loading, see <x-anchor href="../90-advanced/05-resolver-and-loader.js">Resolver and Loader</x-anchor>.</p>
+
+        <h2>Technical reference</h2>
+        <p>See canonical <x-anchor x-attr:href="state.docsModules">Modules</x-anchor> documentation for provider registration and <x-anchor x-attr:href="state.docsLoaders">Loaders</x-anchor> for declarative dependency semantics.</p>
     `,
 
     state: {
@@ -89,10 +92,12 @@ dependencies: {
         rowCount: 0,
         rows: [],
         status: "Not loaded dynamically",
-        dynamicResult: ""
+        dynamicResult: "",
+        docsModules: "",
+        docsLoaders: ""
     },
 
-    controller({dependencies, loader, state}) {
+    controller({config, dependencies, loader, state}) {
         return {
             load() {
                 const table = dependencies.statuses.tables[0];
@@ -101,6 +106,9 @@ dependencies: {
                 state.tableName = table.name;
                 state.rowCount = table.rows.length;
                 state.rows = table.rows;
+                const docsPath = config.modules["xshell-docs"].assets.path + "/pages/10-architecture";
+                state.docsModules = docsPath + "/30-modules.md";
+                state.docsLoaders = docsPath + "/90-loaders.md";
             },
 
             async loadIcon() {

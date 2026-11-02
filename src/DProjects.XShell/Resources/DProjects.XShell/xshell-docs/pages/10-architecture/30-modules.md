@@ -203,3 +203,12 @@ The optional module-wide `/styles/index.css` is loaded only when its path appear
 resource through Resolver → Loader → `style-css`, retains the resulting `CSSStyleSheet` in `module.styles`, and adopts it after successful startup.
 Loader caching ensures the conventional stylesheet is fetched once per module. Relative CSS `@import` and `url(...)` references resolve against the
 stylesheet containing them, including recursively imported stylesheets.
+
+## Working examples
+
+When the host application registers the optional `x-demo` module, these cookbook Pages demonstrate the corresponding behavior:
+
+- `page:x-demo:/pages/06-modules/05-menus.js` — menu contributions, the `/pages` convention, and routes;
+- `page:x-demo:/pages/06-modules/06-dependencies.js` — consuming resources from registered Modules.
+
+These are module-qualified Loader inputs rather than browser-facing navigation URLs.

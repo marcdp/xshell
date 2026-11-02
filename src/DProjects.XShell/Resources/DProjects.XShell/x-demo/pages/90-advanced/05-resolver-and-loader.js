@@ -75,6 +75,16 @@ const component = await loader.load("component:x-button");
 const dataset = await loader.load("dataset:x-demo:statuses");</code></pre>
         <p>The result depends on the resource type. For example, an icon loader returns an SVG element, while a Component loader returns a Component class.</p>
 
+        <h2>Loading a keyed resource batch</h2>
+        <p>Pass an object when several resources are known together. The returned object preserves the requested keys and associates each key with its loaded value.</p>
+        <pre x-pre><code>const resources = await loader.load({
+    icon: "icon:x-file",
+    component: "component:x-button"
+});
+
+// resources.icon      -&gt; loaded SVG element
+// resources.component -&gt; loaded Component class</code></pre>
+
         <h2>Declarative loading in context</h2>
         <p>This Page's <code>icon:x-file</code> dependency was loaded before its controller was constructed: <strong>{{ state.iconName }}</strong>. For the focused tutorial on declaring and consuming dependencies from provider Modules, see <x-anchor href="../06-modules/06-dependencies.js">Using Module Resources</x-anchor>. The inspector above focuses on resolution and dynamic loading mechanics.</p>
 
@@ -108,6 +118,9 @@ const dataset = await loader.load("dataset:x-demo:statuses");</code></pre>
 
         <h2>Next steps</h2>
         <p>For examples of how engines are selected and loaded, see <x-anchor href="03-engines.js">Engines</x-anchor>. To understand how Modules expose and consume resources, see <x-anchor href="../06-modules/03-resources.js">Module Resources</x-anchor> and <x-anchor href="../06-modules/06-dependencies.js">Using Module Resources</x-anchor>.</p>
+
+        <h2>Technical reference</h2>
+        <p>See canonical <x-anchor x-attr:href="state.docsResolvers">Resolvers</x-anchor> and <x-anchor x-attr:href="state.docsLoaders">Loaders</x-anchor> documentation for rule matching, cache identity, and loading guarantees.</p>
     `,
 
     state: {
@@ -117,13 +130,18 @@ const dataset = await loader.load("dataset:x-demo:statuses");</code></pre>
         url: "",
         status: "Choose a resource",
         value: "",
-        iconName: ""
+        iconName: "",
+        docsResolvers: "",
+        docsLoaders: ""
     },
 
-    controller({resolver, loader, dependencies, state}) {
+    controller({config, resolver, loader, dependencies, state}) {
         return {
             load() {
                 state.iconName = dependencies.fileIcon?.nodeName || "Unavailable";
+                const docsPath = config.modules["xshell-docs"].assets.path + "/pages/10-architecture";
+                state.docsResolvers = docsPath + "/80-resolvers.md";
+                state.docsLoaders = docsPath + "/90-loaders.md";
                 this.inspectIcon();
             },
 

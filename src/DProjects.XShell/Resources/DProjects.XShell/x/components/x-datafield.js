@@ -310,7 +310,7 @@ export default {
 
         <div x-elseif="state.type=='checkbox'" class="input container">
             <div>
-                <input type="checkbox" x-attr:value="state.value" name="checkbox" id="checkbox" x-model="state.value"/>
+                <input type="checkbox" x-attr:value="state.value" name="checkbox" id="checkbox" x-model="state.value" x-attr:disabled="state.readonly || state.disabled" />
                 <label x-text="state.labelSecondary" for="checkbox"></label>
             </div>
         </div>

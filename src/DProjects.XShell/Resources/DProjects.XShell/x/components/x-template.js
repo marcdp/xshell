@@ -20,7 +20,7 @@ export default {
         },    
         properties: {
             template: {type: "string", default: "", state: true, attribute: true, description: "The raw XTemplate string."},
-            value: {type: "object", default: null, state: true, description: "The object used as the XTemplate state."}
+            value: {type: "object", default: null, state: true, attribute:true, attributeParser: "json", description: "The object used as the XTemplate state."}
         },
         methods: {
             validate: {
@@ -139,7 +139,6 @@ export default {
                         this.refresh();
                     }
                 });
-
                 events.on(state, "change:template", () => {
                     this.refresh();
                 });

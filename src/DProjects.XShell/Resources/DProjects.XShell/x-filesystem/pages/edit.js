@@ -1,50 +1,72 @@
-// page
+
 export default {
     contract: {
-        description: "Edit page",
+        description: "Filesystem file editor",
         events: {},
         properties: {
-            src: {type: "string", default:null, state:true, query:true, description: "Source of the filesystem (e.g., 'mem:')"},
-            path: {type: "string", default:null, state:true, query:true, description: "Path within the filesystem"}
+            src: {type:"string", default:null, state:true, query:true},
+            path: {type:"string", default:null, state:true, query:true}
         },
         methods: {}
     },
-    meta: {
-        title: "Edit Page"
-    },
+
+    meta: {title:"Edit file"},
+
     style: `
-        iframe {
-            display:block;
-            width: 100%;
-            height: 100%;
-            border: none;
-        }
+        :scope x-template {border:1px red solid;}
     `,
+
     template: `
-        <x-fill>
-            <iframe x-if="state.url" x-attr:src="state.url"></iframe>
-        </x-fill>
-    `,    
+        <x-template 
+            x-prop:template="state.template" 
+            x-model="state.value"
+            >
+        </x-template>
+
+
+        <x-json x-prop:value="state.value"></x-json>
+        <x-button label="refresh" x-on:click="something"></x-button>
+    `,
+
     state: {
-        src: null,
-        path: null,
-        filesystem: null,
-        url: null
+        filesystem:null,
+        src:null,
+        path:null,
+        entry: null,
+        value: null,
+        template: null
     },
-    controller({ events, state, loader }) {
+
+    controller({state, page, loader, resolver}) {
         return {
-            async load(params) {
-               // load
-               this.refresh();
+            async load() {
+                // load
+                this.refresh();
             },
             async refresh() {
-                // handle refresh event
-                if (state.src && state.path) {
-                    state.filesystem = await loader.load("filesystem:" + state.src);
-                    const entry = await state.filesystem.getEntry(state.path);
-                    state.url = (await state.filesystem.getReadUrl(state.path)).url;
-                }
+                // refresh
+                state.filesystem = await loader.load("filesystem:" + state.src);
+                state.entry = await state.filesystem.getEntry(state.path);
+                // resolve editor for the file extension
+                const extension = state.entry ? state.entry.name.split('.').pop() : null;
+                let editorResolverDefinition = resolver.resolve("editor:" + extension);
+                if (!editorResolverDefinition) editorResolverDefinition = resolver.resolve("editor:default");
+                // load editor web component
+                let componentName = editorResolverDefinition.path;
+                await loader.load("component:" + componentName);
+                state.template = `<${componentName} x-model="state.value"></${componentName}>`;
+                // load value
+                const stream = await state.filesystem.loadReadStream(state.path);
+                const text = await new Response(stream).text();
+                state.value = {
+                    value:text
+                };
+            },
+            something() {
+                var aux = state.value;
+                page.invalidate()
+                //state.value =state.value;
             }
         };
     }
-}
+};

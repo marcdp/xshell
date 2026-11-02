@@ -1,7 +1,7 @@
 
 export default {
     meta: {
-        title: "Menus and Areas",
+        title: "Module Menus and Routes",
         description: "Demonstrates Module menu contributions, Page inventory conventions, and routes."
     },
 
@@ -55,6 +55,9 @@ export default {
         <p>The current <strong>{{ state.areaId }}</strong> Area includes these Modules: {{ state.areaModules }}. A registered Module that is not an Area member remains available as a resource provider, but its menu contribution is not composed into that Area.</p>
 
         <p>Continue with <x-anchor href="06-dependencies.js">Using Module Resources</x-anchor> to consume resources from referenced Modules.</p>
+
+        <h2>Technical reference</h2>
+        <p>See <x-anchor x-attr:href="state.docsModules">Modules</x-anchor> for canonical Module configuration semantics and <x-anchor x-attr:href="state.docsAreas">Areas</x-anchor> for composition behavior.</p>
     `,
 
     state: {
@@ -62,7 +65,9 @@ export default {
         areaId: "",
         areaModules: "",
         modulePages: [],
-        routeTarget: ""
+        routeTarget: "",
+        docsModules: "",
+        docsAreas: ""
     },
 
     controller({areas, config, state}) {
@@ -78,6 +83,9 @@ export default {
                 state.areaModules = area.modules.join(", ");
                 state.routeTarget =
                     definition.routes["/hello/{name}"] || "";
+                const docsPath = config.modules["xshell-docs"].assets.path + "/pages";
+                state.docsModules = docsPath + "/10-architecture/30-modules.md";
+                state.docsAreas = docsPath + "/30-subsystems/10-areas.md";
 
                 const modulesCategory = categories.find(item =>
                     item.path?.endsWith("/modules")
