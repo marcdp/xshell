@@ -10,6 +10,10 @@ export default {
         },
         methods: {}
     },
+    meta: {
+        title: "Dialog Message",
+        description: "Shows a message dialog with various types and an OK button."
+    },
     template: `
         <x-form command="submit">            
             <x-notice x-attr:type="state.type" x-attr:label="state.title" x-attr:message="state.message">

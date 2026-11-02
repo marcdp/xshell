@@ -28,9 +28,13 @@
                 "opfs:": {"src": "/js/filesystem-opfs.js", "loader": "instance-js"},
                 "file:": {"src": "/js/filesystem-file.js", "loader": "instance-js"}
             },
-            "editor": {
-                "default": {"src": "x-filesystem-editor-txt", "loader": "instance-js"},
-                "txt": {"src": "x-filesystem-editor-txt", "loader": "instance-js"}
+            "filehandler": {
+                "png": {"src": "/pages/editor-image.js", "loader": "page-js"},
+                "jpg": {"src": "/pages/editor-image.js", "loader": "page-js"},
+                "jpeg": {"src": "/pages/editor-image.js", "loader": "page-js"},
+                "gif": {"src": "/pages/editor-image.js", "loader": "page-js"},
+                "svg": {"src": "/pages/editor-image.js", "loader": "page-js"},  
+                "txt": {"src": "/pages/editor-text.js", "loader": "page-js"}
             }
         }
     }

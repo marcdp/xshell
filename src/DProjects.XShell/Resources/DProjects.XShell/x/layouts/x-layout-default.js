@@ -25,9 +25,29 @@ export default {
     template: `
         <x-loading x-if="state.status=='loading'"></x-loading>
         <x-page-info></x-page-info>
-        <slot></slot>
+        <div x-attr:class="state.pageClasses">
+            <slot></slot>
+        </div>
     `,
     state: {
-        status: ""
-    },    
+        status: "",
+        pageClasses: ""
+    },
+    controller({ events, page }) {
+        return {
+            load() {
+                // bind page load event to update page classes
+                events.on(bus, "xshell:page:load", (event)=>{
+                    if (event.detail.id == getPage()?.id) {
+                        this.onPageLoaded({event});
+                    }
+                });
+            },
+            onPageLoaded({ event }) {
+                // update page classes when the page is loaded
+                this.pageClasses = getPage()?.classes?.join(" ") || "";
+            }
+            
+        };
+    }
 };

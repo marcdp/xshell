@@ -28,7 +28,7 @@ export default {
             margin-bottom:.5em;
             
         }
-        :host .header {}
+        :host .header {padding-left:var(--x-card-padding);padding-right:var(--x-card-padding);}
         :host .header ::slotted(p) {margin:0}
 
         :host .body {padding:var(--x-card-padding);}
@@ -38,7 +38,7 @@ export default {
         :host .body ::slotted(h4:first-child) {margin-top:0}
         :host .body ::slotted(h5:first-child) {margin-top:0}
 
-        :host .footer {}
+        :host .footer {padding-left:var(--x-card-padding);padding-right:var(--x-card-padding);}
         :host .footer ::slotted(p) {margin:0}
     `,
     template: `

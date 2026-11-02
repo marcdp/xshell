@@ -120,6 +120,7 @@ export default {
             .body {
                 display:flex;
                 transition:margin var(--x-transition-duration);
+                --x-fill-top: 6.4em;
                 --x-fill-height: calc(100vh - 6.5em);
             }
             .body .menu {
@@ -147,8 +148,9 @@ export default {
                 display:none;
             }
             .body .divider {
-                _border-left: var(--x-layout-main-border);
-                position:fixed; top:0; bottom:0;
+                position:fixed; 
+                top:0; 
+                bottom:0;
                 left: var(--x-layout-main-drawer-width);;
                 transition:transform var(--x-transition-duration);
             }
@@ -162,6 +164,28 @@ export default {
                 max-width:var(--x-layout-main-page-max-width);
                 margin-left:auto; 
                 margin-right:auto;
+            }
+
+            .body.fill > main {
+                max-width:unset;
+                position:absolute;
+                top: var(--x-fill-top);
+                left:var(--x-layout-main-drawer-width); 
+                right:0;
+                bottom:0;
+                padding:0;
+                display:flex;
+                transition: left var(--x-transition-duration);
+                flex-direction: column;
+                --x-layout-main-page-max-width: unset;
+                --x-layout-main-page-max-width
+            }
+            .body.fill.toggled > main {left:0;}
+            .body.fill main > div {
+                max-width: unset;
+                margin-left:unset;
+                margin-right:unset;
+                flex:1;
             }
         }
 
@@ -275,7 +299,7 @@ export default {
         </nav>
 
         <!-- body -->
-        <div class="body" x-class:toggled="state.toggled">
+        <div x-attr:class="'body' + (state.pageClasses ? ' ' + state.pageClasses : '') + (state.toggled ? ' toggled' : '')">
             <nav class="menu">
                 <div>
                     <x-button class="anchor" icon="x-close" x-on:click="toggleMenu"></x-button>
@@ -299,6 +323,7 @@ export default {
     state: {
         menuNavigation:  null,
         menuTools:       null,
+        pageClasses:     "",
         runningTasks:    0,
     },
     controller({ state, events, areas, bus, getPage, host, tasks }) {
@@ -322,6 +347,12 @@ export default {
                 events.on(state, "change:keyword", "search");
                 // bind tasks change
                 events.on(bus, ["xshell:tasks:added", "xshell:tasks:updated", "xshell:tasks:removed"], "refreshTasks");
+                // bind page load event to update page classes
+                events.on(bus, "xshell:page:load", (event)=>{
+                    if (event.detail.id == getPage()?.id) {
+                        this.onPageLoaded({event});
+                    }
+                });
             },
 
             async mount(params) {
@@ -400,6 +431,12 @@ export default {
             async search(params) {
                 //search
                 bus.emit("xshell:search", { keyword: state.keyword.trim() });
+            },
+            onPageLoaded({ event }) {
+                const page = getPage();
+                if (page) {
+                    state.pageClasses = page.meta?.classes?.join(" ") || "";
+                }
             },
 
         };

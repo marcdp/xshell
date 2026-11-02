@@ -41,7 +41,7 @@ export default {
         dialog.opened::backdrop {
             background-color: var(--x-layout-dialog-backdrop);
         }
-        
+
         x-loading {
             position:fixed;
             width:var(--x-loading-width);
@@ -54,7 +54,13 @@ export default {
         .header {display:flex; align-items:baseline; padding-bottom:.5em;}
         .header div {flex:1; }
         .header div h2 {margin:0; flex:1; font-size: var(--x-font-size-subtitle); margin-right:1em}
+        .header div h2 ~ x-page-description {font-size:var(--x-font-size-small);display:block;}
         .header x-button {transform:translateY(-0.2em);}
+
+        /* fill */
+        dialog.fill {width:100%; height:100%; }
+        dialog.fill > .container {width:100%; height:100%; display:flex; flex-direction:column;}
+        dialog.fill > .container .body {display:flex; flex-direction:column; flex:1;}
 
         /* responsive */
         @media (max-width: 768px) {
@@ -72,8 +78,8 @@ export default {
         
     `,
     template: `
-        <dialog x-class:opened="state.opened" x-on:cancel="queryClose">
-            <div class="container">
+        <dialog x-attr:class="(state.opened ? 'opened ' : '') + state.pageClasses" x-on:cancel="queryClose">
+            <div class="container" >
                 <x-loading x-if="state.status=='loading'"></x-loading>
                 <div class="header">
                     <div>
@@ -91,12 +97,22 @@ export default {
         </dialog>
 
     `,
+    state: {
+        pageClasses: ""
+    },
     controller({ state, events, bus, getPage, host, commands }) {
         let previousFocus = null;
         return {
             load() {
                 //load
                 events.on(bus, "xshell:page:load", "refresh");
+                // bind page load event to update page classes
+                events.on(bus, "xshell:page:load", (event)=>{
+                    if (event.detail.id == getPage()?.id) {
+                        this.onPageLoaded({event});
+                    }
+                });
+                // enqueue open
                 commands.enqueue("open");
                 this.refresh();
             },
@@ -128,7 +144,15 @@ export default {
                         previousFocus.focus({ preventScroll: true });
                     }, 0);
                 }                
-            }
+            },
+
+            // events
+            onPageLoaded({ event }) {
+                const page = getPage();
+                if (page) {
+                    state.pageClasses = page.meta?.classes?.join(" ") || "";
+                }
+            },
 
         }
     }

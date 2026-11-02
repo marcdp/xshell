@@ -56,6 +56,7 @@
         "icon": { "type": "string", "minLength": 1, "description": "The icon of the Page." },
         "renderEngine": { "type": "string", "minLength": 1, "description": "The rendering engine used by the Page." },
         "stateEngine": { "type": "string", "minLength": 1, "description": "The state management engine used by the Page." },
+        "classes": { "type": "array", "items": { "type": "string" }, "description": "CSS classes applied to the Page." },
         "shadowRootOptions": { "type": "object", "description": "Options for the Page's shadow root." }
       },
       "required": [],

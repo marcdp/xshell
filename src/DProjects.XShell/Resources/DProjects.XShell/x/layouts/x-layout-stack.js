@@ -69,23 +69,26 @@ export default {
             opacity:1;
             transition:transform var(--x-transition-duration) ease, opacity var(--x-transition-duration) ease;
         }
+
         div.panel .header {
             padding: var(--x-layout-stack-page-padding-vertical) var(--x-layout-stack-page-padding-horizontal) var(--x-layout-stack-page-padding-vertical) var(--x-layout-stack-page-padding-horizontal);
-            padding-bottom: 0;
             display:flex; 
             align-items:baseline; 
         }
-
         div.panel .header div {flex:1;}
         div.panel .header div h2 {margin:0; flex:1; font-size: var(--x-font-size-subtitle); margin-right:1em;}
+        div.panel .header div h2 ~ x-page-description {font-size:var(--x-font-size-small);display:block;}
         div.panel .header x-button {transform:translateY(-0.2em);}
-        div.panel .body {padding:0em var(--x-layout-stack-page-padding-horizontal);}    
 
+        div.panel .body {padding:0em var(--x-layout-stack-page-padding-horizontal);}    
+        
         @media (min-width: 769px) {
             :host {
                 --x-fill-top: 4.5em;
                 --x-fill-height: calc(100vh - var(--x-fill-top));
             }
+            div.panel .body.fill {display:flex; flex-direction: column; width:100%; position:absolute; top:var(--x-fill-top); height:var(--x-fill-height); box-sizing:border-box; padding:0;}
+            div.panel:has(.body.fill) {scrollbar-width: none; scrollbar-gutter: none; overflow:hidden;}           
         }
         @media (max-width: 768px) {
             :host {
@@ -93,32 +96,36 @@ export default {
                 --x-layout-stack-border-radius: 0;
                 --x-layout-stack-shadow: none;
                 --x-layout-stack-border: none;
+
+                --x-fill-top: 5em;
+                --x-fill-height: calc(100vh - var(--x-fill-top));
             }
-            div.panel .body {
-                padding-top:1.4em;
-            }    
-            div.panel .body:focus  {
-                border:1px red solid;
-            }
+            div.panel .body {padding-top:1.4em;}    
+            div.panel .body.fill {display:flex; flex-direction: column; width:100%; position:absolute; top:var(--x-fill-top); height:var(--x-fill-height); box-sizing:border-box;padding:0;}
+            div.panel:has(.body.fill) {scrollbar-width: none; scrollbar-gutter: none; overflow:hidden;}
         }
     `,
     template: `
         <div class="backdrop" x-class:expanded="state.expanded" x-on:click="queryClose"></div>
-        <div class="panel"    x-class:expanded="state.expanded" x-on:transitionend="transitionEnd" x-on:keydown="keydown">
+        <div class="panel"    x-class:expanded="state.expanded" x-on:transitionend="onTransitionEnd" x-on:keydown="onKeydown">
             <x-loading x-if="state.status=='loading'"></x-loading>
             <div class="header">            
                 <div>
                     <h2><x-page-title></x-page-title></h2>
+                    <x-page-description></x-page-description>
                     <x-page-info></x-page-info>
                 </div>
                 <x-button class="anchor" icon="x-close" x-on:click="queryClose"></x-button>               
             </div>            
-            <div class="body" tabIndex="1">
+            <div x-attr:class="'body' + (state.pageClasses ? ' ' + state.pageClasses : '')" tabIndex="1">
                 <slot></slot>
             </div>
         </div>
     `,
-    controller({ state, events, runtime, host, commands }) {
+    state: {
+        pageClasses: null
+    },
+    controller({ state, events, bus,runtime, host, commands, getPage }) {
         let resolveClose = null;
         let previousFocus = null;
         return {
@@ -133,8 +140,14 @@ export default {
                         commands.enqueue("focus");
                     }, 50);
                 }
+                events.on(bus, "xshell:page:load", (event)=>{
+                    if (event.detail.id == getPage()?.id) {
+                        this.onPageLoaded({event});
+                    }
+                });
             },
             mount() {
+                // mount
                 previousFocus = getDeepActiveElement();
             },
             focus() {
@@ -142,24 +155,6 @@ export default {
                 const hasFocus = host.matches(':focus-within');
                 if (!hasFocus) host.shadowRoot.querySelector(".body")?.focus();
             },
-            transitionEnd({ event }) {
-                //transition end
-                if (!state.expanded && event.target === event.currentTarget && event.propertyName === "transform") {
-                    resolveClose?.();
-                    resolveClose = null;
-                }
-                if (state.expanded){
-                    this.focus();
-                }
-            },
-
-            keydown({ event }) {
-                // keydown handler for the panel
-                if (event.key === "Escape" && !(event.defaultPrevented || event.isComposing) && state.expanded) {
-                    this.queryClose();
-                }
-            },
-
             queryClose() {
                 //query close (send event to host, informing the a page close has been requested)
                 host.dispatchEvent(new CustomEvent("queryClose", { composed: true }));
@@ -183,7 +178,32 @@ export default {
                 // Wait until transitionEnd resolves the Promise
                 await transitionCompleted;
 
-            },            
+            },  
+
+            // events
+            onPageLoaded({ event }) {
+                const page = getPage();
+                if (page) {
+                    state.pageClasses = page.meta?.classes?.join(" ") || "";
+                }
+            },
+            onKeydown({ event }) {
+                // keydown handler for the panel
+                if (event.key === "Escape" && !(event.defaultPrevented || event.isComposing) && state.expanded) {
+                    this.queryClose();
+                }
+            },
+            onTransitionEnd({ event }) {
+                //transition end
+                if (!state.expanded && event.target === event.currentTarget && event.propertyName === "transform") {
+                    resolveClose?.();
+                    resolveClose = null;
+                }
+                if (state.expanded){
+                    this.focus();
+                }
+            },
+          
         }
     }
 }

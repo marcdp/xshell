@@ -31,7 +31,7 @@ export default {
         methods: {}
     },
     style: `
-        :host {display:block; width:100%; height:100%; }
+        :host {display:block; width:100%; height:100%;min-height: 0; }
         :host > div {width:100%; height:100%;}
         .ͼ1 .cm-content {padding:0;}
         .ͼ2 .cm-gutters {background:var(--x-datafield-background)!important; border-right:var(--x-code-border);}

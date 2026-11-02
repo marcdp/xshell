@@ -11,19 +11,21 @@ export default {
     },
 
     meta: {
-        title:"Edit file"
+        title:"Edit file",
+        description: "Lorem iuupsum",
+        classes: ["fill"]
     },
 
     style: `
-        :scope x-template { height:100%; display:flex;}
-        :scope x-template > * {flex:1;}
+        x-toolbar {border-bottom: var(--x-divider-border);}
     `,
 
     template: `
-        
-        <div x-is="state.componentName" x-model="state.value"></div>
-        <x-json x-prop:value="state.value"></x-json>
-
+        <x-toolbar>
+            <x-button label="Save" icon="x-save" command="save" class="menuitem"></x-button>
+            <x-button label="Print" icon="x-print" command="print" class="menuitem"></x-button>
+        </x-toolbar>
+        <codemirror-editor x-model="state.value" style=""></codemirror-editor>
     `,
 
     state: {
@@ -40,19 +42,12 @@ export default {
             async load() {
                 // load
                 this.refresh();
+                page.label += ": " + state.path;
             },
             async refresh() {
                 // refresh
                 state.filesystem = await loader.load("filesystem:" + state.src);
                 state.entry = await state.filesystem.getEntry(state.path);
-                // resolve editor for the file extension
-                const extension = state.entry ? state.entry.name.split('.').pop() : null;
-                let editorResolverDefinition = resolver.resolve("editor:" + extension);
-                if (!editorResolverDefinition) editorResolverDefinition = resolver.resolve("editor:default");
-                // load editor web component
-                let componentName = editorResolverDefinition.path;
-                await loader.load("component:" + componentName);
-                state.componentName = componentName;
                 // load value
                 const stream = await state.filesystem.loadReadStream(state.path);
                 state.value = await new Response(stream).text();

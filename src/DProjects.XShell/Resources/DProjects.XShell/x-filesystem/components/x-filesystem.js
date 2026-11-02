@@ -84,7 +84,7 @@ export default {
         historyIndex: 0,
         root: false
     },
-    controller({ state, events, loader, navigation, getPage, host, dialog, tasks}) {
+    controller({ state, events, loader, navigation, getPage, host, dialog, tasks, resolver}) {
         return {
             async load(args) {
                 // load
@@ -129,8 +129,10 @@ export default {
                 }
                 for(const entry of entries) {
                     const page = getPage();
+                    const resource = "filehandler:"+ entry.path.split('.').pop()
+                    const filehandlerResolverDefinition = resolver.has(resource) ? resolver.resolve(resource) : resolver.resolve("filehandler:")
                     navigation.navigate( {
-                        href: "page:x-filesystem:/pages/edit.js",
+                        href: filehandlerResolverDefinition.path,
                         page: page,
                         params: {
                             src: state.src,
@@ -242,7 +244,8 @@ export default {
                     const entry = await state.filesystem.getEntry(paths[0]);
                     if (entry.type == "file") {
                         filename = paths[0].split("/").pop();
-                        const url = state.filesystem.getReadUrl(paths[0]);
+                        const response = state.filesystem.getReadUrl(paths[0]);
+                        const url = response.url;
                         const link = document.createElement("a");
                         link.href = url;
                         link.download = filename;

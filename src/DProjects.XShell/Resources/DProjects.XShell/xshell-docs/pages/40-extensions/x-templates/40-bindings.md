@@ -56,8 +56,10 @@ Use `x-is` when the same template structure must render as one of several alread
 
 The expression is evaluated once per rendered instance. `null` selects `div`; a valid string is normalized to lowercase and becomes the VDOM/HTML
 tag. Attributes, properties, styles, events, visibility, and children target that resolved element. Changing the tag unloads and replaces it;
-retaining the tag preserves the existing DOM instance. Void and prohibited tags are rejected, and `x-is` cannot be combined with `x-model` because
-model behavior depends on a static control type.
+retaining the tag preserves the existing DOM instance. x-is can be combined with x-model to provide two-way binding to dynamically selected Web Components. The selected component must expose a writable value property and dispatch a change event after updating that property. When x-is changes the selected component, the new component receives the current model value.
+
+<div x-is="state.componentName" x-model="state.value">
+</div>
 
 Static dependency discovery sees only authored tag names. Declare all dynamically selectable Web Components with ordinary definition dependencies,
 for example `dependencies: { field: "component:x-datafield", json: "component:x-json" }`. This uses the existing Resolver → Loader pipeline; `x-is`

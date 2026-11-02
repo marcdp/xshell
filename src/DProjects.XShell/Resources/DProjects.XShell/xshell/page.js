@@ -61,6 +61,8 @@ export default class Page {
         if (this._breadcrumb && this._breadcrumb.length > 0) this._breadcrumb[this._breadcrumb.length - 1].icon = value;
     }
 
+    get meta() { return this.constructor.definition?.meta ?? {}; }
+
     get result() { return this._result; }
     set result(value) { this._result = value; }
 

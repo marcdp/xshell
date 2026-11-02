@@ -111,6 +111,10 @@
         scrollbar-width: var(--x-scrollbar-width);
         scrollbar-gutter: var(--x-scrollbar-gutter);
     }
+    html {
+        overflow-x: hidden!important;
+    }
+    
 }
 @media only screen and (max-width: 768px) {
     :root {

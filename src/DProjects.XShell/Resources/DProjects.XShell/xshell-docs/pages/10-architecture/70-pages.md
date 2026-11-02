@@ -74,6 +74,37 @@ Menu aliases take precedence over routes in both directions.
 See [Components](60-components.md) for the contract and implementation formats. A component contract's DOM events are distinct from public module Bus
 events.
 
+## Page classes
+
+`meta.classes` is declarative Page metadata for a layout to use when it needs to vary its Page-content presentation. It is an array of strings;
+when it is omitted, no Page classes are declared.
+
+```javascript
+export default {
+    meta: {
+        title: "Page Classes",
+        classes: ["fill"]
+    },
+
+    template: `
+        <p>This Page uses the fill layout class.</p>
+    `
+};
+```
+
+Classes are not added automatically to the rendered Page content or to the `<x-page>` element. A layout owns that decision: it reads the active
+Page's metadata when the Page loads and applies the joined class names to its chosen Page container. The checked-in `main`, `stack`, and `dialog`
+layouts do this; their containers are respectively the main body, stack body, and dialog element. A custom layout must explicitly implement the
+same behavior if it supports Page classes.
+
+Styles for these classes therefore belong to the layout that consumes them. The container is inside that layout's Shadow DOM, so ordinary Page
+content styles do not cross the boundary to style it; layout CSS can target its own container and Page CSS can style its own rendered content.
+`meta.classes` is fixed, frozen definition metadata rather than reactive Page state. On replacement, the receiving layout updates its container
+from the newly loaded Page; removing or unloading a Page removes its containing layout or container with it.
+
+The checked-in `default` and `embed` layouts currently read `page.classes` rather than `page.meta.classes`. `Page` exposes the latter, so those
+two layouts do not currently apply `meta.classes`; this is an implementation inconsistency, not an alternative declaration form.
+
 ## Markdown Pages
 
 Markdown documents are also Page resources. Their browser-facing URLs keep the `.md` extension, including documentation menu destinations:
@@ -335,9 +366,10 @@ additional arguments are lost. Parameter/return metadata is descriptive.
 Page injection supplies `definition`; it does not supply Component-only `host`, `module`, or `moduleConfig` aliases.
 Use `page.host` for the mounted host and a registered service for other capabilities.
 
-Implementation meta accepts `id`, `title`, `description`, `icon`, `renderEngine`, `stateEngine`, and `shadowRootOptions`. When `meta.id`
+Implementation meta accepts `id`, `title`, `description`, `icon`, `classes`, `renderEngine`, `stateEngine`, and `shadowRootOptions`. When `meta.id`
 is omitted, `page-js` derives it from the resource filename before creating the Page class; the Page schema therefore does not require authors to
-provide it. `title`, `description`, and `icon` initialize Page presentation metadata; engine names select the implementations described above.
+provide it. `title`, `description`, and `icon` initialize Page presentation metadata; `classes` is consumed by layouts as described in
+[Page classes](#page-classes); engine names select the implementations described above.
 `shadowRootOptions` is schema-accepted metadata but is not consumed by the current Page loader.
 
 Pages reject render-factory-reported slots. The built-in definition render engines are `html` and `x`; `html` reports no slots, so that check is not a
