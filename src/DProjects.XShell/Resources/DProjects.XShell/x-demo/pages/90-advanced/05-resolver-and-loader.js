@@ -2,7 +2,7 @@
 export default {
     meta: {
         title: "Resolver and Loader",
-        description: "Demonstrates resource resolution, dynamic loading, dependencies, and caching."
+        description: "Inspects logical resource resolution, loader selection, dynamic loading, and caching."
     },
 
     dependencies: {
@@ -75,34 +75,8 @@ const component = await loader.load("component:x-button");
 const dataset = await loader.load("dataset:x-demo:statuses");</code></pre>
         <p>The result depends on the resource type. For example, an icon loader returns an SVG element, while a Component loader returns a Component class.</p>
 
-        <h2>Declarative dependencies</h2>
-        <p>When a Page or Component knows which resources it needs, declare them using <code>dependencies</code>. XShell loads those resources before constructing the controller.</p>
-        <pre x-pre><code>export default {
-    dependencies: {
-        fileIcon: "icon:x-file"
-    },
-
-    controller({dependencies, state}) {
-        return {
-            load() {
-                state.iconName = dependencies.fileIcon.nodeName;
-            }
-        };
-    }
-};</code></pre>
-        <p>This Page declares <code>icon:x-file</code> as a dependency. The resolved value is available in the controller as <code>dependencies.fileIcon</code>.</p>
-        <p>Declaratively loaded icon: <strong>{{ state.iconName }}</strong></p>
-        <p>Use declarative dependencies for resources known when the Page is defined. Use <code>loader.load()</code> for resources selected dynamically at runtime.</p>
-
-        <h2>Loading multiple resources</h2>
-        <p>The Loader also accepts an object of resource references and returns an object containing the loaded values under the same keys.</p>
-        <pre x-pre><code>const resources = await loader.load({
-    icon: "icon:x-file",
-    component: "component:x-button"
-});
-
-// resources.icon
-// resources.component</code></pre>
+        <h2>Declarative loading in context</h2>
+        <p>This Page's <code>icon:x-file</code> dependency was loaded before its controller was constructed: <strong>{{ state.iconName }}</strong>. For the focused tutorial on declaring and consuming dependencies from provider Modules, see <x-anchor href="../06-modules/06-dependencies.js">Using Module Resources</x-anchor>. The inspector above focuses on resolution and dynamic loading mechanics.</p>
 
         <h2>Resource-specific loaders</h2>
         <p>Each loader understands a particular resource format. The generic Loader coordinates dispatch without needing to know how every resource type is implemented.</p>
@@ -133,7 +107,7 @@ const dataset = await loader.load("dataset:x-demo:statuses");</code></pre>
         <p>A resolved URL does not guarantee that the resource can be loaded successfully.</p>
 
         <h2>Next steps</h2>
-        <p>For examples of how engines are selected and loaded, see <x-anchor href="03-engines.js">Engines</x-anchor>. To understand how Modules expose resources, see <x-anchor href="../06-modules/03-resources.js">Module Resources</x-anchor>.</p>
+        <p>For examples of how engines are selected and loaded, see <x-anchor href="03-engines.js">Engines</x-anchor>. To understand how Modules expose and consume resources, see <x-anchor href="../06-modules/03-resources.js">Module Resources</x-anchor> and <x-anchor href="../06-modules/06-dependencies.js">Using Module Resources</x-anchor>.</p>
     `,
 
     state: {

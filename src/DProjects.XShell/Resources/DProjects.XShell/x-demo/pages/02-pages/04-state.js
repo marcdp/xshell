@@ -2,31 +2,42 @@
 export default {
     meta: {
         title: "Page State",
-        description: "Demonstrates reactive Page state, two-way binding, conditional rendering, and controller commands."
+        description: "Demonstrates private Page state, controller mutations, derived values, and conditional behavior."
     },
 
     template: `
         <p>A Page can define private reactive <code>state</code>. Changes to state automatically update the parts of the template that depend on it.</p>
 
-        <h2>Reactive values</h2>
-        <p>Use <code>{{ state.name }}</code> to display a state property. Changing the value updates the rendered content.</p>
+        <h2>Declaring and observing state</h2>
+        <p>The initial object belongs to this Page instance. These controls make changes observable while the greeting shows the resulting reactive update.</p>
         <x-datafields columns="2">
             <x-datafield type="text" label="Name" x-model="state.name"></x-datafield>
             <x-datafield type="number" label="Age" min="0" max="120" x-model="state.age"></x-datafield>
         </x-datafields>
         <p>Hello <strong>{{ state.name }}</strong>! You are {{ state.age }} years old.</p>
         <pre x-pre><code>state: {name:"Ada", age:36}</code></pre>
-        <pre x-pre><code>&lt;x-datafield type="text" label="Name" x-model="state.name"&gt;&lt;/x-datafield&gt;
-&lt;p&gt;Hello {{ state.name }}!&lt;/p&gt;</code></pre>
+        <p>The controls use <code>x-model</code> so user edits update the same state object. The X Template syntax itself is covered in <x-anchor href="../07-templates/01-basics.js">Template Basics</x-anchor>.</p>
 
-        <h2>Two-way binding</h2>
-        <p>The <code>x-model</code> directive keeps an input value and a state property synchronized. Changes made by the user update state, and changes made by the controller update the input.</p>
+        <h2>Controller mutations</h2>
+        <p>Controller commands receive the reactive <code>state</code> object and can update it directly. The bound controls and rendered text reflect the same mutations.</p>
         <p>
             <x-button label="Set Ada" command="setAda"></x-button>
             <x-button label="Set Grace" command="setGrace"></x-button>
+            <x-button label="Increase age" command="increaseAge"></x-button>
+            <x-button label="Reset" command="reset"></x-button>
         </p>
         <p>Current name: {{ state.name }}</p>
-        <pre x-pre><code>&lt;x-datafield type="text" x-model="state.name"&gt;&lt;/x-datafield&gt;</code></pre>
+        <pre x-pre><code>controller({state}) {
+    return {
+        setGrace() {state.name = "Grace";},
+        increaseAge() {state.age++;},
+        reset() {
+            state.name = "Ada";
+            state.age = 36;
+            state.showDetails = false;
+        }
+    };
+}</code></pre>
 
         <h2>Conditional rendering</h2>
         <p>Use <code>x-if</code> and <code>x-else</code> to display content based on reactive state.</p>
@@ -43,26 +54,10 @@ export default {
         <p>Profile: <strong>{{ state.name }} ({{ state.age >= 18 ? "Adult" : "Minor" }})</strong></p>
         <pre x-pre><code>&lt;p&gt;{{ state.age >= 18 ? "Adult" : "Minor" }}&lt;/p&gt;</code></pre>
 
-        <h2>Controller commands</h2>
-        <p>A controller receives the reactive <code>state</code> object and can modify it through command methods.</p>
-        <p>
-            <x-button label="Increase age" command="increaseAge"></x-button>
-            <x-button label="Reset" command="reset"></x-button>
-        </p>
-        <pre x-pre><code>controller({state}) {
-    return {
-        increaseAge() {state.age++;},
-        reset() {
-            state.name = "Ada";
-            state.age = 36;
-            state.showDetails = false;
-        }
-    };
-}</code></pre>
-
         <h2>Current state</h2>
         <p>All examples on this Page share the same private state object.</p>
         <x-json x-prop:value="state.snapshot" indent="2"></x-json>
+        <p>State is private implementation data. Public Page inputs are properties declared by the Page contract; they are not automatically the same abstraction.</p>
     `,
 
     state: {

@@ -2,7 +2,7 @@
 export default {
     meta: {
         title: "Using Module Resources",
-        description: "Demonstrates declarative dependencies and dynamic loading of resources from other Modules."
+        description: "Demonstrates declaring, receiving, and using resources provided by registered Modules."
     },
 
     dependencies: {
@@ -12,7 +12,7 @@ export default {
     },
 
     template: `
-        <p>Once Modules have been registered, Pages and Components can request their resources through logical references. XShell's Resolver and Loader handle resource discovery and loading.</p>
+        <p>Once provider Modules have been registered, a Page or Component can declare the particular resources it needs through logical references.</p>
 
         <h2>Declarative dependencies</h2>
         <p>Use a Page's <code>dependencies</code> property for resources known when the Page definition is loaded.</p>
@@ -51,29 +51,11 @@ export default {
         </ul>
 
         <h2>Dynamic resource loading</h2>
-        <p>Use the injected <code>loader</code> service when a resource is selected at runtime rather than declared in advance.</p>
+        <p>For contrast, use the injected <code>loader</code> service when a resource is selected at runtime rather than known with the Page definition.</p>
         <x-button label="Load icon dynamically" command="loadIcon"></x-button>
         <p>Status: <strong>{{ state.status }}</strong></p>
         <p>Dynamic result: {{ state.dynamicResult }}</p>
-        <pre x-pre><code>controller({loader, state}) {
-    return {
-        async loadIcon() {
-            const icon = await loader.load("icon:x-file");
-            state.dynamicResult = icon.nodeName;
-        }
-    };
-}</code></pre>
-        <p>Both declarative dependencies and dynamic loading use the same Resolver and Loader pipeline.</p>
-
-        <h2>Loading multiple resources</h2>
-        <p>The Loader accepts an object of logical references and returns an object with the same keys.</p>
-        <pre x-pre><code>const resources = await loader.load({
-    icon: "icon:x-file",
-    button: "component:x-button"
-});
-
-// resources.icon    -> SVG element
-// resources.button  -> Component class</code></pre>
+        <p>The interactive Resolver and Loader Page inspects this dynamic process in detail; this Page keeps its focus on declarative consumption.</p>
 
         <h2>Module references versus resource dependencies</h2>
         <p>These two declarations serve different purposes.</p>
@@ -90,20 +72,11 @@ dependencies: {
 }</code></pre>
         <p>The Module reference makes the provider Module available during bootstrap. The Page dependency requests one of its resources.</p>
 
-        <h2>Services are different</h2>
-        <p>Resources are loaded through <code>dependencies</code> or <code>loader.load()</code>. Runtime services are injected directly into controllers by name.</p>
-        <pre x-pre><code>controller({navigation, loader, dependencies}) {
-    // navigation: injected runtime service
-    // loader: injected runtime service
-    // dependencies.icon: declared resource
-}</code></pre>
-
         <h2>When to use each approach</h2>
         <x-datafields columns="2">
             <x-datafield label="Module reference">Include another Module in application configuration.</x-datafield>
             <x-datafield label="Declarative dependency">Load a resource needed by a particular Page or Component.</x-datafield>
             <x-datafield label="Dynamic loading">Load a resource selected while the application is running.</x-datafield>
-            <x-datafield label="Service injection">Access an existing runtime capability.</x-datafield>
         </x-datafields>
 
         <p>For a deeper explanation of resource resolution, caching, and loading, see <x-anchor href="../90-advanced/05-resolver-and-loader.js">Resolver and Loader</x-anchor>.</p>

@@ -26,7 +26,7 @@ export default {
     "modules": {
         "x-demo": {
             "label": "XShell Cookbook",
-            "version": "1.0.0",
+            "version": "0.9.0",
             "defaults": {
                 "page": {
                     "renderEngine": "x",

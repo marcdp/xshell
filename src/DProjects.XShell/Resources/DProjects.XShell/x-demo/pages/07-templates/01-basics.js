@@ -2,32 +2,19 @@
 export default {
     meta: {
         title: "Template Basics",
-        description: "Introduces X Templates, text interpolation, reactive state, and two-way binding."
+        description: "Introduces X Template interpolation, expressions, and basic state bindings."
     },
 
     template: `
         <p>X Templates are XShell's declarative rendering syntax. They combine HTML with expressions and directives that connect the Page's template to its reactive state.</p>
 
-        <h2>Text interpolation</h2>
+        <h2>Text interpolation and state binding</h2>
         <p>Use double braces to render a JavaScript expression as text.</p>
-        <p>Hello, <strong>{{ state.name }}</strong>!</p>
-        <pre x-pre><code>&lt;p&gt;Hello, {{ state.name }}!&lt;/p&gt;</code></pre>
-        <p>The expression reads the current value of <code>state.name</code>.</p>
-
-        <h2>Reactive state</h2>
-        <p>A Page declares its initial values in <code>state</code>. When a reactive value changes, bindings that depend on it update automatically.</p>
         <x-datafield type="text" label="Your name" x-model="state.name"></x-datafield>
-        <p>Welcome, <strong>{{ state.name }}</strong>!</p>
-        <pre x-pre><code>state: {
-    name: "Ada"
-}</code></pre>
-
-        <h2>Two-way binding</h2>
-        <p>The <code>x-model</code> directive connects an input to a state property. Editing the input updates state, and changes to state update the input.</p>
-        <x-datafield type="text" label="Message" x-model="state.message"></x-datafield>
-        <p>Current message: {{ state.message }}</p>
-        <pre x-pre><code>&lt;x-datafield type="text" x-model="state.message"&gt;&lt;/x-datafield&gt;
-&lt;p&gt;{{ state.message }}&lt;/p&gt;</code></pre>
+        <p>Hello, <strong>{{ state.name }}</strong>!</p>
+        <pre x-pre><code>&lt;x-datafield type="text" x-model="state.name"&gt;&lt;/x-datafield&gt;
+&lt;p&gt;Hello, {{ state.name }}!&lt;/p&gt;</code></pre>
+        <p>Interpolation reads <code>state.name</code>; <code>x-model</code> is a directive that writes user changes back to that assignable expression. For state ownership, controller mutations, and conditional Page behavior, see <x-anchor href="../02-pages/04-state.js">Page State</x-anchor>.</p>
 
         <h2>Expressions</h2>
         <p>Interpolation can evaluate simple JavaScript expressions, not just direct property references.</p>
@@ -44,7 +31,7 @@ export default {
         <p>Keep template expressions short and use controller methods for more substantial application logic.</p>
 
         <h2>Complete Page example</h2>
-        <p>A Page combines a template with reactive state. A controller is optional when no additional behavior is needed.</p>
+        <p>A Page can combine template syntax with initial state. A controller is optional when no additional behavior is needed.</p>
         <pre x-pre><code>export default {
     template: &#96;
         &lt;x-datafield type="text" label="Name" x-model="state.name"&gt;&lt;/x-datafield&gt;
@@ -61,7 +48,6 @@ export default {
     `,
 
     state: {
-        name: "Ada",
-        message: "Hello from XShell"
+        name: "Ada"
     }
 };

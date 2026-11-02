@@ -31,8 +31,8 @@ page:x-demo:/pages/index.js
 style:x-demo:/styles/main.css
 string:x-demo:/data/info.txt
 bytes:x-demo:/images/logo.png
-dataset:x-demo:countries
-dataset:x-demo:/datasets/countries.json
+dataset:x-demo:statuses
+dataset:x-demo:/datasets/statuses.json
 contract:x:x-button
 ```
 
@@ -84,16 +84,17 @@ regular-expression semantics.
   `..` segments, or contain `\\`, `?`, `#`, or `%`.
 
 Rejecting `%` also rejects encoded separators and traversal attempts for this resolver version. In a module-root rule such as
-`dataset:x-demo:/{path}`, the leading `/` is literal and is not captured: `dataset:x-demo:/datasets/countries.json` captures
-`datasets/countries.json`. Other placeholder names retain the compatible generic nonempty matching behavior; they do not receive the `{name}` or
+`dataset:x-demo:/{path}`, the leading `/` is literal and is not captured: `dataset:x-demo:/datasets/statuses.json` captures
+`datasets/statuses.json`. Other placeholder names retain the compatible generic nonempty matching behavior; they do not receive the `{name}` or
 `{path}` safety checks. Multiple placeholders must be separated by literal text. Empty, malformed, adjacent, or duplicate placeholders are invalid
 rule definitions.
 
-Examples:
+The `statuses` entries below are concrete references to the cookbook's `x-demo/datasets/statuses.json` resource. The remaining entries are
+deliberately illustrative pattern-validation examples and are not claims that those files exist.
 
 | Locator | Result |
 | --- | --- |
-| `dataset:x-demo:countries` | Valid `{name}`; resolves below the module's `/datasets/` directory. |
+| `dataset:x-demo:statuses` | Valid `{name}`; resolves below the module's `/datasets/` directory. |
 | `dataset:x-demo:/datasets/lookups/countries.json` | Valid `/{path}` from the module root. |
 | `module:x-demo:/utils/formatter.js` | Valid `/{path}.js` from the module root. |
 | `dataset:x-demo:crm/customers` | Rejected: `{name}` cannot contain `/`. |

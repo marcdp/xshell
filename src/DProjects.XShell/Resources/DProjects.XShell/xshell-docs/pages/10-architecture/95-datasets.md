@@ -136,14 +136,14 @@ does not support query parameters in URL DataSet locators.
 A module exposes a conventional DataSet by storing a JSON file below its `datasets` directory:
 
 ```text
-<module>/datasets/countries.json
+<module>/datasets/statuses.json
 ```
 
 Consumers use the module id and an extensionless logical name:
 
 ```js
 const dataset = await loader.load(
-    "dataset:x-demo:countries"
+    "dataset:x-demo:statuses"
 );
 
 const table = dataset.tables[0];
@@ -176,9 +176,10 @@ addresses a safe relative path from the module root, so `dataset:orders:/dataset
 `datasets/lookups/statuses.json`. Its leading `/` is part of the rule rather than the `{path}` value. Bootstrap does not check the inventory before
 generating either general rule; a missing file fails when fetched. See [Resolvers](80-resolvers.md) for the placeholder safety rules.
 
-Module qualification makes ownership explicit. `dataset:x-demo:countries` resolves through the `x-demo` assets regardless of which Component or
-Page requests it, so the consuming resource's own module does not change its meaning. The `x-demo` module demonstrates this with
-`datasets/countries.json` and the **Advanced / DataSet** Page at `pages/90-advanced/08-dataset.js`.
+Module qualification makes ownership explicit. `dataset:x-demo:statuses` resolves through the `x-demo` assets regardless of which Component or
+Page requests it, so the consuming resource's own module does not change its meaning. This is a concrete cookbook example: the `x-demo` module
+provides `datasets/statuses.json`, and the **Advanced / DataSets** Page at `pages/90-advanced/06-datasets.js` loads it. The `orders` locators above
+are deliberately generic examples of the two generated rule forms; they do not identify cookbook resources.
 
 ## Additional rules and loaders
 
