@@ -7,8 +7,9 @@ Implemented V0 runtime capabilities:
 - [Dialogs](30-dialogs.md) — Helpers and results from dialog Pages.
 - [i18n](40-i18n.md) — Language configuration, translations, and date/time formatting.
 - [Temp](50-temp.md) — Upload/download identifiers and server cleanup.
+- [Authentication](60-authentication.md) — Optional server-driven sign-in and cookie-backed session endpoints.
+- [Identity](70-identity.md) — Optional Principal state synchronized from the authoritative server session.
 
-[Authentication](60-authentication.md) and [Identity](70-identity.md) describe subsystems outside V0; there is no `xshell.identity` configuration.
-XShell does not log in or register auth/identity services during startup.
+Authentication and identity are supplied by the optional `x-identity` module; they do not introduce an `xshell.identity` Core configuration section.
 
 See [Services](../10-architecture/100-services.md) for runtime registrations and configured service contracts.

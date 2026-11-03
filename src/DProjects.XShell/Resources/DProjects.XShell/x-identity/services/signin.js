@@ -1,96 +1,131 @@
-const FIELD_TYPES = Object.freeze(["Title", "Paragraph", "Text", "Password", "Value"]);
+const FIELD_TYPES = new Set(["Title", "Paragraph", "Text", "Password", "Value"]);
+const STATUSES = new Set(["DataRequired", "Failure", "Success"]);
 
-function abortError() {
-    if (typeof DOMException === "function") return new DOMException("The sign-in operation was aborted.", "AbortError");
-    const error = new Error("The sign-in operation was aborted.");
-    error.name = "AbortError";
+function configurationError(message, options) {
+    const error = new Error(message, options);
+    error.name = "IdentityConfigurationError";
     return error;
 }
 
-function throwIfAborted(signal) {
-    if (signal?.aborted) throw signal.reason ?? abortError();
+function protocolError(message, options) {
+    const error = new Error(message, options);
+    error.name = "SignInProtocolError";
+    return error;
 }
 
-function wait(delay, signal) {
-    throwIfAborted(signal);
-    return new Promise((resolve, reject) => {
-        const timeout = setTimeout(done, delay);
-        function done() {
-            signal?.removeEventListener?.("abort", aborted);
-            resolve();
+function validateStringMap(value, name) {
+    if (!value || typeof value !== "object" || Array.isArray(value)) {
+        throw protocolError(`${name} must be an object.`);
+    }
+    for (const [key, item] of Object.entries(value)) {
+        if (typeof item !== "string") throw protocolError(`${name} '${key}' must be a string.`);
+    }
+}
+
+function validateRequest(request) {
+    if (!request || typeof request !== "object" || Array.isArray(request)) {
+        throw new TypeError("Sign-in request must be an object.");
+    }
+    if (!request.headers || typeof request.headers !== "object" || Array.isArray(request.headers)) {
+        throw new TypeError("Sign-in request headers must be an object.");
+    }
+    for (const [name, value] of Object.entries(request.headers)) {
+        if (typeof value !== "string") throw new TypeError(`Sign-in request header '${name}' must be a string.`);
+    }
+}
+
+function validateField(field, index) {
+    if (!field || typeof field !== "object" || Array.isArray(field)) {
+        throw protocolError(`Sign-in response field at index ${index} must be an object.`);
+    }
+    for (const name of ["name", "label", "description", "placeHolder", "value"]) {
+        if (typeof field[name] !== "string") {
+            throw protocolError(`Sign-in response field at index ${index} has an invalid '${name}'.`);
         }
-        function aborted() {
-            clearTimeout(timeout);
-            reject(signal.reason ?? abortError());
-        }
-        signal?.addEventListener?.("abort", aborted, { once: true });
-    });
+    }
+    if (!FIELD_TYPES.has(field.type)) {
+        throw protocolError(`Sign-in response field at index ${index} has unsupported type '${field.type}'.`);
+    }
+    if (typeof field.required !== "boolean") {
+        throw protocolError(`Sign-in response field at index ${index} has an invalid 'required' value.`);
+    }
 }
 
-function field(name, label, type, options = {}) {
-    if (!FIELD_TYPES.includes(type)) throw new TypeError(`Unsupported sign-in field type '${type}'.`);
-    return {
-        name,
-        label,
-        type,
-        description: options.description ?? "",
-        placeHolder: options.placeHolder ?? "",
-        required: options.required ?? false,
-        value: options.value ?? ""
-    };
+function validateResponse(value) {
+    if (!value || typeof value !== "object" || Array.isArray(value)) {
+        throw protocolError("Sign-in response must be an object.");
+    }
+    if (!STATUSES.has(value.status)) {
+        throw protocolError(`Sign-in response has unsupported status '${value.status}'.`);
+    }
+    validateStringMap(value.headers, "Sign-in response headers");
+    if (!Array.isArray(value.fields)) throw protocolError("Sign-in response fields must be an array.");
+    value.fields.forEach(validateField);
+    if (value.claimsPrincipal !== null &&
+        (!value.claimsPrincipal || typeof value.claimsPrincipal !== "object" || Array.isArray(value.claimsPrincipal))) {
+        throw protocolError("Sign-in response claimsPrincipal must be an object or null.");
+    }
+    return value;
 }
 
-function dataRequired(fields) {
-    return { status: "DataRequired", headers: {}, fields, claimsPrincipal: null };
+function resolveEndpoint(config) {
+    const value = config.modules?.["x-identity"]?.params?.signinUrl;
+    if (typeof value !== "string" || value.trim().length === 0) {
+        throw configurationError("The x-identity signinUrl module parameter is not configured.");
+    }
+    try {
+        const url = /^[a-z][a-z0-9+.-]*:/i.test(value)
+            ? new URL(value)
+            : new URL(value.replace(/^\/+/, ""), config.app.baseUrl);
+        if (url.protocol !== "http:" && url.protocol !== "https:") throw new Error("Unsupported protocol.");
+        return url.href;
+    } catch (cause) {
+        throw configurationError("The x-identity signinUrl module parameter is not a valid HTTP(S) URL.", { cause });
+    }
 }
 
 export default class SignIn {
 
+    constructor({ config }) {
+        this._config = config;
+    }
+
     async signInAsync(request, signal) {
-        throwIfAborted(signal);
-        if (!request || typeof request !== "object" || Array.isArray(request)) {
-            throw new TypeError("Sign-in request must be an object.");
-        }
-        if (!request.headers || typeof request.headers !== "object" || Array.isArray(request.headers)) {
-            throw new TypeError("Sign-in request headers must be an object.");
-        }
-        for (const [name, value] of Object.entries(request.headers)) {
-            if (typeof value !== "string") {
-                throw new TypeError(`Sign-in request header '${name}' must be a string.`);
-            }
-        }
-
-        const login = request.headers.login;
-        if (typeof login !== "string" || login.length === 0) {
-            return dataRequired([
-                field("login", "Login", "Text", {
-                    description: "Enter the login identifier expected by the configured provider.",
-                    placeHolder: "Enter your login",
-                    required: true
-                })
-            ]);
+        validateRequest(request);
+        const url = resolveEndpoint(this._config);
+        let response;
+        try {
+            response = await fetch(url, {
+                method: "POST",
+                credentials: "same-origin",
+                cache: "no-store",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Accept": "application/json"
+                },
+                body: JSON.stringify(request),
+                signal
+            });
+        } catch (cause) {
+            if (signal?.aborted) throw signal.reason ?? cause;
+            const error = new Error("The sign-in endpoint could not be reached.", { cause });
+            error.name = "SignInNetworkError";
+            throw error;
         }
 
-        const password = request.headers.password;
-        if (typeof password !== "string" || password.length === 0) {
-            return dataRequired([
-                field("password", "Password", "Password", {
-                    description: "Enter the credential expected by the configured provider.",
-                    placeHolder: "Enter your password",
-                    required: true
-                })
-            ]);
+        if (!response.ok) {
+            const error = new Error(`The sign-in endpoint returned HTTP ${response.status}.`);
+            error.name = "SignInHttpError";
+            error.status = response.status;
+            throw error;
         }
 
-        // Keep the default provider visibly asynchronous while remaining cancellable.
-        // Credentials are inspected only for presence and are never retained.
-        await wait(150, signal);
-        throwIfAborted(signal);
-        return {
-            status: "Failure",
-            headers: { retry: "true" },
-            fields: [],
-            claimsPrincipal: null
-        };
+        let value;
+        try {
+            value = await response.json();
+        } catch (cause) {
+            throw protocolError("The sign-in endpoint did not return a valid JSON response.", { cause });
+        }
+        return validateResponse(value);
     }
 }

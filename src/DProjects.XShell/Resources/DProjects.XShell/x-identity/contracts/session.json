@@ -1,0 +1,85 @@
+{
+  "$schema": "../../xshell/schemas/service.schema.json",
+  "label": "Session",
+  "description": "Restores and terminates the authoritative cookie-backed server session.",
+  "types": {
+    "sessionResponse": {
+      "type": "object",
+      "description": "Current server session. A null claimsPrincipal is the explicit anonymous-session convention.",
+      "schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["claimsPrincipal"],
+        "properties": {
+          "claimsPrincipal": {
+            "oneOf": [
+              {"type": "null"},
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["identities"],
+                "properties": {
+                  "identities": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": ["authenticationType", "claims"],
+                      "properties": {
+                        "authenticationType": {"type": ["string", "null"]},
+                        "claims": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "required": ["type", "value"],
+                            "properties": {
+                              "type": {"type": "string"},
+                              "value": {"type": "string"}
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        }
+      }
+    }
+  },
+  "methods": {
+    "restoreAsync": {
+      "description": "GETs the configured current-session endpoint using same-origin credentials and no caching.",
+      "parameters": [
+        {
+          "name": "signal",
+          "type": "object",
+          "required": false,
+          "description": "Optional AbortSignal used to cancel the operation."
+        }
+      ],
+      "returns": {
+        "ref": "sessionResponse",
+        "description": "Promise resolving to the validated current-session response."
+      }
+    },
+    "signOutAsync": {
+      "description": "POSTs the configured sign-out endpoint and clears Principal only after the server confirms success.",
+      "parameters": [
+        {
+          "name": "signal",
+          "type": "object",
+          "required": false,
+          "description": "Optional AbortSignal used to cancel the operation."
+        }
+      ],
+      "returns": {
+        "type": "any",
+        "description": "Promise resolving after the server session and local Principal have been cleared."
+      }
+    }
+  }
+}

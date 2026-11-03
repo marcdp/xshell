@@ -5,9 +5,16 @@
             "version": "0.9.0",
             "icon": "x-key",
             "copyright": "",
+            "params": {
+                // The host application must override these with app: or absolute HTTP(S) URLs.
+                "signinUrl": null,
+                "sessionUrl": null,
+                "signoutUrl": null
+            },
             "requires": [
                 "principal",
-                "signin"
+                "signin",
+                "session"
             ],
             "defaults": {
                 "component": {
@@ -50,6 +57,10 @@
             "signin": {
                 "contract": "signin",
                 "implementation": "/services/signin.js"
+            },
+            "session": {
+                "contract": "session",
+                "implementation": "/services/session.js"
             }
         }
     }

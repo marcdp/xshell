@@ -50,7 +50,8 @@ export default class Principal {
     constructor({ bus }) {
         this._bus = bus;
         this._identities = Object.freeze([]);
-        this._serialized = "[]";
+        this._status = "initializing";
+        this._serialized = JSON.stringify({ status: this._status, identities: [] });
     }
 
     get identities() {
@@ -65,6 +66,10 @@ export default class Principal {
         return this._identities.some(identity =>
             typeof identity.authenticationType === "string" && identity.authenticationType.trim().length > 0
         );
+    }
+
+    get status() {
+        return this._status;
     }
 
     hasClaim(type, value) {
@@ -84,17 +89,34 @@ export default class Principal {
 
     setIdentities(identities) {
         const normalized = normalizeIdentities(identities);
-        const serialized = JSON.stringify(normalized);
-        if (serialized === this._serialized) return;
+        const status = normalized.some(identity =>
+            typeof identity.authenticationType === "string" && identity.authenticationType.trim().length > 0
+        ) ? "authenticated" : "anonymous";
+        this._replace(normalized, status);
+    }
 
-        this._identities = normalized;
-        this._serialized = serialized;
-        this._bus.emit("x-identity:principal:changed", {
-            isAuthenticated: this.isAuthenticated
-        });
+    setInitializing() {
+        this._replace(Object.freeze([]), "initializing");
+    }
+
+    setError() {
+        this._replace(Object.freeze([]), "error");
     }
 
     clear() {
-        this.setIdentities([]);
+        this._replace(Object.freeze([]), "anonymous");
+    }
+
+    _replace(identities, status) {
+        const serialized = JSON.stringify({ status, identities });
+        if (serialized === this._serialized) return;
+
+        this._identities = identities;
+        this._status = status;
+        this._serialized = serialized;
+        this._bus.emit("x-identity:principal:changed", {
+            isAuthenticated: this.isAuthenticated,
+            status: this.status
+        });
     }
 }

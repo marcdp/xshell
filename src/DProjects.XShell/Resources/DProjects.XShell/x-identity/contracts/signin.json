@@ -1,7 +1,7 @@
 {
   "$schema": "../../xshell/schemas/service.schema.json",
   "label": "Sign In",
-  "description": "Runs a provider-defined, request/response sign-in conversation.",
+  "description": "Posts ISignIn-compatible requests to a configured server endpoint and returns provider-defined responses without choosing authentication steps.",
   "types": {
     "signInRequest": {
       "type": "object",
@@ -46,15 +46,34 @@
         "properties": {
           "status": {"type": "string", "enum": ["DataRequired", "Failure", "Success"]},
           "headers": {"type": "object", "additionalProperties": {"type": "string"}},
-          "fields": {"type": "array"},
-          "claimsPrincipal": {"type": ["object", "null"]}
+          "fields": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["name", "label", "type", "description", "placeHolder", "required", "value"],
+              "properties": {
+                "name": {"type": "string"},
+                "label": {"type": "string"},
+                "type": {"type": "string", "enum": ["Title", "Paragraph", "Text", "Password", "Value"]},
+                "description": {"type": "string"},
+                "placeHolder": {"type": "string"},
+                "required": {"type": "boolean"},
+                "value": {"type": "string"}
+              }
+            }
+          },
+          "claimsPrincipal": {
+            "type": ["object", "null"],
+            "description": "ClaimsPrincipal representation on Success; the Login Page verifies it against the authoritative server session before updating Principal."
+          }
         }
       }
     }
   },
   "methods": {
     "signInAsync": {
-      "description": "Advances the sign-in conversation. Conventional headers include login, password, attempt, and retry; providers may define others.",
+      "description": "POSTs one request and returns the next server-defined conversation response. Response retry is a control header; other response headers may carry opaque continuation metadata.",
       "parameters": [
         {"name": "request", "ref": "signInRequest", "required": true},
         {

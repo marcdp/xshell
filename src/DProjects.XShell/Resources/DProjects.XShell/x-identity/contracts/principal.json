@@ -47,6 +47,12 @@
       "type": "boolean",
       "readonly": true,
       "description": "Whether any identity has a non-empty authentication type."
+    },
+    "status": {
+      "type": "string",
+      "readonly": true,
+      "schema": {"type": "string", "enum": ["initializing", "anonymous", "authenticated", "error"]},
+      "description": "Current server-session initialization state."
     }
   },
   "events": {
@@ -57,6 +63,12 @@
           "type": "boolean",
           "required": true,
           "description": "Current authentication state."
+        },
+        "status": {
+          "type": "string",
+          "required": true,
+          "schema": {"type": "string", "enum": ["initializing", "anonymous", "authenticated", "error"]},
+          "description": "Current server-session initialization state."
         }
       }
     }
@@ -78,13 +90,19 @@
       "returns": {"type": "boolean"}
     },
     "setIdentities": {
-      "description": "Validates, defensively copies, and replaces all identities.",
+      "description": "Validates, defensively copies, and replaces all identities, setting status to authenticated or anonymous.",
       "parameters": [
         {"name": "identities", "ref": "identities", "required": true}
       ]
     },
     "clear": {
-      "description": "Makes the principal anonymous."
+      "description": "Clears all identities and sets status to anonymous."
+    },
+    "setInitializing": {
+      "description": "Clears all identities and marks server-session initialization as in progress."
+    },
+    "setError": {
+      "description": "Clears all identities and marks server-session retrieval as failed."
     }
   }
 }
