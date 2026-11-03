@@ -1,12 +1,4 @@
-import {  EditorState,
-    EditorView,
-    basicSetup,
-    javascript,
-    json,
-    html,
-    css,
-    xml,
-    markdown} from "../vendor/codemirror/6.0.2/codemirror.js";
+import { EditorState,EditorView,basicSetup,javascript,json,html,css,xml,markdown} from "../vendor/codemirror/6.0.2/codemirror.js";
 
 
 // component
@@ -23,12 +15,27 @@ export default {
                 },
                 description: "Fired when the content of the editor changes."
             },
+            dirty: {
+                detail: {
+                    value: {
+                        type: "boolean",
+                        description: "The new dirty state of the editor."
+                    }
+                },
+                description: "Fired when the dirty state of the editor changes."
+            }
         },
         properties: {
-            value: {type:"string", default:"", attribute:true, state:true, description:""},
-            mode: {type:"string", default:"", attribute:true, state:true, description:"", enum:["javascript", "json", "html", "css"]}
+            value: {type:"string", default:null, attribute:true, state:true, description:""},
+            mode: {type:"string", default:"", attribute:true, state:true, description:"", enum:["javascript", "json", "html", "css"]},
+            dirty: {type:"boolean", default:false, state:true, description:"The dirty state of the editor."},
+            autofocus: {type:"boolean", default:false, attribute:true, state:true, description:"Whether the editor should autofocus."}
         },
-        methods: {}
+        methods: {
+            refreshValue: {
+                description: "Refreshes the content of the editor with the current state value."
+            } 
+        }
     },
     style: `
         :host {display:block; width:100%; height:100%;min-height: 0; }
@@ -41,36 +48,48 @@ export default {
         .ͼ2 .cm-activeLine {background:light-dark(#eeeeee, #303030);}
         .ͼ1 .cm-scroller {
             scrollbar-width: var(--x-scrollbar-width);
-            __scrollbar-gutter: var(--x-scrollbar-gutter);
+            scrollbar-gutter: var(--x-scrollbar-gutter);
         }
+        .cm-editor .cm-cursor { border-left-color: light-dark(#000000, #ffffff); }
     `,
     template: ``,
     state: {
-        value: "",
-        mode: ""    
+        value: null,
+        mode: "",
+        dirty: false
     },
     controller({ state, host, events }) {
         let editorState = null;
         let editor = null;
+        let avoidRefresh = false;
         return {
             load() {
                 // load
                 events.on(state, "change:value", (event) => {
-                    if (!editor) return;
-                    const value = event.newValue ?? "";
-                    const currentValue = editor.state.doc.toString();
-                    if (currentValue == value) return;
-                    editor.dispatch({
-                        changes: {
-                            from: 0,
-                            to: editor.state.doc.length,
-                            insert: value
-                        }
-                    });
+                    if (event.oldValue != event.newValue && !avoidRefresh){
+                        this.refresh();
+                    }
+                });
+                // dirty
+                events.on(state, "change:dirty", (event) => {
+                    host.dispatchEvent(new CustomEvent("dirty", {
+                        detail: { value: state.dirty },
+                        bubbles: true
+                    }));
                 });
             },
             mount() {
+                if (state.value) {
+                    this.refresh();
+                }           
+            },
+            refresh() {
                 // mount
+                if (editor) {
+                    debugger
+                    editor.dispatch({changes: {from: 0, to: editor.state.doc.length, insert: state.value}});
+                    return;
+                }
                 let mode = html();
                 if (state.mode == "html") mode = html();
                 if (state.mode == "javascript") mode = javascript();
@@ -82,7 +101,11 @@ export default {
                     doc: state.value,
                     extensions: [
                         basicSetup,
-                        mode
+                        mode,
+                        EditorView.updateListener.of(update => {
+                            if (!update.docChanged) return;
+                            state.dirty = true;
+                        })
                     ]
                 });
                 editor = new EditorView({
@@ -91,12 +114,23 @@ export default {
                 });
                 editor.dom.addEventListener("blur", () => {
                     const value = editor.state.doc.toString();
+                    avoidRefresh = true;
                     state.value = value;
                     host.dispatchEvent(new CustomEvent("change", {
                         detail: { value },
                         bubbles: true
                     }));
+                    avoidRefresh = false;
                 }, true);
+                if (state.autofocus) {
+                    editor.focus();
+                }
+            },
+            refreshValue() {
+                if (!editor) return;
+                avoidRefresh = true;
+                state.value = editor.state.doc.toString();
+                avoidRefresh = false;
             },
         }
     }

@@ -703,7 +703,9 @@ export default {
             },
 
             toggleCollapse(args) {
-                state.collapsed = !state.collapsed;
+                if (state.collapsible) {
+                    state.collapsed = !state.collapsed;
+                }
             },
             async slotchange(args) {
                 // slotchange

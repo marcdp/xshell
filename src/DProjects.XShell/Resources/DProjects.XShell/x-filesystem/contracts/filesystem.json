@@ -1,0 +1,341 @@
+
+{
+    "$schema": "../../xshell/schemas/contract.schema.json",
+    "label": "Filesystem",
+    "description": "Provider-independent asynchronous filesystem interface. Paths are absolute virtual paths. Options objects are optional and default to {}.",
+
+    "types": {
+        "entry": {
+            "type": "object",
+            "description": "Filesystem entry with path, name, type, created, modified, length, etag and flags.",
+            "schema": {
+                "type": "object",
+                "properties": {
+                    "path": {"type": "string"},
+                    "name": {"type": "string"},
+                    "type": {"type": "string", "enum": ["file", "directory"]},
+                    "created": {"type": ["string", "null"]},
+                    "modified": {"type": ["string", "null"]},
+                    "length": {"type": "integer"},
+                    "etag": {"type": "string"},
+                    "flags": {"type": "integer"}
+                },
+                "required": ["path", "type"]
+            }
+        },
+        "readUrl": {
+            "type": "object",
+            "description": "URL descriptor containing url, expiresAt and optional dispose() callback."
+        },
+        "getMode": {
+            "type": "string",
+            "schema": {"enum": ["all", "files", "directories", "descendants"]}
+        },
+        "syncMode": {
+            "type": "string",
+            "schema": {"enum": ["LeftToRight", "Bidirectional"]}
+        }
+    },
+
+    "properties": {
+        "url": {"type": "string", "readonly": true, "description": "Filesystem identity."},
+        "isReadonly": {"type": "boolean", "description": "Whether mutations are disabled."},
+        "isStarted": {"type": "boolean", "readonly": true, "description": "Whether the filesystem is started."}
+    },
+
+    "methods": {
+        "getEntry": {
+            "description": "Gets an entry by path. Returns null if not found.",
+            "parameters": [
+                {"name": "path", "type": "string", "required": true},
+                {"name": "options", "type": "object", "schema": {
+                    "type": "object",
+                    "properties": {
+                        "signal": {"type": "object", "description": "Optional AbortSignal for cancellation."}
+                    }
+                }}
+            ],
+            "returns": {"ref": "entry", "description": "Promise resolving to an entry or null."}
+        },
+        "getEntries": {
+            "description": "Enumerates filesystem entries using mode and pattern filters.",
+            "parameters": [
+                {"name": "path", "type": "string", "required": true},
+                {"name": "options", "type": "object", "schema": {
+                    "type": "object",
+                    "properties": {
+                        "mode": {"type": "string", "enum": ["all", "files", "directories", "descendants"], "default": "all", "description": "Entry enumeration mode."},
+                        "pattern": {"type": ["string", "null"], "default": null, "description": "Optional filename pattern; null disables filtering."},
+                        "signal": {"type": "object", "description": "Optional AbortSignal for cancellation."}
+                    }
+                }}
+            ],
+            "returns": {"type": "object", "description": "AsyncIterable of filesystem entries."}
+        },
+        "exists": {
+            "description": "Checks whether a path exists.",
+            "parameters": [
+                {"name": "path", "type": "string", "required": true},
+                {"name": "options", "type": "object", "schema": {
+                    "type": "object",
+                    "properties": {
+                        "signal": {"type": "object", "description": "Optional AbortSignal for cancellation."}
+                    }
+                }}
+            ],
+            "returns": {"type": "boolean", "description": "Promise resolving to true if the path exists."}
+        },
+        "existsFile": {
+            "description": "Checks whether a file exists.",
+            "parameters": [
+                {"name": "path", "type": "string", "required": true},
+                {"name": "options", "type": "object", "schema": {
+                    "type": "object",
+                    "properties": {
+                        "signal": {"type": "object", "description": "Optional AbortSignal for cancellation."}
+                    }
+                }}
+            ],
+            "returns": {"type": "boolean"}
+        },
+        "existsDirectory": {
+            "description": "Checks whether a directory exists.",
+            "parameters": [
+                {"name": "path", "type": "string", "required": true},
+                {"name": "options", "type": "object", "schema": {
+                    "type": "object",
+                    "properties": {
+                        "signal": {"type": "object", "description": "Optional AbortSignal for cancellation."}
+                    }
+                }}
+            ],
+            "returns": {"type": "boolean"}
+        },
+        "loadReadStream": {
+            "description": "Opens a readable byte stream for a file.",
+            "parameters": [
+                {"name": "path", "type": "string", "required": true},
+                {"name": "options", "type": "object", "schema": {
+                    "type": "object",
+                    "properties": {
+                        "offset": {"type": "integer", "minimum": 0, "default": 0, "description": "Starting byte offset."},
+                        "length": {"type": "integer", "minimum": -1, "default": -1, "description": "Maximum bytes to read; -1 reads to the end."},
+                        "signal": {"type": "object", "description": "Optional AbortSignal for cancellation."}
+                    }
+                }}
+            ],
+            "returns": {"type": "object", "description": "Promise resolving to ReadableStream."}
+        },
+        "loadWriteStream": {
+            "description": "Opens a writable stream for a file.",
+            "parameters": [
+                {"name": "path", "type": "string", "required": true},
+                {"name": "options", "type": "object", "schema": {
+                    "type": "object",
+                    "properties": {
+                        "append": {"type": "boolean", "default": false, "description": "Append written data instead of replacing existing content."},
+                        "truncate": {"type": "boolean", "default": false, "description": "Truncate or create the file before writing."},
+                        "signal": {"type": "object", "description": "Optional AbortSignal for cancellation."}
+                    }
+                }}
+            ],
+            "returns": {"type": "object", "description": "Promise resolving to WritableStream."}
+        },
+        "getReadUrl": {
+            "description": "Gets a browser-readable URL with optional expiration and disposal.",
+            "parameters": [
+                {"name": "path", "type": "string", "required": true},
+                {"name": "options", "type": "object", "schema": {
+                    "type": "object",
+                    "properties": {
+                        "expiresIn": {"type": "number", "default": 300, "description": "Requested URL validity duration in seconds; provider-dependent."},
+                        "disposition": {"type": "string", "default": "inline", "description": "Requested content disposition, such as inline or attachment."},
+                        "signal": {"type": "object", "description": "Optional AbortSignal for cancellation."}
+                    }
+                }}
+            ],
+            "returns": {"ref": "readUrl"}
+        },
+        "saveFile": {
+            "description": "Creates or overwrites a file.",
+            "parameters": [
+                {"name": "path", "type": "string", "required": true},
+                {"name": "data", "type": "any", "required": true, "description": "File content, typically Blob, ReadableStream, string or binary data."},
+                {"name": "options", "type": "object", "schema": {
+                    "type": "object",
+                    "properties": {
+                        "append": {"type": "boolean", "default": false, "description": "Append data to an existing file instead of replacing its contents."},
+                        "signal": {"type": "object", "description": "Optional AbortSignal for cancellation."}
+                    }
+                }}
+            ],
+            "returns": {"ref": "entry"}
+        },
+        "createDirectory": {
+            "description": "Creates a directory.",
+            "parameters": [
+                {"name": "path", "type": "string", "required": true},
+                {"name": "options", "type": "object", "schema": {
+                    "type": "object",
+                    "properties": {
+                        "signal": {"type": "object", "description": "Optional AbortSignal for cancellation."}
+                    }
+                }}
+            ],
+            "returns": {"ref": "entry"}
+        },
+        "delete": {
+            "description": "Deletes a filesystem entry.",
+            "parameters": [
+                {"name": "path", "type": "string", "required": true},
+                {"name": "options", "type": "object", "schema": {
+                    "type": "object",
+                    "properties": {
+                        "signal": {"type": "object", "description": "Optional AbortSignal for cancellation."}
+                    }
+                }}
+            ]
+        },
+        "deleteFile": {
+            "description": "Deletes a file if it exists.",
+            "parameters": [
+                {"name": "path", "type": "string", "required": true},
+                {"name": "options", "type": "object", "schema": {
+                    "type": "object",
+                    "properties": {
+                        "signal": {"type": "object", "description": "Optional AbortSignal for cancellation."}
+                    }
+                }}
+            ]
+        },
+        "deleteDirectory": {
+            "description": "Deletes a directory if it exists.",
+            "parameters": [
+                {"name": "path", "type": "string", "required": true},
+                {"name": "options", "type": "object", "schema": {
+                    "type": "object",
+                    "properties": {
+                        "signal": {"type": "object", "description": "Optional AbortSignal for cancellation."}
+                    }
+                }}
+            ]
+        },
+        "copy": {
+            "description": "Copies a file or directory.",
+            "parameters": [
+                {"name": "source", "type": "string", "required": true},
+                {"name": "destination", "type": "string", "required": true},
+                {"name": "options", "type": "object", "schema": {
+                    "type": "object",
+                    "properties": {
+                        "overwrite": {"type": "boolean", "default": true, "description": "Overwrite existing destination files."},
+                        "recursive": {"type": "boolean", "default": true, "description": "Recursively copy directory contents."},
+                        "ignoreErrors": {"type": "boolean", "default": false, "description": "Continue copying when individual operations fail, except aborts."},
+                        "tries": {"type": "integer", "minimum": 1, "default": 1, "description": "Maximum number of attempts per file copy."},
+                        "logger": {"type": ["object", "null"], "default": null, "description": "Optional logger supporting info() and error() methods."},
+                        "signal": {"type": "object", "description": "Optional AbortSignal for cancellation."}
+                    }
+                }}
+            ]
+        },
+        "move": {
+            "description": "Moves a file or directory, using copy and delete when necessary.",
+            "parameters": [
+                {"name": "source", "type": "string", "required": true},
+                {"name": "destination", "type": "string", "required": true},
+                {"name": "options", "type": "object", "schema": {
+                    "type": "object",
+                    "properties": {
+                        "logger": {"type": ["object", "null"], "default": null, "description": "Optional logger supporting info() and error() methods."},
+                        "signal": {"type": "object", "description": "Optional AbortSignal for cancellation."}
+                    }
+                }}
+            ]
+        },
+        "touch": {
+            "description": "Updates the modification time. Optional provider capability.",
+            "parameters": [
+                {"name": "path", "type": "string", "required": true},
+                {"name": "modified", "type": "date", "description": "Modification timestamp; defaults to the current date/time."},
+                {"name": "options", "type": "object", "schema": {
+                    "type": "object",
+                    "properties": {
+                        "signal": {"type": "object", "description": "Optional AbortSignal for cancellation."}
+                    }
+                }}
+            ]
+        },
+        "sync": {
+            "description": "Synchronizes two paths. Not implemented by the base class.",
+            "parameters": [
+                {"name": "source", "type": "string", "required": true},
+                {"name": "destination", "type": "string", "required": true},
+                {"name": "options", "type": "object", "schema": {
+                    "type": "object",
+                    "properties": {
+                        "mode": {"type": "string", "enum": ["LeftToRight", "Bidirectional"], "default": "LeftToRight", "description": "Synchronization direction."},
+                        "signal": {"type": "object", "description": "Optional AbortSignal for cancellation."}
+                    }
+                }}
+            ]
+        },
+        "createWatcher": {
+            "description": "Creates a filesystem watcher. Optional provider capability.",
+            "parameters": [
+                {"name": "path", "type": "string", "required": true},
+                {"name": "options", "type": "object", "schema": {
+                    "type": "object",
+                    "properties": {
+                        "filter": {"type": "string", "default": "", "description": "Optional filter for watched entries."},
+                        "excludes": {"type": "array", "items": {"type": "string"}, "default": [], "description": "Patterns or paths excluded from notifications."},
+                        "recursive": {"type": "boolean", "default": false, "description": "Watch descendant directories recursively."},
+                        "signal": {"type": "object", "description": "Optional AbortSignal for cancellation."}
+                    }
+                }}
+            ],
+            "returns": {"type": "object", "description": "Provider-specific watcher object."}
+        },
+        "getMetadata": {
+            "description": "Reads custom metadata. Optional provider capability.",
+            "parameters": [
+                {"name": "path", "type": "string", "required": true},
+                {"name": "options", "type": "object", "schema": {
+                    "type": "object",
+                    "properties": {
+                        "signal": {"type": "object", "description": "Optional AbortSignal for cancellation."}
+                    }
+                }}
+            ],
+            "returns": {"type": "object"}
+        },
+        "setMetadata": {
+            "description": "Writes custom metadata. Optional provider capability.",
+            "parameters": [
+                {"name": "path", "type": "string", "required": true},
+                {"name": "metadata", "type": "object", "required": true},
+                {"name": "options", "type": "object", "schema": {
+                    "type": "object",
+                    "properties": {
+                        "signal": {"type": "object", "description": "Optional AbortSignal for cancellation."}
+                    }
+                }}
+            ]
+        },
+        "supports": {
+            "description": "Checks whether a provider supports an optional capability.",
+            "parameters": [
+                {"name": "path", "type": "string", "required": true},
+                {"name": "feature", "type": "string", "required": true, "enum": ["Touch", "CreateWatcher", "Metadata", "Select"]},
+                {"name": "options", "type": "object", "schema": {
+                    "type": "object",
+                    "properties": {
+                        "signal": {"type": "object", "description": "Optional AbortSignal for cancellation."}
+                    }
+                }}
+            ],
+            "returns": {"type": "boolean"}
+        }
+    },
+
+    "events": {}
+}

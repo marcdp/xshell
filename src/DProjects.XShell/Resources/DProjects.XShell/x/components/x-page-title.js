@@ -16,7 +16,7 @@ export default {
         return {
             load(...args) {
                 // load
-                events.on(bus, "xshell:page:load", (event)=>{
+                events.on(bus, ["xshell:page:load", "xshell:page:change"], (event)=>{
                     if (event.detail.id == getPage()?.id) {
                         this.refresh();
                     }

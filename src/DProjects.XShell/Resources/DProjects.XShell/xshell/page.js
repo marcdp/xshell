@@ -44,12 +44,18 @@ export default class Page {
     set label(value) { 
         this._label = value; 
         if (this._breadcrumb && this._breadcrumb.length > 0) this._breadcrumb[this._breadcrumb.length - 1].label = value;
+        if (this._loaded) {
+            xshell.bus.emit("xshell:page:change", { src: this._src, id: this._id, label: this._label, description: this._description, result: this._result });
+        }
     }
 
     get description() { return this._description; }
     set description(value) { 
         this._description = value; 
         if (this._breadcrumb && this._breadcrumb.length > 0) this._breadcrumb[this._breadcrumb.length - 1].description = value;
+        if (this._loaded) {
+            xshell.bus.emit("xshell:page:change", { src: this._src, id: this._id, label: this._label, description: this._description, result: this._result });
+        }
     }
 
     get breadcrumb() { return this._breadcrumb; }
@@ -59,12 +65,20 @@ export default class Page {
     set icon(value) { 
         this._icon = value; 
         if (this._breadcrumb && this._breadcrumb.length > 0) this._breadcrumb[this._breadcrumb.length - 1].icon = value;
+        if (this._loaded) {
+            xshell.bus.emit("xshell:page:change", { src: this._src, id: this._id, label: this._label, description: this._description, result: this._result });
+        }
     }
 
     get meta() { return this.constructor.definition?.meta ?? {}; }
 
     get result() { return this._result; }
-    set result(value) { this._result = value; }
+    set result(value) { 
+        this._result = value; 
+        if (this._loaded) {
+            xshell.bus.emit("xshell:page:change", { src: this._src, id: this._id, label: this._label, description: this._description, result: this._result });
+        }
+    }
 
     get refs() {
         if (!this._refs) {
@@ -118,6 +132,7 @@ export default class Page {
         await this.onCommand("unload", {});
         this._host = null;
         this._refs = null;
+        xshell.bus.emit("xshell:page:unload", { src: this._src, id: this._id });
     }
 
     // close methods

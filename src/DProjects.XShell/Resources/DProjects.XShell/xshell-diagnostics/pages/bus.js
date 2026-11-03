@@ -42,6 +42,7 @@ export default {
         query_detail: ""
     },
     controller({ state, events, bus, page}) {
+        const MAX_EVENTS = 1000;
         return {
             load() {
                 // load

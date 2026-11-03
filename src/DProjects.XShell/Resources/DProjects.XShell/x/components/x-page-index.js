@@ -30,8 +30,7 @@ export default {
             load() {
                 events.on(bus, "xshell:menus:change", "refresh");
                 events.on(bus, "xshell:area:change", "refresh");
-
-                events.on(bus, "xshell:page:load", (event) => {
+                events.on(bus, ["xshell:page:load", "xshell:page:change"], (event) => {
                     if (event.detail.id === getPage()?.id) {
                         this.refresh();
                     }

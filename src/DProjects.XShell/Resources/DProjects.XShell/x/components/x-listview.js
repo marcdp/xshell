@@ -203,7 +203,8 @@ export default {
                 // scroll to newest item if needed
                 const previousItemCount = this.lastItemCount ?? items.length;
                 this.lastItemCount = items.length;
-                if (args.scroll && items.length > previousItemCount) {
+                
+                if (!args.scroll && items.length > previousItemCount) {
                     const item = items.at(-1);
                     if (!item || !state.autoScroll || (host.checkVisibility && !host.checkVisibility())) return;
                     if (this.autoScrollTimer) clearTimeout(this.autoScrollTimer);

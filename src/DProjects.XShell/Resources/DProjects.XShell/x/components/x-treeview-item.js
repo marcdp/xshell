@@ -54,7 +54,7 @@ export default {
         .row.no-childs .cell > x-icon {visibility:hidden;}
         .row.expanded .cell > x-icon {transform:rotate(90deg);}
 
-        .row ::slotted(div) {white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .row ::slotted(div) {white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: flex; align-items: center;}
 
         x-spinner {display:none; --x-color-primary:var(--x-color-text);}
         :host(.loading) x-spinner {display:inline-block; transform:translate(-.25em,.25em); margin-right:.075em;}

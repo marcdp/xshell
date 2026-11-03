@@ -8,7 +8,7 @@ export default {
     },
     meta: {
         title: "Debug",
-        classes: ["width50"]
+        classes: ["width70"]
     },
     style: `
     `,

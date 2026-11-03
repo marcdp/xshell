@@ -48,6 +48,51 @@ export default {
     &lt;x-treeview-item label="Second" path="/second"&gt;&lt;/x-treeview-item&gt;
 &lt;/x-treeview&gt;</code></pre>
 
+
+<h2>Treeview with columns</h2>
+<p>
+    A treeview can display additional columns alongside its hierarchical
+    items. Define the columns using <code>x-treeview-head</code> and
+    <code>x-treeview-column</code>, then provide each item's extra values
+    using the <code>column</code> slot.
+</p>
+
+<x-treeview x-on:select="onSelect">
+    <x-treeview-head>
+        <x-treeview-column label="Name" width="minmax(12em, 1fr)"></x-treeview-column>
+        <x-treeview-column label="Type" width="9em"></x-treeview-column>
+        <x-treeview-column label="Size" width="6em"></x-treeview-column>
+    </x-treeview-head>
+
+    <x-treeview-body>
+        <x-treeview-item icon="x-folder" label="Documents" path="/documents" expanded>
+            <div slot="column">Folder</div>
+            <div slot="column">—</div>
+
+            <x-treeview-item icon="x-file" label="Report.pdf" path="/documents/report.pdf">
+                <div slot="column">PDF document</div>
+                <div slot="column">245 KB</div>
+            </x-treeview-item>
+
+            <x-treeview-item icon="x-file" label="Notes.txt" path="/documents/notes.txt">
+                <div slot="column">Text document</div>
+                <div slot="column">12 KB</div>
+            </x-treeview-item>
+        </x-treeview-item>
+
+        <x-treeview-item icon="x-folder" label="Images" path="/images" expanded>
+            <div slot="column">Folder</div>
+            <div slot="column">—</div>
+
+            <x-treeview-item icon="x-image" label="Photo.png" path="/images/photo.png">
+                <div slot="column">PNG image</div>
+                <div slot="column">1.2 MB</div>
+            </x-treeview-item>
+        </x-treeview-item>
+    </x-treeview-body>
+</x-treeview>
+
+
         <h2>Keyboard navigation</h2>
         <p>Focus the treeview and use the keyboard to navigate between items.</p>
         <ul>
