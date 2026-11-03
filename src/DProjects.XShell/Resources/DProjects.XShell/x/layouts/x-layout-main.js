@@ -110,7 +110,7 @@ export default {
         }
         h1 ~ x-page-description {
             font-size:var(--x-font-size-small);
-            transform:translateY(-1em);
+            transform:translateY(-1.2em);
             display:block;
         }
 

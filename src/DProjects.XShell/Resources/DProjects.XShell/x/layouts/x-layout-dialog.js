@@ -14,6 +14,9 @@ export default {
         slots: {
             "": {
                 description: "Default slot for the layout content."
+            },
+            "header-actions": {
+                description: "Slot for header action buttons."
             }
         }
     },
@@ -55,7 +58,8 @@ export default {
         .header div {flex:1; }
         .header div h2 {margin:0; flex:1; font-size: var(--x-font-size-subtitle); margin-right:1em}
         .header div h2 ~ x-page-description {font-size:var(--x-font-size-small);display:block;}
-        .header x-button {transform:translateY(-0.2em);}
+        .header .header-actions {display:flex; gap:0.5em; justify-content:flex-end; padding-right:.5em;}
+        .header x-button {_transform:translateY(-0.2em);}
 
         /* fill */
         dialog.fill {width:100%; height:100%; }
@@ -98,7 +102,10 @@ export default {
                         <x-page-description></x-page-description>
                         <x-page-info></x-page-info>
                     </div>
-                    <x-button class="anchor" icon="x-close" x-on:click="queryClose"></x-button>                                        
+                    <div class="header-actions">
+                        <slot name="header-actions"></slot>
+                    </div>
+                    <x-button class="round light" icon="x-close" x-on:click="queryClose"></x-button>                                        
                 </div>
                 
                 <div class="body">

@@ -41,7 +41,7 @@ export default {
 
     template: `
         <x-form>
-            <x-spinner x-if="state.loading" message="Loading properties..."></x-spinner>
+            
             <x-notice x-if="state.error" type="error" x-attr:message="state.error"></x-notice>
 
             <x-tabs x-if="state.info">
@@ -86,11 +86,6 @@ export default {
                     </x-notice>
                 </x-tab>
             </x-tabs>
-
-            <x-button slot="footer" label="Refresh" icon="x-refresh"
-                x-on:click="refresh" x-attr:disabled="state.loading"></x-button>
-            <x-button slot="footer" label="OK" class="submit"
-                x-on:click="close"></x-button>
         </x-form>
     `,
 
@@ -142,7 +137,7 @@ export default {
 
                     const entry = await filesystem.getEntry(state.path, { signal });
                     signal.throwIfAborted();
-                    if (!entry) throw new Error("Entry not found.");
+                    if (!entry) throw new Error("Entry not found: " + state.path);
 
                     const path = entry.path || state.path;
                     const name = entry.name || path.split("/").pop() || "/";
@@ -193,10 +188,6 @@ export default {
                 } finally {
                     if (!signal.aborted) state.loading = false;
                 }
-            },
-
-            close() {
-                page.close();
             }
         };
     }

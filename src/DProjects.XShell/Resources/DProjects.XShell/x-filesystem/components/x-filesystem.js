@@ -60,7 +60,7 @@ export default {
         </div>
 
         <x-contextmenu x-on:command="onCommand">        
-            <x-menuitem label="Open" icon="x-open" command="open" x-attr:disabled="!state.entry"></x-menuitem>
+            <x-menuitem label="Open" icon="x-open" command="open" x-attr:disabled="!state.entry || !state.open"></x-menuitem>
             <x-menuitem label="-" ></x-menuitem>
             <x-menuitem label="New file ..." icon="x-file" command="newFile" x-attr:disabled="(state.entry && state.entry.type != 'directory' ? true : false)"></x-menuitem>
             <x-menuitem label="New folder ..." icon="x-folder" command="newFolder" x-attr:disabled="(state.entry && state.entry.type != 'directory' ? true : false)"></x-menuitem>
@@ -82,6 +82,7 @@ export default {
         entries: [],
         history: ["/"],
         historyIndex: 0,
+        open: false,
         root: false
     },
     controller({ state, events, loader, navigation, getPage, host, dialog, tasks, resolver}) {
@@ -130,16 +131,18 @@ export default {
                 for(const entry of entries) {
                     const page = getPage();
                     const resource = "filehandler:"+ entry.path.split('.').pop()
-                    const filehandlerResolverDefinition = resolver.has(resource) ? resolver.resolve(resource) : resolver.resolve("filehandler:")
-                    navigation.navigate( {
-                        href: filehandlerResolverDefinition.path,
-                        page: page,
-                        params: {
-                            src: state.src,
-                            path: entry.path,
-                        },
-                        open: "stack"
-                    });
+                    if (resolver.has(resource)) {
+                    const filehandlerResolverDefinition = resolver.resolve(resource);
+                        navigation.navigate( {
+                            href: filehandlerResolverDefinition.path,
+                            page: page,
+                            params: {
+                                src: state.src,
+                                path: entry.path,
+                            },
+                            open: "stack"
+                        });
+                    }
                 }
             },
             properties(entries = state.entries) {
@@ -425,7 +428,7 @@ export default {
             },
             onTreeProperties({event}) {
                 // handle tree properties event
-                this.properties(event.detail.entry.path);
+                this.properties([event.detail.entry]);
             },
             onTreeRename({event}) {
                 // handle tree rename event
@@ -450,7 +453,7 @@ export default {
             },
             onListProperties({event}) {
                 // handle list properties event
-                this.properties(event.detail.entry);
+                this.properties([event.detail.entry]);
             },
             onListRename({event}) {
                 // handle list rename event
@@ -470,6 +473,7 @@ export default {
                 // handle context menu entry event
                 state.entry = event.detail.entry;
                 state.entries = event.detail.entries;
+                state.open = resolver.has("filehandler:"+ state.entry.path.split('.').pop()) || state.entry.type == "directory";
                 const contextMenu = host.shadowRoot.querySelector("x-contextmenu");
                 contextMenu.open({x: event.detail.x, y: event.detail.y});
             }

@@ -78,19 +78,22 @@ export default {
             display:flex; 
             align-items:baseline; 
         }
-        div.panel .header div {}
-        div.panel .header div h2 {margin:0; flex:1; font-size: var(--x-font-size-subtitle); margin-right:1em;}
-        div.panel .header div h2 ~ x-page-description {font-size:var(--x-font-size-small);display:block;}
+        div.panel .header div.title {margin-right:1.5em;}
+        div.panel .header div.title h2 {margin:0; font-size: var(--x-font-size-subtitle); }
+        div.panel .header div.title h2 ~ x-page-description {font-size:var(--x-font-size-x-small);display:block;}
         div.panel .header .header-actions {display:flex; flex:1; gap:0.5em; justify-content:start; padding-right:.5em;}
         div.panel .header x-button {}
 
         div.panel .body {padding:0em var(--x-layout-stack-page-padding-horizontal);}    
+        div.panel .body:focus {outline:none;}
         
         @media (min-width: 769px) {
             :host {
                 --x-fill-top: 4.4em;
                 --x-fill-height: calc(100vh - var(--x-fill-top));
             }
+            div.panel .header div.title {transform:translateY(-.4em); height:3em; display:flex; flex-direction:column; justify-content:center;}
+            div.panel .header div.title h2 {flex:0;}
             div.panel .body.fill {display:flex; flex-direction: column; width:100%; position:absolute; top:var(--x-fill-top); height:var(--x-fill-height); box-sizing:border-box; padding:0;}
             div.panel:has(.body.fill) {scrollbar-width: none; scrollbar-gutter: none; overflow:hidden;}           
         }
@@ -104,6 +107,7 @@ export default {
                 --x-fill-top: 5em;
                 --x-fill-height: calc(100vh - var(--x-fill-top));
             }
+            
             div.panel .body {padding-top:1.4em;}    
             div.panel .body.fill {display:flex; flex-direction: column; width:100%; position:absolute; top:var(--x-fill-top); height:var(--x-fill-height); box-sizing:border-box;padding:0;}
             div.panel:has(.body.fill) {scrollbar-width: none; scrollbar-gutter: none; overflow:hidden;}
@@ -114,7 +118,7 @@ export default {
         <div class="panel"    x-class:expanded="state.expanded" x-on:transitionend="onTransitionEnd" x-on:keydown="onKeydown">
             <x-loading x-if="state.status=='loading'"></x-loading>
             <div class="header">            
-                <div>
+                <div class="title">
                     <h2><x-page-title></x-page-title></h2>
                     <x-page-description></x-page-description>
                     <x-page-info></x-page-info>

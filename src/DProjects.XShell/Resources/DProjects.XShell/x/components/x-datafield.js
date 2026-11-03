@@ -113,7 +113,7 @@ export default {
         :host label span.required {}
         :host label .icon-collapsible {display:none;}
 
-        :host label span.langs {float:right; display:inline-flex; gap:.15em}
+        :host label span.langs {float:right; display:inline-flex; gap:.15em; position:absolute; right:0; top:-.7em;}
         :host label span.langs div {display:flex; gap:.15em}
         :host label span.langs x-button {}
         :host label[label-mode='hidden'] {display:none;}
