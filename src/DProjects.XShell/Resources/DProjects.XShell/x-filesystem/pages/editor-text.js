@@ -12,7 +12,6 @@ export default {
 
     meta: {
         title:"Edit file",
-        description: "Lorem iuupsum",
         classes: ["fill"]
     },
 
@@ -21,10 +20,8 @@ export default {
     `,
 
     template: `
-        <x-toolbar>
-            <x-button label="Save" icon="x-save" command="save" class="menuitem"></x-button>
-            <x-button label="Print" icon="x-print" command="print" class="menuitem"></x-button>
-        </x-toolbar>
+        <x-button slot="header-actions" label="Save" icon="x-save" command="save" class="light"></x-button>
+        <x-button slot="header-actions" label="Print" icon="x-print" command="print" class="light"></x-button>
         <codemirror-editor x-model="state.value" style=""></codemirror-editor>
     `,
 

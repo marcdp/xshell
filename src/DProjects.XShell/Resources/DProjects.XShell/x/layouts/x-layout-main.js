@@ -266,7 +266,7 @@ export default {
 
             <div class="shortcuts">
 
-                <x-dropdown class="tasks popover left" collapse-on-click>
+                <x-dropdown class="tasks popover left" _collapse-on-click>
                     <x-button class="round light" icon="x-tasks" tooltip="Background tasks" x-attr:badge="state.runningTasks > 0 ? state.runningTasks : ''"></x-button>
                     <x-page slot="dropdown" src="/pages/tasks.js" loading="lazy"></x-page>
                 </x-dropdown>
@@ -277,7 +277,7 @@ export default {
                             {{ menuitem.label }}
                         </x-anchor>
                     </div>
-                    <x-dropdown x-else x-attr:class="'popover left' + (menuitem.class ? ' ' + menuitem.class : '')"  __collapse-on-click>
+                    <x-dropdown x-else x-attr:class="'popover left' + (menuitem.class ? ' ' + menuitem.class : '')"  collapse-on-click>
                         <x-button x-attr:label="menuitem.label" x-attr:icon="menuitem.icon" x-attr:title="menuitem.tooltip" class="round light"></x-button>
                         <x-menu slot="dropdown" x-prop:menu="menuitem.children"></x-menu>            
                     </x-dropdown>

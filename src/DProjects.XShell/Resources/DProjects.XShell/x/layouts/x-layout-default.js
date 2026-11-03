@@ -33,7 +33,7 @@ export default {
         status: "",
         pageClasses: ""
     },
-    controller({ events, page }) {
+    controller({ events, bus, state, getPage }) {
         return {
             load() {
                 // bind page load event to update page classes
@@ -45,7 +45,7 @@ export default {
             },
             onPageLoaded({ event }) {
                 // update page classes when the page is loaded
-                this.pageClasses = getPage()?.classes?.join(" ") || "";
+                state.pageClasses = getPage()?.meta?.classes?.join(" ") || "";
             }
             
         };

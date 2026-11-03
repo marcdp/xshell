@@ -52,6 +52,17 @@ controller({state}) {
         <pre x-pre><code>&lt;x-datafield type="text" label="Name" x-model="state.name"&gt;&lt;/x-datafield&gt;
 &lt;p&gt;Hello, {{ state.name }}!&lt;/p&gt;</code></pre>
 
+        <h2>Model update events</h2>
+
+        <h3>x-model (change)</h3>
+        <input x-model="state.changeValue">
+        <p>Value: {{ state.changeValue }}</p>
+
+        <h3>x-model.input (live)</h3>
+        <input x-model.input="state.inputValue">
+        <p>Value: {{ state.inputValue }}</p>
+
+
         <h2>Different input types</h2>
         <p>Model binding works with different datafield types, allowing form values to be managed through the same reactive state.</p>
         <x-datafields columns="2">
@@ -120,7 +131,9 @@ controller({state}) {
             {value:"high", label:"High"}
         ],
         formValues: {},
-        lastAction: "None"
+        lastAction: "None",
+        changeValue: "",
+        inputValue: ""
     },
 
     controller({state, events}) {

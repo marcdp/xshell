@@ -76,7 +76,10 @@ export default class Services {
     }
     resolve(name) {
         const result = this._items[name];
-        if (result == undefined) throw new Error(`Service not found: ${name}`); 
+        if (result == undefined) {
+            debugger;
+            throw new Error(`Service not found: ${name}`); 
+        }
         if (result.state === "creating") {
             // report the active constructor path when a service resolves itself recursively
             const cycleStart = this._creationPath.indexOf(name);

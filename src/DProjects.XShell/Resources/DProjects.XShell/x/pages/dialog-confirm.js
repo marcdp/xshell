@@ -9,6 +9,9 @@ export default {
         },
         methods: {}
     },
+    meta: {
+        classes: []
+    },
     template: `
         <x-form>
             <p>

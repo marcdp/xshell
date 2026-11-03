@@ -208,7 +208,7 @@ class XPage extends HTMLElement {
         if (layoutElement == null || layoutElement.localName != layout) {
             if (layoutElement) layoutElement.remove();
             layoutElement = document.createElement(layout);
-            layoutElement.innerHTML = "<slot></slot>";
+            layoutElement.innerHTML = "<slot></slot><slot name=\"header-actions\" slot=\"header-actions\"></slot>";
             this.shadowRoot.appendChild(layoutElement);
             layoutElement.setAttribute("status", "loading");
         }        

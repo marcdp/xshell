@@ -7,7 +7,8 @@ export default {
         methods: {}
     },
     meta: {
-        title: "Debug"
+        title: "Debug",
+        classes: ["width50"]
     },
     style: `
     `,

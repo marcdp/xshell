@@ -26,10 +26,7 @@ export default {
     `,
 
     template: `
-        <x-toolbar slot="top">
-            <x-menuitem label="Download" icon="x-download" command="download" class="menuitem"></x-menuitem>
-            <x-button label="Refresh" icon="x-refresh" command="refresh" class="menuitem"></x-button>
-        </x-toolbar>
+        <x-button slot="header-actions" label="Print" icon="x-print" command="print" class="light"></x-button>
         <img x-attr:src="state.url" />
     `,
 
@@ -54,6 +51,9 @@ export default {
                 state.entry = await state.filesystem.getEntry(state.path);
                 const response = await state.filesystem.getReadUrl(state.path);
                 state.url = response.url;
+            },
+            async print() {
+                // todo ...
             }
         };
     }

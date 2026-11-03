@@ -13,6 +13,9 @@ export default {
         slots: {
             "": {
                 description: "Default slot for the layout content."
+            },
+            "header-actions": {
+                description: "Slot for the layout header."
             }
         }
     },
@@ -75,16 +78,17 @@ export default {
             display:flex; 
             align-items:baseline; 
         }
-        div.panel .header div {flex:1;}
+        div.panel .header div {}
         div.panel .header div h2 {margin:0; flex:1; font-size: var(--x-font-size-subtitle); margin-right:1em;}
         div.panel .header div h2 ~ x-page-description {font-size:var(--x-font-size-small);display:block;}
-        div.panel .header x-button {transform:translateY(-0.2em);}
+        div.panel .header .header-actions {display:flex; flex:1; gap:0.5em; justify-content:start; padding-right:.5em;}
+        div.panel .header x-button {}
 
         div.panel .body {padding:0em var(--x-layout-stack-page-padding-horizontal);}    
         
         @media (min-width: 769px) {
             :host {
-                --x-fill-top: 4.5em;
+                --x-fill-top: 4.4em;
                 --x-fill-height: calc(100vh - var(--x-fill-top));
             }
             div.panel .body.fill {display:flex; flex-direction: column; width:100%; position:absolute; top:var(--x-fill-top); height:var(--x-fill-height); box-sizing:border-box; padding:0;}
@@ -115,7 +119,10 @@ export default {
                     <x-page-description></x-page-description>
                     <x-page-info></x-page-info>
                 </div>
-                <x-button class="anchor" icon="x-close" x-on:click="queryClose"></x-button>               
+                <div class="header-actions">
+                    <slot name="header-actions"></slot>
+                </div>
+                <x-button class="light round" icon="x-close" x-on:click="queryClose"></x-button>               
             </div>            
             <div x-attr:class="'body' + (state.pageClasses ? ' ' + state.pageClasses : '')" tabIndex="1">
                 <slot></slot>

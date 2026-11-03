@@ -35,6 +35,15 @@ export default {
             transform:translateX(-50%);
             z-index:10;
         }
+        div.width20 {width: 20em;}
+        div.width30 {width: 30em;}
+        div.width40 {width: 40em;}
+        div.width50 {width: 50em;}
+        div.width60 {width: 60em;}
+        div.width70 {width: 70em;}
+        div.width80 {width: 80em;}
+        div.width90 {width: 90em;}
+        div.width100 {width: 100em;}
     `,
     template: `
         <x-loading x-if="state.status=='loading'"></x-loading>
@@ -46,7 +55,7 @@ export default {
     state: {
         pageClasses: ""
     },
-    controller({ events, page }) {
+    controller({ events, bus, state, getPage }) {
         return {
             load() {
                 // bind page load event to update page classes
@@ -58,7 +67,7 @@ export default {
             },
             onPageLoaded({ event }) {
                 // update page classes when the page is loaded
-                this.pageClasses = getPage()?.classes?.join(" ") || "";
+                state.pageClasses = getPage()?.meta?.classes?.join(" ") || "";
             }
             
         };

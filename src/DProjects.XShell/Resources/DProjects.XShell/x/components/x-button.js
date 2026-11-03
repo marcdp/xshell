@@ -57,7 +57,7 @@ export default {
         :host .button:hover {border-color:var(--x-color-text); color:var(--x-color-text); background:var(--x-button-background-hover); cursor:pointer; }
         :host .button:active {background:var(--x-button-background-active);}
         :host .button > x-icon.icon {transform:translateY(-.1em); }
-        :host .button > x-icon.icon[icon] + div {padding-left:.15em;}
+        :host .button > x-icon.icon[icon] + div {padding-left:.4em;}
         :host .button > x-icon.down {transform:translateY(-.1em); padding-left:.15em; margin-right:-.25em; }
         :host .button[expanded] > x-icon.down {transform:translateY(.1em) rotate(-180deg) ; }
         :host .button > div {display:flex; flex-direction:column; }

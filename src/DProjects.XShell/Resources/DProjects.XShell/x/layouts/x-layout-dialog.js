@@ -62,6 +62,17 @@ export default {
         dialog.fill > .container {width:100%; height:100%; display:flex; flex-direction:column;}
         dialog.fill > .container .body {display:flex; flex-direction:column; flex:1;}
 
+        /* width */
+        dialog.width20 {width: 20em; min-width:20em;}
+        dialog.width30 {width: 30em;}
+        dialog.width40 {width: 40em;}
+        dialog.width50 {width: 50em;}
+        dialog.width60 {width: 60em;}
+        dialog.width70 {width: 70em;}
+        dialog.width80 {width: 80em;}
+        dialog.width90 {width: 90em;}
+        dialog.width100 {width: 100em;}
+
         /* responsive */
         @media (max-width: 768px) {
             dialog {
