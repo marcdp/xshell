@@ -1,0 +1,73 @@
+{
+  "$schema": "../../xshell/schemas/service.schema.json",
+  "label": "Sign In",
+  "description": "Runs a provider-defined, request/response sign-in conversation.",
+  "types": {
+    "signInRequest": {
+      "type": "object",
+      "description": "Sign-in request with provider-defined string headers.",
+      "schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["headers"],
+        "properties": {
+          "headers": {
+            "type": "object",
+            "additionalProperties": {"type": "string"}
+          }
+        }
+      }
+    },
+    "signInField": {
+      "type": "object",
+      "description": "One provider-requested field in a sign-in conversation.",
+      "schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "label", "type", "description", "placeHolder", "required", "value"],
+        "properties": {
+          "name": {"type": "string"},
+          "label": {"type": "string"},
+          "type": {"type": "string", "enum": ["Title", "Paragraph", "Text", "Password", "Value"]},
+          "description": {"type": "string"},
+          "placeHolder": {"type": "string"},
+          "required": {"type": "boolean"},
+          "value": {"type": "string"}
+        }
+      }
+    },
+    "signInResponse": {
+      "type": "object",
+      "description": "Provider response requesting more data, reporting failure, or returning a principal.",
+      "schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["status", "headers", "fields", "claimsPrincipal"],
+        "properties": {
+          "status": {"type": "string", "enum": ["DataRequired", "Failure", "Success"]},
+          "headers": {"type": "object", "additionalProperties": {"type": "string"}},
+          "fields": {"type": "array"},
+          "claimsPrincipal": {"type": ["object", "null"]}
+        }
+      }
+    }
+  },
+  "methods": {
+    "signInAsync": {
+      "description": "Advances the sign-in conversation. Conventional headers include login, password, attempt, and retry; providers may define others.",
+      "parameters": [
+        {"name": "request", "ref": "signInRequest", "required": true},
+        {
+          "name": "signal",
+          "type": "object",
+          "required": false,
+          "description": "Optional AbortSignal used to cancel the operation."
+        }
+      ],
+      "returns": {
+        "ref": "signInResponse",
+        "description": "Promise resolving to the next provider response."
+      }
+    }
+  }
+}

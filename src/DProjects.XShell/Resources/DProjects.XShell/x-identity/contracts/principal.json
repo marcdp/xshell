@@ -1,0 +1,90 @@
+{
+  "$schema": "../../xshell/schemas/service.schema.json",
+  "label": "Principal",
+  "description": "Represents the current claims-based application principal.",
+  "types": {
+    "identities": {
+      "type": "array",
+      "description": "Claims identities belonging to the principal.",
+      "schema": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["authenticationType", "claims"],
+          "properties": {
+            "authenticationType": {"type": ["string", "null"]},
+            "claims": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["type", "value"],
+                "properties": {
+                  "type": {"type": "string"},
+                  "value": {"type": "string"}
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "properties": {
+    "identities": {
+      "ref": "identities",
+      "readonly": true,
+      "description": "Read-only snapshot of all identities. An anonymous principal has no identities."
+    },
+    "identity": {
+      "type": "object",
+      "readonly": true,
+      "schema": {"type": ["object", "null"]},
+      "description": "First identity, or null when the principal is anonymous."
+    },
+    "isAuthenticated": {
+      "type": "boolean",
+      "readonly": true,
+      "description": "Whether any identity has a non-empty authentication type."
+    }
+  },
+  "events": {
+    "x-identity:principal:changed": {
+      "description": "Emitted on the Bus when the effective principal changes.",
+      "detail": {
+        "isAuthenticated": {
+          "type": "boolean",
+          "required": true,
+          "description": "Current authentication state."
+        }
+      }
+    }
+  },
+  "methods": {
+    "hasClaim": {
+      "description": "Reports whether any identity contains the requested claim.",
+      "parameters": [
+        {"name": "type", "type": "string", "required": true},
+        {"name": "value", "type": "string", "required": false}
+      ],
+      "returns": {"type": "boolean"}
+    },
+    "isInRole": {
+      "description": "Reports whether the principal has the .NET-compatible role claim.",
+      "parameters": [
+        {"name": "role", "type": "string", "required": true}
+      ],
+      "returns": {"type": "boolean"}
+    },
+    "setIdentities": {
+      "description": "Validates, defensively copies, and replaces all identities.",
+      "parameters": [
+        {"name": "identities", "ref": "identities", "required": true}
+      ]
+    },
+    "clear": {
+      "description": "Makes the principal anonymous."
+    }
+  }
+}
