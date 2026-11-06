@@ -28,7 +28,7 @@ The host configures the module reference with application or absolute HTTP(S) UR
 
 ```jsonc
 "x-identity": {
-    "configUrl": "url:../x-identity/module.jsonc",
+    "configUrl": "url:../x-identity/manifest.jsonc",
     "params": {
         "signinUrl": "app:/api/identity/signin",
         "sessionUrl": "app:/api/identity/session",

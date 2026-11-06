@@ -16,8 +16,8 @@ namespace DProjects.XShell.Test {
             foreach (var path in Directory.EnumerateFiles(resourceDirectory, "*.html", SearchOption.AllDirectories)) {
                 // compile authored HTML modules through the same SFC path used by pack and development hosting
                 var moduleDirectory = Path.Combine(resourceDirectory, Path.GetRelativePath(resourceDirectory, path).Split(Path.DirectorySeparatorChar)[0]);
-                var descriptor = File.Exists(Path.Combine(moduleDirectory, "module.json")) ? Path.Combine(moduleDirectory, "module.json") :
-                    Path.Combine(moduleDirectory, "module.jsonc");
+                var descriptor = File.Exists(Path.Combine(moduleDirectory, "manifest.json")) ? Path.Combine(moduleDirectory, "manifest.json") :
+                    Path.Combine(moduleDirectory, "manifest.jsonc");
                 if (!File.Exists(descriptor)) continue;
                 try {
                     _ = await new ModuleFileCompiler().CompileAsync(descriptor, path, TestContext.Current.CancellationToken);

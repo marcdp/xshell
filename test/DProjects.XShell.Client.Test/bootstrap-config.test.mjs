@@ -6,7 +6,7 @@ import vm from "node:vm";
 import Modules from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/modules.js";
 import Resolver from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/resolver.js";
 
-const rootUrl = "https://example.test/modules/app/module.jsonc";
+const rootUrl = "https://example.test/modules/app/manifest.jsonc";
 const bootstrapPath = new URL("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/bootstrap.js", import.meta.url);
 const bootstrapSource = readFileSync(bootstrapPath, "utf8").replace(
     /\/\/ exec bootstrap[\s\S]*$/,
@@ -38,7 +38,7 @@ const bootstrapSource = readFileSync(bootstrapPath, "utf8").replace(
 const fetchedResources = new Map();
 const directFetchCalls = [];
 const metaValues = {
-    "xshell:app.configPath": "/modules/app/module.jsonc",
+    "xshell:app.configPath": "/modules/app/manifest.jsonc",
     "xshell:app.params": "mode=host",
     "xshell:app.basePath": "/app",
     "xshell:xshell.environment": "",
@@ -182,14 +182,14 @@ test("module discovery rejects malformed and reserved local module ids before pa
 test("module discovery rejects malformed and reserved external reference ids before loading them", async () => {
     for (const moduleId of ["bad/id", "xshell"]) {
         const calls = [];
-        await assert.rejects(discover({ modules: { app: definition("app"), [moduleId]: reference("./other/module.jsonc") } }, {}, calls),
+        await assert.rejects(discover({ modules: { app: definition("app"), [moduleId]: reference("./other/manifest.jsonc") } }, {}, calls),
             moduleId === "xshell" ? /Module id 'xshell' is reserved/ : /Invalid module id 'bad\/id'/);
         assert.deepEqual(calls, []);
     }
 });
 
 test("checked-in assets.basePath resolves for root and subpath hosting", () => {
-    const defaults = api.parseJsonc(readFileSync(new URL("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/xshell.jsonc", import.meta.url), "utf8"));
+    const defaults = api.parseJsonc(readFileSync(new URL("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/manifest.jsonc", import.meta.url), "utf8"));
     assert.deepEqual(plain(defaults.xshell.assets), { basePath: "app:/_assets", url: "url:./" });
     assert.deepEqual(plain(defaults.xshell.services.temp), { contract: "temp", implementation: "/temp.js" });
     assert.deepEqual(plain(defaults.xshell.serviceWorker), {});
@@ -204,7 +204,7 @@ test("checked-in assets.basePath resolves for root and subpath hosting", () => {
             }
         });
         new vm.Script(bootstrapSource).runInContext(isolated);
-        const base = isolated.__bootstrapTests.normalizeAssetsBase(defaults.xshell.assets.basePath, "https://example.test/xshell/xshell.json");
+        const base = isolated.__bootstrapTests.normalizeAssetsBase(defaults.xshell.assets.basePath, "https://example.test/xshell/manifest.json");
         assert.equal(base, "/_assets");
         assert.equal(new URL(base.substring(1), `https://example.test${basePath}/`).href, effectiveUrl);
         const generated = api.getAssetsPath(base, "orders", "1.4.0", undefined, "Development");
@@ -215,7 +215,7 @@ test("checked-in assets.basePath resolves for root and subpath hosting", () => {
 });
 
 test("assets.basePath rejects missing, application-root, and out-of-scope locations", () => {
-    const configUrl = "https://example.test/xshell/xshell.json";
+    const configUrl = "https://example.test/xshell/manifest.json";
     assert.throws(() => api.normalizeAssetsBase(undefined, configUrl), /non-empty/);
     assert.throws(() => api.normalizeAssetsBase("app:/", configUrl), /namespace below/);
     assert.throws(() => api.normalizeAssetsBase("https://example.test/elsewhere/assets", configUrl), /within the application base/);
@@ -240,12 +240,12 @@ test("development and published generations use descriptor version and package h
     assert.equal(development.rootNode.config.modules.orders.controller, "/_assets/orders/1.4.0.dev/module.js");
     assert.equal(published.rootNode.assetsPath, "/_assets/orders/1.4.0.a82c31f943e01abc");
     assert.equal(published.rootNode.config.modules.orders.controller, "/_assets/orders/1.4.0.a82c31f943e01abc/module.js");
-    const dependencyUrl = "https://example.test/modules/app/dependency/module.jsonc";
+    const dependencyUrl = "https://example.test/modules/app/dependency/manifest.jsonc";
     const calls = [];
-    const withDependency = await api.discover({ modules: { ...root.modules, dependency: reference("./dependency/module.jsonc") } }, rootUrl,
+    const withDependency = await api.discover({ modules: { ...root.modules, dependency: reference("./dependency/manifest.jsonc") } }, rootUrl,
         { [dependencyUrl]: { modules: { dependency: definition("dependency", { hash: "dependency-hash" }) } } }, calls, "Production");
     assert.equal(withDependency.rootNode.references[0].configUrl,
-        "/_assets/orders/1.4.0.a82c31f943e01abc/dependency/module.jsonc");
+        "/_assets/orders/1.4.0.a82c31f943e01abc/dependency/manifest.jsonc");
     assert.equal(withDependency.rootNode.references[0].loadUrl, dependencyUrl);
     assert.deepEqual(calls, [dependencyUrl]);
     await assert.rejects(api.discover({ modules: { orders: definition("orders", { version: "1.4.0" }) } }, rootUrl, {}, [], "Production"),
@@ -275,8 +275,8 @@ test("module URLs normalize against the declaring logical file and keep explicit
 });
 
 test("bootstrap loads the authored XShell JSONC source through the canonical runtime URL", async () => {
-    const xshellUrl = "https://example.test/xshell/xshell.json";
-    fetchedResources.set(xshellUrl, api.parseJsonc(readFileSync(new URL("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/xshell.jsonc", import.meta.url), "utf8")));
+    const xshellUrl = "https://example.test/xshell/manifest.json";
+    fetchedResources.set(xshellUrl, api.parseJsonc(readFileSync(new URL("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/manifest.jsonc", import.meta.url), "utf8")));
     fetchedResources.set(rootUrl, { modules: { app: definition("app") } });
 
     const effective = await api.loadConfig();
@@ -299,8 +299,8 @@ test("bootstrap loads the authored XShell JSONC source through the canonical run
 });
 
 test("application configuration can replace the framework Temp implementation through normal merging", async () => {
-    const xshellUrl = "https://example.test/xshell/xshell.json";
-    fetchedResources.set(xshellUrl, api.parseJsonc(readFileSync(new URL("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/xshell.jsonc", import.meta.url), "utf8")));
+    const xshellUrl = "https://example.test/xshell/manifest.json";
+    fetchedResources.set(xshellUrl, api.parseJsonc(readFileSync(new URL("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/manifest.jsonc", import.meta.url), "utf8")));
     fetchedResources.set(rootUrl, {
         modules: { app: definition("app") },
         xshell: { services: { temp: { implementation: "/services/custom-temp.js" } } }
@@ -315,7 +315,7 @@ test("application configuration can replace the framework Temp implementation th
 });
 
 test("module URL traversal fails after logical normalization and reports the declaring document", () => {
-    const physicalFile = "https://cdn.example.test/orders/module.jsonc";
+    const physicalFile = "https://cdn.example.test/orders/manifest.jsonc";
 
     for (const value of [
         "../foo.js",
@@ -326,7 +326,7 @@ test("module URL traversal fails after logical normalization and reports the dec
         "/%2e%2e/foo.js"
     ]) {
         assert.throws(
-            () => api.relativizePaths(value, "/_assets/x", "/module.jsonc", physicalFile),
+            () => api.relativizePaths(value, "/_assets/x", "/manifest.jsonc", physicalFile),
             error =>
                 error.message.includes(value) &&
                 error.message.includes(physicalFile) &&
@@ -336,8 +336,8 @@ test("module URL traversal fails after logical normalization and reports the dec
 });
 
 test("module discovery keeps logical configUrl separate from its pre-Service-Worker physical fetch URL", async () => {
-    const physicalUrl = "https://example.test/modules/app/x/module.jsonc";
-    const root = { modules: { app: definition("app"), x: reference("./x/module.jsonc") } };
+    const physicalUrl = "https://example.test/modules/app/x/manifest.jsonc";
+    const root = { modules: { app: definition("app"), x: reference("./x/manifest.jsonc") } };
     const calls = [];
 
     const graph = await discover(root, {
@@ -349,7 +349,7 @@ test("module discovery keeps logical configUrl separate from its pre-Service-Wor
     // discovery keeps both logical and physical coordinates
     assert.equal(
         graph.rootNode.references[0].configUrl,
-        "/_assets/app/1.0.0.dev/x/module.jsonc"
+        "/_assets/app/1.0.0.dev/x/manifest.jsonc"
     );
     assert.equal(
         graph.rootNode.references[0].loadUrl,
@@ -368,9 +368,9 @@ test("module discovery keeps logical configUrl separate from its pre-Service-Wor
         physicalUrl
     );
 
-    const siblingUrl = "https://example.test/modules/x/module.jsonc";
+    const siblingUrl = "https://example.test/modules/x/manifest.jsonc";
     const physical = await discover(
-        { modules: { app: definition("app"), x: reference("url:../x/module.jsonc") } },
+        { modules: { app: definition("app"), x: reference("url:../x/manifest.jsonc") } },
         { [siblingUrl]: { modules: { x: definition("x") } } }
     );
 
@@ -378,15 +378,15 @@ test("module discovery keeps logical configUrl separate from its pre-Service-Wor
     assert.equal(physical.rootNode.references[0].loadUrl, siblingUrl);
 
     await assert.rejects(
-        () => discover({ modules: { app: definition("app"), x: reference("../x/module.jsonc") } }),
+        () => discover({ modules: { app: definition("app"), x: reference("../x/manifest.jsonc") } }),
         error =>
-            error.message.includes("../x/module.jsonc") &&
+            error.message.includes("../x/manifest.jsonc") &&
             error.message.includes(rootUrl) &&
             error.message.includes("escapes the module root")
     );
 
     await assert.rejects(
-        () => discover({ modules: { app: definition("app"), x: reference("module.jsonc") } }),
+        () => discover({ modules: { app: definition("app"), x: reference("manifest.jsonc") } }),
         /unsupported configUrl/
     );
 });
@@ -495,7 +495,7 @@ test("authored generated asset fields and obsolete flat fields are rejected", as
     await assert.rejects(() => discover({ modules: { x: definition("x", { assetsPath: "/authored" }) } }), /obsolete generated assetsPath/);
     await assert.rejects(() => discover({ modules: { x: definition("x", { assetsUrl: "url:.\/" }) } }), /obsolete assetsUrl/);
 
-    const xshellUrl = "https://example.test/xshell/xshell.json";
+    const xshellUrl = "https://example.test/xshell/manifest.json";
     fetchedResources.set(rootUrl, { modules: { app: definition("app") } });
     fetchedResources.set(xshellUrl, { modules: {}, xshell: { assets: { basePath: "app:/_assets", path: "/authored", url: "url:./" }, environment: "Development",
         version: "0.9.0", temp: { url: "url:./" }, resolver: {} } });
@@ -523,7 +523,7 @@ test("Service Worker registration sends the effective configuration mappings unc
     };
     context.setTimeout = () => 0;
     context.clearTimeout = () => {};
-    fetchedResources.set("https://example.test/xshell/xshell.json", {
+    fetchedResources.set("https://example.test/xshell/manifest.json", {
         modules: {}, xshell: { assets: { basePath: "app:/runtime", url: "url:./" }, environment: "Development", version: "0.9.0",
             temp: { url: "url:./" }, resolver: {} }
     });
@@ -585,7 +585,7 @@ test("Service Worker mapping registration keeps the no-response timeout", async 
 
 test("descriptor-provided module and XShell inventories normalize to generation-qualified Paths using only descriptor requests", async () => {
     directFetchCalls.length = 0;
-    const xshellUrl = "https://example.test/xshell/xshell.json";
+    const xshellUrl = "https://example.test/xshell/manifest.json";
     fetchedResources.set(xshellUrl, {
         modules: {},
         xshell: {
@@ -759,7 +759,7 @@ test("initializeXShell imports an absolute XShell module URL unchanged", async (
 
 test("loadConfig derives effective app metadata from the selected root module", async () => {
     directFetchCalls.length = 0;
-    const xshellUrl = "https://example.test/xshell/xshell.json";
+    const xshellUrl = "https://example.test/xshell/manifest.json";
     fetchedResources.set(xshellUrl, {
         modules: {},
         xshell: { assets: { basePath: "app:/_assets", url: "url:./" }, environment: "Production", version: "0.9.0", hash: "31d04ab8e220a581", temp: { url: "url:./" }, resolver: {} }
@@ -801,7 +801,7 @@ test("loadConfig derives effective app metadata from the selected root module", 
 });
 
 test("authored top-level app is rejected in root, dependency, and XShell configurations", async () => {
-    const xshellUrl = "https://example.test/xshell/xshell.json";
+    const xshellUrl = "https://example.test/xshell/manifest.json";
     const framework = { modules: {}, xshell: { assets: { basePath: "app:/_assets", url: "url:./" }, environment: "Development", version: "0.9.0",
         temp: { url: "url:./" }, resolver: {} } };
     fetchedResources.set(xshellUrl, framework);
@@ -810,13 +810,13 @@ test("authored top-level app is rejected in root, dependency, and XShell configu
     fetchedResources.set(rootUrl, { modules: { app: definition("app") } });
     fetchedResources.set(xshellUrl, { ...framework, app: {} });
     await assert.rejects(api.loadConfig(), /must not define top-level app/);
-    await assert.rejects(() => discover({ modules: { app: definition("app"), child: reference("url:../child/module.jsonc") } },
-        { "https://example.test/modules/child/module.jsonc": { app: {}, modules: { child: definition("child") } } }), /must not define top-level app/);
+    await assert.rejects(() => discover({ modules: { app: definition("app"), child: reference("url:../child/manifest.jsonc") } },
+        { "https://example.test/modules/child/manifest.jsonc": { app: {}, modules: { child: definition("child") } } }), /must not define top-level app/);
 });
 
 test("authored xshell.serviceWorker is merged and generated mappings replace authored mappings", async () => {
-    const xshellUrl = "https://example.test/xshell/xshell.json";
-    const childUrl = "https://example.test/modules/child/module.jsonc";
+    const xshellUrl = "https://example.test/xshell/manifest.json";
+    const childUrl = "https://example.test/modules/child/manifest.jsonc";
     const generatedMappings = [
         { src: "https://example.test/app/_assets/xshell/0.9.0.dev", dst: "https://example.test/xshell/",
             version: "0.9.0", name: "xshell", exceptions: [xshellUrl] },
@@ -852,8 +852,8 @@ test("authored xshell.serviceWorker is merged and generated mappings replace aut
 });
 
 test("loadConfig derives every assets.path from a custom assets.basePath", async () => {
-    const xshellUrl = "https://example.test/xshell/xshell.json";
-    const xUrl = "https://example.test/modules/x/module.jsonc";
+    const xshellUrl = "https://example.test/xshell/manifest.json";
+    const xUrl = "https://example.test/modules/x/manifest.jsonc";
     fetchedResources.set(xshellUrl, {
         modules: {},
         xshell: { assets: { basePath: "app:/runtime", url: "url:./" }, environment: "Production", version: "0.9.0", hash: "31d04ab8e220a581", temp: { url: "url:./" }, resolver: {} }
@@ -885,7 +885,7 @@ test("loadConfig derives every assets.path from a custom assets.basePath", async
 });
 
 test("root assets.basePath override is normalized before module discovery", async () => {
-    const xshellUrl = "https://example.test/xshell/xshell.json";
+    const xshellUrl = "https://example.test/xshell/manifest.json";
     fetchedResources.set(xshellUrl, {
         modules: {},
         xshell: { assets: { basePath: "app:/_assets", url: "url:./" }, environment: "Development", version: "0.9.0", temp: { url: "url:./" }, resolver: {} }
@@ -903,7 +903,7 @@ test("root assets.basePath override is normalized before module discovery", asyn
 });
 
 test("loadConfig resolves XShell assets.url from the application base", async () => {
-    fetchedResources.set("https://example.test/xshell/xshell.json", {
+    fetchedResources.set("https://example.test/xshell/manifest.json", {
         modules: {},
         xshell: { assets: { basePath: "app:/_assets", url: "app:/framework/" }, environment: "Development", version: "0.9.0", temp: { url: "url:./" }, resolver: {} }
     });
@@ -917,7 +917,7 @@ test("loadConfig resolves XShell assets.url from the application base", async ()
 });
 
 test("host Development override selects mutable generations without package hashes", async () => {
-    fetchedResources.set("https://example.test/xshell/xshell.json", {
+    fetchedResources.set("https://example.test/xshell/manifest.json", {
         modules: {},
         xshell: { assets: { basePath: "app:/_assets", url: "url:./" }, environment: "Production", version: "0.9.0", temp: { url: "url:./" }, resolver: {} }
     });
@@ -938,7 +938,7 @@ test("host Development override selects mutable generations without package hash
 });
 
 test("non-Development XShell without a package hash fails clearly", async () => {
-    fetchedResources.set("https://example.test/xshell/xshell.json", {
+    fetchedResources.set("https://example.test/xshell/manifest.json", {
         modules: {},
         xshell: { assets: { basePath: "app:/_assets", url: "url:./" }, environment: "Production", version: "0.9.0", temp: { url: "url:./" }, resolver: {} }
     });
@@ -947,8 +947,8 @@ test("non-Development XShell without a package hash fails clearly", async () => 
 });
 
 test("root config accepts exactly one local module regardless of module key order", async () => {
-    const xUrl = "https://example.test/modules/x/module.jsonc";
-    const root = { modules: { x: reference("url:../x/module.jsonc"), app: definition("app") } };
+    const xUrl = "https://example.test/modules/x/manifest.jsonc";
+    const root = { modules: { x: reference("url:../x/manifest.jsonc"), app: definition("app") } };
     const graph = await discover(root, { [xUrl]: { modules: { x: definition("x") } } });
 
     assert.equal(graph.rootNode.id, "app");
@@ -967,17 +967,17 @@ test("app URLs use the fixed host application base across configuration document
     const nestedContext = vm.createContext({ ...context, document: nestedDocument });
     new vm.Script(bootstrapSource, { filename: bootstrapPath.pathname }).runInContext(nestedContext);
     const nestedApi = nestedContext.__bootstrapTests;
-    const ownerUrl = "https://example.test/config/root/module.jsonc";
-    const xUrl = "https://example.test/myapp/modules/x/module.jsonc";
-    const yUrl = "https://example.test/myapp/modules/y/module.jsonc";
-    const sourceUrl = "https://example.test/config/source/module.jsonc";
+    const ownerUrl = "https://example.test/config/root/manifest.jsonc";
+    const xUrl = "https://example.test/myapp/modules/x/manifest.jsonc";
+    const yUrl = "https://example.test/myapp/modules/y/manifest.jsonc";
+    const sourceUrl = "https://example.test/config/source/manifest.jsonc";
     const root = { modules: {
         app: definition("app", { assets: { url: "app:foo" } }),
-        x: reference("app:modules/x/module.jsonc"),
-        source: reference("url:../source/module.jsonc")
+        x: reference("app:modules/x/manifest.jsonc"),
+        source: reference("url:../source/manifest.jsonc")
     } };
     const configs = {
-        [xUrl]: { modules: { x: definition("x", { assets: { url: "app:/foo" } }), y: reference("app:/modules/y/module.jsonc") } },
+        [xUrl]: { modules: { x: definition("x", { assets: { url: "app:/foo" } }), y: reference("app:/modules/y/manifest.jsonc") } },
         [yUrl]: { modules: { y: definition("y", { assets: { url: "https://cdn.example.test/y/" } }) } },
         [sourceUrl]: { modules: { source: definition("source", { assets: { url: "url:./assets/" } }) } }
     };
@@ -999,8 +999,8 @@ test("app URLs use the fixed host application base across configuration document
 });
 
 test("dependency config accepts exactly one local module regardless of module key order", async () => {
-    const aUrl = "https://example.test/modules/a/module.jsonc";
-    const xUrl = "https://example.test/modules/x/module.jsonc";
+    const aUrl = "https://example.test/modules/a/manifest.jsonc";
+    const xUrl = "https://example.test/modules/x/manifest.jsonc";
     const root = { modules: { app: definition("app"), a: reference(aUrl) } };
     const configs = {
         [aUrl]: { modules: { x: reference(xUrl), a: definition("a") } },
@@ -1024,15 +1024,15 @@ test("multiple local module definitions are rejected", async () => {
 });
 
 test("a dependency with zero local module definitions is rejected", async () => {
-    const xUrl = "https://example.test/modules/x/module.jsonc";
+    const xUrl = "https://example.test/modules/x/manifest.jsonc";
     const root = { modules: { app: definition("app"), x: reference(xUrl) } };
-    const configs = { [xUrl]: { modules: { y: reference("https://example.test/modules/y/module.jsonc") } } };
+    const configs = { [xUrl]: { modules: { y: reference("https://example.test/modules/y/manifest.jsonc") } } };
 
     await assert.rejects(() => discover(root, configs), /exactly one local module definition, but found 0/);
 });
 
 test("a dependency with multiple local module definitions is rejected", async () => {
-    const xUrl = "https://example.test/modules/x/module.jsonc";
+    const xUrl = "https://example.test/modules/x/manifest.jsonc";
     const root = { modules: { app: definition("app"), x: reference(xUrl) } };
     const configs = { [xUrl]: { modules: { x: definition("x"), y: definition("y") } } };
 
@@ -1040,7 +1040,7 @@ test("a dependency with multiple local module definitions is rejected", async ()
 });
 
 test("a reference must match the loaded local module identity", async () => {
-    const xUrl = "https://example.test/modules/x/module.jsonc";
+    const xUrl = "https://example.test/modules/x/manifest.jsonc";
     const root = { modules: { app: definition("app"), x: reference(xUrl) } };
     const configs = { [xUrl]: { modules: { y: definition("y") } } };
 
@@ -1048,9 +1048,9 @@ test("a reference must match the loaded local module identity", async () => {
 });
 
 test("a shared dependency with the same URL is fetched and registered once", async () => {
-    const aUrl = "https://example.test/modules/a/module.jsonc";
-    const bUrl = "https://example.test/modules/b/module.jsonc";
-    const xUrl = "https://example.test/modules/x/module.jsonc";
+    const aUrl = "https://example.test/modules/a/manifest.jsonc";
+    const bUrl = "https://example.test/modules/b/manifest.jsonc";
+    const xUrl = "https://example.test/modules/x/manifest.jsonc";
     const root = { modules: { app: definition("app"), a: reference(aUrl), b: reference(bUrl) } };
     const configs = {
         [aUrl]: { modules: { a: definition("a"), x: reference(xUrl) } },
@@ -1080,10 +1080,10 @@ test("a shared dependency with the same URL is fetched and registered once", asy
 });
 
 test("conflicting URLs for the same id discovered in one pass are rejected", async () => {
-    const aUrl = "https://example.test/modules/a/module.jsonc";
-    const bUrl = "https://example.test/modules/b/module.jsonc";
-    const x1Url = "https://example.test/modules/x-v1/module.jsonc";
-    const x2Url = "https://example.test/modules/x-v2/module.jsonc";
+    const aUrl = "https://example.test/modules/a/manifest.jsonc";
+    const bUrl = "https://example.test/modules/b/manifest.jsonc";
+    const x1Url = "https://example.test/modules/x-v1/manifest.jsonc";
+    const x2Url = "https://example.test/modules/x-v2/manifest.jsonc";
     const root = { modules: { app: definition("app"), a: reference(aUrl), b: reference(bUrl) } };
     const configs = {
         [aUrl]: { modules: { a: definition("a"), x: reference(x1Url) } },
@@ -1096,11 +1096,11 @@ test("conflicting URLs for the same id discovered in one pass are rejected", asy
 });
 
 test("a conflicting URL discovered after the module was loaded is rejected", async () => {
-    const aUrl = "https://example.test/modules/a/module.jsonc";
-    const bUrl = "https://example.test/modules/b/module.jsonc";
-    const cUrl = "https://example.test/modules/c/module.jsonc";
-    const x1Url = "https://example.test/modules/x-v1/module.jsonc";
-    const x2Url = "https://example.test/modules/x-v2/module.jsonc";
+    const aUrl = "https://example.test/modules/a/manifest.jsonc";
+    const bUrl = "https://example.test/modules/b/manifest.jsonc";
+    const cUrl = "https://example.test/modules/c/manifest.jsonc";
+    const x1Url = "https://example.test/modules/x-v1/manifest.jsonc";
+    const x2Url = "https://example.test/modules/x-v2/manifest.jsonc";
     const root = { modules: { app: definition("app"), a: reference(aUrl), b: reference(bUrl) } };
     const configs = {
         [aUrl]: { modules: { a: definition("a"), x: reference(x1Url) } },
@@ -1115,8 +1115,8 @@ test("a conflicting URL discovered after the module was loaded is rejected", asy
 });
 
 test("transitive dependencies load and merge before their dependents", async () => {
-    const aUrl = "https://example.test/modules/a/module.jsonc";
-    const xUrl = "https://example.test/modules/x/module.jsonc";
+    const aUrl = "https://example.test/modules/a/manifest.jsonc";
+    const xUrl = "https://example.test/modules/x/manifest.jsonc";
     const root = { trace: ["root"], modules: { app: definition("app"), a: reference(aUrl) } };
     const configs = {
         [aUrl]: { trace: ["a"], modules: { a: definition("a"), x: reference(xUrl) } },
@@ -1131,8 +1131,8 @@ test("transitive dependencies load and merge before their dependents", async () 
 });
 
 test("child references retain params and arbitrary configuration contributions", async () => {
-    const aUrl = "https://example.test/modules/a/module.jsonc";
-    const xUrl = "https://example.test/modules/x/module.jsonc";
+    const aUrl = "https://example.test/modules/a/manifest.jsonc";
+    const xUrl = "https://example.test/modules/x/manifest.jsonc";
     const root = { modules: { app: definition("app"), a: reference(aUrl) } };
     const configs = {
         [aUrl]: { modules: { a: definition("a"), x: { configUrl: xUrl, params: { mode: "compact" }, someFeature: true } } },
@@ -1147,8 +1147,8 @@ test("child references retain params and arbitrary configuration contributions",
 });
 
 test("references reject assets ownership and obsolete assetsUrl but require configUrl", async () => {
-    const aUrl = "https://example.test/modules/a/module.jsonc";
-    const xUrl = "https://example.test/modules/x/module.jsonc";
+    const aUrl = "https://example.test/modules/a/manifest.jsonc";
+    const xUrl = "https://example.test/modules/x/manifest.jsonc";
     const root = { modules: { app: definition("app"), a: reference(aUrl) } };
     const configs = { [aUrl]: { modules: { a: definition("a"), x: { configUrl: xUrl, assets: { url: "url:./assets" } } } } };
 
@@ -1161,7 +1161,7 @@ test("references reject assets ownership and obsolete assetsUrl but require conf
 });
 
 test("module configurations cannot contribute xshell.files", async () => {
-    const childUrl = "https://example.test/modules/child/module.jsonc";
+    const childUrl = "https://example.test/modules/child/manifest.jsonc";
 
     await assert.rejects(() => discover({
         modules: { app: definition("app") },
@@ -1174,7 +1174,7 @@ test("module configurations cannot contribute xshell.files", async () => {
 });
 
 test("root dependency references accept params and merge them last", async () => {
-    const xUrl = "https://example.test/modules/x/module.jsonc";
+    const xUrl = "https://example.test/modules/x/manifest.jsonc";
     const root = { precedence: "root", modules: { app: definition("app"), x: { configUrl: xUrl, params: { mode: "compact" } } } };
     const configs = { [xUrl]: { precedence: "dependency", modules: { x: definition("x", { params: { retained: true, mode: "normal" } }) } } };
     const graph = await discover(root, configs);
@@ -1208,7 +1208,7 @@ test("module route targets use the owning module asset namespace while route key
 });
 
 test("module route targets are normalized independently for dependency modules", async () => {
-    const dependencyUrl = "https://example.test/modules/x/module.jsonc";
+    const dependencyUrl = "https://example.test/modules/x/manifest.jsonc";
     const root = { modules: { app: definition("app"), x: reference(dependencyUrl) } };
     const configs = {
         [dependencyUrl]: {
@@ -1239,7 +1239,7 @@ test("modules without routes remain without a routes property", async () => {
 });
 
 test("root references reject assets but accept arbitrary composition properties", async () => {
-    const xUrl = "https://example.test/modules/x/module.jsonc";
+    const xUrl = "https://example.test/modules/x/manifest.jsonc";
     const root = { modules: { app: definition("app"), x: { configUrl: xUrl, version: "override" } } };
     const graph = await discover(root, { [xUrl]: { modules: { x: definition("x", { version: "dependency" }) } } });
     const effective = plain(api.mergeConfigs(Array.from(graph.mergeOrder, node => node.config)));
@@ -1249,9 +1249,9 @@ test("root references reject assets but accept arbitrary composition properties"
 });
 
 test("sibling contributions to a shared dependency follow declaration order", async () => {
-    const aUrl = "https://example.test/modules/a/module.jsonc";
-    const bUrl = "https://example.test/modules/b/module.jsonc";
-    const xUrl = "https://example.test/modules/x/module.jsonc";
+    const aUrl = "https://example.test/modules/a/manifest.jsonc";
+    const bUrl = "https://example.test/modules/b/manifest.jsonc";
+    const xUrl = "https://example.test/modules/x/manifest.jsonc";
     const root = {
         modules: {
             app: definition("app"),
@@ -1272,8 +1272,8 @@ test("sibling contributions to a shared dependency follow declaration order", as
 });
 
 test("root contributions to a shared dependency have final precedence", async () => {
-    const aUrl = "https://example.test/modules/a/module.jsonc";
-    const xUrl = "https://example.test/modules/x/module.jsonc";
+    const aUrl = "https://example.test/modules/a/manifest.jsonc";
+    const xUrl = "https://example.test/modules/x/manifest.jsonc";
     const root = {
         modules: {
             app: definition("app"),
@@ -1293,9 +1293,9 @@ test("root contributions to a shared dependency have final precedence", async ()
 });
 
 test("diamond dependency order is deterministic and follows sibling declaration order", async () => {
-    const aUrl = "https://example.test/modules/a/module.jsonc";
-    const bUrl = "https://example.test/modules/b/module.jsonc";
-    const xUrl = "https://example.test/modules/x/module.jsonc";
+    const aUrl = "https://example.test/modules/a/manifest.jsonc";
+    const bUrl = "https://example.test/modules/b/manifest.jsonc";
+    const xUrl = "https://example.test/modules/x/manifest.jsonc";
     const root = { trace: ["root"], modules: { app: definition("app"), b: reference(bUrl), a: reference(aUrl) } };
     const configs = {
         [aUrl]: { trace: ["a"], modules: { a: definition("a"), x: reference(xUrl) } },
@@ -1310,7 +1310,7 @@ test("diamond dependency order is deterministic and follows sibling declaration 
 });
 
 test("dependency cycles are rejected with the cycle path", async () => {
-    const bUrl = "https://example.test/modules/b/module.jsonc";
+    const bUrl = "https://example.test/modules/b/manifest.jsonc";
     const root = { modules: { a: definition("a"), b: reference(bUrl) } };
     const configs = { [bUrl]: { modules: { b: definition("b"), a: reference(rootUrl) } } };
 

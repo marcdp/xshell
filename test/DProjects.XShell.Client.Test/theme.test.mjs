@@ -242,7 +242,7 @@ test("XShell initializes services before modules and navigation", () => {
 });
 
 test("the x module registers and resolves theme through controller injection", () => {
-    const moduleConfig = readFileSync(new URL("module.jsonc", xDirectory), "utf8");
+    const moduleConfig = readFileSync(new URL("manifest.jsonc", xDirectory), "utf8");
     let resolutions = 0;
 
     assert.match(moduleConfig, /"theme"\s*:\s*\{\s*"contract"\s*:\s*"theme"\s*,\s*"implementation"\s*:\s*"\/services\/theme\.js"/);

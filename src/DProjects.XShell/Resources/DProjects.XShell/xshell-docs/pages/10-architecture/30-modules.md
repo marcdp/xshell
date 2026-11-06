@@ -1,6 +1,6 @@
 # Modules
 
-The application is the **root module**. Each `module.jsonc` contains one local module definition and zero or more references to external module
+The application is the **root module**. Each `manifest.jsonc` contains one local module definition and zero or more references to external module
 definitions. The `modules` object is both the module identity registry and the dependency graph; there is no separate dependency collection.
 
 ## Definition, reference, effective module, and instance
@@ -35,7 +35,7 @@ definitions. The `modules` object is both the module identity registry and the d
             }
         },
         "x": {
-            "configUrl": "url:../x/module.jsonc"
+            "configUrl": "url:../x/manifest.jsonc"
         }
     }
 }
@@ -66,7 +66,7 @@ Any reference may contribute configuration in addition to its canonical id and `
             }
         },
         "x": {
-            "configUrl": "url:../x/module.jsonc",
+            "configUrl": "url:../x/manifest.jsonc",
             "params": { "mode": "compact" }
         }
     }

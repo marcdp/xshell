@@ -168,7 +168,7 @@ After reverse route generation, path mode prepends `App.BasePath` directly. With
 { "xshell": { "navigation": { "mode": "path" } } }
 ```
 
-The nested names match `xshell.jsonc`; its checked-in default is currently `path`. The runtime `Navigation` constructor reads
+The nested names match `manifest.jsonc`; its checked-in default is currently `path`. The runtime `Navigation` constructor reads
 `config.xshell.navigation.mode`.
 
 On a fresh load at the mode's empty/root URL, Navigation uses the default Area's `home`, derived from the first depth-first navigation item marked

@@ -2,11 +2,11 @@
 export default {
     meta: {
         title: "Creating a Module",
-        description: "Define a Module using module.jsonc and inspect its effective runtime configuration."
+        description: "Define a Module using manifest.jsonc and inspect its effective runtime configuration."
     },
 
     template: `
-        <p>Every Module has a local definition in <code>module.jsonc</code>. The definition declares the Module's identity and settings. XShell reads it during application bootstrap.</p>
+        <p>Every Module has a local definition in <code>manifest.jsonc</code>. The definition declares the Module's identity and settings. XShell reads it during application bootstrap.</p>
 
         <h2>Minimal definition</h2>
         <p>A Module is defined by an entry in the <code>modules</code> object.</p>

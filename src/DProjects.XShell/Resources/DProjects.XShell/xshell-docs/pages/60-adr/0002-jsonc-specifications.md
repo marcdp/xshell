@@ -30,6 +30,6 @@ bootstrap awaits XShell's effective schema validation, deeply freezes the object
 services are constructed. The X module currently includes a `module.js` controller; validation is not environment-gated. The canonical schema is
 `xshell/schemas/config.schema.json`; it requires module defaults for definition-based Page and Component engines and defines XShell UI defaults
 for layouts, lazy/error/Markdown components, and standard dialog pages, plus descriptive common Module contract metadata. The server default points to
-`x-demo/module.jsonc`. Browser JSONC supports comments and trailing commas, matching server/build descriptor parsing.
+`x-demo/manifest.jsonc`. Browser JSONC supports comments and trailing commas, matching server/build descriptor parsing.
 
 See [Configuration](../10-architecture/20-configuration.md) and [Specifications](../50-specifications/).

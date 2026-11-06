@@ -16,7 +16,7 @@ function getAssetsPath(assetsBasePath, moduleId, version, hash, environment) {
     }
     return `${assetsBasePath}/${moduleId}/${generation}`;
 }
-function relativizePaths(value,assetsPath,declaringPath="/module.jsonc",physicalUrl=""){if(Array.isArray(value))return value.map(item=>relativizePaths(item,assetsPath,declaringPath,physicalUrl));if(value&&typeof value==="object"){for(const[name,item]of Object.entries(value))value[name]=relativizePaths(item,assetsPath,declaringPath,physicalUrl);return value;}if(typeof value!=="string")return value;const restoreBraces=normalized=>value.includes("{")||value.includes("}")?normalized.replace(/%7B/gi,"{").replace(/%7D/gi,"}"):normalized;if(value.startsWith("app:"))return restoreBraces(resolveAppUrl(value));if(value.startsWith("url:"))return restoreBraces(new URL(value.substring(4).trim(),physicalUrl).href);if(/^[a-z][a-z0-9+.-]*:/i.test(value))return value;if(!value.startsWith("/")&&!value.startsWith("./")&&!value.startsWith("../"))return value;const root="/__xshell_module_root__",logicalUrl=value.startsWith("/")?new URL(root+value,"https://module.invalid"):new URL(value,"https://module.invalid"+root+declaringPath);if(!logicalUrl.pathname.startsWith(root+"/"))throw new Error(`Module URL '${value}' in '${physicalUrl||declaringPath}' escapes the module root.`);return restoreBraces(assetsPath+logicalUrl.pathname.substring(root.length)+logicalUrl.search+logicalUrl.hash);}
+function relativizePaths(value,assetsPath,declaringPath="/manifest.jsonc",physicalUrl=""){if(Array.isArray(value))return value.map(item=>relativizePaths(item,assetsPath,declaringPath,physicalUrl));if(value&&typeof value==="object"){for(const[name,item]of Object.entries(value))value[name]=relativizePaths(item,assetsPath,declaringPath,physicalUrl);return value;}if(typeof value!=="string")return value;const restoreBraces=normalized=>value.includes("{")||value.includes("}")?normalized.replace(/%7B/gi,"{").replace(/%7D/gi,"}"):normalized;if(value.startsWith("app:"))return restoreBraces(resolveAppUrl(value));if(value.startsWith("url:"))return restoreBraces(new URL(value.substring(4).trim(),physicalUrl).href);if(/^[a-z][a-z0-9+.-]*:/i.test(value))return value;if(!value.startsWith("/")&&!value.startsWith("./")&&!value.startsWith("../"))return value;const root="/__xshell_module_root__",logicalUrl=value.startsWith("/")?new URL(root+value,"https://module.invalid"):new URL(value,"https://module.invalid"+root+declaringPath);if(!logicalUrl.pathname.startsWith(root+"/"))throw new Error(`Module URL '${value}' in '${physicalUrl||declaringPath}' escapes the module root.`);return restoreBraces(assetsPath+logicalUrl.pathname.substring(root.length)+logicalUrl.search+logicalUrl.hash);}
 
 
 // consts
@@ -102,6 +102,7 @@ function getLocalModule(config, configUrl) {
         !Object.hasOwn(module, "configUrl")
     );
     if (entries.length !== 1) {
+        debugger
         const ids = entries.map(([id]) => `'${id}'`);
         throw new Error(`Module configuration '${configUrl}' must contain exactly one local module definition, ` + `but found ${entries.length}${ids.length ? `: ${ids.join(", ")}.` : "."}`);
     }
@@ -132,7 +133,7 @@ function prepareModuleConfig(config, configUrl, assetsBasePath, environment) {
     const localModule = getLocalModule(config, configUrl);
     validateAuthoredModuleAssets(localModule.definition, localModule.id, configUrl);
     const assetsPath = getAssetsPath(assetsBasePath, localModule.id, localModule.definition.version, localModule.definition.hash, environment);
-    let assetsUrl = relativizePaths(localModule.definition.assets?.url || "url:./", assetsPath, "/module.jsonc", configUrl);
+    let assetsUrl = relativizePaths(localModule.definition.assets?.url || "url:./", assetsPath, "/manifest.jsonc", configUrl);
     if (!/^[a-z][a-z0-9+.-]*:/i.test(assetsUrl)) throw new Error(`assets.url must resolve to an absolute HTTP(S) URL: '${assetsUrl}'.`);
     const assetsUrlObject = new URL(assetsUrl);
     if (assetsUrlObject.protocol !== "http:" && assetsUrlObject.protocol !== "https:") throw new Error(`assets.url must resolve to an absolute HTTP(S) URL: '${assetsUrl}'.`);
@@ -257,7 +258,7 @@ function mergeConfigs(configs) {
 async function loadConfig() {
     console.log("bootstrap: loading config ...");
 
-    const xshellConfigUrl = bootstrapUrlDir + "/xshell.json";
+    const xshellConfigUrl = bootstrapUrlDir + "/manifest.json";
     const rootModuleUrl = new URL(appConfigPath, document.baseURI).href;
 
     const [xshellConfig, rootModuleConfig] = await Promise.all([
@@ -274,7 +275,7 @@ async function loadConfig() {
     const environment = xshellEnvironment || rootModuleConfig.xshell?.environment || xshellConfig.xshell.environment;
     const xshellAssetsPath = getAssetsPath(assetsBasePath, "xshell", xshellConfig.xshell.version, xshellConfig.xshell.hash, environment);
 
-    let xshellAssetsUrl = relativizePaths(xshellConfig.xshell.assets?.url || "url:./", xshellAssetsPath, "/xshell.json", xshellConfigUrl);
+    let xshellAssetsUrl = relativizePaths(xshellConfig.xshell.assets?.url || "url:./", xshellAssetsPath, "/manifest.json", xshellConfigUrl);
 
     if (!/^[a-z][a-z0-9+.-]*:/i.test(xshellAssetsUrl)) {
         throw new Error(`xshell.assets.url must resolve to an absolute HTTP(S) URL: '${xshellAssetsUrl}'.`);
@@ -289,7 +290,7 @@ async function loadConfig() {
     xshellConfig.xshell.assets ??= {};
     xshellConfig.xshell.assets.url = xshellAssetsUrlObject.href;
 
-    relativizePaths(xshellConfig, xshellAssetsPath, "/xshell.json", xshellConfigUrl);
+    relativizePaths(xshellConfig, xshellAssetsPath, "/manifest.json", xshellConfigUrl);
 
     // Host/runtime values are added after normalization so they are not reinterpreted as authored configuration.
     xshellConfig.xshell.environment = environment;

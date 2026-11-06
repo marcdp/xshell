@@ -6,7 +6,7 @@ import test from 'node:test';
 import Areas from '../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/areas.js';
 
 const root = fileURLToPath(new URL('../../src/DProjects.XShell/Resources/DProjects.XShell/x-demo/', import.meta.url));
-const config = JSON.parse(readFileSync(path.join(root, 'module.jsonc'), 'utf8').replace(/^\/\/[^\n]*\n/, ''));
+const config = JSON.parse(readFileSync(path.join(root, 'manifest.jsonc'), 'utf8').replace(/^\/\/[^\n]*\n/, ''));
 
 test('x-demo is a separate root with resolvable module references', () => {
     assert.deepEqual(Object.keys(config.modules).filter(id => !config.modules[id].configUrl), ['x-demo']);

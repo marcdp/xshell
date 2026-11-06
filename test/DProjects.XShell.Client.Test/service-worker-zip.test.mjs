@@ -368,7 +368,7 @@ test("malformed, unsupported, encrypted, ZIP64, duplicate, and CRC-invalid archi
 test("ZIP entry path normalization rejects empty, absolute, dot, traversal, and backslash paths", async () => {
     const worker = createWorker();
     const rejectedPaths = [
-        "", "/pages/index.js", "./pages/index.js", "pages/../module.json", "pages\\index.js", "%2Fpages/index.js", "pages/%2e%2e%2Fmodule.json"
+        "", "/pages/index.js", "./pages/index.js", "pages/../manifest.json", "pages\\index.js", "%2Fpages/index.js", "pages/%2e%2e%2Fmanifest.json"
     ];
     for (const path of rejectedPaths) {
         assert.throws(() => worker.normalizePath(path));
@@ -376,7 +376,7 @@ test("ZIP entry path normalization rejects empty, absolute, dot, traversal, and 
     assert.equal(worker.normalizePath("pages/index.js"), "pages/index.js");
 
     await worker.register();
-    const traversal = await worker.request("pages/%2e%2e%2Fmodule.json");
+    const traversal = await worker.request("pages/%2e%2e%2Fmanifest.json");
     assert.equal(traversal.status, 400);
     assert.deepEqual(worker.fetches, []);
 });

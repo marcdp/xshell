@@ -39,8 +39,8 @@ namespace DProjects.XShell.Test {
         public async Task CreateAsync_ExcludesRootDescriptorsIgnoringCase() {
             using var workspace = new TemporaryDirectory();
             var root = workspace.PathFor("source");
-            WriteFile(root, "module.jsonc", [1]);
-            WriteFile(root, "XSHELL.JSON", [2]);
+            WriteFile(root, "manifest.jsonc", [1]);
+            WriteFile(root, "MANIFEST.JSON", [2]);
             WriteFile(root, "file.txt", [3]);
             WriteFile(root, "nested/keep.txt", [4]);
 

@@ -44,7 +44,7 @@ namespace DProjects.XShell.Test {
             Assert.Null(response.ContentType);
         }
         [Theory]
-        [InlineData("module.jsonc", "application/json")]
+        [InlineData("manifest.jsonc", "application/json")]
         [InlineData("readme.md", "text/markdown")]
         public async Task XShellStaticExtensions_UseExpectedContentType(string fileName, string contentType) {
             using var workspace = new TemporaryDirectory();
@@ -74,17 +74,17 @@ namespace DProjects.XShell.Test {
         [Fact]
         public async Task DevelopmentModuleDescriptor_IsCanonicalJsonWithCurrentLocalInventory() {
             using var workspace = new TemporaryDirectory();
-            workspace.Write("resources/demo/module.jsonc", """
+            workspace.Write("resources/demo/manifest.jsonc", """
                 // authored configuration
                 { "modules": {
-                    "dependency": { "configUrl": "url:../dependency/module.jsonc" },
+                    "dependency": { "configUrl": "url:../dependency/manifest.jsonc" },
                     "demo": { "files": [{ "path": "/stale.js", "size": 1, "hash": "stale" }] }
                 } }
                 """);
             workspace.Write("resources/demo/a.txt", "alpha");
             workspace.Write("resources/demo/nested/b.txt", "beta");
 
-            var response = await SendAsync(workspace.PathFor("resources"), "/_resources/demo/module.json", isDevelopment: true);
+            var response = await SendAsync(workspace.PathFor("resources"), "/_resources/demo/manifest.json", isDevelopment: true);
 
             Assert.Equal(StatusCodes.Status200OK, response.StatusCode);
             Assert.StartsWith("application/json", response.ContentType, StringComparison.OrdinalIgnoreCase);
@@ -99,13 +99,35 @@ namespace DProjects.XShell.Test {
             Assert.Equal(Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes("alpha"))).ToLowerInvariant(), a.Hash);
         }
         [Fact]
-        public async Task DevelopmentDescriptor_HeadHasGetHeadersWithoutBody() {
+        public async Task DevelopmentModuleManifestJson_IsDiscovered() {
+            using var workspace = new TemporaryDirectory();
+            workspace.Write("resources/demo/manifest.json", ModuleDescriptor);
+
+            var response = await SendAsync(workspace.PathFor("resources"), "/_resources/demo/manifest.jsonc", isDevelopment: true);
+
+            Assert.Equal(StatusCodes.Status200OK, response.StatusCode);
+            using var manifest = JsonDocument.Parse(response.Text);
+            Assert.True(manifest.RootElement.GetProperty("modules").TryGetProperty("demo", out _));
+        }
+        [Fact]
+        public async Task LegacyModuleFilename_IsNotDiscoveredForCompilation() {
             using var workspace = new TemporaryDirectory();
             workspace.Write("resources/demo/module.jsonc", ModuleDescriptor);
+            workspace.Write("resources/demo/component.html", "<template><p>Legacy</p></template>");
+
+            var response = await SendAsync(workspace.PathFor("resources"), "/_resources/demo/component.js", isDevelopment: true);
+
+            Assert.Equal(StatusCodes.Status204NoContent, response.StatusCode);
+            Assert.Equal(1, response.NextCalls);
+        }
+        [Fact]
+        public async Task DevelopmentDescriptor_HeadHasGetHeadersWithoutBody() {
+            using var workspace = new TemporaryDirectory();
+            workspace.Write("resources/demo/manifest.jsonc", ModuleDescriptor);
             workspace.Write("resources/demo/a.txt", "alpha");
 
-            var get = await SendAsync(workspace.PathFor("resources"), "/_resources/demo/module.json", isDevelopment: true);
-            var head = await SendAsync(workspace.PathFor("resources"), "/_resources/demo/module.json", isDevelopment: true, method: HttpMethods.Head);
+            var get = await SendAsync(workspace.PathFor("resources"), "/_resources/demo/manifest.json", isDevelopment: true);
+            var head = await SendAsync(workspace.PathFor("resources"), "/_resources/demo/manifest.json", isDevelopment: true, method: HttpMethods.Head);
 
             Assert.Equal(StatusCodes.Status200OK, head.StatusCode);
             Assert.Empty(head.Body);
@@ -117,41 +139,67 @@ namespace DProjects.XShell.Test {
         [Fact]
         public async Task DevelopmentXShellDescriptor_EmbedsFrameworkInventory() {
             using var workspace = new TemporaryDirectory();
-            workspace.Write("resources/xshell/xshell.jsonc", "{ \"xshell\": { \"files\": [{ \"path\": \"/stale.js\" }] } }");
+            workspace.Write("resources/xshell/manifest.jsonc", "{ \"xshell\": { \"files\": [{ \"path\": \"/stale.js\" }] } }");
             workspace.Write("resources/xshell/bootstrap.js", "bootstrap");
             workspace.Write("resources/xshell/sw.js", "worker");
 
-            var response = await SendAsync(workspace.PathFor("resources"), "/_resources/xshell/xshell.jsonc", isDevelopment: true);
+            var response = await SendAsync(workspace.PathFor("resources"), "/_resources/xshell/manifest.jsonc", isDevelopment: true);
 
             using var descriptor = JsonDocument.Parse(response.Text);
             var files = ReadInventory(descriptor.RootElement.GetProperty("xshell").GetProperty("files"));
             Assert.Equal(["/bootstrap.js", "/sw.js"], files.Select(file => file.Path));
         }
         [Fact]
+        public async Task DevelopmentNestedXShellManifest_UsesFrameworkDiscoveryContext() {
+            using var workspace = new TemporaryDirectory();
+            workspace.Write("resources/DProjects.XShell/xshell/manifest.jsonc", "{ \"xshell\": {} }");
+            workspace.Write("resources/DProjects.XShell/xshell/bootstrap.js", "bootstrap");
+
+            var response = await SendAsync(workspace.PathFor("resources"),
+                "/_resources/DProjects.XShell/xshell/manifest.json", isDevelopment: true);
+
+            Assert.Equal(StatusCodes.Status200OK, response.StatusCode);
+            using var descriptor = JsonDocument.Parse(response.Text);
+            Assert.True(descriptor.RootElement.TryGetProperty("xshell", out _));
+        }
+        [Fact]
+        public async Task DevelopmentNestedXShellJavaScript_BypassesModuleCompilation() {
+            using var workspace = new TemporaryDirectory();
+            const string source = "export const framework = true;";
+            workspace.Write("resources/DProjects.XShell/xshell/manifest.jsonc", "{ \"xshell\": {} }");
+            workspace.Write("resources/DProjects.XShell/xshell/bootstrap.js", source);
+
+            var response = await SendAsync(workspace.PathFor("resources"),
+                "/_resources/DProjects.XShell/xshell/bootstrap.js", isDevelopment: true);
+
+            Assert.True(response.StatusCode == StatusCodes.Status200OK, response.Text);
+            Assert.Equal(source, response.Text);
+        }
+        [Fact]
         public async Task DevelopmentDescriptor_AmbiguousSourceRepresentationsAreRejected() {
             using var workspace = new TemporaryDirectory();
-            workspace.Write("resources/demo/module.json", ModuleDescriptor);
-            workspace.Write("resources/demo/module.jsonc", ModuleDescriptor);
+            workspace.Write("resources/demo/manifest.json", ModuleDescriptor);
+            workspace.Write("resources/demo/manifest.jsonc", ModuleDescriptor);
 
             var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
-                SendAsync(workspace.PathFor("resources"), "/_resources/demo/module.json", isDevelopment: true));
+                SendAsync(workspace.PathFor("resources"), "/_resources/demo/manifest.json", isDevelopment: true));
 
-            Assert.Contains("both module.json and module.jsonc", exception.Message);
+            Assert.Contains("both manifest.json and manifest.jsonc", exception.Message);
         }
         [Fact]
         public async Task DevelopmentModuleDescriptor_RequiresExactlyOneLocalDefinition() {
             using var workspace = new TemporaryDirectory();
-            workspace.Write("resources/demo/module.jsonc", "{ \"modules\": { \"a\": {}, \"b\": {} } }");
+            workspace.Write("resources/demo/manifest.jsonc", "{ \"modules\": { \"a\": {}, \"b\": {} } }");
 
             var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
-                SendAsync(workspace.PathFor("resources"), "/_resources/demo/module.json", isDevelopment: true));
+                SendAsync(workspace.PathFor("resources"), "/_resources/demo/manifest.json", isDevelopment: true));
 
             Assert.Contains("exactly one local module definition", exception.Message);
         }
         [Fact]
         public async Task DevelopmentHtmlSfc_IsCompiledAtJavaScriptPath() {
             using var workspace = new TemporaryDirectory();
-            workspace.Write("resources/demo/module.jsonc", ModuleDescriptor);
+            workspace.Write("resources/demo/manifest.jsonc", ModuleDescriptor);
             workspace.Write("resources/demo/pages/page.html", "<template><p>Hello</p></template>");
 
             var response = await SendAsync(workspace.PathFor("resources"), "/_resources/demo/pages/page.js", isDevelopment: true);
@@ -167,7 +215,7 @@ namespace DProjects.XShell.Test {
         public async Task DevelopmentRootJavaScript_DoesNotUsePageRenderEngine() {
             using var workspace = new TemporaryDirectory();
             const string source = "export default { value: 1 };";
-            workspace.Write("resources/demo/module.jsonc", ModuleDescriptor);
+            workspace.Write("resources/demo/manifest.jsonc", ModuleDescriptor);
             workspace.Write("resources/demo/module.js", source);
 
             var response = await SendAsync(workspace.PathFor("resources"), "/_resources/demo/module.js", isDevelopment: true);
@@ -180,7 +228,7 @@ namespace DProjects.XShell.Test {
         [Fact]
         public async Task DevelopmentHtmlSfc_HeadCompilesAtJavaScriptPathWithoutBody() {
             using var workspace = new TemporaryDirectory();
-            workspace.Write("resources/demo/module.jsonc", ModuleDescriptor);
+            workspace.Write("resources/demo/manifest.jsonc", ModuleDescriptor);
             workspace.Write("resources/demo/component.html", "<template><p>Héllo</p></template>");
 
             var root = workspace.PathFor("resources");
@@ -195,7 +243,7 @@ namespace DProjects.XShell.Test {
         [Fact]
         public async Task DevelopmentHtmlSfc_IsNotServedAtAuthoredPath() {
             using var workspace = new TemporaryDirectory();
-            workspace.Write("resources/demo/module.jsonc", ModuleDescriptor);
+            workspace.Write("resources/demo/manifest.jsonc", ModuleDescriptor);
             workspace.Write("resources/demo/component.html", "<template><p>Hello</p></template>");
 
             var response = await SendAsync(workspace.PathFor("resources"), "/_resources/demo/component.html", isDevelopment: true);
@@ -207,7 +255,7 @@ namespace DProjects.XShell.Test {
         [Fact]
         public async Task DevelopmentRuntimePathCollision_IsRejected() {
             using var workspace = new TemporaryDirectory();
-            workspace.Write("resources/demo/module.jsonc", ModuleDescriptor);
+            workspace.Write("resources/demo/manifest.jsonc", ModuleDescriptor);
             workspace.Write("resources/demo/component.js", "export default {};");
             workspace.Write("resources/demo/component.html", "<template><p>Hello</p></template>");
 
@@ -221,7 +269,7 @@ namespace DProjects.XShell.Test {
         [Fact]
         public async Task DevelopmentJavaScript_CompilesResourceReferences() {
             using var workspace = new TemporaryDirectory();
-            workspace.Write("resources/demo/module.jsonc", ModuleDescriptor);
+            workspace.Write("resources/demo/manifest.jsonc", ModuleDescriptor);
             const string source = "export default { meta: { renderEngine: 'html' }, style: `.card { background: url('./image.png'); }` };";
             workspace.Write("resources/demo/component.js", source);
 
@@ -236,7 +284,7 @@ namespace DProjects.XShell.Test {
         [Fact]
         public async Task DevelopmentJavaScript_HeadHasGetHeadersWithoutBody() {
             using var workspace = new TemporaryDirectory();
-            workspace.Write("resources/demo/module.jsonc", ModuleDescriptor);
+            workspace.Write("resources/demo/manifest.jsonc", ModuleDescriptor);
             workspace.Write("resources/demo/component.js", "export default { meta: { renderEngine: 'html' }, label: 'café' };");
 
             var root = workspace.PathFor("resources");
@@ -252,7 +300,7 @@ namespace DProjects.XShell.Test {
         [Fact]
         public async Task DevelopmentCss_CompilesRelativeResourceUrl() {
             using var workspace = new TemporaryDirectory();
-            workspace.Write("resources/demo/module.jsonc", ModuleDescriptor);
+            workspace.Write("resources/demo/manifest.jsonc", ModuleDescriptor);
             workspace.Write("resources/demo/styles/site.css", ".card { background: url('../image.png'); }");
 
             var response = await SendAsync(workspace.PathFor("resources"), "/_resources/demo/styles/site.css", isDevelopment: true);
@@ -266,7 +314,7 @@ namespace DProjects.XShell.Test {
         [Fact]
         public async Task DevelopmentCss_HeadHasGetHeadersWithoutBody() {
             using var workspace = new TemporaryDirectory();
-            workspace.Write("resources/demo/module.jsonc", ModuleDescriptor);
+            workspace.Write("resources/demo/manifest.jsonc", ModuleDescriptor);
             workspace.Write("resources/demo/styles/site.css", ".café { background: url('../image.png'); }");
 
             var root = workspace.PathFor("resources");
@@ -284,7 +332,7 @@ namespace DProjects.XShell.Test {
         [InlineData("POST", "/_resources/demo/component.html")]
         public async Task DevelopmentCompiler_OtherMethodsContinueDownstream(string method, string requestPath) {
             using var workspace = new TemporaryDirectory();
-            workspace.Write("resources/demo/module.jsonc", ModuleDescriptor);
+            workspace.Write("resources/demo/manifest.jsonc", ModuleDescriptor);
             workspace.Write("resources/demo/component.js", "export default { label: 'compiled' };");
             workspace.Write("resources/demo/component.html", "<template><p>Source</p></template>");
             workspace.Write("resources/demo/styles/site.css", ".card { color: red; }");
@@ -301,7 +349,7 @@ namespace DProjects.XShell.Test {
             using var workspace = new TemporaryDirectory();
             const string source = "export default { style: `url('./image.png')` };";
             workspace.Write("resources/orphan.js", source);
-            workspace.Write("module.jsonc", ModuleDescriptor);
+            workspace.Write("manifest.jsonc", ModuleDescriptor);
 
             var response = await SendAsync(workspace.PathFor("resources"), "/_resources/orphan.js", isDevelopment: true);
 
@@ -336,11 +384,11 @@ namespace DProjects.XShell.Test {
         [Fact]
         public async Task DescriptorTraversal_DoesNotIndexDirectoryOutsideResourceRoot() {
             using var workspace = new TemporaryDirectory();
-            workspace.Write("outside/module.jsonc", ModuleDescriptor);
+            workspace.Write("outside/manifest.jsonc", ModuleDescriptor);
             workspace.Write("outside/secret.txt", "outside secret");
             Directory.CreateDirectory(workspace.PathFor("resources"));
 
-            var response = await SendAsync(workspace.PathFor("resources"), "/_resources/../outside/module.json", isDevelopment: true);
+            var response = await SendAsync(workspace.PathFor("resources"), "/_resources/../outside/manifest.json", isDevelopment: true);
 
             Assert.Equal(StatusCodes.Status404NotFound, response.StatusCode);
             Assert.Empty(response.Body);

@@ -18,7 +18,7 @@ function createEvents(getController) {
 test("Modules diagnostics filters on the canonical configured assets path", () => {
     const state = { id: "", version: "", label: "", assetPath: "/_assets/orders", configUrl: "", modules: [] };
     const modules = { registry: [{
-        id: "orders", label: "Orders", version: "", assets: { path: "/_assets/orders", url: "https://example.test/orders/" }, configUrl: "/orders/module.jsonc", files: []
+        id: "orders", label: "Orders", version: "", assets: { path: "/_assets/orders", url: "https://example.test/orders/" }, configUrl: "/orders/manifest.jsonc", files: []
     }] };
     const controller = ModulesPage.controller({ state, modules });
 

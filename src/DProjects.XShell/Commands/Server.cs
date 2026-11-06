@@ -16,7 +16,7 @@ using Microsoft.Extensions.DependencyInjection;
 namespace DProjects.XShell.Commands {
 
     [Description("Launch a web server")]
-    [Example("DProjects.XShell server --app-config-path /_resources/DProjects.XShell/x-demo/module.jsonc --param a=123 --param b=456 ", "")]
+    [Example("DProjects.XShell server --app-config-path /_resources/DProjects.XShell/x-demo/manifest.jsonc --param a=123 --param b=456 ", "")]
     public class Server() : ICommand {
 
 
@@ -66,7 +66,7 @@ namespace DProjects.XShell.Commands {
             return new Extensions.Configuration {
                 App = new Extensions.AppConfig {
                     BasePath = AppBasePath,
-                    ConfigPath = string.IsNullOrEmpty(AppConfigPath) ? AppBasePath + "/_resources/" + ResourcesName + "/x-demo/module.jsonc" : AppConfigPath,
+                    ConfigPath = string.IsNullOrEmpty(AppConfigPath) ? AppBasePath + "/_resources/" + ResourcesName + "/x-demo/manifest.jsonc" : AppConfigPath,
                     Params = Param
                 },
                 Temp = new Extensions.TempConfig {

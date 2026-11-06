@@ -39,7 +39,7 @@ function configuration(i18n) {
             resolver: {},
             ui: { layout: {}, component: {}, dialog: {} },
             i18n,
-            configUrl: "https://example.test/xshell/xshell.json",
+            configUrl: "https://example.test/xshell/manifest.json",
             serviceWorker: { mappings: [] },
             files: []
         }

@@ -13,7 +13,7 @@ const moduleDefinition = routes => ({
     version: "1.0.0",
     copyright: "",
     icon: "",
-    configUrl: "https://example.test/test/module.jsonc",
+    configUrl: "https://example.test/test/manifest.jsonc",
     assets: { path: "/_assets/test", url: "https://example.test/test/" },
     files: [{ path: "/_assets/test/pages/index.js", size: 123, hash: "test-hash" }],
     ...(routes === undefined ? {} : { routes }),
@@ -50,12 +50,12 @@ function configuration(module) {
                 datetime: { options: {}, formats: {} },
                 strings: {}
             },
-            configUrl: "https://example.test/xshell/xshell.json",
+            configUrl: "https://example.test/xshell/manifest.json",
             serviceWorker: { mappings: [
                 { src: "https://example.test/_assets/xshell", dst: "https://example.test/xshell/", version: "1.0.0", name: "xshell",
-                    exceptions: ["https://example.test/xshell/xshell.json"] },
+                    exceptions: ["https://example.test/xshell/manifest.json"] },
                 { src: "https://example.test/_assets/test", dst: "https://example.test/test/", version: "1.0.0", name: "test",
-                    exceptions: ["https://example.test/test/module.jsonc"] }
+                    exceptions: ["https://example.test/test/manifest.jsonc"] }
             ] },
             files: [{ path: "/_assets/xshell/xshell.js", size: 456, hash: "xshell-hash" }]
         }

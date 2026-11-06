@@ -12,7 +12,7 @@ app.UseXShell(new Extensions.Configuration {
     App = new Extensions.AppConfig {
         Description = "",
         BasePath = "",
-        ConfigPath = "/_resources/DProjects.XShell/x-demo/module.jsonc",
+        ConfigPath = "/_resources/DProjects.XShell/x-demo/manifest.jsonc",
         Params = new Dictionary<string, string>()
     },
     Resources = new Extensions.ResourcesConfig {
@@ -92,7 +92,7 @@ and the host values. `pack` uses the same builder to put `index.html` and root `
 Deployment can alias stable application and worker URLs to those files using `release.root`; the packer does not create the aliases.
 
 A deployed immutable framework generation directory, such as `/xshell/<version>.<hash>`, can serve as `XShell.BasePath`. Its published directory
-directly exposes `bootstrap.js`, `xshell.json`, and `sw.js` for startup requests. The same scripts also remain inside the complete `xshell.zip`.
+directly exposes `bootstrap.js`, `manifest.json`, and `sw.js` for startup requests. The same scripts also remain inside the complete `xshell.zip`.
 
 ## Browser platform requirement
 
@@ -130,7 +130,7 @@ The bundled `server` command hosts resources and the demo. Options include `-a` 
 (params), and `-r` / `--resources-name`. The resource name defaults to
 `DProjects.XShell` and selects the logical directory `Resources/<name>/`. For `ResourcesName = "Custom"` and `AppBasePath = "/demo"`, server uses
 `Resources.ResourceName = "Custom"`, `Resources.BasePath = "/demo/_resources/Custom"`, `XShell.BasePath = "/demo/_resources/Custom/xshell"`, and
-the default `App.ConfigPath = "/demo/_resources/Custom/x-demo/module.jsonc"`. An explicit `--app-config-path` is preserved unchanged.
+the default `App.ConfigPath = "/demo/_resources/Custom/x-demo/manifest.jsonc"`. An explicit `--app-config-path` is preserved unchanged.
 `ResourcesName` selects bundled source content. The command separately derives the HTTP resource request path and XShell bootstrap/worker
 source path from that name. It is not a module id, package id, or runtime assets namespace. The default
 application is x-demo; server supplies no application authentication pipeline. Select `Development` for on-demand compilation.

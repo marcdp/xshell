@@ -76,7 +76,7 @@ test("server derives every default resource path from ResourcesName and preserve
             const response = await fetch(defaults.url + "/default/");
             assert.equal(response.status, 200);
             const index = await response.text();
-            assert.equal(metaContent(index, "xshell:app.configPath"), "/default/_resources/DProjects.XShell/x-demo/module.jsonc");
+            assert.equal(metaContent(index, "xshell:app.configPath"), "/default/_resources/DProjects.XShell/x-demo/manifest.jsonc");
             assert.match(index, /<script src="\/default\/_resources\/DProjects\.XShell\/xshell\/bootstrap\.js"/);
         } finally {
             await stopServer(defaults.child);
@@ -88,17 +88,17 @@ test("server derives every default resource path from ResourcesName and preserve
             assert.equal(response.status, 200);
             const index = await response.text();
             assert.equal(metaContent(index, "xshell:app.basePath"), "/demo");
-            assert.equal(metaContent(index, "xshell:app.configPath"), "/demo/_resources/Custom/x-demo/module.jsonc");
+            assert.equal(metaContent(index, "xshell:app.configPath"), "/demo/_resources/Custom/x-demo/manifest.jsonc");
             assert.match(index, /<script src="\/demo\/_resources\/Custom\/xshell\/bootstrap\.js"/);
         } finally {
             await stopServer(first.child);
         }
         const second = await startServer(join(tool, "DProjects.XShell.dll"),
-            ["--resources-name", "Custom", "--app-base-path", "/demo", "--app-config-path", "/explicit/module.json", "--environment", "Production"]);
+            ["--resources-name", "Custom", "--app-base-path", "/demo", "--app-config-path", "/explicit/manifest.json", "--environment", "Production"]);
         try {
             const response = await fetch(second.url + "/demo/");
             assert.equal(response.status, 200);
-            assert.equal(metaContent(await response.text(), "xshell:app.configPath"), "/explicit/module.json");
+            assert.equal(metaContent(await response.text(), "xshell:app.configPath"), "/explicit/manifest.json");
         } finally {
             await stopServer(second.child);
         }

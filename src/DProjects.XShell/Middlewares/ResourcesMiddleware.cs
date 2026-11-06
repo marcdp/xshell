@@ -45,7 +45,7 @@ namespace DProjects.XShell.Middlewares {
                         return;
                     }
                     var relativePath = remaining.Value ?? "";
-                    if (!TryGetDescriptorKind(relativePath, out var descriptorName, out var descriptorKind)) {
+                    if (!TryGetDescriptorKind(relativePath, out var descriptorKind)) {
                         await nextMiddleware();
                         return;
                     }
@@ -64,7 +64,7 @@ namespace DProjects.XShell.Middlewares {
                     }
 
                     // use exactly one authored JSON or JSONC representation for either request extension
-                    var descriptorPath = FindDescriptor(directory, descriptorName);
+                    var descriptorPath = FindDescriptor(directory);
                     if (descriptorPath == null) {
                         await nextMiddleware();
                         return;
@@ -127,14 +127,18 @@ namespace DProjects.XShell.Middlewares {
                         context.Response.StatusCode = StatusCodes.Status404NotFound;
                         return;
                     }
-                    // search module.json or module.jsonc in the file's directory or its parent directories
+                    // search manifest.json or manifest.jsonc in the file's directory or its parent directories
                     string directory = Path.GetDirectoryName(file) ?? "";
                     string? moduleJson = null;
                     while (!string.IsNullOrEmpty(directory) && IsInside(directory, physicalPath)) {
-                        var moduleJsonPath = Path.Combine(directory, "module.json");
-                        var moduleJsoncPath = Path.Combine(directory, "module.jsonc");
+                        var moduleJsonPath = Path.Combine(directory, Services.ManifestFileNames.Json);
+                        var moduleJsoncPath = Path.Combine(directory, Services.ManifestFileNames.Jsonc);
                         if (File.Exists(moduleJsonPath) && File.Exists(moduleJsoncPath)) {
-                            throw new InvalidOperationException($"Source '{directory}' contains both module.json and module.jsonc.");
+                            throw new InvalidOperationException($"Source '{directory}' contains both manifest.json and manifest.jsonc.");
+                        } else if ((File.Exists(moduleJsonPath) || File.Exists(moduleJsoncPath)) &&
+                            string.Equals(Path.GetFileName(Path.TrimEndingDirectorySeparator(directory)), "xshell", StringComparison.OrdinalIgnoreCase)) {
+                            // Framework resources use the same manifest filename but are not module resources.
+                            break;
                         } else if (File.Exists(moduleJsonPath)) {
                             moduleJson = moduleJsonPath;
                             break;
@@ -199,12 +203,12 @@ namespace DProjects.XShell.Middlewares {
         public Task InvokeAsync(HttpContext context) {
             return mPipeline(context);
         }
-        private static string? FindDescriptor(string directory, string name) {
+        private static string? FindDescriptor(string directory) {
             // reject ambiguous authored descriptors consistently with Pack
-            var json = Path.Combine(directory, name + ".json");
-            var jsonc = Path.Combine(directory, name + ".jsonc");
+            var json = Path.Combine(directory, Services.ManifestFileNames.Json);
+            var jsonc = Path.Combine(directory, Services.ManifestFileNames.Jsonc);
             if (File.Exists(json) && File.Exists(jsonc)) {
-                throw new InvalidOperationException($"Source '{directory}' contains both {name}.json and {name}.jsonc.");
+                throw new InvalidOperationException($"Source '{directory}' contains both manifest.json and manifest.jsonc.");
             }
             return File.Exists(json) ? json : File.Exists(jsonc) ? jsonc : null;
         }
@@ -213,24 +217,18 @@ namespace DProjects.XShell.Middlewares {
             response.Headers.Pragma = "no-cache";
             response.Headers.Expires = "0";
         }
-        private static bool TryGetDescriptorKind(string relativePath, out string name, out Services.DescriptorKind kind) {
+        private static bool TryGetDescriptorKind(string relativePath, out Services.DescriptorKind kind) {
             // route all descriptor extensions through one enrichment path
             var fileName = relativePath[(relativePath.LastIndexOf('/') + 1)..];
-            if (fileName.Equals("module.json", StringComparison.OrdinalIgnoreCase) ||
-                fileName.Equals("module.jsonc", StringComparison.OrdinalIgnoreCase)) {
-                name = "module";
-                kind = Services.DescriptorKind.Module;
-                return true;
+            if (!fileName.Equals(Services.ManifestFileNames.Json, StringComparison.OrdinalIgnoreCase) &&
+                !fileName.Equals(Services.ManifestFileNames.Jsonc, StringComparison.OrdinalIgnoreCase)) {
+                kind = default;
+                return false;
             }
-            if (fileName.Equals("xshell.json", StringComparison.OrdinalIgnoreCase) ||
-                fileName.Equals("xshell.jsonc", StringComparison.OrdinalIgnoreCase)) {
-                name = "xshell";
-                kind = Services.DescriptorKind.XShell;
-                return true;
-            }
-            name = "";
-            kind = default;
-            return false;
+            var segments = relativePath.Split('/', StringSplitOptions.RemoveEmptyEntries);
+            kind = segments.Length >= 2 && string.Equals(segments[^2], "xshell", StringComparison.OrdinalIgnoreCase) ?
+                Services.DescriptorKind.XShell : Services.DescriptorKind.Module;
+            return true;
         }
         private static bool IsInside(string path, string root) {
             var comparison = OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;

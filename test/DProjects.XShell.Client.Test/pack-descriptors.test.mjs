@@ -29,7 +29,7 @@ function module(directory, id, references = {}, extra = {}) {
     mkdirSync(directory, { recursive: true });
     const modules = { [id]: { version: "1.0.0", ...extra }, ...references };
     const content = JSON.stringify({ modules });
-    writeFileSync(join(directory, "module.jsonc"), "// authored configuration\n" + content);
+    writeFileSync(join(directory, "manifest.jsonc"), "// authored configuration\n" + content);
     writeFileSync(join(directory, "resource.txt"), id);
     return content;
 }
@@ -95,7 +95,7 @@ function metaContent(index, name) {
 }
 
 function archivePath(output, packagePath) {
-    return join(output, dirname(packagePath), packagePath.endsWith("/xshell.json") ? "xshell.zip" : "module.zip");
+    return join(output, dirname(packagePath), packagePath.split("/")[0] === "xshell" ? "xshell.zip" : "module.zip");
 }
 
 function assertUtcTimestamp(value) {
@@ -111,13 +111,13 @@ test("pack discovers a dependency graph, rewrites references, and commits one co
         module(join(sources, "customers"), "customers", {}, { builtAt: "2000-01-01T00:00:00Z" });
         module(join(sources, "x"), "x");
         module(join(sources, "orders"), "orders", {
-            customers: { configUrl: "url:../customers/module.jsonc", params: { theme: "blue" } },
-            x: { configUrl: "url:../x/module.jsonc" }
+            customers: { configUrl: "url:../customers/manifest.jsonc", params: { theme: "blue" } },
+            x: { configUrl: "url:../x/manifest.jsonc" }
         });
-        module(join(sources, "reports"), "reports", { x: { configUrl: "url:../x/module.jsonc" } });
+        module(join(sources, "reports"), "reports", { x: { configUrl: "url:../x/manifest.jsonc" } });
         const authored = module(join(sources, "app"), "app", {
-            orders: { configUrl: "url:../orders/module.jsonc" },
-            reports: { configUrl: "url:../reports/module.jsonc" }
+            orders: { configUrl: "url:../orders/manifest.jsonc" },
+            reports: { configUrl: "url:../reports/manifest.jsonc" }
         }, { files: [{ path: "/stale.js", size: 1, hash: "stale" }] });
 
         const release = successfulPack(join(sources, "app"), output);
@@ -143,15 +143,15 @@ test("pack discovers a dependency graph, rewrites references, and commits one co
         for (const path of release.packages.filter(path => path !== release.xshell)) {
             const directory = join(output, dirname(path));
             const archive = entries(join(directory, "module.zip"));
-            assert.deepEqual(readdirSync(directory).sort(), path === release.root ? ["index.html", "module.json", "module.zip", "sw.js"] : ["module.json", "module.zip"]);
-            assert.equal(archive.has("module.json"), true);
-            assert.equal(archive.has("module.jsonc"), false);
-            const canonical = JSON.parse(archive.get("module.json")).modules[path.split("/")[0]];
+            assert.deepEqual(readdirSync(directory).sort(), path === release.root ? ["index.html", "manifest.json", "module.zip", "sw.js"] : ["manifest.json", "module.zip"]);
+            assert.equal(archive.has("manifest.json"), true);
+            assert.equal(archive.has("manifest.jsonc"), false);
+            const canonical = JSON.parse(archive.get("manifest.json")).modules[path.split("/")[0]];
             if (path === release.root) {
                 const canonicalIndex = archive.get("index.html").toString("utf8");
                 const hash = dirname(path).split(".").at(-1);
-                assert.equal(metaContent(canonicalIndex, "xshell:app.configPath"), "/app/1.0.0.__XSHELL_ROOT_HASH__/module.json");
-                assert.equal(metaContent(index, "xshell:app.configPath"), `/app/1.0.0.${hash}/module.json`);
+                assert.equal(metaContent(canonicalIndex, "xshell:app.configPath"), "/app/1.0.0.__XSHELL_ROOT_HASH__/manifest.json");
+                assert.equal(metaContent(index, "xshell:app.configPath"), `/app/1.0.0.${hash}/manifest.json`);
                 assert.deepEqual(readFileSync(join(directory, "sw.js")), archive.get("sw.js"));
                 assert.equal(canonical.files.some(file => ["/index.html", "/sw.js"].includes(file.path)), false);
             } else {
@@ -168,10 +168,10 @@ test("pack discovers a dependency graph, rewrites references, and commits one co
             assert.equal(Object.hasOwn(published.modules[path.split("/")[0]].assets, "path"), false);
             assert.deepEqual(published.modules[path.split("/")[0]].files.map(file => file.path), ["/resource.txt"]);
             assert.deepEqual(published.modules[path.split("/")[0]].files, canonical.files);
-            assert.equal(canonical.files.some(file => ["/module.json", "/module.jsonc", "/xshell.json", "/xshell.jsonc"].includes(file.path)), false);
+            assert.equal(canonical.files.some(file => ["/manifest.json", "/manifest.jsonc"].includes(file.path)), false);
             assert.equal(published.modules[path.split("/")[0]].files[0].hash, createHash("sha256").update(path.split("/")[0]).digest("hex"));
             assert.equal(published.modules[path.split("/")[0]].files[0].size, Buffer.byteLength(path.split("/")[0]));
-            const archived = JSON.parse(archive.get("module.json"));
+            const archived = JSON.parse(archive.get("manifest.json"));
             for (const [id, reference] of Object.entries(published.modules)) {
                 if (id === path.split("/")[0]) continue;
                 assert.deepEqual(archived.modules[id], reference);
@@ -182,19 +182,19 @@ test("pack discovers a dependency graph, rewrites references, and commits one co
             }
         }
         const frameworkDirectory = join(output, dirname(release.xshell));
-        assert.deepEqual(readdirSync(frameworkDirectory).sort(), ["bootstrap.js", "sw.js", "xshell.json", "xshell.zip"]);
+        assert.deepEqual(readdirSync(frameworkDirectory).sort(), ["bootstrap.js", "sw.js", "manifest.json", "xshell.zip"]);
         const frameworkArchive = entries(archivePath(output, release.xshell));
-        assert.equal(frameworkArchive.has("xshell.json"), true);
+        assert.equal(frameworkArchive.has("manifest.json"), true);
         assert.equal(frameworkArchive.has("bootstrap.js"), true);
         assert.equal(frameworkArchive.has("sw.js"), true);
         assert.deepEqual(frameworkArchive.get("sw.js"), readFileSync(join(dirname(assemblyPath), "Resources", "DProjects.XShell", "xshell", "sw.js")));
         assert.equal(frameworkArchive.has("xshell.js"), true);
-        assert.equal(frameworkArchive.has("xshell.jsonc"), false);
+        assert.equal(frameworkArchive.has("manifest.jsonc"), false);
         for (const name of ["bootstrap.js", "sw.js"]) {
             assert.deepEqual(readFileSync(join(frameworkDirectory, name)), frameworkArchive.get(name));
         }
-        assert.notDeepEqual(readFileSync(join(frameworkDirectory, "xshell.json")), frameworkArchive.get("xshell.json"));
-        const frameworkCanonical = JSON.parse(frameworkArchive.get("xshell.json")).xshell;
+        assert.notDeepEqual(readFileSync(join(frameworkDirectory, "manifest.json")), frameworkArchive.get("manifest.json"));
+        const frameworkCanonical = JSON.parse(frameworkArchive.get("manifest.json")).xshell;
         const frameworkPublished = descriptor(output, release.xshell).xshell;
         const frameworkHash = dirname(release.xshell).split(".").at(-1);
         assert.equal(frameworkCanonical.hash, "");
@@ -202,7 +202,7 @@ test("pack discovers a dependency graph, rewrites references, and commits one co
         assert.equal(frameworkCanonical.files.some(file => file.path === "/bootstrap.js"), true);
         assert.equal(frameworkCanonical.files.some(file => file.path === "/sw.js"), true);
         assert.equal(frameworkCanonical.files.some(file =>
-            ["/module.json", "/module.jsonc", "/xshell.json", "/xshell.jsonc"].includes(file.path)), false);
+            ["/manifest.json", "/manifest.jsonc"].includes(file.path)), false);
         assert.equal(frameworkPublished.hash, frameworkHash);
         assert.equal(frameworkPublished.assets.url, "url:./xshell.zip");
         assert.equal(frameworkPublished.assets.basePath, "app:/_assets");
@@ -213,7 +213,7 @@ test("pack discovers a dependency graph, rewrites references, and commits one co
         assert.equal(Object.hasOwn(descriptor(output, release.root).modules, "xshell"), false);
         const orders = descriptor(output, release.packages.find(path => path.startsWith("orders/")));
         assert.deepEqual(orders.modules.customers.params, { theme: "blue" });
-        assert.equal(readFileSync(join(sources, "app", "module.jsonc"), "utf8"), "// authored configuration\n" + authored);
+        assert.equal(readFileSync(join(sources, "app", "manifest.jsonc"), "utf8"), "// authored configuration\n" + authored);
 
         const priorPackages = new Map(release.packages.map(path => [path, {
             descriptor: readFileSync(join(output, path)), zip: readFileSync(archivePath(output, path))
@@ -260,8 +260,8 @@ test("dependency identity changes propagate to consumers while unrelated package
         module(join(sources, "child"), "child");
         module(join(sources, "other"), "other");
         module(join(sources, "app"), "app", {
-            child: { configUrl: "url:../child/module.jsonc" },
-            other: { configUrl: "url:../other/module.jsonc" }
+            child: { configUrl: "url:../child/manifest.jsonc" },
+            other: { configUrl: "url:../other/manifest.jsonc" }
         });
         const before = successfulPack(join(sources, "app"), output);
         const beforeChildPath = before.packages.find(path => path.startsWith("child/"));
@@ -299,15 +299,15 @@ test("invalid graphs and build failures leave the committed release unchanged", 
         module(join(sources, "app"), "app");
         successfulPack(join(sources, "app"), output);
         const committed = readFileSync(join(output, "release.json"), "utf8");
-        module(join(sources, "app"), "app", { missing: { configUrl: "url:../missing/module.jsonc" } });
+        module(join(sources, "app"), "app", { missing: { configUrl: "url:../missing/manifest.jsonc" } });
         assert.match(pack(join(sources, "app"), output).stderr, /Missing module configuration/);
-        module(join(sources, "child"), "child", { app: { configUrl: "url:../app/module.jsonc" } });
-        module(join(sources, "app"), "app", { child: { configUrl: "url:../child/module.jsonc" } });
+        module(join(sources, "child"), "child", { app: { configUrl: "url:../app/manifest.jsonc" } });
+        module(join(sources, "app"), "app", { child: { configUrl: "url:../child/manifest.jsonc" } });
         assert.match(pack(join(sources, "app"), output).stderr, /cycle/i);
         module(join(sources, "child"), "wrong");
         assert.match(pack(join(sources, "app"), output).stderr, /defines local module 'wrong'/);
         module(join(sources, "child"), "child");
-        module(join(sources, "app"), "app", { child: { configUrl: "url:../child/module.jsonc" } });
+        module(join(sources, "app"), "app", { child: { configUrl: "url:../child/manifest.jsonc" } });
         writeFileSync(join(sources, "child", "pages.html"), "<div></div>");
         writeFileSync(join(sources, "child", "pages.js"), "export default {};");
         assert.match(pack(join(sources, "app"), output).stderr, /Conflicting module resources/);
@@ -323,7 +323,7 @@ test("framework packaging retains its distinct descriptor and ZIP format", () =>
     try {
         const source = join(root, "xshell");
         mkdirSync(source);
-        writeFileSync(join(source, "xshell.jsonc"), '// comment\n{"xshell":{"version":"2.0.0","files":[{"path":"/stale.js"}]}}');
+        writeFileSync(join(source, "manifest.jsonc"), '// comment\n{"xshell":{"version":"2.0.0","files":[{"path":"/stale.js"}]}}');
         writeFileSync(join(source, "bootstrap.js"), "console.log('bootstrap');");
         writeFileSync(join(source, "sw.js"), "console.log('worker');");
         writeFileSync(join(source, "xshell.js"), "console.log('x');");
@@ -339,12 +339,12 @@ test("framework packaging retains its distinct descriptor and ZIP format", () =>
         assertUtcTimestamp(published.xshell.builtAt);
         assert.equal(published.xshell.assets.url, "url:./xshell.zip");
         const archive = entries(join(output, dirname(release.root), "xshell.zip"));
-        assert.equal(archive.has("xshell.json"), true);
-        assert.deepEqual(readdirSync(join(output, dirname(release.root))).sort(), ["bootstrap.js", "sw.js", "xshell.json", "xshell.zip"]);
+        assert.equal(archive.has("manifest.json"), true);
+        assert.deepEqual(readdirSync(join(output, dirname(release.root))).sort(), ["bootstrap.js", "sw.js", "manifest.json", "xshell.zip"]);
         for (const name of ["bootstrap.js", "sw.js"]) assert.deepEqual(readFileSync(join(output, dirname(release.root), name)), archive.get(name));
-        assert.notDeepEqual(readFileSync(join(output, release.root)), archive.get("xshell.json"));
+        assert.notDeepEqual(readFileSync(join(output, release.root)), archive.get("manifest.json"));
         assert.equal(contentHash(archive), published.xshell.hash);
-        const canonical = JSON.parse(archive.get("xshell.json")).xshell;
+        const canonical = JSON.parse(archive.get("manifest.json")).xshell;
         assert.equal(canonical.hash, "");
         assert.equal(Object.hasOwn(canonical, "builtAt"), false);
         assert.deepEqual(canonical.files, published.xshell.files);
@@ -352,14 +352,14 @@ test("framework packaging retains its distinct descriptor and ZIP format", () =>
         const originalDescriptor = readFileSync(join(output, release.root));
         const originalZip = readFileSync(join(output, dirname(release.root), "xshell.zip"));
         const originalFiles = ["bootstrap.js", "sw.js"].map(name => [name, readFileSync(join(output, dirname(release.root), name))]);
-        writeFileSync(join(source, "xshell.jsonc"), '{"xshell":{"version":"2.0.0","builtAt":"2000-01-01T00:00:00Z"}}');
+        writeFileSync(join(source, "manifest.jsonc"), '{"xshell":{"version":"2.0.0","builtAt":"2000-01-01T00:00:00Z"}}');
         const repeated = successfulPack(source, output);
         assert.equal(repeated.root, release.root);
         assert.equal(repeated.xshell, release.xshell);
         assert.deepEqual(readFileSync(join(output, release.root)), originalDescriptor);
         assert.deepEqual(readFileSync(join(output, dirname(release.root), "xshell.zip")), originalZip);
         for (const [name, bytes] of originalFiles) assert.deepEqual(readFileSync(join(output, dirname(release.root), name)), bytes);
-        writeFileSync(join(source, "xshell.jsonc"), '{"app":{},"xshell":{"version":"2.0.0"}}');
+        writeFileSync(join(source, "manifest.jsonc"), '{"app":{},"xshell":{"version":"2.0.0"}}');
         assert.match(pack(source, output).stderr, /must not define top-level app/);
         assert.equal(existsSync(join(output, "index.html")), false);
     } finally {
@@ -372,7 +372,7 @@ test("framework packaging requires both canonical bootstrap files", () => {
     try {
         const source = join(root, "xshell");
         mkdirSync(source);
-        writeFileSync(join(source, "xshell.json"), '{"xshell":{"version":"2.0.0"}}');
+        writeFileSync(join(source, "manifest.json"), '{"xshell":{"version":"2.0.0"}}');
         const output = join(root, "dist");
         assert.match(pack(source, output).stderr, /missing required bootstrap\.js/);
         writeFileSync(join(source, "bootstrap.js"), "bootstrap");
@@ -390,7 +390,7 @@ test("equivalent JSON and JSONC property orders produce the same package identit
         const second = join(root, "second");
         module(first, "app", {}, { label: "Application" });
         mkdirSync(second);
-        writeFileSync(join(second, "module.json"), '{"modules":{"app":{"label":"Application","version":"1.0.0"}}}');
+        writeFileSync(join(second, "manifest.json"), '{"modules":{"app":{"label":"Application","version":"1.0.0"}}}');
         writeFileSync(join(second, "resource.txt"), "app");
         const a = successfulPack(first, join(root, "output-a"));
         const b = successfulPack(second, join(root, "output-b"));
@@ -409,13 +409,13 @@ test("conflicting identities and unsupported dependency URLs fail before publica
         module(join(sources, "one"), "shared");
         module(join(sources, "two"), "shared");
         module(join(sources, "app"), "app", {
-            shared: { configUrl: "url:../one/module.jsonc" },
-            branch: { configUrl: "url:../branch/module.jsonc" }
+            shared: { configUrl: "url:../one/manifest.jsonc" },
+            branch: { configUrl: "url:../branch/manifest.jsonc" }
         });
-        module(join(sources, "branch"), "branch", { shared: { configUrl: "url:../two/module.jsonc" } });
+        module(join(sources, "branch"), "branch", { shared: { configUrl: "url:../two/manifest.jsonc" } });
         assert.match(pack(join(sources, "app"), output).stderr, /conflicting configUrl/);
         assert.equal(existsSync(join(output, "release.json")), false);
-        module(join(sources, "app"), "app", { shared: { configUrl: "url:https://example.invalid/shared/module.json" } });
+        module(join(sources, "app"), "app", { shared: { configUrl: "url:https://example.invalid/shared/manifest.json" } });
         assert.match(pack(join(sources, "app"), output).stderr, /Remote module dependency/);
         module(join(sources, "app"), "app", { shared: { params: { mode: "compact" } } });
         assert.match(pack(join(sources, "app"), output).stderr, /exactly one local module definition/);
@@ -431,11 +431,11 @@ test("pack keeps asset ownership with local definitions", () => {
         const sources = join(root, "sources");
         const output = join(root, "dist");
         module(join(sources, "child"), "child", {}, { assets: { url: "url:./assets/" } });
-        module(join(sources, "app"), "app", { child: { configUrl: "url:../child/module.jsonc", assets: { url: "url:./override/" } } });
+        module(join(sources, "app"), "app", { child: { configUrl: "url:../child/manifest.jsonc", assets: { url: "url:./override/" } } });
         assert.match(pack(join(sources, "app"), output).stderr, /cannot override assets/);
-        module(join(sources, "app"), "app", { child: { configUrl: "url:../child/module.jsonc", assetsUrl: "url:.\/override\/" } });
+        module(join(sources, "app"), "app", { child: { configUrl: "url:../child/manifest.jsonc", assetsUrl: "url:.\/override\/" } });
         assert.match(pack(join(sources, "app"), output).stderr, /obsolete assetsUrl/);
-        module(join(sources, "app"), "app", { child: { configUrl: "url:../child/module.jsonc", files: [] } });
+        module(join(sources, "app"), "app", { child: { configUrl: "url:../child/manifest.jsonc", files: [] } });
         assert.match(pack(join(sources, "app"), output).stderr, /cannot define files/);
         assert.equal(existsSync(join(output, "release.json")), false);
     } finally {
@@ -449,7 +449,7 @@ test("module packaging rejects xshell.files contributions", () => {
         const source = join(root, "app");
         const output = join(root, "dist");
         module(source, "app");
-        writeFileSync(join(source, "module.jsonc"), JSON.stringify({ modules: { app: { version: "1.0.0" } }, xshell: { files: [] } }));
+        writeFileSync(join(source, "manifest.jsonc"), JSON.stringify({ modules: { app: { version: "1.0.0" } }, xshell: { files: [] } }));
 
         assert.match(pack(source, output).stderr, /cannot define xshell\.files/);
         assert.equal(existsSync(join(output, "release.json")), false);
@@ -481,7 +481,7 @@ test("an immutable package collision cannot replace the committed release", () =
         const sources = join(root, "sources");
         const output = join(root, "dist");
         module(join(sources, "child"), "child");
-        module(join(sources, "app"), "app", { child: { configUrl: "url:../child/module.jsonc" } });
+        module(join(sources, "app"), "app", { child: { configUrl: "url:../child/manifest.jsonc" } });
         const release = successfulPack(join(sources, "app"), output);
         const committed = readFileSync(join(output, "release.json"), "utf8");
         const child = release.packages.find(path => path.startsWith("child/"));
@@ -638,7 +638,7 @@ test("a collision after publishing one new package leaves the old release select
         const sources = join(root, "sources");
         const output = join(root, "dist");
         module(join(sources, "child"), "child");
-        module(join(sources, "app"), "app", { child: { configUrl: "url:../child/module.jsonc" } });
+        module(join(sources, "app"), "app", { child: { configUrl: "url:../child/manifest.jsonc" } });
         successfulPack(join(sources, "app"), output);
         const committed = readFileSync(join(output, "release.json"), "utf8");
         writeFileSync(join(sources, "child", "resource.txt"), "changed");
@@ -689,7 +689,7 @@ test("deployment bootstrap options create distinct root generations without chan
         const output = join(root, "dist");
         const child = join(root, "child");
         module(child, "child");
-        module(source, "app", { child: { configUrl: "url:../child/module.jsonc" } });
+        module(source, "app", { child: { configUrl: "url:../child/manifest.jsonc" } });
         const original = successfulPack(source, output);
         const originalDependency = original.packages.find(path => path.startsWith("child/"));
         const check = args => {
@@ -717,8 +717,8 @@ test("deployment bootstrap options create distinct root generations without chan
         for (const args of [["--environment", "Staging"], ["--param", "tenant=other"], ["--temp-base-path", "/uploads"]]) check(args);
         const canonical = entries(archivePath(output, packed.root));
         const canonicalIndex = canonical.get("index.html").toString("utf8");
-        assert.equal(canonicalIndex.includes("/demo/app/1.0.0.__XSHELL_ROOT_HASH__/module.json"), true);
-        assert.equal(index.includes(`/demo/app/1.0.0.${dirname(packed.root).split(".").at(-1)}/module.json`), true);
+        assert.equal(canonicalIndex.includes("/demo/app/1.0.0.__XSHELL_ROOT_HASH__/manifest.json"), true);
+        assert.equal(index.includes(`/demo/app/1.0.0.${dirname(packed.root).split(".").at(-1)}/manifest.json`), true);
         assert.equal(contentHash(canonical), dirname(packed.root).split(".").at(-1));
         const before = {
             descriptor: readFileSync(join(output, packed.root)), index: readFileSync(join(rootDirectory, "index.html")),
@@ -759,8 +759,8 @@ test("root self-hash publication preserves placeholder text in user bootstrap va
         const archive = entries(archivePath(output, release.root));
         const canonicalIndex = archive.get("index.html").toString("utf8");
         const publishedIndex = readFileSync(join(directory, "index.html"), "utf8");
-        assert.equal(metaContent(canonicalIndex, "xshell:app.configPath"), "/demo/app/1.0.0.__XSHELL_ROOT_HASH__/module.json");
-        assert.equal(metaContent(publishedIndex, "xshell:app.configPath"), `/demo/app/1.0.0.${hash}/module.json`);
+        assert.equal(metaContent(canonicalIndex, "xshell:app.configPath"), "/demo/app/1.0.0.__XSHELL_ROOT_HASH__/manifest.json");
+        assert.equal(metaContent(publishedIndex, "xshell:app.configPath"), `/demo/app/1.0.0.${hash}/manifest.json`);
         for (const index of [canonicalIndex, publishedIndex]) {
             assert.equal(metaContent(index, "xshell:app.params"), "token=__XSHELL_ROOT_HASH__");
             assert.equal(metaContent(index, "xshell:xshell.environment"), "__XSHELL_ROOT_HASH__");
@@ -789,7 +789,7 @@ test("pack selects bundled XShell resource sets without changing package or rele
         const source = join(root, "app");
         const child = join(root, "child");
         module(child, "child");
-        module(source, "app", { child: { configUrl: "url:../child/module.jsonc" } });
+        module(source, "app", { child: { configUrl: "url:../child/manifest.jsonc" } });
         const copy = join(root, "tool-copy");
         cpSync(dirname(assemblyPath), copy, { recursive: true });
         const defaultResources = join(copy, "Resources", "DProjects.XShell");
@@ -861,7 +861,7 @@ test("authored app metadata and invalid options do not commit a release", () => 
         const committed = readFileSync(join(output, "release.json"), "utf8");
         const index = readFileSync(join(output, dirname(original.root), "index.html"), "utf8");
         const worker = readFileSync(join(output, dirname(original.root), "sw.js"), "utf8");
-        writeFileSync(join(source, "module.jsonc"), JSON.stringify({ app: { label: "obsolete" }, modules: { app: { version: "1.0.0" } } }));
+        writeFileSync(join(source, "manifest.jsonc"), JSON.stringify({ app: { label: "obsolete" }, modules: { app: { version: "1.0.0" } } }));
         assert.match(pack(source, output).stderr, /must not define top-level app/);
         assert.equal(readFileSync(join(output, "release.json"), "utf8"), committed);
         assert.equal(readFileSync(join(output, dirname(original.root), "index.html"), "utf8"), index);

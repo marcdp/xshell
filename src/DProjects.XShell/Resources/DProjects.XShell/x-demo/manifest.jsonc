@@ -24,19 +24,19 @@
             }
         },
         "x": {
-            "configUrl": "url:../x/module.jsonc"
+            "configUrl": "url:../x/manifest.jsonc"
         },
         "x-filesystem": {
-            "configUrl": "url:../x-filesystem/module.jsonc"
+            "configUrl": "url:../x-filesystem/manifest.jsonc"
         },
         "x-identity": {
-            "configUrl": "url:../x-identity/module.jsonc"
+            "configUrl": "url:../x-identity/manifest.jsonc"
         },
         "xshell-diagnostics": {
-            "configUrl": "url:../xshell-diagnostics/module.jsonc"
+            "configUrl": "url:../xshell-diagnostics/manifest.jsonc"
         },
         "xshell-docs": {
-            "configUrl": "url:../xshell-docs/module.jsonc"
+            "configUrl": "url:../xshell-docs/manifest.jsonc"
         }
     },
     "xshell": {

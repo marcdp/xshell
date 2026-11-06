@@ -40,7 +40,7 @@
             }
         },
         "codemirror": {
-            "configUrl": "url:../codemirror/module.jsonc"
+            "configUrl": "url:../codemirror/manifest.jsonc"
         }
     },
 

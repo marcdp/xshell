@@ -39,10 +39,8 @@ namespace DProjects.XShell.Services {
 
         // methods (private)
         private static bool IsDescriptor(string path) {
-            return path.Equals("/module.json", StringComparison.OrdinalIgnoreCase) ||
-                path.Equals("/module.jsonc", StringComparison.OrdinalIgnoreCase) ||
-                path.Equals("/xshell.json", StringComparison.OrdinalIgnoreCase) ||
-                path.Equals("/xshell.jsonc", StringComparison.OrdinalIgnoreCase);
+            return path.Equals("/" + ManifestFileNames.Json, StringComparison.OrdinalIgnoreCase) ||
+                path.Equals("/" + ManifestFileNames.Jsonc, StringComparison.OrdinalIgnoreCase);
         }
     }
 }

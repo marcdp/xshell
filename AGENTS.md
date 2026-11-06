@@ -151,7 +151,7 @@ Do not collapse these concepts merely to reduce code.
 Module specifications are normally authored as:
 
 ```text
-module.jsonc
+manifest.jsonc
 ```
 
 JSONC is intentional.
@@ -171,7 +171,7 @@ Bootstrap recursively discovers `modules.<id>.configUrl` references and builds c
 
 Repeated references to the same canonical module do not imply multiple live runtime instances.
 
-Each `module.jsonc` contains exactly one local module definition: the `modules.<id>` entry without `configUrl`. Every other entry is an external
+Each `manifest.jsonc` contains exactly one local module definition: the `modules.<id>` entry without `configUrl`. Every other entry is an external
 reference whose key must match the referenced document's local module id. References may contribute `params` and other mergeable configuration;
 `configUrl` identifies the referenced definition, whose local definition owns `assets.url`. Merge order is dependency-first, owner-later, root-last.
 
@@ -601,7 +601,7 @@ lives at `xshell.files`. Bootstrap consumes those self-contained descriptors and
 namespace. A committed distribution is selected through `release.json`; its `root` names the root descriptor and its `packages` list names the
 complete package set.
 
-Do not manually maintain generated `files` metadata in `module.jsonc` or `xshell.jsonc`.
+Do not manually maintain generated `files` metadata in `manifest.json` or `manifest.jsonc`.
 
 Module references must not define `files`, and module/root descriptors must not contribute `xshell.files`. Development middleware and Pack replace
 stale inventory on the owning local module or framework definition.

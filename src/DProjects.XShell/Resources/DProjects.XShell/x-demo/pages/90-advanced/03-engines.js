@@ -28,7 +28,7 @@ export default {
         <p>The loader manages Page and Component orchestration. Engines focus on their own responsibilities rather than replacing the Page or Component contract.</p>
 
         <h2>Module defaults</h2>
-        <p>A Module defines its default engine choices for Pages and Components in <code>module.jsonc</code>.</p>
+        <p>A Module defines its default engine choices for Pages and Components in <code>manifest.jsonc</code>.</p>
         <x-datafields columns="2">
             <x-datafield label="Default Page render engine">{{ state.defaultPageRender }}</x-datafield>
             <x-datafield label="Default Page state engine">{{ state.defaultPageState }}</x-datafield>

@@ -59,10 +59,10 @@ export default {
 
         <h2>Module references versus resource dependencies</h2>
         <p>These two declarations serve different purposes.</p>
-        <pre x-pre><code>// Application module.jsonc
+        <pre x-pre><code>// Application manifest.jsonc
 "modules": {
     "x": {
-        "configUrl": "url:../x/module.jsonc"
+        "configUrl": "url:../x/manifest.jsonc"
     }
 }
 

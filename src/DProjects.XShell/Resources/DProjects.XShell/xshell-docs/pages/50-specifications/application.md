@@ -1,6 +1,6 @@
 # Root Module and Application Metadata
 
-The application is the root module selected by a release. `release.root` names its packaged `module.json`; development hosting selects the same
+The application is the root module selected by a release. `release.root` names its packaged `manifest.json`; development hosting selects the same
 role through `xshell:app.configPath`. Any module can be selected as the root of a release. No `main`, `isRoot`, or `moduleType` field marks a module,
 and there is no separate authored application descriptor or application package.
 
@@ -17,9 +17,9 @@ and there is no separate authored application descriptor or application package.
                 "component": { "renderEngine": "x", "stateEngine": "proxy" }
             }
         },
-        "customers": { "configUrl": "url:../customers/module.jsonc" },
+        "customers": { "configUrl": "url:../customers/manifest.jsonc" },
         "reports": {
-            "configUrl": "url:../reports/module.jsonc",
+            "configUrl": "url:../reports/manifest.jsonc",
             "params": { "mode": "compact" }
         }
     },

@@ -279,7 +279,7 @@ namespace DProjects.XShell.Test {
             }
 
             // methods
-            public static async Task<HostingApplication> StartAsync(string appBasePath = "/app", string[]? unhandledPrefixes = null, string appConfigPath = "/_resources/DProjects.XShell/x-demo/module.jsonc", string xshellBasePath = "/_resources/DProjects.XShell/xshell", string resourcesBasePath = "/_resources/DProjects.XShell",
+            public static async Task<HostingApplication> StartAsync(string appBasePath = "/app", string[]? unhandledPrefixes = null, string appConfigPath = "/_resources/DProjects.XShell/x-demo/manifest.jsonc", string xshellBasePath = "/_resources/DProjects.XShell/xshell", string resourcesBasePath = "/_resources/DProjects.XShell",
                 Action<WebApplication>? configureEndpoints = null) {
                 var tempPath = Path.Combine(Path.GetTempPath(), "DProjects.XShell.Test", Guid.NewGuid().ToString("N"));
                 var builder = WebApplication.CreateBuilder(new WebApplicationOptions { EnvironmentName = "Development" });

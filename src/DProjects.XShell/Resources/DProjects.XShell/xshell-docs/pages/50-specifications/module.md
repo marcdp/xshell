@@ -60,8 +60,8 @@ Every non-local entry must declare `configUrl`:
                 "component": { "renderEngine": "x", "stateEngine": "proxy" }
             }
         },
-        "x": { "configUrl": "url:../x/module.jsonc" },
-        "customers": { "configUrl": "url:../customers/module.jsonc" }
+        "x": { "configUrl": "url:../x/manifest.jsonc" },
+        "customers": { "configUrl": "url:../customers/manifest.jsonc" }
     }
 }
 ```
@@ -83,7 +83,7 @@ Bootstrap resolves references recursively and the final effective entry is a com
     "version": "1.0.0",
     "copyright": "",
     "icon": "",
-    "configUrl": "https://example.test/x/module.jsonc",
+    "configUrl": "https://example.test/x/manifest.jsonc",
     "assets": {
         "path": "/_assets/x/1.0.0.dev",
         "url": "https://example.test/x/"

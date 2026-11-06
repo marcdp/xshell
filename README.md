@@ -40,7 +40,7 @@ flowchart LR
     APP --> MN["Module N"]
 
     subgraph MODULE["A Module"]
-        CFG["Configuration<br/>module.jsonc"]
+        CFG["Configuration<br/>manifest.jsonc"]
         CTRL["Optional Controller<br/>module.js"]
         PAGES["Pages"]
         COMPONENTS["Components"]
@@ -64,7 +64,7 @@ A good Module should be easy to inspect and answer:
 Sample module file structure:
 ```
 my-module/
-├── module.jsonc
+├── manifest.jsonc
 ├── module.js
 │
 ├── pages/
@@ -113,9 +113,9 @@ no `--xshell` argument or `modules.xshell` reference.
 The application is the root module selected by `release.root`; no authored `app` block, `main` flag, or separate application package is used.
 Pack puts `index.html` and application `sw.js` in the immutable root module generation. `--app-base-path` defaults to empty, `--environment` defaults
 to `Production`, repeatable `--param key=value` supplies root parameters, and `--temp-base-path` defaults to `<app-base-path>/temp`.
-Dependency module directories contain `module.json` and `module.zip`; the root also contains `index.html` and `sw.js`. Each module has
+Dependency module directories contain `manifest.json` and `module.zip`; the root also contains `index.html` and `sw.js`. Each module has
 `modules.<id>.assets.url = "url:./module.zip"` and
-`modules.<id>.files = [...]` in the descriptor. The `xshell/<version>.<hash>/` directory contains `xshell.json`, `bootstrap.js`, `sw.js`, and
+`modules.<id>.files = [...]` in the descriptor. The `xshell/<version>.<hash>/` directory contains `manifest.json`, `bootstrap.js`, `sw.js`, and
 `xshell.zip`. Its published descriptor has `xshell.assets.url = "url:./xshell.zip"` and `xshell.files = [...]`.
 `bootstrap.js` and `sw.js` are exact canonical copies also retained inside the complete framework ZIP, allowing direct startup requests without
 creating separate package identities.
@@ -130,13 +130,13 @@ and cannot be replaced by the other representation. At runtime, a Service Worker
 complete immutable package and serves its entries; other destinations use expanded-directory URL rewriting. ZIP deployment remains subject to the
 documented same-origin/CORS/CSP constraints and supported ZIP format limits.
 
-In Development, resource middleware serves generated `module.json`/`module.jsonc` and `xshell.json`/`xshell.jsonc` responses whose local
+In Development, resource middleware serves generated `manifest.json`/`manifest.jsonc` responses whose local
 `modules.<id>.files` or `xshell.files` value reflects the current physical directory. Authored descriptors are not modified, and authors should not
 maintain this generated metadata. Bootstrap consumes the self-contained descriptor and normalizes package-relative inventory paths into the
 generation-qualified `/_assets/...` namespace; there is no separate inventory request.
 
-Module and XShell descriptors may be authored as JSON or JSONC during development. Packaging parses either form and publishes normalized strict JSON
-using the canonical filenames `module.json` and `xshell.json`. Production packages therefore do not contain `module.jsonc` or `xshell.jsonc`.
+All module and XShell manifests use `manifest.json` or `manifest.jsonc`; discovery context determines the manifest role. Packaging parses either
+form and publishes normalized strict JSON as `manifest.json`. Production packages therefore do not contain `manifest.jsonc`.
 
 
 

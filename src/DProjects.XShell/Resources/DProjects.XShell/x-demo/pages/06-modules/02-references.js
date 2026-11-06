@@ -6,7 +6,7 @@ export default {
     },
 
     template: `
-        <p>An application can include Modules defined in other directories. Instead of repeating their configuration, it references their <code>module.jsonc</code> files using <code>configUrl</code>.</p>
+        <p>An application can include Modules defined in other directories. Instead of repeating their configuration, it references their <code>manifest.jsonc</code> files using <code>configUrl</code>.</p>
 
         <h2>Local definition versus reference</h2>
         <pre x-pre><code>{
@@ -16,10 +16,10 @@ export default {
             "version": "0.9.0"
         },
         "x": {
-            "configUrl": "url:../x/module.jsonc"
+            "configUrl": "url:../x/manifest.jsonc"
         },
         "x-filesystem": {
-            "configUrl": "url:../x-filesystem/module.jsonc"
+            "configUrl": "url:../x-filesystem/manifest.jsonc"
         }
     }
 }</code></pre>
@@ -27,15 +27,15 @@ export default {
 
         <h2>Reference resolution</h2>
         <p>During bootstrap, XShell follows Module references, reads their definitions, and prepares effective configuration for each canonical Module ID.</p>
-        <pre x-pre><code>Application module.jsonc
+        <pre x-pre><code>Application manifest.jsonc
     |
     +-- x-demo         local definition
     |
-    +-- x              ../x/module.jsonc
+    +-- x              ../x/manifest.jsonc
     |
-    +-- x-filesystem   ../x-filesystem/module.jsonc
+    +-- x-filesystem   ../x-filesystem/manifest.jsonc
     |
-    +-- xshell-docs    ../xshell-docs/module.jsonc</code></pre>
+    +-- xshell-docs    ../xshell-docs/manifest.jsonc</code></pre>
 
         <h2>Referenced Modules in this application</h2>
         <p>The following values come from the effective configuration and runtime Module registry.</p>
@@ -53,7 +53,7 @@ export default {
         <p>Module references make a Module's definition and resources available to the application. A Page's <code>dependencies</code> property requests particular resources from those Modules.</p>
         <pre x-pre><code>// Application configuration:
 "x": {
-    "configUrl": "url:../x/module.jsonc"
+    "configUrl": "url:../x/manifest.jsonc"
 }
 
 // Individual Page:

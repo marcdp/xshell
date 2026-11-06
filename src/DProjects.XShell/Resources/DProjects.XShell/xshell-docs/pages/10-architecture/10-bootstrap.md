@@ -2,12 +2,12 @@
 
 The ASP.NET host or packed `index.html` writes `xshell:` meta values and loads the selected XShell generation's `bootstrap.js`.
 `xshell:app.configPath` points to the root module configuration document. The application is that root module for this release.
-For a packed release, `release.root` selects the immutable root generation containing `module.json`, `index.html`, and application `sw.js`.
+For a packed release, `release.root` selects the immutable root generation containing `manifest.json`, `index.html`, and application `sw.js`.
 Deployment can map stable public application and worker URLs to the selected generation while retaining the versioned physical files.
 
 ```text
 host HTML
-    -> load canonical xshell.json and the configured root module descriptor
+    -> load canonical manifest.json and the configured root module descriptor
     -> find the root file's one local module definition
     -> discover modules.<id>.configUrl references recursively
     -> validate reference ids and canonical URLs
@@ -106,7 +106,7 @@ Areas composes menus, ordered routes, and homes after module startup; Navigation
 
 In Development, `ResourcesMiddleware` parses the one authored JSON or JSONC descriptor, generates the current physical inventory, replaces any
 authored stale `files` value in the generated response, and leaves the source file unchanged. Requests for either extension use the same discovery
-rule, so canonical `module.json` and `xshell.json` URLs can be served from authored JSONC. This effective configuration and its inventories are
+rule, so canonical `manifest.json` and authored `manifest.jsonc` URLs can both be served from either representation. This effective configuration and its inventories are
 bootstrap-time values. File changes do not mutate an already initialized application; reloading runs bootstrap again and receives the current
 development descriptor, inventory, and resources. See
 [Service Worker](110-service-worker.md#development-generations).
@@ -117,8 +117,8 @@ See [Configuration](20-configuration.md), [Services](100-services.md), [Modules]
 
 Browser bootstrap accepts JSONC comments and trailing commas in framework, root, and dependency configuration documents. Its scanner preserves
 quoted content while removing comments and commas before closing object or array delimiters. Server/build descriptor parsing accepts the same dialect.
-The framework request always uses the canonical runtime URL `xshell.json`; development middleware discovers exactly one `xshell.json` or
-`xshell.jsonc` source and serves generated strict JSON containing `xshell.files`. Module descriptor requests use the same rule and contain the local
+The framework request always uses the canonical runtime URL `manifest.json`; development middleware discovers exactly one `manifest.json` or
+`manifest.jsonc` source and serves generated strict JSON containing `xshell.files`. Module descriptor requests use the same rule and contain the local
 definition's generated `files`, where local ownership means the only `modules.<id>` entry without `configUrl`.
 
 See [Hosting](40-hosting.md) for meta inputs and generated worker files.

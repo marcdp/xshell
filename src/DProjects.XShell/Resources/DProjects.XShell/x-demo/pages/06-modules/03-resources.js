@@ -11,7 +11,7 @@ export default {
         <h2>Organizing resources</h2>
         <p>A Module can contain different resource types:</p>
         <pre x-pre><code>my-module/
-├── module.jsonc
+├── manifest.jsonc
 ├── module.js
 ├── pages/
 │   └── index.js

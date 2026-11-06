@@ -10,5 +10,7 @@
         ".vs": true,
         ".tmp": true,
         "dist": true,
+        "**/__pycache__": true,
+        "artifacts": true
     }
 }

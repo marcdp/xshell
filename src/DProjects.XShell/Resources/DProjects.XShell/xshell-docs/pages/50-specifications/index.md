@@ -1,6 +1,6 @@
 # Specifications
 
-XShell authors configuration as JSONC. The root module uses the same `module.jsonc` composition model as dependency modules; there is no separate
+XShell authors configuration as JSONC. The root module uses the same `manifest.jsonc` composition model as dependency modules; there is no separate
 application file format. See [Root Module](application.md) for the application-specific `app` section and [Module](module.md) for local definitions,
 external reference contributions, asset locations, and the declarative public contract.
 The root also composes [Areas](../30-subsystems/10-areas.md) from module ids. Module menu contributions remain independent of that placement.
