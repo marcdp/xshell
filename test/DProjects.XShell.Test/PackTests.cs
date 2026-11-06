@@ -5,6 +5,7 @@ using System.Text.Json;
 
 using DProjects.Commands;
 using DProjects.XShell.Commands;
+using DProjects.XShell.Services;
 
 namespace DProjects.XShell.Test {
 
@@ -81,7 +82,7 @@ namespace DProjects.XShell.Test {
         [Fact]
         public async Task XShell_PublishesItsDistinctImmutableZipPackage() {
             using var workspace = new TemporaryDirectory();
-            var source = CreateXShellSource(workspace.PathFor("source"));
+            var source = CreateXShellSource(workspace.PathFor("source/xshell"));
             var output = workspace.PathFor("dist");
 
             var package = await PackAsync(source, output);
@@ -107,6 +108,43 @@ namespace DProjects.XShell.Test {
             var package = await PackAsync(source, workspace.PathFor("dist"));
 
             Assert.True(File.Exists(Path.Combine(package, "manifest.json")));
+        }
+        [Fact]
+        public async Task XShell_LoadsManifestJson() {
+            using var workspace = new TemporaryDirectory();
+            var source = CreateXShellSource(workspace.PathFor("source/xshell"));
+            File.Move(Path.Combine(source, "manifest.jsonc"), Path.Combine(source, "manifest.json"));
+
+            var package = await PackAsync(source, workspace.PathFor("dist"));
+
+            Assert.True(File.Exists(Path.Combine(package, "manifest.json")));
+        }
+        [Theory]
+        [InlineData("xshell/manifest.json", DescriptorKind.XShell)]
+        [InlineData("xshell/manifest.jsonc", DescriptorKind.XShell)]
+        [InlineData("customers/manifest.jsonc", DescriptorKind.Module)]
+        [InlineData("app/manifest.jsonc", DescriptorKind.Module)]
+        [InlineData("XShElL/manifest.jsonc", DescriptorKind.XShell)]
+        public void DescriptorClassifier_UsesImmediateParentDirectory(string path, DescriptorKind expected) {
+            Assert.Equal(expected, DescriptorClassifier.GetKind(path));
+        }
+        [Fact]
+        public async Task FrameworkShapedManifestOutsideXShell_IsRejectedAsModule() {
+            using var workspace = new TemporaryDirectory();
+            var source = CreateXShellSource(workspace.PathFor("source/framework"));
+
+            var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => PackAsync(source, workspace.PathFor("dist")));
+
+            Assert.Contains("must contain a modules object", exception.Message);
+        }
+        [Fact]
+        public async Task ModuleShapedManifestInsideXShell_IsRejectedAsFramework() {
+            using var workspace = new TemporaryDirectory();
+            var source = CreateModuleSource(workspace.PathFor("source/xshell"));
+
+            var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => PackAsync(source, workspace.PathFor("dist")));
+
+            Assert.Contains("must contain xshell", exception.Message);
         }
         [Theory]
         [InlineData("module.json")]
@@ -226,10 +264,8 @@ namespace DProjects.XShell.Test {
         private static async Task<string> PackAsync(string source, string output, string moduleId = ModuleId) {
             var command = new Pack(new TestEnvironment()) { Source = source, Output = output };
             Assert.Equal(0, await command.ExecuteAsync(TestContext.Current.CancellationToken));
-            using var sourceManifest = JsonDocument.Parse(File.ReadAllText(
-                File.Exists(Path.Combine(source, "manifest.json")) ? Path.Combine(source, "manifest.json") : Path.Combine(source, "manifest.jsonc")),
-                new JsonDocumentOptions { CommentHandling = JsonCommentHandling.Skip, AllowTrailingCommas = true });
-            var id = sourceManifest.RootElement.TryGetProperty("modules", out _) ? moduleId : "xshell";
+            var id = DescriptorClassifier.GetKind(File.Exists(Path.Combine(source, "manifest.json")) ?
+                Path.Combine(source, "manifest.json") : Path.Combine(source, "manifest.jsonc")) == DescriptorKind.XShell ? "xshell" : moduleId;
             return Path.Combine(output, Assert.Single(Directory.GetDirectories(Path.Combine(output, id))));
         }
         private static JsonElement ReadModuleDescriptor(string package) {

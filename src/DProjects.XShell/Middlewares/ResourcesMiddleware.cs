@@ -136,7 +136,7 @@ namespace DProjects.XShell.Middlewares {
                         if (File.Exists(moduleJsonPath) && File.Exists(moduleJsoncPath)) {
                             throw new InvalidOperationException($"Source '{directory}' contains both manifest.json and manifest.jsonc.");
                         } else if ((File.Exists(moduleJsonPath) || File.Exists(moduleJsoncPath)) &&
-                            string.Equals(Path.GetFileName(Path.TrimEndingDirectorySeparator(directory)), "xshell", StringComparison.OrdinalIgnoreCase)) {
+                            Services.DescriptorClassifier.GetKind(File.Exists(moduleJsonPath) ? moduleJsonPath : moduleJsoncPath) == Services.DescriptorKind.XShell) {
                             // Framework resources use the same manifest filename but are not module resources.
                             break;
                         } else if (File.Exists(moduleJsonPath)) {
@@ -225,9 +225,7 @@ namespace DProjects.XShell.Middlewares {
                 kind = default;
                 return false;
             }
-            var segments = relativePath.Split('/', StringSplitOptions.RemoveEmptyEntries);
-            kind = segments.Length >= 2 && string.Equals(segments[^2], "xshell", StringComparison.OrdinalIgnoreCase) ?
-                Services.DescriptorKind.XShell : Services.DescriptorKind.Module;
+            kind = Services.DescriptorClassifier.GetKind(relativePath);
             return true;
         }
         private static bool IsInside(string path, string root) {

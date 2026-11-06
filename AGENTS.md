@@ -156,6 +156,10 @@ manifest.jsonc
 
 JSONC is intentional.
 
+Manifest type is determined solely by the immediate parent directory name: a `manifest.json` or `manifest.jsonc` directly inside `xshell/` is an
+XShell framework manifest; every other manifest is a module manifest. The extension selects JSON versus JSONC parsing, not the manifest type.
+After classification, validate the manifest against that distinct framework or module structure.
+
 When changing module configuration:
 
 - preserve JSONC support and useful comments;

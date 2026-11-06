@@ -5,6 +5,25 @@ namespace DProjects.XShell.Services {
 
     internal enum DescriptorKind { Module, XShell }
 
+    internal static class DescriptorClassifier {
+
+        // methods
+        public static DescriptorKind GetKind(string descriptorPath) {
+            ArgumentException.ThrowIfNullOrWhiteSpace(descriptorPath);
+
+            // Descriptor paths may be filesystem paths or slash-separated request paths.
+            // Classification is deliberately path-only: the immediate parent owns the kind.
+            var path = descriptorPath.TrimEnd('/', '\\');
+            var fileSeparator = path.LastIndexOfAny(['/', '\\']);
+            if (fileSeparator < 0) return DescriptorKind.Module;
+            var parent = path[..fileSeparator].TrimEnd('/', '\\');
+            var parentSeparator = parent.LastIndexOfAny(['/', '\\']);
+            var parentName = parent[(parentSeparator + 1)..];
+            return string.Equals(parentName, "xshell", StringComparison.OrdinalIgnoreCase) ?
+                DescriptorKind.XShell : DescriptorKind.Module;
+        }
+    }
+
     internal sealed class DescriptorInventory {
 
         // consts

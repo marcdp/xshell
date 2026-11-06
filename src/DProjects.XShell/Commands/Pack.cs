@@ -70,8 +70,7 @@ namespace DProjects.XShell.Commands {
 
             // discover and validate the complete graph without publishing anything
             var rootDescriptor = FindDescriptor(sourcePath);
-            var rootConfiguration = await ReadJsonObjectAsync(rootDescriptor, cancellationToken);
-            var isFramework = !rootConfiguration.ContainsKey("modules") && rootConfiguration.ContainsKey("xshell");
+            var isFramework = DescriptorClassifier.GetKind(rootDescriptor) == DescriptorKind.XShell;
             var frameworkDescriptor = isFramework ? rootDescriptor : FindBundledFrameworkDescriptor(ResourcesName);
             var order = isFramework ? [] : await DiscoverAsync(rootDescriptor, cancellationToken);
 

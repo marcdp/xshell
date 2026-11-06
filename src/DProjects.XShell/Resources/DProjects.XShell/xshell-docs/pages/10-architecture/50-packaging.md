@@ -21,9 +21,9 @@ Application packs automatically use the selected XShell resources shipped beside
 exists, and applications do not declare a framework filesystem path or a `modules.xshell` reference.
 The former `--zip` flag and expanded output mode have been removed.
 
-For compatibility with framework packaging, a source whose `manifest.json` or `manifest.jsonc` contains an XShell framework definition without a
-`modules` object can still produce a standalone XShell framework ZIP distribution. It has no module dependency graph. The source context and manifest
-contents determine the processing path; the filename does not encode the manifest kind.
+Standalone XShell framework packaging uses a source whose immediate directory is named `xshell` and whose `manifest.json` or `manifest.jsonc`
+satisfies the XShell framework structure. Every other source directory is packaged as a module. The extension selects JSON or JSONC parsing; it does
+not select the manifest kind, and manifest contents never reclassify the source. A standalone framework package has no module dependency graph.
 Standalone XShell packaging creates no application `index.html` or root `sw.js` because it selects no root module application.
 
 ## Discovery and build
