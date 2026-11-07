@@ -118,7 +118,7 @@ test("generated Markdown Page rules preserve document URLs and cache classes by 
     }
 });
 
-test("generated module resolver rules distinguish names from root-relative paths", () => {
+test("generated ESM resolver rules distinguish names from module-root-relative paths", () => {
     const config = {
         app: { basePath: "/app", baseUrl: "https://example.test/app/" },
         modules: {
@@ -135,6 +135,11 @@ test("generated module resolver rules distinguish names from root-relative paths
     assert.equal(resolver.resolve("dataset:x-demo:/crm/customers.json").path, "/_assets/x-demo/crm/customers.json");
     assert.equal(resolver.resolve("page:x-demo:/pages/index.js").path, "/_assets/x-demo/pages/index.js");
     assert.equal(resolver.resolve("component:x:x-button").path, "/_assets/x/components/x-button.js");
+    assert.equal(resolver.resolve("esm:x-utils").path, "/_assets/x/x-utils.js");
+    const esm = resolver.resolve("esm:x-demo:/utils/formatter.js");
+    assert.equal(esm.path, "/_assets/x-demo/utils/formatter.js");
+    assert.equal(esm.definition.loader, "esm-js");
+    assert.equal(resolver.has("module:x-demo:/utils/formatter.js"), false);
 });
 
 test("generated style rules route module CSS through the standard cached style-css loader", () => {
@@ -293,7 +298,7 @@ test("bootstrap loads the authored XShell JSONC source through the canonical run
     assert.equal(resolver.resolve("state-engine:proxy").url, "https://example.test/app/_assets/xshell/0.9.0.dev/state-engines/proxy.js");
     assert.equal(resolver.resolve("render-engine:x").url, "https://example.test/app/_assets/xshell/0.9.0.dev/render-engines/x.js");
     assert.equal(resolver.resolve("schema:config").url, "https://example.test/app/_assets/xshell/0.9.0.dev/schemas/config.json");
-    const tempImplementation = resolver.resolve("module:" + config.xshell.services.temp.implementation);
+    const tempImplementation = resolver.resolve("esm:" + config.xshell.services.temp.implementation);
     assert.equal(tempImplementation.url, "https://example.test/app/_assets/xshell/0.9.0.dev/temp.js");
     assert.equal(tempImplementation.definition.moduleId, "xshell");
 });
@@ -678,7 +683,7 @@ test("fillResolverRules discovers framework contracts from the XShell inventory"
     });
 });
 
-test("fillResolverRules exposes framework-owned JavaScript through the module loader", () => {
+test("fillResolverRules exposes framework-owned JavaScript through the ESM loader", () => {
     const config = {
         app: { basePath: "/app", baseUrl: "https://example.test/app/" },
         modules: {},
@@ -686,10 +691,10 @@ test("fillResolverRules exposes framework-owned JavaScript through the module lo
     };
 
     api.fillResolverRules(config);
-    const result = new Resolver({ config }).resolve("module:/_assets/xshell/temp.js");
+    const result = new Resolver({ config }).resolve("esm:/_assets/xshell/temp.js");
 
     assert.equal(result.url, "https://example.test/app/_assets/xshell/temp.js");
-    assert.equal(result.definition.loader, "module-js");
+    assert.equal(result.definition.loader, "esm-js");
     assert.equal(result.definition.moduleId, "xshell");
     assert.equal(result.definition.modulePath, "/_assets/xshell");
 });
@@ -718,7 +723,7 @@ test("effective inventories exist before validation and configuration is frozen 
         xshell: {
             assets: { path: "/_assets/xshell" },
             files: [{ path: "/_assets/xshell/xshell.js", size: 2, hash: "xshell" }],
-            resolver: { module: { xshell: { src: "/_assets/xshell/xshell.js" } } }
+            resolver: { esm: { xshell: { src: "/_assets/xshell/xshell.js" } } }
         }
     };
     const runtime = {
@@ -748,7 +753,7 @@ test("effective inventories exist before validation and configuration is frozen 
 });
 
 test("initializeXShell imports an absolute XShell module URL unchanged", async () => {
-    const config = { xshell: { resolver: { module: { xshell: { src: "https://cdn.example.test/xshell.js" } } } } };
+    const config = { xshell: { resolver: { esm: { xshell: { src: "https://cdn.example.test/xshell.js" } } } } };
     let importedUrl;
     await api.initializeXShell(config, async url => {
         importedUrl = url;

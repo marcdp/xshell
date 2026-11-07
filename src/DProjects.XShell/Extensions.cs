@@ -17,9 +17,13 @@ namespace DProjects.XShell {
             public AppConfig App { get; init; } = new AppConfig();
             public TempConfig Temp { get; init; } = new TempConfig();
             public XShellConfig XShell { get; init; } = new XShellConfig();
+            public SourcesConfig Sources { get; init; } = new SourcesConfig();
             public ResourcesConfig Resources { get; init; } = new ResourcesConfig();
             public ServerConfig Server { get; init; } = new ServerConfig();
             public SharesConfig Shares { get; init; } = new SharesConfig();
+        }
+        public class SourcesConfig {
+            public string[] Urls { get; init; } = Array.Empty<string>();
         }
         public class ResourcesConfig {
             public string BasePath { get; init; } = "";

@@ -252,7 +252,7 @@ is an ordinary XShell resource reference.
 ```js
 export default {
     dependencies: {
-        marked: "module:/utils/markdown.js",
+        marked: "esm:/utils/markdown.js",
         fileIcon: "icon:x-file",
         editor: "component:x-code-editor"
     },

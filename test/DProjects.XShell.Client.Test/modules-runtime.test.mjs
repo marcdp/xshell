@@ -36,6 +36,7 @@ function createModules(config, { loader = {}, services = {} } = {}) {
 
 test("module without service requirements initializes and starts normally", async () => {
     let starts = 0;
+    const loads = [];
     class ModuleController {
 
         start() {
@@ -49,13 +50,14 @@ test("module without service requirements initializes and starts normally", asyn
         }
     });
     const modules = createModules(config, {
-        loader: { async load() { return ModuleController; } },
+        loader: { async load(resource) { loads.push(resource); return ModuleController; } },
         services: { resolve() { throw new Error("no service should be resolved"); } }
     });
 
     await modules.init();
 
     assert.equal(starts, 1);
+    assert.deepEqual(loads, ["esm:/_assets/orders/module.js"]);
 });
 
 test("module controllers start in dependency order and stop in reverse dependency order", async () => {
@@ -188,7 +190,7 @@ test("module requirements accept configured lazy services without constructing t
         }
     });
     const loader = { async load(resource) {
-        assert.equal(resource, `module:${servicePath}`);
+        assert.equal(resource, `esm:${servicePath}`);
         return IdentityService;
     } };
     const services = new Services({

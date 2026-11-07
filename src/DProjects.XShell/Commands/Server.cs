@@ -29,8 +29,10 @@ namespace DProjects.XShell.Commands {
         public string Environment { get; init; } = "";
         [Flag('p', "Parameter", "")]
         public Dictionary<string, string> Param { get; init; } = new();
+        
         [Flag('r', "Resources name", "DProjects.XShell")]
         public string ResourcesName { get; init; } = "DProjects.XShell";
+
         [Flag('s', "Share connection string", "")]
         public string[] Share { get; init; } = Array.Empty<string>();
 

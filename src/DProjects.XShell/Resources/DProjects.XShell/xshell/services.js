@@ -45,7 +45,7 @@ export default class Services {
             tasks.push((async () => {
                 const moduleId = this._areas.getModuleId(service.implementation);
                 const start = performance.now();
-                const serviceImplementation = await this._loader.load("module:" + service.implementation);
+                const serviceImplementation = await this._loader.load("esm:" + service.implementation);
                 const owner = moduleId === "xshell" ? this._config.xshell : this._config.modules[moduleId];
                 const implementationFile = owner?.files?.find(file => file.path === service.implementation);
                 this.register(serviceName, null, { 

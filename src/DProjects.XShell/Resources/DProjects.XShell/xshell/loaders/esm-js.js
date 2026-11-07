@@ -1,5 +1,5 @@
 //export 
-export default class LoaderModuleJs {
+export default class LoaderEsmJs {
     async load(src, context) {
         // dynamic import of a module
         let module = await import(src);

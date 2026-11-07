@@ -309,7 +309,7 @@ Definition-based Components and Pages may declare:
 
 ```js
 dependencies: {
-    helper: "module:/some/resource.js"
+    helper: "esm:/some/resource.js"
 }
 ```
 

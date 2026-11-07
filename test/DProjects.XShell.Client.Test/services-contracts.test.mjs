@@ -202,13 +202,13 @@ test("configured services load eagerly but instantiate lazily as singletons", as
         execute() {}
     }
     const definitions = { example: { contract: "example", implementation: "/_assets/test/services/example.js" } };
-    const implementations = { "module:/_assets/test/services/example.js": ExampleService };
+    const implementations = { "esm:/_assets/test/services/example.js": ExampleService };
     const contractItems = { example: createContractItem("example", { execute: {} }) };
     const { loads, services } = createServices(definitions, implementations, contractItems);
 
     await services.init();
 
-    assert.deepEqual(loads, ["module:/_assets/test/services/example.js"]);
+    assert.deepEqual(loads, ["esm:/_assets/test/services/example.js"]);
     assert.equal(constructions, 0);
     assert.equal(services.getServiceInfo("example").state, "registered");
 
@@ -223,7 +223,7 @@ test("configured services load eagerly but instantiate lazily as singletons", as
 test("successful lazy creation emits once after validation with only the service ID", async () => {
     class ExampleService { execute() {} }
     const definitions = { example: { contract: "example", implementation: "/_assets/test/services/example.js" } };
-    const implementations = { "module:/_assets/test/services/example.js": ExampleService };
+    const implementations = { "esm:/_assets/test/services/example.js": ExampleService };
     const contractItems = { example: createContractItem("example", { execute: {} }) };
     const { services, emitted } = createServices(definitions, implementations, contractItems);
 
@@ -242,7 +242,7 @@ test("failed lazy construction emits no created event and can be retried", async
         }
     }
     const definitions = { example: { contract: "example", implementation: "/_assets/test/services/example.js" } };
-    const implementations = { "module:/_assets/test/services/example.js": ExampleService };
+    const implementations = { "esm:/_assets/test/services/example.js": ExampleService };
     const contractItems = { example: createContractItem("example") };
     const { services, emitted } = createServices(definitions, implementations, contractItems);
 
@@ -262,7 +262,7 @@ test("service inspection returns independent read-only metadata snapshots", asyn
         }
     }
     const definitions = { example: { contract: "example", implementation: "/_assets/test/services/example.js" } };
-    const implementations = { "module:/_assets/test/services/example.js": ExampleService };
+    const implementations = { "esm:/_assets/test/services/example.js": ExampleService };
     const contractItems = { example: createContractItem("example", { execute: {} }) };
     const runtime = { active: true };
     const { services } = createServices(definitions, implementations, contractItems);
@@ -320,7 +320,7 @@ test("has reports runtime and configured services without constructing lazy impl
         }
     }
     const definitions = { example: { contract: "example", implementation: "/_assets/test/services/example.js" } };
-    const implementations = { "module:/_assets/test/services/example.js": ExampleService };
+    const implementations = { "esm:/_assets/test/services/example.js": ExampleService };
     const contractItems = { example: createContractItem("example") };
     const { services } = createServices(definitions, implementations, contractItems);
     services.register("runtime", { active: true });
@@ -349,14 +349,14 @@ test("the framework Temp service loads lazily, validates its contract, and remai
     const contractItem = { ...createContractItem("temp"), moduleId: "xshell", contract: TempContract };
     const { config, loads, services } = createServices(
         { temp: { contract: "temp", implementation } },
-        { [`module:${implementation}`]: Temp },
+        { [`esm:${implementation}`]: Temp },
         { temp: contractItem },
         { moduleId: "xshell", frameworkFiles: [{ path: implementation, size: 321 }] }
     );
 
     services.register("config", config);
     await services.init();
-    assert.deepEqual(loads, [`module:${implementation}`]);
+    assert.deepEqual(loads, [`esm:${implementation}`]);
     assert.equal(services.getServiceInfo("temp").state, "registered");
 
     const temp = services.resolve("temp");
@@ -386,7 +386,7 @@ test("an alternative configured Temp implementation replaces the framework defau
     const implementation = "/_assets/app/services/temp.js";
     const { services } = createServices(
         { temp: { contract: "temp", implementation } },
-        { [`module:${implementation}`]: AlternativeTemp },
+        { [`esm:${implementation}`]: AlternativeTemp },
         { temp: { ...createContractItem("temp"), contract: TempContract } }
     );
 
@@ -435,7 +435,7 @@ test("unknown contract references fail before implementation loading", async () 
 test("service creation rejects an implementation missing a required method", async () => {
     class InvalidService {}
     const definitions = { toast: { contract: "toast", implementation: "/_assets/test/services/toast.js" } };
-    const implementations = { "module:/_assets/test/services/toast.js": InvalidService };
+    const implementations = { "esm:/_assets/test/services/toast.js": InvalidService };
     const contractItems = { toast: createContractItem("toast", { show: {} }) };
     const { services, emitted } = createServices(definitions, implementations, contractItems);
     await services.init();
@@ -453,7 +453,7 @@ test("service creation accepts a declared own property", async () => {
         }
     }
     const definitions = { identity: { contract: "identity", implementation: "/_assets/test/services/identity.js" } };
-    const implementations = { "module:/_assets/test/services/identity.js": IdentityService };
+    const implementations = { "esm:/_assets/test/services/identity.js": IdentityService };
     const contractItems = { identity: createContractItem("identity", {}, { currentUser: { type: "object", readonly: true } }) };
     const { services } = createServices(definitions, implementations, contractItems);
     await services.init();
@@ -471,7 +471,7 @@ test("service creation accepts a prototype getter without executing it during va
         }
     }
     const definitions = { identity: { contract: "identity", implementation: "/_assets/test/services/identity.js" } };
-    const implementations = { "module:/_assets/test/services/identity.js": IdentityService };
+    const implementations = { "esm:/_assets/test/services/identity.js": IdentityService };
     const contractItems = { identity: createContractItem("identity", {}, { currentUser: { type: "object", readonly: true } }) };
     const { services } = createServices(definitions, implementations, contractItems);
     await services.init();
@@ -485,7 +485,7 @@ test("service creation accepts a prototype getter without executing it during va
 test("service creation rejects an implementation missing a required property", async () => {
     class InvalidIdentityService {}
     const definitions = { identity: { contract: "identity", implementation: "/_assets/test/services/identity.js" } };
-    const implementations = { "module:/_assets/test/services/identity.js": InvalidIdentityService };
+    const implementations = { "esm:/_assets/test/services/identity.js": InvalidIdentityService };
     const contractItems = { identity: createContractItem("identity", {}, { currentUser: { type: "object", readonly: true } }) };
     const { services } = createServices(definitions, implementations, contractItems);
     await services.init();
@@ -512,8 +512,8 @@ test("circular constructor dependencies fail with the service path", async () =>
         b: { contract: "b", implementation: "/_assets/test/services/b.js" }
     };
     const implementations = {
-        "module:/_assets/test/services/a.js": ServiceA,
-        "module:/_assets/test/services/b.js": ServiceB
+        "esm:/_assets/test/services/a.js": ServiceA,
+        "esm:/_assets/test/services/b.js": ServiceB
     };
     const contractItems = { a: createContractItem("a"), b: createContractItem("b") };
     const { services } = createServices(definitions, implementations, contractItems);
@@ -540,8 +540,8 @@ test("different service names may use the same contract", async () => {
         second: { contract: "shared", implementation: "/_assets/test/services/second.js" }
     };
     const implementations = {
-        "module:/_assets/test/services/first.js": FirstService,
-        "module:/_assets/test/services/second.js": SecondService
+        "esm:/_assets/test/services/first.js": FirstService,
+        "esm:/_assets/test/services/second.js": SecondService
     };
     const contractItems = { shared: createContractItem("shared", { execute: {} }) };
     const { services } = createServices(definitions, implementations, contractItems);
@@ -573,8 +573,8 @@ test("services receive other lazily-created services through constructor injecti
         consumer: { contract: "consumer", implementation: "/_assets/test/services/consumer.js" }
     };
     const implementations = {
-        "module:/_assets/test/services/dependency.js": DependencyService,
-        "module:/_assets/test/services/consumer.js": ConsumerService
+        "esm:/_assets/test/services/dependency.js": DependencyService,
+        "esm:/_assets/test/services/consumer.js": ConsumerService
     };
     const contractItems = {
         dependency: createContractItem("dependency", { getValue: {} }),

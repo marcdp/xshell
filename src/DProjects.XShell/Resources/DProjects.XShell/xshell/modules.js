@@ -81,7 +81,7 @@ export default class Modules {
             const moduleControllerJs = moduleConfig.assets.path + "/module.js";
             for (const file of moduleConfig.files) {
                 if (file.path == moduleControllerJs) {
-                    const moduleClass = await this._loader.load("module:" + moduleControllerJs);
+                    const moduleClass = await this._loader.load("esm:" + moduleControllerJs);
                     const servicesProvider = new Proxy({}, {
                         get: (obj, prop) => {
                             if (prop == "moduleAssetsPath") {

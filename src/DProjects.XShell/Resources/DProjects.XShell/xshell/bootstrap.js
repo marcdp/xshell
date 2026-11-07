@@ -462,10 +462,10 @@ function fillResolverRules(config) {
 
     if (config.xshell.assets?.path) {
         const frameworkAssetsPath = config.xshell.assets.path;
-        resolver.module ??= {};
-        resolver.module[`${frameworkAssetsPath}/{path}.js`] ??= {
+        resolver.esm ??= {};
+        resolver.esm[`${frameworkAssetsPath}/{path}.js`] ??= {
             src: `${frameworkAssetsPath}/{path}.js`,
-            loader: "module-js",
+            loader: "esm-js",
             cache: true,
             moduleId: "xshell",
             modulePath: frameworkAssetsPath
@@ -595,32 +595,32 @@ function fillResolverRules(config) {
             modulePath: moduleAssetsPath
         };
 
-        // module
-        resolver.module ??= {};
-        resolver.module[`${moduleId}-{name}`] ??= {
+        // ES module
+        resolver.esm ??= {};
+        resolver.esm[`${moduleId}-{name}`] ??= {
             src: `${moduleAssetsPath}/${moduleId}-{name}.js`,
-            loader: "module-js",
+            loader: "esm-js",
             cache: true,
             moduleId,
             modulePath: moduleAssetsPath
         };
-        resolver.module[`${moduleId}:${moduleId}-{name}`] ??= {
+        resolver.esm[`${moduleId}:${moduleId}-{name}`] ??= {
             src: `${moduleAssetsPath}/${moduleId}-{name}.js`,
-            loader: "module-js",
+            loader: "esm-js",
             cache: true,
             moduleId,
             modulePath: moduleAssetsPath
         };
-        resolver.module[`${moduleAssetsPath}/{path}.js`] ??= {
+        resolver.esm[`${moduleAssetsPath}/{path}.js`] ??= {
             src: `${moduleAssetsPath}/{path}.js`,
-            loader: "module-js",
+            loader: "esm-js",
             cache: true,
             moduleId,
             modulePath: moduleAssetsPath
         };
-        resolver.module[`${moduleId}:/{path}.js`] ??= {
+        resolver.esm[`${moduleId}:/{path}.js`] ??= {
             src: `${moduleAssetsPath}/{path}.js`,
-            loader: "module-js",
+            loader: "esm-js",
             cache: true,
             moduleId,
             modulePath: moduleAssetsPath
@@ -754,7 +754,7 @@ function fillResolverRules(config) {
 // xshell initialization functions
 async function initializeXShell(config, loadXShellModule = url => import(url)) {
     console.log("bootstrap: loading xshell ...");
-    const authoredSrc = config.xshell.resolver.module.xshell.src;
+    const authoredSrc = config.xshell.resolver.esm.xshell.src;
     const xshellUrl = new URL(authoredSrc.startsWith("/") ? authoredSrc.substring(1) : authoredSrc, appBaseUrl).href;
     const xshell = (await loadXShellModule(xshellUrl)).default;
     

@@ -65,9 +65,9 @@ test("resolver gives name and path placeholders safe unambiguous semantics", () 
         page: { "x-demo:/{path}": { src: "/_assets/x-demo/{path}", loader: "page-js" } },
         component: { "x:{name}": { src: "/_assets/x/components/{name}.js", loader: "component-js" } },
         icon: { "x-file": { src: "/icons/x-file.svg", loader: "icon-svg" } },
-        module: {
-            "{name}": { src: "/modules/{name}.js", loader: "module-js" },
-            "x-demo:/{path}": { src: "/_assets/x-demo/{path}", loader: "module-js" }
+        esm: {
+            "{name}": { src: "/modules/{name}.js", loader: "esm-js" },
+            "x-demo:/{path}": { src: "/_assets/x-demo/{path}", loader: "esm-js" }
         }
     } } } });
 
@@ -78,7 +78,7 @@ test("resolver gives name and path placeholders safe unambiguous semantics", () 
         ["component:x:x-button", "/_assets/x/components/x-button.js", "component-js"],
         ["dataset:x-demo:/crm/customers.json", "/_assets/x-demo/crm/customers.json", "dataset-url"],
         ["icon:x-file", "/icons/x-file.svg", "icon-svg"],
-        ["module:xshell", "/modules/xshell.js", "module-js"]
+        ["esm:xshell", "/modules/xshell.js", "esm-js"]
     ];
     for (const [resource, path, loader] of cases) {
         assert.equal(resolver.has(resource), true, resource);
@@ -125,7 +125,7 @@ test("resolver gives name and path placeholders safe unambiguous semantics", () 
         ["dataset:x-demo:countries#section", "/_assets/x-demo/datasets/countries.json"],
         ["dataset:x-demo:countries?page=2#section", "/_assets/x-demo/datasets/countries.json"],
         ["page:x-demo:/pages/home.js?mode=edit", "/_assets/x-demo/pages/home.js"],
-        ["module:x-demo:/utils/formatter.js#export", "/_assets/x-demo/utils/formatter.js"],
+        ["esm:x-demo:/utils/formatter.js#export", "/_assets/x-demo/utils/formatter.js"],
         ["icon:x-file?theme=dark#preview", "/icons/x-file.svg"]
     ];
     for (const [resource, path] of suffixedCases) {

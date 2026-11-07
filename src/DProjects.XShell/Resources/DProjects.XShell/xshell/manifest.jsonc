@@ -30,7 +30,7 @@
         // resolver
         "resolver": {
             "component": {
-                "x-page": {"src": "/x-page.js", "loader": "module-js", "cache": true}
+                "x-page": {"src": "/x-page.js", "loader": "esm-js", "cache": true}
             },
             "dataset": {
                 "static:{definition}": {"src": "static:{definition}", "loader": "dataset-static"},
@@ -42,14 +42,14 @@
             "https": {
                 "{url}": {"src": "https:{url}","loader": "response-http", "cache": false}
             },
-            "module": {
-                "xshell": {"src": "/xshell.js", "loader": "module-js", "cache": true}
+            "esm": {
+                "xshell": {"src": "/xshell.js", "loader": "esm-js", "cache": true}
             },
             "render-engine": {
-                "{name}": {"src": "/render-engines/{name}.js","loader": "module-js", "cache": true}
+                "{name}": {"src": "/render-engines/{name}.js","loader": "esm-js", "cache": true}
             },
             "state-engine": {
-                "{name}": {"src": "/state-engines/{name}.js","loader": "module-js", "cache": true}
+                "{name}": {"src": "/state-engines/{name}.js","loader": "esm-js", "cache": true}
             }
         },
 

@@ -101,11 +101,11 @@ resolver entries fail bootstrap.
 A module prefix is not required unless it is part of the chosen id. Registration names are independent: multiple services can use one contract.
 
 For example, `x/contracts/toast.json` defines id `toast` and registration `xshell.services.toast.contract = "toast"`.
-The implementation URL is imported through `module:` and must default-export a class.
+The implementation URL is imported through `esm:` and must default-export a class.
 
 Framework contracts use the same JSON format and validation. For example, `xshell/contracts/temp.json` defines `temp`; XShell associates it with
 the framework-owned default provider declared as `xshell.services.temp`, whose implementation is `xshell/temp.js`. Bootstrap normalizes framework
-implementation paths into the framework asset namespace and generates a `module:` resolver rule with `moduleId: "xshell"`, so framework services
+implementation paths into the framework asset namespace and generates an `esm:` resolver rule with `moduleId: "xshell"`, so framework services
 use the same loading and inspection pipeline as module-provided services. Applications may replace the Temp implementation through normal
 configuration merging without assigning it to the `x` module.
 

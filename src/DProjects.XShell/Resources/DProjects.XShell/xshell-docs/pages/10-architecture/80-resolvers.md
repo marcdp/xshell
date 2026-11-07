@@ -15,7 +15,7 @@ Global resource locators preserve the existing application-wide names and versio
 icon:x-file
 layout:x-layout-main
 component:x-button
-module:x-utils
+esm:x-utils
 page:/_assets/x-demo/<generation>/pages/index.js
 ```
 
@@ -25,8 +25,8 @@ Module-qualified locators put the owning module id immediately after the resourc
 icon:x:x-file
 layout:x:x-layout-main
 component:x:x-button
-module:x:x-utils
-module:x-demo:/utils/formatter.js
+esm:x:x-utils
+esm:x-demo:/utils/formatter.js
 page:x-demo:/pages/index.js
 style:x-demo:/styles/main.css
 string:x-demo:/data/info.txt
@@ -37,7 +37,7 @@ contract:x:x-button
 ```
 
 The forms coexist. A qualified locator can select an existing logical resource name, such as `component:x:x-button`, or a physical path relative to
-the identified module root, such as `module:x-demo:/utils/formatter.js`. In a root-relative form, the `/` after the second colon is literal. Bootstrap
+the identified module root, such as `esm:x-demo:/utils/formatter.js`. In a root-relative form, the `/` after the second colon is literal. Bootstrap
 supplies the module's versioned virtual asset Path in the generated rule. The resource type still selects the resource-specific loader.
 
 For each canonical module, `fillResolverRules()` generates the following conventions. `<assets-path>` is that module's normalized versioned virtual
@@ -49,7 +49,7 @@ Path, for example `/_assets/x-demo/<generation>`.
 | `layout` | `layout:<module-id>-layout-{name}` | `layout:<module-id>:<module-id>-layout-{name}` | `component-js` |
 | `component` | `component:<module-id>-{name}` | `component:<module-id>:<module-id>-{name}` | `component-js` |
 | `page` | `page:<assets-path>/{path}.js`; `.html`; `.md` | `page:<module-id>:/{path}.js`; `.html`; `.md` | `.js` and `.html`: `page-js`; `.md`: `page-md` |
-| `module` | `module:<module-id>-{name}`; `module:<assets-path>/{path}.js` | `module:<module-id>:<module-id>-{name}`; `module:<module-id>:/{path}.js` | `module-js` |
+| `esm` | `esm:<module-id>-{name}`; `esm:<assets-path>/{path}.js` | `esm:<module-id>:<module-id>-{name}`; `esm:<module-id>:/{path}.js` | `esm-js` |
 | `style` | `style:<assets-path>/{path}.css` | `style:<module-id>:/{path}.css` | `style-css` |
 | `string` | `string:<assets-path>/{path}` | `string:<module-id>:/{path}` | `string-any` |
 | `bytes` | `bytes:<assets-path>/{path}` | `bytes:<module-id>:/{path}` | `bytes-any` |
@@ -96,7 +96,7 @@ deliberately illustrative pattern-validation examples and are not claims that th
 | --- | --- |
 | `dataset:x-demo:statuses` | Valid `{name}`; resolves below the module's `/datasets/` directory. |
 | `dataset:x-demo:/datasets/lookups/countries.json` | Valid `/{path}` from the module root. |
-| `module:x-demo:/utils/formatter.js` | Valid `/{path}.js` from the module root. |
+| `esm:x-demo:/utils/formatter.js` | Valid `/{path}.js` from the module root. |
 | `dataset:x-demo:crm/customers` | Rejected: `{name}` cannot contain `/`. |
 | `dataset:x-demo:/crm/../config.json` | Rejected: `{path}` cannot contain `..`. |
 | `dataset:x-demo:/crm//customers.json` | Rejected: `{path}` cannot contain an empty segment. |
@@ -124,7 +124,7 @@ caching, suffix limitation, and browser security behavior.
 ## Declarative component and Page dependencies
 
 Values in a Component or Page implementation's `dependencies` object are ordinary logical resource references, such as
-`module:x:/utils/markdown.js`, `icon:x-file`, or `component:x:x-code-editor`. The Resolver determines which resource definition matches a reference
+`esm:x:/utils/markdown.js`, `icon:x-file`, or `component:x:x-code-editor`. The Resolver determines which resource definition matches a reference
 and maps it to its URL and loader metadata. The Loader then obtains that resource and exposes the value under the declaration's key in
 `controller({ dependencies })`.
 

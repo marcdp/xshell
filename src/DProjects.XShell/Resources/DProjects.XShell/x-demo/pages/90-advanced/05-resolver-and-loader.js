@@ -94,7 +94,7 @@ const dataset = await loader.load("dataset:x-demo:statuses");</code></pre>
             <x-datafield label="icon-svg">Loads an SVG icon element.</x-datafield>
             <x-datafield label="component-js">Loads or creates a Web Component class.</x-datafield>
             <x-datafield label="page-js">Loads or creates a Page class.</x-datafield>
-            <x-datafield label="module-js">Imports an ES module.</x-datafield>
+            <x-datafield label="esm-js">Imports an ES module.</x-datafield>
             <x-datafield label="dataset-url">Loads and materializes a DataSet.</x-datafield>
         </x-datafields>
 

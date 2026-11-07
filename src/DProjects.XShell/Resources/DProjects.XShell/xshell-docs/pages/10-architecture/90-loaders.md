@@ -27,7 +27,7 @@ For example:
 icon-svg
     → fetch SVG and return an SVG element
 
-module-js
+esm-js
     → import an ES module
 
 component-js
@@ -54,7 +54,7 @@ const data = await response.json();
 
 XShell does not infer a representation from the URL path, file extension, or response `Content-Type`. The caller chooses `response.text()`,
 `response.json()`, `response.arrayBuffer()`, `response.blob()`, or another `Response` API. Loading a bare URL does not execute JavaScript; a
-`.js` URL is not equivalent to a `module:` resource.
+`.js` URL is not equivalent to an `esm:` resource.
 
 The built-in HTTP(S) rules set `cache: false`, so bare URLs are not cached by the XShell Loader. Browser HTTP caching remains independent. The
 current Resolver removes query strings and fragments before matching rules, so they are not included in the URL passed to `fetch`; this is a
@@ -69,7 +69,7 @@ loader.load("https://server.example/data")
     → raw HTTP(S) resource
     → Response
 
-loader.load("module:...")
+loader.load("esm:...")
     → typed XShell resource
     → ES module export
 ```
@@ -132,11 +132,11 @@ SVG element
 Loading an ES module:
 
 ```text
-module:/_assets/module1/<generation>/module.js
-or module:module1:/module.js
+esm:/_assets/module1/<generation>/module.js
+or esm:module1:/module.js
     ↓
 /_assets/module1/<generation>/module.js
-loader=module-js
+loader=esm-js
     ↓
 ES module export
 ```
@@ -254,7 +254,7 @@ flowchart LR
     D --> E{Resource-specific loader}
 
     E --> F["icon-svg<br/>SVG element"]
-    E --> G["module-js<br/>ES module"]
+    E --> G["esm-js<br/>ES module"]
     E --> H["component-js<br/>Web Component"]
     E --> I["page-js<br/>Page Component"]
 
