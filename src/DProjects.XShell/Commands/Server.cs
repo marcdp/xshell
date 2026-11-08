@@ -16,32 +16,27 @@ using Microsoft.Extensions.DependencyInjection;
 namespace DProjects.XShell.Commands {
 
     [Description("Launch a web server")]
-    [Example("DProjects.XShell server --app-config-path /_resources/DProjects.XShell/x-demo/manifest.jsonc --param a=123 --param b=456 ", "")]
+    [Example("DProjects.XShell server --app-base-path /prefix --app-module \"module:x-demo:0.9.0\" --param a=123 --param b=456 --source /prefix/_resources/DProjects.XShell/{module}/index.json", "")]
     public class Server() : ICommand {
 
 
         // Arguments
         [Flag('a', "App base path", "")]
         public string AppBasePath { get; init; } = "";
-        [Flag('c', "App config file path", "")]
-        public string AppConfigPath { get; init; } = "";
+        [Flag('c', "App module", "")]
+        public string AppModule { get; init; } = "";
         [Flag('e', "Environment", "")]
         public string Environment { get; init; } = "";
         [Flag('p', "Parameter", "")]
         public Dictionary<string, string> Param { get; init; } = new();
-        
-        [Flag('r', "Resources name", "DProjects.XShell")]
-        public string ResourcesName { get; init; } = "DProjects.XShell";
-
+        [Flag('s', "Source", "/_resources/DProjects.XShell/{module}/index.json")]
+        public string[] Source { get; init; } = [];
         [Flag('s', "Share connection string", "")]
         public string[] Share { get; init; } = Array.Empty<string>();
 
 
         //methods
         public async Task<int> ExecuteAsync(CancellationToken cancellationToken) {
-
-            // validate selected bundled resources before starting the host
-            ResourceNameValidator.Validate(ResourcesName);
 
             // builder
             var builder = WebApplication.CreateBuilder();
@@ -68,21 +63,18 @@ namespace DProjects.XShell.Commands {
             return new Extensions.Configuration {
                 App = new Extensions.AppConfig {
                     BasePath = AppBasePath,
-                    ConfigPath = string.IsNullOrEmpty(AppConfigPath) ? AppBasePath + "/_resources/" + ResourcesName + "/x-demo/manifest.jsonc" : AppConfigPath,
+                    Module = AppModule,
                     Params = Param
                 },
                 Temp = new Extensions.TempConfig {
-                    Path = System.IO.Path.Combine(System.IO.Path.GetTempPath(), ResourcesName, "temp"),
+                    Path = System.IO.Path.Combine(System.IO.Path.GetTempPath(), AppModule.Replace(":","-").Replace("*", "-"), "temp"),
                     BasePath = AppBasePath + "/temp",
                     ExpirationTime = TimeSpan.FromHours(1)
                 },
-                Resources = new Extensions.ResourcesConfig {
-                    BasePath = AppBasePath + "/_resources/" + ResourcesName,
-                    ResourceName = ResourcesName
-                },
-                XShell = new Extensions.XShellConfig {
-                    BasePath = AppBasePath + "/_resources/" + ResourcesName + "/xshell"
-                },
+                Sources = Source,
+                //XShell = new Extensions.XShellConfig {
+                //    BasePath = AppBasePath + "/_resources/" + ResourcesName + "/xshell"
+                //},
                 Server = new Extensions.ServerConfig {
                     Environment = Environment
                 },

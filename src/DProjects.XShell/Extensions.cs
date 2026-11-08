@@ -16,27 +16,25 @@ namespace DProjects.XShell {
         public class Configuration {
             public AppConfig App { get; init; } = new AppConfig();
             public TempConfig Temp { get; init; } = new TempConfig();
-            public XShellConfig XShell { get; init; } = new XShellConfig();
-            public SourcesConfig Sources { get; init; } = new SourcesConfig();
-            public ResourcesConfig Resources { get; init; } = new ResourcesConfig();
+            //public XShellConfig XShell { get; init; } = new XShellConfig();
+            public string[] Sources { get; init; } = new string[] { };            
             public ServerConfig Server { get; init; } = new ServerConfig();
             public SharesConfig Shares { get; init; } = new SharesConfig();
         }
-        public class SourcesConfig {
-            public string[] Urls { get; init; } = Array.Empty<string>();
-        }
-        public class ResourcesConfig {
-            public string BasePath { get; init; } = "";
-            public string ResourceName { get; init; } = "DProjects.XShell";
-        }
-        public class XShellConfig {
-            public string BasePath { get; init; } = "";
-        }
+        //public class XShellConfig {
+        //    public string BasePath { get; init; } = "";
+        //}
         public class AppConfig {
-            public string Description { get; init; } = "";
             public string BasePath { get; init; } = "";
-            public string ConfigPath { get; init; } = "";
+            public string Module { get; init; } = "";
+            public string Description { get; init; } = "";
             public Dictionary<string, string> Params { get; init; } = new();
+        }
+        public class TempConfig {
+            public string Path { get; init; } = "";
+            public string BasePath { get; init; } = "/temp";
+            public TimeSpan ExpirationTime { get; init; } = TimeSpan.FromHours(1);
+            public long FileSizeLimit { get; init; } = 100 * 1024 * 1024; // 100 MB
         }
         public class ServerConfig {
             public string? Environment { get; init; } = null;
@@ -47,12 +45,6 @@ namespace DProjects.XShell {
             public string BasePath { get; init; } = "/shares";
             public FilesystemHttpMiddleware.Options[] Shares { get; init; }  = Array.Empty<FilesystemHttpMiddleware.Options>();  
         }
-        public class TempConfig {
-            public string Path { get; init; } = "";
-            public string BasePath { get; init; } = "/temp";
-            public TimeSpan ExpirationTime { get; init; } = TimeSpan.FromHours(1);
-            public long FileSizeLimit { get; init; } = 100 * 1024 * 1024; // 100 MB
-        }
 
 
         // methods
@@ -62,6 +54,10 @@ namespace DProjects.XShell {
             ArgumentNullException.ThrowIfNull(app);
             ArgumentNullException.ThrowIfNull(config);
             ValidateConfiguration(config);
+
+            // compute xshell baseurl
+            // TODO ...
+            const string xshellBasePath = config.Sources[0].Replace("{module}", "xshell");
 
             // config webapplication
             var assembly = typeof(Extensions).Assembly;
@@ -111,7 +107,7 @@ namespace DProjects.XShell {
             app.UseRouting();
 
             // bootstrap files /
-            var bootstrapFiles = (new Services.BootstrapFilesBuilder()).Build(config, environment);
+            var bootstrapFiles = (new Services.BootstrapFilesBuilder()).Build(config, environment, xshellBaseUrl);
 
             // SPA fallback
             app.Use(async (context, next) => {

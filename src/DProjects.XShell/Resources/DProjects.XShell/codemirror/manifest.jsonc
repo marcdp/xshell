@@ -19,6 +19,9 @@
             },
             "contract": {
                 "events": {}
+            },
+            "dependencies": {
+                "x": "module:x:*"
             }
         }
     }

@@ -24,6 +24,9 @@
                         {"label": "Shortcut 1.1", "href": "/pages/index.js", "icon": "x-settings", "embedded": true }
                     ] }
                 ]
+            },
+            "dependencies": {
+                "x": "module:x:*"
             }
         }
     },

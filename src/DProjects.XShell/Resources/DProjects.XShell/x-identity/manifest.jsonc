@@ -45,6 +45,9 @@
             "routes": {
                 "/login": "/pages/login.js",
                 "/account": "/pages/account.js"
+            },
+            "dependencies": {
+                "x": "module:x:*"
             }
         }
     },

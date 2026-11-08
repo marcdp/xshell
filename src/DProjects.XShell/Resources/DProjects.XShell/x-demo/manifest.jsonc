@@ -21,6 +21,13 @@
             },
             "routes": {
                 "/hello/{name}": "/pages/02-pages/03-parameters.js"
+            },
+            "dependencies": {
+                "x": "module:x:*",
+                "x-filesystem": "module:x-filesystem:*",    
+                "x-identity": "module:x-identity:*",
+                "xshell-diagnostics": "module:xshell-diagnostics:*",
+                "xshell-docs": "module:xshell-docs:*"
             }
         },
         "x": {

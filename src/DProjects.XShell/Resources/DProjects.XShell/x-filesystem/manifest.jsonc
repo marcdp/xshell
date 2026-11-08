@@ -15,6 +15,9 @@
                     "renderEngine": "x",
                     "stateEngine": "proxy"
                 }
+            },
+            "dependencies": {
+                "x": "module:x:*"
             }
         }
     },

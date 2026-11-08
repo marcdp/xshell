@@ -19,6 +19,9 @@
             },
             "menus": {
                 "navigation": "/pages"
+            },
+            "dependencies": {
+                "x": "module:x:*"
             }
         }
     },

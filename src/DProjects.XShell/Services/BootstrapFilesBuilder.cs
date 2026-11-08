@@ -5,46 +5,58 @@ namespace DProjects.XShell.Services {
 
     internal sealed class BootstrapFilesBuilder {
 
-        internal Dictionary<string, string> Build(Extensions.Configuration config, string environment) {
+        internal Dictionary<string, string> Build(Extensions.Configuration config, string environment, string xshellBaseUrl) {
             var result = new Dictionary<string, string>();
 
-            // serialize app params
+            // prepare params
             var appParams = string.Join("&", config.App.Params.Select(kv => Uri.EscapeDataString(kv.Key) + "=" + Uri.EscapeDataString(kv.Value)));
-
+            var moduleSources = config.Sources.Select(s => $"<meta name=\"xshell:source\" content=\"{EncodeAttribute(s)}\">").ToArray();
 
             // index
             result["/index.html"] = $"""
-                    <!DOCTYPE html>
-                    <html lang="en">
-                    <head>
+                <!DOCTYPE html>
+                <html lang="en">
+                <head>
 
-                        <!-- general -->
-                        <meta charset="utf-8">
-                        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                        <meta http-equiv="Content-Security-Policy" content="{EncodeAttribute(config.Server.ContentSecurityPolicy)}">
-                        <meta name="description" content="{EncodeAttribute(config.App.Description)}">
+                    <!-- html -->
+                    <meta charset="utf-8">
+                    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                    <meta name="description" content="{EncodeAttribute(config.App.Description)}">
+                    <meta http-equiv="Content-Security-Policy" content="{EncodeAttribute(config.Server.ContentSecurityPolicy)}">
 
-                        <!-- config xshell -->
-                        <meta name="xshell:app.basePath"       content="{EncodeAttribute(config.App.BasePath)}">
-                        <meta name="xshell:app.configPath"     content="{EncodeAttribute(config.App.ConfigPath)}">
-                        <meta name="xshell:app.params"         content="{EncodeAttribute(appParams)}">
-                        <meta name="xshell:xshell.environment" content="{EncodeAttribute(environment)}">
-                        <meta name="xshell:xshell.temp.url"    content="{EncodeAttribute(config.Temp.BasePath)}">
+                    <!-- XShell application -->
+                    <meta name="xshell:app.basePath"       content="{EncodeAttribute(config.App.BasePath)}">
+                    <meta name="xshell:app.module"         content="{EncodeAttribute(config.App.Module)}">
+                    <meta name="xshell:app.params"         content="{EncodeAttribute(appParams)}">
 
-                        <!-- bootstrap xshell -->
-                        <script src="{EncodeAttribute(config.XShell.BasePath + "/bootstrap.js")}" ></script>
+                    <!-- XShell environment -->
+                    <meta name="xshell:xshell.environment" content="{EncodeAttribute(environment)}">
+                    <meta name="xshell:xshell.temp.url"    content="{EncodeAttribute(config.Temp.BasePath)}">
 
-                    </head>
-                    <body>
-                    </body>
-                    </html>
-                    """;
+                    <!-- XShell module package sources -->
+                    {string.Join("\n", moduleSources)}
+                        
+                    <!-- index -->
+                    <script type="module" src="{EncodeAttribute(config.App.BasePath + "/index.js")}" ></script>
+
+                </head>
+                <body>
+                </body>
+                </html>
+                """;
 
             // sw.js
-            result["/sw.js"] = $"""
-                    // import real service worker script from xshell cdn
-                    importScripts({JsonSerializer.Serialize(config.XShell.BasePath + "/sw.js")}); 
-                    """;
+            result["/sw.js"] = $$"""
+                // Service Worker entry point
+                // importScripts({JsonSerializer.Serialize(xshellBaseUrl + "/sw.js")}); 
+                """;
+
+            // index.js
+            result["/index.js"] = $$"""
+                // App entry point
+                debugger;
+                
+                """;
 
             // return
             return result;

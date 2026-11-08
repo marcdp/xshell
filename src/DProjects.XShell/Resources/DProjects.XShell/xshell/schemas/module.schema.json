@@ -27,6 +27,7 @@
       "description": "Public contract of the Module.",
       "unevaluatedProperties": false
     },
+    "dependencies": {"type": "object", "additionalProperties": {"type": "string"}, "description": "Module dependencies mapped to their canonical identifiers."},
     "files": {"type": "array", "items": {"$ref": "#/$defs/file"}, "description": "Normalized virtual resource inventory for the module."}
   },
   "required": ["label", "version", "copyright", "icon", "configUrl", "assets", "defaults", "files"],
