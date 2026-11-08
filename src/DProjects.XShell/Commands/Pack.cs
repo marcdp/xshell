@@ -249,15 +249,16 @@ namespace DProjects.XShell.Commands {
         }
         private static Dictionary<string, string> BuildRootStartupFiles(ModuleNode root, BuiltPackage framework, string rootHash, string appBasePath, string environment, Dictionary<string, string> parameters, string tempBasePath) {
             // generate startup resources from structured bootstrap values for canonical and published root representations
-            var config = new Extensions.Configuration {
-                    App = new Extensions.AppConfig { BasePath = appBasePath,
-                    ConfigPath = $"{appBasePath}/{root.Id}/{root.Version}.{rootHash}/{ManifestFileNames.Json}",
-                    Params = parameters
-                },
-                XShell = new Extensions.XShellConfig { BasePath = appBasePath + "/" + framework.RelativeDirectory },
-                Temp = new Extensions.TempConfig { BasePath = tempBasePath }
-            };
-            return new BootstrapFilesBuilder().Build(config, environment);
+            throw new NotImplementedException();
+            //var config = new Extensions.Configuration {
+            //        App = new Extensions.AppConfig { BasePath = appBasePath,
+            //        ConfigPath = $"{appBasePath}/{root.Id}/{root.Version}.{rootHash}/{ManifestFileNames.Json}",
+            //        Params = parameters
+            //    },
+            //    XShell = new Extensions.XShellConfig { BasePath = appBasePath + "/" + framework.RelativeDirectory },
+            //    Temp = new Extensions.TempConfig { BasePath = tempBasePath }
+            //};
+            //return new BootstrapFilesBuilder().Build(config, environment);
         }
         private static async Task<BuiltPackage> BuildFrameworkAsync(string descriptorPath, string stagingPath, string outputPath, CancellationToken cancellationToken) {
             // retain the framework's separate descriptor and resource compilation rules

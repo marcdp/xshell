@@ -49,7 +49,8 @@ namespace DProjects.XShell.Commands {
             var app = builder.Build();
 
             // use XShell
-            app.UseXShell(BuildConfiguration());
+            var config = BuildConfiguration();
+            app.UseXShell(config);
 
             // run app
             await app.RunAsync();

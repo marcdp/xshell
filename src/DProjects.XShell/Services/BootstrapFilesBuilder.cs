@@ -5,7 +5,7 @@ namespace DProjects.XShell.Services {
 
     internal sealed class BootstrapFilesBuilder {
 
-        internal Dictionary<string, string> Build(Extensions.Configuration config, string environment, string xshellBaseUrl) {
+        internal Dictionary<string, string> Build(Extensions.Configuration config, string environment) {
             var result = new Dictionary<string, string>();
 
             // prepare params
@@ -54,8 +54,49 @@ namespace DProjects.XShell.Services {
             // index.js
             result["/index.js"] = $$"""
                 // App entry point
-                debugger;
-                
+                const meta = name => document.querySelector(`meta[name="${name}"]`)?.content;
+                const sources = [...document.querySelectorAll('meta[name="xshell:source"]')].map(e => e.content);
+                async function resolve(reference) {
+                    debugger;
+                    const match = /^module:([^:]+):(\d+\.\d+\.\d+)$/.exec(reference ?? "");
+                    if (!match) throw new Error(`Invalid module reference: ${reference}`);
+
+                    const [, name, version] = match;
+
+                    for (const [sourceIndex, source] of sources.entries()) {
+                        try {
+                            const indexUrl = new URL(source.replace("{module}", name), document.baseURI);
+                            const response = await fetch(indexUrl);
+                            if (!response.ok) continue;
+
+                            const index = await response.json();
+                            if (index.module !== name) continue;
+
+                            const entry = index.versions?.[version];
+                            if (!entry?.hash) continue;
+
+                            return {
+                                name, version, hash: entry.hash, sourceIndex,
+                                dependencies: entry.dependencies ?? {},
+                                baseUrl: new URL(`${version}.${entry.hash}/`, indexUrl).href
+                            };
+                        } catch (error) {
+                            console.warn(`Source unavailable: ${source}`, error);
+                        }
+                    }
+
+                    throw new Error(`Cannot resolve ${reference}`);
+                }
+
+                const app = await resolve(meta("xshell:app.module"));
+                const xshellRef = app.dependencies.xshell;
+                if (!xshellRef) throw new Error(`Module '${app.name}' must depend on xshell.`);
+
+                const xshell = await resolve(xshellRef);
+                const bootstrap = await import(new URL("bootstrap.js", xshell.baseUrl).href);
+
+                await bootstrap.start({ app, xshell, sources });
+
                 """;
 
             // return

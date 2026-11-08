@@ -16,14 +16,10 @@ namespace DProjects.XShell {
         public class Configuration {
             public AppConfig App { get; init; } = new AppConfig();
             public TempConfig Temp { get; init; } = new TempConfig();
-            //public XShellConfig XShell { get; init; } = new XShellConfig();
             public string[] Sources { get; init; } = new string[] { };            
             public ServerConfig Server { get; init; } = new ServerConfig();
             public SharesConfig Shares { get; init; } = new SharesConfig();
         }
-        //public class XShellConfig {
-        //    public string BasePath { get; init; } = "";
-        //}
         public class AppConfig {
             public string BasePath { get; init; } = "";
             public string Module { get; init; } = "";
@@ -57,27 +53,29 @@ namespace DProjects.XShell {
 
             // compute xshell baseurl
             // TODO ...
-            const string xshellBasePath = config.Sources[0].Replace("{module}", "xshell");
+            //const string xshellBasePath = config.Sources[0].Replace("{module}", "xshell");
 
             // config webapplication
             var assembly = typeof(Extensions).Assembly;
             var environment = (string.IsNullOrEmpty(config.Server.Environment) ? app.Environment.EnvironmentName : config.Server.Environment);
             var isDevelopment = environment.Equals("Development", StringComparison.OrdinalIgnoreCase);
+            string resourceName = "DProjects.XShell";
             string resourcePath;
+            string resourceBasePath = "/_resources/" + resourceName;
             if (isDevelopment) {
                 var projectDirectory = assembly.GetCustomAttributes<AssemblyMetadataAttribute>().FirstOrDefault(x => x.Key == "ProjectDirectory")?.Value;
                 if (string.IsNullOrEmpty(projectDirectory)) {
                     throw new InvalidOperationException("Unable to determine the DProjects.XShell project directory.");
                 }
-                resourcePath = Path.Combine(projectDirectory, "Resources", config.Resources.ResourceName);
+                resourcePath = Path.Combine(projectDirectory, "Resources", resourceName);
             } else {
                 var assemblyPath = Path.GetDirectoryName(assembly.Location)!;
-                resourcePath = Path.Combine(assemblyPath, "Resources", config.Resources.ResourceName);
+                resourcePath = Path.Combine(assemblyPath, "Resources", resourceName);
             }
             if (!Directory.Exists(resourcePath)) throw new DirectoryNotFoundException($"XShell resources directory not found: {resourcePath}");
 
             // /_resources
-            app.UseMiddleware<Middlewares.ResourcesMiddleware>(resourcePath, config.Resources.BasePath, isDevelopment);
+            app.UseMiddleware<Middlewares.ResourcesMiddleware>(resourcePath, resourceBasePath, isDevelopment);
 
             // /_temp
             app.UseMiddleware<Middlewares.TempMiddleware>(config.Temp);
@@ -107,7 +105,7 @@ namespace DProjects.XShell {
             app.UseRouting();
 
             // bootstrap files /
-            var bootstrapFiles = (new Services.BootstrapFilesBuilder()).Build(config, environment, xshellBaseUrl);
+            var bootstrapFiles = (new Services.BootstrapFilesBuilder()).Build(config, environment);
 
             // SPA fallback
             app.Use(async (context, next) => {
@@ -165,14 +163,12 @@ namespace DProjects.XShell {
         private static void ValidateConfiguration(Configuration config) {
             if (config.App == null) throw new ArgumentNullException(nameof(config.App), "XShell App configuration is required.");
             if (config.Temp == null) throw new ArgumentNullException(nameof(config.Temp), "XShell Temp configuration is required.");
-            if (config.XShell == null) throw new ArgumentNullException(nameof(config.XShell), "XShell XShell configuration is required.");
-            if (config.Resources == null) throw new ArgumentNullException(nameof(config.Resources), "XShell Resources configuration is required.");
             if (config.Server == null) throw new ArgumentNullException(nameof(config.Server), "XShell Server configuration is required.");
             if (config.App.Description == null) throw new ArgumentNullException(nameof(config.App.Description), "XShell App.Description must not be null.");
             if (config.App.Params == null) throw new ArgumentNullException(nameof(config.App.Params), "XShell App.Params must not be null.");
 
             // validate required paths and numeric Temp limits
-            if (string.IsNullOrWhiteSpace(config.App.ConfigPath)) throw new ArgumentException("XShell App.ConfigPath must be a non-empty application configuration path or URL.", nameof(config));
+            if (string.IsNullOrWhiteSpace(config.App.Module)) throw new ArgumentException("XShell App.Module must be a non-empty module specification.", nameof(config));
             if (string.IsNullOrWhiteSpace(config.Temp.Path)) throw new ArgumentException("XShell Temp.Path must be a non-empty physical storage path.", nameof(config));
             try {
                 Path.GetFullPath(config.Temp.Path);
@@ -186,8 +182,6 @@ namespace DProjects.XShell {
 
             // validate independent host request paths without changing their values
             if (!IsRequestBasePath(config.App.BasePath, true)) throw new ArgumentException("XShell App.BasePath must be empty or a rooted request path starting with '/'.", nameof(config));
-            if (!IsRequestBasePath(config.Resources.BasePath, false)) throw new ArgumentException("XShell Resources.BasePath must be a non-empty rooted request path starting with '/'.", nameof(config));
-            if (!IsRequestBasePath(config.XShell.BasePath, false)) throw new ArgumentException("XShell XShell.BasePath must be a non-empty rooted request path starting with '/'.", nameof(config));
             if (!IsRequestBasePath(config.Temp.BasePath, false)) throw new ArgumentException("XShell Temp.BasePath must be a non-empty rooted request path starting with '/'.", nameof(config));
 
             // validate values consumed by generated HTML and SPA fallback
