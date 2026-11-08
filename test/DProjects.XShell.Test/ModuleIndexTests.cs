@@ -61,6 +61,39 @@ namespace DProjects.XShell.Test {
             var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => new ModuleIndexBuilder().BuildAsync(files.PathFor("demo/manifest.json"), "dev", TestContext.Current.CancellationToken));
             Assert.Contains("both manifest.json and manifest.jsonc", exception.Message);
         }
+        [Theory]
+        [InlineData("x")]
+        [InlineData("x-demo")]
+        [InlineData("x-filesystem")]
+        [InlineData("xshell-docs")]
+        public async Task Builder_AcceptsCanonicalModuleIds(string id) {
+            using var files = new Files();
+            files.Write(id + "/manifest.jsonc", $$"""{ "modules": { "{{id}}": { "version": "0.9.0" } } }""");
+            using var index = JsonDocument.Parse(await new ModuleIndexBuilder().BuildAsync(files.PathFor(id + "/manifest.jsonc"), "dev", TestContext.Current.CancellationToken));
+            Assert.Equal(id, index.RootElement.GetProperty("module").GetString());
+        }
+        [Theory]
+        [InlineData("Demo")]
+        [InlineData("demo_one")]
+        [InlineData("1demo")]
+        [InlineData("demo--one")]
+        [InlineData("demo.one")]
+        [InlineData("xshell")]
+        public async Task Builder_RejectsNoncanonicalLocalIds(string id) {
+            using var files = new Files();
+            files.Write(id + "/manifest.jsonc", $$"""{ "modules": { "{{id}}": { "version": "0.9.0" } } }""");
+            await Assert.ThrowsAsync<InvalidOperationException>(() => new ModuleIndexBuilder().BuildAsync(files.PathFor(id + "/manifest.jsonc"), "dev", TestContext.Current.CancellationToken));
+        }
+        [Theory]
+        [InlineData("Demo")]
+        [InlineData("demo_one")]
+        [InlineData("1demo")]
+        [InlineData("demo--one")]
+        public async Task Builder_RejectsNoncanonicalDependencyIds(string id) {
+            using var files = new Files();
+            files.Write("demo/manifest.jsonc", $$"""{ "modules": { "demo": { "version": "0.9.0", "dependencies": { "{{id}}": "module:x:*" } } } }""");
+            await Assert.ThrowsAsync<InvalidOperationException>(() => new ModuleIndexBuilder().BuildAsync(files.PathFor("demo/manifest.jsonc"), "dev", TestContext.Current.CancellationToken));
+        }
         private sealed class Files : IDisposable {
             public string Root { get; } = Path.Combine(Path.GetTempPath(), "DProjects.XShell.Test", Guid.NewGuid().ToString("N"));
             public string PathFor(string name) => Path.Combine(Root, name.Replace('/', Path.DirectorySeparatorChar));

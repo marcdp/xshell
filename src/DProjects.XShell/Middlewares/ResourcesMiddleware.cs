@@ -15,6 +15,7 @@ namespace DProjects.XShell.Middlewares {
         // fields
         private readonly RequestDelegate mPipeline;
         private readonly string mPhysicalPath;
+        private readonly string mRealPhysicalPath;
         private readonly string mRequestPath;
         private readonly bool mIsDevelopment;
         private readonly Services.ModuleIndexBuilder mIndexBuilder = new();
@@ -29,6 +30,7 @@ namespace DProjects.XShell.Middlewares {
             }
             var fileProvider = new PhysicalFileProvider(physicalPath);
             mPhysicalPath = physicalPath;
+            mRealPhysicalPath = new DirectoryInfo(physicalPath).ResolveLinkTarget(true)?.FullName ?? physicalPath;
             mRequestPath = requestPath;
             mIsDevelopment = isDevelopment;
 
@@ -212,8 +214,17 @@ namespace DProjects.XShell.Middlewares {
                 await mPipeline(context);
                 return;
             }
+            if (!IsSafeDevelopmentPath(remaining.Value ?? "")) {
+                context.Response.StatusCode = StatusCodes.Status404NotFound;
+                return;
+            }
             if (await TryServeModuleIndexAsync(context, remaining)) return;
             var parts = (remaining.Value ?? "").Split('/', StringSplitOptions.None);
+            if (parts.Length >= 3 && parts[2].Contains(".dev", StringComparison.Ordinal) &&
+                (parts.Length < 4 || !parts[2].EndsWith(".dev", StringComparison.Ordinal))) {
+                context.Response.StatusCode = StatusCodes.Status404NotFound;
+                return;
+            }
             if (parts.Length < 4 || parts[0] != "" || !parts[2].EndsWith(".dev", StringComparison.Ordinal)) {
                 await mPipeline(context);
                 return;
@@ -240,7 +251,12 @@ namespace DProjects.XShell.Middlewares {
                 return;
             }
             var originalPath = context.Request.Path;
-            context.Request.Path = new PathString(mRequestPath + "/" + moduleId + "/" + string.Join('/', parts.Skip(3)));
+            var translatedPath = "/" + moduleId + "/" + string.Join('/', parts.Skip(3));
+            if (!IsSafeDevelopmentPath(translatedPath)) {
+                context.Response.StatusCode = StatusCodes.Status404NotFound;
+                return;
+            }
+            context.Request.Path = new PathString(mRequestPath + translatedPath);
             try {
                 await mPipeline(context);
             } finally {
@@ -273,10 +289,10 @@ namespace DProjects.XShell.Middlewares {
         }
         private bool TryGetModuleDirectory(string moduleId, out string moduleDirectory) {
             moduleDirectory = "";
-            if (!Services.ModuleIndexBuilder.ModuleIdPattern.IsMatch(moduleId)) return false;
+            if (!Services.ModuleIds.IsValid(moduleId)) return false;
             var candidate = Path.GetFullPath(Path.Combine(mPhysicalPath, moduleId));
             if (!IsInside(candidate, mPhysicalPath) || !Directory.Exists(candidate) ||
-                !IsInside(new DirectoryInfo(candidate).ResolveLinkTarget(true)?.FullName ?? candidate, mPhysicalPath)) return false;
+                !IsInside(new DirectoryInfo(candidate).ResolveLinkTarget(true)?.FullName ?? candidate, mRealPhysicalPath)) return false;
             moduleDirectory = candidate;
             return true;
         }
@@ -304,6 +320,33 @@ namespace DProjects.XShell.Middlewares {
             root = Path.GetFullPath(root) .TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
             path = Path.GetFullPath(path) .TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
             return path.StartsWith(root, comparison);
+        }
+        private bool IsSafeDevelopmentPath(string relativePath) {
+            try {
+                var decoded = relativePath.TrimStart('/');
+                for (var i = 0; i < 8; i++) {
+                    if (decoded.Split('/').Any(part => part is "." or ".." || part.Contains('\\') || part.Contains(':') || part.Contains('\0'))) return false;
+                    var next = Uri.UnescapeDataString(decoded);
+                    if (next == decoded) break;
+                    if (next.Count(character => character == '/') != decoded.Count(character => character == '/')) return false;
+                    decoded = next;
+                }
+                if (Uri.UnescapeDataString(decoded) != decoded) return false;
+                if (decoded.Split('/').Any(part => part is "." or ".." || part.Contains('\\') || part.Contains(':') || part.Contains('\0'))) return false;
+                var current = mRealPhysicalPath;
+                foreach (var segment in relativePath.TrimStart('/').Split('/', StringSplitOptions.RemoveEmptyEntries)) {
+                    current = Path.GetFullPath(Path.Combine(current, segment));
+                    if (!IsInside(current, mRealPhysicalPath)) return false;
+                    FileSystemInfo item = Directory.Exists(current) ? new DirectoryInfo(current) : new FileInfo(current);
+                    if (item.LinkTarget != null) {
+                        current = item.ResolveLinkTarget(true)?.FullName ?? "";
+                        if (!IsInside(current, mRealPhysicalPath)) return false;
+                    }
+                }
+                return true;
+            } catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException) {
+                return false;
+            }
         }
 
 

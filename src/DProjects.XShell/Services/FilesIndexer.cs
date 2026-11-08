@@ -14,10 +14,13 @@ namespace DProjects.XShell.Services {
             return CreateAsync(path, cancellationToken, null);
         }
         public async Task<IReadOnlyList<FileIndexItem>> CreateAsync(string path, CancellationToken cancellationToken,
-            IReadOnlySet<string>? excludedPaths) {
+            IReadOnlySet<string>? excludedPaths, bool skipLinks = false) {
             // scan
             var files = new List<FileIndexItem>();
-            foreach (var file in Directory.EnumerateFiles(path, "*", SearchOption.AllDirectories)) {
+            var entries = skipLinks
+                ? Directory.EnumerateFiles(path, "*", new EnumerationOptions { RecurseSubdirectories = true, AttributesToSkip = FileAttributes.ReparsePoint })
+                : Directory.EnumerateFiles(path, "*", SearchOption.AllDirectories);
+            foreach (var file in entries) {
                 cancellationToken.ThrowIfCancellationRequested();
                 var relativePath = "/" + Path.GetRelativePath(path, file).Replace('\\', '/');
                 if ((excludedPaths?.Contains(relativePath) ?? false) || IsDescriptor(relativePath)) {

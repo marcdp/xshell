@@ -1,5 +1,7 @@
 using System.Net;
 using System.Collections.Specialized;
+using System.Text.Json;
+using System.Text.RegularExpressions;
 
 using DProjects.XShell.Commands;
 using Microsoft.AspNetCore.Builder;
@@ -25,6 +27,19 @@ namespace DProjects.XShell.Test {
             Assert.IsType<Dictionary<string, string>>(config.App.Params);
             Assert.Equal("a=b", config.App.Params["mode"]);
             Assert.Equal("acme", config.App.Params["tenant"]);
+        }
+        [Theory]
+        [InlineData("", "/_resources/DProjects.XShell/{module}/index.json")]
+        [InlineData("/prefix", "/prefix/_resources/DProjects.XShell/{module}/index.json")]
+        public void ServerConfiguration_DefaultSourceMatchesAppBase(string appBasePath, string expected) {
+            var config = new Server { AppBasePath = appBasePath }.BuildConfiguration();
+            Assert.Equal([expected], config.Sources);
+        }
+        [Fact]
+        public void ServerConfiguration_PreservesOrderedExternalSources() {
+            var sources = new[] { "https://cdn.example.test/{module}/index.json", "/mirror/{module}/index.json" };
+            var config = new Server { AppBasePath = "/prefix", Source = sources }.BuildConfiguration();
+            Assert.Equal(sources, config.Sources);
         }
         [Fact]
         public async Task AppBasePath_RedirectsToTrailingSlash() {
@@ -107,26 +122,27 @@ namespace DProjects.XShell.Test {
             Assert.DoesNotContain("xshell:app.basePath", await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
         }
         [Fact]
-        public async Task ServiceWorker_UsesConfiguredXShellBasePath() {
-            await using var host = await HostingApplication.StartAsync(xshellBasePath: "/custom/xshell");
+        public async Task ServiceWorker_EntryPointIsGenerated() {
+            await using var host = await HostingApplication.StartAsync();
 
             using var response = await host.Client.GetAsync("/app/sw.js", TestContext.Current.CancellationToken);
             var body = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
             Assert.Equal("application/javascript", response.Content.Headers.ContentType?.MediaType);
-            Assert.Contains("importScripts(\"/custom/xshell/sw.js\")", body);
+            Assert.Contains("Service Worker entry point", body);
             Assert.DoesNotContain("<!DOCTYPE html>", body, StringComparison.OrdinalIgnoreCase);
         }
         [Theory]
-        [InlineData("/_resources/DProjects.XShell")]
-        [InlineData("/app/_resources/DProjects.XShell")]
-        public async Task ResourceNamespace_ServesResourceWithoutClaimingAppIndex(string resourcesBasePath) {
-            await using var host = await HostingApplication.StartAsync(resourcesBasePath: resourcesBasePath);
+        [InlineData("")]
+        [InlineData("/app")]
+        public async Task ResourceNamespace_ServesResourceWithoutClaimingAppIndex(string appBasePath) {
+            await using var host = await HostingApplication.StartAsync(appBasePath: appBasePath);
+            var resourcesBasePath = appBasePath + "/_resources/DProjects.XShell";
 
             using var response = await host.Client.GetAsync(resourcesBasePath + "/xshell/bootstrap.js",
                 TestContext.Current.CancellationToken);
-            using var index = await host.Client.GetAsync("/app/index.html", TestContext.Current.CancellationToken);
+            using var index = await host.Client.GetAsync(appBasePath + "/index.html", TestContext.Current.CancellationToken);
 
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
             Assert.True(response.Content.Headers.ContentType?.MediaType is "text/javascript" or "application/javascript");
@@ -134,13 +150,39 @@ namespace DProjects.XShell.Test {
         }
         [Theory]
         [InlineData("")]
+        [InlineData("/prefix")]
+        public async Task PackageSource_ResolvesThroughDevelopmentResourceRoute(string appBasePath) {
+            await using var host = await HostingApplication.StartAsync(appBasePath: appBasePath);
+            using var html = await host.Client.GetAsync(appBasePath + "/index.html", TestContext.Current.CancellationToken);
+            var body = await html.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
+            var source = WebUtility.HtmlDecode(Regex.Match(body, "<meta name=\"xshell:source\" content=\"(?<source>[^\"]+)\"").Groups["source"].Value);
+            Assert.Equal(appBasePath + "/_resources/DProjects.XShell/{module}/index.json", source);
+            using var index = await host.Client.GetAsync(source.Replace("{module}", "xshell"), TestContext.Current.CancellationToken);
+            Assert.Equal(HttpStatusCode.OK, index.StatusCode);
+            using var descriptor = JsonDocument.Parse(await index.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
+            Assert.Equal("xshell", descriptor.RootElement.GetProperty("module").GetString());
+            Assert.Equal("dev", descriptor.RootElement.GetProperty("versions").GetProperty("0.9.0").GetProperty("hash").GetString());
+            using var resource = await host.Client.GetAsync(appBasePath + "/_resources/DProjects.XShell/xshell/0.9.0.dev/bootstrap.js", TestContext.Current.CancellationToken);
+            Assert.Equal(HttpStatusCode.OK, resource.StatusCode);
+        }
+        [Fact]
+        public async Task PackageSource_InvalidRouteIsNotRewritten() {
+            const string source = "/prefix/_resources/Other/{module}/index.json";
+            await using var host = await HostingApplication.StartAsync(appBasePath: "/prefix", sources: [source]);
+            using var html = await host.Client.GetAsync("/prefix/index.html", TestContext.Current.CancellationToken);
+            Assert.Contains(source, await html.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
+            using var index = await host.Client.GetAsync(source.Replace("{module}", "xshell"), TestContext.Current.CancellationToken);
+            Assert.Equal(HttpStatusCode.NotFound, index.StatusCode);
+        }
+        [Theory]
         [InlineData("resources")]
         [InlineData("/")]
-        public async Task InvalidResourcesBasePath_IsRejected(string resourcesBasePath) {
+        [InlineData("/prefix/")]
+        public async Task InvalidAppBasePath_IsRejected(string appBasePath) {
             var exception = await Assert.ThrowsAsync<ArgumentException>(() =>
-                HostingApplication.StartAsync(resourcesBasePath: resourcesBasePath));
+                HostingApplication.StartAsync(appBasePath: appBasePath));
 
-            Assert.Contains("XShell Resources.BasePath must be a non-empty rooted request path starting with '/'.", exception.Message);
+            Assert.Contains("XShell App.BasePath must be empty or a rooted request path starting with '/'.", exception.Message);
         }
         [Fact]
         public async Task TempRequest_IsHandledBeforeAppBaseRedirect() {
@@ -241,16 +283,17 @@ namespace DProjects.XShell.Test {
         }
         [Fact]
         public async Task Bootstrap_ReflectsHostingConfiguration() {
-            await using var host = await HostingApplication.StartAsync(appConfigPath: "/config/root.jsonc", xshellBasePath: "/custom/xshell");
+            await using var host = await HostingApplication.StartAsync();
 
             using var response = await host.Client.GetAsync("/app/index.html", TestContext.Current.CancellationToken);
             var body = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
             AssertBootstrap(response, body);
             Assert.Matches("name=\"xshell:app.basePath\"\\s+content=\"/app\"", body);
-            Assert.Matches("name=\"xshell:app.configPath\"\\s+content=\"/config/root.jsonc\"", body);
+            Assert.Matches("name=\"xshell:app.module\"\\s+content=\"module:x-demo:0.9.0\"", body);
             Assert.Matches("name=\"xshell:xshell.environment\"\\s+content=\"Development\"", body);
-            Assert.Contains("src=\"/custom/xshell/bootstrap.js\"", body);
+            Assert.Contains("src=\"/app/index.js\"", body);
+            Assert.Contains("content=\"/app/_resources/DProjects.XShell/{module}/index.json\"", body);
         }
 
         // methods (private)
@@ -258,7 +301,7 @@ namespace DProjects.XShell.Test {
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
             Assert.Equal("text/html", response.Content.Headers.ContentType?.MediaType);
             Assert.Contains("xshell:app.basePath", body);
-            Assert.Contains("/bootstrap.js", body);
+            Assert.Contains("/index.js", body);
         }
 
         // inner classes
@@ -279,7 +322,7 @@ namespace DProjects.XShell.Test {
             }
 
             // methods
-            public static async Task<HostingApplication> StartAsync(string appBasePath = "/app", string[]? unhandledPrefixes = null, string appConfigPath = "/_resources/DProjects.XShell/x-demo/manifest.jsonc", string xshellBasePath = "/_resources/DProjects.XShell/xshell", string resourcesBasePath = "/_resources/DProjects.XShell",
+            public static async Task<HostingApplication> StartAsync(string appBasePath = "/app", string[]? unhandledPrefixes = null, string[]? sources = null,
                 Action<WebApplication>? configureEndpoints = null) {
                 var tempPath = Path.Combine(Path.GetTempPath(), "DProjects.XShell.Test", Guid.NewGuid().ToString("N"));
                 var builder = WebApplication.CreateBuilder(new WebApplicationOptions { EnvironmentName = "Development" });
@@ -294,7 +337,7 @@ namespace DProjects.XShell.Test {
                             Module = "module:x-demo:0.9.0",
                             Params = new Dictionary<string, string>()
                         },
-                        Sources = [resourcesBasePath + "/{module}/index.json"],
+                        Sources = sources ?? [appBasePath + "/_resources/DProjects.XShell/{module}/index.json"],
                         Server = new Extensions.ServerConfig {
                             Environment = "Development",
                             UnhandledPrefixes = unhandledPrefixes ?? new Extensions.ServerConfig().UnhandledPrefixes

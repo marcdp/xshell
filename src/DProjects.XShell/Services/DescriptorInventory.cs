@@ -39,7 +39,7 @@ namespace DProjects.XShell.Services {
             var directory = Path.GetDirectoryName(descriptorPath) ?? throw new InvalidOperationException($"Descriptor '{descriptorPath}' has no containing directory.");
 
             // replace authored inventory metadata with the current physical inventory
-            var inventory = CreateJsonArray(await new FilesIndexer().CreateAsync(directory, cancellationToken));
+            var inventory = CreateJsonArray(await new FilesIndexer().CreateAsync(directory, cancellationToken, null, skipLinks: true));
             if (kind == DescriptorKind.Module) {
                 var modules = root["modules"] as JsonObject ??
                     throw new InvalidOperationException($"Module configuration '{descriptorPath}' must contain a modules object.");

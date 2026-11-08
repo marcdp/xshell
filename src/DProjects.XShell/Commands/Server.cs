@@ -29,7 +29,7 @@ namespace DProjects.XShell.Commands {
         public string Environment { get; init; } = "";
         [Flag('p', "Parameter", "")]
         public Dictionary<string, string> Param { get; init; } = new();
-        [Flag('s', "Source", "/_resources/DProjects.XShell/{module}/index.json")]
+        [Flag('s', "Source", "")]
         public string[] Source { get; init; } = [];
         [Flag('s', "Share connection string", "")]
         public string[] Share { get; init; } = Array.Empty<string>();
@@ -60,7 +60,6 @@ namespace DProjects.XShell.Commands {
         }
         internal Extensions.Configuration BuildConfiguration() {
 
-            // derive every resource route from the same selected resource-set name
             return new Extensions.Configuration {
                 App = new Extensions.AppConfig {
                     BasePath = AppBasePath,
@@ -72,10 +71,8 @@ namespace DProjects.XShell.Commands {
                     BasePath = AppBasePath + "/temp",
                     ExpirationTime = TimeSpan.FromHours(1)
                 },
-                Sources = Source,
-                //XShell = new Extensions.XShellConfig {
-                //    BasePath = AppBasePath + "/_resources/" + ResourcesName + "/xshell"
-                //},
+                Sources = Source.Length == 0 || Source.All(string.IsNullOrWhiteSpace)
+                    ? [AppBasePath + "/_resources/DProjects.XShell/{module}/index.json"] : Source,
                 Server = new Extensions.ServerConfig {
                     Environment = Environment
                 },

@@ -56,12 +56,22 @@ namespace DProjects.XShell.Services {
                 // App entry point
                 const meta = name => document.querySelector(`meta[name="${name}"]`)?.content;
                 const sources = [...document.querySelectorAll('meta[name="xshell:source"]')].map(e => e.content);
+                const stableVersion = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/;
+                const compareVersions = (left, right) => {
+                    const a = left.match(stableVersion).slice(1).map(BigInt);
+                    const b = right.match(stableVersion).slice(1).map(BigInt);
+                    for (let i = 0; i < 3; i++) {
+                        if (a[i] !== b[i]) return a[i] > b[i] ? -1 : 1;
+                    }
+                    return 0;
+                };
                 async function resolve(reference) {
-                    debugger;
-                    const match = /^module:([^:]+):(\d+\.\d+\.\d+)$/.exec(reference ?? "");
-                    if (!match) throw new Error(`Invalid module reference: ${reference}`);
+                    const match = /^module:([a-z][a-z0-9]*(?:-[a-z0-9]+)*):(.+)$/.exec(reference ?? "");
+                    if (!match || (match[2] !== "*" && !stableVersion.test(match[2]))) {
+                        throw new Error(`Unsupported module reference (expected an exact version or *): ${reference}`);
+                    }
 
-                    const [, name, version] = match;
+                    const [, name, requestedVersion] = match;
 
                     for (const [sourceIndex, source] of sources.entries()) {
                         try {
@@ -72,7 +82,10 @@ namespace DProjects.XShell.Services {
                             const index = await response.json();
                             if (index.module !== name) continue;
 
-                            const entry = index.versions?.[version];
+                            const version = requestedVersion === "*"
+                                ? Object.keys(index.versions ?? {}).filter(value => stableVersion.test(value) && index.versions[value]?.hash).sort(compareVersions)[0]
+                                : requestedVersion;
+                            const entry = version && index.versions?.[version];
                             if (!entry?.hash) continue;
 
                             return {

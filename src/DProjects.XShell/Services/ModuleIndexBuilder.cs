@@ -7,7 +7,6 @@ namespace DProjects.XShell.Services {
         private static readonly Regex VersionPattern = new(
             @"^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(?:-(?:0|[1-9][0-9]*|[0-9A-Za-z-]*[A-Za-z-][0-9A-Za-z-]*)(?:\.(?:0|[1-9][0-9]*|[0-9A-Za-z-]*[A-Za-z-][0-9A-Za-z-]*))*)?(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$",
             RegexOptions.Compiled | RegexOptions.CultureInvariant);
-        internal static readonly Regex ModuleIdPattern = new(@"^[A-Za-z0-9][A-Za-z0-9_-]*$", RegexOptions.Compiled | RegexOptions.CultureInvariant);
         private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
 
         internal sealed record ManifestInfo(string Module, string Version, Dictionary<string, string> Dependencies);
@@ -73,7 +72,7 @@ namespace DProjects.XShell.Services {
                     if (locals.Count != 1) throw new InvalidOperationException($"Module manifest '{manifestPath}' must contain exactly one local module definition, but found {locals.Count}.");
                     module = locals[0].Name;
                     definition = locals[0].Value;
-                    if (module != Path.GetFileName(directory) || !ModuleIdPattern.IsMatch(module)) {
+                    if (module != Path.GetFileName(directory) || !ModuleIds.IsValid(module) || module == "xshell") {
                         throw new InvalidOperationException($"Local module ID '{module}' must match its directory name '{Path.GetFileName(directory)}'.");
                     }
                 }
@@ -85,7 +84,7 @@ namespace DProjects.XShell.Services {
                 if (definition.TryGetProperty("dependencies", out var declared)) {
                     if (declared.ValueKind != JsonValueKind.Object) throw new InvalidOperationException($"Manifest '{manifestPath}' dependencies must be an object.");
                     foreach (var dependency in declared.EnumerateObject()) {
-                        if (!ModuleIdPattern.IsMatch(dependency.Name) || dependency.Value.ValueKind != JsonValueKind.String || string.IsNullOrWhiteSpace(dependency.Value.GetString())) {
+                        if (!ModuleIds.IsValid(dependency.Name) || dependency.Value.ValueKind != JsonValueKind.String || string.IsNullOrWhiteSpace(dependency.Value.GetString())) {
                             throw new InvalidOperationException($"Manifest '{manifestPath}' contains an invalid dependency '{dependency.Name}'.");
                         }
                         if (!dependencies.TryAdd(dependency.Name, dependency.Value.GetString()!)) throw new InvalidOperationException($"Manifest '{manifestPath}' repeats dependency '{dependency.Name}'.");

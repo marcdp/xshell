@@ -451,6 +451,19 @@ namespace DProjects.XShell.Test {
             Assert.Equal(status, response.StatusCode);
             Assert.Equal(nextCalls, response.NextCalls);
         }
+        [Theory]
+        [InlineData("Demo")]
+        [InlineData("demo_one")]
+        [InlineData("1demo")]
+        [InlineData("demo--one")]
+        [InlineData("demo.one")]
+        public async Task DevelopmentModuleIndex_RejectsNoncanonicalDirectory(string id) {
+            using var workspace = new TemporaryDirectory();
+            workspace.Write($"resources/{id}/manifest.jsonc", $$"""{ "modules": { "{{id}}": { "version": "0.9.0" } } }""");
+            var response = await SendAsync(workspace.PathFor("resources"), $"/_resources/{id}/index.json", true);
+            Assert.Equal(404, response.StatusCode);
+            Assert.Equal(0, response.NextCalls);
+        }
         [Fact]
         public async Task DevelopmentModuleIndex_MissingManifestReturns404_AndProductionDoesNotGenerate() {
             using var workspace = new TemporaryDirectory();
@@ -521,6 +534,12 @@ namespace DProjects.XShell.Test {
         [InlineData("0.9.dev/file.txt")]
         [InlineData("0.9.0.dev/../file.txt")]
         [InlineData("0.9.0.dev/../../outside.txt")]
+        [InlineData("0.9.0.dev/%2e%2e/outside.txt")]
+        [InlineData("0.9.0.dev/%252e%252e/outside.txt")]
+        [InlineData("0.9.0.dev/nested/%2e%2e/file.txt")]
+        [InlineData("0.9.0.devx/file.txt")]
+        [InlineData("0.9.0.dev")]
+        [InlineData("0.9.0.dev/%2foutside.txt")]
         public async Task InvalidVersionedPaths_Return404(string suffix) {
             using var workspace = new TemporaryDirectory();
             workspace.Write("resources/demo/manifest.jsonc", VersionedDescriptor);
@@ -531,6 +550,46 @@ namespace DProjects.XShell.Test {
 
             Assert.Equal(404, response.StatusCode);
             Assert.DoesNotContain("outside secret", response.Text);
+        }
+        [Fact]
+        public async Task VersionedPath_RejectsManifestVersionMismatch() {
+            using var workspace = new TemporaryDirectory();
+            workspace.Write("resources/demo/manifest.jsonc", VersionedDescriptor);
+            workspace.Write("resources/demo/file.txt", "inside");
+            var response = await SendAsync(workspace.PathFor("resources"), "/_resources/demo/0.9.1.dev/file.txt", true);
+            Assert.Equal(404, response.StatusCode);
+        }
+        [Theory]
+        [InlineData("/_resources/demo/index.json")]
+        [InlineData("/_resources/demo/0.9.0.dev/file.txt")]
+        [InlineData("/_resources/demo/0.9.0.dev/manifest.json")]
+        public async Task UnsupportedMethod_DoesNotServeGeneratedResources(string path) {
+            using var workspace = new TemporaryDirectory();
+            workspace.Write("resources/demo/manifest.jsonc", VersionedDescriptor);
+            workspace.Write("resources/demo/file.txt", "inside");
+            var response = await SendAsync(workspace.PathFor("resources"), path, true, HttpMethods.Post);
+            Assert.Equal(204, response.StatusCode);
+            Assert.Empty(response.Body);
+            Assert.Equal(1, response.NextCalls);
+        }
+        [Fact]
+        public async Task NestedSymbolicLink_OutsideRootIsRejected() {
+            using var workspace = new TemporaryDirectory();
+            workspace.Write("resources/demo/manifest.jsonc", VersionedDescriptor);
+            workspace.Write("outside/secret.txt", "outside secret");
+            try {
+                Directory.CreateSymbolicLink(workspace.PathFor("resources/demo/nested"), workspace.PathFor("outside"));
+            } catch (Exception exception) when (exception is UnauthorizedAccessException or IOException or PlatformNotSupportedException) {
+                return;
+            }
+            foreach (var path in new[] { "/_resources/demo/nested/secret.txt", "/_resources/demo/0.9.0.dev/nested/secret.txt" }) {
+                var response = await SendAsync(workspace.PathFor("resources"), path, true);
+                Assert.Equal(404, response.StatusCode);
+                Assert.DoesNotContain("outside secret", response.Text);
+            }
+            var descriptor = await SendAsync(workspace.PathFor("resources"), "/_resources/demo/manifest.json", true);
+            Assert.Equal(200, descriptor.StatusCode);
+            Assert.DoesNotContain("secret.txt", descriptor.Text);
         }
         [Fact]
         public async Task VersionedPath_IsDevelopmentOnly_AndUnversionedStillWorks() {

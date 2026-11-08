@@ -22,7 +22,6 @@ namespace DProjects.XShell.Commands {
     public class Pack(IEnvironment environment) : ICommand {
 
         // consts
-        private const string ModuleIdPattern = "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$";
         private const string ReleaseFileName = "release.json";
         private const string RootHashPlaceholder = "__XSHELL_ROOT_HASH__";
         private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
@@ -616,7 +615,7 @@ namespace DProjects.XShell.Commands {
             return FindDescriptor(frameworkDirectory);
         }
         private static void ValidateModuleId(string id) {
-            if (!Regex.IsMatch(id, ModuleIdPattern, RegexOptions.CultureInvariant) || id == "xshell") {
+            if (!ModuleIds.IsValid(id) || id == "xshell") {
                 throw new InvalidOperationException($"Invalid or reserved module id '{id}'.");
             }
         }
