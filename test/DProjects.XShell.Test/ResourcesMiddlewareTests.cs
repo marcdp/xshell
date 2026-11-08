@@ -17,6 +17,9 @@ namespace DProjects.XShell.Test {
         private const string ModuleDescriptor = """
             { "modules": { "demo": { "defaults": { "page": { "renderEngine": "x" } } } } }
             """;
+        private const string VersionedDescriptor = """
+            { "modules": { "demo": { "version": "0.9.0", "defaults": { "page": { "renderEngine": "x" } } } } }
+            """;
 
         // methods
         [Fact]
@@ -393,6 +396,154 @@ namespace DProjects.XShell.Test {
             Assert.Equal(StatusCodes.Status404NotFound, response.StatusCode);
             Assert.Empty(response.Body);
             Assert.Equal(0, response.NextCalls);
+        }
+        [Theory]
+        [InlineData("demo", "{ \"modules\": { \"demo\": { \"version\": \"0.9.0\", \"dependencies\": { \"xshell\": \"module:xshell:*\" } } } }")]
+        [InlineData("xshell", "{ \"xshell\": { \"version\": \"0.9.0\" } }")]
+        public async Task DevelopmentModuleIndex_GetAndHeadUseManifest(string moduleId, string manifest) {
+            using var workspace = new TemporaryDirectory();
+            workspace.Write($"resources/{moduleId}/manifest.jsonc", manifest);
+            var root = workspace.PathFor("resources");
+            var path = $"/_resources/{moduleId}/index.json";
+
+            var get = await SendAsync(root, path, true);
+            var head = await SendAsync(root, path, true, HttpMethods.Head);
+
+            Assert.Equal(200, get.StatusCode);
+            Assert.StartsWith("application/json", get.ContentType);
+            Assert.Equal(get.Body.Length, get.Headers.ContentLength);
+            Assert.Equal(get.Body.Length, head.Headers.ContentLength);
+            Assert.Equal(get.ContentType, head.ContentType);
+            Assert.Empty(head.Body);
+            AssertNoCache(get);
+            AssertNoCache(head);
+            Assert.Equal(0, get.NextCalls + head.NextCalls);
+            using var index = JsonDocument.Parse(get.Text);
+            Assert.Equal(moduleId, index.RootElement.GetProperty("module").GetString());
+            var generation = index.RootElement.GetProperty("versions").GetProperty("0.9.0");
+            Assert.Equal("dev", generation.GetProperty("hash").GetString());
+            if (moduleId == "demo") Assert.Equal("module:xshell:*", generation.GetProperty("dependencies").GetProperty("xshell").GetString());
+            else Assert.Empty(generation.GetProperty("dependencies").EnumerateObject());
+        }
+        [Fact]
+        public async Task DevelopmentModuleIndex_ReflectsManifestChanges() {
+            using var workspace = new TemporaryDirectory();
+            workspace.Write("resources/demo/manifest.jsonc", "{ \"modules\": { \"demo\": { \"version\": \"0.9.0\" } } }");
+            var root = workspace.PathFor("resources");
+            var first = await SendAsync(root, "/_resources/demo/index.json", true);
+            workspace.Write("resources/demo/manifest.jsonc", "{ \"modules\": { \"demo\": { \"version\": \"1.0.0\" } } }");
+            var second = await SendAsync(root, "/_resources/demo/index.json", true);
+
+            Assert.Contains("0.9.0", first.Text);
+            Assert.Contains("1.0.0", second.Text);
+            Assert.Equal(0, first.NextCalls + second.NextCalls);
+        }
+        [Theory]
+        [InlineData("/_resources/missing/index.json", 404, 0)]
+        [InlineData("/_resources/demo/0.9.0.dev/index.json", 204, 1)]
+        [InlineData("/_resources/../index.json", 404, 0)]
+        [InlineData("/_resources/bad.id/index.json", 404, 0)]
+        [InlineData("/else/demo/index.json", 204, 1)]
+        public async Task DevelopmentModuleIndex_RejectsOrFallsThrough(string path, int status, int nextCalls) {
+            using var workspace = new TemporaryDirectory();
+            workspace.Write("resources/demo/manifest.jsonc", VersionedDescriptor);
+            var response = await SendAsync(workspace.PathFor("resources"), path, true);
+            Assert.Equal(status, response.StatusCode);
+            Assert.Equal(nextCalls, response.NextCalls);
+        }
+        [Fact]
+        public async Task DevelopmentModuleIndex_MissingManifestReturns404_AndProductionDoesNotGenerate() {
+            using var workspace = new TemporaryDirectory();
+            Directory.CreateDirectory(workspace.PathFor("resources/demo"));
+            var root = workspace.PathFor("resources");
+            var missing = await SendAsync(root, "/_resources/demo/index.json", true);
+            workspace.Write("resources/demo/manifest.jsonc", VersionedDescriptor);
+            var production = await SendAsync(root, "/_resources/demo/index.json");
+
+            Assert.Equal(404, missing.StatusCode);
+            Assert.Equal(0, missing.NextCalls);
+            Assert.Equal(204, production.StatusCode);
+            Assert.Equal(1, production.NextCalls);
+        }
+        [Fact]
+        public async Task VersionedResources_UsePhysicalFilesAndExistingCompilationStages() {
+            using var workspace = new TemporaryDirectory();
+            workspace.Write("resources/demo/manifest.jsonc", VersionedDescriptor);
+            workspace.Write("resources/demo/pages/page.html", "<template><p>Versioned</p></template>");
+            workspace.Write("resources/demo/styles/site.css", ".card { background: url('../image.png'); }");
+            workspace.Write("resources/demo/image.png", new byte[] { 1, 2, 3 });
+            var root = workspace.PathFor("resources");
+
+            var descriptor = await SendAsync(root, "/_resources/demo/0.9.0.dev/manifest.json", true);
+            var descriptorHead = await SendAsync(root, "/_resources/demo/0.9.0.dev/manifest.json", true, HttpMethods.Head);
+            var page = await SendAsync(root, "/_resources/demo/0.9.0.dev/pages/page.js", true);
+            var pageHead = await SendAsync(root, "/_resources/demo/0.9.0.dev/pages/page.js", true, HttpMethods.Head);
+            var css = await SendAsync(root, "/_resources/demo/0.9.0.dev/styles/site.css", true);
+            var image = await SendAsync(root, "/_resources/demo/0.9.0.dev/image.png", true);
+
+            Assert.Equal(200, descriptor.StatusCode);
+            using var parsed = JsonDocument.Parse(descriptor.Text);
+            Assert.True(parsed.RootElement.GetProperty("modules").GetProperty("demo").TryGetProperty("files", out _));
+            AssertNoCache(descriptor);
+            AssertCompiledHeadMatchesGet(descriptor, descriptorHead);
+            Assert.Equal(200, page.StatusCode);
+            Assert.Contains("Versioned", page.Text);
+            AssertNoCache(page);
+            AssertCompiledHeadMatchesGet(page, pageHead);
+            Assert.Equal(200, css.StatusCode);
+            Assert.Contains("url('/image.png')", css.Text);
+            AssertNoCache(css);
+            Assert.Equal(new byte[] { 1, 2, 3 }, image.Body);
+            AssertNoCache(image);
+            Assert.Equal(0, descriptor.NextCalls + descriptorHead.NextCalls + page.NextCalls + pageHead.NextCalls + css.NextCalls + image.NextCalls);
+        }
+        [Fact]
+        public async Task VersionedFrameworkScripts_AndHeadUsePhysicalFiles() {
+            using var workspace = new TemporaryDirectory();
+            workspace.Write("resources/xshell/manifest.jsonc", "{ \"xshell\": { \"version\": \"0.9.0\" } }");
+            workspace.Write("resources/xshell/bootstrap.js", "bootstrap");
+            workspace.Write("resources/xshell/sw.js", "worker");
+            var root = workspace.PathFor("resources");
+
+            var bootstrap = await SendAsync(root, "/_resources/xshell/0.9.0.dev/bootstrap.js", true);
+            var worker = await SendAsync(root, "/_resources/xshell/0.9.0.dev/sw.js", true);
+            var head = await SendAsync(root, "/_resources/xshell/0.9.0.dev/bootstrap.js", true, HttpMethods.Head);
+
+            Assert.Equal("bootstrap", bootstrap.Text);
+            Assert.Equal("worker", worker.Text);
+            Assert.Equal(200, head.StatusCode);
+            Assert.Empty(head.Body);
+            Assert.Equal(bootstrap.Body.Length, head.Headers.ContentLength);
+            AssertNoCache(head);
+        }
+        [Theory]
+        [InlineData("1.0.0.dev/file.txt")]
+        [InlineData("0.9.dev/file.txt")]
+        [InlineData("0.9.0.dev/../file.txt")]
+        [InlineData("0.9.0.dev/../../outside.txt")]
+        public async Task InvalidVersionedPaths_Return404(string suffix) {
+            using var workspace = new TemporaryDirectory();
+            workspace.Write("resources/demo/manifest.jsonc", VersionedDescriptor);
+            workspace.Write("resources/demo/file.txt", "inside");
+            workspace.Write("outside.txt", "outside secret");
+
+            var response = await SendAsync(workspace.PathFor("resources"), "/_resources/demo/" + suffix, true);
+
+            Assert.Equal(404, response.StatusCode);
+            Assert.DoesNotContain("outside secret", response.Text);
+        }
+        [Fact]
+        public async Task VersionedPath_IsDevelopmentOnly_AndUnversionedStillWorks() {
+            using var workspace = new TemporaryDirectory();
+            workspace.Write("resources/demo/manifest.jsonc", VersionedDescriptor);
+            workspace.Write("resources/demo/file.txt", "source");
+            var root = workspace.PathFor("resources");
+
+            var production = await SendAsync(root, "/_resources/demo/0.9.0.dev/file.txt");
+            var unversioned = await SendAsync(root, "/_resources/demo/file.txt", true);
+
+            Assert.Equal(204, production.StatusCode);
+            Assert.Equal("source", unversioned.Text);
         }
 
         // methods (private)

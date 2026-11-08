@@ -110,7 +110,7 @@ namespace DProjects.XShell.Test {
         // methods (private)
         private static string GetResourceDirectory() {
             var projectDirectory = typeof(Extensions).Assembly.GetCustomAttributes<AssemblyMetadataAttribute>().Single(attribute => attribute.Key == "ProjectDirectory").Value;
-            return Path.Combine(projectDirectory!, "Resources", new Extensions.ResourcesConfig().ResourceName);
+            return Path.Combine(projectDirectory!, "Resources", "DProjects.XShell");
         }
 
         private static bool IsVendorPath(string path) => path.Contains("\\vendor\\", StringComparison.OrdinalIgnoreCase) || path.Contains("/vendor/", StringComparison.OrdinalIgnoreCase);

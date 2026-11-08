@@ -120,13 +120,13 @@ namespace DProjects.XShell.Test {
             Assert.True(File.Exists(Path.Combine(package, "manifest.json")));
         }
         [Theory]
-        [InlineData("xshell/manifest.json", DescriptorKind.XShell)]
-        [InlineData("xshell/manifest.jsonc", DescriptorKind.XShell)]
-        [InlineData("customers/manifest.jsonc", DescriptorKind.Module)]
-        [InlineData("app/manifest.jsonc", DescriptorKind.Module)]
-        [InlineData("XShElL/manifest.jsonc", DescriptorKind.XShell)]
-        public void DescriptorClassifier_UsesImmediateParentDirectory(string path, DescriptorKind expected) {
-            Assert.Equal(expected, DescriptorClassifier.GetKind(path));
+        [InlineData("xshell/manifest.json", "XShell")]
+        [InlineData("xshell/manifest.jsonc", "XShell")]
+        [InlineData("customers/manifest.jsonc", "Module")]
+        [InlineData("app/manifest.jsonc", "Module")]
+        [InlineData("XShElL/manifest.jsonc", "XShell")]
+        public void DescriptorClassifier_UsesImmediateParentDirectory(string path, string expected) {
+            Assert.Equal(expected, DescriptorClassifier.GetKind(path).ToString());
         }
         [Fact]
         public async Task FrameworkShapedManifestOutsideXShell_IsRejectedAsModule() {

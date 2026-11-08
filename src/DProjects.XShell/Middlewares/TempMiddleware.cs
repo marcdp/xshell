@@ -7,9 +7,7 @@ namespace DProjects.XShell.Middlewares {
     internal sealed class TempMiddleware : IDisposable {
 
         // vars
-        private static readonly HashSet<string> InlineContentTypes = new(StringComparer.OrdinalIgnoreCase) {
-            "image/png", "image/jpeg", "image/gif", "image/webp", "image/avif", "text/plain", "application/pdf"
-        };
+        private static readonly HashSet<string> InlineContentTypes = new(StringComparer.OrdinalIgnoreCase) {"image/png", "image/jpeg", "image/gif", "image/webp", "image/avif", "text/plain", "application/pdf"};
         private readonly RequestDelegate mNext;
         private readonly Extensions.TempConfig mConfig;
         private readonly FileExtensionContentTypeProvider mContentTypes = new();

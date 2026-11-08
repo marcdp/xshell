@@ -61,7 +61,7 @@ namespace DProjects.XShell {
             var isDevelopment = environment.Equals("Development", StringComparison.OrdinalIgnoreCase);
             string resourceName = "DProjects.XShell";
             string resourcePath;
-            string resourceBasePath = "/_resources/" + resourceName;
+            string resourceBasePath = config.App.BasePath + "/_resources/" + resourceName;
             if (isDevelopment) {
                 var projectDirectory = assembly.GetCustomAttributes<AssemblyMetadataAttribute>().FirstOrDefault(x => x.Key == "ProjectDirectory")?.Value;
                 if (string.IsNullOrEmpty(projectDirectory)) {

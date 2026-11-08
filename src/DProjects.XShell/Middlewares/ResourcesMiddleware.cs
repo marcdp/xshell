@@ -14,6 +14,10 @@ namespace DProjects.XShell.Middlewares {
 
         // fields
         private readonly RequestDelegate mPipeline;
+        private readonly string mPhysicalPath;
+        private readonly string mRequestPath;
+        private readonly bool mIsDevelopment;
+        private readonly Services.ModuleIndexBuilder mIndexBuilder = new();
 
 
         // ctor
@@ -24,6 +28,9 @@ namespace DProjects.XShell.Middlewares {
                 throw new DirectoryNotFoundException($"Resources directory not found: {physicalPath}");
             }
             var fileProvider = new PhysicalFileProvider(physicalPath);
+            mPhysicalPath = physicalPath;
+            mRequestPath = requestPath;
+            mIsDevelopment = isDevelopment;
 
             // content types
             var contentTypeProvider = new FileExtensionContentTypeProvider();
@@ -200,17 +207,81 @@ namespace DProjects.XShell.Middlewares {
 
 
         // methods
-        public Task InvokeAsync(HttpContext context) {
-            return mPipeline(context);
+        public async Task InvokeAsync(HttpContext context) {
+            if (!mIsDevelopment || !context.Request.Path.StartsWithSegments(mRequestPath, out var remaining)) {
+                await mPipeline(context);
+                return;
+            }
+            if (await TryServeModuleIndexAsync(context, remaining)) return;
+            var parts = (remaining.Value ?? "").Split('/', StringSplitOptions.None);
+            if (parts.Length < 4 || parts[0] != "" || !parts[2].EndsWith(".dev", StringComparison.Ordinal)) {
+                await mPipeline(context);
+                return;
+            }
+            var moduleId = parts[1];
+            var version = parts[2][..^4];
+            if (!Services.ModuleIndexBuilder.IsValidVersion(version) ||
+                parts.Skip(3).Any(part => part is "" or "." or ".." || part.Contains('\\'))) {
+                context.Response.StatusCode = StatusCodes.Status404NotFound;
+                return;
+            }
+            if (!TryGetModuleDirectory(moduleId, out var moduleDirectory)) {
+                context.Response.StatusCode = StatusCodes.Status404NotFound;
+                return;
+            }
+            try {
+                var manifest = FindDescriptor(moduleDirectory);
+                if (manifest == null || (await Services.ModuleIndexBuilder.ReadManifestAsync(manifest, context.RequestAborted)).Version != version) {
+                    context.Response.StatusCode = StatusCodes.Status404NotFound;
+                    return;
+                }
+            } catch (Exception exception) when (exception is InvalidOperationException or IOException or UnauthorizedAccessException) {
+                context.Response.StatusCode = StatusCodes.Status500InternalServerError;
+                return;
+            }
+            var originalPath = context.Request.Path;
+            context.Request.Path = new PathString(mRequestPath + "/" + moduleId + "/" + string.Join('/', parts.Skip(3)));
+            try {
+                await mPipeline(context);
+            } finally {
+                context.Request.Path = originalPath;
+            }
+        }
+        private async Task<bool> TryServeModuleIndexAsync(HttpContext context, PathString remaining) {
+            if (!HttpMethods.IsGet(context.Request.Method) && !HttpMethods.IsHead(context.Request.Method)) return false;
+            var parts = (remaining.Value ?? "").Split('/', StringSplitOptions.None);
+            if (parts.Length != 3 || parts[0] != "" || parts[2] != "index.json") return false;
+            if (!TryGetModuleDirectory(parts[1], out var moduleDirectory)) {
+                context.Response.StatusCode = StatusCodes.Status404NotFound;
+                return true;
+            }
+            try {
+                var manifest = FindDescriptor(moduleDirectory);
+                if (manifest == null) {
+                    context.Response.StatusCode = StatusCodes.Status404NotFound;
+                    return true;
+                }
+                var bytes = Encoding.UTF8.GetBytes(await mIndexBuilder.BuildAsync(manifest, "dev", context.RequestAborted));
+                SetNoCacheHeaders(context.Response);
+                context.Response.ContentType = "application/json";
+                context.Response.ContentLength = bytes.Length;
+                if (!HttpMethods.IsHead(context.Request.Method)) await context.Response.Body.WriteAsync(bytes, context.RequestAborted);
+            } catch (Exception exception) when (exception is InvalidOperationException or IOException or UnauthorizedAccessException) {
+                context.Response.StatusCode = StatusCodes.Status500InternalServerError;
+            }
+            return true;
+        }
+        private bool TryGetModuleDirectory(string moduleId, out string moduleDirectory) {
+            moduleDirectory = "";
+            if (!Services.ModuleIndexBuilder.ModuleIdPattern.IsMatch(moduleId)) return false;
+            var candidate = Path.GetFullPath(Path.Combine(mPhysicalPath, moduleId));
+            if (!IsInside(candidate, mPhysicalPath) || !Directory.Exists(candidate) ||
+                !IsInside(new DirectoryInfo(candidate).ResolveLinkTarget(true)?.FullName ?? candidate, mPhysicalPath)) return false;
+            moduleDirectory = candidate;
+            return true;
         }
         private static string? FindDescriptor(string directory) {
-            // reject ambiguous authored descriptors consistently with Pack
-            var json = Path.Combine(directory, Services.ManifestFileNames.Json);
-            var jsonc = Path.Combine(directory, Services.ManifestFileNames.Jsonc);
-            if (File.Exists(json) && File.Exists(jsonc)) {
-                throw new InvalidOperationException($"Source '{directory}' contains both manifest.json and manifest.jsonc.");
-            }
-            return File.Exists(json) ? json : File.Exists(jsonc) ? jsonc : null;
+            return Services.ModuleIndexBuilder.FindManifest(directory);
         }
         private static void SetNoCacheHeaders(HttpResponse response) {
             response.Headers.CacheControl = "no-cache, no-store, must-revalidate";

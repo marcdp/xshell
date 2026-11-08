@@ -17,8 +17,7 @@ namespace DProjects.XShell.Test {
             Assert.Contains(GetRequiredFullName(typeof(Extensions.Configuration)), exportedNames);
             Assert.Contains(GetRequiredFullName(typeof(Extensions.AppConfig)), exportedNames);
             Assert.Contains(GetRequiredFullName(typeof(Extensions.TempConfig)), exportedNames);
-            Assert.Contains(GetRequiredFullName(typeof(Extensions.XShellConfig)), exportedNames);
-            Assert.Contains(GetRequiredFullName(typeof(Extensions.ResourcesConfig)), exportedNames);
+            Assert.Contains(GetRequiredFullName(typeof(Extensions.SharesConfig)), exportedNames);
             Assert.Contains(GetRequiredFullName(typeof(Extensions.ServerConfig)), exportedNames);
             Assert.Contains(GetRequiredFullName(typeof(Commands.Server)), exportedNames);
             Assert.Contains(GetRequiredFullName(typeof(Commands.Pack)), exportedNames);

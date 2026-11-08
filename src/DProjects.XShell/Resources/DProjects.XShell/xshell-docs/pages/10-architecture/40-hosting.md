@@ -73,6 +73,14 @@ Generated host HTML attribute values are HTML encoded. This serialization safety
 
 ## Request pipeline
 
+In Development, `UseXShell()` generates a package index from each module's local manifest at
+`/_resources/DProjects.XShell/<module>/index.json`. The index reports the authored version, direct dependency
+requirements, and the development generation hash `dev`. GET and HEAD requests read the manifest each time, so
+edits appear without publishing a package. Source files remain in unversioned physical directories, while
+`/_resources/DProjects.XShell/<module>/<version>.dev/<resource>` serves the same files through the existing
+descriptor, compilation, and static-file stages. The version must match the local manifest. Unversioned development
+resource URLs continue to work. Production does not generate indexes or translate these versioned source paths.
+
 1. Resource middleware serves the physical resource tree.
 2. Temp middleware handles its prefix.
 3. A request exactly at `App.BasePath` redirects to `App.BasePath + "/"`. With a nonempty application base, requests outside it also redirect there unless resource or Temp middleware handled them first.

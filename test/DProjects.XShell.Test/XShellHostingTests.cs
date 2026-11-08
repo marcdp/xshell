@@ -291,13 +291,10 @@ namespace DProjects.XShell.Test {
                         
                         App = new Extensions.AppConfig {
                             BasePath = appBasePath,
-                            ConfigPath = appConfigPath,
+                            Module = "module:x-demo:0.9.0",
                             Params = new Dictionary<string, string>()
                         },
-                        Resources = new Extensions.ResourcesConfig {
-                            BasePath = resourcesBasePath,
-                            ResourceName = "DProjects.XShell"
-                        },
+                        Sources = [resourcesBasePath + "/{module}/index.json"],
                         Server = new Extensions.ServerConfig {
                             Environment = "Development",
                             UnhandledPrefixes = unhandledPrefixes ?? new Extensions.ServerConfig().UnhandledPrefixes
@@ -307,9 +304,6 @@ namespace DProjects.XShell.Test {
                             BasePath = "/temp",
                             ExpirationTime = TimeSpan.FromMinutes(30),
                             FileSizeLimit = 10 * 1024 * 1024
-                        },
-                        XShell = new Extensions.XShellConfig {
-                           BasePath = xshellBasePath
                         },
                     });
                     await app.StartAsync(TestContext.Current.CancellationToken);
