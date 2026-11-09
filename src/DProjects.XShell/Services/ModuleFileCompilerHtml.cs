@@ -52,7 +52,7 @@ namespace DProjects.XShell.Services {
             return new ModuleFileCompiler.FileContent { ContentType = "text/html", Content = result.ToString() };
         }
 
-        // methods (private)
+        // private methods
         private static void AppendProcessedTag(ModuleFileCompilerContext context, string html, StringBuilder result, int tagStart, int nameStart, int nameEnd, int tagEnd) {
             // collect static attributes before rewriting so selectors work regardless of attribute order
             var attributes = new List<(string Name, string Value, int Start, int End, char Quote)>();

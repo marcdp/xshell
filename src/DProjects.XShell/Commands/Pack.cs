@@ -53,7 +53,6 @@ namespace DProjects.XShell.Commands {
             // validate paths before touching the destination
             if (string.IsNullOrWhiteSpace(Source)) throw new ArgumentException("Source directory is required.");
             if (string.IsNullOrWhiteSpace(Output)) throw new ArgumentException("Output directory is required.");
-            ResourceNameValidator.Validate(ResourcesName);
             if (!IsRequestBasePath(AppBasePath, true)) throw new ArgumentException("App base path must be empty or a rooted request path starting with '/'.");
             var bootstrapEnvironment = string.IsNullOrEmpty(Environment) ? "Production" : Environment;
             if (string.IsNullOrWhiteSpace(bootstrapEnvironment)) throw new ArgumentException("Environment must be non-empty.");
@@ -100,7 +99,7 @@ namespace DProjects.XShell.Commands {
             return 0;
         }
 
-        // methods (private)
+        // private methods
         private static async Task<List<ModuleNode>> DiscoverAsync(string rootDescriptor, CancellationToken cancellationToken) {
             // follow local definition documents with the same ownership rules as Bootstrap
             var byPath = new Dictionary<string, ModuleNode>(PathComparer());

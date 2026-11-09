@@ -30,7 +30,7 @@ namespace DProjects.XShell.Services {
             return new ModuleFileCompilerJs().Compile(context, js);
         }
 
-        // methods (private)
+        // private methods
         private Sections ReadSections(string html) {
             string? style = null;
             string? template = null;

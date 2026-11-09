@@ -34,7 +34,7 @@ module references. For `*`, it chooses the highest stable semantic version with 
 expressions are not supported by this initial locator. The browser framework handles further module dependency resolution.
 
 In Development, a module's `index.json` is generated from its local `manifest.json` or `manifest.jsonc` on GET and HEAD. The index contains
-the authored version, hash `dev`, and direct dependencies. A URL of the form
+the authored version, hash `dev`, a relative package `path` of `<version>.dev/`, and direct dependencies. A URL of the form
 `<App.BasePath>/_resources/DProjects.XShell/<module>/<version>.dev/<resource>` maps to the same physical file as the unversioned URL,
 provided the version matches the local manifest. The normal descriptor, compiler, and static-file handlers serve the mapped resource.
 Development descriptors include current physical file inventories; symbolic links are omitted from those inventories. Development

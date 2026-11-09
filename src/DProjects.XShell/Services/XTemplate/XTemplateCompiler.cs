@@ -64,7 +64,7 @@ namespace DProjects.XShell.Services.XTemplate {
             return new XTemplateCompileResult(javascript, compiledDependencies, slots);
         }
 
-        // methods (private)
+        // private methods
         private static void CollectMetadata(ElementNode element, string? currentComponentName, IReadOnlyList<string> ancestors, Dictionary<string, List<IReadOnlyList<string>>> dependencies, List<string> slots, HashSet<string> slotNames) {
             foreach (var child in element.Children.OfType<ElementNode>()) {
                 if (child.Name.Contains('-', StringComparison.Ordinal) && !string.Equals(child.Name, currentComponentName, StringComparison.OrdinalIgnoreCase)) {
@@ -531,7 +531,7 @@ namespace DProjects.XShell.Services.XTemplate {
                 return root;
             }
 
-            // methods (private)
+            // private methods
             private void ParseComment(ElementNode parent) {
                 var offset = mPosition;
                 var end = source.IndexOf("-->", mPosition + 4, StringComparison.Ordinal);

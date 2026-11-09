@@ -71,7 +71,7 @@ namespace DProjects.XShell.Services.XTemplate {
             return string.Join(';', declarations.Select(declaration => declaration.Name + ":" + declaration.Value + (declaration.Priority.Length == 0 ? string.Empty : " !" + declaration.Priority)));
         }
 
-        // methods (private)
+        // private methods
         private static (string Value, string Priority) ExtractPriority(string value, int offset) {
             var quote = '\0';
             var parentheses = 0;

@@ -19,8 +19,7 @@ namespace DProjects.XShell.Commands {
     [Example("DProjects.XShell server --app-base-path /prefix --app-module \"module:x-demo:0.9.0\" --param a=123 --param b=456 --source /prefix/_resources/DProjects.XShell/{module}/index.json", "")]
     public class Server() : ICommand {
 
-
-        // Arguments
+        // props
         [Flag('a', "App base path", "")]
         public string AppBasePath { get; init; } = "";
         [Flag('c', "App module", "")]
@@ -34,8 +33,7 @@ namespace DProjects.XShell.Commands {
         [Flag('s', "Share connection string", "")]
         public string[] Share { get; init; } = Array.Empty<string>();
 
-
-        //methods
+        // methods
         public async Task<int> ExecuteAsync(CancellationToken cancellationToken) {
 
             // builder
@@ -60,6 +58,7 @@ namespace DProjects.XShell.Commands {
         }
         internal Extensions.Configuration BuildConfiguration() {
 
+            // compose host configuration from command arguments
             return new Extensions.Configuration {
                 App = new Extensions.AppConfig {
                     BasePath = AppBasePath,

@@ -90,7 +90,7 @@ namespace DProjects.XShell.Services.XTemplate {
             return result.ToString();
         }
 
-        // methods (private)
+        // private methods
         private void EnsureAttributeAllowed(string name, int offset) {
             if (string.Equals(name, "style", StringComparison.OrdinalIgnoreCase) && !mOptions.AllowStyleAttributes) {
                 throw new XTemplateException("Inline style attributes are not allowed by this XTemplate renderer.",offset);

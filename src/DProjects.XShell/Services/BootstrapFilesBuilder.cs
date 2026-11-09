@@ -5,6 +5,7 @@ namespace DProjects.XShell.Services {
 
     internal sealed class BootstrapFilesBuilder {
 
+        // methods
         internal Dictionary<string, string> Build(Extensions.Configuration config, string environment) {
             var result = new Dictionary<string, string>();
 
@@ -65,6 +66,31 @@ namespace DProjects.XShell.Services {
                     }
                     return 0;
                 };
+                function resolvePackageBaseUrl(path, indexUrl) {
+                    // validate the package-relative directory supplied by the repository index
+                    if (typeof path !== "string" || !path.endsWith("/") || path.startsWith("/") || path.includes("\\") || /[?#]/.test(path)) {
+                        throw new Error("Module index entry path must be a relative directory path ending in '/'.");
+                    }
+                    for (const segment of path.split("/")) {
+                        let decoded;
+                        try {
+                            decoded = decodeURIComponent(segment);
+                        } catch {
+                            throw new Error("Module index entry path contains invalid percent-encoding.");
+                        }
+                        if (decoded === "." || decoded === ".." || decoded.includes("/") || decoded.includes("\\")) {
+                            throw new Error("Module index entry path must not contain traversal.");
+                        }
+                    }
+
+                    // ensure URL resolution remains within the originating repository index directory
+                    const indexDirectoryUrl = new URL("./", indexUrl);
+                    const baseUrl = new URL(path, indexUrl);
+                    if (baseUrl.origin !== indexDirectoryUrl.origin || !baseUrl.href.startsWith(indexDirectoryUrl.href)) {
+                        throw new Error("Module index entry path must resolve within the index directory.");
+                    }
+                    return baseUrl.href;
+                }
                 async function resolve(reference) {
                     const match = /^module:([a-z][a-z0-9]*(?:-[a-z0-9]+)*):(.+)$/.exec(reference ?? "");
                     if (!match || (match[2] !== "*" && !stableVersion.test(match[2]))) {
@@ -86,12 +112,12 @@ namespace DProjects.XShell.Services {
                                 ? Object.keys(index.versions ?? {}).filter(value => stableVersion.test(value) && index.versions[value]?.hash).sort(compareVersions)[0]
                                 : requestedVersion;
                             const entry = version && index.versions?.[version];
-                            if (!entry?.hash) continue;
+                            if (!entry?.hash || !entry?.path) continue;
 
                             return {
                                 name, version, hash: entry.hash, sourceIndex,
                                 dependencies: entry.dependencies ?? {},
-                                baseUrl: new URL(`${version}.${entry.hash}/`, indexUrl).href
+                                baseUrl: resolvePackageBaseUrl(entry.path, indexUrl)
                             };
                         } catch (error) {
                             console.warn(`Source unavailable: ${source}`, error);
@@ -116,7 +142,7 @@ namespace DProjects.XShell.Services {
             return result;
         }
 
-        // methods (private)
+        // private methods
         private static string EncodeAttribute(string value) {
             return WebUtility.HtmlEncode(value);
         }

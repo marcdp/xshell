@@ -438,6 +438,60 @@ namespace DProjects.XShell.Test {
             Assert.Contains("1.0.0", second.Text);
             Assert.Equal(0, first.NextCalls + second.NextCalls);
         }
+        [Fact]
+        public async Task DevelopmentRepositoryIndex_GetAndHeadReflectCurrentModules() {
+            using var workspace = new TemporaryDirectory();
+            workspace.Write("resources/x-demo/manifest.jsonc", "{ \"modules\": { \"x-demo\": { \"version\": \"1.2.3\" } } }");
+            workspace.Write("resources/xshell/manifest.jsonc", "{ \"xshell\": { \"version\": \"0.9.0\" } }");
+            var root = workspace.PathFor("resources");
+
+            var get = await SendAsync(root, "/_resources/index.json", true);
+            var head = await SendAsync(root, "/_resources/index.json", true, HttpMethods.Head);
+            workspace.Write("resources/x-filesystem/manifest.jsonc", "{ \"modules\": { \"x-filesystem\": { \"version\": \"2.1.0\" } } }");
+            var updated = await SendAsync(root, "/_resources/index.json", true);
+            Directory.Delete(workspace.PathFor("resources/x-filesystem"), recursive: true);
+            var removed = await SendAsync(root, "/_resources/index.json", true);
+
+            Assert.Equal(200, get.StatusCode);
+            Assert.StartsWith("application/json", get.ContentType);
+            Assert.Equal(get.Body.Length, get.Headers.ContentLength);
+            Assert.Equal(get.Body.Length, head.Headers.ContentLength);
+            Assert.Equal(get.ContentType, head.ContentType);
+            Assert.Empty(head.Body);
+            AssertNoCache(get);
+            AssertNoCache(head);
+            using var index = JsonDocument.Parse(get.Text);
+            Assert.Equal(["x-demo", "xshell"], index.RootElement.GetProperty("modules").EnumerateObject().Select(item => item.Name));
+            Assert.Equal("x-demo/index.json", index.RootElement.GetProperty("modules").GetProperty("x-demo").GetProperty("url").GetString());
+            Assert.Contains("x-filesystem", updated.Text);
+            Assert.DoesNotContain("x-filesystem", removed.Text);
+            Assert.Equal(0, get.NextCalls + head.NextCalls + updated.NextCalls + removed.NextCalls);
+        }
+        [Fact]
+        public async Task DevelopmentRepositoryIndex_HandlesBasePathsAndProductionFallsThrough() {
+            using var workspace = new TemporaryDirectory();
+            workspace.Write("resources/demo/manifest.jsonc", VersionedDescriptor);
+            var root = workspace.PathFor("resources");
+
+            var development = await SendAsync(root, "/prefix/_resources/index.json", true, requestBasePath: "/prefix/_resources");
+            var production = await SendAsync(root, "/_resources/index.json");
+
+            Assert.Equal(200, development.StatusCode);
+            Assert.Contains("demo", development.Text);
+            Assert.Equal(204, production.StatusCode);
+            Assert.Equal(1, production.NextCalls);
+        }
+        [Fact]
+        public async Task DevelopmentRepositoryIndex_DoesNotExposeMalformedManifestDetails() {
+            using var workspace = new TemporaryDirectory();
+            workspace.Write("resources/demo/manifest.jsonc", "{ invalid");
+
+            var response = await SendAsync(workspace.PathFor("resources"), "/_resources/index.json", true);
+
+            Assert.Equal(StatusCodes.Status500InternalServerError, response.StatusCode);
+            Assert.Empty(response.Body);
+            Assert.Equal(0, response.NextCalls);
+        }
         [Theory]
         [InlineData("/_resources/missing/index.json", 404, 0)]
         [InlineData("/_resources/demo/0.9.0.dev/index.json", 204, 1)]
@@ -606,7 +660,7 @@ namespace DProjects.XShell.Test {
         }
 
         // methods (private)
-        private static async Task<MiddlewareResponse> SendAsync(string resourceRoot, string requestPath, bool isDevelopment = false, string? method = null) {
+        private static async Task<MiddlewareResponse> SendAsync(string resourceRoot, string requestPath, bool isDevelopment = false, string? method = null, string requestBasePath = "/_resources") {
             var serviceCollection = new ServiceCollection().AddLogging();
             serviceCollection.AddSingleton<IWebHostEnvironment>(new TestWebHostEnvironment(resourceRoot, isDevelopment));
             using var services = serviceCollection.BuildServiceProvider();
@@ -616,7 +670,7 @@ namespace DProjects.XShell.Test {
                 context.Response.StatusCode = StatusCodes.Status204NoContent;
                 return Task.CompletedTask;
             };
-            var middleware = new ResourcesMiddleware(next, services, resourceRoot, "/_resources", isDevelopment);
+            var middleware = new ResourcesMiddleware(next, services, resourceRoot, requestBasePath, isDevelopment);
             var context = new DefaultHttpContext();
             context.Request.Method = method ?? HttpMethods.Get;
             context.Request.Path = requestPath;

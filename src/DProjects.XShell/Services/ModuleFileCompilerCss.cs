@@ -29,7 +29,7 @@ namespace DProjects.XShell.Services {
             return new ModuleFileCompiler.FileContent { ContentType = "text/css", Content = result.ToString() };
         }
 
-        // methods (private)
+        // private methods
         private static void AppendComment(string css, StringBuilder result, ref int index) {
             // preserve the complete comment without inspecting URL-looking text
             var end = css.IndexOf("*/", index + 2, StringComparison.Ordinal);

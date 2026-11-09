@@ -123,7 +123,7 @@ namespace DProjects.XShell.Services.XTemplate {
             };
         }
 
-        // methods (private)
+        // private methods
         private ExpressionToken ReadIdentifier(int offset) {
             while (_position < _source.Length && IsIdentifierPart(_source[_position])) _position++;
             var text = _source[offset.._position];
@@ -204,7 +204,7 @@ namespace DProjects.XShell.Services.XTemplate {
             return expression;
         }
 
-        // methods (private)
+        // private methods
         private XTemplateExpression ParseConditional() {
             var condition = ParseCoalesce();
             if (!Take(ExpressionTokenKind.Question)) return condition;

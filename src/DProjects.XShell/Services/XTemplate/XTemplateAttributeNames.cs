@@ -7,7 +7,7 @@ namespace DProjects.XShell.Services.XTemplate {
         // methods
         public static bool IsValid(string name) => name.Length > 0 && name.EnumerateRunes().All(IsValidRune);
 
-        // methods (private)
+        // private methods
         private static bool IsValidRune(Rune rune) {
             var value = rune.Value;
             return !Rune.IsWhiteSpace(rune) && value is not '"' and not '\'' and not '<' and not '>' and not '=' and not '/' and not '\0' && value > 0x1F && value != 0x7F && !IsUnicodeNoncharacter(value);

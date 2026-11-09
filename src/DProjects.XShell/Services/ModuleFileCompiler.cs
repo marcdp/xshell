@@ -64,7 +64,7 @@ namespace DProjects.XShell.Services {
             return new FileContent { ContentType = mimeType, Content = content };
         }
 
-        // methods (private)
+        // private methods
         internal static async Task<Config> ReadConfigAsync(string moduleDescriptorPath, CancellationToken cancellationToken) {
             // parse JSONC with the same comments and trailing-comma support used by module descriptors
             var configJson = await File.ReadAllTextAsync(moduleDescriptorPath, cancellationToken);

@@ -40,7 +40,7 @@ namespace DProjects.XShell.Services {
             return files;
         }
 
-        // methods (private)
+        // private methods
         private static bool IsDescriptor(string path) {
             return path.Equals("/" + ManifestFileNames.Json, StringComparison.OrdinalIgnoreCase) ||
                 path.Equals("/" + ManifestFileNames.Jsonc, StringComparison.OrdinalIgnoreCase);

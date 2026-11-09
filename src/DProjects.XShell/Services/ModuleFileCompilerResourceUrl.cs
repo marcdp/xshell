@@ -41,7 +41,7 @@ namespace DProjects.XShell.Services {
             return "/" + string.Join('/', segments) + suffix;
         }
 
-        // methods (private)
+        // private methods
         private static bool HasExplicitScheme(string url) {
             // recognize the URI scheme grammar without treating drive-like physical paths specially
             if (!IsAsciiLetter(url[0])) return false;

@@ -54,7 +54,7 @@ namespace DProjects.XShell.Services.XTemplate {
             return Source[lineStart..position];
         }
 
-        // methods (private)
+        // private methods
         private int FindDefaultExportIndex() {
             for (var index = 0; index + 1 < _tokens.Count; index++) {
                 if (_tokens[index].Is("export") && _tokens[index + 1].Is("default")) return index;
@@ -316,7 +316,7 @@ namespace DProjects.XShell.Services.XTemplate {
                 return result;
             }
 
-            // methods (private)
+            // private methods
             private static void SkipLineComment(string source, ref int position) { position += 2; while (position < source.Length && source[position] is not '\r' and not '\n') position++; }
             private static void SkipBlockComment(string source, ref int position) {
                 var start = position;

@@ -65,7 +65,7 @@ namespace DProjects.XShell.Services.XTemplate {
             return source[..export.ContentStart] + insertion + source[export.ContentStart..];
         }
 
-        // methods (private)
+        // private methods
         private static string SerializeArtifact(XTemplateCompileResult artifact) {
             var dependencies = artifact.Dependencies.Select(dependency =>
                 "{resource:" + JsonSerializer.Serialize(dependency.Resource) + ",ancestorPaths:[" +

@@ -21,6 +21,7 @@ namespace DProjects.XShell.Test {
             Assert.Equal("demo", index.RootElement.GetProperty("module").GetString());
             var generation = index.RootElement.GetProperty("versions").GetProperty("0.9.0");
             Assert.Equal("dev", generation.GetProperty("hash").GetString());
+            Assert.Equal("0.9.0.dev/", generation.GetProperty("path").GetString());
             Assert.Equal("module:xshell:*", generation.GetProperty("dependencies").GetProperty("xshell").GetString());
             Assert.Equal("module:x:^1", generation.GetProperty("dependencies").GetProperty("x").GetString());
             Assert.Equal(2, generation.GetProperty("dependencies").EnumerateObject().Count());

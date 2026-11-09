@@ -68,7 +68,7 @@ namespace DProjects.XShell.Middlewares {
         }
 
 
-        // methods (private)
+        // private methods
         private async Task PostAsync(HttpContext context) {
             // reject requests that are not form submissions (multipart/form-data)
             if (!context.Request.HasFormContentType) {

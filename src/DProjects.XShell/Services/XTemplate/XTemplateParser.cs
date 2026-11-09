@@ -40,7 +40,7 @@ namespace DProjects.XShell.Services.XTemplate {
             return Freeze(root);
         }
 
-        // methods (private)
+        // private methods
         private void ParseComment(MutableElement parent) {
             var offset = _position;
             var end = _source.IndexOf("-->", _position + 4, StringComparison.Ordinal);

@@ -43,7 +43,7 @@ namespace DProjects.XShell.Services.XTemplate {
             };
         }
 
-        // methods (private)
+        // private methods
         private static string Stringify(object? input, IReadOnlyList<object?> arguments, XTemplateObjectAccess? objectAccess, int offset) {
             RequireCount("stringify", arguments, 0, 0, offset);
             if (input == null) return string.Empty;

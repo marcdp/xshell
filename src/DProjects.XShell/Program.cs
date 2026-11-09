@@ -7,6 +7,7 @@ namespace DProjects.XShell {
 
     public static class Program {
 
+        // methods
         public static async Task<int> Main(string[] args) {
              
             // create host builder
@@ -18,14 +19,14 @@ namespace DProjects.XShell {
                 cfg.AddCommandsFromAssembly(DProjects.XShell.Assembly.Instance);
             });
 
-            //  Build App 
+            // build application host
             var app = builder.Build();
 
-            // Execute
+            // execute requested command
             var commandManager = app.Services.GetRequiredService<CommandsManager>();
             int result = await commandManager.ExecuteAsync(args, CancellationToken.None);
 
-            // Return
+            // return command exit code
             return result;
 
         }

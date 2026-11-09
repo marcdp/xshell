@@ -28,7 +28,7 @@ namespace DProjects.XShell.Services.XTemplate {
             };
         }
 
-        // methods (private)
+        // private methods
         private object? ResolveIdentifier(IdentifierExpression expression) {
             if (!_context.TryGetValue(expression.Name, out var value)) throw new XTemplateExpressionEvaluationException($"Unknown identifier '{expression.Name}'", expression.Offset);
             return Normalize(value, expression.Offset);

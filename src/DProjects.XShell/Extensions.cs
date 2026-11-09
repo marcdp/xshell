@@ -151,7 +151,7 @@ namespace DProjects.XShell {
 
         }
 
-        // methods (private)
+        // private methods
         private static async Task WriteGeneratedTextAsync(HttpContext context, string content, string contentType) {
             var bytes = Encoding.UTF8.GetBytes(content);
             context.Response.ContentType = contentType;

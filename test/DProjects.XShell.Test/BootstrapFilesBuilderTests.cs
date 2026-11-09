@@ -41,18 +41,18 @@ namespace DProjects.XShell.Test {
         }
         [Fact]
         public async Task GeneratedIndex_ResolvesExactXShellVersion() {
-            using var result = await RunGeneratedIndexAsync("module:xshell:0.9.0", """{"0.9.0":{"hash":"old"},"0.9.10":{"hash":"new"}}""");
+            using var result = await RunGeneratedIndexAsync("module:xshell:0.9.0", """{"0.9.0":{"hash":"old","path":"published-old/"},"0.9.10":{"hash":"new","path":"published-new/"}}""");
             Assert.True(result.RootElement.GetProperty("ok").GetBoolean());
             var xshell = result.RootElement.GetProperty("started").GetProperty("xshell");
             Assert.Equal("0.9.0", xshell.GetProperty("version").GetString());
             Assert.Equal("old", xshell.GetProperty("hash").GetString());
             Assert.Equal(0, xshell.GetProperty("sourceIndex").GetInt32());
-            Assert.Contains("/first/xshell/0.9.0.old/", xshell.GetProperty("baseUrl").GetString());
+            Assert.Contains("/first/xshell/published-old/", xshell.GetProperty("baseUrl").GetString());
         }
         [Fact]
         public async Task GeneratedIndex_WildcardUsesNumericStableVersionFromFirstSuitableSource() {
-            using var result = await RunGeneratedIndexAsync("module:xshell:*", """{"0.9.9":{"hash":"nine"},"0.9.10":{"hash":"ten","dependencies":{"x":"module:x:*"}},"0.9.11-rc.1":{"hash":"preview"},"bad":{"hash":"malformed"}}""",
-                """{"9.0.0":{"hash":"later-source"}}""");
+            using var result = await RunGeneratedIndexAsync("module:xshell:*", """{"0.9.9":{"hash":"nine","path":"nine/"},"0.9.10":{"hash":"ten","path":"ten/","dependencies":{"x":"module:x:*"}},"0.9.11-rc.1":{"hash":"preview","path":"preview/"},"bad":{"hash":"malformed","path":"malformed/"}}""",
+                """{"9.0.0":{"hash":"later-source","path":"later/"}}""");
             Assert.True(result.RootElement.GetProperty("ok").GetBoolean());
             var started = result.RootElement.GetProperty("started");
             var xshell = started.GetProperty("xshell");
@@ -65,24 +65,37 @@ namespace DProjects.XShell.Test {
             Assert.Equal("1.0.0", app.GetProperty("version").GetString());
             Assert.Equal("root", app.GetProperty("hash").GetString());
             Assert.Equal("module:xshell:*", app.GetProperty("dependencies").GetProperty("xshell").GetString());
-            Assert.Contains("/first/app/1.0.0.root/", app.GetProperty("baseUrl").GetString());
+            Assert.Contains("/first/app/app-package/", app.GetProperty("baseUrl").GetString());
             Assert.Equal(2, started.GetProperty("sources").GetArrayLength());
         }
         [Fact]
         public async Task GeneratedIndex_FallsBackToNextSource() {
-            using var result = await RunGeneratedIndexAsync("module:xshell:*", """{"0.9.10-rc.1":{"hash":"preview"}}""",
-                """{"0.9.9":{"hash":"fallback"}}""");
+            using var result = await RunGeneratedIndexAsync("module:xshell:*", """{"0.9.10-rc.1":{"hash":"preview","path":"preview/"}}""",
+                """{"0.9.9":{"hash":"fallback","path":"fallback/"}}""");
             Assert.True(result.RootElement.GetProperty("ok").GetBoolean());
             var xshell = result.RootElement.GetProperty("started").GetProperty("xshell");
             Assert.Equal("0.9.9", xshell.GetProperty("version").GetString());
             Assert.Equal(1, xshell.GetProperty("sourceIndex").GetInt32());
-            Assert.Contains("/second/xshell/0.9.9.fallback/", xshell.GetProperty("baseUrl").GetString());
+            Assert.Contains("/second/xshell/fallback/", xshell.GetProperty("baseUrl").GetString());
         }
         [Fact]
         public async Task GeneratedIndex_RejectsUnsupportedVersionExpression() {
-            using var result = await RunGeneratedIndexAsync("module:xshell:^0.9", """{"0.9.0":{"hash":"dev"}}""");
+            using var result = await RunGeneratedIndexAsync("module:xshell:^0.9", """{"0.9.0":{"hash":"dev","path":"dev/"}}""");
             Assert.False(result.RootElement.GetProperty("ok").GetBoolean());
             Assert.Contains("Unsupported module reference", result.RootElement.GetProperty("error").GetString());
+        }
+        [Theory]
+        [InlineData(null)]
+        [InlineData("https://example.test/packages/")]
+        [InlineData("../packages/")]
+        [InlineData("packages/?query")]
+        [InlineData("packages/#fragment")]
+        [InlineData("packages")]
+        public async Task GeneratedIndex_RejectsMissingOrInvalidPackagePath(string? path) {
+            var pathProperty = path == null ? "" : $$",\"path\":\"{{path}}\"";
+            using var result = await RunGeneratedIndexAsync("module:xshell:0.9.0", $$"""{"0.9.0":{"hash":"dev"{{pathProperty}}}}""");
+            Assert.False(result.RootElement.GetProperty("ok").GetBoolean());
+            Assert.Contains("Cannot resolve", result.RootElement.GetProperty("error").GetString());
         }
 
         // methods (private)
@@ -100,7 +113,7 @@ namespace DProjects.XShell.Test {
                 var indexes = new Dictionary<string, JsonElement> {
                     ["first/app/index.json"] = JsonSerializer.Deserialize<JsonElement>(JsonSerializer.Serialize(new {
                         module = "app", versions = new Dictionary<string, object> {
-                            ["1.0.0"] = new { hash = "root", dependencies = new Dictionary<string, string> { ["xshell"] = xshellReference } }
+                            ["1.0.0"] = new { hash = "root", path = "app-package/", dependencies = new Dictionary<string, string> { ["xshell"] = xshellReference } }
                         }
                     })),
                     ["first/xshell/index.json"] = JsonSerializer.Deserialize<JsonElement>($$"""{"module":"xshell","versions":{{firstVersions}}}""")
@@ -111,7 +124,9 @@ namespace DProjects.XShell.Test {
                     using var entries = JsonDocument.Parse(versions);
                     foreach (var entry in entries.RootElement.EnumerateObject()) {
                         if (!entry.Value.TryGetProperty("hash", out var hash)) continue;
-                        var bootstrapDirectory = Path.Combine(directory, source, "xshell", entry.Name + "." + hash.GetString());
+                        if (!entry.Value.TryGetProperty("path", out var pathValue) || pathValue.GetString() is not string path) continue;
+                        if (!path.EndsWith('/') || path.StartsWith('/') || path.Contains("..", StringComparison.Ordinal) || path.IndexOfAny(['?', '#', '\\']) >= 0) continue;
+                        var bootstrapDirectory = Path.Combine(directory, source, "xshell", path.TrimEnd('/').Replace('/', Path.DirectorySeparatorChar));
                         Directory.CreateDirectory(bootstrapDirectory);
                         File.WriteAllText(Path.Combine(bootstrapDirectory, "bootstrap.js"), "export async function start(value) { globalThis.started = value; }");
                     }

@@ -67,7 +67,7 @@ namespace DProjects.XShell.Services.XTemplate {
             return adapter.GetMembers(value);
         }
 
-        // methods (private)
+        // private methods
         private sealed class DictionaryAdapter : IXTemplateObjectAdapter {
 
             // methods

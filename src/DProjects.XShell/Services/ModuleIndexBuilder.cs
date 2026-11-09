@@ -4,23 +4,31 @@ using System.Text.RegularExpressions;
 
 namespace DProjects.XShell.Services {
     internal sealed class ModuleIndexBuilder {
-        private static readonly Regex VersionPattern = new(
-            @"^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(?:-(?:0|[1-9][0-9]*|[0-9A-Za-z-]*[A-Za-z-][0-9A-Za-z-]*)(?:\.(?:0|[1-9][0-9]*|[0-9A-Za-z-]*[A-Za-z-][0-9A-Za-z-]*))*)?(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$",
+
+        // vars
+        private static readonly Regex VersionPattern = new(@"^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(?:-(?:0|[1-9][0-9]*|[0-9A-Za-z-]*[A-Za-z-][0-9A-Za-z-]*)(?:\.(?:0|[1-9][0-9]*|[0-9A-Za-z-]*[A-Za-z-][0-9A-Za-z-]*))*)?(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$",
             RegexOptions.Compiled | RegexOptions.CultureInvariant);
         private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
 
+        // inner classes
         internal sealed record ManifestInfo(string Module, string Version, Dictionary<string, string> Dependencies);
 
+        // methods
         internal static bool IsValidVersion(string version) => VersionPattern.IsMatch(version);
 
         public async Task<string> BuildAsync(string manifestPath, string hash, CancellationToken cancellationToken = default) {
             ArgumentException.ThrowIfNullOrWhiteSpace(hash);
+
+            // read the authored module identity and dependencies
             var info = await ReadManifestAsync(manifestPath, cancellationToken);
+
+            // serialize the version-specific repository index entry
             var index = new JsonObject {
                 ["module"] = info.Module,
                 ["versions"] = new JsonObject {
                     [info.Version] = new JsonObject {
                         ["hash"] = hash,
+                        ["path"] = $"{info.Version}.{hash}/",
                         ["dependencies"] = JsonSerializer.SerializeToNode(info.Dependencies)
                     }
                 }
@@ -28,6 +36,7 @@ namespace DProjects.XShell.Services {
             return index.ToJsonString(JsonOptions);
         }
 
+        // private methods
         internal static string? FindManifest(string directory) {
             var json = Path.Combine(directory, ManifestFileNames.Json);
             var jsonc = Path.Combine(directory, ManifestFileNames.Jsonc);

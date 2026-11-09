@@ -23,7 +23,7 @@ namespace DProjects.XShell.Services.XTemplate {
             return $"utils.expr.assign({CompileIdentifier(root, scope)}, [{path}], {valueExpression})";
         }
 
-        // methods (private)
+        // private methods
         private string CompileExpression(XTemplateExpression expression, XTemplateExpressionJavaScriptScope scope) {
             return expression switch {
                 LiteralExpression literal => CompileLiteral(literal),

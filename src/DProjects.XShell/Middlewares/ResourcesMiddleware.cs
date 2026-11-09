@@ -12,13 +12,14 @@ namespace DProjects.XShell.Middlewares {
     internal sealed class ResourcesMiddleware {
 
 
-        // fields
+        // vars
         private readonly RequestDelegate mPipeline;
         private readonly string mPhysicalPath;
         private readonly string mRealPhysicalPath;
         private readonly string mRequestPath;
         private readonly bool mIsDevelopment;
         private readonly Services.ModuleIndexBuilder mIndexBuilder = new();
+        private readonly Services.RepositoryIndexBuilder mRepositoryIndexBuilder = new();
 
 
         // ctor
@@ -210,6 +211,7 @@ namespace DProjects.XShell.Middlewares {
 
         // methods
         public async Task InvokeAsync(HttpContext context) {
+            // pass through ordinary requests and protected paths
             if (!mIsDevelopment || !context.Request.Path.StartsWithSegments(mRequestPath, out var remaining)) {
                 await mPipeline(context);
                 return;
@@ -218,8 +220,13 @@ namespace DProjects.XShell.Middlewares {
                 context.Response.StatusCode = StatusCodes.Status404NotFound;
                 return;
             }
+
+            // serve generated repository and module indexes before translating versioned asset paths
+            if (await TryServeRepositoryIndexAsync(context, remaining)) return;
             if (await TryServeModuleIndexAsync(context, remaining)) return;
             var parts = (remaining.Value ?? "").Split('/', StringSplitOptions.None);
+
+            // validate the versioned development asset URL
             if (parts.Length >= 3 && parts[2].Contains(".dev", StringComparison.Ordinal) &&
                 (parts.Length < 4 || !parts[2].EndsWith(".dev", StringComparison.Ordinal))) {
                 context.Response.StatusCode = StatusCodes.Status404NotFound;
@@ -252,6 +259,8 @@ namespace DProjects.XShell.Middlewares {
             }
             var originalPath = context.Request.Path;
             var translatedPath = "/" + moduleId + "/" + string.Join('/', parts.Skip(3));
+
+            // translate the versioned request to the physical development resource path
             if (!IsSafeDevelopmentPath(translatedPath)) {
                 context.Response.StatusCode = StatusCodes.Status404NotFound;
                 return;
@@ -263,6 +272,8 @@ namespace DProjects.XShell.Middlewares {
                 context.Request.Path = originalPath;
             }
         }
+
+        // private methods
         private async Task<bool> TryServeModuleIndexAsync(HttpContext context, PathString remaining) {
             if (!HttpMethods.IsGet(context.Request.Method) && !HttpMethods.IsHead(context.Request.Method)) return false;
             var parts = (remaining.Value ?? "").Split('/', StringSplitOptions.None);
@@ -278,6 +289,21 @@ namespace DProjects.XShell.Middlewares {
                     return true;
                 }
                 var bytes = Encoding.UTF8.GetBytes(await mIndexBuilder.BuildAsync(manifest, "dev", context.RequestAborted));
+                SetNoCacheHeaders(context.Response);
+                context.Response.ContentType = "application/json";
+                context.Response.ContentLength = bytes.Length;
+                if (!HttpMethods.IsHead(context.Request.Method)) await context.Response.Body.WriteAsync(bytes, context.RequestAborted);
+            } catch (Exception exception) when (exception is InvalidOperationException or IOException or UnauthorizedAccessException) {
+                context.Response.StatusCode = StatusCodes.Status500InternalServerError;
+            }
+            return true;
+        }
+        private async Task<bool> TryServeRepositoryIndexAsync(HttpContext context, PathString remaining) {
+            if (!HttpMethods.IsGet(context.Request.Method) && !HttpMethods.IsHead(context.Request.Method)) return false;
+            if (remaining.Value != "/index.json") return false;
+            try {
+                // generate the repository module catalog on demand
+                var bytes = Encoding.UTF8.GetBytes(await mRepositoryIndexBuilder.BuildAsync(mPhysicalPath, context.RequestAborted));
                 SetNoCacheHeaders(context.Response);
                 context.Response.ContentType = "application/json";
                 context.Response.ContentLength = bytes.Length;

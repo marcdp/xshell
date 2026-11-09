@@ -62,7 +62,7 @@ namespace DProjects.XShell.Services {
             return new ModuleFileCompiler.FileContent { ContentType = "application/javascript", Content = js };
         }
 
-        // methods (private)
+        // private methods
         private static string? ResolveCurrentComponentName(ModuleFileCompilerContext context, XTemplate.JavaScriptSource document) {
             // use the module resource convention to keep page templates independent from component identity
             if (!context.RelativePath.StartsWith("/components/", StringComparison.OrdinalIgnoreCase)) return null;
