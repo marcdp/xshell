@@ -28,7 +28,8 @@
                 "x-identity":           "module:x-identity:latest",
                 "xshell":               "module:xshell:latest",
                 "xshell-diagnostics":   "module:xshell-diagnostics:latest",
-                "xshell-docs":          "module:xshell-docs:latest"
+                "xshell-docs":          "module:xshell-docs:latest",
+                "codemirror":           "module:codemirror:latest"
             }
         }
     },

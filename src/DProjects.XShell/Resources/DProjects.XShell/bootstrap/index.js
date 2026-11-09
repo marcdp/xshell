@@ -2,12 +2,68 @@
 // App entry point
 const meta = name => document.querySelector(`meta[name="${name}"]`)?.content;
 const sources = [...document.querySelectorAll('meta[name="xshell:source"]')].map(element => element.content);
+console.log("bootstrap: init ...");
+
+
+// Spinner
+function showSpinner() {
+    document.addEventListener("DOMContentLoaded", () => {
+        const stylesheet = new CSSStyleSheet();
+        stylesheet.replaceSync(`
+            body {padding:0; margin:0;}
+            .spinner {
+                display:block;width:100%;
+                background:#cccccc;height:.4em;border-radius:.25em;position:absolute;top:50%;left:50%;
+                transform:translate(-50%, -50%);width:12em;visibility:hidden;
+                animation:spinnerShowDiv 0s forwards;animation-delay:200ms;
+            }
+            .spinner div {
+                display:block;animation:spinnerProgressBar 2s ease-in-out;animation-delay:200ms;
+                animation-fill-mode:both;animation-iteration-count:infinite;
+                background:#006CE0;height:.4em;border-radius:.25em;position:absolute;
+            }
+            @keyframes spinnerProgressBar { 0% {left:0;width:0;} 50% {left:0;width:100%;} 100% {left:100%;width:0;} }
+            @keyframes spinnerShowDiv { to {visibility:visible;} }
+        `);
+
+        document.adoptedStyleSheets = [...document.adoptedStyleSheets, stylesheet];
+
+        const div = document.createElement("DIV");
+        div.innerHTML = "<div></div>";
+        div.className = "spinner";
+        document.body.appendChild(div);
+    });
+}
+function hideSpinner() {
+    document.querySelector(".spinner")?.remove();
+}
+function showBootstrapError(error) {
+    const render = () => {
+        hideSpinner();
+        console.error("XShell bootstrap failed:", error);
+        const container = document.createElement("main");
+        const title = document.createElement("h1");
+        const message = document.createElement("pre");
+        title.textContent = "Application failed to start";
+        message.textContent = error?.message || String(error);
+        container.append(title, message);
+        document.body.replaceChildren(container);
+    };
+    if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", render, { once: true });
+    } else {
+        render();
+    }
+}
+showSpinner();
+
 
 // Caches
 const repositories = new Map();
 const indexes = new Map();
 const modules = new Map();
 const tasks = new Map();
+
 
 // Repository indexes
 function getRepositoryUrl(source) {
@@ -106,6 +162,7 @@ function schedule(reference) {
 
 
 // Load repositories and resolve modules
+console.log("bootstrap: loading repositories indexes ...");
 await loadRepositories();
 const app = await schedule(meta("xshell:app.module"));
 const completed = new Set();
@@ -114,10 +171,6 @@ while (completed.size < tasks.size) {
     await Promise.all(batch.map(([, task]) => task));
     batch.forEach(([reference]) => completed.add(reference));
 }
-console.log("Repositories:", repositories);
-console.log("Module indexes:", indexes);
-console.log("Resolved modules:", modules);
-console.log("Application:", app);
 
 
 // Validate module generations
@@ -154,6 +207,7 @@ async function prepareModules() {
         module.assetsUrl = assetsUrl.href;
     }));
 }
+console.log("bootstrap: loading module manifests ...");
 await prepareModules();
 
 
@@ -161,6 +215,7 @@ await prepareModules();
 const appBasePath = (meta("xshell:app.basePath") ?? "").replace(/\/+$/, "");
 const appBaseUrl = new URL(`${appBasePath}/`, document.location.origin).href;
 const assetsBasePath = "/_assets";
+const xshellTempUrl = meta("xshell:xshell.temp.url");
 const environment = meta("xshell:xshell.environment");
 function normalizeUrl(value, module, declaringPath = "/manifest.json") {
     if (typeof value !== "string") return value;
@@ -200,28 +255,53 @@ validateModules();
 
 
 // Merge resolved manifests into one effective configuration
-function mergeManifests() {
-    const config = { modules: {} };
-    const framework = [...modules.values()].find(module => module.name === "xshell");
-    if (!framework) throw new Error("XShell framework module not resolved.");
 
-    config.xshell = structuredClone(framework.manifest.xshell);
+function mergeManifests() {
+    const selected = new Map([...modules.values()].map(module => [module.name, module]));
+    const framework = selected.get("xshell");
+    if (!framework) throw new Error("XShell framework module not resolved.");
+    const order = [framework], visited = new Set(["xshell"]), visiting = [];
+    const visit = module => {
+        if (visited.has(module.name)) return;
+        if (visiting.includes(module.name)) throw new Error(`Circular module dependency: ${[...visiting, module.name].join(" -> ")}`);
+        visiting.push(module.name);
+        for (const name of Object.keys(module.dependencies ?? {})) {
+            const dependency = selected.get(name);
+            if (!dependency) throw new Error(`Unresolved dependency '${name}' of module '${module.name}'.`);
+            visit(dependency);
+        }
+        visiting.pop();
+        visited.add(module.name);
+        order.push(module);
+    };
+    visit(app);
+    const isObject = value => value !== null && typeof value === "object" && !Array.isArray(value);
+    const merge = (target, source) => {
+        for (const [key, value] of Object.entries(source)) {
+            if (Array.isArray(value)) target[key] = Array.isArray(target[key]) ? [...target[key], ...value] : [...value];
+            else if (isObject(value)) target[key] = merge(isObject(target[key]) ? target[key] : {}, value);
+            else target[key] = value;
+        }
+        return target;
+    };
+    const config = order.reduce((result, module) => merge(result, module.manifest), {});
     config.xshell.assets ??= {};
     config.xshell.assets.url = framework.assetsUrl;
-
-    for (const module of modules.values()) {
+    config.xshell.assets.path = framework.assetsPath;
+    config.xshell.configUrl = framework.manifestUrl;
+    for (const module of order) {
         if (module.name === "xshell") continue;
-        const definition = module.manifest.modules?.[module.name];
+        const definition = config.modules?.[module.name];
         if (!definition) throw new Error(`Missing module definition: ${module.name}`);
-
-        config.modules[module.name] = structuredClone(definition);
-        config.modules[module.name].assets ??= {};
-        config.modules[module.name].assets.url = module.assetsUrl;
-        config.modules[module.name].configUrl = module.manifestUrl;
+        definition.assets ??= {};
+        definition.assets.url = module.assetsUrl;
+        definition.assets.path = module.assetsPath;
+        definition.configUrl = module.manifestUrl;
     }
     return config;
 }
-const config = mergeManifests();
+console.log("bootstrap: merging module manifests ...");
+let config = mergeManifests();
 const effectiveRoot = config.modules[app.name];
 if (!effectiveRoot) throw new Error(`Root module '${app.name}' not found.`);
 effectiveRoot.params = Object.fromEntries(new URLSearchParams(meta("xshell:app.params") ?? ""));
@@ -235,16 +315,422 @@ config.app = {
     baseUrl: appBaseUrl,
     params: effectiveRoot.params
 };
-console.log("Effective XShell configuration:", config);
 
 
+// Fill config
+function fillXShell(config) {
+    config.xshell.environment = environment;
+    config.xshell.temp.url ??= new URL(xshellTempUrl, document.baseURI).href;
+    config.xshell.assets.basePath = assetsBasePath;
+    return config;
+}
+function fillXShellResolverRules(config) {
+    const resolver = config.xshell.resolver;
+    const contractDeclarations = new Map();
+    resolver.contract ??= {};
+    const addContractDeclarations = (ownerType, ownerId, assetsPath, files) => {
+        const contractsPath = assetsPath + "/contracts";
+        for (const file of files ?? []) {
+            if (!file.path.startsWith(contractsPath + "/") || !file.path.endsWith(".json")) continue;
+            const id = file.path.substring(contractsPath.length + 1).replace(/\.json$/, "");
+            const first = contractDeclarations.get(id);
+            if (first) throw new Error(`Duplicate contract '${id}' declared by ${first.ownerType} '${first.ownerId}' in '${first.path}' ` + `and ${ownerType} '${ownerId}' in '${file.path}'.`);
+            if (Object.hasOwn(resolver.contract, id)) throw new Error(`Duplicate contract '${id}' conflicts with an existing resolver entry while processing ` + `${ownerType} '${ownerId}' file '${file.path}'.`);
+            contractDeclarations.set(id, { ownerType, ownerId, path: file.path });
+            resolver.contract[id] = {
+                src: `${contractsPath}/${id}.json`,
+                loader: "object-json",
+                cache: true,
+                moduleId: ownerId,
+                modulePath: assetsPath
+            };
+        }
+    };
+    const addSchemaDeclarations = (ownerType, ownerId, assetsPath, files) => {
+        const schemasPath = assetsPath + "/schemas";
+        for (const file of files ?? []) {
+            if (!file.path.startsWith(schemasPath + "/") || !file.path.endsWith(".schema.json")) continue;
+            const id = file.path.substring(schemasPath.length + 1).replace(/\.schema\.json$/, "");
+            const first = contractDeclarations.get(id);
+            if (first) throw new Error(`Duplicate schema '${id}' declared by ${first.ownerType} '${first.ownerId}' in '${first.path}' ` + `and ${ownerType} '${ownerId}' in '${file.path}'.`);
+            if (Object.hasOwn(resolver.schema, id)) throw new Error(`Duplicate schema '${id}' conflicts with an existing resolver entry while processing ` + `${ownerType} '${ownerId}' file '${file.path}'.`);
+            contractDeclarations.set(id, { ownerType, ownerId, path: file.path });
+            resolver.schema[id] = {
+                src: `${schemasPath}/${id}.schema.json`,
+                loader: "schema-json",
+                cache: true,
+                moduleId: ownerId,
+                modulePath: assetsPath
+            };
+        }
+    };
 
-// Locate XShell framework bootstrap               
-//for(const key of modules.keys()) {
-//    const module = modules.get(key);
-//    if (module.name == "xshell") {                        
-//        const manifest = module.manifest;
-//        const manifestUrl = module.manifestUrl;
-//        debugger;
-//    }
-//}
+    if (config.xshell.assets?.path) {
+        const frameworkAssetsPath = config.xshell.assets.path;
+        resolver.esm ??= {};
+        resolver.esm[`${frameworkAssetsPath}/{path}.js`] ??= {
+            src: `${frameworkAssetsPath}/{path}.js`,
+            loader: "esm-js",
+            cache: true,
+            moduleId: "xshell",
+            modulePath: frameworkAssetsPath
+        };
+        addContractDeclarations("XShell", "xshell", frameworkAssetsPath, config.xshell.files);
+        resolver.schema ??= {};
+        addSchemaDeclarations("XShell", "xshell", frameworkAssetsPath, config.xshell.files);
+    }
+
+    for (const [moduleId, module] of Object.entries(config.modules)) {
+        const moduleAssetsPath = module.assets.path;
+        // icon
+        resolver.icon ??= {};
+        resolver.icon[moduleId] ??= {
+            src: `${moduleAssetsPath}/icons/${moduleId}.svg`,
+            loader: "icon-svg",
+            cache: true,
+            moduleId,
+            modulePath: moduleAssetsPath
+        };
+        resolver.icon[`${moduleId}-{name}`] ??= {
+            src: `${moduleAssetsPath}/icons/${moduleId}-{name}.svg`,
+            loader: "icon-svg",
+            cache: true,
+            moduleId,
+            modulePath: moduleAssetsPath
+        };
+        resolver.icon[`${moduleId}:${moduleId}-{name}`] ??= {
+            src: `${moduleAssetsPath}/icons/${moduleId}-{name}.svg`,
+            loader: "icon-svg",
+            cache: true,
+            moduleId,
+            modulePath: moduleAssetsPath
+        };
+
+        // layout
+        resolver.layout ??= {};
+        resolver.layout[`${moduleId}-layout-{name}`] ??= {
+            src: `${moduleAssetsPath}/layouts/${moduleId}-layout-{name}.js`,
+            loader: "component-js",
+            cache: true,
+            moduleId,
+            modulePath: moduleAssetsPath
+        };
+        resolver.layout[`${moduleId}:${moduleId}-layout-{name}`] ??= {
+            src: `${moduleAssetsPath}/layouts/${moduleId}-layout-{name}.js`,
+            loader: "component-js",
+            cache: true,
+            moduleId,
+            modulePath: moduleAssetsPath
+        };
+
+        // component
+        resolver.component ??= {};
+        resolver.component[`${moduleId}-{name}`] ??= {
+            src: `${moduleAssetsPath}/components/${moduleId}-{name}.js`,
+            loader: "component-js",
+            cache: true,
+            moduleId,
+            modulePath: moduleAssetsPath
+        };        
+        resolver.component[`${moduleId}`] ??= {
+            src: `${moduleAssetsPath}/components/${moduleId}.js`,
+            loader: "component-js",
+            cache: true,
+            moduleId,
+            modulePath: moduleAssetsPath
+        };        
+        resolver.component[`${moduleId}:${moduleId}-{name}`] ??= {
+            src: `${moduleAssetsPath}/components/${moduleId}-{name}.js`,
+            loader: "component-js",
+            cache: true,
+            moduleId,
+            modulePath: moduleAssetsPath
+        };        
+
+        // page
+        resolver.page ??= {};
+        resolver.page[`${moduleAssetsPath}/{path}.js`] ??= {
+            src: `${moduleAssetsPath}/{path}.js`,
+            loader: "page-js",
+            cache: true,
+            cacheMode: "path",
+            moduleId,
+            modulePath: moduleAssetsPath
+        };
+        resolver.page[`${moduleId}:/{path}.js`] ??= {
+            src: `${moduleAssetsPath}/{path}.js`,
+            loader: "page-js",
+            cache: true,
+            cacheMode: "path",
+            moduleId,
+            modulePath: moduleAssetsPath
+        };
+        resolver.page[`${moduleAssetsPath}/{path}.html`] ??= {
+            src: `${moduleAssetsPath}/{path}.js`,
+            loader: "page-js",
+            cache: true,
+            cacheMode: "path",
+            moduleId,
+            modulePath: moduleAssetsPath
+        };
+        resolver.page[`${moduleId}:/{path}.html`] ??= {
+            src: `${moduleAssetsPath}/{path}.js`,
+            loader: "page-js",
+            cache: true,
+            cacheMode: "path",
+            moduleId,
+            modulePath: moduleAssetsPath
+        };
+        resolver.page[`${moduleAssetsPath}/{path}.md`] ??= {
+            src: `${moduleAssetsPath}/{path}.md`,
+            loader: "page-md",
+            cache: true,
+            cacheMode: "path",
+            moduleId,
+            modulePath: moduleAssetsPath
+        };
+        resolver.page[`${moduleId}:/{path}.md`] ??= {
+            src: `${moduleAssetsPath}/{path}.md`,
+            loader: "page-md",
+            cache: true,
+            cacheMode: "path",
+            moduleId,
+            modulePath: moduleAssetsPath
+        };
+
+        // ES module
+        resolver.esm ??= {};
+        resolver.esm[`${moduleId}-{name}`] ??= {
+            src: `${moduleAssetsPath}/${moduleId}-{name}.js`,
+            loader: "esm-js",
+            cache: true,
+            moduleId,
+            modulePath: moduleAssetsPath
+        };
+        resolver.esm[`${moduleId}:${moduleId}-{name}`] ??= {
+            src: `${moduleAssetsPath}/${moduleId}-{name}.js`,
+            loader: "esm-js",
+            cache: true,
+            moduleId,
+            modulePath: moduleAssetsPath
+        };
+        resolver.esm[`${moduleAssetsPath}/{path}.js`] ??= {
+            src: `${moduleAssetsPath}/{path}.js`,
+            loader: "esm-js",
+            cache: true,
+            moduleId,
+            modulePath: moduleAssetsPath
+        };
+        resolver.esm[`${moduleId}:/{path}.js`] ??= {
+            src: `${moduleAssetsPath}/{path}.js`,
+            loader: "esm-js",
+            cache: true,
+            moduleId,
+            modulePath: moduleAssetsPath
+        };
+
+        // style
+        resolver.style ??= {};
+        resolver.style[`${moduleAssetsPath}/{path}.css`] ??= {
+            src: `${moduleAssetsPath}/{path}.css`,
+            loader: "style-css",
+            cache: true,
+            moduleId,
+            modulePath: moduleAssetsPath
+        };
+        resolver.style[`${moduleId}:/{path}.css`] ??= {
+            src: `${moduleAssetsPath}/{path}.css`,
+            loader: "style-css",
+            cache: true,
+            moduleId,
+            modulePath: moduleAssetsPath
+        };
+
+        // string
+        resolver.string ??= {};
+        resolver.string[`${moduleAssetsPath}/{path}`] ??= {
+            src: `${moduleAssetsPath}/{path}`,
+            loader: "string-any",
+            cache: false,
+            moduleId,
+            modulePath: moduleAssetsPath
+        };
+        resolver.string[`${moduleId}:/{path}`] ??= {
+            src: `${moduleAssetsPath}/{path}`,
+            loader: "string-any",
+            cache: false,
+            moduleId,
+            modulePath: moduleAssetsPath
+        };
+
+        // object
+        resolver.object ??= {};
+        resolver.object[`${moduleAssetsPath}/{path}`] ??= {
+            src: `${moduleAssetsPath}/{path}`,
+            loader: "object-json",
+            cache: false,
+            moduleId,
+            modulePath: moduleAssetsPath
+        };
+        resolver.object[`${moduleId}:/{path}`] ??= {
+            src: `${moduleAssetsPath}/{path}`,
+            loader: "object-json",
+            cache: false,
+            moduleId,
+            modulePath: moduleAssetsPath
+        };
+
+        // bytes
+        resolver.bytes ??= {};
+        resolver.bytes[`${moduleAssetsPath}/{path}`] ??= {
+            src: `${moduleAssetsPath}/{path}`,
+            loader: "bytes-any",
+            cache: false,
+            moduleId,
+            modulePath: moduleAssetsPath
+        };
+        resolver.bytes[`${moduleId}:/{path}`] ??= {
+            src: `${moduleAssetsPath}/{path}`,
+            loader: "bytes-any",
+            cache: false,
+            moduleId,
+            modulePath: moduleAssetsPath
+        };
+
+        // datasets
+        resolver.dataset ??= {};
+        resolver.dataset[`${moduleAssetsPath}/{path}`] ??= {
+            src: `${moduleAssetsPath}/{path}`,
+            loader: "dataset-url",
+            cache: false,
+            moduleId,
+            modulePath: moduleAssetsPath
+        };
+        resolver.dataset[`${moduleId}:{name}`] ??= {
+            src: `${moduleAssetsPath}/datasets/{name}.json`,
+            loader: "dataset-url",
+            cache: false,
+            moduleId,
+            modulePath: moduleAssetsPath
+        };
+        resolver.dataset[`${moduleId}:/{path}`] ??= {
+            src: `${moduleAssetsPath}/{path}`,
+            loader: "dataset-url",
+            cache: false,
+            moduleId,
+            modulePath: moduleAssetsPath
+        };
+
+        // schemas
+        resolver.schema ??= {}; 
+        resolver.schema[`${moduleId}:{name}`] ??= {
+            src: `${moduleAssetsPath}/schemas/{name}.schema.json`,
+            loader: "schema-json",
+            cache: true,
+            moduleId,
+            modulePath: moduleAssetsPath
+        };
+        resolver.schema[`${moduleId}:/{path}`] ??= {
+            src: `${moduleAssetsPath}/{path}`,
+            loader: "schema-json",
+            cache: true,
+            moduleId,
+            modulePath: moduleAssetsPath
+        };
+        addSchemaDeclarations("module", moduleId, moduleAssetsPath, module.files);
+
+        // contracts
+        const moduleAssetsPathContracts = moduleAssetsPath + "/contracts";
+        resolver.contract[`${moduleId}:{name}`] ??= {
+            src: `${moduleAssetsPathContracts}/{name}.json`,
+            loader: "object-json",
+            cache: true,
+            moduleId,
+            modulePath: moduleAssetsPath
+        };
+        addContractDeclarations("module", moduleId, moduleAssetsPath, module.files);
+    }
+
+    return config;
+}
+config = fillXShell(config)
+config = fillXShellResolverRules(config)
+
+
+// Install service worker
+async function installServiceWorker(config) {
+    console.log("bootstrap: service worker: installing ...");
+    // generate the mappings requested by this effective application generation after all asset locations are finalized
+    config.xshell.serviceWorker ??= {};
+    config.xshell.serviceWorker.mappings = [{
+        src: new URL(config.xshell.assets.path.substring(1), appBaseUrl).href,
+        dst: config.xshell.assets.url,
+        version: config.xshell.version,
+        name: "xshell",
+        exceptions: [config.xshell.configUrl]
+    }, ...Object.entries(config.modules).map(([moduleId, module]) => ({
+        src: new URL(module.assets.path.substring(1), appBaseUrl).href,
+        dst: module.assets.url,
+        version: module.version,
+        name: moduleId,
+        exceptions: [module.configUrl]
+    }))];
+    // register service worker with the generated mappings
+    const reg = await navigator.serviceWorker.register(appBasePath + "/sw.js", {
+        scope: appBasePath + "/"
+    });
+    console.log("bootstrap: service worker: rules: ", config.xshell.serviceWorker.mappings);
+    // wait for ready
+    console.log("bootstrap: service worker: waiting for ready ...");
+    await navigator.serviceWorker.ready;
+    if (!navigator.serviceWorker.controller) {
+        console.log("bootstrap: page is not controlled ... forcing reload");
+        location.reload();
+        return false;
+    }
+    // register mappings with the service worker
+    console.log("bootstrap: service worker: registering mappings ...");
+    await new Promise((resolve, reject) => {
+        const channel = new MessageChannel();
+        channel.port1.onmessage = event => {
+            clearTimeout(timeoutId);
+            channel.port1.close();
+            if (event.data?.type === "registered") {
+                resolve();
+            } else if (event.data?.type === "error") {
+                debugger;
+                reject(new Error(event.data.message || "Service Worker mapping registration failed."));
+            } else {
+                reject(new Error(`Unexpected Service Worker mapping registration response: '${event.data?.type}'.`));
+            }
+        };
+        const timeoutId = setTimeout(() => {
+            reject(new Error("Service Worker did not reply in time"));
+            channel.port1.close();
+        }, 5000);
+        reg.active.postMessage({ type: "registerMappings", payload: { rules: config.xshell.serviceWorker.mappings } }, [channel.port2]);
+    });
+    console.log("bootstrap: service worker: ready");
+    return true;
+}
+await installServiceWorker(config)
+
+
+// import and start xshell
+function getXShellUrl(config) {
+    const src = config.xshell?.resolver?.esm?.xshell?.src;
+    if (typeof src !== "string" || !src.trim()) throw new Error("Missing XShell entry point: resolver.esm.xshell.src");
+    return new URL(src.startsWith("/") ? src.substring(1) : src, appBaseUrl).href;
+}
+function deepFreeze(obj){
+    if(obj===null||typeof obj!=="object") return obj;Object.freeze(obj);
+    for(const value of Object.values(obj)) deepFreeze(value);
+    return obj;
+}
+const xshellUrl = getXShellUrl(config);
+console.log("bootstrap: xshell: import  from ... ", xshellUrl);
+const xshellModule = await import(xshellUrl);
+const xshell = xshellModule.default;
+console.log("bootstrap: xshell: init", config);
+await xshell.init(deepFreeze(config));
+hideSpinner();

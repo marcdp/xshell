@@ -37,9 +37,6 @@
                         {"label": "About", "href": "/pages/about.js"}
                     ] }
                 ]
-            },
-            "dependencies": {
-                "codemirror": "module:codemirror:latest"
             }
         }
     },
