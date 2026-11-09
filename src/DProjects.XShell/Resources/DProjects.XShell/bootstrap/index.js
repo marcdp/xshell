@@ -11,7 +11,7 @@ const tasks = new Map();
 
 // Repository indexes
 function getRepositoryUrl(source) {
-    const suffix = "{module}/index.json";
+    const suffix = "index.json";
     if (!source.endsWith(suffix)) throw new Error(`Invalid repository source: ${source}`);
     return new URL(source.slice(0, -suffix.length) + "index.json", document.baseURI).href;
 }

@@ -6,61 +6,37 @@ namespace DProjects.XShell.Services {
     internal sealed class BootstrapFilesBuilder {
 
         // methods
-        internal Dictionary<string, string> Build(Extensions.Configuration config, string environment) {
+        internal Dictionary<string, string> Build(Extensions.Configuration config, string environment, string bootstrapPath) {
             var result = new Dictionary<string, string>();
 
-            // prepare params
-            var appParams = string.Join("&", config.App.Params.Select(kv => Uri.EscapeDataString(kv.Key) + "=" + Uri.EscapeDataString(kv.Value)));
-            var moduleSources = config.Sources.Select(s => $"<meta name=\"xshell:source\" content=\"{EncodeAttribute(s)}\">").ToArray();
-            var moduleSourcesJavascriptArray = string.Join(",\n", config.Sources.Select(s => $"\"{EncodeAttribute(s)}\""));
-
-            // index
-            result["/index.html"] = $"""
-                <!DOCTYPE html>
-                <html lang="en">
-                <head>
-
-                    <!-- html -->
-                    <meta charset="utf-8">
-                    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                    <meta name="description" content="{EncodeAttribute(config.App.Description)}">
-                    <meta http-equiv="Content-Security-Policy" content="{EncodeAttribute(config.Server.ContentSecurityPolicy)}">
-
-                    <!-- XShell application -->
-                    <meta name="xshell:app.basePath"       content="{EncodeAttribute(config.App.BasePath)}">
-                    <meta name="xshell:app.module"         content="{EncodeAttribute(config.App.Module)}">
-                    <meta name="xshell:app.params"         content="{EncodeAttribute(appParams)}">
-
-                    <!-- XShell environment -->
-                    <meta name="xshell:xshell.environment" content="{EncodeAttribute(environment)}">
-                    <meta name="xshell:xshell.temp.url"    content="{EncodeAttribute(config.Temp.BasePath)}">
-
-                    <!-- XShell module package sources -->
-                    {string.Join("\n", moduleSources)}
-                        
-                    <!-- index -->
-                    <script type="module" src="{EncodeAttribute(config.App.BasePath + "/index.js")}" ></script>
-
-                </head>
-                <body>
-                </body>
-                </html>
-                """;
-
-            // sw.js
-            result["/sw.js"] = $$"""
-                // Service Worker entry point
-                const sources = [{{moduleSourcesJavascriptArray}}];
-                // importScripts({JsonSerializer.Serialize(xshellBaseUrl + "/sw.js")}); 
-                """;
-
+            // scan bootstrap path for files
+            foreach(var file in Directory.EnumerateFiles(bootstrapPath, "*", SearchOption.AllDirectories)) {
+                var relativePath = "/" + Path.GetRelativePath(bootstrapPath, file).Replace("\\", "/");
+                var content = File.ReadAllText(file);
+                if (relativePath.Equals("/index.html")) {
+                    content = ReplacePlaceHolders(content, config, environment);
+                }
+                result[relativePath] = content;
+            }
 
             // return
             return result;
         }
 
-        // private methods
-        private static string EncodeAttribute(string value) {
+        // private methods        
+        private string ReplacePlaceHolders(string content, Extensions.Configuration config, string environment) {
+            content = content.Replace("{config.App.Description}", EncodeAttribute(config.App.Description));
+            content = content.Replace("{config.Server.ContentSecurityPolicy}", EncodeAttribute(config.Server.ContentSecurityPolicy));
+            content = content.Replace("{config.App.BasePath}", EncodeAttribute(config.App.BasePath));
+            content = content.Replace("{config.App.Module}", EncodeAttribute(config.App.Module));
+            content = content.Replace("{config.App.Params}", string.Join("&", config.App.Params.Select(kv => Uri.EscapeDataString(kv.Key) + "=" + Uri.EscapeDataString(kv.Value))));
+            content = content.Replace("{environment}", EncodeAttribute(environment));
+            content = content.Replace("{config.Temp.BasePath}", EncodeAttribute(config.Temp.BasePath));
+            content = content.Replace("{config.Sources}", string.Join("\n", config.Sources.Select(s => $"<meta name=\"xshell:source\" content=\"{EncodeAttribute(s)}\">")));
+
+            return content;
+        }
+        private string EncodeAttribute(string value) {
             return WebUtility.HtmlEncode(value);
         }
     }

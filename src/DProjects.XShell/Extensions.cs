@@ -105,7 +105,8 @@ namespace DProjects.XShell {
             app.UseRouting();
 
             // bootstrap files /
-            var bootstrapFiles = (new Services.BootstrapFilesBuilder()).Build(config, environment);
+            var bootstrapPath = System.IO.Path.Combine(resourcePath, "bootstrap");
+            var bootstrapFiles = (new Services.BootstrapFilesBuilder()).Build(config, environment, bootstrapPath);
 
             // SPA fallback
             app.Use(async (context, next) => {

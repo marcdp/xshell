@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+
+    <!-- html -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="{config.App.Description}">
+    <meta http-equiv="Content-Security-Policy" content="{config.Server.ContentSecurityPolicy}">
+    <link rel="icon" href="{config.App.BasePath}/favicon.svg" type="image/svg+xml">
+
+    <!-- XShell application -->
+    <meta name="xshell:app.basePath"       content="{config.App.BasePath}">
+    <meta name="xshell:app.module"         content="{config.App.Module}">
+    <meta name="xshell:app.params"         content="{config.App.Params}">
+
+    <!-- XShell environment -->
+    <meta name="xshell:xshell.environment" content="{environment}">
+    <meta name="xshell:xshell.temp.url"    content="{config.Temp.BasePath}">
+
+    <!-- XShell module sources -->
+    {config.Sources}
+        
+    <!-- index -->
+    <script type="module" src="{config.App.BasePath}/index.js" ></script>
+
+</head>
+<body>
+</body>
+</html>
