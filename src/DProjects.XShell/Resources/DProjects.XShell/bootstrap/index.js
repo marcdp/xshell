@@ -15,7 +15,6 @@ function getRepositoryUrl(source) {
     if (!source.endsWith(suffix)) throw new Error(`Invalid repository source: ${source}`);
     return new URL(source.slice(0, -suffix.length) + "index.json", document.baseURI).href;
 }
-
 async function fetchIndex(url) {
     if (!indexes.has(url)) indexes.set(url, (async () => {
         const response = await fetch(url);
@@ -24,7 +23,6 @@ async function fetchIndex(url) {
     })());
     return indexes.get(url);
 }
-
 async function loadRepositories() {
     const results = await Promise.allSettled(sources.map(async source => {
         const url = getRepositoryUrl(source);
@@ -42,27 +40,22 @@ async function loadRepositories() {
 // Version selection
 const stableVersion = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/;
 const parts = version => version.split(".").map(BigInt);
-
 function compareVersions(a, b) {
     const x = parts(a), y = parts(b);
     for (let i = 0; i < 3; i++) if (x[i] !== y[i]) return x[i] > y[i] ? 1 : -1;
     return 0;
 }
-
 function matches(version, requirement) {
     if (!stableVersion.test(version)) return false;
     if (requirement === "latest") return true;
     if (stableVersion.test(requirement)) return version === requirement;
-
     const operator = requirement[0], base = requirement.slice(1);
     if (!["^", "~"].includes(operator) || !stableVersion.test(base)) throw new Error(`Invalid version requirement: ${requirement}`);
-
     const v = parts(version), b = parts(base);
     if (compareVersions(version, base) < 0) return false;
     if (operator === "~") return v[0] === b[0] && v[1] === b[1];
     return b[0] > 0n ? v[0] === b[0] : b[1] > 0n ? v[0] === 0n && v[1] === b[1] : v[0] === 0n && v[1] === 0n && v[2] === b[2];
 }
-
 function selectVersion(index, requirement) {
     return Object.keys(index.versions ?? {}).filter(version => matches(version, requirement)).sort((a, b) => compareVersions(b, a))[0];
 }
@@ -72,11 +65,9 @@ async function loadModule(reference) {
     const match = /^module:([a-z][a-z0-9]*(?:-[a-z0-9]+)*):(.+)$/.exec(reference ?? "");
     if (!match) throw new Error(`Invalid module reference: ${reference}`);
     const [, name, requirement] = match;
-
     for (const [sourceIndex, repository] of repositories) {
         const descriptor = repository.index.modules[name];
         if (!descriptor?.url) continue;
-
         const indexUrl = new URL(descriptor.url, repository.url).href;
         let index;
         try {
@@ -86,7 +77,6 @@ async function loadModule(reference) {
             continue;
         }
         if (index.module !== name) continue;
-
         const version = selectVersion(index, requirement);
         if (!version) continue;
 
@@ -99,7 +89,7 @@ async function loadModule(reference) {
         const manifestUrl = new URL(entry.url, indexUrl);
         if (!["http:", "https:"].includes(manifestUrl.protocol) || !manifestUrl.pathname.endsWith("/manifest.json") || manifestUrl.search || manifestUrl.hash) throw new Error(`Invalid manifest URL: ${entry.url}`);
 
-        const module = { name, version, sourceIndex, dependencies: entry.dependencies ?? {}, manifestUrl: manifestUrl.href, baseUrl: new URL(".", manifestUrl).href };
+        const module = { name, hash: entry.hash, version, sourceIndex, dependencies: entry.dependencies ?? {}, manifestUrl: manifestUrl.href, baseUrl: new URL(".", manifestUrl).href };
         modules.set(key, module);
 
         for (const dependency of Object.values(module.dependencies)) schedule(dependency);
@@ -168,36 +158,45 @@ await prepareModules();
 
 
 // Normalize manifest URLs before merging
-const appBasePath = meta("xshell:app.basePath") ?? "";
-const appBaseUrl = new URL(appBasePath.replace(/\/?$/, "/"), document.location.origin).href;
+const appBasePath = (meta("xshell:app.basePath") ?? "").replace(/\/+$/, "");
+const appBaseUrl = new URL(`${appBasePath}/`, document.location.origin).href;
 const assetsBasePath = "/_assets";
-
+const environment = meta("xshell:xshell.environment");
 function normalizeUrl(value, module, declaringPath = "/manifest.json") {
     if (typeof value !== "string") return value;
-    if (value.startsWith("app:")) return new URL(value.slice(4).replace(/^\/+/, ""), appBaseUrl).href;
-    if (value.startsWith("url:")) return new URL(value.slice(4), module.manifestUrl).href;
+    const restoreBraces = url => url.replace(/%7B/gi, "{").replace(/%7D/gi, "}");
+    if (value.startsWith("app:")) {
+        const root = new URL(appBaseUrl);
+        const url = new URL(value.slice(4).trim().replace(/^\/+/, ""), root);
+        if (url.origin !== root.origin || !url.pathname.startsWith(root.pathname)) throw new Error(`Application URL escapes app root: ${value}`);
+        return restoreBraces(url.href);
+    }
+    if (value.startsWith("url:")) return restoreBraces(new URL(value.slice(4).trim(), module.manifestUrl).href);
     if (/^[a-z][a-z0-9+.-]*:/i.test(value)) return value;
     if (!value.startsWith("/") && !value.startsWith("./") && !value.startsWith("../")) return value;
-
     const root = new URL(`.${module.assetsPath}/`, appBaseUrl);
     const url = value.startsWith("/") ? new URL(value.slice(1), root) : new URL(value, new URL(declaringPath.replace(/^\/+/, ""), root));
-    if (!url.href.startsWith(root.href)) throw new Error(`Module URL escapes asset root: ${value}`);
-    return url.href;
+    if (url.origin !== root.origin || !url.pathname.startsWith(root.pathname)) throw new Error(`Module URL escapes asset root: ${value}`);
+    return restoreBraces(url.pathname.slice(new URL(appBaseUrl).pathname.length - 1) + url.search + url.hash);
 }
-
 function normalizeManifest(value, module, declaringPath = "/manifest.json") {
     if (Array.isArray(value)) return value.map(item => normalizeManifest(item, module, declaringPath));
     if (value && typeof value === "object") return Object.fromEntries(Object.entries(value).map(([key, item]) => [key, normalizeManifest(item, module, declaringPath)]));
     return normalizeUrl(value, module, declaringPath);
 }
-
 for (const module of modules.values()) {
-    module.assetsPath = `${assetsBasePath}/${module.name}/${module.version}.dev`;
-    module.manifest = normalizeManifest(module.manifest, module);
     const definition = module.name === "xshell" ? module.manifest.xshell : module.manifest.modules[module.name];
-    definition.assets ??= {};
-    definition.assets.url = module.assetsUrl;
+    if (Object.hasOwn(definition.assets ?? {}, "path")) throw new Error(`Module '${module.name}' must not define generated assets.path.`);
+    const generation = environment?.toLowerCase() === "development" ? `${module.version}.dev` : `${module.version}.${module.hash}`;
+    if (environment?.toLowerCase() !== "development" && !module.hash) throw new Error(`Missing package hash: ${module.name}@${module.version}`);
+    module.assetsPath = `${assetsBasePath}/${module.name}/${generation}`;
+    module.manifest = normalizeManifest(module.manifest, module);
+    const normalizedDefinition = module.name === "xshell" ? module.manifest.xshell : module.manifest.modules[module.name];
+    normalizedDefinition.assets ??= {};
+    normalizedDefinition.assets.url = module.assetsUrl;
+    normalizedDefinition.assets.path = module.assetsPath;
 }
+validateModules();
 
 
 // Merge resolved manifests into one effective configuration
@@ -220,12 +219,22 @@ function mergeManifests() {
         config.modules[module.name].assets.url = module.assetsUrl;
         config.modules[module.name].configUrl = module.manifestUrl;
     }
-
     return config;
 }
-
-validateModules();
 const config = mergeManifests();
+const effectiveRoot = config.modules[app.name];
+if (!effectiveRoot) throw new Error(`Root module '${app.name}' not found.`);
+effectiveRoot.params = Object.fromEntries(new URLSearchParams(meta("xshell:app.params") ?? ""));
+config.app = {
+    id: app.name,
+    label: effectiveRoot.label ?? "",
+    version: effectiveRoot.version,
+    copyright: effectiveRoot.copyright ?? "",
+    icon: effectiveRoot.icon ?? "",
+    basePath: appBasePath,
+    baseUrl: appBaseUrl,
+    params: effectiveRoot.params
+};
 console.log("Effective XShell configuration:", config);
 
 
