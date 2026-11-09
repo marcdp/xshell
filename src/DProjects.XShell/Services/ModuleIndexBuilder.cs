@@ -28,7 +28,7 @@ namespace DProjects.XShell.Services {
                 ["versions"] = new JsonObject {
                     [info.Version] = new JsonObject {
                         ["hash"] = hash,
-                        ["path"] = $"{info.Version}.{hash}/",
+                        ["url"] = $"{info.Version}.{hash}/manifest.json",
                         ["dependencies"] = JsonSerializer.SerializeToNode(info.Dependencies)
                     }
                 }

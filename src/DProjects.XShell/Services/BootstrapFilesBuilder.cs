@@ -66,30 +66,21 @@ namespace DProjects.XShell.Services {
                     }
                     return 0;
                 };
-                function resolvePackageBaseUrl(path, indexUrl) {
-                    // validate the package-relative directory supplied by the repository index
-                    if (typeof path !== "string" || !path.endsWith("/") || path.startsWith("/") || path.includes("\\") || /[?#]/.test(path)) {
-                        throw new Error("Module index entry path must be a relative directory path ending in '/'.");
+                function resolveManifestUrl(url, indexUrl) {
+                    // accept a relative URL or an absolute HTTP(S) URL to the concrete manifest
+                    if (typeof url !== "string" || !url) throw new Error("Module index entry url must reference manifest.json.");
+                    if (/^[A-Za-z][A-Za-z0-9+.-]*:/.test(url) && !/^https?:/i.test(url)) {
+                        throw new Error("Module index entry url must use HTTP(S).");
                     }
-                    for (const segment of path.split("/")) {
-                        let decoded;
-                        try {
-                            decoded = decodeURIComponent(segment);
-                        } catch {
-                            throw new Error("Module index entry path contains invalid percent-encoding.");
-                        }
-                        if (decoded === "." || decoded === ".." || decoded.includes("/") || decoded.includes("\\")) {
-                            throw new Error("Module index entry path must not contain traversal.");
-                        }
+                    let manifestUrl;
+                    try {
+                        manifestUrl = new URL(url, indexUrl);
+                    } catch {
+                        throw new Error("Module index entry url is malformed.");
                     }
-
-                    // ensure URL resolution remains within the originating repository index directory
-                    const indexDirectoryUrl = new URL("./", indexUrl);
-                    const baseUrl = new URL(path, indexUrl);
-                    if (baseUrl.origin !== indexDirectoryUrl.origin || !baseUrl.href.startsWith(indexDirectoryUrl.href)) {
-                        throw new Error("Module index entry path must resolve within the index directory.");
-                    }
-                    return baseUrl.href;
+                    if (manifestUrl.search || manifestUrl.hash) throw new Error("Module index entry url must not contain a query string or fragment.");
+                    if (!manifestUrl.pathname.endsWith("/manifest.json")) throw new Error("Module index entry url must reference manifest.json.");
+                    return manifestUrl.href;
                 }
                 async function resolve(reference) {
                     const match = /^module:([a-z][a-z0-9]*(?:-[a-z0-9]+)*):(.+)$/.exec(reference ?? "");
@@ -112,12 +103,14 @@ namespace DProjects.XShell.Services {
                                 ? Object.keys(index.versions ?? {}).filter(value => stableVersion.test(value) && index.versions[value]?.hash).sort(compareVersions)[0]
                                 : requestedVersion;
                             const entry = version && index.versions?.[version];
-                            if (!entry?.hash || !entry?.path) continue;
+                            if (!entry?.hash || !entry?.url) continue;
+                            const manifestUrl = resolveManifestUrl(entry.url, indexUrl);
 
                             return {
                                 name, version, hash: entry.hash, sourceIndex,
                                 dependencies: entry.dependencies ?? {},
-                                baseUrl: resolvePackageBaseUrl(entry.path, indexUrl)
+                                manifestUrl,
+                                baseUrl: new URL(".", manifestUrl).href
                             };
                         } catch (error) {
                             console.warn(`Source unavailable: ${source}`, error);

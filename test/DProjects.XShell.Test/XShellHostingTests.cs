@@ -162,6 +162,7 @@ namespace DProjects.XShell.Test {
             using var descriptor = JsonDocument.Parse(await index.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
             Assert.Equal("xshell", descriptor.RootElement.GetProperty("module").GetString());
             Assert.Equal("dev", descriptor.RootElement.GetProperty("versions").GetProperty("0.9.0").GetProperty("hash").GetString());
+            Assert.Equal("0.9.0.dev/manifest.json", descriptor.RootElement.GetProperty("versions").GetProperty("0.9.0").GetProperty("url").GetString());
             using var resource = await host.Client.GetAsync(appBasePath + "/_resources/DProjects.XShell/xshell/0.9.0.dev/bootstrap.js", TestContext.Current.CancellationToken);
             Assert.Equal(HttpStatusCode.OK, resource.StatusCode);
         }
