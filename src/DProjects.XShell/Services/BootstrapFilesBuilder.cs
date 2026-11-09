@@ -100,14 +100,14 @@ namespace DProjects.XShell.Services {
                             if (index.module !== name) continue;
 
                             const version = requestedVersion === "*"
-                                ? Object.keys(index.versions ?? {}).filter(value => stableVersion.test(value) && index.versions[value]?.hash).sort(compareVersions)[0]
+                                ? Object.keys(index.versions ?? {}).filter(value => stableVersion.test(value) && index.versions[value]?.url).sort(compareVersions)[0]
                                 : requestedVersion;
                             const entry = version && index.versions?.[version];
-                            if (!entry?.hash || !entry?.url) continue;
+                            if (!entry?.url) continue;
                             const manifestUrl = resolveManifestUrl(entry.url, indexUrl);
 
                             return {
-                                name, version, hash: entry.hash, sourceIndex,
+                                name, version, sourceIndex,
                                 dependencies: entry.dependencies ?? {},
                                 manifestUrl,
                                 baseUrl: new URL(".", manifestUrl).href

@@ -30,11 +30,12 @@ Explicit `--source` values keep their order and spelling.
 The generated `index.html` includes the application module, base path, parameters, environment, Temp URL, and one `xshell:source` meta tag
 per source. It loads `<App.BasePath>/index.js`. That small ESM entry point locates the root module, reads its direct `xshell` dependency,
 and dynamically imports the selected framework's `bootstrap.js`. It accepts an exact `major.minor.patch` version or `*` in these initial
-module references. For `*`, it chooses the highest stable semantic version with a hash in the first suitable source. Other version
+module references. For `*`, it chooses the highest stable semantic version with a manifest URL in the first suitable source. Other version
 expressions are not supported by this initial locator. The browser framework handles further module dependency resolution.
 
 In Development, a module's `index.json` is generated from its local `manifest.json` or `manifest.jsonc` on GET and HEAD. The index contains
-the authored version, hash `dev`, a relative manifest `url` of `<version>.dev/manifest.json`, and direct dependencies. A URL of the form
+the authored version, a relative manifest `url` of `<version>.dev/manifest.json`, and direct dependencies. The manifest URL is the sole
+public identifier of the selected module generation. A URL of the form
 `<App.BasePath>/_resources/DProjects.XShell/<module>/<version>.dev/<resource>` maps to the same physical file as the unversioned URL,
 provided the version matches the local manifest. The normal descriptor, compiler, and static-file handlers serve the mapped resource.
 Published indexes may instead use an absolute HTTP(S) manifest `url`; module package files are then resolved relative to that manifest.

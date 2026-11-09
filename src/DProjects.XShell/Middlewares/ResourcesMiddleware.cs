@@ -288,7 +288,7 @@ namespace DProjects.XShell.Middlewares {
                     context.Response.StatusCode = StatusCodes.Status404NotFound;
                     return true;
                 }
-                var bytes = Encoding.UTF8.GetBytes(await mIndexBuilder.BuildAsync(manifest, "dev", context.RequestAborted));
+                var bytes = Encoding.UTF8.GetBytes(await mIndexBuilder.BuildAsync(manifest, context.RequestAborted));
                 SetNoCacheHeaders(context.Response);
                 context.Response.ContentType = "application/json";
                 context.Response.ContentLength = bytes.Length;

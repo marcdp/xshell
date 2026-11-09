@@ -41,38 +41,38 @@ namespace DProjects.XShell.Test {
         }
         [Fact]
         public async Task GeneratedIndex_ResolvesExactXShellVersion() {
-            using var result = await RunGeneratedIndexAsync("module:xshell:0.9.0", """{"0.9.0":{"hash":"old","url":"published-old/manifest.json"},"0.9.10":{"hash":"new","url":"published-new/manifest.json"}}""");
+            using var result = await RunGeneratedIndexAsync("module:xshell:0.9.0", """{"0.9.0":{"url":"published-old/manifest.json"},"0.9.10":{"url":"published-new/manifest.json"}}""");
             Assert.True(result.RootElement.GetProperty("ok").GetBoolean());
             var xshell = result.RootElement.GetProperty("started").GetProperty("xshell");
             Assert.Equal("0.9.0", xshell.GetProperty("version").GetString());
-            Assert.Equal("old", xshell.GetProperty("hash").GetString());
+            Assert.False(xshell.TryGetProperty("hash", out _));
             Assert.Equal(0, xshell.GetProperty("sourceIndex").GetInt32());
             Assert.Contains("/first/xshell/published-old/", xshell.GetProperty("baseUrl").GetString());
             Assert.Contains("/first/xshell/published-old/manifest.json", xshell.GetProperty("manifestUrl").GetString());
         }
         [Fact]
         public async Task GeneratedIndex_WildcardUsesNumericStableVersionFromFirstSuitableSource() {
-            using var result = await RunGeneratedIndexAsync("module:xshell:*", """{"0.9.9":{"hash":"nine","url":"nine/manifest.json"},"0.9.10":{"hash":"ten","url":"ten/manifest.json","dependencies":{"x":"module:x:*"}},"0.9.11-rc.1":{"hash":"preview","url":"preview/manifest.json"},"bad":{"hash":"malformed","url":"malformed/manifest.json"}}""",
-                """{"9.0.0":{"hash":"later-source","url":"later/manifest.json"}}""");
+            using var result = await RunGeneratedIndexAsync("module:xshell:*", """{"0.9.9":{"url":"nine/manifest.json"},"0.9.10":{"url":"ten/manifest.json","dependencies":{"x":"module:x:*"}},"0.9.11-rc.1":{"url":"preview/manifest.json"},"bad":{"url":"malformed/manifest.json"}}""",
+                """{"9.0.0":{"url":"later/manifest.json"}}""");
             Assert.True(result.RootElement.GetProperty("ok").GetBoolean());
             var started = result.RootElement.GetProperty("started");
             var xshell = started.GetProperty("xshell");
             Assert.Equal("0.9.10", xshell.GetProperty("version").GetString());
-            Assert.Equal("ten", xshell.GetProperty("hash").GetString());
+            Assert.False(xshell.TryGetProperty("hash", out _));
             Assert.Equal(0, xshell.GetProperty("sourceIndex").GetInt32());
             Assert.Equal("module:x:*", xshell.GetProperty("dependencies").GetProperty("x").GetString());
             var app = started.GetProperty("app");
             Assert.Equal(0, app.GetProperty("sourceIndex").GetInt32());
             Assert.Equal("1.0.0", app.GetProperty("version").GetString());
-            Assert.Equal("root", app.GetProperty("hash").GetString());
+            Assert.False(app.TryGetProperty("hash", out _));
             Assert.Equal("module:xshell:*", app.GetProperty("dependencies").GetProperty("xshell").GetString());
             Assert.Contains("/first/app/app-package/", app.GetProperty("baseUrl").GetString());
             Assert.Equal(2, started.GetProperty("sources").GetArrayLength());
         }
         [Fact]
         public async Task GeneratedIndex_FallsBackToNextSource() {
-            using var result = await RunGeneratedIndexAsync("module:xshell:*", """{"0.9.10-rc.1":{"hash":"preview","url":"preview/manifest.json"}}""",
-                """{"0.9.9":{"hash":"fallback","url":"fallback/manifest.json"}}""");
+            using var result = await RunGeneratedIndexAsync("module:xshell:*", """{"0.9.10-rc.1":{"url":"preview/manifest.json"}}""",
+                """{"0.9.9":{"url":"fallback/manifest.json"}}""");
             Assert.True(result.RootElement.GetProperty("ok").GetBoolean());
             var xshell = result.RootElement.GetProperty("started").GetProperty("xshell");
             Assert.Equal("0.9.9", xshell.GetProperty("version").GetString());
@@ -81,7 +81,7 @@ namespace DProjects.XShell.Test {
         }
         [Fact]
         public async Task GeneratedIndex_RejectsUnsupportedVersionExpression() {
-            using var result = await RunGeneratedIndexAsync("module:xshell:^0.9", """{"0.9.0":{"hash":"dev","url":"dev/manifest.json"}}""");
+            using var result = await RunGeneratedIndexAsync("module:xshell:^0.9", """{"0.9.0":{"url":"dev/manifest.json"}}""");
             Assert.False(result.RootElement.GetProperty("ok").GetBoolean());
             Assert.Contains("Unsupported module reference", result.RootElement.GetProperty("error").GetString());
         }
@@ -93,14 +93,14 @@ namespace DProjects.XShell.Test {
         [InlineData("package/manifest.json#section")]
         [InlineData("http://[invalid")]
         public async Task GeneratedIndex_RejectsMissingOrInvalidManifestUrl(string? url) {
-            var urlProperty = url == null ? "" : $$",\"url\":\"{{url}}\"";
-            using var result = await RunGeneratedIndexAsync("module:xshell:0.9.0", $$"""{"0.9.0":{"hash":"dev"{{urlProperty}}}}""");
+            var versions = url == null ? """{"0.9.0":{}}""" : "{\"0.9.0\":{\"url\":" + JsonSerializer.Serialize(url) + "}}";
+            using var result = await RunGeneratedIndexAsync("module:xshell:0.9.0", versions);
             Assert.False(result.RootElement.GetProperty("ok").GetBoolean());
             Assert.Contains("Cannot resolve", result.RootElement.GetProperty("error").GetString());
         }
         [Fact]
         public async Task GeneratedIndex_DoesNotFallBackToObsoletePathProperty() {
-            using var result = await RunGeneratedIndexAsync("module:xshell:0.9.0", """{"0.9.0":{"hash":"dev","path":"legacy/"}}""");
+            using var result = await RunGeneratedIndexAsync("module:xshell:0.9.0", """{"0.9.0":{"path":"legacy/"}}""");
 
             Assert.False(result.RootElement.GetProperty("ok").GetBoolean());
             Assert.Contains("Cannot resolve", result.RootElement.GetProperty("error").GetString());
@@ -111,6 +111,7 @@ namespace DProjects.XShell.Test {
 
             Assert.Contains("new URL(entry.url, indexUrl)", index);
             Assert.Contains("new URL(\".\", manifestUrl)", index);
+            Assert.DoesNotContain("entry.hash", index);
             Assert.DoesNotContain("entry.path", index);
             var indexUrl = new Uri("https://index.example.test/xshell/index.json");
             Assert.Equal("https://index.example.test/xshell/0.9.0.dev/manifest.json", new Uri(indexUrl, "0.9.0.dev/manifest.json").ToString());
@@ -132,7 +133,7 @@ namespace DProjects.XShell.Test {
                 var indexes = new Dictionary<string, JsonElement> {
                     ["first/app/index.json"] = JsonSerializer.Deserialize<JsonElement>(JsonSerializer.Serialize(new {
                         module = "app", versions = new Dictionary<string, object> {
-                            ["1.0.0"] = new { hash = "root", url = "app-package/manifest.json", dependencies = new Dictionary<string, string> { ["xshell"] = xshellReference } }
+                            ["1.0.0"] = new { url = "app-package/manifest.json", dependencies = new Dictionary<string, string> { ["xshell"] = xshellReference } }
                         }
                     })),
                     ["first/xshell/index.json"] = JsonSerializer.Deserialize<JsonElement>($$"""{"module":"xshell","versions":{{firstVersions}}}""")
@@ -142,7 +143,6 @@ namespace DProjects.XShell.Test {
                     if (versions == null) continue;
                     using var entries = JsonDocument.Parse(versions);
                     foreach (var entry in entries.RootElement.EnumerateObject()) {
-                        if (!entry.Value.TryGetProperty("hash", out var hash)) continue;
                         if (!entry.Value.TryGetProperty("url", out var urlValue) || urlValue.GetString() is not string url) continue;
                         if (!url.EndsWith("/manifest.json") || url.StartsWith('/') || url.Contains("..", StringComparison.Ordinal) || url.IndexOfAny(['?', '#', '\\']) >= 0) continue;
                         var bootstrapDirectory = Path.Combine(directory, source, "xshell", url[..^"manifest.json".Length].Replace('/', Path.DirectorySeparatorChar));

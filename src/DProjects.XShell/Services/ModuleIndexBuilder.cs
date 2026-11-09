@@ -16,9 +16,7 @@ namespace DProjects.XShell.Services {
         // methods
         internal static bool IsValidVersion(string version) => VersionPattern.IsMatch(version);
 
-        public async Task<string> BuildAsync(string manifestPath, string hash, CancellationToken cancellationToken = default) {
-            ArgumentException.ThrowIfNullOrWhiteSpace(hash);
-
+        public async Task<string> BuildAsync(string manifestPath, CancellationToken cancellationToken = default) {
             // read the authored module identity and dependencies
             var info = await ReadManifestAsync(manifestPath, cancellationToken);
 
@@ -27,8 +25,7 @@ namespace DProjects.XShell.Services {
                 ["module"] = info.Module,
                 ["versions"] = new JsonObject {
                     [info.Version] = new JsonObject {
-                        ["hash"] = hash,
-                        ["url"] = $"{info.Version}.{hash}/manifest.json",
+                        ["url"] = $"{info.Version}.dev/manifest.json",
                         ["dependencies"] = JsonSerializer.SerializeToNode(info.Dependencies)
                     }
                 }

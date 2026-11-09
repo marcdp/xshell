@@ -421,9 +421,10 @@ namespace DProjects.XShell.Test {
             using var index = JsonDocument.Parse(get.Text);
             Assert.Equal(moduleId, index.RootElement.GetProperty("module").GetString());
             var generation = index.RootElement.GetProperty("versions").GetProperty("0.9.0");
-            Assert.Equal("dev", generation.GetProperty("hash").GetString());
             Assert.Equal("0.9.0.dev/manifest.json", generation.GetProperty("url").GetString());
+            Assert.False(generation.TryGetProperty("hash", out _));
             Assert.False(generation.TryGetProperty("path", out _));
+            Assert.Equal(["dependencies", "url"], generation.EnumerateObject().Select(property => property.Name).OrderBy(name => name));
             if (moduleId == "demo") Assert.Equal("module:xshell:*", generation.GetProperty("dependencies").GetProperty("xshell").GetString());
             else Assert.Empty(generation.GetProperty("dependencies").EnumerateObject());
         }
