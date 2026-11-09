@@ -2,7 +2,7 @@
 // App entry point
 const meta = name => document.querySelector(`meta[name="${name}"]`)?.content;
 const sources = [...document.querySelectorAll('meta[name="xshell:source"]')].map(element => element.content);
-console.log("bootstrap: init ...");
+
 
 // ui
 function showSpinner() {
@@ -58,11 +58,27 @@ function showBootstrapError(error) {
 
 // main
 async function main() {
+
+    // Performance tracking start
+    const started = performance.now();
+    let previous = started;
+    const timings = [];
+    const checkpoint = phase => {
+        const now = performance.now();
+        timings.push({ phase, durationMs: +(now - previous).toFixed(2), totalMs: +(now - started).toFixed(2) });
+        previous = now;
+    };
+
+    // action
     try {
-    
+
+        // checkpoint
+        console.log("bootstrap: init ...");
+
 
         // Show spinner
         showSpinner();
+        checkpoint("spinner shown");
 
 
         // Caches
@@ -173,6 +189,7 @@ async function main() {
         // Load repositories and resolve modules
         console.log("bootstrap: loading repositories indexes ...");
         await loadRepositories();
+        checkpoint("repositories loaded");
         const app = await schedule(meta("xshell:app.module"));
         const completed = new Set();
         while (completed.size < tasks.size) {
@@ -180,6 +197,7 @@ async function main() {
             await Promise.all(batch.map(([, task]) => task));
             batch.forEach(([reference]) => completed.add(reference));
         }
+        checkpoint("modules versions loaded");
 
 
         // Validate module generations
@@ -194,6 +212,7 @@ async function main() {
             }
         }
         validateModules();
+        checkpoint("modules validated");
 
 
         // Download manifests and resolve physical asset URLs
@@ -218,7 +237,7 @@ async function main() {
         }
         console.log("bootstrap: loading module manifests ...");
         await prepareModules();
-
+        checkpoint("modules manifests downloaded");
 
         // Normalize manifest URLs before merging
         const appBasePath = (meta("xshell:app.basePath") ?? "").replace(/\/+$/, "");
@@ -261,6 +280,7 @@ async function main() {
             normalizedDefinition.assets.path = module.assetsPath;
         }
         validateModules();
+        checkpoint("modules normalized");
 
 
         // Merge resolved manifests into one effective configuration
@@ -293,6 +313,11 @@ async function main() {
                 return target;
             };
             const config = order.reduce((result, module) => merge(result, module.manifest), {});
+
+            const frameworkEntry = framework.manifest.xshell?.resolver?.esm?.xshell;
+            if (typeof frameworkEntry?.src !== "string" || !frameworkEntry.src) throw new Error("Selected XShell framework does not define resolver.esm.xshell.src");
+            config.xshell.resolver.esm.xshell = structuredClone(frameworkEntry);
+
             config.xshell.assets ??= {};
             config.xshell.assets.url = framework.assetsUrl;
             config.xshell.assets.path = framework.assetsPath;
@@ -323,6 +348,7 @@ async function main() {
             baseUrl: appBaseUrl,
             params: effectiveRoot.params
         };
+        checkpoint("app config filled");
 
 
         // Fill config
@@ -663,7 +689,7 @@ async function main() {
         }
         config = fillXShell(config)
         config = fillXShellResolverRules(config)
-
+        checkpoint("app config filled with missing values");
 
         // Install service worker
         async function installServiceWorker(config) {
@@ -722,6 +748,7 @@ async function main() {
             return true;
         }
         await installServiceWorker(config)
+        checkpoint("service worker installed");
 
 
         // import and start xshell
@@ -738,17 +765,25 @@ async function main() {
         const xshellUrl = getXShellUrl(config);
         console.log("bootstrap: xshell: import  from ... ", xshellUrl);
         const xshellModule = await import(xshellUrl);
+        checkpoint("xshell instance imported");
+
         const xshell = xshellModule.default;
         console.log("bootstrap: xshell: init", config);
         await xshell.init(deepFreeze(config));
+        checkpoint("xshell initialized");
 
     } catch (error) {
         // error
+        checkpoint("Failed phase");
         console.error("bootstrap: error", error);
         showBootstrapError(error);
     } finally {
         // hide spinner in finally block to ensure it is hidden even if an error occurs
         hideSpinner();
+        console.group("XShell bootstrap performance");
+        console.table(timings);
+        console.log(`Total: ${(performance.now() - started).toFixed(2)} ms`);
+        console.groupEnd();
     }
 }
 
