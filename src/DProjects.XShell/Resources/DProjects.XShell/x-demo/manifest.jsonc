@@ -23,28 +23,13 @@
                 "/hello/{name}": "/pages/02-pages/03-parameters.js"
             },
             "dependencies": {
-                "x":                    "module:x:*",
-                "x-filesystem":         "module:x-filesystem:*",    
-                "x-identity":           "module:x-identity:*",
-                "xshell":               "module:xshell:*",
-                "xshell-diagnostics":   "module:xshell-diagnostics:*",
-                "xshell-docs":          "module:xshell-docs:*"
+                "x":                    "module:x:latest",
+                "x-filesystem":         "module:x-filesystem:latest",    
+                "x-identity":           "module:x-identity:latest",
+                "xshell":               "module:xshell:latest",
+                "xshell-diagnostics":   "module:xshell-diagnostics:latest",
+                "xshell-docs":          "module:xshell-docs:latest"
             }
-        },
-        "x": {
-            "configUrl": "url:../x/manifest.jsonc"
-        },
-        "x-filesystem": {
-            "configUrl": "url:../x-filesystem/manifest.jsonc"
-        },
-        "x-identity": {
-            "configUrl": "url:../x-identity/manifest.jsonc"
-        },
-        "xshell-diagnostics": {
-            "configUrl": "url:../xshell-diagnostics/manifest.jsonc"
-        },
-        "xshell-docs": {
-            "configUrl": "url:../xshell-docs/manifest.jsonc"
         }
     },
     "xshell": {

@@ -47,7 +47,7 @@
                 "/account": "/pages/account.js"
             },
             "dependencies": {
-                "x": "module:x:*"
+                "x": "module:x:latest"
             }
         }
     },

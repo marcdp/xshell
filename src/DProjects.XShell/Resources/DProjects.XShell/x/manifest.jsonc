@@ -37,10 +37,10 @@
                         {"label": "About", "href": "/pages/about.js"}
                     ] }
                 ]
+            },
+            "dependencies": {
+                "codemirror": "module:codemirror:latest"
             }
-        },
-        "codemirror": {
-            "configUrl": "url:../codemirror/manifest.jsonc"
         }
     },
 

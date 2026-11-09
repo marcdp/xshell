@@ -12,6 +12,7 @@ namespace DProjects.XShell.Services {
             // prepare params
             var appParams = string.Join("&", config.App.Params.Select(kv => Uri.EscapeDataString(kv.Key) + "=" + Uri.EscapeDataString(kv.Value)));
             var moduleSources = config.Sources.Select(s => $"<meta name=\"xshell:source\" content=\"{EncodeAttribute(s)}\">").ToArray();
+            var moduleSourcesJavascriptArray = string.Join(",\n", config.Sources.Select(s => $"\"{EncodeAttribute(s)}\""));
 
             // index
             result["/index.html"] = $"""
@@ -49,87 +50,10 @@ namespace DProjects.XShell.Services {
             // sw.js
             result["/sw.js"] = $$"""
                 // Service Worker entry point
+                const sources = [{{moduleSourcesJavascriptArray}}];
                 // importScripts({JsonSerializer.Serialize(xshellBaseUrl + "/sw.js")}); 
                 """;
 
-            // index.js
-            result["/index.js"] = $$"""
-                // App entry point
-                const meta = name => document.querySelector(`meta[name="${name}"]`)?.content;
-                const sources = [...document.querySelectorAll('meta[name="xshell:source"]')].map(e => e.content);
-                const stableVersion = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/;
-                const compareVersions = (left, right) => {
-                    const a = left.match(stableVersion).slice(1).map(BigInt);
-                    const b = right.match(stableVersion).slice(1).map(BigInt);
-                    for (let i = 0; i < 3; i++) {
-                        if (a[i] !== b[i]) return a[i] > b[i] ? -1 : 1;
-                    }
-                    return 0;
-                };
-                function resolveManifestUrl(url, indexUrl) {
-                    // accept a relative URL or an absolute HTTP(S) URL to the concrete manifest
-                    if (typeof url !== "string" || !url) throw new Error("Module index entry url must reference manifest.json.");
-                    if (/^[A-Za-z][A-Za-z0-9+.-]*:/.test(url) && !/^https?:/i.test(url)) {
-                        throw new Error("Module index entry url must use HTTP(S).");
-                    }
-                    let manifestUrl;
-                    try {
-                        manifestUrl = new URL(url, indexUrl);
-                    } catch {
-                        throw new Error("Module index entry url is malformed.");
-                    }
-                    if (manifestUrl.search || manifestUrl.hash) throw new Error("Module index entry url must not contain a query string or fragment.");
-                    if (!manifestUrl.pathname.endsWith("/manifest.json")) throw new Error("Module index entry url must reference manifest.json.");
-                    return manifestUrl.href;
-                }
-                async function resolve(reference) {
-                    const match = /^module:([a-z][a-z0-9]*(?:-[a-z0-9]+)*):(.+)$/.exec(reference ?? "");
-                    if (!match || (match[2] !== "*" && !stableVersion.test(match[2]))) {
-                        throw new Error(`Unsupported module reference (expected an exact version or *): ${reference}`);
-                    }
-
-                    const [, name, requestedVersion] = match;
-
-                    for (const [sourceIndex, source] of sources.entries()) {
-                        try {
-                            const indexUrl = new URL(source.replace("{module}", name), document.baseURI);
-                            const response = await fetch(indexUrl);
-                            if (!response.ok) continue;
-
-                            const index = await response.json();
-                            if (index.module !== name) continue;
-
-                            const version = requestedVersion === "*"
-                                ? Object.keys(index.versions ?? {}).filter(value => stableVersion.test(value) && index.versions[value]?.url).sort(compareVersions)[0]
-                                : requestedVersion;
-                            const entry = version && index.versions?.[version];
-                            if (!entry?.url) continue;
-                            const manifestUrl = resolveManifestUrl(entry.url, indexUrl);
-
-                            return {
-                                name, version, sourceIndex,
-                                dependencies: entry.dependencies ?? {},
-                                manifestUrl,
-                                baseUrl: new URL(".", manifestUrl).href
-                            };
-                        } catch (error) {
-                            console.warn(`Source unavailable: ${source}`, error);
-                        }
-                    }
-
-                    throw new Error(`Cannot resolve ${reference}`);
-                }
-
-                const app = await resolve(meta("xshell:app.module"));
-                const xshellRef = app.dependencies.xshell;
-                if (!xshellRef) throw new Error(`Module '${app.name}' must depend on xshell.`);
-
-                const xshell = await resolve(xshellRef);
-                const bootstrap = await import(new URL("bootstrap.js", xshell.baseUrl).href);
-
-                await bootstrap.start({ app, xshell, sources });
-
-                """;
 
             // return
             return result;

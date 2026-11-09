@@ -21,7 +21,7 @@
                 "navigation": "/pages"
             },
             "dependencies": {
-                "x": "module:x:*"
+                "x": "module:x:latest"
             }
         }
     },
