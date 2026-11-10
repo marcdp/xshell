@@ -1,29 +1,29 @@
 # Module Configuration Specification
 
-A module configuration is a JSONC document whose `modules` object contains exactly one local definition and zero or more external references.
+A normal module is authored in `manifest.json` or, preferably, `manifest.jsonc`, with its local definition under `modules.<id>`. The active browser
+selects that document through repository metadata rather than discovering it through another manifest.
 
-## Local definition
+## Module identity
 
-The local definition is the one entry without `configUrl`. Its object key is the canonical module id.
-
-## Module ID
-
-A module ID is a case-sensitive canonical identifier consisting only of lowercase ASCII letters, decimal digits, and single hyphens. It must begin
-with a letter, must not end with a hyphen, and must not contain consecutive hyphens. The identifier `xshell` is reserved for the XShell framework.
-Module IDs are used directly as virtual asset path segments and package directory names and are never normalized or URL-encoded.
+A module id is a case-sensitive canonical identifier matching:
 
 ```regex
 ^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$
 ```
 
-For example, `orders`, `orders-v2`, and `xshell-docs` are valid module IDs. `Orders`, `orders_v2`, `orders--v2`, and `xshell` are invalid.
+It begins with a lowercase ASCII letter and otherwise uses lowercase letters, decimal digits, and nonrepeating, nonterminal hyphens. `xshell` is
+reserved for the framework. Development index generation also requires a normal module id to equal its immediate directory name.
+
+Do not duplicate identity in `name`, `id`, or `moduleId`; the `modules` property key is authoritative.
+
+## Authored local definition
 
 ```jsonc
 {
     "modules": {
         "orders": {
             "label": "Orders",
-            "version": "1.0.0",
+            "version": "1.2.3",
             "copyright": "",
             "icon": "",
             "requires": ["toast"],
@@ -31,10 +31,15 @@ For example, `orders`, `orders-v2`, and `xshell-docs` are valid module IDs. `Ord
                 "page": { "renderEngine": "x", "stateEngine": "proxy" },
                 "component": { "renderEngine": "x", "stateEngine": "proxy" }
             },
-            "menus": {},
+            "dependencies": {
+                "xshell": "module:xshell:^1.0.0",
+                "x": "module:x:latest"
+            },
+            "menus": {
+                "navigation": "/pages"
+            },
             "routes": {
-                "/something": "/pages/index.js",
-                "/repository/{repositoryId}/projects/{projectId}/items": "/pages/index.js"
+                "/orders/{orderId}": "/pages/order.js"
             },
             "contract": { "events": {} }
         }
@@ -42,206 +47,120 @@ For example, `orders`, `orders-v2`, and `xshell-docs` are valid module IDs. `Ord
 }
 ```
 
-Do not duplicate identity in `name`, `id`, or `moduleId`. Property order does not determine ownership. A document with no local definition or more
-than one local definition is invalid.
+`ModuleIndexBuilder` identifies the local definition, validates its version, and copies `dependencies` into the generated module version index.
+The browser resolves those index dependencies recursively. A dependency key is the expected module id and its value is a
+`module:<id>:<requirement>` reference.
 
-## External reference
+The browser supports exact stable versions, `latest`, and fully specified caret or tilde requirements. The C# builder accepts a wider semantic
+version grammar for manifest versions, including prerelease and build metadata, but the browser selector only selects plain stable
+`major.minor.patch` version keys.
 
-Every non-local entry must declare `configUrl`:
-
-```jsonc
-{
-    "modules": {
-        "orders": {
-            "label": "Orders", "version": "1.0.0", "copyright": "", "icon": "",
-            "assets": { "url": "url:./" },
-            "defaults": {
-                "page": { "renderEngine": "x", "stateEngine": "proxy" },
-                "component": { "renderEngine": "x", "stateEngine": "proxy" }
-            }
-        },
-        "x": { "configUrl": "url:../x/manifest.jsonc" },
-        "customers": { "configUrl": "url:../customers/manifest.jsonc" }
-    }
-}
-```
-
-The key is the expected identity. `modules.x` must resolve to a document whose local definition is `modules.x`. Bootstrap rejects identity mismatch,
-conflicting URLs for the same id, wrong ids for an already known URL, and cycles.
-
-Any reference may contribute `params`, definition fields, or other configuration to the canonical effective module. `configUrl` remains required
-and identifies the referenced definition document. No reference may define or override `assets`; the referenced local definition owns its physical
-resource location through `assets.url`.
+The active browser does not treat other `modules.<id>.configUrl` objects as package-discovery instructions. The current Pack command still does so
+as legacy behavior; that production application-pack path is incomplete.
 
 ## Normalized effective module
 
-Bootstrap resolves references recursively and the final effective entry is a complete definition:
+After selection, bootstrap merges the manifest and enriches the selected definition:
 
-```jsonc
-"x": {
-    "label": "X",
-    "version": "1.0.0",
-    "copyright": "",
-    "icon": "",
-    "configUrl": "https://example.test/x/manifest.jsonc",
-    "assets": {
-        "path": "/_assets/x/1.0.0.dev",
-        "url": "https://example.test/x/"
-    },
-    "files": [],
-    "params": { "mode": "compact" },
-    "defaults": {
-        "page": { "renderEngine": "x", "stateEngine": "proxy" },
-        "component": { "renderEngine": "x", "stateEngine": "proxy" }
-    }
+```json
+{
+  "label": "Orders",
+  "version": "1.2.3",
+  "copyright": "",
+  "icon": "",
+  "configUrl": "https://repo.example/orders/1.2.3.dev/manifest.json",
+  "assets": {
+    "path": "/_assets/orders/1.2.3.dev",
+    "url": "https://repo.example/orders/1.2.3.dev/"
+  },
+  "dependencies": {
+    "xshell": "module:xshell:^1.0.0",
+    "x": "module:x:latest"
+  },
+  "files": [],
+  "defaults": {
+    "page": { "renderEngine": "x", "stateEngine": "proxy" },
+    "component": { "renderEngine": "x", "stateEngine": "proxy" }
+  }
 }
 ```
 
-`configUrl` is the source document. `assets.url` is the physical resource container and defaults to that document's directory. Runtime resource
-references use the generation-qualified `assets.path` form `/_assets/<module-id>/<generation>/...` rather than the physical URL.
-In configuration URL fields, `/foo` starts at the module root; `./foo` and `../foo` use the declaring file's logical module directory and
-cannot escape the module root. `app:` and `url:` are available only during configuration/bootstrap. `url:` uses the physical declaring document URL,
-including for `configUrl` and `assets.url`; `app:` resolves against the XShell application base, including `app:foo` and `app:/foo` under a nested
-path. Runtime CSS and template resource references reject both pseudo-schemes. They use logical relative paths and module-root `/foo` when
-module-owned. Custom resources without a module path use normal URL resolution against their declaring URL for relative and origin-root paths.
-Standard absolute schemes and protocol-relative URLs remain unchanged.
+The effective schema requires `label`, `version`, `copyright`, `icon`, `configUrl`, `assets`, `defaults`, and `files`. It permits `params`,
+`requires`, `hash`, `builtAt`, `menus`, `routes`, `contract`, and `dependencies`.
 
-The effective schema requires `label`, `version`, `copyright`, `icon`, `configUrl`, complete `assets`, `defaults`, and `files`.
-Optional effective fields include `params`, `requires`, `menus`, `routes`, `contract`, and published package metadata `hash` and `builtAt`.
-`builtAt` is a UTC timestamp generated by `pack` for the local immutable package. It is not required in authored development modules, is absent
-from the canonical ZIP descriptor, and is preserved when the package is reused.
+| Property | Meaning |
+| --- | --- |
+| `configUrl` | Absolute URL of the selected manifest document. |
+| `assets.url` | Absolute physical directory or ZIP container; authored `url:./` is the normal default. |
+| `assets.path` | Generated virtual generation root under `/_assets`. |
+| `files` | Effective virtual resource inventory, with `path`, `size`, and `hash`. |
+| `dependencies` | Authored dependency declarations retained as module metadata; index copies drive discovery. |
 
-## Module contract
+Development paths use `<version>.dev`. Non-Development paths require an index-provided package hash and use `<version>.<hash>`.
 
-`contract` is an optional inline common contract describing the Module's intended public surface:
+## Configuration URL expressions
 
-```jsonc
-"contract": {
-    "label": "Orders Module",
-    "types": {
-        "order": {
-            "type": "object",
-            "schema": {
-                "type": "object",
-                "required": ["id"],
-                "properties": { "id": { "type": "string" } }
-            }
-        }
-    },
-    "properties": {
-        "selectedOrder": { "ref": "order", "readonly": true }
-    },
-    "events": {
-        "changed": {
-            "detail": {
-                "order": { "ref": "order", "required": true }
-            }
-        }
-    },
-    "methods": {
-        "refresh": {
-            "description": "Refreshes order data.",
-            "returns": { "type": "void" }
-        }
-    }
-}
-```
+Bootstrap recursively normalizes recognized strings in a selected manifest:
 
-The common fields are `label`, `description`, `icon`, named `types`, public `properties`, `events`, `methods`, and optional `examples`.
-Value descriptors use either a direct XShell `type` or a contract-local `ref`; direct types and named type definitions may add JSON Schema Draft
-2020-12 constraints in `schema`. `module.schema.json` validates the contract while validating the complete normalized effective Module.
+- `app:` resolves below the application base URL;
+- `url:` resolves against the selected physical manifest URL;
+- `/` resolves from the owning module's virtual generation root;
+- `./` and `../` resolve from the declaring logical path without escaping that root;
+- absolute schemes remain unchanged; and
+- other strings remain unchanged.
 
-The contract remains metadata. It does not locate or instantiate the optional `module.js` controller, expose methods on a runtime module, validate
-controller members, dispatch events, or validate runtime values and payloads. The current Module validation path also does not perform the
-service-contract registration pass that verifies whether every `ref` names a declared type.
+This means `configUrl`, `assets.url`, and `assets.path` describe different addressing layers. Runtime module resources normally use the virtual
+`assets.path`, not the physical manifest or asset-container URL.
 
-An optional Module controller is a separate implementation convention: when the generated inventory contains `/module.js` at the Module root,
-XShell loads its default-exported class and constructs it with `moduleAssetsPath`, `moduleConfig`, and named Services through the provider proxy.
-Its optional `start()` and `stop()` methods are lifecycle hooks, not contract-derived methods.
+## Inventories and conventional resources
+
+Development middleware generates package-relative `files` entries in the served descriptor; bootstrap converts their effective copies to virtual
+generation paths. Authors should not maintain `files` manually.
+
+The optional module-wide `/styles/index.css` and `/module.js` controller are loaded only when their normalized paths occur in the inventory. Styles
+use the normal Resolver → Loader path. The controller must default-export a class; optional `start()` and `stop()` methods are lifecycle hooks.
 
 ## Required services
 
-`requires` is an optional array of unique, non-empty service names that the module expects the runtime to provide:
+`requires` is an optional array of unique nonempty service names:
 
 ```jsonc
 "requires": ["toast"]
 ```
 
-XShell validates these names after the service registry has been finalized and before any module controller is loaded or started. The validation is
-an existence check and does not instantiate configured lazy services. `requires` is not a module reference, a Component or Page implementation's
-resource `dependencies` object, or controller service access. Controllers continue to receive existing services by name, such as
-`controller({ toast })`.
+After Services finalizes its registry and before any module controller starts, Modules checks that every name exists. The check does not instantiate
+a lazy service. `requires` is distinct from repository module `dependencies`, Component/Page resource `dependencies`, and controller service access.
 
-## Routes
+## Menus and routes
 
-`routes` is an optional object whose keys are friendly application Path patterns and whose values are module-relative Page targets:
+`menus` maps names to static arrays, module-relative inventory paths such as `"/pages"`, or registered runtime source names. Areas compose menu
+contributions from selected modules; menus are navigation data and do not create dependencies.
+
+`routes` maps Area-relative friendly Path patterns to module-relative Page targets:
 
 ```jsonc
 "routes": {
-    "/something": "/pages/index.js",
-    "/repository/{repositoryId}/projects/{projectId}/items": "/pages/index.js"
+    "/orders/{orderId}": "/pages/order.js"
 }
 ```
 
-Routes are application Path-to-Page declarations, distinct from `menus`, which define visible navigation structures and concrete destinations.
-Route
-keys are Area-relative application Path patterns. They support literal segments and whole-segment `{parameterName}` placeholders only; optional parameters,
-wildcards, catch-alls, typed parameters, custom regular expressions, and route priorities are unsupported.
+Route values normalize into the owning module's virtual generation namespace. Route keys remain application navigation patterns and are not
+prefixed with Area or application base paths in the module definition. Areas preserve module and declaration order when composing routes;
+Navigation performs forward and reverse resolution.
 
-During bootstrap, each authored module-relative route target is normalized into a canonical module resource Path in the owning module's
-`/_assets/<module-id>/<generation>/...` namespace. Route keys remain unchanged, and neither Area prefixes nor application base paths are stored in the
-declaration. The runtime module exposes the normalized object as `module.routes`. Areas compose `area.routes` from `area.modules`, preserving module
-order, route declaration order, and duplicate paths.
+## Module contract
 
-Navigation resolves incoming Area-relative public paths against that ordered collection. A forward match selects the canonical Page target and adds
-decoded path parameters as encoded query parameters. Intrinsic target query parameters initialize the target query, incoming public query values may
-replace non-route target values, and route-path parameters win all same-name conflicts. Fragments remain attached.
+`contract` is optional public metadata using the common contract model. Supported categories include `label`, `description`, `icon`, named `types`,
+public `properties`, `events`, `methods`, and `examples`. `module.schema.json` validates this metadata as part of effective configuration.
 
-For browser-facing generation, Navigation selects the first applicable route targeting a canonical Page, substitutes placeholder values from its
-query, and consumes those values from the public query. Intrinsic target query parameters are also consumed after they match; unrelated query values
-and fragments remain. A missing placeholder makes only that reverse candidate inapplicable. Exact menu aliases retain precedence in both directions.
-Ambiguity is resolved strictly by Area composition order without scoring, specificity ranking, or priorities. No match falls through to existing
-Navigation behavior, and canonical Page hrefs remain directly usable without a route.
+The contract does not locate or instantiate `module.js`, expose controller functions automatically, dispatch declared events, register a service,
+or validate runtime controller behavior.
 
-The normalized declarations are available through `xshell.modules.getModuleById(id).routes`. This is the effective configuration object itself;
-modules without routes expose a frozen empty object. Route metadata remains declarative—Areas and Navigation compose and interpret it without
-mutating the module definition.
+## Runtime instance
 
-For example, this authored route:
+Modules creates one runtime instance for every effective `config.modules` id. It exposes effective params, routes, styles, and the optional
+controller. Controllers start in dependency order and stop in reverse order. This runtime object is separate from both the authored and resolved
+definition.
 
-```jsonc
-"/repository/{repositoryId}/projects/{projectId}/items": "/pages/items.js"
-```
-
-becomes this effective runtime entry for module `x-demo`:
-
-```jsonc
-"/repository/{repositoryId}/projects/{projectId}/items": "/_assets/x-demo/<generation>/pages/items.js"
-```
-
-See [Root Module](application.md), [Modules](../10-architecture/30-modules.md), and [Configuration](../10-architecture/20-configuration.md).
-
-## Inventories and module styles
-
-Development middleware and Pack generate `files`, whose entries have `path`, `size`, and `hash`, directly in `modules.<localId>` or `xshell`.
-The physical descriptor paths are package-relative; bootstrap normalizes them to generation-qualified application Paths together with the rest of
-the descriptor. Runtime descriptors are self-contained, including remote descriptors. Inventories describe resources; do not hand-author or
-manually maintain them as menu or contract declarations.
-The optional module-wide `/styles/index.css` is loaded only when its path occurs in the inventory. `Modules` loads it as a `style:` resource through
-the standard Resolver → Loader → `style-css` pipeline. Relative CSS imports and URLs resolve against the stylesheet containing them. There is no
-accepted effective module `styles` field.
-`params` is a free-form object. `menus` maps arbitrary menu names to static arrays, module-relative inventory paths beginning with `/` such as
-`"/pages"`, or registered runtime source names. Inventory paths derive Page menus from generated `files`; see [Areas](../30-subsystems/10-areas.md).
-Menu items may set `tooltip` for navigation-anchor tooltip text. They may set `embedded` so `x-menu` / `x-menuitem` hosts the target Page inline
-instead of rendering a navigation anchor; that menu presentation option is separate from general Navigation Page lifecycle and
-`xshell.ui.layout.embed`.
-
-The effective schema requires complete module defaults, source locations, and generated `files`/`assets.path` metadata.
-Bootstrap enriches the object before schema validation. See [Packaging](../10-architecture/50-packaging.md).
-
-## Module-owned DataSets
-
-JSON DataSets stored under a module's `/datasets` directory are addressable through extensionless `dataset:<module-id>:<path>` logical resources.
-Bootstrap generates the resolver rule from the canonical module definition and maps nested logical paths into the module's versioned assets. This
-convention does not add a declarative `datasets` field to module configuration. See [DataSets](../10-architecture/95-datasets.md) and the
-[DataSet JSON specification](dataset.md).
+See [Root Module and Application Metadata](application.md), [Modules](../10-architecture/30-modules.md),
+[Configuration](../10-architecture/20-configuration.md), and [Packaging](../10-architecture/50-packaging.md).

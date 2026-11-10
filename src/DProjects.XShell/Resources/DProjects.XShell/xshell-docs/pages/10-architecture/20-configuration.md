@@ -1,196 +1,183 @@
 # Configuration
 
-XShell accepts JSON or JSONC authored fragments and produces one normalized **effective configuration** with `app`, `modules`, and `xshell` sections.
-
-## Path and URL terminology
-
-In XShell documentation and normalized/effective runtime configuration, a **Path** is an application-root-relative value. It starts with `/`, has no
-scheme or origin, and is relative to the XShell application URL namespace. For example:
-
-```text
-/my-app-prefix
-/_assets/x/<generation>/page.js
-/_assets/codemirror/<generation>/components/editor.js
-```
-
-A **URL** is a fully qualified absolute browser URL. It contains a scheme and, where applicable, an origin, so it can be passed directly to browser
-URL, fetch, or import APIs. For example:
-
-```text
-https://server/my-app-prefix/
-https://server/my-app-prefix/_assets/x/<generation>/page.js
-https://cdn.example.com/codemirror/
-```
-
-This establishes the naming convention for normalized/effective/runtime values: `...Path` denotes an application-root-relative Path and `...Url`
-denotes a fully qualified absolute URL. A Path is a logical application resource location; it is not interchangeable with the browser-facing physical
-URL for that resource. Convert a Path when a browser or native-link API requires an absolute URL, for example:
+Bootstrap produces one normalized effective configuration:
 
 ```js
-new URL("_assets/x/page.js", config.app.baseUrl)
+config = {
+    app: {},
+    modules: {},
+    xshell: {}
+};
 ```
 
-The application base preserves that distinction:
+The sections have different responsibilities:
 
-```text
-app.basePath = "/prefix"
-app.baseUrl  = "https://server/prefix/"
-```
+- `config.app` is effective application identity, metadata, parameters, repository sources, and hosting context;
+- `config.modules` contains the selected, merged, and normalized module definitions; and
+- `config.xshell` contains the selected framework configuration and XShell subsystems.
 
-`app.basePath` is a Path prefix and does not require a trailing slash. `app.baseUrl` is an absolute base-directory URL and intentionally ends in `/`
-so ordinary URL resolution works:
+The selected root module is the entry point of dependency resolution. The application is the composition of that root, its dependencies, the
+framework, and host values. `config.app` is only the application's effective metadata view; it is not the whole configuration.
 
-```js
-new URL("file.js", config.app.baseUrl)
-```
+## Authored manifests and indexes
 
-Authored configuration is a separate input layer. It may contain configuration coordinates / URL expressions such as `app:/foo`, `url:./foo`,
-`/foo`, `./foo`, and `../foo`; these are not necessarily final runtime URLs. Bootstrap normalizes them before runtime:
-
-Configuration path normalization is value-driven and recursively applies to every string value, regardless of its property name. A string using one
-of these recognized forms is therefore a path/URL expression wherever it appears; ordinary strings that do not use a recognized form remain
-unchanged. Object property names are not normalized.
-
-```text
-authored configuration expression
-    ↓ bootstrap/config normalization
-effective Path or absolute URL
-    ↓ runtime
-```
-
-For example, an authored `"assets": { "url": "url:./" }` becomes an absolute effective `assets.url`, while authored
-`"assets": { "basePath": "app:/_assets" }` becomes the effective Path `/_assets`.
-
-## Authored module configuration
-
-Every module configuration has exactly one local definition and zero or more external references:
+Module specifications are normally authored as `manifest.jsonc`. A representative root definition is:
 
 ```jsonc
 {
     "modules": {
-        "app": {
-            "label": "Application",
+        "shop": {
+            "label": "Shop",
             "version": "1.0.0",
-            "assets": { "url": "url:./" },
             "copyright": "",
             "icon": "",
             "defaults": {
-                "page": { "renderEngine": "x", "stateEngine": "proxy" },
-                "component": { "renderEngine": "x", "stateEngine": "proxy" }
+                "component": { "renderEngine": "x", "stateEngine": "proxy" },
+                "page": { "renderEngine": "x", "stateEngine": "proxy" }
+            },
+            "dependencies": {
+                "xshell": "module:xshell:^1.0.0",
+                "x": "module:x:latest"
             }
-        },
-        "x": {
-            "configUrl": "url:../x/manifest.jsonc",
-            "params": { "mode": "compact" }
+        }
+    },
+    "xshell": {
+        "areas": {
+            "default": "shop",
+            "definitions": {
+                "shop": { "prefix": "shop", "modules": ["shop"] }
+            }
         }
     }
 }
 ```
 
-`app` is local because it has no `configUrl`. `x` is a reference. Both root and child references may contribute `params` or other configuration
-to the canonical effective module.
-Authored module and framework descriptors do not contain a top-level `app` object. Bootstrap creates effective `config.app` from the root module
-selected by `release.root` or the development host, together with deployment base paths and root parameters.
+A module manifest may contribute its local module definition and other effective sections such as `xshell`. `ModuleIndexBuilder` copies the local
+definition's `dependencies` into that version's repository index entry. Browser discovery follows the version-index dependencies; it does not scan
+downloaded manifests for `configUrl` references.
 
-## Effective configuration
+The selected module manifest is the `manifest.json` URL recorded by its chosen version-index entry. Development middleware can generate that strict
+JSON response from either an authored `manifest.json` or `manifest.jsonc` file.
 
-After discovery and normalization, each reference is replaced through merging by its complete canonical definition.
-This excerpt shows location/params fields only, omitting required metadata and defaults:
+## Effective application metadata
 
-```jsonc
+Bootstrap generates, rather than authors, `config.app`:
+
+```json
 {
-    "modules": {
-        "app": {
-            "label": "Application",
-            "configUrl": "https://example.test/app/manifest.jsonc",
-            "assets": { "path": "/_assets/app/1.0.0.dev", "url": "https://example.test/app/" }
-        },
-        "x": {
-            "label": "X",
-            "version": "1.0.0",
-            "configUrl": "https://example.test//x/manifest.jsonc",
-            "assets": { "path": "/_assets/x/1.0.0.dev", "url": "https://example.test/x/" },
-            "params": { "mode": "compact" }
-        }
-    }
+  "app": {
+    "id": "shop",
+    "label": "Shop",
+    "version": "1.0.0",
+    "copyright": "",
+    "icon": "",
+    "basePath": "/demo",
+    "baseUrl": "https://example.test/demo/",
+    "params": { "tenant": "acme" },
+    "sources": ["https://example.test/demo/_resources/DProjects.XShell/index.json"],
+    "environment": "Development"
+  }
 }
 ```
 
-The module key is the identity; duplicate `name`, `id`, or `moduleId` fields are unnecessary. `configUrl` locates the module descriptor, which may be
-`manifest.json` or `manifest.jsonc` during development and is canonical `manifest.json` in production. `assets.url` locates the physical resources. Bootstrap
-generates `assets.path` as the application-root-relative virtual package base in the Service Worker
-namespace. The local definition owns `assets`; references cannot define or override it. `assets.path` is effective runtime metadata and is not authored in
-`manifest.json` or `manifest.jsonc`.
-Published module and framework descriptors may also carry optional `builtAt` metadata generated by `pack`. Development configurations do not
-need it. The framework property is `xshell.builtAt`; module properties are `modules.<id>.builtAt`. See [Packaging](50-packaging.md).
+Identity and descriptive fields come from the effective root module. `basePath`, `baseUrl`, `params`, `sources`, and `environment` come from host
+inputs. `sources` preserves configured order and includes normalized URLs that were unavailable during bootstrap. The current hosting environment
+interface is `xshell:app.environment` → `config.app.environment`; `xshell:xshell.environment` and `config.xshell.environment` are obsolete.
 
-Bootstrap also generates `xshell.serviceWorker.mappings` after finalizing XShell and module asset paths and URLs. It contains one mapping for the
-framework and one for each effective module, with absolute virtual `src`, normalized physical `dst`, and `version`, `name`, and `exceptions`
-metadata. The array represents mappings requested by this effective application generation; the worker's durable IndexedDB registry can contain
-additional generations registered by other tabs. `xshell.serviceWorker` is a normal authored object: framework defaults and module/root
-contributions follow the ordinary configuration merge order. Bootstrap then replaces only `xshell.serviceWorker.mappings` with the generated
-effective array, which is deeply frozen with the rest of the configuration. Any authored `mappings` value is therefore ignored rather than
-concatenated with the generated mappings.
+The runtime always emits all fields shown above. The current schema defines them all, although `config.schema.json` does not yet list `id`,
+`sources`, or `environment` in the `app.required` array.
+
+## Effective modules and asset locations
+
+A selected module becomes a complete effective `config.modules.<id>` definition. The bootstrap supplies three different location values:
+
+| Property | Meaning |
+| --- | --- |
+| `configUrl` | Absolute URL of the selected manifest document. |
+| `assets.url` | Absolute physical directory or ZIP container URL. |
+| `assets.path` | Application-root-relative generation-qualified virtual asset path. |
+
+For example:
+
+```json
+{
+  "modules": {
+    "x": {
+      "label": "X",
+      "version": "1.2.3",
+      "configUrl": "https://repo.example/x/1.2.3.dev/manifest.json",
+      "assets": {
+        "url": "https://repo.example/x/1.2.3.dev/",
+        "path": "/_assets/x/1.2.3.dev"
+      },
+      "files": [
+        { "path": "/_assets/x/1.2.3.dev/components/x-button.js", "size": 1234, "hash": "..." }
+      ]
+    }
+  }
+}
+```
+
+Development generation names are `<version>.dev`. Other environments require a version-index `hash` and use `<version>.<hash>`. The active host
+sets `xshell.assets.basePath` to `/_assets` explicitly. The framework manifest still authors `app:/_assets`, but the current host does not use that
+value to select a different virtual namespace.
+
+Physical inventory entries in served manifests are package-relative. Recursive manifest normalization changes their effective copies to virtual
+generation paths while preserving `size` and `hash`.
+
+## Path and URL normalization
+
+In effective configuration, a **Path** is application-root-relative, begins with `/`, and has no scheme or origin. A **URL** is fully qualified and
+can be passed to browser URL, fetch, or import APIs. For example:
+
+```text
+app.basePath = "/demo"
+app.baseUrl  = "https://example.test/demo/"
+assets.path  = "/_assets/x/1.2.3.dev"
+assets.url   = "https://repo.example/x/1.2.3.dev/"
+```
+
+Bootstrap recursively normalizes recognized string forms in each selected manifest:
+
+| Authored form | Resolution |
+| --- | --- |
+| `app:foo` or `app:/foo` | Below `config.app.baseUrl`; escaping the application root is rejected. |
+| `url:./foo` | Against the selected physical manifest URL. |
+| `/foo` | From the owning module generation's virtual root. |
+| `./foo`, `../foo` | From the declaring logical path inside the generation; escaping the generation root is rejected. |
+| Absolute scheme | Left unchanged. |
+| Other string | Left unchanged. |
+
+`url:` therefore normally creates an absolute physical URL, while `/`, `./`, and `../` create application-relative virtual Paths. Object property
+names are not normalized.
 
 ## Merge and precedence
 
-| Values | Result |
-| --- | --- |
-| Plain object + plain object | Recursively merge properties. |
-| Array + array | Concatenate in merge order. |
-| Scalar or other value | Later value replaces earlier value. |
-
-Merge order is deterministic:
+Objects merge recursively, arrays concatenate, and later scalar values replace earlier values. The merge order is:
 
 ```text
-XShell defaults
-    -> dependency module definitions
-    -> their dependents
-    -> root application configuration
+selected XShell framework
+    -> dependency modules
+    -> modules that depend on them
+    -> selected root module
 ```
 
-Bootstrap derives that order from the dependency graph, retains sibling declaration/discovery order, and rejects cycles. Reference contributions
-merge after the referenced local definition; the root merges last and therefore has final authority. Fetch completion order has no effect.
+Dependency traversal is deterministic and rejects cycles. The root contributes last. The selected framework's
+`xshell.resolver.esm.xshell` entry is restored after the merge so the selected framework runtime stays authoritative.
 
-## Defaults, URLs, and validation
+The root module's effective `params` is replaced with the parsed `xshell:app.params` host value. The same object becomes `config.app.params`.
 
-Every effective module requires generated `files`/`assets.path`, source locations, descriptive metadata, and `defaults.page` and `defaults.component`,
-each with non-empty `renderEngine` and `stateEngine`. These module defaults
-are separate from global `xshell.ui` settings.
+## Generated framework and resolver configuration
 
-In authored configuration URL expressions, `/foo` starts at the module root, while `./foo` and `../foo` use the declaring file's directory in logical
-module coordinates. Paths that traverse above the module root are invalid. `app:` and `url:` are configuration-only; runtime CSS and template resource
-references reject both. In configuration, `url:` uses the physical declaring document URL. `app:` uses the XShell application base URL
-built once from `document.location.origin` and the host's `xshell:app.basePath` meta value. For example, with a base of
-`https://example.com/myapp/`, both `app:images/logo.svg` and `app:/images/logo.svg` resolve to
-`https://example.com/myapp/images/logo.svg`. Absolute schemes, including `https:`, `data:`, and `blob:`, remain unchanged.
+Bootstrap fills `xshell.temp.url`, the fixed effective `xshell.assets.basePath`, and resolver rules for selected module generations. File inventories
+also generate exact contract and schema entries. Module defaults under `modules.<id>.defaults` select render and state engines for definition-based
+resources; they remain distinct from global infrastructure under `xshell.ui`.
 
-`xshell.assets.basePath` defines the application-relative base of XShell's virtual asset namespace. The checked-in value is
-`"assets": { "basePath": "app:/_assets", "url": "url:./" }`. For an application base of `https://example.com/myapp/`, this resolves under
-`https://example.com/myapp/_assets`. The effective configuration stores the normalized application-relative path `/_assets`; the framework and
-module `assets.path` values are derived from that one base. For example, module `x` has `assets.path: "/_assets/x/1.0.0.dev"`, which the host serves under
-`/myapp/_assets/x/1.0.0.dev`. `assets.url` remains the separate physical source location.
+Bootstrap then generates `xshell.serviceWorker.mappings`. An authored `mappings` value is replaced, not appended. The effective array describes this
+application startup; the worker's durable registry can contain additional generations.
 
-Bootstrap gives each local definition its document URL as `configUrl` and defaults `assets.url` to the document directory. It maps module-relative
-runtime paths into the normalized virtual namespace.
+`config.schema.json` describes the final merged object passed to `xshell.init()`, not a partial authored manifest. The host bootstrap does not call
+`xshell.validateConfig()` directly. It freezes the effective configuration and calls `xshell.init(config)`; initialization performs schema and
+cross-reference validation before constructing the remaining subsystems.
 
-The canonical schema describes the final merged object, not partial authored references. Development middleware and Pack supply the required
-descriptor-embedded inventories before bootstrap. Bootstrap normalizes them with their owning descriptors and generates exact contract resolver
-rules from the effective inventory after Service Worker initialization.
-It imports XShell, awaits `xshell.validateConfig(config)` for the complete enriched object, and then deeply freezes it.
-`xshell.init(config)` validates again before constructing runtime services. Validation errors abort startup; there is no environment gate.
-The X module currently includes a `module.js` controller; configuration validation remains a separate bootstrap and initialization responsibility.
-`xshell.ui.component.markdown` selects the Component used by `page-md` for Markdown Pages; the current X module sets it to `x-markdown`.
-The required `xshell.i18n` section supplies the current language, available languages, date/time formats, and translation dictionaries. The X module
-provides the baseline values, and application composition may override them through the normal merge precedence.
-An effective module may optionally declare `routes`, an object mapping friendly application Path patterns to module-relative Page targets. During
-bootstrap, route target values are normalized into canonical module resource Paths in the owning module's
-`/_assets/<module-id>/<generation>/...` namespace;
-route keys remain Area-relative application Path patterns unchanged. Routes are distinct from module `menus`: menus describe user-visible navigation
-declarations, while routes are application
-Path-to-Page declarations. Runtime modules expose the normalized object as `module.routes`; Areas compose ordered `area.routes` from participating
-modules without adding their prefixes, and Navigation performs forward and reverse route resolution. See [Modules](30-modules.md),
-[Areas](../30-subsystems/10-areas.md), and [Navigation](120-navigation.md).
-Bootstrap deeply freezes the result before `xshell.init(config)`.
-
-See [Modules](30-modules.md), [Bootstrap](10-bootstrap.md), and [Specifications](../50-specifications/).
+See [Bootstrap](10-bootstrap.md), [Modules](30-modules.md), [Service Worker](110-service-worker.md), and [Specifications](../50-specifications/).

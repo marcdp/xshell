@@ -78,6 +78,7 @@ export default {
             display:flex; 
             align-items:baseline; 
         }
+        div.panel .header > x-button:first-child {margin-right:1em; margin-left:-1em;}
         div.panel .header div.title {margin-right:1.5em;}
         div.panel .header div.title h2 {margin:0; font-size: var(--x-font-size-subtitle); }
         div.panel .header div.title h2 ~ x-page-description {font-size:var(--x-font-size-x-small);display:block;}
@@ -118,6 +119,7 @@ export default {
         <div class="panel"    x-class:expanded="state.expanded" x-on:transitionend="onTransitionEnd" x-on:keydown="onKeydown">
             <x-loading x-if="state.status=='loading'"></x-loading>
             <div class="header">            
+                <x-button class="light round" icon="x-arrow-back" x-on:click="queryClose"></x-button>               
                 <div class="title">
                     <h2><x-page-title></x-page-title></h2>
                     <x-page-description></x-page-description>
@@ -126,7 +128,9 @@ export default {
                 <div class="header-actions">
                     <slot name="header-actions"></slot>
                 </div>
+                <!--
                 <x-button class="light round" icon="x-close" x-on:click="queryClose"></x-button>               
+                -->
             </div>            
             <div x-attr:class="'body' + (state.pageClasses ? ' ' + state.pageClasses : '')" tabIndex="1">
                 <slot></slot>

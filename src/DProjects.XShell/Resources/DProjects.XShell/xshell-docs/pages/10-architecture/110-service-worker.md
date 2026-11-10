@@ -3,7 +3,7 @@
 Bootstrap always installs the XShell Service Worker. It provides resource virtualization: a stable client-facing namespace for module files regardless
 of where their source files reside.
 
-The checked-in value is normalized as follows:
+The framework manifest contains this authored value, while the active host explicitly initializes the effective value:
 
 ```text
 authored:
@@ -13,9 +13,10 @@ effective:
     xshell.assets.basePath = "/_assets"
 ```
 
-Bootstrap normalizes the authored value against the application base URL, producing effective application Paths such as
+The active host currently fixes the effective virtual base to `/_assets`; it does not select it dynamically from the authored manifest. This produces
+effective application Paths such as
 `/_assets/x/1.4.0.dev/components/x-button.js` (served under `/myapp/_assets/...` when the application base is `/myapp/`). It sends a mapping for each
-canonical module definition and the XShell framework files. Each rule maps the virtual prefix to `assets.url` and carries `configUrl` in an
+selected module definition and the XShell framework files. Each rule maps the virtual prefix to `assets.url` and carries `configUrl` in an
 `exceptions` field. The current worker does not apply that field;
 configuration discovery still fetches the original document URL before worker setup. The worker rewrites matching requests and fetches the physical
 resource. Repeated
@@ -26,7 +27,8 @@ finalizing each `assets.path`, `assets.url`, and `configUrl`. The array contains
 an absolute virtual `src` URL under the application base URL, a normalized physical `dst` URL, and `version`, `name`, and `exceptions` metadata.
 Bootstrap then registers the application-level `/sw.js` and sends this array directly in `registerMappings`. The worker runs its own `normalizeRule`
 validation at the message boundary and merges the batch into IndexedDB. After resolver generation from the already embedded inventories, bootstrap
-validates and freezes the effective configuration. `xshell.serviceWorker` is normal authored configuration and participates in the ordinary merge
+freezes the effective configuration and passes it to `xshell.init()`, which performs configuration validation. `xshell.serviceWorker` is normal
+authored configuration and participates in the ordinary merge
 order, allowing framework defaults and module/root contributions. Its `mappings` property is different: bootstrap replaces any merged authored
 value with the generated mappings for this effective application generation, so authored mappings are not runtime mapping inputs.
 
@@ -37,7 +39,7 @@ client: /_assets/<module-id>/<generation>/<resource>
     → resource response
 ```
 
-`configUrl` identifies a module configuration document. `assets.url` identifies the physical directory or package holding its assets. Normal clients
+`configUrl` identifies the selected module manifest document. `assets.url` identifies the physical directory or package holding its assets. Normal clients
 must use `/_assets/<module-id>/<generation>/...` and remain independent of whether storage is expanded or packaged. A destination whose URL pathname
 ends in `.zip` is ZIP-backed; the worker loads the complete immutable package, indexes its central directory, and serves the matched package-relative
 entry. Other destinations retain expanded-directory URL rewriting. ZIP bytes are cached by physical package URL in deployment-specific Cache Storage,

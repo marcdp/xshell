@@ -76,6 +76,7 @@ export default {
                         contractItems.push(item);
                     }
                 }
+                contractItems.sort((a, b) => a.id.localeCompare(b.id));
                 state.contractItems = contractItems;
             }
         };

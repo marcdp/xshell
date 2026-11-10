@@ -1,54 +1,100 @@
 # Root Module and Application Metadata
 
-The application is the root module selected by a release. `release.root` names its packaged `manifest.json`; development hosting selects the same
-role through `xshell:app.configPath`. Any module can be selected as the root of a release. No `main`, `isRoot`, or `moduleType` field marks a module,
-and there is no separate authored application descriptor or application package.
+The host selects a **root module reference** through `xshell:app.module`:
+
+```html
+<meta name="xshell:app.module" content="module:shop:latest">
+```
+
+The root module is the entry point for repository dependency resolution and the last module manifest merged into effective configuration. The
+application is the result composed from that root, its dependencies, the selected XShell framework, and host configuration. No `main`, `isRoot`,
+or `moduleType` field marks a module.
+
+## Root module manifest
+
+The root uses an ordinary module manifest:
 
 ```jsonc
 {
     "modules": {
-        "app": {
-            "label": "Example",
+        "shop": {
+            "label": "Shop",
             "version": "1.0.0",
             "copyright": "",
             "icon": "",
             "defaults": {
                 "page": { "renderEngine": "x", "stateEngine": "proxy" },
                 "component": { "renderEngine": "x", "stateEngine": "proxy" }
+            },
+            "dependencies": {
+                "xshell": "module:xshell:^1.0.0",
+                "x": "module:x:latest"
             }
-        },
-        "customers": { "configUrl": "url:../customers/manifest.jsonc" },
-        "reports": {
-            "configUrl": "url:../reports/manifest.jsonc",
-            "params": { "mode": "compact" }
         }
     },
     "xshell": {
         "areas": {
-            "default": "customers",
+            "default": "shop",
             "global": [],
             "definitions": {
-                "customers": { "prefix": "customers", "modules": ["customers", "reports"] }
+                "shop": { "prefix": "shop", "modules": ["shop"] }
             }
         }
     }
 }
 ```
 
-`modules.app` is local because it has no `configUrl`. The other entries are dependency references. The root composes the application and its
-references may contribute configuration just like child references. Every reference requires `configUrl`; no reference may define or override `assets`.
-Dependencies merge first and the root merges last. The effective `modules` object contains full canonical definitions.
+The server copies direct dependencies into the root generation's module version index. Browser bootstrap uses those version-index entries for
+recursive discovery. It does not follow `configUrl` fields inside this manifest.
 
-Bootstrap constructs effective `config.app` from the selected root module's id, label, version, copyright, and icon, plus the bootstrap deployment
-basePath, baseUrl, and parameters. The optional `xshell:app.params` meta value becomes the root module's `params` and the same effective
-`config.app.params` value. The effective schema requires `app`, `modules`, and `xshell`; that requirement does not permit an authored top-level
-`app` object. Authored module and XShell descriptors containing one are rejected.
+## Effective `config.app`
 
-`xshell:app.configPath` is a bootstrap input, not an effective `app` field. Pack derives it from `release.root` when generating the root package's
-`index.html`. The containing root generation also owns the application `sw.js`, so `release.root` selects the module descriptor and complete
-immutable startup generation. Both files participate in the root hash and ZIP, but are excluded from its module resource inventory and from
-`release.packages` as separate entries. The canonical index uses `__XSHELL_ROOT_HASH__` for its own config path during hashing; the published
-loose index substitutes the real hash. Startup settings and selected XShell generation can change the root identity without changing dependencies.
-Stable public application and worker URLs, when required, are deployment aliases to the selected root generation.
+Bootstrap generates `config.app`; authored manifests must not use it as an application descriptor:
 
-See [Module Specification](module.md), [Bootstrap](../10-architecture/10-bootstrap.md), and [Packaging](../10-architecture/50-packaging.md).
+```json
+{
+  "app": {
+    "id": "shop",
+    "label": "Shop",
+    "version": "1.0.0",
+    "copyright": "",
+    "icon": "",
+    "basePath": "/demo",
+    "baseUrl": "https://example.test/demo/",
+    "params": { "tenant": "acme" },
+    "sources": ["https://example.test/demo/_resources/DProjects.XShell/index.json"],
+    "environment": "Development"
+  }
+}
+```
+
+| Property | Source and meaning |
+| --- | --- |
+| `id` | Selected root module id. |
+| `label` | Effective root module label, or `""`. |
+| `version` | Selected root module version. |
+| `copyright` | Effective root copyright, or `""`. |
+| `icon` | Effective root icon, or `""`. |
+| `basePath` | Host application request-path prefix with trailing slashes removed. |
+| `baseUrl` | Absolute application base-directory URL. |
+| `params` | Parsed `xshell:app.params`; also replaces the root module's effective `params`. |
+| `sources` | All configured repository index URLs, normalized to absolute URLs in configured order. |
+| `environment` | Value of `xshell:app.environment`. |
+
+`sources` includes configured repositories that failed to load during this startup. Availability affects resolution, not the recorded host
+configuration.
+
+The current `config.schema.json` declares every property above and describes the object as a generated runtime projection. Its current required list
+omits `id`, `sources`, and `environment`, even though the host implementation always emits them.
+
+`config.app` does not contain module definitions or XShell subsystem configuration. Those remain in `config.modules` and `config.xshell`.
+
+## Hosting inputs
+
+The current application host inputs are `xshell:app.module`, `xshell:app.basePath`, `xshell:app.params`, `xshell:app.environment`, and repeatable
+`xshell:app.source` values. `xshell:app.configPath`, `xshell:source`, and `xshell:xshell.environment` belong to the superseded bootstrap model.
+
+Production root startup generation is not implemented in the current Pack command. Do not infer a production `release.root` contract for the new
+repository-driven bootstrap from the legacy Pack code.
+
+See [Module Specification](module.md), [Bootstrap](../10-architecture/10-bootstrap.md), and [Hosting](../10-architecture/40-hosting.md).

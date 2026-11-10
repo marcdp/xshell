@@ -19,7 +19,8 @@ export default {
             badge:     {type:"string", default:"", attribute:true, state:true, description:""},
             command:   {type:"string", default:"", attribute:true, state:true, description:""},
             href:      {type:"string", default:"", attribute:true, state:true, description:""},
-            autofocus: {type:"boolean", default:false, attribute:true, state:true, description:""}
+            autofocus: {type:"boolean", default:false, attribute:true, state:true, description:""},
+            tooltip:    {type:"string", default:"", attribute:true, state:true, description:""}
         },
         methods: {
             focus:{
@@ -137,7 +138,7 @@ export default {
     `,
     template: ` 
         <div>
-            <button class="button" tabindex="1" x-attr:expanded="(state.expanded && !state.command ? true : false)" x-on:click="command" x-attr:has-more="(state.childs && state.command ? true : false)" x-on:keydown.enter="command">
+            <button class="button" tabindex="1" x-attr:expanded="(state.expanded && !state.command ? true : false)" x-on:click="command" x-attr:has-more="(state.childs && state.command ? true : false)" x-on:keydown.enter="command" x-attr:title="state.tooltip">
                 <x-icon class="icon" x-if="state.icon" x-attr:icon="state.icon"></x-icon>
                 <div x-if="state.label">
                     <span class="label"   x-if="state.label" x-html="state.label"></span>

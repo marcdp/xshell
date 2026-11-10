@@ -9,6 +9,8 @@ This section records significant XShell design decisions, their context, and imp
 - [ADR-0003: Navigation](0003-navigation.md) — Implemented hash/path modes and intents outside V0.
 - [ADR-0004: Properties and State](0004-properties-and-state.md) — Separating public component properties from internal reactive state.
 - [ADR-0005: Area and Menu Composition](0005-area-menu-composition.md) — Application-owned Areas and reusable module menu slots.
+- [ADR-0006: Repository Resolution and Host-Owned Bootstrap](0006-repository-resolution-and-host-bootstrap.md) — Repository version selection,
+  host-owned startup, and the root-module/application distinction.
 
 ## Conventions
 

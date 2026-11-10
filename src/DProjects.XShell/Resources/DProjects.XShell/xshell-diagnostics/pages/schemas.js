@@ -76,7 +76,7 @@ export default {
                         });
                     }
                 }
-
+                schemas.sort((a, b) => a.id.localeCompare(b.id));
                 state.schemas = schemas;
             }
         };

@@ -24,18 +24,32 @@ it is not placed in browser storage or URLs. Labels and descriptions are rendere
 
 ## Configuration
 
-The host configures the module reference with application or absolute HTTP(S) URLs:
+The root module selects `x-identity` through repository dependency metadata and contributes application or absolute HTTP(S) endpoint URLs to the
+effective module configuration:
 
 ```jsonc
-"x-identity": {
-    "configUrl": "url:../x-identity/manifest.jsonc",
-    "params": {
-        "signinUrl": "app:/api/identity/signin",
-        "sessionUrl": "app:/api/identity/session",
-        "signoutUrl": "app:/api/identity/signout"
+{
+    "modules": {
+        "app": {
+            "dependencies": {
+                "x-identity": "module:x-identity:latest"
+            }
+        },
+        "x-identity": {
+            "configUrl": "url:../x-identity/manifest.jsonc",
+            "params": {
+                "signinUrl": "app:/api/identity/signin",
+                "sessionUrl": "app:/api/identity/session",
+                "signoutUrl": "app:/api/identity/signout"
+            }
+        }
     }
 }
 ```
+
+The version-index dependency selects the package. In this contribution, `configUrl` only distinguishes the nonlocal `modules.x-identity` entry for
+the current manifest/index tooling; browser discovery does not follow it. Whole-manifest merging applies the root's later `params` contribution to
+the already selected definition.
 
 `app:` preserves deployments under a non-root application base. The module provides no default provider and reports a configuration error when a
 required endpoint is absent.

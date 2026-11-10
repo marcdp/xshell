@@ -1,0 +1,36 @@
+{
+  "label": "XVault encrypt/decrypt",
+  "description": "Encrypts and decrypts text using XVault.",
+  "methods": {
+    "decrypt": {
+      "description": "Decrypts text using XVault.",
+      "parameters": [
+        {
+          "name": "text",
+          "type": "string",
+          "required": true,
+          "description": "Encrypted text to decrypt."
+        }
+      ],
+      "returns": {
+        "type": "string",
+        "description": "Decrypted text."
+      }
+    },
+    "encrypt": {
+      "description": "Encrypts text using XVault.",
+      "parameters": [
+        {
+          "name": "text",
+          "type": "string",
+          "required": true,
+          "description": "Plain text to encrypt."
+        }
+      ],
+      "returns": {
+        "type": "string",
+        "description": "Encrypted text."
+      }
+    }
+  }
+}

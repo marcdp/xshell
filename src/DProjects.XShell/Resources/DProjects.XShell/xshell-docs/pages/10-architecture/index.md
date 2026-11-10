@@ -1,23 +1,25 @@
 # Architecture
 
-XShell starts from the application's root module definition and recursively discovers module references. The flow is:
+XShell starts from a host-selected root module reference and resolves it through ordered repositories. The flow is:
 
 ```text
-HTML/bootstrap inputs → root module → recursive module references → canonical module definitions
-    → URL and embedded-inventory normalization → nested effective configuration (app, modules, xshell)
+HTML/bootstrap inputs → repository indexes → module version indexes → selected root and recursive dependencies
+    → manifests → URL and embedded-inventory normalization → nested effective configuration (app, modules, xshell)
     → Service Worker mappings → resolver rules from file inventories (including service contracts)
-    → import XShell → validate effective config → deep freeze → init (validate again)
+    → import XShell → deep freeze → init and validate effective config
     → initialize i18n and Contracts → register core services → finalize service registry → validate module service requirements → one live module instance per module id
     → controllers register runtime sources → Areas compose menus, routes, and homes → Navigation starts
 ```
 
-`config.modules` contains canonical definitions keyed by module id. `xshell.modules` is the runtime service. Repeated references to one definition
-URL are fetched once and produce one live module instance. Bootstrap merges dependencies before dependents and the root last; cycles are rejected.
-References can configure canonical dependency modules; the root still merges last. Optional module controllers are constructed once and started
-during module initialization. See [Bootstrap](10-bootstrap.md).
+`config.app` contains effective application metadata and hosting context. `config.modules` contains selected definitions keyed by module id, and
+`config.xshell` contains framework configuration. The root module is the dependency-resolution entry point, not the whole application. Dependency
+requirements come from module version indexes, not authored `configUrl` references in downloaded manifests. Bootstrap merges dependencies before
+dependents and the root last; cycles and conflicting generations are rejected. `xshell.modules` is the runtime service and creates one live module
+instance per effective id. See [Bootstrap](10-bootstrap.md).
 
-Module resources use `/_assets/<module>/...` with the checked-in `xshell.assets.basePath` value `app:/_assets`. The Service Worker maps that namespace to
-source files. Resource resolution selects a URL and loader; the loader obtains the resource. A Page uses the normal Component model plus Navigation.
+Module resources use the host-fixed effective namespace `/_assets/<module>/<generation>/...`. The framework manifest currently authors
+`xshell.assets.basePath` as `app:/_assets`, but the host explicitly initializes the effective base. The Service Worker maps that namespace to source
+files or ZIP packages. Resource resolution selects a URL and loader; the loader obtains the resource. A Page uses the normal Component model plus Navigation.
 Module defaults define the render and state engines for their own definition-based Pages and Components. XShell defaults are separate global UI
 infrastructure for layout contexts, lazy/error/Markdown components, and standard dialog pages.
 
@@ -61,7 +63,7 @@ current state. Operational APIs such as `services.resolve(...)` and `loader.load
 - [Configuration](20-configuration.md) — Nested effective configuration and merge rules.
 - [Modules](30-modules.md) — Definitions, references, root composition, params, and live instances.
 - [Hosting](40-hosting.md) — ASP.NET middleware, generated bootstrap, and SPA fallback.
-- [Packaging](50-packaging.md) — Development inventories and transactional application ZIP distributions.
+- [Packaging](50-packaging.md) — Implemented packaging mechanisms and the incomplete legacy application-pack integration.
 - [Components](60-components.md) — The Web Component model.
 - [Pages](70-pages.md) — Pages and layouts.
 - [Resolvers](80-resolvers.md) — Logical resource resolution.

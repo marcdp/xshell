@@ -171,13 +171,17 @@ Modules may contribute metadata, params, styles, controllers, menus, defaults, c
 
 Do not assume declarative fields are runtime-enforced unless the implementation actually enforces them.
 
-Bootstrap recursively discovers `modules.<id>.configUrl` references and builds canonical module definitions.
+The development host resolves `module:<id>:<requirement>` references through ordered repository indexes. A repository index locates each module's
+version index; the selected version entry locates its manifest and declares the dependency references used for recursive discovery. The browser does
+not discover packages by following authored `modules.<id>.configUrl` entries inside downloaded manifests.
 
-Repeated references to the same canonical module do not imply multiple live runtime instances.
+Each authored module `manifest.jsonc` contains one local `modules.<id>` definition. Its `dependencies` object is copied into the generated module
+version index. The selected root module is the entry point of dependency resolution; the application is the composition produced from that root,
+its dependencies, the selected XShell framework, and host values. Keep the root module, `config.app`, and the whole application distinct.
 
-Each `manifest.jsonc` contains exactly one local module definition: the `modules.<id>` entry without `configUrl`. Every other entry is an external
-reference whose key must match the referenced document's local module id. References may contribute `params` and other mergeable configuration;
-`configUrl` identifies the referenced definition, whose local definition owns `assets.url`. Merge order is dependency-first, owner-later, root-last.
+Bootstrap adds normalized `configUrl`, `assets.url`, and `assets.path` metadata to resolved effective definitions. Repeated references to the same
+selected module generation do not imply multiple live runtime instances. Merge order is dependency-first, dependent-later, root-last; the selected
+framework's runtime entry remains authoritative.
 
 Keep these concepts separate:
 
@@ -237,19 +241,19 @@ plus relevant module definitions and ADRs.
 
 ## Resource namespace and Service Worker
 
-The current virtual asset namespace is configured through:
+The current virtual asset namespace is exposed through:
 
 ```text
 xshell.assets.basePath
 ```
 
-The checked-in configured value is:
+The framework manifest's checked-in authored value is:
 
 ```text
 app:/_assets
 ```
 
-which resolves against the application base URL and produces virtual URLs such as:
+The active host bootstrap explicitly sets the effective base path to `/_assets` and produces virtual URLs such as:
 
 ```text
 /_assets/x/1.0.0.dev/components/x-button.js
@@ -275,9 +279,10 @@ assets.url
 
 conceptually separate.
 
-Bootstrap consumes physical file inventories embedded in module and XShell descriptors and normalizes their package-relative paths into the virtual
-namespace. The Service Worker supports ZIP-backed destinations whose URL pathname ends in `.zip`, plus expanded-directory destinations. Do not
-assume arbitrary remote/CDN sources: fetch/CORS and the host CSP still apply, and only the documented ZIP subset is supported.
+Do not describe the virtual base as dynamically selectable until the host implementation supports that behavior. Bootstrap consumes physical file
+inventories embedded in module and XShell descriptors and normalizes their package-relative paths into the virtual namespace. The Service Worker
+supports ZIP-backed destinations whose URL pathname ends in `.zip`, plus expanded-directory destinations. Do not assume arbitrary remote/CDN
+sources: fetch/CORS and the host CSP still apply, and only the documented ZIP subset is supported.
 
 ---
 
@@ -590,7 +595,7 @@ Do not use documentation alone as proof that a field is supported.
 
 Modules are authored as expanded directories.
 
-The project also provides explicit normal-module and XShell framework packaging using:
+The project contains reusable normal-module and XShell framework packaging mechanisms in:
 
 ```text
 Commands/Pack.cs
@@ -598,20 +603,23 @@ Services/FilesIndexer.cs
 Services/ModuleFileCompiler.cs
 ```
 
-Packaging recursively builds complete application distributions as immutable ZIP packages with descriptor-embedded physical file inventories.
-`FilesIndexer` generates package-relative paths, sizes, and hashes. Development middleware injects them into generated descriptor responses; Pack
-injects them into canonical and published descriptors before hashing. Module inventory lives at `modules.<localId>.files`, and framework inventory
-lives at `xshell.files`. Bootstrap consumes those self-contained descriptors and normalizes the embedded paths into the virtual application resource
-namespace. A committed distribution is selected through `release.json`; its `root` names the root descriptor and its `packages` list names the
-complete package set.
+`FilesIndexer` generates package-relative paths, sizes, and hashes. Development middleware injects them into generated descriptor responses; Pack's
+package-building paths inject them into canonical and published descriptors before hashing. Module inventory lives at
+`modules.<localId>.files`, and framework inventory lives at `xshell.files`. The active host bootstrap consumes those self-contained descriptors and
+normalizes the embedded paths into the virtual application resource namespace.
+
+Application packaging is not aligned with the active repository-driven host bootstrap. `Pack.cs` still discovers dependencies through legacy
+`configUrl` references, still expects framework `bootstrap.js` startup files, and `BuildRootStartupFiles()` throws `NotImplementedException`.
+Do not document a repository-driven production application distribution as implemented, and do not infer successful application packing from the
+reusable ZIP, inventory, hashing, or publication helpers.
 
 Do not manually maintain generated `files` metadata in `manifest.json` or `manifest.jsonc`.
 
 Module references must not define `files`, and module/root descriptors must not contribute `xshell.files`. Development middleware and Pack replace
 stale inventory on the owning local module or framework definition.
 
-Keep responsibilities distinct: Pack creates and validates immutable ZIP artifacts, while the Service Worker consumes ZIP-backed mappings at
-runtime. The worker fetches the complete package, supports stored and DEFLATE entries, and rejects malformed or unsupported archives.
+Keep responsibilities distinct: artifact production and Service Worker ZIP consumption are separate. The worker fetches a complete ZIP-backed
+destination, supports stored and DEFLATE entries, and rejects malformed or unsupported archives.
 
 ---
 

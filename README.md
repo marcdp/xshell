@@ -25,7 +25,17 @@ XShell is currently **pre-1.0** and evolving.
 
 ## How an application fits together
 
-An XShell application is the runtime plus one or more Modules.
+An XShell application is composed from a selected **root module**, its recursively resolved module dependencies, the selected XShell framework,
+and host configuration. The root module starts dependency resolution; it is not the whole application. At runtime, bootstrap produces one effective
+configuration with three distinct sections:
+
+```js
+config = {
+    app: {},      // effective application identity, metadata, and hosting context
+    modules: {},  // selected and normalized module definitions
+    xshell: {}    // framework and subsystem configuration
+};
+```
 
 A Module can contain Pages, Components, styles, Services, Contracts, icons, and optional module behavior.
 
@@ -99,44 +109,36 @@ my-module/
 ```
 
 
-### Packaging and current deployment
+## Repository-driven startup
 
-The V0 browser runtime maps module resources through its Service Worker into the application resource namespace, using generation-qualified Paths
-such as `/_assets/my-module/<generation>/...`. Development destinations are normally expanded directories. Published `assets.url` values can point to immutable ZIP
-packages, which the Service Worker fetches and reads to serve JavaScript, CSS, Pages, icons, and other package entries.
+The ASP.NET host emits metadata naming a root reference such as `module:x-demo:latest` and one or more ordered repository index URLs. The host-owned
+`bootstrap/index.js` then:
 
-`DProjects.XShell pack ./app ./dist` publishes the application, its recursive module dependencies, and the XShell framework as
-independent immutable ZIP packages under `<output>/<id>/<version>.<hash>/`. The framework source comes from the resources shipped with the running
-DProjects.XShell tool. `--resources-name` selects the directory under `Resources/` and defaults to `DProjects.XShell`; pack reads its framework
-from `Resources/<name>/xshell/`. The name selects source content only and does not appear in package IDs, output paths, or runtime URLs. There is
-no `--xshell` argument or `modules.xshell` reference.
-The application is the root module selected by `release.root`; no authored `app` block, `main` flag, or separate application package is used.
-Pack puts `index.html` and application `sw.js` in the immutable root module generation. `--app-base-path` defaults to empty, `--environment` defaults
-to `Production`, repeatable `--param key=value` supplies root parameters, and `--temp-base-path` defaults to `<app-base-path>/temp`.
-Dependency module directories contain `manifest.json` and `module.zip`; the root also contains `index.html` and `sw.js`. Each module has
-`modules.<id>.assets.url = "url:./module.zip"` and
-`modules.<id>.files = [...]` in the descriptor. The `xshell/<version>.<hash>/` directory contains `manifest.json`, `bootstrap.js`, `sw.js`, and
-`xshell.zip`. Its published descriptor has `xshell.assets.url = "url:./xshell.zip"` and `xshell.files = [...]`.
-`bootstrap.js` and `sw.js` are exact canonical copies also retained inside the complete framework ZIP, allowing direct startup requests without
-creating separate package identities.
-The release manifest uses `root` for the application module, `xshell` for the framework, and `packages` for the complete immutable package set.
-The root startup files participate in the root hash and ZIP but are excluded from `modules.<root-id>.files`; they have no separate `release.packages`
-entries. Bootstrap derives effective `config.app` from the root module metadata and deployment values. Pack hashes a canonical root index with
-`__XSHELL_ROOT_HASH__` in its self-reference and publishes a loose index with the real hash. Startup settings and selected XShell generation can
-change the root hash while leaving dependency and XShell identities unchanged. Deployment may alias stable `/` and `/sw.js` public URLs to the
-generation selected by `release.root`.
-Both canonical and published descriptors contain the generated physical inventory. An existing package path is reused for the same representation
-and cannot be replaced by the other representation. At runtime, a Service Worker mapping whose destination pathname ends in `.zip` loads the
-complete immutable package and serves its entries; other destinations use expanded-directory URL rewriting. ZIP deployment remains subject to the
-documented same-origin/CORS/CSP constraints and supported ZIP format limits.
+1. loads repository indexes and module version indexes;
+2. selects stable module generations and resolves dependencies from version-index metadata;
+3. downloads and normalizes the selected manifests;
+4. merges the framework, dependencies, dependents, and root into the effective configuration;
+5. registers Service Worker mappings for the fixed `/_assets` virtual namespace; and
+6. imports the selected framework runtime, freezes the configuration, and calls `xshell.init(config)`.
 
-In Development, resource middleware serves generated `manifest.json`/`manifest.jsonc` responses whose local
-`modules.<id>.files` or `xshell.files` value reflects the current physical directory. Authored descriptors are not modified, and authors should not
-maintain this generated metadata. Bootstrap consumes the self-contained descriptor and normalizes package-relative inventory paths into the
-generation-qualified `/_assets/...` namespace; there is no separate inventory request.
+The browser accepts exact stable versions, `latest`, and fully specified caret or tilde requirements such as `^1.2.3` and `~1.2.3`. Repository
+order is precedence: the first repository with a usable compatible generation wins. Dependency discovery uses each selected version entry's
+`dependencies`; it does not follow authored `configUrl` references inside downloaded manifests.
 
-All module and XShell manifests use `manifest.json` or `manifest.jsonc`; discovery context determines the manifest role. Packaging parses either
-form and publishes normalized strict JSON as `manifest.json`. Production packages therefore do not contain `manifest.jsonc`.
+Development middleware generates repository and version indexes from the resource tree. It also serves strict-JSON descriptor responses with a
+generated physical file inventory while leaving authored `manifest.jsonc` files unchanged.
+
+## Assets and packaging status
+
+The browser maps generation-qualified virtual Paths such as `/_assets/my-module/1.2.3.dev/...` to each selected definition's physical
+`assets.url`. Expanded-directory destinations are proxied directly. Destinations whose URL pathname ends in `.zip` are read by the Service Worker;
+package bytes use Cache Storage while the durable mapping registry uses IndexedDB.
+
+Reusable packaging code exists for normalized descriptors, inventories, immutable ZIPs, hashing, and publication. Full application packaging is
+currently incomplete and still belongs to the previous `configUrl`-driven bootstrap architecture: `Pack.cs` follows authored `configUrl`
+references, expects framework `bootstrap.js`, and its root startup generation method throws `NotImplementedException`. Do not treat the current
+`pack` command as an implemented repository-driven production deployment workflow. See
+[Packaging](src/DProjects.XShell/Resources/DProjects.XShell/xshell-docs/pages/10-architecture/50-packaging.md).
 
 
 

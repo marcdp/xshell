@@ -80,6 +80,10 @@
 
         // services
         "services": {
+            "markdown": {
+                "contract": "markdown",
+                "implementation": "/services/markdown-default.js"
+            },
             "theme": {
                 "contract": "theme",
                 "implementation": "/services/theme-default.js"

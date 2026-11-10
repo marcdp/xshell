@@ -1,182 +1,75 @@
 # Packaging
 
-`pack` builds a complete application distribution from its root module. It follows every `modules.<id>.configUrl` reference recursively, packages
-each canonical module once, and adds the XShell framework as its own immutable ZIP package. Recursion and ZIP output are mandatory.
+XShell has implemented reusable packaging mechanisms, but production **application packaging is not currently integrated with the active
+repository-driven host bootstrap**. This page separates those states.
 
-## Command
+## Implemented development representation
 
-```text
-DProjects.XShell pack ./app ./dist --resources-name DProjects.XShell --app-base-path /demo --environment Production --param tenant=acme
-```
+In Development, `ResourcesMiddleware` provides the representation consumed by the active bootstrap:
 
-First argument is the root application module directory. It contains `manifest.json` or `manifest.jsonc` with exactly one local module definition.
-Second argument is the distribution directory. The command rejects an output directory containing the source or contained by the source.
-`-a` / `--app-base-path` defaults to `""`; `-e` / `--environment` defaults to `Production`; repeatable `-p` / `--param key=value` supplies
-bootstrap parameters to the root module; and optional `--temp-base-path` defaults to `<app-base-path>/temp` (`/temp` at the deployment root).
-`-r` / `--resources-name` selects the logical bundled resource-set directory under `Resources/` and defaults to `DProjects.XShell`. Application
-packs read the framework from `Resources/<name>/xshell/`. The selected name is a source selector, not a module or package id, runtime assets
-namespace, release path, or output-layout segment.
-The application is the root module selected by `release.root`. No authored `app` block, `main` flag, or separate application package exists.
-Application packs automatically use the selected XShell resources shipped beside the running DProjects.XShell assembly. No `--xshell` argument
-exists, and applications do not declare a framework filesystem path or a `modules.xshell` reference.
-The former `--zip` flag and expanded output mode have been removed.
+- a repository index at `/_resources/DProjects.XShell/index.json`;
+- one module version index at `/<module-id>/index.json`;
+- generation URLs such as `/<module-id>/<version>.dev/manifest.json`; and
+- strict-JSON descriptors with generated physical file inventories.
 
-Standalone XShell framework packaging uses a source whose immediate directory is named `xshell` and whose `manifest.json` or `manifest.jsonc`
-satisfies the XShell framework structure. Every other source directory is packaged as a module. The extension selects JSON or JSONC parsing; it does
-not select the manifest kind, and manifest contents never reclassify the source. A standalone framework package has no module dependency graph.
-Standalone XShell packaging creates no application `index.html` or root `sw.js` because it selects no root module application.
+`FilesIndexer` produces sorted package-relative entries containing `path`, `size`, and a lowercase SHA-256 content hash. Development descriptor
+generation replaces stale inventory on the owning local module or framework definition without editing the authored JSONC file. Bootstrap then
+normalizes the inventory paths into `/_assets/<id>/<generation>/...`.
 
-## Discovery and build
+## Implemented reusable package mechanisms
 
-The command parses the full graph before changing published output. Each reference key must equal the local module id in the referenced document.
-References are resolved relative to the document that contains them. Repeated references to one canonical document are deduplicated. Missing
-documents, id conflicts, cycles, invalid ids, and references without `configUrl` fail the build.
-References cannot define `files`, because inventory belongs to the referenced local definition. A module or root descriptor cannot contribute
-`xshell.files`; only the XShell framework descriptor owns that inventory. Stale authored `files` on the owning local module or framework definition
-are replaced with generated metadata.
+`Pack.cs`, `FilesIndexer`, and `ModuleFileCompiler` contain working mechanisms for:
 
-Only local filesystem source definitions are supported. A `url:../other/manifest.jsonc` reference and a `file:` URL resolve to local files.
-Remote HTTP(S), `app:`, and deployment-root references fail clearly because the packer has no authenticated remote package fetch and integrity
-verification mechanism. It does not recompile remote immutable packages or omit unsupported dependencies.
+- classifying normal-module and XShell framework manifests;
+- parsing JSON and JSONC;
+- compiling JavaScript, XShell HTML resources, and CSS in staged module trees;
+- generating descriptor-embedded inventories;
+- creating deterministic ZIP archives;
+- deriving content hashes from sorted canonical paths and bytes;
+- publishing immutable `<id>/<version>.<hash>/` package directories;
+- verifying an existing immutable identity before reuse; and
+- installing a `release.json` commit record transactionally after staged packages are published.
 
-Dependency modules are built in topological order, followed by the bundled XShell framework and finally the selected root module. The framework
-is not merged into the application module. Each module package retains its own local definition and its own dependency
-references and reference contributions. The packer changes only each dependency's `configUrl` to the definitive packaged descriptor, such as
-`url:../../customers/1.2.0.<hash>/manifest.json`. The relative URL works regardless of where the distribution is deployed. Original source
-descriptors are never edited.
+The Service Worker can consume a mapping whose physical destination pathname ends in `.zip`. It fetches the complete package, caches package bytes,
+parses the supported ZIP subset, and serves individual virtual resource requests. Artifact production and browser package consumption are separate
+responsibilities.
 
-The command copies source files into private staging, normalizes JSONC descriptors to strict `manifest.json`, compiles JavaScript, HTML XShell SFC,
-and standalone CSS through `ModuleFileCompiler`, then generates the structured physical inventory and embeds it at
-`modules.<localId>.files`. An HTML SFC becomes a JavaScript file; conflicting authored HTML and JavaScript runtime paths fail. Framework resources
-remain uncompiled under the existing framework convention and receive their inventory at `xshell.files`.
+## Legacy and incomplete application integration
 
-Each canonical archive contains the compiled tree and a self-contained descriptor whose own generated `hash` is empty and whose generated `files`
-array is complete. The external descriptor beside the ZIP has the calculated hash, `assets.url = "url:./module.zip"` (or `xshell.zip`), the same
-physical file inventory, and `builtAt`. Both descriptors contain the same rewritten dependency references. The inventory is embedded and the
-canonical descriptor is written before hashing; the archive is created before external publication metadata is added. Any authored `builtAt` is
-removed from canonical module or framework definitions before hashing.
+The application path in `Pack.cs` still models the previous bootstrap architecture:
 
-The package hash is the first 16 lowercase hexadecimal characters of SHA-256 over sorted canonical relative paths, lengths, and file bytes.
-It includes the canonical descriptor with its embedded inventory and final rewritten references. It excludes ZIP timestamps and external
-publication metadata.
-ZIP entries are written in sorted order with a fixed timestamp, so the archive bytes are also reproducible for the same canonical tree.
-Changing a dependency identity can change its consumers' hashes. Unchanged packages keep their identities and are reused after the existing
-archive and external descriptor pass integrity checks. Existing immutable packages are never overwritten.
+- dependency discovery recursively follows authored `modules.<id>.configUrl` references;
+- dependency descriptors are rewritten with packaged `configUrl` values;
+- framework packages expect loose `bootstrap.js` and `sw.js` files;
+- root validation expects `xshell:app.configPath` in generated HTML; and
+- `BuildRootStartupFiles()` throws `NotImplementedException`.
 
-The root role is assigned only for this pack operation. A module built as a dependency has `manifest.json` and `module.zip`; the same source selected
-as the root also receives generated `index.html` and `sw.js` in its canonical tree and published directory. The generated startup files, selected
-XShell generation, application base path, environment, parameters, and temp base path therefore affect the root hash. Dependency and XShell hashes
-remain independent of root startup settings. The canonical root index uses `__XSHELL_ROOT_HASH__` in its own config path during hashing; only the
-published loose index substitutes the resulting root hash. The canonical index inside `module.zip` retains the placeholder. The canonical and
-published root `sw.js` are byte-identical and import the selected XShell worker.
+Consequently, the current command cannot complete a normal root application pack, and its dependency graph is not the repository/version-index
+graph used by `bootstrap/index.js`. The repository does not yet implement the production equivalent of the development repository catalog,
+version indexes, host-owned `index.js`, and root startup generation.
 
-| Property | Location | Meaning |
-| --- | --- | --- |
-| `version` | Module or framework descriptor | Authored semantic version. |
-| `hash` | Published descriptor | Immutable canonical content identity. |
-| `builtAt` | Published module or framework descriptor | UTC time when that immutable package was originally built. |
-| `createdAt` | `release.json` | UTC time when the application distribution was committed. |
+Do not treat the intended output layout, `release.json` model, or existing Pack tests as proof that repository-driven application packaging works.
+Do not publish a replacement production specification until implementation chooses and completes that integration.
 
-`pack` generates `builtAt` only in the external published local definition, never in the canonical descriptor inside the ZIP. It is excluded from
-package hashing and retained when an existing package is reused. Identical content therefore keeps the same package identity across builds. A
-framework package uses `xshell.builtAt` in its published `manifest.json` under the same rules. Both timestamps use `yyyy-MM-ddTHH:mm:ssZ`.
-Packages published before `builtAt` was introduced remain reusable without it; their immutable descriptors are not retroactively rewritten.
+Standalone or lower-level packaging paths may exercise parts of the reusable machinery, but that does not establish a deployable application
+workflow. In particular, a successful immutable ZIP operation does not mean the active host can discover or start that distribution.
 
-For example, a published `customers/1.2.0.a83f92c1d4567890/manifest.json` may contain:
+## Current production boundary
 
-```json
-{
-  "modules": {
-    "customers": {
-      "version": "1.2.0",
-      "hash": "a83f92c1d4567890",
-      "builtAt": "2026-10-11T15:30:00Z",
-      "assets": { "url": "url:./module.zip" }
-    }
-  }
-}
-```
+The following runtime behavior is implemented independently of Pack's incomplete application integration:
 
-The actual published descriptor also retains its other configuration and file inventory fields.
+- bootstrap accepts HTTP(S) repository, module-index, manifest, expanded-directory, and ZIP asset URLs subject to browser fetch/CORS and CSP;
+- non-Development generations require an index-provided hash and use `<version>.<hash>` virtual paths;
+- descriptor inventories are self-contained and require no separate inventory request; and
+- the Service Worker supports expanded-directory and ZIP-backed mapping destinations.
 
-## Distribution and transaction boundary
+These capabilities are building blocks, not an implemented repository-driven publisher or deployment manager. Pack does not upload packages or
+configure a hosting environment.
 
-A committed output has this structure:
+## Authoring rules that remain valid
 
-```text
-dist/
-  release.json
-  xshell/0.9.0.<hash>/manifest.json
-  xshell/0.9.0.<hash>/bootstrap.js
-  xshell/0.9.0.<hash>/sw.js
-  xshell/0.9.0.<hash>/xshell.zip
-  app/1.0.0.<hash>/manifest.json
-  app/1.0.0.<hash>/index.html
-  app/1.0.0.<hash>/sw.js
-  app/1.0.0.<hash>/module.zip
-  orders/2.0.0.<hash>/manifest.json
-  orders/2.0.0.<hash>/module.zip
-  customers/1.2.0.<hash>/manifest.json
-  customers/1.2.0.<hash>/module.zip
-```
+Modules and the framework may be authored as `manifest.json` or `manifest.jsonc`. Generated `files`, `hash`, `builtAt`, `configUrl`, and
+`assets.path` are effective or publication metadata and should not be manually maintained in normal source manifests. A module inventory belongs to
+its local `modules.<id>` definition; framework inventory belongs to `xshell.files`.
 
-`xshell.zip` remains the complete canonical framework package, including `manifest.json`, `bootstrap.js`, and `sw.js`. The latter two files are also
-published beside the ZIP as exact byte copies of their canonical versions because bootstrap and Service Worker startup must address them directly.
-The loose copies introduce no separate package identity or inventory entries: the canonical tree determines the one XShell hash. `release.xshell`
-identifies this four-file package through its published `manifest.json` descriptor.
-
-`release.json` is the authoritative commit record. Its `root` field identifies both the application module descriptor and its complete startup
-generation in the containing directory; `xshell` identifies the exact framework
-descriptor; and its package-id-sorted `packages` array lists the complete immutable package set. A standalone XShell pack sets `root` and `xshell`
-to the same descriptor and lists it once. `createdAt` records the successful distribution commit, independently of package
-build times. A new release may reuse packages built months earlier. For example:
-
-```json
-{
-  "root": "app/1.0.0.1234567890abcdef/manifest.json",
-  "xshell": "xshell/0.9.0.0123456789abcdef/manifest.json",
-  "createdAt": "2026-10-11T15:35:00Z",
-  "packages": [
-    "app/1.0.0.1234567890abcdef/manifest.json",
-    "customers/1.2.0.a83f92c1d4567890/manifest.json",
-    "xshell/0.9.0.0123456789abcdef/manifest.json"
-  ]
-}
-```
-
-The published root `index.html` points `xshell:app.configPath` to `/demo/app/1.0.0.<hash>/manifest.json` and loads
-`/demo/xshell/0.9.0.<hash>/bootstrap.js`. Its `sw.js` imports `/demo/xshell/0.9.0.<hash>/sw.js`; bootstrap registers the application worker
-at `/demo/sw.js` for `/demo/` scope. A deployment host can read `release.root`, take its directory, and serve stable public `/demo/` and
-`/demo/sw.js` URLs as aliases to that generation's `index.html` and `sw.js`. Pack only creates the immutable physical files. The startup files
-are part of the root package rather than separate entries in `release.packages`.
-
-Consumers should read `release.json` to select a distribution, then resolve
-its paths within the same output directory. Package directories outside the manifest are uncommitted and may be left by an interrupted publish.
-
-The build has three phases: full graph discovery and validation, private staging of dependency, XShell, and root ZIP packages, then publication.
-An exclusive `.pack.lock` file serializes concurrent commits and is removed as the final publication operation while its exclusive handle is held.
-The command moves immutable packages to their final paths, verifies any existing identities, and installs `release.json` last. A failed build or
-package validation does not select a new release. Previously published and newly moved immutable packages are left intact. The staging directory
-is created beside `--output` to keep package moves on the same filesystem.
-
-## Descriptor-embedded file inventory
-
-`FilesIndexer` returns structured entries for compiled runtime resources, excluding `manifest.json` and `manifest.jsonc`.
-Each entry contains a package-relative path, byte size, and lowercase SHA-256 hash. Paths start with `/`, use forward slashes, and are sorted
-ordinally. Pack replaces any authored stale inventory and embeds the generated array in the canonical descriptor before computing the package hash,
-so inventory metadata participates in the immutable identity without descriptor self-recursion. The published descriptor receives the same array.
-The generated inventory exists only in the canonical and published descriptors.
-For the root module only, the inventory also excludes `/index.html` and `/sw.js`: these startup files remain in the hash and ZIP, but are served
-as application startup resources rather than virtual `/_assets/...` module resources. XShell's own `sw.js` remains in its inventory.
-
-Development uses the same representation: `ResourcesMiddleware` generates a descriptor response with `modules.<localId>.files` or `xshell.files`.
-Authors should not manually maintain `files`. Bootstrap consumes the self-contained descriptor and normalizes those package-relative Paths into the
-generation-qualified application namespace without a separate inventory fetch.
-
-Packaging creates and validates distribution artifacts; deployment and browser runtime loading are separate concerns. The current Service Worker
-does load a complete immutable ZIP when a mapping destination pathname ends in `.zip`, indexes its central directory, and serves matched entries.
-Other destinations use expanded-directory URL rewriting. The ZIP reader supports Pack's stored and DEFLATE entries and rejects malformed,
-encrypted, ZIP64, duplicate-name, unsupported-compression, size-invalid, and CRC-invalid content. Fetch/CORS and the host CSP still constrain remote
-destinations. The packer does not upload artifacts or implement deployment.
-
-See [Modules](30-modules.md), [Service Worker](110-service-worker.md), and [Hosting](40-hosting.md).
+See [Bootstrap](10-bootstrap.md), [Hosting](40-hosting.md), [Modules](30-modules.md), and [Service Worker](110-service-worker.md).

@@ -1,0 +1,21 @@
+{
+  "label": "Markdown Parser",
+  "description": "Converts Markdown text into HTML using marked.",
+  "methods": {
+    "parse": {
+      "description": "Converts Markdown text into HTML.",
+      "parameters": [
+        {
+          "name": "markdown",
+          "type": "string",
+          "required": true,
+          "description": "Markdown source text."
+        }
+      ],
+      "returns": {
+        "type": "string",
+        "description": "Generated HTML."
+      }
+    }
+  }
+}

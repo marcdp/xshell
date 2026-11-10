@@ -127,6 +127,7 @@ export default {
                         });
                     }
                 };
+                list.sort((a, b) => a.id.localeCompare(b.id));
                 state.modules = list;
             }
         };

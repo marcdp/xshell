@@ -1,214 +1,116 @@
 # Modules
 
-The application is the **root module**. Each `manifest.jsonc` contains one local module definition and zero or more references to external module
-definitions. The `modules` object is both the module identity registry and the dependency graph; there is no separate dependency collection.
+A Module is a reusable configuration and resource unit. The host selects one module reference as the **root module**; repository version metadata
+then supplies its recursive dependency graph. The root is the dependency-resolution entry point and final configuration contributor. The
+**application** is the composition of the root, its dependencies, the selected XShell framework, and host configuration.
 
-## Definition, reference, effective module, and instance
+## Four distinct concepts
 
-| Concept | Location | Meaning |
-| --- | --- | --- |
-| Local module definition | The one `modules.<id>` entry without `configUrl` | The module owned by the current configuration document. |
-| External module reference | A `modules.<id>` entry with `configUrl` | A dependency whose key is the expected canonical module id. |
-| Reference contribution | Properties on an external reference besides `configUrl` | Configuration merged into the canonical effective module. |
-| Canonical effective module | Final `config.modules.<id>` | The resolved definition plus root composition values and normalized URLs. |
-| Runtime module instance | `xshell.modules` | One runtime record per canonical effective module id. |
+| Concept | Meaning |
+| --- | --- |
+| Module reference | `module:<id>:<requirement>` in host metadata or a version-index dependency value. |
+| Authored module definition | The local `modules.<id>` object in that module's `manifest.jsonc`. |
+| Resolved module definition | Final normalized `config.modules.<id>` selected through repository metadata. |
+| Runtime module instance | The one instance created by the Modules subsystem for that effective id. |
 
-```jsonc
-{
-    "modules": {
-        "orders": {
-            "label": "Orders",
-            "version": "1.0.0",
-            "copyright": "",
-            "icon": "",
-            "defaults": {
-                "page": { "renderEngine": "x", "stateEngine": "proxy" },
-                "component": { "renderEngine": "x", "stateEngine": "proxy" }
-            },
-            "contract": {
-                "label": "Orders",
-                "methods": {
-                    "refresh": {
-                        "description": "Refreshes module-owned data."
-                    }
-                }
-            }
-        },
-        "x": {
-            "configUrl": "url:../x/manifest.jsonc"
-        }
-    }
-}
-```
+Do not use “application,” “root module,” `config.app`, resolved definition, or runtime instance as synonyms.
 
-Here `orders` is local and `x` is a dependency. Property order has no meaning. Bootstrap requires exactly one entry without `configUrl`; it rejects
-documents with zero or several local definitions.
+## Authoring identity and dependencies
 
-The key is authoritative identity. A reference named `x` must resolve to a document whose local definition is also `modules.x`. Bootstrap rejects an
-identity mismatch, one id mapped to different URLs, or two ids that point at a document defining only one of them.
-
-## Reference contributions and root composition
-
-Any reference may contribute configuration in addition to its canonical id and `configUrl`. The root file is identified because the host's
-`xshell:app.configPath` points to it:
-
-```jsonc
-{
-    "modules": {
-        "app": {
-            "label": "Application",
-            "version": "1.0.0",
-            "copyright": "",
-            "icon": "",
-            "defaults": {
-                "page": { "renderEngine": "x", "stateEngine": "proxy" },
-                "component": { "renderEngine": "x", "stateEngine": "proxy" }
-            }
-        },
-        "x": {
-            "configUrl": "url:../x/manifest.jsonc",
-            "params": { "mode": "compact" }
-        }
-    }
-}
-```
-
-The root requires no `main`, `root`, `isRoot`, or module-type flag. Its role comes from `release.root` in a packed distribution or
-`xshell:app.configPath` in development hosting. The root module is the application for that release.
-
-## Discovery and canonical identity
-
-Bootstrap follows references recursively, resolves each `configUrl` against the document where it was authored, and deduplicates by resolved URL.
-References introduced in one discovery pass are collected in a `Set`-equivalent map, so `A -> X` and `B -> X` fetch X once. The final effective
-configuration contains the full resolved definition, not the lightweight reference stub.
-
-Dependencies are merged before their dependents, with the root last. A reference contribution merges after the referenced local definition and
-before its owner module's own configuration. Sibling traversal follows declaration/discovery order, so fetch completion timing cannot select
-precedence. Dependency cycles are rejected because they make this precedence ambiguous.
-
-The normalized `configUrl` records the definition document. `assets.url` identifies its physical resource container and defaults to that document's
-directory. References cannot define or override `assets`; physical resource ownership stays with the local definition. Runtime resources use
-`/_assets/<module-id>/<generation>/...`; the Service Worker maps that generation-qualified namespace to `assets.url`.
-
-The build-time `pack` command follows the same local-definition and reference ownership rules. It recursively packages the root application and
-all local source dependencies into independent ZIPs, preserving each descriptor's reference contributions. It replaces each reference's
-`configUrl` with a relative URL to the immutable dependency descriptor before hashing the consumer. The committed `release.json` identifies the
-root package and complete package set. See [Packaging](50-packaging.md) for the command, local-source policy, and transaction boundary.
-
-The optional module `routes` object follows the same normalization boundary: its values are module-relative Page targets authored in the module
-configuration and become `/_assets/<module-id>/<generation>/...` paths during bootstrap. Its application-facing keys are not normalized. Route
-placeholders remain
-declarative module metadata; Navigation interprets them only after Areas compose the participating modules' routes.
-
-## Menu contributions and Areas
-
-A module can declare named menu contributions. Each is either a static array or the name of a dynamic source registered with
-`Areas.registerSource()`. Areas compose these contributions from module ids; Area membership does not create dependencies or additional runtime
-module instances. See [Areas](../30-subsystems/10-areas.md).
-
-## Required services
-
-The optional module-level `requires` array names services that must be present for the module to function:
-
-```jsonc
-"orders": {
-    "requires": ["toast"]
-}
-```
-
-After `Services.init()` has finalized the service registry, `Modules.init()` checks all module requirements with `Services.has()` before loading or
-starting any module controller. A missing service fails startup with the module id and service name. The check does not resolve or construct a
-configured lazy service.
-
-`module.requires` is service availability metadata. It is distinct from a Component or Page implementation's `dependencies`, which names concrete
-resources loaded through Resolver and Loader, and from `controller({ serviceName })`, which resolves an existing service for runtime use. See
-[Services](100-services.md).
-
-## Module contract
-
-A local Module definition may include an inline `contract` using the shared contract model:
+A module manifest contains its local definition under its canonical id:
 
 ```jsonc
 {
     "modules": {
         "orders": {
             "label": "Orders",
-            "version": "1.0.0",
+            "version": "1.2.3",
             "copyright": "",
             "icon": "",
             "defaults": {
                 "page": { "renderEngine": "x", "stateEngine": "proxy" },
                 "component": { "renderEngine": "x", "stateEngine": "proxy" }
             },
-            "contract": {
-                "label": "Orders Module",
-                "properties": {
-                    "status": { "type": "string", "readonly": true }
-                },
-                "events": {
-                    "changed": {
-                        "detail": {
-                            "entityId": { "type": "string", "required": true }
-                        }
-                    }
-                },
-                "methods": {
-                    "refresh": {
-                        "returns": { "type": "void" }
-                    }
-                }
+            "dependencies": {
+                "xshell": "module:xshell:^1.0.0",
+                "x": "module:x:latest"
             }
         }
     }
 }
 ```
 
-`module.schema.json` reuses `contract.schema.json`, so Module contracts may describe labels, descriptions, icons, local named types, public
-properties, events, methods, and examples. The contract is validated as part of the normalized effective configuration. Bootstrap supplies an
-empty contract and `events` map when they are omitted.
+The key is the module identity. Valid ids match `^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$`; `xshell` is reserved for the framework. A normal module's id
+must also match its immediate directory name when the server builds its index.
 
-The contract describes the Module's intended public surface; it is not a service registration or a controller implementation. The current Module
-runtime does not compare contract properties or methods with the optional `module.js` controller, validate event payloads, or dispatch declared
-events. In particular, a declared method does not create a controller method. Contract-local `ref` values receive structural schema validation,
-but Module validation does not currently perform the service-contract registry's extra check that each reference names a declared type.
+`ModuleIndexBuilder` copies the local definition's direct `dependencies` into the module version index. Browser bootstrap recursively follows those
+index entries. It does not discover packages from `configUrl` entries inside the downloaded manifest. Dependencies are resolved before dependents,
+cycles are rejected during merge, and selecting incompatible generations for one module id is an error.
 
-## Module controller and runtime instance
+The current `x-demo/manifest.jsonc` is representative: it defines `modules.x-demo`, declares `module:...` dependencies, and contributes application
+composition under `xshell.areas`.
 
-`Modules.init()` iterates the effective `config.modules` map once. It creates one record per canonical id, loads styles and an optional controller,
-makes final params available as `moduleConfig.params` to that controller, and exposes the effective module's normalized `routes` declarations.
-Repeated dependency references
-therefore still produce one runtime instance. `module.routes` is the effective configuration object itself; when routes are absent it is a frozen empty
-object. Before creating those instances, XShell validates every module's service requirements. The effective configuration is immutable by the time
-runtime modules are initialized.
+## Resolution and effective definitions
 
-Retrieve a runtime module with `xshell.modules.getModuleById(id)`. `xshell.modules.registry` is a frozen snapshot of module metadata; it omits
-runtime controllers and mutable internal records.
-`module.routes` is declarative metadata: Areas compose it, and Navigation uses the resulting ordered Area routes for forward and reverse resolution.
+For every selected generation, bootstrap validates that the manifest contains the expected `modules.<id>` object and matching version. It then
+normalizes the complete manifest and merges it into the effective configuration. A manifest can therefore contribute its own module definition and
+additional sections such as `xshell` configuration.
 
-See [Module Specification](../50-specifications/module.md), [Configuration](20-configuration.md), [Bootstrap](10-bootstrap.md), and
+The effective module definition includes generated location and inventory metadata:
+
+```json
+{
+  "label": "Orders",
+  "version": "1.2.3",
+  "configUrl": "https://repo.example/orders/1.2.3.dev/manifest.json",
+  "assets": {
+    "url": "https://repo.example/orders/1.2.3.dev/",
+    "path": "/_assets/orders/1.2.3.dev"
+  },
+  "files": []
+}
+```
+
+`configUrl` identifies the selected descriptor. `assets.url` identifies the physical resource container. `assets.path` identifies the virtual,
+generation-qualified application namespace. They are not interchangeable.
+
+Merge order is framework first, dependency-first among modules, and root last. Objects merge recursively, arrays concatenate, and later scalar
+values replace earlier values. This is whole-manifest composition; the active bootstrap has no separate reference-contribution mechanism.
+
+## Root module and application metadata
+
+The host chooses the root using `xshell:app.module`, for example `module:x-demo:latest`. No `main`, `root`, `isRoot`, or module-type field is stored
+in the manifest. The root contributes last, but it remains a module definition in `config.modules`.
+
+Bootstrap separately derives `config.app` from root metadata and host values. `config.app.id` is the root id, while base path, base URL, parameters,
+repository sources, and environment describe the composed application's hosting context.
+
+## Runtime module instances
+
+`Modules.init()` iterates effective `config.modules` once and creates one runtime record per id. Repeated dependency requirements therefore do not
+create multiple runtime module instances. Retrieve a module with `xshell.modules.getModuleById(id)`; `xshell.modules.registry` is a frozen
+inspection snapshot.
+
+Before controllers start, Modules verifies optional `requires` service names against the finalized service registry. It loads a conventional
+module-wide `/styles/index.css` and `/module.js` controller only when those paths occur in the generated inventory. Controllers start sequentially
+in dependency order and stop in reverse order. A controller receives `moduleAssetsPath`, `moduleConfig`, and named services; its optional `start()`
+and `stop()` methods are lifecycle hooks.
+
+## Menus, routes, Areas, and contracts
+
+Module menu and route declarations are reusable contributions. Areas select and compose participating module ids; Area membership is not a module
+dependency and does not create another module instance. Routes map Area-relative friendly paths to normalized canonical Page Paths. Menus are
+navigation data, not module references.
+
+The optional module `contract` describes public metadata using the common contract schema. It does not register a service, create controller
+methods, or enforce controller implementation. Optional `requires` names services and is distinct from repository module dependencies and from a
+Component or Page implementation's resource `dependencies`.
+
+See [Module Specification](../50-specifications/module.md), [Configuration](20-configuration.md), [Areas](../30-subsystems/10-areas.md), and
 [Service Worker](110-service-worker.md).
 
-## Controller access and startup order
+## Packaging boundary
 
-Module constructors receive `moduleAssetsPath`, `moduleConfig` (including `id` and params), or named registered services via the provider proxy.
-There is no direct injected `params` value.
-Module controllers start sequentially in dependency order: referenced dependencies start before modules that depend on them. Controllers stop
-sequentially in reverse dependency order. If startup fails, controllers that already started successfully are stopped in reverse successful-start
-order before the original startup error is rethrown. Ordering between modules with no dependency relationship is deterministic but does not imply
-dependency semantics. Controller constructors are created while iterating the effective module map, not on service lookup.
-The optional controller is discovered by convention only when `<module assets path>/module.js` appears in the generated file inventory. It must
-default-export a class. Its optional `start()` and `stop()` methods participate in Module lifecycle, independently of any names in
-`moduleConfig.contract`.
-The optional module-wide `/styles/index.css` is loaded only when its path appears in the module inventory. `Modules` requests it as a `style:`
-resource through Resolver → Loader → `style-css`, retains the resulting `CSSStyleSheet` in `module.styles`, and adopts it after successful startup.
-Loader caching ensures the conventional stylesheet is fetched once per module. Relative CSS `@import` and `url(...)` references resolve against the
-stylesheet containing them, including recursively imported stylesheets.
-
-## Working examples
-
-When the host application registers the optional `x-demo` module, these cookbook Pages demonstrate the corresponding behavior:
-
-- `page:x-demo:/pages/06-modules/05-menus.js` — menu contributions, the `/pages` convention, and routes;
-- `page:x-demo:/pages/06-modules/06-dependencies.js` — consuming resources from registered Modules.
-
-These are module-qualified Loader inputs rather than browser-facing navigation URLs.
+The current Pack command still follows legacy authored `configUrl` references when discovering local filesystem dependencies. That behavior is not
+the browser's repository-driven module-resolution model. Application packaging is incomplete because root startup generation is not implemented;
+see [Packaging](50-packaging.md).

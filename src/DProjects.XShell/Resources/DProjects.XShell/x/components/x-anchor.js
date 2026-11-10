@@ -16,7 +16,7 @@ export default {
             outlet:     {type:"string", default:null, attribute:true, state:true, description:""},
             rel:        {type:"string", default:null, attribute:true, state:true, description:"", reflect:true},
             replace:    {type:"boolean", default:false, attribute:true, state:true, description:""},
-            tooltip:     {type:"string", default:"", attribute:true, state:true, description:""}
+            tooltip:    {type:"string", default:"", attribute:true, state:true, description:""}
         },
         methods: {
             focus: {

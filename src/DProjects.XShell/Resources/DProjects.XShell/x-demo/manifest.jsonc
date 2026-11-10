@@ -26,6 +26,7 @@
                 "x":                    "module:x:latest",
                 "x-filesystem":         "module:x-filesystem:latest",    
                 "x-identity":           "module:x-identity:latest",
+                "x-vault":              "module:x-vault:latest",
                 "xshell":               "module:xshell:latest",
                 "xshell-diagnostics":   "module:xshell-diagnostics:latest",
                 "xshell-docs":          "module:xshell-docs:latest",

@@ -1,124 +1,165 @@
 # Bootstrap
 
-The ASP.NET host or packed `index.html` writes `xshell:` meta values and loads the selected XShell generation's `bootstrap.js`.
-`xshell:app.configPath` points to the root module configuration document. The application is that root module for this release.
-For a packed release, `release.root` selects the immutable root generation containing `manifest.json`, `index.html`, and application `sw.js`.
-Deployment can map stable public application and worker URLs to the selected generation while retaining the versioned physical files.
+The active browser bootstrap is the host-owned `bootstrap/index.js`. The generated host `index.html` loads it directly; startup is not delegated to
+a version-specific framework `bootstrap.js`.
+
+## Host inputs
+
+The host supplies these meta values:
+
+```html
+<meta name="xshell:app.module" content="module:x-demo:latest">
+<meta name="xshell:app.basePath" content="">
+<meta name="xshell:app.params" content="">
+<meta name="xshell:app.environment" content="Development">
+<meta name="xshell:app.source" content="/_resources/DProjects.XShell/index.json">
+<meta name="xshell:xshell.temp.url" content="/temp">
+```
+
+`xshell:app.source` is repeatable. Source order is repository precedence. The bootstrap normalizes every configured source against
+`document.baseURI` and requires its URL to end in `index.json`.
+
+## Startup sequence
+
+```mermaid
+flowchart TD
+    H[Host index.html and meta values] --> R[Ordered repository indexes]
+    R --> V[Module version indexes]
+    V --> G[Root and recursive dependency generations]
+    G --> M[Selected manifests]
+    M --> C[Normalized and merged config.app, config.modules, config.xshell]
+    C --> W[Service Worker mappings]
+    C --> E[Generated resolver rules]
+    W --> I[Import selected XShell runtime]
+    E --> I
+    I --> F[Deep-freeze and xshell.init]
+```
 
 ```text
-host HTML
-    -> load canonical manifest.json and the configured root module descriptor
-    -> find the root file's one local module definition
-    -> discover modules.<id>.configUrl references recursively
-    -> validate reference ids and canonical URLs
-    -> reject dependency cycles
-    -> resolve xshell.assets.basePath and the effective environment
-    -> normalize configUrl, assets.url, and resource paths using each generation's assets.path
-    -> merge defaults, dependencies, dependents, and root
-    -> derive effective config.app from the canonical root module and bootstrap deployment values
-    -> retain the generated assets.path for every effective module and XShell
-    -> retain and normalize the descriptor-embedded module and XShell file inventories
-    -> install and initialize Service Worker mappings
-    -> generate resolver rules, including exact contract:<id> inventory entries
-    -> load and validate the XShell runtime
-    -> deep-freeze the effective config and initialize XShell
+host index.html
+    -> read host metadata and ordered repository sources
+    -> load available repository indexes
+    -> resolve the root module reference
+    -> load module version indexes and schedule recursive dependencies
+    -> validate that each module id selects one generation
+    -> download selected manifests
+    -> generate asset paths and normalize manifest values
+    -> merge XShell, dependencies, dependents, and root
+    -> construct config.app and fill framework/resolver defaults
+    -> register generated Service Worker mappings
+    -> import the selected XShell runtime entry
+    -> deep-freeze config and await xshell.init(config)
 ```
 
-## Root and local module detection
+The implementation records a performance checkpoint after each major phase and prints a timing table in `finally`. It shows a delayed spinner while
+startup is running. A failure is logged, removes the spinner, and replaces the document body with an application-startup error. Individual
+repository and module-index failures are warnings when another source can satisfy the request; a manifest failure after selection is fatal.
 
-The root is the document selected by `app.configPath`. Within it, as in every module document, bootstrap finds the one `modules.<id>` entry without
-`configUrl`. It never uses the first property. Zero or multiple local definitions are configuration errors.
+## Repository and version resolution
 
-The optional `xshell:app.params` value becomes both the root definition's params and effective `config.app.params`. Effective `config.app` takes
-id, label, version, copyright, and icon from the canonical root module, and basePath and baseUrl from bootstrap. Neither module nor framework source
-documents may author a top-level `app` object. References in both root and non-root documents may contribute params or other configuration to a
-dependency.
+A root or dependency reference has this form:
 
-## Recursive discovery
+```text
+module:<module-id>:<version-requirement>
+```
 
-For each external reference, bootstrap resolves `url:` in `configUrl` relative to its physical owner document and `app:` relative to the fixed
-application base URL supplied at bootstrap. Plain module paths use the owner's logical module coordinates. A reference key is the expected
-identity, so `modules.x`
-must load a document whose local definition is `modules.x`. The graph rejects:
+The browser supports:
 
-- identity mismatches;
-- one module id associated with different resolved URLs;
-- an already loaded URL referenced under the wrong id; and
-- dependency cycles.
+- an exact stable `major.minor.patch` version;
+- `latest`;
+- a fully specified caret requirement such as `^1.2.3`; and
+- a fully specified tilde requirement such as `~1.2.3`.
 
-Pending URLs are deduplicated within every discovery pass, and the loaded-config map prevents later passes from fetching them again. Shared
-dependencies therefore load once.
+It does not implement `*`, shortened ranges such as `^1.2`, prerelease selection, build-metadata selection, or general npm SemVer expressions.
+For each reference, bootstrap examines repositories in configured order and selects the highest compatible stable version from the first repository
+with a valid module index and compatible entry.
 
-## Normalization and merge
-
-Each local definition receives its configuration document URL as `configUrl`. Its `assets.url` defaults to the same document's directory unless the
-definition owns an explicit value. Plain module-relative reference URLs use the owner's virtual asset namespace; `url:` explicitly selects the
-physical source document. Bootstrap uses the physical source URL to load a referenced configuration before the Service Worker is available.
-This `url:` form is limited to configuration/bootstrap; runtime stylesheet and template resource references reject it.
-
-Bootstrap normalizes the configured `xshell.assets.basePath` once. The checked-in `app:/_assets` resolves relative to the application base URL and is
-stored as the application-relative virtual path `/_assets`. Bootstrap derives generation-qualified `assets.path` before normalizing resources:
-`/_assets/x/1.4.0.dev` for a Development module and `/_assets/xshell/0.9.0.<hash>` for a published framework. Development uses
-`<version>.dev` regardless of any descriptor hash; other environments require the generated package hash and use `<version>.<hash>`.
-With an application hosted under `/myapp/`, these are served under `/myapp/_assets/...`.
-`assets.path` is generated runtime metadata; `assets.url` remains the separate physical backing location.
-
-The dependency graph supplies a post-order merge sequence. Dependencies precede dependents, reference contributions merge after the referenced
-local definition, sibling references retain declaration/discovery order, and the root is last. This produces deterministic root-authoritative
-composition independent of network completion order. The final
-`config.modules` entries are full canonical definitions rather than unresolved stubs.
-
-## Runtime handoff
-
-After resolving effective XShell and module definitions, bootstrap finalizes their `assets.path`, `assets.url`, and `configUrl` values. It then generates
-`config.xshell.serviceWorker.mappings`: one mapping for XShell and one per effective module. Each `src` is an absolute browser URL under
-`config.app.baseUrl` for that generation's virtual asset path; each `dst` is the normalized physical `assets.url`. Mapping metadata retains the
-package `version`, module `name`, and `configUrl` in `exceptions`. The enclosing `xshell.serviceWorker` object is normal authored configuration and
-follows the same merge order as other `xshell` settings. Bootstrap preserves that merged object but replaces its `mappings` property with the
-generated effective array, so authored mappings are never concatenated into the runtime mappings.
-
-Bootstrap registers the application Service Worker at `app.basePath + "/sw.js"`, waits for control, and sends these mappings directly in a
-`registerMappings` message. The worker validates the batch and adds it to its durable registry before acknowledging. The effective mappings describe
-what this bootstrap generation requested; the IndexedDB registry may also contain mappings from other generations or tabs. Inventory loading does
-not depend on this mapping step: every runtime descriptor is self-contained and already provides `modules.<localId>.files` or `xshell.files`.
-Remote runtime descriptors are likewise responsible for containing their inventory. 
-
-The inventory in each served or canonical descriptor is package-relative:
+Repository index:
 
 ```json
-{ "path": "/components/x-button.js", "size": 1234, "hash": "..." }
+{
+  "modules": {
+    "xshell": { "url": "xshell/index.json" },
+    "x": { "url": "x/index.json" }
+  }
+}
 ```
 
-The existing descriptor normalization converts only the effective-config copy into the virtual application resource namespace:
+Module version index:
 
 ```json
-{ "path": "/_assets/x/1.4.0.dev/components/x-button.js", "size": 1234, "hash": "..." }
+{
+  "module": "x",
+  "versions": {
+    "1.2.3": {
+      "url": "1.2.3.dev/manifest.json",
+      "dependencies": {
+        "xshell": "module:xshell:^1.0.0"
+      }
+    }
+  }
+}
 ```
 
-The same single normalization pass produces Paths such as `/_assets/xshell/0.9.0.dev/xshell.js` in `config.xshell.files`. These are
-application-root-relative virtual Paths,
-not absolute browser URLs; `size` and `hash` are unchanged. Bootstrap then loads the
-XShell runtime, validates the complete enriched configuration, deeply freezes it, and calls `xshell.init(config)`. The generated mappings are frozen
-with the rest of `xshell.config`. `xshell.init` validates again,
-constructs runtime services, awaits i18n and Contracts initialization, registers core instances, and finalizes
-configured Services. Modules checks requirements before loading any controller and then initializes one instance per canonical id.
-Areas composes menus, ordered routes, and homes after module startup; Navigation starts last.
+Repository-index and version-index requests are deduplicated by URL. Module-resolution requests are deduplicated by the complete reference string,
+and selected generations are cached by `<name>@<version>`. After recursion finishes, bootstrap rejects two selected versions or manifest URLs for
+the same module id. Dependency graph traversal rejects cycles and missing dependency ids.
 
-In Development, `ResourcesMiddleware` parses the one authored JSON or JSONC descriptor, generates the current physical inventory, replaces any
-authored stale `files` value in the generated response, and leaves the source file unchanged. Requests for either extension use the same discovery
-rule, so canonical `manifest.json` and authored `manifest.jsonc` URLs can both be served from either representation. This effective configuration and its inventories are
-bootstrap-time values. File changes do not mutate an already initialized application; reloading runs bootstrap again and receives the current
-development descriptor, inventory, and resources. See
-[Service Worker](110-service-worker.md#development-generations).
+The dependency information used for discovery comes from the selected version-index entry. Downloaded manifests contribute configuration, but the
+browser does not discover additional packages by following `modules.<id>.configUrl` values inside them.
 
-See [Configuration](20-configuration.md), [Services](100-services.md), [Modules](30-modules.md), and [Service Worker](110-service-worker.md).
+`ModuleIndexBuilder` accepts full semantic versions, including prerelease and build metadata, when generating indexes. The browser selector is
+deliberately narrower and selects only plain stable `major.minor.patch` keys. Repository tooling and browser selectability are therefore distinct.
 
-## JSONC boundary
+## Manifest normalization and merge
 
-Browser bootstrap accepts JSONC comments and trailing commas in framework, root, and dependency configuration documents. Its scanner preserves
-quoted content while removing comments and commas before closing object or array delimiters. Server/build descriptor parsing accepts the same dialect.
-The framework request always uses the canonical runtime URL `manifest.json`; development middleware discovers exactly one `manifest.json` or
-`manifest.jsonc` source and serves generated strict JSON containing `xshell.files`. Module descriptor requests use the same rule and contain the local
-definition's generated `files`, where local ownership means the only `modules.<id>` entry without `configUrl`.
+The selected version entry's `url` must resolve to an HTTP(S) URL whose path ends in `/manifest.json` and has no query or fragment. The downloaded
+document must contain `xshell` for the framework or `modules.<selected-id>` for a normal module, with a version equal to the selected index version.
 
-See [Hosting](40-hosting.md) for meta inputs and generated worker files.
+For each selected generation, bootstrap adds effective metadata:
+
+- `configUrl`: the absolute selected manifest URL;
+- `assets.url`: the absolute physical directory or ZIP URL, resolved from authored `url:...` and defaulting to `url:./`;
+- `assets.path`: `/_assets/<id>/<version>.dev` in Development or `/_assets/<id>/<version>.<hash>` otherwise; and
+- `files`: inventory paths normalized into that generation-qualified virtual namespace.
+
+The host currently fixes the effective virtual base to `/_assets`; it does not derive a selectable base from authored configuration. Production
+generations require the version-index hash.
+
+Manifest values are normalized recursively. `app:` resolves below the application base URL, `url:` resolves against the selected manifest URL,
+absolute schemes remain unchanged, `/` starts at the owning generation's virtual root, and `./` or `../` resolve from the declaring logical path
+without escaping that root. Ordinary strings are unchanged.
+
+Merge behavior is deterministic:
+
+| Input | Effective result |
+| --- | --- |
+| Object + object | Recursive property merge. |
+| Array + array | Concatenation in merge order. |
+| Scalar or other value | The later value replaces the earlier value. |
+
+The selected framework merges first, then dependencies before their dependents, with the root last. The framework's own
+`xshell.resolver.esm.xshell` entry is restored after merging so another manifest cannot replace the selected runtime entry.
+
+## Effective application and runtime handoff
+
+Bootstrap constructs `config.app` from the root module and host values. `config.app` is application metadata and hosting context, not the whole
+effective configuration and not a runtime module instance. It contains `id`, `label`, `version`, `copyright`, `icon`, `basePath`, `baseUrl`,
+`params`, `sources`, and `environment`. `sources` contains all configured repository URLs in normalized absolute form, including sources that were
+unavailable during this startup. Host parameters replace the effective root module's `params` and are also exposed as `config.app.params`.
+
+After filling resolver rules, bootstrap generates one `xshell.serviceWorker.mappings` entry for the framework and one for every effective module.
+It registers `<app.basePath>/sw.js`, waits for the worker to control the page, sends `registerMappings`, and waits up to five seconds for the
+acknowledgement. A newly installed worker that does not yet control the page causes a reload.
+
+Finally, bootstrap resolves the runtime URL from the selected framework's `resolver.esm.xshell.src`, dynamically imports it, recursively freezes the
+effective configuration, and calls:
+
+```js
+await xshell.init(config);
+```
+
+There is no separate `xshell.validateConfig(config)` call in the host bootstrap. `XShell.init()` creates Resolver and Loader, then calls its own
+`validateConfig()` before constructing the remaining runtime subsystems.
+
+See [Configuration](20-configuration.md), [Modules](30-modules.md), [Hosting](40-hosting.md), and [Service Worker](110-service-worker.md).

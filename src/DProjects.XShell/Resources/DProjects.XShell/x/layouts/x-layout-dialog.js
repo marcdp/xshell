@@ -55,7 +55,7 @@ export default {
         }
         .container { position:relative; }
         .header {display:flex; align-items:baseline; padding-bottom:.5em;}
-        .header div {flex:1; }
+        .header div:first-child {flex:1;}
         .header div h2 {margin:0; flex:1; font-size: var(--x-font-size-subtitle); margin-right:1em}
         .header div h2 ~ x-page-description {font-size:var(--x-font-size-small);display:block;}
         .header .header-actions {display:flex; gap:0.5em; justify-content:flex-end; padding-right:.5em;}

@@ -52,6 +52,7 @@
     --x-color-background-x-gray: light-dark(#F0F0F0, #242424);
     --x-color-background-xx-gray: light-dark(#D5D5D5, #303030);
     --x-color-background-xxx-gray: light-dark(#C5C5C5, #3A3A3A);
+    --x-color-background-xxxx-gray: light-dark(#F0F0F0, #202020);
 
     
     /* x-layout */
@@ -74,7 +75,7 @@
     --x-layout-stack-background:light-dark(#FFFFFF, #181818);
     --x-layout-stack-border-radius: .65em 0 0 .65em;
     --x-layout-stack-shadow:light-dark(rgba(0, 0, 0, 0.22), rgba(0, 0, 0, 0.55)) 0px 25.6px 57.6px 0px, light-dark(rgba(0, 0, 0, 0.18), rgba(0, 0, 0, 0.40)) 0px 4.8px 14.4px 0px;
-    --x-layout-stack-width: calc(100vw - var(--x-layout-main-drawer-width));
+    --x-layout-stack-width: 75vw;
     --x-layout-stack-page-padding-vertical: 1em;
     --x-layout-stack-page-padding-horizontal: 2em;
     --x-layout-stack-backdrop: light-dark(rgba(0,0,0,.1), rgba(0, 0, 0, .45));

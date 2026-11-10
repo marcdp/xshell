@@ -18,6 +18,7 @@ export default {
 
     style: `
         x-toolbar {flex:1;}
+        x-toolbar span {padding-left:.5em; display:block;}
         x-notice {margin: var(--x-layout-stack-page-padding-vertical) var(--x-layout-stack-page-padding-horizontal) var(--x-layout-stack-page-padding-vertical) var(--x-layout-stack-page-padding-horizontal);}
         iframe {width: 100%; height: 100%; border: none;}
     `,
@@ -25,10 +26,7 @@ export default {
     template: `
         <x-toolbar slot="header-actions" x-if="!state.error">
             <span style="flex:1"></span>
-            <span>
-                <x-file-size x-prop:value="state.entry.length"></x-file-size>
-            </span>
-            <x-button label="Print" icon="x-print" command="print" class="light"></x-button>
+            <x-button tooltiptext="Print" icon="x-print" command="print" class="round light"></x-button>
         </x-toolbar>        
         <x-notice x-if="state.error" type="error" x-attr:message="state.error"></x-notice>
         <iframe x-attr:src="state.url"></iframe>

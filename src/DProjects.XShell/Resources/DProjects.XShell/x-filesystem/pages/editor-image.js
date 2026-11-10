@@ -17,6 +17,7 @@ export default {
     style: `
         .viewer {display:flex; flex-direction:column; height:100%; min-height:0; overflow:hidden;}
         .toolbar {display:flex; align-items:center; gap:.3em; flex:1;}
+        .toolbar span {padding-left:.5em;}
         .viewport {display:flex; flex:1; min-width:0; min-height:0; overflow:auto; overscroll-behavior:contain;}
         .image-stage {position:relative; flex:none; margin:auto;}
         .image-stage img {position:absolute; top:50%; left:50%; display:block; max-width:none; max-height:none; transform-origin:center; cursor:grab; user-select:none; -webkit-user-drag:none;}
@@ -32,13 +33,11 @@ export default {
             <x-button label="100%" command="actualSize" class="light"></x-button>
             <x-button label="Fit" command="fit" class="light"></x-button>
             <x-button icon="x-rotate" command="rotate" class="round light"></x-button>
-
-            <span style="flex:1"></span>
             <span x-if="state.naturalWidth">
-                {{ state.naturalWidth }} × {{ state.naturalHeight }} px /
-                <x-file-size x-prop:value="state.fileSize"></x-file-size>
+                {{ state.naturalWidth }} × {{ state.naturalHeight }} px            
             </span>
-            <x-button label="Print" icon="x-print" command="print" class="light" x-if="!state.aes"></x-button>
+            <span style="flex:1"></span>
+            <x-button tooltip="Print" icon="x-print" command="print" class="round light" x-if="!state.aes"></x-button>
         </x-toolbar>
 
         <x-notice x-if="state.error" type="error" x-attr:message="state.error"></x-notice>

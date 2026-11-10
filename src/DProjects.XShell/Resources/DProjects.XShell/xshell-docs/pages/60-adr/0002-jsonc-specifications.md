@@ -2,34 +2,47 @@
 
 ## Status
 
-Accepted for JSONC authoring, nested composition, and effective-configuration schema validation. Module contracts use the common descriptive
-contract model; module actions and intents are outside V0.
+Accepted for JSONC authoring and effective-configuration schema validation. Its original `configUrl` composition mechanism is superseded for active
+browser bootstrap by [ADR-0006](0006-repository-resolution-and-host-bootstrap.md).
 
 ## Context
 
 XShell's human-authored configuration benefits from comments. Earlier checked-in application and module files used flat dotted keys and a separate
-`app.jsonc` convention. Current root and core module definitions use nested objects. That legacy context is not the current configuration model.
+`app.jsonc` convention. Later bootstrap code used one local `modules.<id>` definition plus external `configUrl` references. Neither legacy form is
+the current browser discovery model.
 
-## Decision
+## Decision retained
 
-Use JSONC for root and dependency module definitions. The application is the root module. Each document has one local `modules.<id>` definition
-without `configUrl`; its other module entries are external references. Compose nested `app`, `modules`, and `xshell` objects into one effective
-configuration. Merge plain objects recursively, concatenate arrays, and let later scalar values replace earlier ones. Dependencies precede their
-dependents, with the root last. References may contribute configuration to their canonical effective modules; `assets.url` remains owned by the
-referenced local definition.
+Use JSONC for human-authored module and framework manifests. Compose nested `app`, `modules`, and `xshell` objects into one effective configuration.
+Merge plain objects recursively, concatenate arrays, and let later scalar values replace earlier ones. Dependencies precede their dependents, with
+the root last.
 
-Use JSON Schema as the validation language for the final merged object. Fragments may be partial; the effective configuration is the main validation
-boundary. Deeply freeze it before handing it to XShell. No browser-native schema validator is assumed.
+Use JSON Schema as the validation language for the complete effective configuration. Authored manifests may be partial contributors; bootstrap
+enriches selected definitions with generated locations, inventories, host application metadata, Service Worker mappings, and resolver entries.
+Deeply freeze the result before handing it to XShell.
+
+## Superseded discovery decision
+
+The earlier browser design identified a document's local definition as the `modules.<id>` object without `configUrl` and recursively followed other
+`modules.<id>.configUrl` entries. The active browser instead selects manifests through repository and module version indexes. Version-index
+dependency entries drive recursive discovery; downloaded manifests contribute configuration but do not introduce new packages through
+`configUrl`.
+
+The selected root remains a module definition. The application is the broader composition of the root, dependencies, selected framework, and host
+configuration; generated `config.app` is its metadata and hosting projection.
 
 ## Consequences and current status
 
-Bootstrap parses JSONC, validates local and referenced module identities, deduplicates referenced definitions by URL, rejects conflicting identities
-and cycles, and merges nested data in deterministic dependency-first order with the root last. Development middleware and Pack generate
-descriptor-embedded inventories; bootstrap normalizes them during configuration preparation. After worker mapping and resolver generation,
-bootstrap awaits XShell's effective schema validation, deeply freezes the object, and calls init. Init validates again before runtime
-services are constructed. The X module currently includes a `module.js` controller; validation is not environment-gated. The canonical schema is
-`xshell/schemas/config.schema.json`; it requires module defaults for definition-based Page and Component engines and defines XShell UI defaults
-for layouts, lazy/error/Markdown components, and standard dialog pages, plus descriptive common Module contract metadata. The server default points to
-`x-demo/manifest.jsonc`. Browser JSONC supports comments and trailing commas, matching server/build descriptor parsing.
+Development middleware accepts authored JSON or JSONC and serves selected `/manifest.json` URLs as strict JSON with generated inventories. The
+host-owned bootstrap rejects conflicting generations and dependency cycles, merges in deterministic dependency-first order, generates mappings and
+resolver entries, freezes the effective object, and calls `xshell.init(config)`. Initialization performs schema validation before constructing the
+remaining runtime subsystems.
 
-See [Configuration](../10-architecture/20-configuration.md) and [Specifications](../50-specifications/).
+The canonical schema is `xshell/schemas/config.schema.json`. It defines module defaults for definition-based Page and Component engines, global
+XShell UI infrastructure, Areas, navigation, resolvers, services, i18n, asset locations, generated inventories, and application metadata.
+
+The current Pack command still implements the superseded `configUrl` graph internally and has incomplete root startup integration. That packaging
+code does not restore the old mechanism as the active browser architecture.
+
+See [Configuration](../10-architecture/20-configuration.md), [Specifications](../50-specifications/), and
+[ADR-0006](0006-repository-resolution-and-host-bootstrap.md).

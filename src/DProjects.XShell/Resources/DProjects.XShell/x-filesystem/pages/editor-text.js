@@ -18,6 +18,7 @@ export default {
 
     style: `
         x-toolbar {flex:1;}
+        x-toolbar span {padding-left:.5em; display:block;}
         x-notice {margin: var(--x-layout-stack-page-padding-vertical) var(--x-layout-stack-page-padding-horizontal) var(--x-layout-stack-page-padding-vertical) var(--x-layout-stack-page-padding-horizontal);}
         codemirror-editor {border-top: 1px var(--x-datafield-border-color) solid;}
     `,
@@ -25,15 +26,17 @@ export default {
     template: `
         <x-toolbar slot="header-actions" x-if="!state.error">
             <x-button label="Save" icon="x-save" command="save" class="light"></x-button>
-            <span style="flex:1"></span>
             <span>
-                <x-file-size x-prop:value="state.entry.length"></x-file-size>
+                
             </span>
-            <x-button label="Print" icon="x-print" command="print" class="light"></x-button>
+            <span style="flex:1"></span>            
+            <x-button tooltip="Preview" icon="x-preview" command="preview" class="round light"></x-button>
+            <x-button tooltip="Print" icon="x-print" command="print" class="round light"></x-button>
         </x-toolbar>
         
         <x-notice x-if="state.error" type="error" x-attr:message="state.error"></x-notice>
-        <codemirror-editor x-else x-prop:mode="state.mode" x-model="state.value" x-on:keydown="onKeyDown" x-on:dirty="onDirty" autofocus></codemirror-editor>
+        
+        <x-code-editor class="editor" x-else x-prop:mode="state.mode" x-model="state.value" x-on:keydown="onKeyDown" x-on:dirty="onDirty" autofocus></x-code-editor>
     `,
 
     state: {
@@ -49,7 +52,7 @@ export default {
         aes_password: null,
     },
 
-    controller({state, page, loader, dialog, commands}) {
+    controller({state, page, loader, dialog, commands, markdown}) {
         return {
             async load() {
                 // load
@@ -123,7 +126,7 @@ export default {
                     state.saving = false;
                 }
                 // set not dirty
-                const editor = page.host.querySelector("codemirror-editor");
+                const editor = page.host.querySelector(".editor");
                 editor.dirty = false;
             },
             print() {
@@ -140,6 +143,17 @@ export default {
                 });
                 win.focus();
                 win.print();
+            },
+            async preview() {
+                //preview
+                const html = markdown.parse(state.value);
+                await dialog.open({
+                    href: "page:x-filesystem:/pages/viewer.js",
+                    title: "Preview",
+                    context: {
+                        value: html
+                    }
+                });
             },
             close(){
                 page.close();
@@ -159,13 +173,13 @@ export default {
                 // on key down
                 if (event.key === "p" && (event.ctrlKey || event.metaKey)) {
                     // print
-                    const editor = page.host.querySelector("codemirror-editor");
+                    const editor = page.host.querySelector(".editor");
                     editor.refreshValue();
                     event.preventDefault();
                     this.print();
                 } else if (event.key === "s" && (event.ctrlKey || event.metaKey)) {
                     // save
-                    const editor = page.host.querySelector("codemirror-editor");
+                    const editor = page.host.querySelector(".editor");
                     editor.refreshValue();
                     state.value = editor.value;
                     event.preventDefault();

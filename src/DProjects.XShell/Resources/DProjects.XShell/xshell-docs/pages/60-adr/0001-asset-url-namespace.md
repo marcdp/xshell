@@ -12,9 +12,9 @@ Framework and module resources can originate from different directories or URLs.
 
 ## Current implementation
 
-The namespace is controlled by `xshell.assets.basePath`. The checked-in XShell configuration uses `app:/_assets`. Bootstrap resolves it against the
-application base URL and derives paths such as `/_assets/xshell/0.9.0.dev` and `/_assets/<module-id>/<generation>`. It sends corresponding rules to
-the service worker.
+The checked-in XShell configuration authors `xshell.assets.basePath` as `app:/_assets`. The active host bootstrap currently initializes the effective
+base explicitly as `/_assets`, then derives paths such as `/_assets/xshell/0.9.0.dev` and `/_assets/<module-id>/<generation>`. It sends corresponding
+rules to the service worker. Dynamic selection of another virtual base is not currently implemented by the host.
 
 The `/_assets` namespace must remain stable unless a separate compatibility decision changes it.
 
@@ -24,8 +24,8 @@ Development generations are named `<version>.dev`; they do not require a package
 generations are immutable and named `<version>.<hash>`, where `hash` is the generated package-level identity. The runtime asset URL form is
 `/_assets/<module-id>/<generation>/...`, including `xshell` as a module id for framework assets.
 
-Bootstrap selects `.dev` only when the effective environment is Development, ignoring any hash. Other environments require the descriptor's
-non-empty package hash. Service Worker rule sources use the resulting generation-qualified paths.
+Bootstrap selects `.dev` only when `config.app.environment` is Development, ignoring any hash. Other environments require the selected version-index
+entry's non-empty package hash. Service Worker rule sources use the resulting generation-qualified paths.
 
 The Service Worker owns one persistent application-scope registry. Registration is additive and serialized. Canonical `src` identifies an
 immutable mapping: the same `src` and `dst` is idempotent, while the same `src` with another `dst` rejects the complete registration batch.

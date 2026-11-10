@@ -93,6 +93,7 @@ export default {
                         });
                     }
                 }
+                list.sort((a, b) => a.serviceId.localeCompare(b.serviceId));
                 state.items = list;
             }
         };

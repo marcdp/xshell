@@ -1,16 +1,16 @@
 # Specifications
 
-XShell authors configuration as JSONC. The root module uses the same `manifest.jsonc` composition model as dependency modules; there is no separate
-application file format. All descriptors use `manifest.json` or `manifest.jsonc`. A descriptor directly inside `xshell/` is an XShell framework
-descriptor; a descriptor in every other directory is a module descriptor. Its extension selects the parser, and the selected distinct framework or
-module schema validates its contents after classification. See [Root Module](application.md) for the application-specific `app` section and [Module](module.md) for local definitions,
-external reference contributions, asset locations, and the declarative public contract.
+XShell authors configuration as JSONC. The root module uses the same `manifest.jsonc` model as other modules; there is no separate authored
+application format. All descriptors use `manifest.json` or `manifest.jsonc`. A descriptor directly inside `xshell/` is an XShell framework
+descriptor; a descriptor in every other directory is a module descriptor. Its extension selects the parser, and classification selects the
+framework or module structure. See [Root Module and Application Metadata](application.md) for the generated `app` section and [Module](module.md)
+for local definitions, repository dependency references, asset locations, and the declarative public contract.
 The root also composes [Areas](../30-subsystems/10-areas.md) from module ids. Module menu contributions remain independent of that placement.
 
-The validation boundary is the complete effective configuration after discovery, descriptor and embedded-inventory normalization, merge, worker
-mapping, and resolver generation. Bootstrap imports XShell and awaits `xshell.validateConfig(config)` against
-`xshell/schemas/config.schema.json` before deep freeze and `xshell.init(config)`. Init validates again before runtime service construction. Failure
-aborts startup in every environment.
+The validation boundary is the complete effective configuration after repository resolution, descriptor and embedded-inventory normalization,
+merge, worker mapping, and resolver generation. Host bootstrap imports XShell, deep-freezes the object, and calls `xshell.init(config)`.
+Initialization creates Resolver and Loader and then validates against `xshell/schemas/config.schema.json` before constructing the remaining runtime
+services. There is no separate host-side `xshell.validateConfig(config)` call.
 The X module currently includes a `module.js` controller; configuration validation remains a separate bootstrap and initialization responsibility.
 
 The schema defines `app`, `modules`, and `xshell`, including module `configUrl`, nested `assets`, defaults, menus, optional service `requires`, optional

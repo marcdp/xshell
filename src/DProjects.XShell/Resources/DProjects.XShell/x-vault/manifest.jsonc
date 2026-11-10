@@ -1,0 +1,28 @@
+{
+    "modules": {
+        "x-vault": {
+            "label": "X Vault",
+            "version": "0.9.0",
+            "icon": "x-key",
+            "copyright": "",
+            "defaults": {
+                "component": {
+                    "renderEngine": "x",
+                    "stateEngine": "proxy"
+                },
+                "page": {
+                    "renderEngine": "x",
+                    "stateEngine": "proxy"
+                }
+            }
+        }
+    },
+    "xshell": {
+        "services": {
+            "xvault": {
+                "contract": "xvault",
+                "implementation": "/services/xvault.js"
+            }
+        }
+    }
+}

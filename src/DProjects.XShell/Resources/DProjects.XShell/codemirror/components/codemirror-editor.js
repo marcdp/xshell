@@ -43,9 +43,13 @@ export default {
         .cm-editor {}
         .cm-editor.cm-focused {outline:none;}
         .ͼ1 .cm-content {padding:0;}
-        .ͼ2 .cm-gutters {background:var(--x-datafield-background)!important; border-right:var(--x-code-border);}
+        .ͼ2 .cm-gutters {background:var(--x-color-background-xxxx-gray)!important; border-right:none; }
+        .ͼ2 .cm-gutters .cm-lineNumbers .cm-gutterElement {padding-left:.75em!important; padding-right:.75em!important;}
         .ͼ2 .cm-activeLineGutter {background:light-dark(#eeeeee, #303030);}
         .ͼ2 .cm-activeLine {background:light-dark(#eeeeee, #303030);}
+
+        .ͼ2 .cm-gutters .cm-gutter.cm-foldGutter {display:none!important;}
+
         .ͼ1 .cm-scroller {
             scrollbar-width: var(--x-scrollbar-width);
             scrollbar-gutter: var(--x-scrollbar-gutter);
@@ -108,7 +112,8 @@ export default {
                         EditorView.updateListener.of(update => {
                             if (!update.docChanged) return;
                             state.dirty = true;
-                        })
+                        }),
+                        ...(state.mode == "markdown" ? [EditorView.lineWrapping] : [])
                     ]
                 });
                 editor = new EditorView({
