@@ -211,7 +211,7 @@ export default {
         :host .picker span {flex:1; display:block;padding-left:.5em; padding-right:.5em; line-height:2.15em; color:var(--x-datafield-color);}
         :host .picker input {border:none; outline:none; }
         :host .picker input:focus {border:none; outline:none;}
-        :host .picker x-button {width:3em; margin:-.1em; }
+        :host .picker x-button {width:3em; margin: -0.1em; }
         
         :host .list {}
         :host .list .list-body {display:flex; flex-direction:column; margin-top:.4em;}

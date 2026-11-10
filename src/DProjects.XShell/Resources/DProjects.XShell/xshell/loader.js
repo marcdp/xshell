@@ -105,7 +105,7 @@ export default class Loader {
                 result.push(window.customElements.get(name));
             } else {
                 // load
-                console.log(`loader: load '${resource}' from ${url} ...`);
+                //console.log(`loader: load '${resource}' from ${url} ...`);
                 let promise = (async () => {
                     let value = null;
                     let registryItem = {resource, 

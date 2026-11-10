@@ -1,3 +1,4 @@
+import aes from "../js/aes.js";
 
 export default {
     contract: {
@@ -37,7 +38,7 @@ export default {
                 {{ state.naturalWidth }} × {{ state.naturalHeight }} px /
                 <x-file-size x-prop:value="state.fileSize"></x-file-size>
             </span>
-            <x-button label="Print" icon="x-print" command="print" class="light"></x-button>
+            <x-button label="Print" icon="x-print" command="print" class="light" x-if="!state.aes"></x-button>
         </x-toolbar>
 
         <x-notice x-if="state.error" type="error" x-attr:message="state.error"></x-notice>
@@ -82,10 +83,11 @@ export default {
         width: 0,
         height: 0,
         stageWidth: 0,
-        stageHeight: 0
+        stageHeight: 0,
+        aes: false
     },
 
-    controller({ state, page, loader }) {
+    controller({ state, page, loader, dialog, commands}) {
         let filesystem = null;
         let readUrl = null;
         let viewport = null;
@@ -162,12 +164,13 @@ export default {
 
         return {
             async load() {
+                // load
                 page.label = state.path.split("/").pop();
                 page.description = state.path;
                 await this.refresh();
             },
-
             async refresh() {
+                // refresh
                 const id = ++revision;
 
                 stopDrag();
@@ -181,6 +184,7 @@ export default {
                 state.naturalHeight = 0;
                 state.rotation = 0;
                 state.zoom = 1;
+                state.aes = false;
                 state.fit = true;
                 state.label = "Fit";
 
@@ -189,22 +193,50 @@ export default {
                 try {
                     const fs = await loader.load("filesystem:" + state.src);
                     const entry = await fs.getEntry(state.path);
-                    const result = await fs.getReadUrl(state.path);
+                    filesystem = fs;
+                    state.fileSize = entry?.length ?? 0;
 
-                    if (disposed || id !== revision) {
-                        result.dispose?.();
-                        return;
+                    // load
+                    let extension = state.path.split(".").pop();
+                    if (extension === "aes") {
+                        // aes
+                        state.aes = true;
+                        const aes_password = await dialog.prompt({ title: "Enter password", inputType: "password", required:true});
+                        if (!aes_password) {
+                            state.error = "Password is required.";
+                            commands.enqueue("close");
+                            return;
+                        }
+                        try {
+                            const stream = await fs.loadReadStream(state.path);
+                            let value = await new Response(stream).text();
+                            value = await aes.decrypt(value, aes_password);
+                            state.url = value;
+                        } catch (error) {
+                            state.error = error.message || "Unable to decrypt file.";                           
+                            commands.enqueue("close");
+                        }
+                        
+                    } else {
+                        // set
+                        const result = await fs.getReadUrl(state.path);
+                        if (disposed || id !== revision) {
+                            result.dispose?.();
+                            return;
+                        }
+                        readUrl = result;
+                        state.url = result.url;
                     }
 
-                    filesystem = fs;
-                    readUrl = result;
-                    state.fileSize = entry?.length ?? 0;
-                    state.url = result.url;
                 } catch (error) {
+                    // catch
                     if (!disposed && id === revision) {
                         state.error = error.message + ": " + state.path;
                     }
                 }
+            },
+            close() {
+                page.close();
             },
 
             // image events

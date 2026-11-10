@@ -15,8 +15,7 @@ namespace DProjects.XShell {
         // inner class
         public class Configuration {
             public AppConfig App { get; init; } = new AppConfig();
-            public TempConfig Temp { get; init; } = new TempConfig();
-            public string[] Sources { get; init; } = new string[] { };            
+            public TempConfig Temp { get; init; } = new TempConfig();            
             public ServerConfig Server { get; init; } = new ServerConfig();
             public SharesConfig Shares { get; init; } = new SharesConfig();
         }
@@ -25,6 +24,7 @@ namespace DProjects.XShell {
             public string Module { get; init; } = "";
             public string Description { get; init; } = "";
             public Dictionary<string, string> Params { get; init; } = new();
+            public string[] Sources { get; init; } = new string[] { };            
         }
         public class TempConfig {
             public string Path { get; init; } = "";

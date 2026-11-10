@@ -29,7 +29,9 @@
         "icon": {"type": "string", "description": "Selected root module icon resource."},
         "basePath": {"type": "string", "description": "Application-root-relative Path prefix under which the application is hosted; no trailing slash is required."},
         "baseUrl": {"type": "string", "description": "Fully qualified absolute application base-directory URL; ends with / for normal URL resolution."},
-        "params": {"type": "object", "additionalProperties": true, "description": "Application-specific parameters."}
+        "params": {"type": "object", "additionalProperties": true, "description": "Application-specific parameters."},
+        "sources": {"type": "array","items": {"type": "string", "format": "uri"},"description": "List of source repositories for the application."},
+        "environment": {"type": "string", "description": "Application environment."}
       },
       "required": ["label", "version", "copyright", "icon", "basePath", "baseUrl", "params"],
       "additionalProperties": false,
@@ -48,10 +50,9 @@
     },    
     "xshell": {
       "type": "object",
-      "required": ["version", "environment", "assets", "areas", "navigation", "resolver", "ui", "i18n", "configUrl", "serviceWorker", "files"],
+      "required": ["version", "assets", "areas", "navigation", "resolver", "ui", "i18n", "configUrl", "serviceWorker", "files"],
       "properties": {
         "version": {"type": "string", "description": "XShell runtime version."},
-        "environment": {"type": "string", "description": "Runtime environment name."},
         "configUrl": {"type": "string", "format": "uri", "description": "Fully qualified absolute URL of the normalized XShell configuration document."},
         "assets": {"$ref": "#/$defs/xshellAssets", "description": "Virtual namespace and physical addressing for XShell assets."},
         "serviceWorker": {"$ref": "#/$defs/xshellServiceWorker", "description": "Merged Service Worker configuration augmented by bootstrap with the mappings requested by this effective application generation; not the worker's complete persisted registry."},

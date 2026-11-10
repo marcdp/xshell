@@ -86,6 +86,19 @@ export default {
         root: false
     },
     controller({ state, events, loader, navigation, getPage, host, dialog, tasks, resolver}) {
+        const getFileHandler = (resolver, path) => {
+            // scan all possible file extensions
+            const name = path.split('/').pop();
+            const parts = name.split('.');
+            for (let i = 0; i < parts.length; i++) {
+                const extension = parts.slice(i).join('.');
+                const resource = "filehandler:" + extension;
+                if (resolver.has(resource)) {
+                    return resolver.resolve(resource);
+                }
+            }
+            return null;
+        };
         return {
             async load(args) {
                 // load
@@ -130,11 +143,10 @@ export default {
                 }
                 for(const entry of entries) {
                     const page = getPage();
-                    const resource = "filehandler:"+ entry.path.split('.').pop()
-                    if (resolver.has(resource)) {
-                    const filehandlerResolverDefinition = resolver.resolve(resource);
+                    const resolverDefinition = getFileHandler(resolver, entry.path);
+                    if (resolverDefinition) {
                         navigation.navigate( {
-                            href: filehandlerResolverDefinition.path,
+                            href: resolverDefinition.path,
                             page: page,
                             params: {
                                 src: state.src,
@@ -247,7 +259,7 @@ export default {
                     const entry = await state.filesystem.getEntry(paths[0]);
                     if (entry.type == "file") {
                         filename = paths[0].split("/").pop();
-                        const response = state.filesystem.getReadUrl(paths[0]);
+                        const response = await state.filesystem.getReadUrl(paths[0]);
                         const url = response.url;
                         const link = document.createElement("a");
                         link.href = url;
@@ -473,7 +485,7 @@ export default {
                 // handle context menu entry event
                 state.entry = event.detail.entry;
                 state.entries = event.detail.entries;
-                state.open = resolver.has("filehandler:"+ state.entry.path.split('.').pop()) || state.entry.type == "directory";
+                state.open = (getFileHandler(resolver, state.entry.path) || state.entry.type == "directory");
                 const contextMenu = host.shadowRoot.querySelector("x-contextmenu");
                 contextMenu.open({x: event.detail.x, y: event.detail.y});
             }

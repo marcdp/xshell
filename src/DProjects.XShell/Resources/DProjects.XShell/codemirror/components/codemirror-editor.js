@@ -1,4 +1,4 @@
-import { EditorState,EditorView,basicSetup,javascript,json,html,css,xml,markdown} from "../vendor/codemirror/6.0.2/codemirror.js";
+import { EditorState,EditorView,basicSetup,javascript,json,html,css,xml,markdown,yaml} from "../vendor/codemirror/6.0.2/codemirror.js";
 
 
 // component
@@ -53,6 +53,9 @@ export default {
         .cm-editor .cm-cursor { border-left-color: light-dark(#000000, #ffffff); }
     `,
     template: ``,
+    meta: {
+        renderEngine: "none"
+    },
     state: {
         value: null,
         mode: "",
@@ -86,7 +89,6 @@ export default {
             refresh() {
                 // mount
                 if (editor) {
-                    debugger
                     editor.dispatch({changes: {from: 0, to: editor.state.doc.length, insert: state.value}});
                     return;
                 }
@@ -96,6 +98,7 @@ export default {
                 if (state.mode == "json") mode = json();
                 if (state.mode == "css") mode = css();
                 if (state.mode == "xml") mode = xml();
+                if (state.mode == "yaml") mode = yaml();
                 if (state.mode == "markdown") mode = markdown();
                 editorState = EditorState.create({
                     doc: state.value,

@@ -31,17 +31,15 @@ export default {
     },
     template: `
         <!--<x-spinner x-if="!state.ready"></x-spinner>-->
-        <x-lazy>
-            <codemirror-editor 
-                class="editor"
-                x-prop:value="state.value"             
-                x-prop:readonly="state.readonly" 
-                x-attr:mode="state.mode"
-                x-on:change="change"
-            ></codemirror-editor>
-        </x-lazy>
+        <codemirror-editor 
+            class="editor"
+            x-prop:value="state.value"             
+            x-prop:readonly="state.readonly" 
+            x-attr:mode="state.mode"
+            x-on:change="change"
+        ></codemirror-editor>
     `,
-    controller({ state, host }) {
+    controller({ state, events, host }) {
         return {
             load(params) {
                 //load

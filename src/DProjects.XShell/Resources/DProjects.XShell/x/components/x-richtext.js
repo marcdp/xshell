@@ -39,7 +39,7 @@ export default {
             border-top: var(--x-datafield-border);            
         }
         .editor:focus {
-            border-color:var(--x-color-black);
+            border-color:var(--x-datafield-border-focus);
         }
     `,
     state: {

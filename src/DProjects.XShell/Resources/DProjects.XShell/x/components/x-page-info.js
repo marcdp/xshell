@@ -41,7 +41,7 @@ export default {
         return {
             async load() {
                 // mount
-                state.visible = (config.xshell.environment.toLowerCase() === "development");
+                state.visible = (config.app.environment.toLowerCase() === "development");
                 events.on(bus, ["xshell:page:load", "xshell:page:change"], (event) => {
                     let page = getPage();
                     if (event.detail.id == page?.id) {

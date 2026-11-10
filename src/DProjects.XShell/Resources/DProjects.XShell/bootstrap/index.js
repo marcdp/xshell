@@ -1,7 +1,7 @@
 
 // App entry point
 const meta = name => document.querySelector(`meta[name="${name}"]`)?.content;
-const sources = [...document.querySelectorAll('meta[name="xshell:source"]')].map(element => element.content);
+const repositoryUrls = [...document.querySelectorAll('meta[name="xshell:app.source"]')].map(element => element.content);
 
 
 // ui
@@ -82,38 +82,38 @@ async function main() {
 
 
         // Caches
-        const repositories = new Map();
-        const indexes = new Map();
-        const modules = new Map();
-        const tasks = new Map();
+        const repositoryIndexes = new Map();
+        const indexRequests = new Map();
+        const resolvedModules = new Map();
+        const moduleRequests = new Map();
 
 
         // Repository indexes
-        function getRepositoryUrl(source) {
+        function normalizeRepositoryUrl(source) {
             const suffix = "index.json";
             if (!source.endsWith(suffix)) throw new Error(`Invalid repository source: ${source}`);
             return new URL(source.slice(0, -suffix.length) + "index.json", document.baseURI).href;
         }
         async function fetchIndex(url) {
-            if (!indexes.has(url)) indexes.set(url, (async () => {
+            if (!indexRequests.has(url)) indexRequests.set(url, (async () => {
                 const response = await fetch(url);
                 if (!response.ok) throw new Error(`HTTP ${response.status}: ${url}`);
                 return response.json();
             })());
-            return indexes.get(url);
+            return indexRequests.get(url);
         }
         async function loadRepositories() {
-            const results = await Promise.allSettled(sources.map(async source => {
-                const url = getRepositoryUrl(source);
+            const results = await Promise.allSettled(repositoryUrls.map(async source => {
+                const url = normalizeRepositoryUrl(source);
                 const index = await fetchIndex(url);
                 if (!index || !index.modules || typeof index.modules !== "object" || Array.isArray(index.modules)) throw new Error(`Invalid repository index: ${url}`);
                 return { url, index };
             }));
             results.forEach((result, i) => {
-                if (result.status === "fulfilled") repositories.set(i, result.value);
-                else console.warn(`Repository unavailable: ${sources[i]}`, result.reason);
+                if (result.status === "fulfilled") repositoryIndexes.set(i, result.value);
+                else console.warn(`Repository unavailable: ${repositoryUrls[i]}`, result.reason);
             });
-            if (!repositories.size) throw new Error("No XShell repositories available.");
+            if (!repositoryIndexes.size) throw new Error("No XShell repositories available.");
         }
 
 
@@ -142,11 +142,11 @@ async function main() {
 
 
         // Recursive module discovery
-        async function loadModule(reference) {
+        async function resolveModule(reference) {
             const match = /^module:([a-z][a-z0-9]*(?:-[a-z0-9]+)*):(.+)$/.exec(reference ?? "");
             if (!match) throw new Error(`Invalid module reference: ${reference}`);
             const [, name, requirement] = match;
-            for (const [sourceIndex, repository] of repositories) {
+            for (const [sourceIndex, repository] of repositoryIndexes) {
                 const descriptor = repository.index.modules[name];
                 if (!descriptor?.url) continue;
                 const indexUrl = new URL(descriptor.url, repository.url).href;
@@ -162,7 +162,7 @@ async function main() {
                 if (!version) continue;
 
                 const key = `${name}@${version}`;
-                if (modules.has(key)) return modules.get(key);
+                if (resolvedModules.has(key)) return resolvedModules.get(key);
 
                 const entry = index.versions[version];
                 if (!entry || typeof entry.url !== "string") throw new Error(`Missing manifest URL: ${key}`);
@@ -171,7 +171,7 @@ async function main() {
                 if (!["http:", "https:"].includes(manifestUrl.protocol) || !manifestUrl.pathname.endsWith("/manifest.json") || manifestUrl.search || manifestUrl.hash) throw new Error(`Invalid manifest URL: ${entry.url}`);
 
                 const module = { name, hash: entry.hash, version, sourceIndex, dependencies: entry.dependencies ?? {}, manifestUrl: manifestUrl.href, baseUrl: new URL(".", manifestUrl).href };
-                modules.set(key, module);
+                resolvedModules.set(key, module);
 
                 for (const dependency of Object.values(module.dependencies)) schedule(dependency);
                 return module;
@@ -179,9 +179,9 @@ async function main() {
             throw new Error(`Cannot resolve module: ${reference}`);
         }
         function schedule(reference) {
-            if (tasks.has(reference)) return tasks.get(reference);
-            const task = loadModule(reference);
-            tasks.set(reference, task);
+            if (moduleRequests.has(reference)) return moduleRequests.get(reference);
+            const task = resolveModule(reference);
+            moduleRequests.set(reference, task);
             return task;
         }
 
@@ -192,8 +192,8 @@ async function main() {
         checkpoint("repositories loaded");
         const app = await schedule(meta("xshell:app.module"));
         const completed = new Set();
-        while (completed.size < tasks.size) {
-            const batch = [...tasks].filter(([reference]) => !completed.has(reference));
+        while (completed.size < moduleRequests.size) {
+            const batch = [...moduleRequests].filter(([reference]) => !completed.has(reference));
             await Promise.all(batch.map(([, task]) => task));
             batch.forEach(([reference]) => completed.add(reference));
         }
@@ -203,7 +203,7 @@ async function main() {
         // Validate module generations
         function validateModules() {
             const selected = new Map();
-            for (const module of modules.values()) {
+            for (const module of resolvedModules.values()) {
                 const previous = selected.get(module.name);
                 if (previous && (previous.version !== module.version || previous.manifestUrl !== module.manifestUrl)) {
                     throw new Error(`Conflicting module generations: ${module.name}`);
@@ -216,8 +216,8 @@ async function main() {
 
 
         // Download manifests and resolve physical asset URLs
-        async function prepareModules() {
-            await Promise.all([...modules.values()].map(async module => {
+        async function loadModuleManifests() {
+            await Promise.all([...resolvedModules.values()].map(async module => {
                 const response = await fetch(module.manifestUrl);
                 if (!response.ok) throw new Error(`Cannot load manifest: ${module.manifestUrl}`);
 
@@ -236,7 +236,7 @@ async function main() {
             }));
         }
         console.log("bootstrap: loading module manifests ...");
-        await prepareModules();
+        await loadModuleManifests();
         checkpoint("modules manifests downloaded");
 
         // Normalize manifest URLs before merging
@@ -244,7 +244,7 @@ async function main() {
         const appBaseUrl = new URL(`${appBasePath}/`, document.location.origin).href;
         const assetsBasePath = "/_assets";
         const xshellTempUrl = meta("xshell:xshell.temp.url");
-        const environment = meta("xshell:xshell.environment");
+        const environment = meta("xshell:app.environment");
         function normalizeUrl(value, module, declaringPath = "/manifest.json") {
             if (typeof value !== "string") return value;
             const restoreBraces = url => url.replace(/%7B/gi, "{").replace(/%7D/gi, "}");
@@ -267,7 +267,7 @@ async function main() {
             if (value && typeof value === "object") return Object.fromEntries(Object.entries(value).map(([key, item]) => [key, normalizeManifest(item, module, declaringPath)]));
             return normalizeUrl(value, module, declaringPath);
         }
-        for (const module of modules.values()) {
+        for (const module of resolvedModules.values()) {
             const definition = module.name === "xshell" ? module.manifest.xshell : module.manifest.modules[module.name];
             if (Object.hasOwn(definition.assets ?? {}, "path")) throw new Error(`Module '${module.name}' must not define generated assets.path.`);
             const generation = environment?.toLowerCase() === "development" ? `${module.version}.dev` : `${module.version}.${module.hash}`;
@@ -285,7 +285,7 @@ async function main() {
 
         // Merge resolved manifests into one effective configuration
         function mergeManifests() {
-            const selected = new Map([...modules.values()].map(module => [module.name, module]));
+            const selected = new Map([...resolvedModules.values()].map(module => [module.name, module]));
             const framework = selected.get("xshell");
             if (!framework) throw new Error("XShell framework module not resolved.");
             const order = [framework], visited = new Set(["xshell"]), visiting = [];
@@ -346,14 +346,15 @@ async function main() {
             icon: effectiveRoot.icon ?? "",
             basePath: appBasePath,
             baseUrl: appBaseUrl,
-            params: effectiveRoot.params
+            params: effectiveRoot.params,
+            sources: repositoryUrls.map(normalizeRepositoryUrl),
+            environment: environment
         };
         checkpoint("app config filled");
 
 
         // Fill config
         function fillXShell(config) {
-            config.xshell.environment = environment;
             config.xshell.temp.url ??= new URL(xshellTempUrl, document.baseURI).href;
             config.xshell.assets.basePath = assetsBasePath;
             return config;
@@ -720,7 +721,8 @@ async function main() {
             if (!navigator.serviceWorker.controller) {
                 console.log("bootstrap: page is not controlled ... forcing reload");
                 location.reload();
-                throw new Error("Service Worker installation failed: page is not controlled.");
+                return;
+                //throw new Error("Service Worker installation failed: page is not controlled.");
             }
             // register mappings with the service worker
             console.log("bootstrap: service worker: registering mappings ...");
@@ -780,7 +782,7 @@ async function main() {
     } finally {
         // hide spinner in finally block to ensure it is hidden even if an error occurs
         hideSpinner();
-        console.group("XShell bootstrap performance");
+        console.group("bootstrap: performance timmings:");
         console.table(timings);
         console.log(`Total: ${(performance.now() - started).toFixed(2)} ms`);
         console.groupEnd();

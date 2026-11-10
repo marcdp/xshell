@@ -28,8 +28,8 @@ namespace DProjects.XShell.Commands {
         public string Environment { get; init; } = "";
         [Flag('p', "Parameter", "")]
         public Dictionary<string, string> Param { get; init; } = new();
-        [Flag('s', "Source", "")]
-        public string[] Source { get; init; } = [];
+        [Flag('s', "App source", "")]
+        public string[] AppSource { get; init; } = [];
         [Flag('s', "Share connection string", "")]
         public string[] Share { get; init; } = Array.Empty<string>();
 
@@ -63,15 +63,14 @@ namespace DProjects.XShell.Commands {
                 App = new Extensions.AppConfig {
                     BasePath = AppBasePath,
                     Module = AppModule,
-                    Params = Param
+                    Params = Param,
+                    Sources = AppSource.Length == 0 || AppSource.All(string.IsNullOrWhiteSpace) ? new string[] { AppBasePath + "/_resources/DProjects.XShell/{module}/index.json" } : AppSource
                 },
                 Temp = new Extensions.TempConfig {
                     Path = System.IO.Path.Combine(System.IO.Path.GetTempPath(), AppModule.Replace(":","-").Replace("*", "-"), "temp"),
                     BasePath = AppBasePath + "/temp",
                     ExpirationTime = TimeSpan.FromHours(1)
                 },
-                Sources = Source.Length == 0 || Source.All(string.IsNullOrWhiteSpace)
-                    ? [AppBasePath + "/_resources/DProjects.XShell/{module}/index.json"] : Source,
                 Server = new Extensions.ServerConfig {
                     Environment = Environment
                 },

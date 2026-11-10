@@ -32,7 +32,7 @@ namespace DProjects.XShell.Services {
             content = content.Replace("{config.App.Params}", string.Join("&", config.App.Params.Select(kv => Uri.EscapeDataString(kv.Key) + "=" + Uri.EscapeDataString(kv.Value))));
             content = content.Replace("{environment}", EncodeAttribute(environment));
             content = content.Replace("{config.Temp.BasePath}", EncodeAttribute(config.Temp.BasePath));
-            content = content.Replace("{config.Sources}", string.Join("\n", config.Sources.Select(s => $"<meta name=\"xshell:source\" content=\"{EncodeAttribute(s)}\">")));
+            content = content.Replace("{config.App.Sources}", string.Join("\n", config.App.Sources.Select(s => $"<meta name=\"xshell:app.source\" content=\"{EncodeAttribute(s)}\">")));
 
             return content;
         }

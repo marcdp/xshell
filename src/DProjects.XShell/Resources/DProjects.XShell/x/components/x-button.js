@@ -60,7 +60,7 @@ export default {
         :host .button > x-icon.icon[icon] + div {padding-left:.4em;}
         :host .button > x-icon.down {transform:translateY(-.1em); padding-left:.15em; margin-right:-.25em; }
         :host .button[expanded] > x-icon.down {transform:translateY(.1em) rotate(-180deg) ; }
-        :host .button > div {display:flex; flex-direction:column; }
+        :host .button > div {display:flex; flex-direction:column; align-items:flex-start;}
         :host .button > div span.label {white-space:nowrap; font-weight: 700;}
         :host .button > div span.message {font-size:var(--x-font-size-small);}
         :host .button[has-more] { border-radius:var(--x-button-border-radius) 0 0 var(--x-button-border-radius); border-right:none;}

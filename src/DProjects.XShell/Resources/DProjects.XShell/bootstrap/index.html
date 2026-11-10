@@ -10,19 +10,17 @@
     <link rel="icon" href="{config.App.BasePath}/favicon.svg" type="image/svg+xml">
 
     <!-- XShell application -->
-    <meta name="xshell:app.basePath"       content="{config.App.BasePath}">
-    <meta name="xshell:app.module"         content="{config.App.Module}">
-    <meta name="xshell:app.params"         content="{config.App.Params}">
+    <meta name="xshell:app.basePath" content="{config.App.BasePath}">
+    <meta name="xshell:app.module" content="{config.App.Module}">
+    <meta name="xshell:app.params" content="{config.App.Params}">
+    <meta name="xshell:app.environment" content="{environment}">
+    {config.App.Sources}
 
-    <!-- XShell environment -->
-    <meta name="xshell:xshell.environment" content="{environment}">
-    <meta name="xshell:xshell.temp.url"    content="{config.Temp.BasePath}">
+    <!-- XShell other -->
+    <meta name="xshell:xshell.temp.url" content="{config.Temp.BasePath}">
 
-    <!-- XShell module sources -->
-    {config.Sources}
-        
     <!-- index -->
-    <script type="module" src="{config.App.BasePath}/index.js" ></script>
+    <script type="module" src="{config.App.BasePath}/index.js"></script>
 
 </head>
 <body>

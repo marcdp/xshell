@@ -35,16 +35,21 @@
 
                 /* images */
                 "png": {"src": "/pages/editor-image.js", "loader": "page-js"},
+                "png.aes": {"src": "/pages/editor-image.js", "loader": "page-js"},
                 "jpg": {"src": "/pages/editor-image.js", "loader": "page-js"},
+                "jpg.aes": {"src": "/pages/editor-image.js", "loader": "page-js"},
                 "jpeg": {"src": "/pages/editor-image.js", "loader": "page-js"},
+                "jpeg.aes": {"src": "/pages/editor-image.js", "loader": "page-js"},
                 "gif": {"src": "/pages/editor-image.js", "loader": "page-js"},
                 "svg": {"src": "/pages/editor-image.js", "loader": "page-js"},  
 
                 /* text files */
                 "txt": {"src": "/pages/editor-text.js", "loader": "page-js"},
+                "txt.aes": {"src": "/pages/editor-text.js", "loader": "page-js"},
+                "md": {"src": "/pages/editor-text.js", "loader": "page-js"},
+                "md.aes": {"src": "/pages/editor-text.js", "loader": "page-js"},
                 "env": {"src": "/pages/editor-text.js", "loader": "page-js"},
                 "css": {"src": "/pages/editor-text.js", "loader": "page-js"},
-                "md": {"src": "/pages/editor-text.js", "loader": "page-js"},
                 "xml": {"src": "/pages/editor-text.js", "loader": "page-js"},
                 "js": {"src": "/pages/editor-text.js", "loader": "page-js"},   
                 "json": {"src": "/pages/editor-text.js", "loader": "page-js"},   
@@ -53,7 +58,10 @@
                 "yaml": {"src": "/pages/editor-text.js", "loader": "page-js"},
                 "yml": {"src": "/pages/editor-text.js", "loader": "page-js"},
                 "php": {"src": "/pages/editor-text.js", "loader": "page-js"},
-                "ps1": {"src": "/pages/editor-text.js", "loader": "page-js"}
+                "ps1": {"src": "/pages/editor-text.js", "loader": "page-js"},
+
+                /* other */
+                "pdf": {"src": "/pages/editor-iframe.js", "loader": "page-js"}
 
             }
         }

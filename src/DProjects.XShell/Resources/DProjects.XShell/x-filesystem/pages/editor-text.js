@@ -1,3 +1,4 @@
+import aes from "../js/aes.js";
 
 export default {
     contract: {
@@ -43,10 +44,12 @@ export default {
         mode: null,
         value: null,
         error: null,
-        dirty: false
+        dirty: false,
+        aes: false,
+        aes_password: null,
     },
 
-    controller({state, page, loader}) {
+    controller({state, page, loader, dialog, commands}) {
         return {
             async load() {
                 // load
@@ -62,25 +65,52 @@ export default {
                     state.error = "Entry not found: " + state.path;
                     return;
                 }
-                const extension = state.path.split(".").pop();
+                let extension = state.path.split(".").pop();
                 state.mode = "text";
+                if (extension === "aes") {
+                    state.aes = true;
+                    extension = state.path.substr(0, state.path.length - 4).split(".").pop();
+                }
                 if (extension === "css") state.mode = "css";
                 if (extension === "html") state.mode = "html";
                 if (extension === "js") state.mode = "javascript";
                 if (extension === "json") state.mode = "json";
                 if (extension === "md") state.mode = "markdown";
+                if (extension === "yaml" || extension === "yml") state.mode = "yaml";
                 if (extension === "xml") state.mode = "xml";                
                 // load value
                 const stream = await state.filesystem.loadReadStream(state.path);
-                state.value = await new Response(stream).text();
+                let value = await new Response(stream).text();
+                if (state.aes) {
+                    state.aes_password = await dialog.prompt({ title: "Enter password", inputType: "password", required:true});
+                    if (!state.aes_password) {
+                        state.error = "Password is required.";
+                        commands.enqueue("close");
+                        return;
+                    }
+                    try {
+                        value = await aes.decrypt(value, state.aes_password);
+                    } catch (error) {
+                        state.error = error.message || "Unable to decrypt file.";
+                        commands.enqueue("close");
+                        return;
+                    }
+                }   
+                state.value = value;
             },
             async save() {   
                 // save
-                const value = state.value ?? "";
+                let value = state.value ?? "";
                 state.saving = true;
                 state.saved = false;
                 state.error = null;
                 try {
+                    if (state.aes) {
+                        value = await aes.encrypt(value, state.aes_password, {
+                            encoding: "Base64",
+                            fold: 76
+                        });
+                    }
                     const blob = new Blob([value], {
                         type: "text/plain;charset=utf-8"
                     });
@@ -110,6 +140,9 @@ export default {
                 });
                 win.focus();
                 win.print();
+            },
+            close(){
+                page.close();
             },
 
             // events

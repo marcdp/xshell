@@ -934,7 +934,7 @@ test("host Development override selects mutable generations without package hash
     const hostedContext = vm.createContext({ ...context, document: hostedDocument });
     new vm.Script(bootstrapSource, { filename: bootstrapPath.pathname }).runInContext(hostedContext);
     const config = plain(await hostedContext.__bootstrapTests.loadConfig());
-    assert.equal(config.xshell.environment, "dEvElOpMeNt");
+    assert.equal(config.app.environment, "dEvElOpMeNt");
     assert.equal(config.xshell.assets.path, "/_assets/xshell/0.9.0.dev");
     assert.equal(config.modules.app.assets.path, "/_assets/app/1.0.0.dev");
     assert.deepEqual(config.xshell.serviceWorker.mappings.map(rule => rule.src), [

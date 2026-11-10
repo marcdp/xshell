@@ -8,7 +8,6 @@
 
         // core
         "version": "0.9.0",
-        "environment": "Development",
         "assets": {
             "basePath": "app:/_assets",
             "url": "url:./"
