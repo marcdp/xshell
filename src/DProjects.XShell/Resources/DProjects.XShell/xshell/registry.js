@@ -8,13 +8,17 @@ export default class Registry {
         this._items = config.xshell.registry;
     }
 
-    // propos
+    // props
     get registry() {
-        return Object.freeze(Object.entries(this._items).map(([name, item]) => Object.freeze({
-            name,
-            schema: item.schema,
-            contributions: item.contributions
-        })));
+        return Object.freeze(Object.fromEntries(
+            Object.entries(this._items).map(([name, item]) => [
+                name,
+                Object.freeze({
+                    schema: item.schema,
+                    contributions: item.contributions ?? []
+                })
+            ])
+        ));
     }
 
     // methods

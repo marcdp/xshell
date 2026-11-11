@@ -8,22 +8,15 @@
       "description": "Opens the configured confirmation dialog.",
       "parameters": [
         {
-          "name": "options",
-          "type": "object",
-          "required": true,
-          "description": "Single destructured options object. Fields correspond to the JavaScript method signature.",
+          "name": "options", "type": "object", "required": true, "description": "Single destructured options object. Fields correspond to the JavaScript method signature.",
           "schema": {
             "type": "object",
             "properties": {
-              "title": {
-                "type": "string"
-              },
-              "message": {
-                "type": "string"
-              },
+              "title": {"type":"string"},
+              "message": {"type":"string"},
               "variant": {
                 "type": "string",
-                "enum": ["yesno", "yesnocancel", "okcancel", "ok"],
+                "enum": ["yesno","yesnocancel","okcancel","ok"],
                 "default": "yesno",
                 "description": "Determines which confirmation buttons are displayed."
               }
@@ -41,25 +34,18 @@
       "description": "Opens the configured message dialog.",
       "parameters": [
         {
-          "name": "options",
-          "type": "object",
-          "required": true,
-          "description": "Single destructured options object. Fields correspond to the JavaScript method signature.",
+          "name": "options", "type": "object", "required": true, "description": "Single destructured options object. Fields correspond to the JavaScript method signature.",
           "schema": {
             "type": "object",
             "properties": {
               "type": {
                 "type": "string",
-                "enum": ["info", "warning", "error", "success"],
+                "enum": ["info","warning","error","success"],
                 "default": "info",
                 "description": "Specifies the type of message dialog."
               },
-              "title": {
-                "type": "string"
-              },
-              "message": {
-                "type": "string"
-              }
+              "title": {"type":"string"},
+              "message": {"type":"string"}
             },
             "additionalProperties": true
           }
@@ -74,38 +60,20 @@
       "description": "Opens the configured prompt dialog.",
       "parameters": [
         {
-          "name": "options",
-          "type": "object",
-          "required": true,
-          "description": "Single destructured options object. Fields correspond to the JavaScript method signature.",
+          "name": "options", "type": "object", "required": true, "description": "Single destructured options object. Fields correspond to the JavaScript method signature.",
           "schema": {
             "type": "object",
             "properties": {
-              "title": {
-                "type": "string",
-                "description": "Specifies the title of the prompt dialog."
-              },
-              "message": {
-                "type": "string",
-                "description": "Specifies the message of the prompt dialog."
-              },
-              "value": {
-                "type": "any",
-                "description": "Specifies the default value of the prompt input."
-              },
+              "title": {"type":"string","description":"Specifies the title of the prompt dialog."},
+              "message": {"type":"string","description":"Specifies the message of the prompt dialog."},
+              "value": {"type":"any","description":"Specifies the default value of the prompt input."},
               "inputType": {
                 "type": "string",
                 "description": "Specifies the type of input for the prompt dialog.",
-                "enum": ["text", "number", "password", "email", "url", "tel"]
+                "enum": ["text","number","password","email","url","tel"]
               },
-              "placeholder": {
-                "type": "string",
-                "description": "Specifies the placeholder text for the prompt input."
-              },
-              "required": {
-                "type": "boolean",
-                "description": "Specifies whether the prompt input is required."
-              }
+              "placeholder": {"type":"string","description":"Specifies the placeholder text for the prompt input."},
+              "required": {"type":"boolean","description":"Specifies whether the prompt input is required."}
             },
             "additionalProperties": true
           }
@@ -120,44 +88,18 @@
       "description": "Opens the configured picker dialog.",
       "parameters": [
         {
-          "name": "options",
-          "type": "object",
-          "required": true,
-          "description": "Single destructured options object. Fields correspond to the JavaScript method signature.",
+          "name": "options", "type": "object", "required": true, "description": "Single destructured options object. Fields correspond to the JavaScript method signature.",
           "schema": {
             "type": "object",
             "properties": {
-              "title": {
-                "type": "string",
-                "description": "Specifies the title of the picker dialog."
-              },
-              "message": {
-                "type": "string",
-                "description": "Specifies the message of the picker dialog."
-              },
-              "value": {
-                "description": "Specifies the default value of the picker input."
-              },
-              "inputType": {
-                "type": "string",
-                "description": "Specifies the type of input for the picker dialog.",
-                "enum": ["select", "radios"]
-              },
-              "placeholder": {
-                "type": "string",
-                "description": "Specifies the placeholder text for the picker input."
-              },
-              "domain": {
-                "description": "Specifies the domain of the picker dialog."
-              },
-              "multiple": {
-                "type": "boolean",
-                "description": "Specifies whether multiple selections are allowed in the picker dialog."
-              },
-              "required": {
-                "type": "boolean",
-                "description": "Specifies whether the picker input is required."
-              }
+              "title": {"type":"string","description":"Specifies the title of the picker dialog."},
+              "message": {"type":"string","description":"Specifies the message of the picker dialog."},
+              "value": {"description":"Specifies the default value of the picker input."},
+              "inputType": {"type":"string","description":"Specifies the type of input for the picker dialog.","enum":["select","radios"]},
+              "placeholder": {"type":"string","description":"Specifies the placeholder text for the picker input."},
+              "domain": {"description":"Specifies the domain of the picker dialog."},
+              "multiple": {"type":"boolean","description":"Specifies whether multiple selections are allowed in the picker dialog."},
+              "required": {"type":"boolean","description":"Specifies whether the picker input is required."}
             },
             "additionalProperties": true
           }
@@ -172,38 +114,15 @@
       "description": "Opens a radio picker of configured languages, excluding language IDs in current.",
       "parameters": [
         {
-          "name": "options",
-          "type": "object",
-          "required": false,
-          "description": "Single destructured options object. Fields correspond to the JavaScript method signature.",
+          "name": "options", "type": "object", "required": false, "description": "Single destructured options object. Fields correspond to the JavaScript method signature.",
           "schema": {
             "type": "object",
             "properties": {
-              "title": {
-                "type": "string",
-                "default": "Select language",
-                "description": "Specifies the title of the language picker dialog."
-              },
-              "message": {
-                "type": "string",
-                "default": "Language",
-                "description": "Specifies the message of the language picker dialog."
-              },
-              "value": {
-                "description": "Specifies the currently selected value in the language picker dialog."
-              },
-              "required": {
-                "type": "boolean",
-                "default": true,
-                "description": "Specifies whether the language picker input is required." 
-              },
-              "current": {
-                "type": "array",
-                "items": {
-                  "type": "string"
-                },
-                "default": []
-              }
+              "title": {"type":"string","default":"Select language","description":"Specifies the title of the language picker dialog."},
+              "message": {"type":"string","default":"Language","description":"Specifies the message of the language picker dialog."},
+              "value": {"description":"Specifies the currently selected value in the language picker dialog."},
+              "required": {"type":"boolean","default":true,"description":"Specifies whether the language picker input is required."},
+              "current": {"type":"array","items":{"type":"string"},"default":[]}
             },
             "additionalProperties": true
           }
@@ -218,26 +137,10 @@
       "description": "Opens the specified page as a dialog.",
       "parameters": [
         {
-          "name": "options",
-          "type": "object",
-          "required": true,
-          "description": "Single destructured options object. Fields correspond to the JavaScript method signature.",
+          "name": "options", "type": "object", "required": true, "description": "Single destructured options object. Fields correspond to the JavaScript method signature.",
           "schema": {
             "type": "object",
-            "properties": {
-              "href": {
-                "type": "string"
-              },
-              "params": {},
-              "title": {
-                "type": "string"
-              },
-              "breadcrumb": {},
-              "icon": {
-                "type": "string"
-              },
-              "context": {}
-            },
+            "properties": {"href":{"type":"string"},"params":{},"title":{"type":"string"},"breadcrumb":{},"icon":{"type":"string"},"context":{}},
             "additionalProperties": true
           }
         }
