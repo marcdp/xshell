@@ -1,64 +1,60 @@
+
 // component
 export default {
     contract: {
-        description: "Provides a draggable splitter between two adjacent panes.",
+        description: "Automatically resizes adjacent flex panes.",
         events: {
             resize: {
-                description: "Raised after the splitter changes the size of the preceding pane."
+                description: "Raised when resizing finishes.",
+                detail: {
+                    size: { type: "number" }
+                }
+            },
+            change: {
+                description: "Raised when the splitter position changes.",
+                detail: {
+                    size: { type: "number" }
+                }
             }
         },
         properties: {
-            orientation: {
-                type: "string",
-                default: "vertical",
-                attribute: true,
-                state: true,
-                reflect: true,
-                enum: ["vertical", "horizontal"],
-                description: "Splitter orientation."
-            },
             disabled: {
                 type: "boolean",
                 default: false,
                 attribute: true,
                 state: true,
-                reflect: true,
-                description: "Whether resizing is disabled."
+                reflect: true
             }
         },
         methods: {}
+        
     },
     style: `
         :host {
-            display:block;
-            flex:0 0 .15em;
-            background:var(--x-splitter-background);
-            cursor:col-resize;
-            user-select:none;
-            touch-action:none;
+            display: flex;
+            position: relative;
+            z-index: 1;
+            justify-content: end;
+            flex: 0 0 .15em;
+            background: var(--x-splitter-background);
         }
 
-        :host([orientation="horizontal"]) {
-            cursor:row-resize;
-        }
-
-        :host([disabled]) {
-            cursor:default;
-        }
-
+        /* Handle */
         .handle {
-            width:100%;
-            height:100%;
-            outline:none;
-            box-sizing:border-box;
-            touch-action:none;
+            position: absolute;
+            inset: 0;
+            cursor: col-resize;
+            touch-action: none;
+            user-select: none;
+            outline: none;
         }
+        .handle[aria-orientation="horizontal"] { cursor: row-resize; }
+        :host([disabled]) .handle { cursor: default; }
+ 
     `,
     template: `
-        <div
-            class="handle"
-            role="separator"
-            x-attr:aria-orientation="state.orientation"
+        <div class="handle" role="separator" tabindex="0"
+            x-attr:aria-disabled="state.disabled"
             x-on:pointerdown="pointerDown"
             x-on:pointermove="pointerMove"
             x-on:pointerup="pointerUp"
@@ -66,58 +62,93 @@ export default {
             x-on:keydown="keydown">
         </div>
     `,
-    controller({ state, host }) {
-        function getLimits(pane, nextPane, vertical) {
-            const dimension = vertical ? "width" : "height";
-            const paneSize = pane.getBoundingClientRect()[dimension];
-            const nextSize = nextPane.getBoundingClientRect()[dimension];
-            const splitterSize = host.getBoundingClientRect()[dimension];
-            const parent = host.parentElement;
-            const parentStyle = parent && getComputedStyle(parent);
-            const parentSize = parent && (parent[vertical ? "clientWidth" : "clientHeight"]
-                - (parseFloat(parentStyle[vertical ? "paddingLeft" : "paddingTop"]) || 0)
-                - (parseFloat(parentStyle[vertical ? "paddingRight" : "paddingBottom"]) || 0));
-            const available = Math.max(0, Math.min(paneSize + nextSize,
-                parentSize == null ? Infinity : parentSize - splitterSize));
+    controller({ state, host, commands }) {
+        let drag = null;
 
-            function minimum(element) {
-                const style = getComputedStyle(element);
-                const value = style[vertical ? "minWidth" : "minHeight"];
-                const parsed = /^\d+(?:\.\d+)?px$/.test(value) ? parseFloat(value) : 0;
-                const inset = vertical
-                    ? (parseFloat(style.paddingLeft) || 0) + (parseFloat(style.paddingRight) || 0) + (parseFloat(style.borderLeftWidth) || 0) + (parseFloat(style.borderRightWidth) || 0)
-                    : (parseFloat(style.paddingTop) || 0) + (parseFloat(style.paddingBottom) || 0) + (parseFloat(style.borderTopWidth) || 0) + (parseFloat(style.borderBottomWidth) || 0);
-                const basisInset = style.boxSizing === "border-box" ? 0 : inset;
-                return { size: parsed + basisInset, basisInset };
-            }
+        const size = (element, axis) => element.getBoundingClientRect()[axis];
 
-            const { size: min, basisInset } = minimum(pane);
-            const { size: minNext } = minimum(nextPane);
-            if (available < min + minNext) {
-                return { min: paneSize, max: paneSize, basisInset };
-            }
-            return { min, max: available - minNext, basisInset };
+        function minimum(element, axis) {
+            const style = getComputedStyle(element);
+            const sides = axis === "width" ? ["Left", "Right"] : ["Top", "Bottom"];
+            const inset = sides.reduce((sum, side) => sum + (parseFloat(style["padding" + side]) || 0) + (parseFloat(style["border" + side + "Width"]) || 0), 0);
+            const value = parseFloat(style[axis === "width" ? "minWidth" : "minHeight"]) || 0;
+            const basisInset = style.boxSizing === "border-box" ? 0 : inset;
+            return {
+                min: Math.max(inset, value + basisInset),
+                basisInset
+            };
+        }
+
+        function orientation() {
+            const direction = getComputedStyle(host.parentElement).flexDirection;
+            const y = direction.startsWith("column");
+            host.shadowRoot.querySelector(".handle") ?.setAttribute("aria-orientation", y ? "horizontal" : "vertical");
+            return {
+                axis: y ? "height" : "width",
+                coordinate: y ? "clientY" : "clientX",
+                sign: direction.endsWith("reverse") ? -1 : 1
+            };
+        }
+
+        function measure() {
+            const pane = host.previousElementSibling;
+            const next = host.nextElementSibling;
+            if (!pane || !next || !host.parentElement) return null;
+
+            const direction = orientation();
+            const current = size(pane, direction.axis);
+            const total = current + size(next, direction.axis);
+            const { min, basisInset } = minimum(pane, direction.axis);
+            const nextMin = minimum(next, direction.axis);
+            const valid = total >= min + nextMin.min;
+
+            return {
+                ...direction,
+                pane, next, current, total, basisInset,
+                nextInset: nextMin.basisInset,
+                min: valid ? min : current,
+                max: valid ? total - nextMin.min : current
+            };
+        }
+
+        function resize(target, value) {
+            const actual = Math.max(target.min, Math.min(target.max, value));
+            // Keep the preceding pane flexible.
+            // Resize only the following pane.
+            const nextSize = target.total - actual - target.nextInset;
+            target.next.style.flex = `0 0 ${Math.max(0, nextSize)}px`;
+        }
+
+        function notify(target) {
+            host.dispatchEvent(new CustomEvent("resize", {
+                bubbles: true,
+                detail: { size: size(target.pane, target.axis) }
+            }));
+        }
+        function notifyChange(target) {
+            host.dispatchEvent(new CustomEvent("change", {
+                bubbles: true,
+                detail: { size: size(target.pane, target.axis) }
+            }));
         }
 
         return {
+            mount() {
+                if (host.parentElement) commands.enqueue("orientation");
+            },
+            orientation() {
+                return orientation();
+            },
             pointerDown({ event }) {
                 if (state.disabled || event.button !== 0) return;
 
-                const pane = host.previousElementSibling;
-                const nextPane = host.nextElementSibling;
-                if (!pane || !nextPane) return;
+                const target = measure();
+                if (!target) return;
 
-                const vertical = state.orientation === "vertical";
-                const paneRect = pane.getBoundingClientRect();
-                const limits = getLimits(pane, nextPane, vertical);
-
-                this._drag = {
+                drag = {
+                    ...target,
                     pointerId: event.pointerId,
-                    pane,
-                    vertical,
-                    start: vertical ? event.clientX : event.clientY,
-                    size: vertical ? paneRect.width : paneRect.height,
-                    ...limits
+                    start: event[target.coordinate]
                 };
 
                 event.currentTarget.setPointerCapture(event.pointerId);
@@ -125,70 +156,41 @@ export default {
             },
 
             pointerMove({ event }) {
-                const drag = this._drag;
                 if (!drag || drag.pointerId !== event.pointerId) return;
-
-                const position = drag.vertical ? event.clientX : event.clientY;
-                const size = Math.max(drag.min, Math.min(drag.max, drag.size + position - drag.start));
-
-                drag.pane.style.flex = `0 0 ${Math.max(0, size - drag.basisInset)}px`;
+                resize(drag, drag.current + (event[drag.coordinate] - drag.start) * drag.sign);
+                notifyChange(drag);
             },
 
             pointerUp({ event }) {
-                const drag = this._drag;
                 if (!drag || drag.pointerId !== event.pointerId) return;
-
-                const rect = drag.pane.getBoundingClientRect();
-                const size = drag.vertical ? rect.width : rect.height;
-
-                if (event.currentTarget.hasPointerCapture?.(event.pointerId)) {
-                    event.currentTarget.releasePointerCapture(event.pointerId);
-                }
-
-                this._drag = null;
-
-                host.dispatchEvent(new CustomEvent("resize", {
-                    bubbles: true,
-                    composed: false,
-                    detail: { size }
-                }));
+                if (event.currentTarget.hasPointerCapture?.(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
+                notify(drag);
+                notifyChange(drag);
+                drag = null;
             },
 
             keydown({ event }) {
                 if (state.disabled) return;
 
-                const pane = host.previousElementSibling;
-                const nextPane = host.nextElementSibling;
-                if (!pane || !nextPane) return;
+                const target = measure();
+                if (!target) return;
 
-                const vertical = state.orientation === "vertical";
-                let direction = 0;
+                const keys = target.axis === "width"
+                    ? { ArrowLeft: -1, ArrowRight: 1 }
+                    : { ArrowUp: -1, ArrowDown: 1 };
 
-                if (vertical && event.key === "ArrowLeft") direction = -1;
-                if (vertical && event.key === "ArrowRight") direction = 1;
-                if (!vertical && event.key === "ArrowUp") direction = -1;
-                if (!vertical && event.key === "ArrowDown") direction = 1;
-
+                const direction = keys[event.key];
                 if (!direction) return;
 
-                const paneRect = pane.getBoundingClientRect();
-                const current = vertical ? paneRect.width : paneRect.height;
-                const { min, max, basisInset } = getLimits(pane, nextPane, vertical);
-                const size = Math.max(min, Math.min(max, current + direction * 10));
+                resize(target, target.current + direction * target.sign * (event.shiftKey ? 1 : 10));
 
-                pane.style.flex = `0 0 ${Math.max(0, size - basisInset)}px`;
-
-                host.dispatchEvent(new CustomEvent("resize", {
-                    bubbles: true,
-                    composed: false,
-                    detail: { size }
-                }));
-
+                notify(target);
+                notifyChange(target);
                 event.preventDefault();
             },
 
             unload() {
-                this._drag = null;
+                drag = null;
             }
         };
     }

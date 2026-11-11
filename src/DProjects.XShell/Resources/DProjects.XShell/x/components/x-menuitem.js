@@ -11,6 +11,7 @@ export default {
             command:     {type:"string", default:"", attribute:true, state:true, description:""},
             selected:    {type:"boolean", default:false, attribute:true, state:true, description:""},
             checked:     {type:"boolean", default:false, attribute:true, state:true, description:""},
+            open:        {type:"string", default:"", attribute:true, state:true, description:"Indicates whether the menu item is open.", enum:["stack", "top", "dialog", "dock"]},
             disabled:    {type:"boolean", default:false, attribute:true, state:true, description:""},
             embedded:    {type:"boolean", default:false, attribute:true, state:true, description:"Hosts the target Page inline instead of rendering a navigation anchor."},
             tooltip:     {type:"string", default:"", attribute:true, state:true, description:"Optional tooltip text shown on the navigation anchor."},
@@ -43,31 +44,16 @@ export default {
         
         :host(.selected) .menuitem {background:var(--x-color-background-x-gray);}
         :host HR {border:none; background:var(--x-menuitem-separator-color); height:.1px; margin-top:.15em; margin-bottom:.15em; display:block; box-sizing: border-box; width:100%;}
-        
+       
         /* dropdown */
-        x-contextmenu {
-            width: var(--x-contextmenu-width);
-            position:absolute; 
-            left:100%;
-            box-sizing:border-box;            
-            margin-left:0em;
-            margin-top:-.2em;
-        }
+        x-contextmenu {width: var(--x-contextmenu-width);position:absolute; left:100%;box-sizing:border-box;            margin-left:0em;margin-top:-.2em;}
         x-contextmenu.down {top:calc(100% + .2em); left:-.1em;}
         x-contextmenu.left {left:100%!important; margin-left:.1em; transform:translateX(-100%);}
 
         /* inline */
         :host(.inline) x-anchor .has-childs {transform:rotate(90deg); transition: transform var(--x-transition-duration);}
         :host(.inline) x-anchor[expanded] .has-childs {transform:rotate(-90deg)}
-        :host(.inline) x-contextmenu {
-            position:unset;
-            border:none;
-            background:none;
-            padding:0;
-            width:unset;
-            box-shadow:none;
-            padding-left:2.5em;
-        }
+        :host(.inline) x-contextmenu {position:unset;border:none;background:none;padding:0;width:unset;box-shadow:none;padding-left:2.5em;}
     `,
     state: {
         command:"",
@@ -80,11 +66,11 @@ export default {
     template: `
         <hr x-if="state.label=='-'" />
         <div x-elseif="state.embedded">
-            <x-page  x-attr:src="state.href" loading="lazy"></x-page>
+            <x-page x-attr:src="state.href" loading="lazy"></x-page>
         </div>
         <x-button x-elseif="state.command" class="menuitem" x-attr:command="state.command" x-attr:label="state.label" x-attr:icon="state.icon" x-attr:disabled="state.disabled" >
         </x-button>
-        <x-anchor x-else class="menuitem anchor" x-class:down="state.childsDown" x-attr:href="state.href" x-attr:disabled="state.disabled" x-attr:expanded="state.expanded" x-class:selected="state.selected" x-attr:tooltip="state.tooltip">
+        <x-anchor x-else class="menuitem anchor" x-class:down="state.childsDown" x-attr:href="state.href" x-attr:disabled="state.disabled" x-attr:expanded="state.expanded" x-class:selected="state.selected" x-attr:tooltip="state.tooltip" x-attr:open="state.open">
             <x-icon x-if="state.checked" icon="x-check"></x-icon>
             <x-icon x-if="!state.checked && state.icon" class="icon" x-attr:icon="state.icon"></x-icon>
             <span   x-if="state.label" class="label">{{ state.label + ' ' + state.command}}</span>

@@ -50,6 +50,13 @@ export default {
         :host(.plain) a:active {color:var(--x-color-primary-dark)}
         :host(.plain.selected) a {color:var(--x-color-primary);}
         :host(.plain.selected) a:hover {color:var(--x-color-primary-dark);}    
+
+        :host(.round) {}
+        :host(.round) a {border: var(--x-button-border); display:flex; width:2.5em; text-align:center; border-radius:50%; padding-left:0; padding-right:0; justify-content: center; box-sizing:border-box;height:2.45em; }
+
+        :host(.light) a {background:var(--x-button-background); border-color:var(--x-color-background-gray); color:var(--x-color-text); }
+        :host(.light) a:hover {background:var(--x-button-background-hover-light); border-color:var(--x-color-background-x-gray); }
+        :host(.light) a:active {background:var(--x-button-background-active-light); border-color:var(--x-color-background-xx-gray); }
     `,
     template: `
         <a part="a" x-attr:href="state.hrefReal" x-attr:disabled="state.disabled" x-attr:target="state.target" x-attr:rel="state.rel" x-attr:title="state.tooltip" x-on:click="click" tabindex="1"><slot></slot></a>

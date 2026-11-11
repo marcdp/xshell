@@ -383,7 +383,10 @@ export async function createPageClassFromJsDefinition(src, context, definition) 
             this._renderPending = false;
             // remove this mount's style sheets from the host's adopted style sheets
             if (styleSheets.length && this.host) {
-                this.host.getRootNode().adoptedStyleSheets = this.host.getRootNode().adoptedStyleSheets.filter(stylesheet => !styleSheets.includes(stylesheet));
+                const rootNode = this.host.getRootNode();
+                if (rootNode && rootNode.adoptedStyleSheets) {
+                    rootNode.adoptedStyleSheets = rootNode.adoptedStyleSheets.filter(stylesheet => !styleSheets.includes(stylesheet));
+                }
             }
             // controller may be async
             await super.unmount();

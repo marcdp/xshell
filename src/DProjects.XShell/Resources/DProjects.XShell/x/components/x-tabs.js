@@ -35,6 +35,8 @@ export default {
         nav a.selected {font-weight:600; color:var(--x-color-primary);}
         nav a.selected:after {font-weight:600; border:.125em var(--x-color-primary) solid;}
 
+        :host(.no-header) nav {display:none;}
+
         ::slotted(x-tab) {display:none;}
 
         @media only screen and (max-width: 768px) {
@@ -75,12 +77,14 @@ export default {
                     let tab = Array.from(tabs).find(tab => tab.getAttribute("hash") == hash);
                     let tabIndex = Array.from(tabs).indexOf(tab);
                     if (tabIndex != -1) state.selectedIndex = tabIndex;
+                    this.refresh();
                 });
                 events.on(state, "change:selectedIndex", (event) => {
                     let selectedIndex = event.newValue;
                     let tabs = host.querySelectorAll(":scope > x-tab");
                     let tab = tabs[selectedIndex];
                     if (tab) state.selectedHash = tab.hash;
+                    this.refresh();
                 });
             },
             mount() {

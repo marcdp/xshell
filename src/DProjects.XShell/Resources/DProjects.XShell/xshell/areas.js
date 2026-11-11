@@ -267,6 +267,7 @@ export default class Areas {
             command: menuitem.command || null,
             icon: menuitem.icon || null,
             embedded: menuitem.embedded ?? false,
+            open: menuitem.open || "",
             class: menuitem.class || "",
             tooltip: menuitem.tooltip ?? null,
             module: module.id,

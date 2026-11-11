@@ -20,9 +20,7 @@
             "menus": {
                 "navigation": "/pages",
                 "shortcuts": [
-                    {"label": "", "tooltip":"Diagnostics", "icon": "xshell-diagnostics", "children":[
-                        {"label": "Shortcut 1.1", "href": "/pages/index.js", "icon": "x-settings", "embedded": true }
-                    ] }
+                    {"label":"", "icon": "xshell-diagnostics", "href": "/pages/index.js", "open": "dock", "default": true }
                 ]
             },
             "dependencies": {

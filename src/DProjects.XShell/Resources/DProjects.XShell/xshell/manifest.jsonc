@@ -93,6 +93,7 @@
             "layout": {
                 "default": null,
                 "dialog": null,
+                "dock": null,
                 "main": null,
                 "stack": null,
                 "embed": null

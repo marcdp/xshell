@@ -110,6 +110,7 @@
             "layout": {
                 "default": "x-layout-default",
                 "dialog": "x-layout-dialog",
+                "dock": "x-layout-dock",
                 "main": "x-layout-main",
                 "stack": "x-layout-stack",
                 "embed": "x-layout-embed"

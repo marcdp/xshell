@@ -56,12 +56,14 @@
 
     
     /* x-layout */
-
     --x-layout-default-page-padding-vertical: 0em;
     --x-layout-default-page-padding-horizontal: 0em;
 
     --x-layout-embed-page-padding-vertical: 0em;
     --x-layout-embed-page-padding-horizontal: 0em;
+
+    --x-layout-dock-page-padding-vertical: .25em;
+    --x-layout-dock-page-padding-horizontal: .5em;
 
     --x-layout-main-border: 1px light-dark(#B4B4BB, #313236) solid;
     --x-layout-main-drawer-width: 19em;
@@ -94,6 +96,7 @@
     --x-markdown-pre-background:light-dark(#F8F8F8, #1E1E1E);
 
     /* x-scrollbar */
+    --x-scrollbar: 'auto';
     --x-scrollbar-width: thin;
     --x-scrollbar-width-pixels: 0px;
     --x-scrollbar-gutter: stable;
@@ -114,9 +117,16 @@
     }
     html {
         overflow-x: hidden!important;
+    }        
+    html[data-scrollbar="none"] {
+        overflow: hidden !important;
+        scrollbar-gutter: auto !important;
     }
-    
-}
+    html:has(body > x-page[layout='stack'])[data-scrollbar="none"] {
+        padding-right: 0!important;
+    }
+} 
+
 @media only screen and (max-width: 768px) {
     :root {
         --x-page-padding-left:1.5em;
@@ -135,8 +145,7 @@
 html {
     font-family:var(--x-font-family);
     font-size:var(--x-font-size);
-    color:var(--x-color-text);   
-    scrollbar-gutter: stable;
+    color:var(--x-color-text);       
 }
 html:has(body > x-page[layout='stack']) {
     scrollbar-gutter: auto;
@@ -146,7 +155,9 @@ html:has(body > x-page[layout='stack']) {
 html:has(body > x-page > x-fill) {
     scrollbar-gutter: auto;
     overflow: hidden;
-}
+} 
+
+
 :not(:defined) {
     visibility: hidden;
 }
@@ -380,7 +391,7 @@ x-markdown table th, x-markdown table td {border:1px solid var(--x-color-gray); 
     --x-skeleton-duration: 1.5s;
 
     /* x-splitter */
-    --x-splitter-background: light-dark(#eeeeee, #202020);
+    --x-splitter-background: light-dark(#B4B4BB, #45454D);
     
     /* x-tooltip */
     --x-tooltip-background: light-dark(#303030, #E8EAED);
@@ -402,3 +413,6 @@ x-markdown table th, x-markdown table td {border:1px solid var(--x-color-gray); 
 :root[data-theme="dark"] {
     --x-datafield-border-width: .05em;
 }
+
+
+

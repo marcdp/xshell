@@ -115,6 +115,7 @@ export default {
         :host(.menuitem) .button:focus {outline:none; background:var(--x-color-background-x-gray);}
         :host(.menuitem[disabled]) .button {color:var(--x-color-xxx-gray)}
         :host(.menuitem[disabled]) x-icon {color:var(--x-color-xxx-gray)}
+        :host(.menuitem.pressed) .button {background:var(--x-color-background-x-gray);}
         
         :host(.round) .button {padding-left:0; padding-right:0; width:100%; width:2.5em; justify-content: center;}
 
@@ -122,6 +123,8 @@ export default {
         :host(.light) .button > div span.label {font-weight:500;}
         :host(.light) .button:hover {background:var(--x-button-background-hover-light); border-color:var(--x-color-background-x-gray); }
         :host(.light) .button:active {background:var(--x-button-background-active-light); border-color:var(--x-color-background-xx-gray); }
+        
+        :host(.small) .button {font-size:75%}
         
         :host(.plain) .button {border-radius: var(--x-datafield-border-radius); border:var(--x-datafield-border); padding:0 0 0 0; line-height:unset; width:100%; width:2em; color:var(--x-color-gray);align-items:center;justify-content: center; min-height:2.2em}
         :host(.plain) .button > div span.label {font-weight: normal; color:var(--x-color-gray);}

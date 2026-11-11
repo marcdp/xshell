@@ -297,6 +297,11 @@ export default class Navigation {
                     outletElement.setAttribute("src", hrefFinal);
                 }
             }
+        } else if (open == "dock") {
+            // stack
+            this._bus.emit("xshell:navigation:dock:changed", { 
+                src: hrefAbsolute,
+            });
         }  
     }
 

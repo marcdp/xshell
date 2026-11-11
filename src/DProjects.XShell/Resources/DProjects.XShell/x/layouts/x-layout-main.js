@@ -32,6 +32,9 @@ export default {
             min-height:100vh;
             background:var(--x-color-background-page);
         }
+
+
+        /* loading */
         x-loading {
             position:fixed;
             width:var(--x-loading-width);
@@ -40,6 +43,25 @@ export default {
             transform:translateX(-50%);
             z-index:10;
         }
+
+
+        /* dock */
+        .dock-container .docked-page {position:relative;}
+
+        .dock-container x-splitter x-toolbar {transform: translateZ(90);}
+        .dock-container x-splitter x-toolbar span {flex:1;}
+
+        .dock-container.bottom {display:flex; flex-direction:column;height:100vh; overflow:hidden;}
+        .dock-container.bottom .docked-main {display:block; flex:1; min-height:10em; overflow-y:auto;  scrollbar-width:thin; scrollbar-gutter: stable;}
+        .dock-container.bottom .docked-page {flex:0 0 25em; min-height:10em;  overflow-y:auto; scrollbar-width:thin; background:var(--x-color-background-page);}  
+        .dock-container.bottom .docked-page x-page {height:100%;}
+        
+        .dock-container.right {display:flex; flex-direction:row; height:100vh; width:100vw; }
+        .dock-container.right .docked-main {display:block; flex:1; min-width:10em; overflow:auto; scrollbar-width:thin; height:100vh; }
+        .dock-container.right .docked-page {flex:0 0 25em; min-width:10em; overflow-y:auto; scrollbar-width:thin; background:var(--x-color-background-page);}  
+        .dock-container.right .docked-page x-page {height:100%;}
+
+        /* header */
         .header {
             display:flex;
             align-items:center;
@@ -53,10 +75,8 @@ export default {
         .header .logo {display:block; }
         .header .logo img {display:block; width:3em; height:1.9em; object-fit:contain; border-right:var(--x-layout-main-border);}
         .header .spacer {flex:1}
-        .header x-dropdown {margin-left:.5em; }
-        
+        .header x-dropdown {margin-left:.5em; }        
         .header.shell {z-index:6; padding-left:.65em;}
-
         .header.breadcrumb {z-index:5; padding-right:1.5em;}
 
         /* areas */
@@ -69,16 +89,17 @@ export default {
         .header .search x-datafield {width:30em;}
         .header .search x-icon {transform:translate(.75em,.3em); position:absolute; color: var(--x-datafield-color-placeholder); position:0;}
         .header .search-button {display:none;}
+
+        /* shortcuts */
         .header .shortcuts {display:flex; align-items:center;}
-        .header .shortcuts > * {margin-left: 0.25em;}
+        .header .shortcuts x-dropdown {margin:0;}
+        .header .shortcuts > * {margin-left: 0.5em;}
 
         /* breadcrumb */
         .breadcrumb {position:sticky; top:0; user-select: none; flex:1;}
-        
         .breadcrumb x-icon.toggle {border-radius:50%; font-size:1.225em; width:1.75em; height:1.75em; display:inline-flex; align-items:center; justify-content:center;line-height:1em; background:var(--x-color-primary); color:var(--x-color-white); margin-right:.25em; cursor:pointer; margin-right:.5em}
         .breadcrumb x-icon.toggle:hover {background:var(--x-color-primary-dark); }
         .breadcrumb x-icon.toggle:active {background:var(--x-color-primary-x-dark)}
-        
         .breadcrumb x-icon.toggle.toggled {background:none; color:var(--x-color-text)}
         .breadcrumb x-icon.toggle.toggled:hover {background:var(--x-color-xxxxx-gray); }
         .breadcrumb x-icon.toggle.toggled:active {background:var(--x-color-xxxx-gray)}
@@ -117,11 +138,14 @@ export default {
         /* desktop */
         @media (min-width: 769px) {
             
+            .docked-main {
+                --x-fill-top: 6.4em;
+                --x-fill-height: calc(100vh - 6.5em);
+            }
             .body {
                 display:flex;
                 transition:margin var(--x-transition-duration);
-                --x-fill-top: 6.4em;
-                --x-fill-height: calc(100vh - 6.5em);
+                
             }
             .body .menu {
                 position:sticky;
@@ -241,82 +265,105 @@ export default {
             }
     `,
     template: `
+
+        <!-- loading -->
         <x-loading x-if="state.status=='loading'"></x-loading>        
 
-        <!-- shell header -->
-        <nav class="header shell">
+        <!-- docked page -->
+        <div x-attr:class="'dock-container ' + (state.dockSrc ? state.dockPosition : '')">
 
-            <a class="logo" x-attr:href="state.appBasePath" x-if="state.appIcon">
-                <img x-attr:src="state.appIcon" x-attr:title="state.appLabel">
-            </a>
-            
-            <x-dropdown class="areas popover">
-                <x-icon tabindex="1" icon="x-apps" class="size-x2"></x-icon>
-                <x-page slot="dropdown" src="/pages/areas.js" loading="lazy"></x-page>
-            </x-dropdown>
+            <div class="docked-main" x-on:scroll="onScroll">
 
-            <x-dropdown class="input-dropdown">
-                <div class="search">
-                    <x-datafield type="search" placeholder="Search" x-model="state.keyword" ></x-datafield>
-                </div>
-                <x-page slot="dropdown" src="/pages/search.js" loading="lazy"></x-page>
-            </x-dropdown>
+                <!-- shell header -->
+                <nav class="header shell">
 
-            <div class="spacer"></div>
-
-            <div class="shortcuts">
-
-                <x-dropdown class="tasks popover left" _collapse-on-click>
-                    <x-button class="round light" icon="x-tasks" tooltip="Background tasks" x-attr:badge="state.runningTasks > 0 ? state.runningTasks : ''"></x-button>
-                    <x-page slot="dropdown" src="/pages/tasks.js" loading="lazy"></x-page>
-                </x-dropdown>
-
-                <div x-for="menuitem in state.menuShortcuts">
-                    <div x-if="menuitem.href">
-                        <x-anchor x-attr:href="menuitem.href" x-attr:title="menuitem.tooltip" class="plain">
-                            {{ menuitem.label }}
-                        </x-anchor>
-                    </div>
-                    <x-dropdown x-else x-attr:class="'popover left' + (menuitem.class ? ' ' + menuitem.class : '')"  collapse-on-click>
-                        <x-button x-attr:label="menuitem.label" x-attr:icon="menuitem.icon" x-attr:title="menuitem.tooltip" class="round light"></x-button>
-                        <x-menu slot="dropdown" x-prop:menu="menuitem.children"></x-menu>            
+                    <a class="logo" x-attr:href="state.appBasePath" x-if="state.appIcon">
+                        <img x-attr:src="state.appIcon" x-attr:title="state.appLabel">
+                    </a>
+                    
+                    <x-dropdown class="areas popover">
+                        <x-icon tabindex="1" icon="x-apps" class="size-x2"></x-icon>
+                        <x-page slot="dropdown" src="/pages/areas.js" loading="lazy"></x-page>
                     </x-dropdown>
+
+                    <x-dropdown class="input-dropdown">
+                        <div class="search">
+                            <x-datafield type="search" placeholder="Search" x-model="state.keyword" ></x-datafield>
+                        </div>
+                        <x-page slot="dropdown" src="/pages/search.js" loading="lazy"></x-page>
+                    </x-dropdown>
+
+                    <div class="spacer"></div>
+
+                    <div class="shortcuts">
+
+                        <x-dropdown class="tasks popover left" _collapse-on-click>
+                            <x-button class="round light" icon="x-tasks" tooltip="Background tasks" x-attr:badge="state.runningTasks > 0 ? state.runningTasks : ''"></x-button>
+                            <x-page slot="dropdown" src="/pages/tasks.js" loading="lazy"></x-page>
+                        </x-dropdown>
+
+                        <div x-for="menuitem in state.menuShortcuts">
+                            <div x-if="menuitem.href">
+                                <x-anchor x-attr:href="menuitem.href" x-attr:title="menuitem.tooltip" x-attr:open="menuitem.open" class="round light" >
+                                    <x-icon x-attr:icon="menuitem.icon"></x-icon>
+                                    <label>{{ menuitem.label }}</label>
+                                </x-anchor>
+                            </div>
+                            <x-dropdown x-else x-attr:class="'popover left' + (menuitem.class ? ' ' + menuitem.class : '')"  collapse-on-click>
+                                <x-button x-attr:label="menuitem.label" x-attr:icon="menuitem.icon" x-attr:title="menuitem.tooltip" class="round light"></x-button>
+                                <x-menu slot="dropdown" x-prop:menu="menuitem.children"></x-menu>            
+                            </x-dropdown>
+                        </div>
+                    </div>
+
+                </nav>
+
+                <!-- breadcrumb -->
+                <nav class="header breadcrumb">
+                    <div x-if="state.menuNavigation">
+                        <x-icon icon="x-menu" x-on:click="toggleMenu" class="toggle" x-class:toggled="state.toggled"></x-icon>
+                    </div>
+                    <x-page-breadcrumb></x-page-breadcrumb>
+
+                    <div class="spacer"></div>
+
+                    <x-menu x-prop:menu="state.menuTools" class="horizontal"></x-menu>            
+                </nav>
+
+                <!-- body -->
+                <div x-attr:class="'body' + (state.pageClasses ? ' ' + state.pageClasses : '') + (state.toggled ? ' toggled' : '')">
+                    <nav class="menu">
+                        <div>
+                            <x-button class="anchor" icon="x-close" x-on:click="onToggleMenu"></x-button>
+                            <x-page-menu></x-page-menu>
+                        </div>
+                    </nav>
+                    <div class="divider"></div>
+                    <main>           
+                        <div>     
+                            <h1>
+                                <x-page-title></x-page-title>
+                            </h1>
+                            <x-page-description></x-page-description>
+                            <x-page-info></x-page-info>
+                            <slot></slot>
+                        </div>
+                    </main>
                 </div>
+
             </div>
 
-        </nav>
+            <x-splitter x-if="state.dockSrc" x-on:resize="onDockResize" x-on:change="onDockResize">
+                <x-toolbar>
+                    <span></span>
+                    <x-button x-attr:icon="state.dockPosition == 'bottom' ? 'x-toggle-panel-bottom' : 'x-toggle-panel-right'" x-on:click="onDockToggle" class="round light small"></x-button>
+                </x-toolbar>
+            </x-splitter>
 
-        <!-- breadcrumb -->
-        <nav class="header breadcrumb">
-            <div x-if="state.menuNavigation">
-                <x-icon icon="x-menu" x-on:click="toggleMenu" class="toggle" x-class:toggled="state.toggled"></x-icon>
-            </div>
-            <x-page-breadcrumb></x-page-breadcrumb>
+            <div class="docked-page" x-if="state.dockSrc" >                
+                <x-page x-attr:src="state.dockSrc" layout="dock" x-on:close="onDockClose" x-on:toggledock="onDockToggle"></x-page>
+            </div>  
 
-            <div class="spacer"></div>
-
-            <x-menu x-prop:menu="state.menuTools" class="horizontal"></x-menu>            
-        </nav>
-
-        <!-- body -->
-        <div x-attr:class="'body' + (state.pageClasses ? ' ' + state.pageClasses : '') + (state.toggled ? ' toggled' : '')">
-            <nav class="menu">
-                <div>
-                    <x-button class="anchor" icon="x-close" x-on:click="toggleMenu"></x-button>
-                    <x-page-menu></x-page-menu>
-                </div>
-            </nav>
-            <div class="divider"></div>
-            <main>           
-                <div>     
-                    <h1>
-                        <x-page-title></x-page-title>
-                    </h1>
-                    <x-page-description></x-page-description>
-                    <x-page-info></x-page-info>
-                    <slot></slot>
-                </div>
-            </main>
         </div>
 
     `,
@@ -325,13 +372,17 @@ export default {
         menuTools:       null,
         pageClasses:     "",
         runningTasks:    0,
+        dockPosition:    "bottom",
+        dockSrc:         ""
     },
-    controller({ state, events, areas, bus, getPage, host, tasks }) {
+    controller({ state, events, areas, bus, getPage, host, tasks, commands }) {
         return {
             async load(params) {
                 // toggled
                 state.toggled = localStorage.getItem("xshell.toggled") == "true";
-
+                state.dockSrc = localStorage.getItem("xshell.dockSrc") || "";
+                state.dockPosition = localStorage.getItem("xshell.dockPosition") || "bottom";                
+                if (state.dockSrc) document.documentElement.setAttribute("data-scrollbar", "none");
                 // auto close menu on navigation start (mobile)
                 events.on(bus, "xshell:navigation:start", (e) => {
                     if (probablyPhone()) {
@@ -353,6 +404,24 @@ export default {
                         this.onPageLoaded({event});
                     }
                 });
+                // listen for dock changes
+                events.on(bus, "xshell:navigation:dock:changed", (event) => {
+                    state.dockSrc = event.detail.src;
+                });
+                events.on(state, ["change:dockSrc", "change:dockPosition"], (event) => {
+                    if (state.dockSrc) {
+                        document.documentElement.setAttribute("data-scrollbar", "none");
+                    } else {
+                        document.documentElement.removeAttribute("data-scrollbar");
+                    }
+                    if (state.dockSrc) {
+                        localStorage.setItem("xshell.dockSrc", state.dockSrc);
+                    } else {
+                        localStorage.removeItem("xshell.dockSrc");
+                    }
+                    localStorage.setItem("xshell.dockPosition", state.dockPosition);
+                    commands.enqueue("refreshMenuHeight");
+                });
             },
 
             async mount(params) {
@@ -364,17 +433,22 @@ export default {
                 this.refresh();
 
                 // Initialize menu and update its height on scroll and resize
-                let menu = null;
-                function updateMenuHeight() {
-                    menu  = menu || host.shadowRoot.querySelector(".body > .menu");
-                    if (!menu) return;
-                    const top = menu.getBoundingClientRect().top;
-                    menu.style.height = `${window.innerHeight - top}px`;
+                window.addEventListener("scroll", () => this.refreshMenuHeight(), { passive: true });
+                window.addEventListener("resize", () => this.refreshMenuHeight());
+                this.refreshMenuHeight();
+            },
 
+            refreshMenuHeight() {
+                const menu = host.shadowRoot.querySelector(".body > .menu");
+                const dockedMain = host.shadowRoot.querySelector(".docked-main");
+                if (!menu) return;
+                const top = menu.getBoundingClientRect().top;
+                if (state.dockSrc && state.dockPosition === "bottom") {
+                    const dockedMainRect = dockedMain.getBoundingClientRect();
+                    menu.style.height = `${dockedMainRect.height - top}px`;
+                } else {
+                    menu.style.height = `${window.innerHeight - top}px`;
                 }
-                window.addEventListener("scroll", updateMenuHeight, { passive: true });
-                window.addEventListener("resize", updateMenuHeight);
-                updateMenuHeight();
             },
 
             async refreshCssVariables() {
@@ -422,22 +496,41 @@ export default {
                 }
             },
 
-            async toggleMenu(params) {
-                //toggle-menu
-                state.toggled = !state.toggled;
-                localStorage.setItem("xshell.toggled", state.toggled);
-            },
-
             async search(params) {
                 //search
                 bus.emit("xshell:search", { keyword: state.keyword.trim() });
             },
+
+            // events
+            async onToggleMenu(params) {
+                //toggle-menu
+                state.toggled = !state.toggled;
+                localStorage.setItem("xshell.toggled", state.toggled);
+            },
             onPageLoaded({ event }) {
+                // page loaded
                 const page = getPage();
                 if (page) {
                     state.pageClasses = page.meta?.classes?.join(" ") || "";
                 }
+                this.refreshMenuHeight();
             },
+            onDockClose() {
+                // dock close
+                state.dockSrc = null;
+            },
+            onDockToggle() {
+                // dock toggle
+                state.dockPosition = state.dockPosition === "bottom" ? "right" : "bottom";
+            },
+            onDockResize() {
+                // dock resize
+                this.refreshMenuHeight();
+            },
+            onScroll() {
+                // handle scroll
+                this.refreshMenuHeight();
+            }
 
         };
     }
