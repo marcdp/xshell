@@ -27,7 +27,7 @@
             "filecommands": {
                 "schema": "schema:x-filesystem-file-command",
                 "contributions": [
-                    {"id": "encrypt", "label": "Encrypt", "extensions": ["txt", "json", "md"], "handler": "esm:x-crypto:/commands/encrypt.js"}
+                    {"id": "encryptaes", "label": "Encrypt", "icon":"x-lock", "extensions": ["txt", "json", "md"], "handler": "/js/command_encrypt_aes.js"}
                 ]
             }
         },

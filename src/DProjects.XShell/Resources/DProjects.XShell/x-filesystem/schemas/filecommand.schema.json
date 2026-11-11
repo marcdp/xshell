@@ -1,0 +1,18 @@
+
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://xshell.dev/schemas/filecommand.schema.json",
+    "type": "object",
+    "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "label": {"type": "string", "minLength": 1},
+        "icon": {"type": "string"},
+        "extensions": {
+            "type": "array",
+            "items": {"type": "string"}
+        },
+        "handler": {"type": "string", "minLength": 1}
+    },
+    "required": ["id", "label", "extensions", "handler"],
+    "additionalProperties": false
+}
