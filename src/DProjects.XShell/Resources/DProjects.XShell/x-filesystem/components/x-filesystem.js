@@ -61,6 +61,7 @@ export default {
 
         <x-contextmenu x-on:command="onCommand">        
             <x-menuitem label="Open" icon="x-open" command="open" x-attr:disabled="!state.entry || !state.open"></x-menuitem>
+            <x-menuitem x-for="command in state.commands" x-attr:label="command.label" x-attr:icon="command.icon" command="customCommand" x-attr:data-command="command.id" x-attr:disabled="!state.entry"></x-menuitem>
             <x-menuitem label="-" ></x-menuitem>
             <x-menuitem label="New file ..." icon="x-file" command="newFile" x-attr:disabled="(state.entry && state.entry.type != 'directory' ? true : false)"></x-menuitem>
             <x-menuitem label="New folder ..." icon="x-folder" command="newFolder" x-attr:disabled="(state.entry && state.entry.type != 'directory' ? true : false)"></x-menuitem>
@@ -80,12 +81,13 @@ export default {
         pathList: "/",
         entry: null,
         entries: [],
+        commands: [],
         history: ["/"],
         historyIndex: 0,
         open: false,
         root: false
     },
-    controller({ state, events, loader, navigation, getPage, host, dialog, tasks, resolver}) {
+    controller({ state, events, loader, navigation, getPage, host, dialog, tasks, resolver, registry }) {
         const getFileHandler = (resolver, path) => {
             // scan all possible file extensions
             const name = path.split('/').pop();
@@ -98,6 +100,13 @@ export default {
                 }
             }
             return null;
+        };
+        const getFileCommands = (registry, path) => {
+            const fileCommands = registry.get("filecommands");
+            if (!fileCommands) return [];
+            return fileCommands.contributions.filter(command => {
+                return command.extensions.some(ext => path.endsWith(ext));
+            });
         };
         return {
             async load(args) {
@@ -367,6 +376,13 @@ export default {
                 }
                 return true;
             },
+            async customCommand(command, path) {
+                // handle custom command
+                const Command = await loader.load("command:" + command);
+                // todo ...
+                debugger;
+                await dialog.command({title: "Custom Command", Command: command, commandContext: { path }, values: { path }});
+            },
 
 
             /* commands */
@@ -389,6 +405,9 @@ export default {
                     if (paths.length) this.downloadFiles(paths);
                 } else if (event.detail.command === "rename") {
                     if (state.entry) this.rename(state.entry.path);
+                } else if (event.detail.command === "customCommand") {
+                    const command = event.target.dataset.command;
+                    if (state.entry) this.customCommand(command, state.entry.path);
                 } else {
                     alert("UNHANDLED COMMAND: " + event.detail.command)
                 }
@@ -485,6 +504,7 @@ export default {
                 // handle context menu entry event
                 state.entry = event.detail.entry;
                 state.entries = event.detail.entries;
+                state.commands = getFileCommands(registry, state.entry.path);
                 state.open = (getFileHandler(resolver, state.entry.path) || state.entry.type == "directory");
                 const contextMenu = host.shadowRoot.querySelector("x-contextmenu");
                 contextMenu.open({x: event.detail.x, y: event.detail.y});

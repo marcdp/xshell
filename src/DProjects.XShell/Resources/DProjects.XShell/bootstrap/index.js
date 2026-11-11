@@ -381,18 +381,40 @@ async function main() {
                     };
                 }
             };
+            resolver.schema ??= {};
+            const schemaDeclarations = new Map();
             const addSchemaDeclarations = (ownerType, ownerId, assetsPath, files) => {
                 const schemasPath = assetsPath + "/schemas";
                 for (const file of files ?? []) {
                     if (!file.path.startsWith(schemasPath + "/") || !file.path.endsWith(".schema.json")) continue;
                     const id = file.path.substring(schemasPath.length + 1).replace(/\.schema\.json$/, "");
-                    const first = contractDeclarations.get(id);
+                    const first = schemaDeclarations.get(id);
                     if (first) throw new Error(`Duplicate schema '${id}' declared by ${first.ownerType} '${first.ownerId}' in '${first.path}' ` + `and ${ownerType} '${ownerId}' in '${file.path}'.`);
                     if (Object.hasOwn(resolver.schema, id)) throw new Error(`Duplicate schema '${id}' conflicts with an existing resolver entry while processing ` + `${ownerType} '${ownerId}' file '${file.path}'.`);
-                    contractDeclarations.set(id, { ownerType, ownerId, path: file.path });
+                    schemaDeclarations.set(id, { ownerType, ownerId, path: file.path });
                     resolver.schema[id] = {
                         src: `${schemasPath}/${id}.schema.json`,
                         loader: "schema-json",
+                        cache: true,
+                        moduleId: ownerId,
+                        modulePath: assetsPath
+                    };
+                }
+            };
+            resolver.command ??= {};
+            const commandDeclarations = new Map();
+            const addCommandDeclarations = (ownerType, ownerId, assetsPath, files) => {
+                const commandsPath = assetsPath + "/commands";
+                for (const file of files ?? []) {
+                    if (!file.path.startsWith(commandsPath + "/") || !file.path.endsWith(".js")) continue;
+                    const id = file.path.substring(commandsPath.length + 1).replace(/\.js$/, "");
+                    const first = commandDeclarations.get(id);
+                    if (first) throw new Error(`Duplicate command '${id}' declared by ${first.ownerType} '${first.ownerId}' in '${first.path}' ` + `and ${ownerType} '${ownerId}' in '${file.path}'.`);
+                    if (Object.hasOwn(resolver.command, id)) throw new Error(`Duplicate command '${id}' conflicts with an existing resolver entry while processing ` + `${ownerType} '${ownerId}' file '${file.path}'.`);
+                    commandDeclarations.set(id, { ownerType, ownerId, path: file.path });
+                    resolver.command[id] = {
+                        src: `${commandsPath}/${id}.js`,
+                        loader: "command-js",
                         cache: true,
                         moduleId: ownerId,
                         modulePath: assetsPath
@@ -411,8 +433,8 @@ async function main() {
                     modulePath: frameworkAssetsPath
                 };
                 addContractDeclarations("XShell", "xshell", frameworkAssetsPath, config.xshell.files);
-                resolver.schema ??= {};
                 addSchemaDeclarations("XShell", "xshell", frameworkAssetsPath, config.xshell.files);
+                addCommandDeclarations("XShell", "xshell", frameworkAssetsPath, config.xshell.files);
             }
 
             for (const [moduleId, module] of Object.entries(config.modules)) {
@@ -681,9 +703,20 @@ async function main() {
                     loader: "object-json",
                     cache: true,
                     moduleId,
-                    modulePath: moduleAssetsPath
+                    modulePath: moduleAssetsPathContracts
                 };
                 addContractDeclarations("module", moduleId, moduleAssetsPath, module.files);
+
+                // commands
+                const moduleAssetsPathCommands = moduleAssetsPath + "/commands";
+                resolver.command[`${moduleId}:{name}`] ??= {
+                    src: `${moduleAssetsPathCommands}/{name}.js`,
+                    loader: "command-js",
+                    cache: true,
+                    moduleId,
+                    modulePath: moduleAssetsPathCommands
+                };
+                addCommandDeclarations("module", moduleId, moduleAssetsPath, module.files);
             }
 
             return config;

@@ -151,6 +151,14 @@ Bootstrap recursively normalizes recognized string forms in each selected manife
 `url:` therefore normally creates an absolute physical URL, while `/`, `./`, and `../` create application-relative virtual Paths. Object property
 names are not normalized.
 
+## Registry schemas
+
+A module contributes a named registry under `xshell.registry` with a module-relative schema file path, for example
+`"schema": "/schemas/filecommand.schema.json"`. Bootstrap normalizes that path to the module's generation-qualified `assets.path` before merging
+configuration. During `xshell.init()`, Registry maps the effective asset path to an existing schema Resolver resource, loads it through Loader, and
+validates each contribution against that schema before module controllers start. Framework-owned schemas use generated inventory resolver entries.
+Missing or empty `contributions` are valid; an unknown schema path, schema-loading error, or invalid contribution stops initialization.
+
 ## Merge and precedence
 
 Objects merge recursively, arrays concatenate, and later scalar values replace earlier values. The merge order is:

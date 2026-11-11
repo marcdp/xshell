@@ -89,6 +89,7 @@
                 "markdown": ""
             },
             "dialog": {
+                "command": null,
                 "confirm": null,
                 "message": null,
                 "prompt": null,

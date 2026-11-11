@@ -23,14 +23,18 @@
     },
 
     "xshell": {
+
+        // XShell specific configuration for the x-filesystem module
         "registry": {
             "filecommands": {
-                "schema": "schema:x-filesystem-file-command",
+                "schema": "/schemas/filecommand.schema.json",
                 "contributions": [
-                    {"id": "encryptaes", "label": "Encrypt", "icon":"x-lock", "extensions": ["txt", "json", "md"], "handler": "/js/command_encrypt_aes.js"}
+                    {"id": "encrypt-aes", "label": "Encrypt", "icon":"x-lock", "extensions": ["txt", "json", "md"]}
                 ]
             }
         },
+
+        // resolver
         "resolver": {
             "filesystem": {
                 "mem:": {"src": "/js/filesystem-mem.js", "loader": "instance-js"},

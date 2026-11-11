@@ -1,0 +1,29 @@
+
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://xshell.dev/schemas/command.schema.json",
+  "title": "XShell Command Implementation",
+  "description": "Describes the implementation object of an XShell Command.",
+  "type": "object",
+  "required": ["contract", "controller"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": { "type": "string", "format": "uri-reference", "description": "URI of the JSON Schema used to validate this Command."},
+    "contract": {
+      "type": "object",
+      "description": "Public contract of the Command, including its execute method.",
+      "required": ["execute"],
+      "additionalProperties": false,
+      "properties": {
+        "label": { "type": "string", "description": "Human-readable label of the Command." },
+        "icon": { "type": "string", "description": "Icon representing the Command." },
+        "description": { "type": "string", "description": "Human-readable description of the Command." },
+        "types": {  "$ref": "./contract.schema.json#/properties/types", "description": "Reusable named types scoped to the Command contract." },
+        "execute": {"$ref": "./contract.schema.json#/$defs/method","description": "Contract of the Command's execute method."}
+      }
+    },
+    "controller": {
+      "description": "Factory called with Command runtime dependencies and invocation context; must return an object implementing execute()."
+    }
+  }
+}

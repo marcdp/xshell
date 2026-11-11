@@ -10,9 +10,8 @@
         "extensions": {
             "type": "array",
             "items": {"type": "string"}
-        },
-        "handler": {"type": "string", "minLength": 1}
+        }
     },
-    "required": ["id", "label", "extensions", "handler"],
+    "required": ["id", "label", "extensions"],
     "additionalProperties": false
 }

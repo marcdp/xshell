@@ -204,8 +204,8 @@
       "type": "object",
       "required": [],
       "properties": {
+        "command": {"type": ["string", "null"], "description": "Default dialog command layout."},
         "default": {"type": ["string", "null"], "description": "Default page layout."},
-        "dialog": {"type": ["string", "null"], "description": "Default dialog page layout."},
         "main": {"type": ["string", "null"], "description": "Default main page layout."},
         "stack": {"type": ["string", "null"], "description": "Default stacked page layout."},
         "embed": {"type": ["string", "null"], "description": "Default embedded page layout."}
@@ -227,6 +227,7 @@
     "xshellUiDialog": {
       "type": "object",
       "properties": {
+        "command": {"type": ["string", "null"], "description": "Page used for command dialogs."},
         "confirm": {"type": ["string", "null"], "description": "Page used for confirmation dialogs."},
         "message": {"type": ["string", "null"], "description": "Page used for message dialogs."},
         "prompt": {"type": ["string", "null"], "description": "Page used for prompt dialogs."},
@@ -303,7 +304,7 @@
       "type": "object",
       "required": ["schema"],
       "properties": {
-        "schema": {"type": "string", "minLength": 1, "description": "Resource reference to the JSON Schema used to validate registry contributions."},
+        "schema": {"type": "string", "minLength": 1, "description": "Effective module or framework asset path to the JSON Schema used to validate registry contributions."},
         "contributions": {
             "type": "array",
             "items": {"type": "object"},

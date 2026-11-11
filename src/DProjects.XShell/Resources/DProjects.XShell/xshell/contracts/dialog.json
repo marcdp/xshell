@@ -4,6 +4,28 @@
   "properties": {},
   "events": {},
   "methods": {
+    "command": {
+      "description": "Opens the configured command dialog.",
+      "parameters": [
+        {
+          "name": "options", "type": "object", "required": true, "description": "Single destructured options object. Fields correspond to the JavaScript method signature.",
+          "schema": {
+            "type": "object",
+            "properties": {
+              "title": {"type":"string"},
+              "Command": {"type":"string"},
+              "commandContext": {"type":"object"},
+              "values": {"type":"object"}
+            },
+            "additionalProperties": true
+          }
+        }
+      ],
+      "returns": {
+        "type": "any",
+        "description": "Promise resolving to the value returned by navigation.navigate(); exact result shape is not specified by Dialog."
+      }
+    },
     "confirm": {
       "description": "Opens the configured confirmation dialog.",
       "parameters": [

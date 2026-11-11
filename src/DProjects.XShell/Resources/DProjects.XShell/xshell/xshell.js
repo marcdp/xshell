@@ -69,7 +69,7 @@ class XShell {
         this._contracts = new Contracts( { config: config, loader: this._loader } );
         await this._i18n.init(config.xshell.i18n);
         this._services = new Services( {config, loader: this._loader, contracts: this._contracts, areas: this._areas, bus: this._bus } );
-        this._registry = new Registry( {config, loader: this._loader, contracts: this._contracts, areas: this._areas, bus: this._bus } );
+        this._registry = new Registry( {config, loader: this._loader, resolver: this._resolver } );
         this._modules = new Modules( { bus: this._bus, config: config, loader: this._loader, resolver: this._resolver, document: document, services: this._services } );
         this._navigation = new Navigation( { areas: this._areas, bus: this._bus, config: config, container: document.body, resolver: this._resolver });
         this._dialog = new Dialog( { config: config, navigation: this._navigation, i18n: this._i18n } );        
@@ -91,6 +91,7 @@ class XShell {
         this._services.register("services", this._services, { contractItem: this._contracts.getContractItemById("services")});
         this._services.register("registry", this._registry, { contractItem: this._contracts.getContractItemById("registry")});
         await this._services.init();
+        await this._registry.init();
         // modules
         await this._modules.init();  
         // areas

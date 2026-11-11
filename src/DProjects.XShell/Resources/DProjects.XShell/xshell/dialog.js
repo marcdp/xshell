@@ -14,6 +14,19 @@ export default class Dialog {
     }
 
     // methods
+    async command({ title, Command, commandContext, values }) {
+        const href = this._config.xshell.ui.dialog.command;
+        return await this._navigation.navigate({ 
+            href, 
+            open:"dialog", 
+            context: {
+                title,
+                Command,
+                commandContext,
+                values
+            } 
+        });
+    }
     async confirm({ title, message, variant }) {
         const href = this._config.xshell.ui.dialog.confirm;
         return await this._navigation.navigate({ 
