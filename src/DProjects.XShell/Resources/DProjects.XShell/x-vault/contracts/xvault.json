@@ -10,6 +10,12 @@
           "type": "string",
           "required": true,
           "description": "Encrypted text to decrypt."
+        },
+        {
+          "name": "password",
+          "type": "string",
+          "required": true,
+          "description": "Password for decryption."
         }
       ],
       "returns": {
@@ -25,6 +31,12 @@
           "type": "string",
           "required": true,
           "description": "Plain text to encrypt."
+        },
+        {
+          "name": "password",
+          "type": "string",
+          "required": true,
+          "description": "Password for encryption."
         }
       ],
       "returns": {

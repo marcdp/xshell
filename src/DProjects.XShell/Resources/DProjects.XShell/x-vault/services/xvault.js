@@ -6,12 +6,12 @@ export default class XVault {
 
 
     // methods
-    async decrypt(text) {
+    async decrypt(text, password) {
         // Implement decryption logic here
         return text; // Placeholder
     }
 
-    async encrypt(text) {
+    async encrypt(text, password) {
         // Implement encryption logic here
         return text; // Placeholder
     }

@@ -21,17 +21,7 @@ export default {
             flex: 1;
             min-width: 15em;
         }
-        .row {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 1em;
-            flex-wrap: wrap;
-        }
-        .muted {
-            color: var(--x-color-text-gray);
-            font-size: .9em;
-        }
+        
         .error {
             color: #b42318;
             white-space: pre-wrap;
@@ -40,12 +30,6 @@ export default {
             display: grid;
             gap: 1em;
             margin: 1em 0;
-        }
-        .method {
-            border-bottom: var(--x-divider-border);
-        }
-        .method-body {
-            padding: .5em 1em 1.5em;
         }
         pre {
             padding: .75em;
@@ -84,7 +68,7 @@ export default {
                     <span class="muted">{{ state.status }}</span>
                 </x-toolbar>
 
-                <p class="error" x-if="state.error">{{ state.error }}</p>
+                <x-notice class="error" x-if="state.error" x-attr:label="state.error"></x-notice>
 
                 <div x-if="state.contractId">
                     <p>
@@ -102,14 +86,12 @@ export default {
                     No properties declared.
                 </p>
 
-                <x-card x-for="item in state.properties" x-key="name">
-                    <div class="row">
-                        <div>
-                            <strong>{{ item.name }}</strong>
-                            <span class="muted">({{ item.type }})</span>
-                            <span class="muted" x-if="item.readonly">read-only</span>
-                        </div>
-
+                <x-accordion x-else>
+                    <x-accordion-panel x-for="item in state.properties" x-key="name" 
+                        class="card"
+                        x-attr:label="item.name"
+                        x-attr:description="item.description + ' (' + item.type + (item.readonly ? ', read-only' : '') + ')'"
+                        >
                         <x-button
                             label="Read"
                             icon="x-refresh"
@@ -117,14 +99,10 @@ export default {
                             x-attr:disabled="!state.resolved"
                             x-on:click="readProperty">
                         </x-button>
-                    </div>
+                        <pre x-if="item.read">{{ item.value }}</pre>
+                    </x-accordion-panel>
+                </x-accordion>
 
-                    <p class="muted" x-if="item.description">
-                        {{ item.description }}
-                    </p>
-
-                    <pre x-if="item.read">{{ item.value }}</pre>
-                </x-card>
             </x-datafields>
 
             <!-- Methods -->
@@ -134,16 +112,17 @@ export default {
                     No methods declared.
                 </p>
 
-                <x-details
-                    class="method"
-                    x-for="method in state.methods"
-                    x-key="name"
-                    x-attr:label="method.label">
+                <x-accordion x-else>
+                    <x-accordion-panel
+                        class="card"
+                        x-for="method in state.methods"
+                        x-key="name"
+                        x-attr:label="method.label"
+                        x-attr:description="method.description"
+                        >
 
-                    <div class="method-body">
-
-                        <p class="muted" x-if="method.description">
-                            {{ method.description }}
+                        <p class="muted" x-if="method.parameters.length == 0">
+                            This method has no parameters.
                         </p>
 
                         <!-- Parameters -->
@@ -160,11 +139,7 @@ export default {
                                 x-model="param.input">
                             </x-datafield>
                         </div>
-
-                        <p class="muted" x-if="method.parameters.length == 0">
-                            This method has no parameters.
-                        </p>
-
+                        
                         <p class="muted">Returns: {{ method.returns }}</p>
 
                         <!-- Invocation permission -->
@@ -192,18 +167,15 @@ export default {
                         </div>
 
                         <!-- Error -->
-                        <p class="error" x-if="method.error">
-                            {{ method.error }}
-                        </p>
+                        <x-notice class="error" x-if="state.error" x-attr:label="state.error"></x-notice>
 
                         <!-- Result -->
                         <div x-if="method.hasResult">
                             <strong>Result</strong>
                             <pre>{{ method.result }}</pre>
                         </div>
-
-                    </div>
-                </x-details>
+                    </x-accordion-panel>
+                </x-accordion>
             </x-datafields>
 
             <!-- Events -->
@@ -213,11 +185,15 @@ export default {
                     No events declared.
                 </p>
 
-                <x-card x-for="item in state.serviceEvents" x-key="name">
-                    <strong>{{ item.name }}</strong>
-                    <p class="muted">{{ item.description }}</p>
-                    <div class="muted">Payload: {{ item.detail }}</div>
-                </x-card>
+                <x-accordion x-else>
+                    <x-accordion-panel x-for="item in state.serviceEvents" x-key="name" 
+                        class="card"
+                        x-attr:label="item.name"
+                        x-attr:description="item.description"
+                        >
+                            <div>Payload: {{ item.detail }}</div>
+                    </x-accordion-panel>
+                </x-accordion>
 
                 <div class="toolbar" x-if="state.serviceEvents.length > 0">
                     <x-button

@@ -34,6 +34,7 @@ export default {
     style: `
         :host {
             display:block;
+            padding-bottom:.5em;
         }
         :host div.body {display: grid; grid-gap: 1em 1em; flex:1;}
         :host([columns='2']) div.body { grid-template-columns: repeat(2, 1fr); }
@@ -47,9 +48,11 @@ export default {
         ::slotted([columns='4']) {grid-column: span 4 / span 1;}
         ::slotted([columns='5']) {grid-column: span 5 / span 1;}
         ::slotted([columns='6']) {grid-column: span 6 / span 1;}
+        ::slotted(p:first-child) {margin-top:0;}
+        ::slotted(p:last-child) {margin-bottom:0;}
 
-        :host label {font-weight:600; display:inline-block; position:relative; line-height:2em; padding-bottom:.25em;  margin-bottom:1em; padding-top:.5em;}
-        :host label::after {content:""; border-radius:.1em; position:absolute; width:100%; bottom:0; left:0; border:.125em var(--x-color-text) solid;}
+        :host label {font-weight:500; display:inline-block; position:relative; line-height:2em; padding-bottom:.25em;  margin-bottom:.5em; padding-top:.5em; font-size:var(--x-font-size-subsubtitle)}
+        :host label::after {content:""; border-radius:.1em; position:absolute; width:100%; bottom:0; left:0; _border:.125em var(--x-color-text) solid;}
         :host p {margin:0; margin-bottom:1.5em;}
 
         :host .row {display:flex;}

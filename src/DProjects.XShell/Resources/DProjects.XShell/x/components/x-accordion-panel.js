@@ -10,6 +10,7 @@ export default {
         },
         properties: {
             label:    {type:"string",  default:"",    attribute:true, state:true, description:""},
+            description: {type:"string",  default:"",    attribute:true, state:true, description:""},
             icon:     {type:"string",  default:"",    attribute:true, state:true, description:""},
             expanded: {type:"boolean", default:false, attribute:true, state:true, description:""}
         },
@@ -27,11 +28,14 @@ export default {
         :host {display:block;}
         .header {display:flex; height:2.5em; align-items:center; padding:0 .5em 0 1em; cursor:pointer; user-select: none;}
         .header > x-icon {margin-right:.5em; transition: transform var(--x-transition-duration); }
-        .header > span {flex:1; font-weight:600;}
+        .header > label {flex:1; cursor:pointer; display:inline}
+        .header > label span.label {font-weight:500;}
+        .header > label span.description {font-weight:normal; color: var(--x-color-text-gray);}
+        .header > label span.description:before { content: ": "; }
         .header > .toolbar {margin-right:1em; }
-        .header:hover > span {color:var(--x-color-primary)!important; }
+        .header:hover > label {color:var(--x-color-primary)!important; }
         .header:hover > x-icon {color:var(--x-color-primary)!important;}
-        .header[expanded] span {color:var(--x-color-primary);}
+        .header[expanded] label {color:var(--x-color-primary);}
         .header[expanded] x-icon:last-child {transform:rotate(-180deg); }
         
         .body {
@@ -46,11 +50,15 @@ export default {
         .body[expanded] {grid-template-rows: 1fr;}
 
         :host(:last-child) .body {border-bottom:none;}
+
+        ::slotted(*:first-child) {margin-top:0!important;}
     `,
     template: `
         <div class="header" x-on:click="toggle" x-attr:expanded="state.expanded">
             <x-icon x-if="state.icon" x-attr:icon="state.icon"></x-icon>
-            <span x-text="state.label"></span>
+            <label>
+                <span class="label" x-text="state.label"></span><span class="description" x-if="state.description" x-text="state.description"></span>
+            </label>
             <div class="toolbar">
                 <slot name="toolbar"></slot>
             </div>
