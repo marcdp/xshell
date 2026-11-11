@@ -30,7 +30,8 @@ controller({ bus, events }) {
 
 The `events` helper removes this registration on final unload. With direct registration, retain the function and explicitly remove it on destruction.
 Bus messages have no DOM bubbling, composed path, or cancellation.
-`module.contract.events` and service event contracts are metadata, without automatic validation/dispatch.
+Service contracts describe published Bus events as metadata; declarations do not automatically validate or dispatch events. A module may provide
+multiple Services with separate contracts. Modules have no public contracts. Component and Page contracts describe their own public APIs.
 
 Area consumers listen for `xshell:area:change` and `xshell:menus:change`; Navigation emits `xshell:navigation:end`; the Theme service emits
 `x:theme:changed` with `{ mode }` when the selected theme mode changes.

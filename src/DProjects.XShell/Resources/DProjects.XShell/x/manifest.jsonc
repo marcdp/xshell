@@ -8,17 +8,6 @@
             "version": "0.9.0",
             "copyright": "",
             "icon": "",
-            "contract": {
-                "label": "X module",
-                "description": "X module for various functionalities",
-                "events": {},
-                "methods": {
-                    "doSomething": {
-                        "label": "Do Something",
-                        "description": "Performs an action"
-                    }
-                }
-            },
             "defaults": {
                 "component": { 
                     "renderEngine": "x",

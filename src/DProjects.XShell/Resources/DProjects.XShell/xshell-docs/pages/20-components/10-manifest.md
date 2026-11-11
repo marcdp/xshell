@@ -29,7 +29,7 @@ The Component and Page loaders validate the complete default export against `com
 
 ## Shared contract model
 
-`contract.schema.json` defines the common contract vocabulary used by Services, Components, Pages, and Modules. Every top-level field is optional:
+`contract.schema.json` defines the common contract vocabulary used by Services, Components, and Pages. Every top-level field is optional:
 
 | Field | Shape and role |
 | --- | --- |
@@ -93,7 +93,7 @@ export default {
 ```
 
 The shared schema validates descriptor shape and JSON Schema placement. Service contract registration additionally verifies that every `ref` in a
-property, event detail field, method parameter, or return value names a declared local type. Component, Page, and Module validation currently does
+property, event detail field, method parameter, or return value names a declared local type. Component and Page validation currently do
 not perform that extra reference-existence pass. None of these schemas validates runtime property values, event payloads, method arguments, or
 method results against `type`, `ref`, or `schema`.
 
@@ -106,7 +106,8 @@ Specialized schemas reuse the shared definitions and then apply element-specific
   Component contract fields.
 - `page.schema.json` embeds the contract in the Page implementation object, adds Page property metadata and `slots`, and rejects unsupported Page
   contract fields. The loader separately rejects slots reported by the selected Page render engine.
-- `module.schema.json` accepts an optional common contract in the effective Module configuration. It does not add Component/Page metadata.
+
+Modules do not define public contracts; `module.schema.json` rejects `contract` on effective Module configurations.
 
 ## Component-specific surface
 

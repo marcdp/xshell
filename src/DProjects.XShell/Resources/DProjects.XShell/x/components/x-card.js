@@ -32,11 +32,13 @@ export default {
         :host .header ::slotted(p) {margin:0}
 
         :host .body {padding:var(--x-card-padding);}
+        :host .body ::slotted(p:first-child) {margin-top:0}
         :host .body ::slotted(h1:first-child) {margin-top:0}
         :host .body ::slotted(h2:first-child) {margin-top:0}
         :host .body ::slotted(h3:first-child) {margin-top:0}
         :host .body ::slotted(h4:first-child) {margin-top:0}
         :host .body ::slotted(h5:first-child) {margin-top:0}
+        :host .body ::slotted(p:last-child) {margin-bottom:0}
 
         :host .footer {padding-left:var(--x-card-padding);padding-right:var(--x-card-padding);}
         :host .footer ::slotted(p) {margin:0}

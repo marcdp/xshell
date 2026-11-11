@@ -20,7 +20,7 @@ XShell is currently **pre-1.0** and evolving.
 - **Portable deployment**: application code uses stable application Paths while XShell maps them to the appropriate resource URLs.
 - **Developer friendly**: behavior should be easy to trace from source to browser, with minimal build-time machinery.
 - **Understandable by humans and AI**: predictable files, naming, schemas, contracts, and boundaries make the system easy to inspect and reason about.
-- **Explicit contracts**: public capabilities should be described wherever practical — properties, methods, events, slots, service APIs, and module-level capabilities.
+- **Explicit contracts**: Services, Components, and Pages describe their public properties, methods, and events where practical; Components and Pages also describe slots.
 - **Framework agnostic**: XShell is not built around React, Vue, Lit, or any other rendering framework. Its architecture is based on Web standards, and rendering technologies can evolve independently from the application structure.
 
 ## How an application fits together

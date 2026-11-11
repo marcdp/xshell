@@ -71,8 +71,8 @@ the route's canonical Page href, and supplied with extracted path parameters as 
 applicable canonical Page href back to its friendly route, consuming placeholder query parameters while preserving unrelated query and fragments.
 Menu aliases take precedence over routes in both directions.
 
-See [Components](60-components.md) for the contract and implementation formats. A component contract's DOM events are distinct from public module Bus
-events.
+See [Components](60-components.md) for the contract and implementation formats. Component and Page contract DOM events are distinct from Bus events
+described by Service contracts.
 
 ## Page classes
 

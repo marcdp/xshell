@@ -193,20 +193,14 @@ test("effective schema requires app baseUrl", () => {
     assert.equal(validator.validate(config).valid, true, JSON.stringify(validator.validate(config).errors));
 });
 
-test("effective schema accepts descriptive module events", () => {
+test("effective schema rejects module contracts", () => {
     const module = moduleDefinition();
+    assertValid(module);
     module.contract = { events: { ready: { description: "Module is ready" } } };
 
-    assertValid(module);
-});
-
-test("effective schema rejects module actions and intents", () => {
-    for (const field of ["actions", "intents"]) {
-        const module = moduleDefinition();
-        module.contract = { events: {}, [field]: {} };
-
-        assert.equal(validator.validate(configuration(module)).valid, false, `${field} must not be part of the V0 module contract`);
-    }
+    const result = validator.validate(configuration(module));
+    assert.equal(result.valid, false);
+    assert.ok(result.errors.some(error => error.error.includes('Property "contract"')));
 });
 
 test("effective schema rejects the removed xshell.identity configuration", () => {

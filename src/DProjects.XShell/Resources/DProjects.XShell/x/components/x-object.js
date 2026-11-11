@@ -178,23 +178,14 @@ export default {
                     x-text="state.openText"></span>
             </button>
 
-            <div
-                x-else
-                class="node">
+            <div x-else class="node">
 
                 <span class="toggle empty">
                     ▶
                 </span>
 
-                <span
-                    x-if="state.name"
-                    class="name"
-                    x-text="state.name"></span>
-
-                <span
-                    class="value"
-                    x-attr:class="'value ' + state.type"
-                    x-text="state.text"></span>
+                <span x-if="state.name" class="name" x-text="state.name"></span>
+                <span class="value" x-attr:class="'value ' + state.type" x-text="state.text"></span>
             </div>
 
         </div>

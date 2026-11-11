@@ -17,9 +17,6 @@
                     "stateEngine": "proxy"
                 }
             },
-            "contract": {
-                "events": {}
-            },
             "dependencies": {
                 "x": "module:x:latest"
             }

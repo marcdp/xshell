@@ -62,8 +62,8 @@
     --x-layout-embed-page-padding-vertical: 0em;
     --x-layout-embed-page-padding-horizontal: 0em;
 
-    --x-layout-dock-page-padding-vertical: .25em;
-    --x-layout-dock-page-padding-horizontal: .5em;
+    --x-layout-dock-page-padding-vertical: 1em;
+    --x-layout-dock-page-padding-horizontal: 1.5em;
 
     --x-layout-main-border: 1px light-dark(#B4B4BB, #313236) solid;
     --x-layout-main-drawer-width: 19em;

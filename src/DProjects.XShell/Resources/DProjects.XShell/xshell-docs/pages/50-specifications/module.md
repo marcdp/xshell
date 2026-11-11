@@ -40,8 +40,7 @@ Do not duplicate identity in `name`, `id`, or `moduleId`; the `modules` property
             },
             "routes": {
                 "/orders/{orderId}": "/pages/order.js"
-            },
-            "contract": { "events": {} }
+            }
         }
     }
 }
@@ -86,7 +85,7 @@ After selection, bootstrap merges the manifest and enriches the selected definit
 ```
 
 The effective schema requires `label`, `version`, `copyright`, `icon`, `configUrl`, `assets`, `defaults`, and `files`. It permits `params`,
-`requires`, `hash`, `builtAt`, `menus`, `routes`, `contract`, and `dependencies`.
+`requires`, `hash`, `builtAt`, `menus`, `routes`, and `dependencies`.
 
 | Property | Meaning |
 | --- | --- |
@@ -148,13 +147,11 @@ Route values normalize into the owning module's virtual generation namespace. Ro
 prefixed with Area or application base paths in the module definition. Areas preserve module and declaration order when composing routes;
 Navigation performs forward and reverse resolution.
 
-## Module contract
+## Public contracts
 
-`contract` is optional public metadata using the common contract model. Supported categories include `label`, `description`, `icon`, named `types`,
-public `properties`, `events`, `methods`, and `examples`. `module.schema.json` validates this metadata as part of effective configuration.
-
-The contract does not locate or instantiate `module.js`, expose controller functions automatically, dispatch declared events, register a service,
-or validate runtime controller behavior.
+Modules do not define public contracts. `module.schema.json` rejects a `contract` property on an effective module definition. A module may provide
+multiple Services, each with its own contract describing public properties, methods, and published Bus events. Components and Pages retain their
+own public contracts. Module controller `start()` and `stop()` methods remain internal lifecycle hooks.
 
 ## Runtime instance
 

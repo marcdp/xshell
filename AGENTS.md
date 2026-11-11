@@ -167,7 +167,7 @@ When changing module configuration:
 - search consumers;
 - update specification documentation when contracts change.
 
-Modules may contribute metadata, params, styles, controllers, menus, defaults, configuration, resolvers, UI resources, and public contract metadata.
+Modules may contribute metadata, params, styles, controllers, menus, defaults, configuration, resolvers, and UI resources. They do not define public contracts.
 
 Do not assume declarative fields are runtime-enforced unless the implementation actually enforces them.
 

@@ -96,15 +96,15 @@ module-wide `/styles/index.css` and `/module.js` controller only when those path
 in dependency order and stop in reverse order. A controller receives `moduleAssetsPath`, `moduleConfig`, and named services; its optional `start()`
 and `stop()` methods are lifecycle hooks.
 
-## Menus, routes, Areas, and contracts
+## Menus, routes, Areas, and services
 
 Module menu and route declarations are reusable contributions. Areas select and compose participating module ids; Area membership is not a module
 dependency and does not create another module instance. Routes map Area-relative friendly paths to normalized canonical Page Paths. Menus are
 navigation data, not module references.
 
-The optional module `contract` describes public metadata using the common contract schema. It does not register a service, create controller
-methods, or enforce controller implementation. Optional `requires` names services and is distinct from repository module dependencies and from a
-Component or Page implementation's resource `dependencies`.
+Modules are composition units and do not define public contracts. A module may provide multiple Services, each with its own contract describing
+public properties, methods, and published Bus events. Components and Pages have their own public contracts. Optional `requires` names services and
+is distinct from repository module dependencies and from a Component or Page implementation's resource `dependencies`.
 
 See [Module Specification](../50-specifications/module.md), [Configuration](20-configuration.md), [Areas](../30-subsystems/10-areas.md), and
 [Service Worker](110-service-worker.md).

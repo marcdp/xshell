@@ -872,8 +872,8 @@ test("loadConfig derives every assets.path from a custom assets.basePath", async
 
     assert.equal(config.modules.app.assets.path, "/runtime/app/1.0.0.app-hash");
     assert.equal(config.modules.x.assets.path, "/runtime/x/1.0.0.x-hash");
-    assert.deepEqual(config.modules.app.contract, { events: {} });
-    assert.deepEqual(config.modules.x.contract, { events: {} });
+    assert.equal(Object.hasOwn(config.modules.app, "contract"), false);
+    assert.equal(Object.hasOwn(config.modules.x, "contract"), false);
     assert.equal(config.xshell.assets.basePath, "/runtime");
     assert.equal(config.xshell.assets.path, "/runtime/xshell/0.9.0.31d04ab8e220a581");
     assert.deepEqual(config.xshell.serviceWorker.mappings, [
