@@ -1,0 +1,29 @@
+{
+    "$schema": "../schemas/contract.schema.json",
+    "label": "Registry",
+    "description": "Provides read-only access to named registries and their module contributions.",
+    "properties": {
+        "registry": {
+            "type": "object",
+            "readonly": true,
+            "description": "Read-only dictionary of named registries, each containing a schema reference and an array of contributions."
+        }
+    },
+    "events": {},
+    "methods": {
+        "has": {
+            "description": "Checks whether a named registry exists.",
+            "parameters": [
+                {"name": "name", "type": "string", "required": true}
+            ],
+            "returns": {"type": "boolean"}
+        },
+        "get": {
+            "description": "Returns a registry definition containing its schema and contributions, or undefined if not found.",
+            "parameters": [
+                {"name": "name", "type": "string", "required": true}
+            ],
+            "returns": {"type": "object"}
+        }
+    }
+}

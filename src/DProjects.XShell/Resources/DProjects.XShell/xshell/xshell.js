@@ -7,6 +7,7 @@ import Loader from "./loader.js";
 import Navigation from "./navigation.js";
 import Modules from "./modules.js";
 import Page from "./page.js";
+import Registry from "./registry.js";
 import Resolver from "./resolver.js";
 import Runtime from "./runtime.js";
 import Services from "./services.js";
@@ -28,6 +29,7 @@ class XShell {
     _loader = null;
     _modules = null;
     _navigation = null;
+    _registry = null;
     _resolver = null;
     _runtime = null;
     _services = null;
@@ -49,6 +51,7 @@ class XShell {
     get resolver() { return this._resolver; }
     get runtime() { return this._runtime; }
     get services() { return this._services; }
+    get registry() { return this._registry; }
     get temp() { return this._services?.has("temp") ? this._services.resolve("temp") : null; }
 
     //methods
@@ -66,6 +69,7 @@ class XShell {
         this._contracts = new Contracts( { config: config, loader: this._loader } );
         await this._i18n.init(config.xshell.i18n);
         this._services = new Services( {config, loader: this._loader, contracts: this._contracts, areas: this._areas, bus: this._bus } );
+        this._registry = new Registry( {config, loader: this._loader, contracts: this._contracts, areas: this._areas, bus: this._bus } );
         this._modules = new Modules( { bus: this._bus, config: config, loader: this._loader, resolver: this._resolver, document: document, services: this._services } );
         this._navigation = new Navigation( { areas: this._areas, bus: this._bus, config: config, container: document.body, resolver: this._resolver });
         this._dialog = new Dialog( { config: config, navigation: this._navigation, i18n: this._i18n } );        
@@ -85,6 +89,7 @@ class XShell {
         this._services.register("runtime", this._runtime, { contractItem: this._contracts.getContractItemById("runtime")});
         this._services.register("contracts", this._contracts, { contractItem: this._contracts.getContractItemById("contracts")});
         this._services.register("services", this._services, { contractItem: this._contracts.getContractItemById("services")});
+        this._services.register("registry", this._registry, { contractItem: this._contracts.getContractItemById("registry")});
         await this._services.init();
         // modules
         await this._modules.init();  

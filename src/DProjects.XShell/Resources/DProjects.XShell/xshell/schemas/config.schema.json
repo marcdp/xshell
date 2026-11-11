@@ -293,6 +293,7 @@
     },
     "xshellRegistry": {
       "type": "object",
+      "propertyNames": {"minLength": 1},
       "additionalProperties": {
         "$ref": "#/$defs/xshellRegistryItem"
       },
@@ -300,7 +301,7 @@
     },
     "xshellRegistryItem": {
       "type": "object",
-      "required": ["schema", "contributions"],
+      "required": ["schema"],
       "properties": {
         "schema": {"type": "string", "minLength": 1, "description": "Resource reference to the JSON Schema used to validate registry contributions."},
         "contributions": {
