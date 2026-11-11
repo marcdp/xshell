@@ -1,343 +1,117 @@
 # Components
 
-An XShell component is a standalone JavaScript file that exports a Web Component implementation.
+XShell uses browser Web Components as its component boundary. A component JavaScript module default-exports either a custom-element class or a
+definition object. The class form owns its implementation directly; the definition form lets XShell construct and register the final class.
 
-A component can be provided in two forms:
-
-```text
-component.js
-    ↓
-default export
-    ├── class  → Web Component class
-    └── object → Web Component definition
-```
+This page describes ownership and loading. The [Component guides](../20-components/) are authoritative for the contract, properties, state, events,
+slots, lifecycle, rendering, forms, and list behavior.
 
 ## Component as a class
 
-If the default export is a JavaScript class, XShell considers it to be the component class and returns it directly.
-
-For example:
+A default-exported Web Component class bypasses definition processing:
 
 ```js
-class MyComponent extends HTMLElement {
+export default class ExampleElement extends HTMLElement {
     connectedCallback() {
-        this.innerHTML = "Hello";
+        this.textContent = "Example";
     }
 }
-customElements.define("my-component", MyComponent);
-export default MyComponent;
 ```
 
-In this case the component provides its own implementation and registration; the class-return branch does not apply definition contracts.
+The module remains loadable through the `component-js` loader, but the class owns registration behavior, public API, state, rendering, and lifecycle.
+The inline definition contract and engine model described below do not apply.
 
 ## Component as a definition
 
-If the default export is an object, XShell considers it to be a Web Component definition.
-
-A component definition contains two separate concerns in one default-exported object:
-
-```text
-default.contract
-    public interface
-
-remaining default-export fields
-    implementation
-```
-
-For example:
+A definition-based Component keeps public API metadata and runtime implementation in one default-exported object while preserving their distinct
+roles:
 
 ```js
 export default {
     contract: {
-        description: "Provides a layout and action controls for a group of data fields.",
-
-        events: {
-            move: {
-                description: "Raised when the field is moved.",
-                detail: {
-                    direction: { type: "string" }
-                }
-            },
-
-            edit: {
-                description: "Raised when the field is edited."
-            },
-
-            remove: {
-                description: "Raised when the field is removed."
-            }
-        },
-
         properties: {
-            label:   { type: "string",  default: "",    attribute: true, state: true },
-            message: { type: "string",  default: "",    attribute: true, state: true },
-            columns: { type: "number",  default: 2,     attribute: true, state: true },
-            remove:  { type: "boolean", default: false, attribute: true, state: true },
-            move:    { type: "boolean", default: false, attribute: true, state: true },
-            edit:    { type: "boolean", default: false, attribute: true, state: true }
+            label: { type: "string", default: "Example", attribute: true, state: true }
         },
-
-        methods: {},
-
-        slots: {
-            "": {
-                description: "Default slot."
-            },
-            "header": {
-                description: "Content displayed in the component header."
-            }
+        methods: {
+            reset: { description: "Reset the component." }
         }
     },
-    style: `
-        :host {
-            display: block;
-        }
 
-        div.body {
-            display: grid;
-            gap: 1em;
-        }
-    `,
+    state: { count: 0 },
+    template: `<button x-on:click="increment">{{ state.label }}: {{ state.count }}</button>`,
 
-    template: `
-        <label x-if="state.label" x-text="state.label"></label>
-
-        <div class="body">
-            <slot></slot>
-        </div>
-
-        <x-button
-            x-if="state.edit"
-            icon="x-edit"
-            x-on:click="edit">
-        </x-button>
-    `,
-
-    state: {},
-
-    controller({ host }) {
+    controller({ state }) {
         return {
-            edit(event) {
-                host.dispatchEvent(
-                    new CustomEvent("edit", {
-                        bubbles: true,
-                        composed: false
-                    })
-                );
-            }
+            increment() { state.count++; },
+            reset() { state.count = 0; }
         };
     }
 };
 ```
 
+The optional inline `contract` describes public API. The remaining fields provide implementation metadata, dependencies, style, template/rendering,
+private state, and controller behavior. A separate named `export const contract` is not an input to the current Component or Page loaders.
+
 ## Contract
 
-The optional inline `contract` property describes the public interface of the component.
+The shared contract vocabulary is defined by `xshell/schemas/contract.schema.json`. Complete definition objects are validated against
+`component.schema.json` or `page.schema.json`; those schemas specialize the shared vocabulary for their resource types.
 
-It can describe:
+Properties are public API and state is private implementation data. A property participates in state only when it declares `state: true`. Controller
+methods remain private unless the contract declares a same-named public method. Slot metadata documents and validates composition; it does not create
+`<slot>` elements. Contract event metadata does not itself dispatch events, and descriptive type metadata does not generally validate runtime values.
 
-```text
-label + description + icon
-types
-properties
-events
-methods
-slots
-examples
-```
-
-For example:
-
-```js
-export default {
-    contract: {
-        label: "Sample Component",
-        description: "A sample component.",
-
-        events: {
-            change: {
-                description: "Raised when the value changes."
-            }
-        },
-
-        properties: {
-            value: {
-                type: "string",
-                default: "",
-                attribute: true,
-                state: true,
-                description: "Current value."
-            }
-        },
-
-        methods: {},
-
-        slots: {
-            "": {
-                description: "Default slot."
-            },
-            "header": {
-                description: "Content displayed in the component header."
-            }
-        }
-    },
-
-    template: `<slot></slot>`
-};
-```
-
-The contract describes how other code can interact with the component.
-
-Its optional `slots` section documents the public Web Component composition API. The empty string `""` identifies the default unnamed slot, and
-named keys identify named slots. Slot metadata supports `description` and an optional `required` boolean. This metadata does not create or render
-`<slot>` elements; the implementation defines those elements. Every engine-reported slot must be declared in
-`contract.slots`; `x` reports compiler-discovered slots while `html` reports none. `<slot></slot>` uses the empty-string key, while `<slot
-name="actions"></slot>` uses the `actions` key. Duplicate occurrences
-of a slot are allowed, and a declared slot does not have to appear in the template.
-
-It is separate from the runtime implementation.
-
-Component property metadata adds `attribute`, `attributeParser`, `state`, and `reflect` to the common property descriptor. Component
-`reflect: true` writes a kebab-case attribute even without `attribute: true`, which controls incoming observation. Page-only `query` and
-`context` metadata is not accepted by the Component schema. See [Properties](../20-components/20-properties.md).
-
-The common contract also supports contract-local named `types` and either direct `type` descriptors or `ref` descriptors. Additional structured
-constraints belong in the descriptor's JSON Schema Draft 2020-12 `schema`. See
-[Component Contract](../20-components/10-manifest.md#shared-contract-model).
-
-When the component definition is loaded, the component loader validates render-factory slot metadata against the contract before registering the
-component.
-If the factory reports a slot not declared in `contract.slots`, loading fails. This is component contract/loader validation, not render-engine
-validation.
+See [Component Contract](../20-components/10-manifest.md) for supported fields and enforcement boundaries, then [Properties](../20-components/20-properties.md),
+[State](../20-components/30-state.md), [Events](../20-components/40-events.md), and [Slots](../20-components/50-slots.md).
 
 ## Implementation
 
-The default exported object contains the runtime implementation of the component.
-
-Typical fields are:
-
-```text
-dependencies
-style
-template
-state
-controller
-```
-
-Conceptually:
-
-```text
-contract
-    ↓
-public contract
-
-implementation
-    ↓
-style + template + state + behavior
-```
-
-The implementation object is not itself a browser Web Component class.
-
-It must first be converted into one.
-
-Its optional `style` property is one CSS source string. Put all CSS rules for the Component in that string; `style` does not accept an array of
-strings.
+Definition fields include `meta`, `dependencies`, `style`, `template`, compiler-generated `templateRenderer`, `state`, and `controller`. The loader
+derives missing resource metadata where documented, selects engines from resource `meta` and the owning module's defaults, and passes implementation
+services to the controller. Implementation fields do not become public API merely because they exist on the definition or controller.
 
 ## Declarative dependencies
 
-A definition-based Component can declare resources that its controller needs through `dependencies`. It is a declarative resource request, not a
-separate dependency-injection subsystem. Each key is the name made available on the `dependencies` object passed to the controller, and each value
-is an ordinary XShell resource reference.
+`dependencies` requests resources needed before the Component class is constructed:
 
 ```js
 export default {
     dependencies: {
-        marked: "esm:/utils/markdown.js",
-        fileIcon: "icon:x-file",
+        helper: "esm:/utils/helper.js",
         editor: "component:x-code-editor"
     },
 
-    template: `<div></div>`,
-
     controller({ dependencies }) {
-        return {
-            load() {
-                console.log(dependencies.marked);
-                console.log(dependencies.fileIcon);
-                console.log(dependencies.editor);
-            }
-        };
+        return { load() { dependencies.helper.initialize(); } };
     }
 };
 ```
 
-`component-js` passes the dependencies object to the Loader. For each value, the Resolver selects the matching resource definition, URL, and
-resource-specific loader; the Loader then obtains the resolved resource. The resulting values retain their declared keys in `dependencies`.
-
-All declared dependencies are resolved before the generated Web Component class is returned and before a component instance creates its controller.
-An unresolvable reference rejects the Loader request. If resolution succeeds but one or more loads fail, the Loader waits for its requested loads to
-settle and then rejects. In either case, the component class and its controller are not created.
-
-This is distinct from runtime loading. `dependencies` is for resources known in the implementation definition and resolved automatically during
-component loading. The `loader` service remains available to controller code for dynamic or runtime resource loading; dynamic
-`loader.load(...)` calls are not replaced by `dependencies`.
+Each value follows the normal [Resolver](80-resolvers.md) -> [Loader](90-loaders.md) pipeline. All declared resources settle before class construction;
+failed resolution or loading rejects the Component load. This is declarative resource loading, not a separate dependency-injection framework.
+Controllers can still use the Loader service for resources selected dynamically at runtime.
 
 ## Component loader
 
-Components are loaded through the `component-js` loader.
+The `component-js` loader:
 
-Conceptually:
+1. imports the module and returns a default-exported class unchanged;
+2. otherwise normalizes and validates the complete definition and inline contract;
+3. selects state and render engines, creates the render factory, and validates factory-reported slots;
+4. loads render-factory and implementation dependencies;
+5. constructs and registers an `HTMLElement` subclass with declared public properties and method proxies; and
+6. coordinates controller creation, connection lifecycle, state changes, and rendering for each instance.
 
-```text
-component.js
-    ↓
-component-js loader
-    ↓
-default export
-    ↓
-class?
-    ├── yes → return class
-    └── no
-         ↓
-       component definition
-         ↓
-       build Web Component class
-         ↓
-       customElements.define(...)
-```
-
-For definition-based components, `component-js`:
-
-1. imports the module and reads its default export;
-2. normalizes defaults and validates the complete definition, including its inline contract, plus property/state consistency;
-3. selects state/render engines and creates the render factory;
-4. checks factory-reported slots against `contract.slots`;
-5. loads render-factory dependencies and then implementation `dependencies`, and initializes the render factory;
-6. builds and registers an `HTMLElement` subclass with public properties/method proxies;
-7. on instance construction, creates state, helpers, and the private controller and validates declared controller methods;
-8. coordinates connection lifecycle and scheduled rendering.
-
-The result is a standard browser Web Component.
+Generic contract, controller, lifecycle, and public-API responsibilities remain in the loader. State engines own reactive state; render engines own
+rendered output. See [Lifecycle](../20-components/60-lifecycle.md) and [Rendering Engines](../20-components/70-rendering.md).
 
 ## Containing Page lookup
 
-Definition-based Component controllers can request `getPage` service:
-
-```js
-controller({ getPage }) {
-    // ...
-}
-```
-
-Both services locate the closest containing `<x-page>` host. The lookup walks ordinary DOM parents and, when it reaches a Shadow DOM root, continues
-through `getRootNode().host`. Consequently, it can find a containing Page across Shadow DOM boundaries. A Component and a Page remain separate
-runtime systems; this lookup only gives a Component access to its containing Page.
+A definition-based Component can request the injected `getPage` service. It walks ordinary parents and Shadow DOM hosts to find the closest
+`<x-page>`, then returns that host's current Page or `null`. A Page might not yet exist during Component `mount()`, so callers must handle `null`.
+This lookup does not merge the Component and Page runtime models; Page navigation remains a Page responsibility.
 
 ### `getPage()`
-
-`getPage()` is synchronous and returns the current value of the closest `<x-page>` host's `page` property. Its effective return type is
-`Page | null`: it returns `null` when there is no containing `<x-page>`, and it can also return `null` while that host has no current Page instance.
-It is therefore not guaranteed to return a Page during Component `mount()`.
 
 ```js
 controller({ getPage }) {
@@ -345,8 +119,7 @@ controller({ getPage }) {
         mount() {
             const page = getPage();
             if (!page) return;
-
-            // use containing Page
+            // use the containing Page
         }
     };
 }
@@ -354,221 +127,54 @@ controller({ getPage }) {
 
 ## Controller and Web Component ownership
 
-The generated Web Component owns DOM/custom-element integration, public properties, public contract methods, its `ShadowRoot`, and framework
-lifecycle plumbing. The controller owns implementation behavior, private methods, lifecycle handlers, and X Template handlers.
-
-Controller methods always execute with the controller object as `this`. A controller that needs the generated Web Component must explicitly
-request the injected `host` dependency; XShell does not inject `shadowRoot` separately.
-
-```js
-export default {
-    contract: {
-        methods: {
-            validate: {
-                description: "Validates the component."
-            }
-        }
-    },
-
-    template: '<div class="content"></div>',
-    controller({ state, host }) {
-        return {
-            mount() {
-                host.addEventListener("click", () => this.refresh());
-                this.refresh();
-            },
-
-            refresh() {
-                const element = host.shadowRoot.querySelector(".content");
-                // update private implementation behavior
-            },
-
-            validate(options) {
-                // validate using the caller's original arguments
-            }
-        };
-    }
-};
-```
-
-In this example, `this.refresh()` calls another method on the same controller, `host.shadowRoot` accesses the Web Component DOM, and
-`element.validate(options)` is a public Web Component proxy to `controller.validate(options)`.
-
-Controller methods are private by default. X Template handlers resolve directly against the controller, so a template can invoke `refresh`,
-`validate`, or any other controller handler without exposing it on the Web Component. Only names declared by `contract.methods` are installed as
-public Web Component methods. Each declared public method must have a controller function of the same name and cannot replace a framework or
-native Web Component method. Contract method entries are metadata; the loader never executes them as implementation functions.
+The generated Web Component owns browser integration, its public contract surface, Shadow DOM, and framework lifecycle plumbing. The controller owns
+implementation behavior, private methods, lifecycle handlers, and template handlers. Controller methods execute with the controller as `this`; code
+that needs the generated element requests the injected `host` value. Only names in `contract.methods` are proxied onto the element.
 
 ## State and rendering
 
-A definition-based component resolves its engines from its own `meta` first and then from its owning module's required defaults:
+A definition resolves `renderEngine` and `stateEngine` from its `meta` overrides and then its owning module's `defaults.component`. Page definitions
+use the parallel `defaults.page` group. These module defaults are not the same as global `xshell.ui` resources, which select application UI
+infrastructure such as layouts, lazy/error components, Markdown presentation, and dialogs.
 
-```jsonc
-{
-    "modules": {
-        "orders": {
-            "defaults": {
-                "page": { "renderEngine": "x", "stateEngine": "proxy" },
-                "component": { "renderEngine": "x", "stateEngine": "proxy" }
-            }
-        }
-    }
-}
-```
-
-`component-js` precedence is component `meta`, then `modules.<id>.defaults.component`. Each resolved module requires both this component-default
-group and the corresponding Page-default group; render engine and state engine values are required non-empty strings. XShell defaults do not
-provide component render or state engines. `xshell.ui.component` instead selects the global `lazy`, `error`, and Markdown Page `markdown` components.
-
-The loader uses the selected engines while converting the definition into the final Web Component class. It remains responsible for the contract,
-public API, properties and attributes, controller, lifecycle, services, and orchestration. The state engine owns reactive state only; the render
-engine owns rendered output only.
-
-For example:
-
-```text
-component definition
-    ↓
-component-js loader
-    ├─ state engine → reactive state
-    └─ render engine → rendered output
-    ↓
-HTMLElement subclass
-```
-
-X Templates can be used as a render engine, but they are not required by the component model.
+X Templates are one optional render-engine extension; they are not the Component model itself. See [X Templates](../40-extensions/x-templates/).
 
 ## Component resources
 
-Modules normally expose components from their `components/` directory.
-
-For example:
-
-```text
-module1/
-└── components/
-    ├── module1-button.js
-    ├── module1-form.js
-    └── module1-field.js
-```
-
-Bootstrap creates conventional component resolvers for each module.
-
-A logical component reference such as:
-
-```text
-component:module1-button
-```
-
-can therefore resolve to the corresponding JavaScript component file.
-
-See [Resolvers](80-resolvers.md) and [Loaders](90-loaders.md).
+Modules normally expose Components from `components/`. Bootstrap uses resolved file inventories to create conventional Component resolver entries, so
+a logical reference such as `component:module1-button` can resolve to the owning module's JavaScript resource. Dynamic runtime resources must not be
+classified as unused solely from static imports.
 
 ## Summary
 
-The main XShell component model is:
-
 ```text
-one component
-    =
-one JavaScript file
+component module
+    -> default-exported Web Component class
+    or
+    -> default-exported definition with optional inline contract
+       -> component-js loader
+       -> registered Web Component class
 ```
 
-Its default export is either:
-
-```text
-Web Component class
-```
-
-or a:
-
-```text
-Web Component definition object
-    └─ optional inline contract
-    ↓
-component-js
-    ↓
-Web Component class
-```
-
-The optional inline `contract` property describes the public interface.
-
-The default export provides the runtime implementation.
+The contract and implementation share an object but remain separate concepts. Resolver selection, loader orchestration, state behavior, rendering,
+and navigation retain distinct responsibilities.
 
 ## List data-field item defaults
 
-`x-datafield type="list"` accepts the optional `itemDefault` property. Bind an object with `x-prop:item-default`; each Add action deep-clones that
-value before appending it to the list. When the property is omitted or null, the component appends `{}` as before. Nested objects and arrays are
-also cloned, so newly added items do not share mutable values.
-
-```html
-<x-datafield
-    label="Addresses"
-    type="list"
-    add
-    x-model="state.customer.addresses"
-    x-prop:item-default="state.addressDefault">
-
-    <x-datafields x-for="address in state.customer.addresses" move remove>
-        <x-datafield label="Street" type="text" x-model="address.street"></x-datafield>
-        <x-datafield label="City" type="text" x-model="address.city"></x-datafield>
-    </x-datafields>
-</x-datafield>
-```
-
-```js
-state: {
-    customer: { addresses: [] },
-    addressDefault: {
-        street: "",
-        city: "",
-        location: { country: "" }
-    }
-}
-```
-
-Define every property used by an item-level `x-model` binding on the default value. XShell keeps strict assignment semantics and does not create
-missing members automatically.
+`x-datafield type="list"` accepts `itemDefault`; each Add action deep-clones the supplied object, or appends `{}` when it is absent. Define every
+property used by item-level strict `x-model` bindings because those bindings do not create missing members. Detailed list composition and examples
+belong in the [List View guide](../20-components/90-listview.md).
 
 ## Markdown component inputs
 
-`x-markdown` is a trusted-content renderer and does not sanitize generated HTML. `x-markdown.value` accepts trusted raw Markdown text, and
-`x-markdown.src` accepts a normal browser URL to trusted Markdown content and uses `fetch`, without routing the document through the Loader or
-requiring a `string:` prefix. Both inputs use the same renderer, backed by `x/utils/markdown.js` and its vendored parser. Applications must
-sanitize untrusted or user-controlled Markdown according to their own policy before rendering it, or use a different Markdown Component with an
-appropriate sanitization policy. CSP is defense in depth and does not replace sanitizing untrusted content.
-
-```html
-<x-markdown src="/_assets/xshell-docs/<generation>/pages/10-architecture/100-services.md"></x-markdown>
-<x-markdown value="This is **Markdown**."></x-markdown>
-```
-
-The Service Worker maps requests for `/_assets/...` application Paths to physical resources. The component keeps that virtual source URL as the base for
-relative `a[href]`, `img[src]`, `source[src]`, `video[src]`, and `audio[src]` attributes, including those inside templates. It preserves fragment-only,
-root-relative, fully qualified, and protocol URLs. Relative query strings and fragments survive resolution; same-origin results use pathname,
-query, and fragment. Without `src`, direct `value` content retains its authored URLs.
-
-After conversion, the component discovers custom elements, including nested template content, and loads their `component:<name>` dependencies
-before committing the DOM. Raw HTML and custom XShell elements are intentionally supported and may become live DOM. HTTP failures render the
-response status and source URL as text through the same Markdown path. A newer input supersedes an older fetch or pending render. Changing `src`
-to a document with identical text still updates its relative URLs.
-
-Ordinary anchors remain anchors. Inside a Page, `x-page` performs navigation interception; `x-markdown` does not call Navigation. Markdown links
-retain their `.md` URLs and resolve through the generic [Markdown Page adapter](70-pages.md#markdown-pages).
+`x-markdown` renders trusted Markdown and does not sanitize generated HTML. `value` accepts trusted text; `src` is fetched as a normal browser URL and
+becomes the base for relative document resources. Applications must sanitize untrusted content before rendering it. Page adaptation, navigation, and
+URL behavior are documented under [Markdown Pages](70-pages.md#markdown-pages).
 
 ## Related documentation
 
-* [Components](../20-components/)
-* [Component Contract](../20-components/10-manifest.md)
-* [Properties](../20-components/20-properties.md)
-* [Slots](../20-components/50-slots.md)
-* [State](../20-components/30-state.md)
-* [Lifecycle](../20-components/60-lifecycle.md)
-* [Resolvers](80-resolvers.md)
-* [Loaders](90-loaders.md)
-* [X Templates](../40-extensions/x-templates/)
-
-Implementation fields also include `meta` and compiler-generated `templateRenderer`.
-The loader derives `meta.id` from the resource filename when a definition omits it, before validating the Component implementation schema.
-The schema requires the resulting id and also accepts optional title, description, icon, shadow-root, and engine metadata.
-Contract enforcement and metadata limits are detailed in [Component Contract](../20-components/10-manifest.md).
+- [Component guides](../20-components/)
+- [Pages](70-pages.md)
+- [Resolvers](80-resolvers.md)
+- [Loaders](90-loaders.md)
+- [X Templates](../40-extensions/x-templates/)

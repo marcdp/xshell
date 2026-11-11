@@ -16,10 +16,12 @@ export default {
 
         <h2>Public properties</h2>
         <p>The <code>contract</code> declares each property's type, default value, and behavior. Unlike private Page state, public properties form part of the Page's external interface.</p>
-        <pre x-pre><code>export const contract = {
-    properties: {
-        name: {type:"string", default:"Ada", query:true, state:true},
-        count: {type:"number", default:1, query:true, state:true, reflect:true}
+        <pre x-pre><code>export default {
+    contract: {
+        properties: {
+            name: {type:"string", default:"Ada", query:true, state:true},
+            count: {type:"number", default:1, query:true, state:true, reflect:true}
+        }
     }
 };</code></pre>
 

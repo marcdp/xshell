@@ -26,10 +26,12 @@ export default {
 
         <h2>Context passing</h2>
         <p>The <code>context</code> object supplies initial values to the custom Page. The child declares the corresponding properties using <code>context:true</code>.</p>
-        <pre x-pre><code>export const contract = {
-    properties: {
-        message: {type:"string", default:"", state:true, context:true},
-        value: {type:"string", default:"", state:true, context:true}
+        <pre x-pre><code>export default {
+    contract: {
+        properties: {
+            message: {type:"string", default:"", state:true, context:true},
+            value: {type:"string", default:"", state:true, context:true}
+        }
     }
 };</code></pre>
 

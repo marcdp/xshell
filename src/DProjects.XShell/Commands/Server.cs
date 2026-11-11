@@ -16,7 +16,7 @@ using Microsoft.Extensions.DependencyInjection;
 namespace DProjects.XShell.Commands {
 
     [Description("Launch a web server")]
-    [Example("DProjects.XShell server --app-base-path /prefix --app-module \"module:x-demo:0.9.0\" --param a=123 --param b=456 --source /prefix/_resources/DProjects.XShell/{module}/index.json", "")]
+    [Example("DProjects.XShell server --app-base-path /prefix --app-module \"module:x-demo:0.9.0\" --param a=123 --param b=456 --app-source /prefix/_resources/DProjects.XShell/index.json", "")]
     public class Server() : ICommand {
 
         // props

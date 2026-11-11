@@ -93,7 +93,9 @@ export default {
             refresh() {
                 // mount
                 if (editor) {
-                    editor.dispatch({changes: {from: 0, to: editor.state.doc.length, insert: state.value}});
+                    if (state.value != editor.state.doc.toString()) {
+                        editor.dispatch({changes: {from: 0, to: editor.state.doc.length, insert: state.value}});
+                    }
                     return;
                 }
                 let mode = html();

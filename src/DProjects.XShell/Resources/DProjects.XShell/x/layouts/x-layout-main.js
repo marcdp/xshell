@@ -288,7 +288,7 @@ export default {
 
                     <x-dropdown class="input-dropdown">
                         <div class="search">
-                            <x-datafield type="search" placeholder="Search" x-model="state.keyword" ></x-datafield>
+                            <x-datafield type="search" placeholder="Search" x-model="state.keyword" autocomplete="off"></x-datafield>
                         </div>
                         <x-page slot="dropdown" src="/pages/search.js" loading="lazy"></x-page>
                     </x-dropdown>

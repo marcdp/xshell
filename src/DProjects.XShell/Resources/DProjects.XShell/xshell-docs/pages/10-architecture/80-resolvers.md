@@ -5,7 +5,7 @@ They are separate responsibilities. Both global and module-qualified locators us
 navigation or a different loading mechanism.
 
 Generated resolver entries use generation-qualified, application-root-relative virtual Paths such as
-`/_assets/x/<generation>/icons/x-file.svg`. See [Configuration](20-configuration.md#path-and-url-terminology).
+`/_assets/x/<generation>/icons/x-file.svg`. See [Configuration](20-configuration.md#path-and-url-normalization).
 
 ## Resource-addressing conventions
 

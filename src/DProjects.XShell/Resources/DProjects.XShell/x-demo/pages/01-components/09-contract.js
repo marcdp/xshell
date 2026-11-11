@@ -7,7 +7,7 @@ export default {
     dependencies: { counter: "component:x-demo-counter" },
 
     template: `
-        <p>The exported <code>contract</code> declares the counter's public <code>label</code> property, <code>reset</code> method, and <code>hint</code> slot. Its default export implements private <code>count</code> state and controller methods.</p>
+        <p>The default-exported definition's inline <code>contract</code> declares the counter's public <code>label</code> property, <code>reset</code> method, and <code>hint</code> slot. The same definition implements private <code>count</code> state and controller methods.</p>
         <x-demo-counter label="Clicks"><small slot="hint">Click Add one to change private count.</small></x-demo-counter>
         <x-button label="Change public label" command="changeLabel"></x-button>
         <x-button label="Reset through public method" command="resetCounter"></x-button>

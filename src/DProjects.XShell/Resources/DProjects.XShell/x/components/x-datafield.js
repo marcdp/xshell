@@ -503,8 +503,8 @@ export default {
             <x-icon icon="x-search"></x-icon>
             <input 
                 class="input"                
-                autocomplete="on"
                 x-on:input="searchInput"
+                x-attr:autocomplete="state.autocomplete"
                 x-attr:value="state.value"
                 x-attr:id="state.inputId"
                 x-attr:type="state.type" 

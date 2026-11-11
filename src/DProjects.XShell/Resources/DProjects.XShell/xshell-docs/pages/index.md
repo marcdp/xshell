@@ -17,12 +17,13 @@ virtualizes assets, initializes services/modules, and activates Pages through Ar
 - [Service Worker](10-architecture/110-service-worker.md) — `/_assets`, expanded-directory mapping, and immutable ZIP-backed loading.
 - [X Templates](40-extensions/x-templates/index.md) — Optional compiled rendering.
 - [Hosting](10-architecture/40-hosting.md) and [Packaging](10-architecture/50-packaging.md) — ASP.NET, compilation, and inventories.
-- [Subsystems](30-subsystems/index.md) — Bus, dialogs, i18n, Temp.
+- [Subsystems](30-subsystems/index.md) — Core Areas, Bus, dialogs, i18n, and Temp, plus optional Authentication and Identity documentation.
 
 ## Reference
 
 [Architecture](10-architecture/index.md), [Specifications](50-specifications/index.md), [Extensions](40-extensions/index.md), and [ADRs](60-adr/index.md)
 provide detailed reference and decision context.
 
-Authentication/Identity and navigation intents are outside V0. Runtime ZIP loading is implemented for Service Worker destinations whose pathname
-ends in `.zip`; it is separate from Pack's responsibility for creating the archives. Descriptive contracts do not enforce every type or emit events.
+Authentication and Identity are implemented by the optional `x-identity` module; they are not XShell Core subsystems. Navigation intent mapping and
+dispatch remain outside V0. Runtime ZIP loading is implemented for Service Worker destinations whose pathname ends in `.zip`; it is separate from
+Pack's responsibility for creating the archives. Descriptive contracts do not enforce every type or emit events.

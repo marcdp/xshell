@@ -50,7 +50,7 @@
     },    
     "xshell": {
       "type": "object",
-      "required": ["version", "assets", "areas", "navigation", "resolver", "ui", "i18n", "configUrl", "serviceWorker", "files"],
+      "required": ["version", "assets", "areas", "navigation", "resolver", "ui", "i18n", "configUrl", "serviceWorker", "files", "registry"],
       "properties": {
         "version": {"type": "string", "description": "XShell runtime version."},
         "configUrl": {"type": "string", "format": "uri", "description": "Fully qualified absolute URL of the normalized XShell configuration document."},
@@ -65,7 +65,8 @@
         "resolver": {"$ref": "#/$defs/resolver", "description": "Logical resource resolver configuration."},
         "services": {"$ref": "#/$defs/xshellServices", "description": "Services configuration."},
         "temp": {"$ref": "#/$defs/xshellTemp", "description": "Temp configuration."},
-        "files": {"type": "array", "items": {"$ref": "#/$defs/file"}, "description": "Normalized virtual resource inventory for the XShell framework."}
+        "files": {"type": "array", "items": {"$ref": "#/$defs/file"}, "description": "Normalized virtual resource inventory for the XShell framework."},
+        "registry": {"$ref": "#/$defs/xshellRegistry", "description": "Extensible registry populated by application modules."}
       },
       "additionalProperties": false,
       "description": "Core XShell runtime configuration."
@@ -289,6 +290,27 @@
       },
       "additionalProperties": false,
       "description": "Configuration for a single service."
+    },
+    "xshellRegistry": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/$defs/xshellRegistryItem"
+      },
+       "description": "Named extensible registries containing contributions from multiple modules."
+    },
+    "xshellRegistryItem": {
+      "type": "object",
+      "required": ["schema", "contributions"],
+      "properties": {
+        "schema": {"type": "string", "minLength": 1, "description": "Resource reference to the JSON Schema used to validate registry contributions."},
+        "contributions": {
+            "type": "array",
+            "items": {"type": "object"},
+            "description": "Additive collection of definitions contributed by modules. Each item must conform to the registry schema."
+        }
+      },
+      "additionalProperties": false,
+      "description": "Definition of an extensible registry."
     }
   },
   "description": "Schema for the final merged and normalized XShell configuration passed to xshell.init()."
