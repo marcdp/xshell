@@ -1,47 +1,121 @@
 {
   "label": "XVault encrypt/decrypt",
-  "description": "Encrypts and decrypts text using XVault.",
+  "description": "Python-compatible XVault V1/V2 document encryption with editable plaintext and a separate encryption context.",
   "methods": {
     "decrypt": {
-      "description": "Decrypts text using XVault.",
+      "description": "Authenticates and decrypts markers, returning editable text without metadata and its encryption context. Supply format when detection is ambiguous.",
       "parameters": [
+        { "name": "text", "type": "string", "required": true, "description": "Encrypted text to decrypt." },
+        { "name": "password", "type": "string", "required": true, "description": "Password for decryption." },
         {
-          "name": "text",
-          "type": "string",
-          "required": true,
-          "description": "Encrypted text to decrypt."
-        },
-        {
-          "name": "password",
-          "type": "string",
-          "required": true,
-          "description": "Password for decryption."
+          "name": "options",
+          "type": "object",
+          "required": false,
+          "default": {},
+          "schema": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": { "format": { "type": "string", "enum": [ "env", "json", "jsonc", "yaml", "yml", "markdown", "md", "ovpn" ] } }
+          }
         }
       ],
-      "returns": {
-        "type": "string",
-        "description": "Decrypted text."
-      }
+      "returns": { "ref": "decryptionResult", "description": "Editable document with markers retained, plus the context required to encrypt it." }
     },
     "encrypt": {
-      "description": "Encrypts text using XVault.",
+      "description": "Authenticates the context, encrypts edited markers, preserves unchanged ciphertext, and restores metadata. Refresh context by decrypting the saved result.",
       "parameters": [
+        { "name": "text", "type": "string", "required": true, "description": "Plain text to encrypt." },
+        { "name": "password", "type": "string", "required": true, "description": "Password for encryption." },
         {
-          "name": "text",
-          "type": "string",
+          "name": "context",
+          "ref": "encryptionContext",
           "required": true,
-          "description": "Plain text to encrypt."
-        },
-        {
-          "name": "password",
-          "type": "string",
-          "required": true,
-          "description": "Password for encryption."
+          "description": "The original decryption context, or an explicit new-vault context."
         }
       ],
-      "returns": {
-        "type": "string",
-        "description": "Encrypted text."
+      "returns": { "type": "string", "description": "Complete encrypted document including its original or newly initialized metadata." }
+    }
+  },
+  "types": {
+    "encryptionContext": {
+      "type": "object",
+      "description": "Keep in application memory, associated with its document. Contains encrypted metadata and original ciphertext, never keys or passwords. New contexts default to V2.",
+      "schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [ "kind", "format" ],
+        "properties": {
+          "kind": { "enum": [ "new", "existing" ] },
+          "format": { "type": "string", "enum": [ "env", "json", "jsonc", "yaml", "yml", "markdown", "md", "ovpn" ] },
+          "cryptoVersion": { "enum": [ 1, 2 ] },
+          "metadata": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [ "crypto_version", "salt" ],
+            "properties": {
+              "crypto_version": { "enum": [ 1, 2 ] },
+              "salt": { "type": "string", "pattern": "^[0-9a-fA-F]{32}$" },
+              "check": { "type": "string" },
+              "encrypted_key": { "type": "string" }
+            },
+            "oneOf": [
+              { "properties": { "crypto_version": { "const": 1 } }, "required": [ "check" ], "not": { "required": [ "encrypted_key" ] } },
+              { "properties": { "crypto_version": { "const": 2 } }, "required": [ "encrypted_key" ], "not": { "required": [ "check" ] } }
+            ]
+          },
+          "originalText": { "type": "string" }
+        },
+        "oneOf": [
+          {
+            "properties": { "kind": { "const": "new" } },
+            "not": { "anyOf": [ { "required": [ "metadata" ] }, { "required": [ "originalText" ] } ] }
+          },
+          { "properties": { "kind": { "const": "existing" } }, "required": [ "cryptoVersion", "metadata", "originalText" ] }
+        ]
+      }
+    },
+    "decryptionResult": {
+      "type": "object",
+      "schema": {
+        "type": "object",
+        "required": [ "text", "context" ],
+        "additionalProperties": false,
+        "properties": {
+          "text": { "type": "string" },
+          "context": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [ "kind", "format" ],
+            "properties": {
+              "kind": { "enum": [ "new", "existing" ] },
+              "format": { "type": "string", "enum": [ "env", "json", "jsonc", "yaml", "yml", "markdown", "md", "ovpn" ] },
+              "cryptoVersion": { "enum": [ 1, 2 ] },
+              "metadata": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [ "crypto_version", "salt" ],
+                "properties": {
+                  "crypto_version": { "enum": [ 1, 2 ] },
+                  "salt": { "type": "string", "pattern": "^[0-9a-fA-F]{32}$" },
+                  "check": { "type": "string" },
+                  "encrypted_key": { "type": "string" }
+                },
+                "oneOf": [
+                  { "properties": { "crypto_version": { "const": 1 } }, "required": [ "check" ], "not": { "required": [ "encrypted_key" ] } },
+                  { "properties": { "crypto_version": { "const": 2 } }, "required": [ "encrypted_key" ], "not": { "required": [ "check" ] } }
+                ]
+              },
+              "originalText": { "type": "string" }
+            },
+            "oneOf": [
+              {
+                "properties": { "kind": { "const": "new" } },
+                "not": { "anyOf": [ { "required": [ "metadata" ] }, { "required": [ "originalText" ] } ] }
+              },
+              { "properties": { "kind": { "const": "existing" } }, "required": [ "cryptoVersion", "metadata", "originalText" ] }
+            ]
+          }
+        }
       }
     }
   }

@@ -1,0 +1,36 @@
+name: XVault interoperability
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  interoperability:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          path: xshell
+      - uses: actions/checkout@v6
+        with:
+          repository: marcdp/xvault
+          ref: e2c6ebf7edd2c72192ca4c8f160ab435b5ba9fd0
+          path: xvault
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24.x'
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - name: Install Python oracle dependencies
+        run: python -m pip install 'dprojectstools>=0.0.38' 'argon2-cffi>=25.1.0' 'python-dotenv>=1.2.2' 'keyring>=25.6.0' 'cryptography>=44.0.0' 'json5>=0.13.0' 'PyYAML>=6.0.2'
+      - name: Verify real V1/V2 crypto and both interoperability directions
+        working-directory: xshell/test/DProjects.XShell.Client.Test
+        env:
+          XVAULT_PYTHON_REPO: ${{ github.workspace }}/xvault
+          PYTHONDONTWRITEBYTECODE: '1'
+        run: node --test --test-concurrency=1 xvault*.test.mjs

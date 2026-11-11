@@ -5,6 +5,7 @@ Extensions add optional capabilities on top of XShell. They are not required by 
 ## Extensions
 
 - [X Templates](x-templates/) — An optional declarative rendering extension that integrates with XShell Components.
+- [XVault](xvault.md) — Python-compatible V1/V2 document encryption with a separate editing context.
 
 ## Related documentation
 
