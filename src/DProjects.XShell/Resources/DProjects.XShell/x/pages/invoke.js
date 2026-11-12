@@ -235,6 +235,8 @@ export default {
                 <strong>Completed</strong>
                 <pre x-if="state.hasResult" x-text="state.resultText"></pre>
             </div>
+
+            <x-json x-prop:value="state.args"></x-json>
         </div>
     `,
     state: {
@@ -295,6 +297,8 @@ export default {
             mount() {
                 // mount
                 state.isDialog = page.host?.layout === "dialog";
+                //const schema = page.host.querySelector('x-schema[ref="arguments"]');
+                //alert(schema)
             },
 
             unload() {
@@ -304,7 +308,6 @@ export default {
             },
 
             argumentsChanged({ event }) {
-                debugger;
                 if (state.args !== event.detail.newValue) state.args = event.detail.newValue;
                 state.preview = structuredClone(event.detail.newValue);
             },

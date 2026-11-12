@@ -157,6 +157,8 @@ export default {
         label.collapsible span.caption {cursor:pointer}
         label.collapsible .icon-collapsible {display:inline-block;}
         label.collapsible:not(.collapsed) .icon-collapsible {transform: rotate(90deg);}
+
+        .input.object {padding-right:var(--x-datafield-padding-left);}
                 
         :host > input[type='file'] {
             padding:.35em;

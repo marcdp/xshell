@@ -88,13 +88,17 @@ function makeTemplate(schema) {
         return `<x-datafield ${attributes.join(" ")}></x-datafield>`;
     }
 
+
     function fields(schema, path, depth) {
         const required = new Set(schema.required || []);
-        return `<x-datafields columns="1">${Object.entries(schema.properties || {}).map(([name, definition]) => {
+        const condition = path === "state" ? "" : ` x-if="${escapeAttribute(path + " != null")}"`;
+
+        return `<x-datafields columns="1"${condition}>${Object.entries(schema.properties || {}).map(([name, definition]) => {
             if (protectedNames.has(name)) throw new Error(`Unsupported property name '${name}'.`);
             return field(definition, `${path}[${JSON.stringify(name)}]`, name, required.has(name), depth);
         }).join("\n")}</x-datafields>`;
     }
+
 
     return fields(schema, "state", 0);
 }
@@ -165,11 +169,12 @@ export default {
         error: "" 
     },
 
-    controller({ state, events, host, loader, jsonValidator }) {
+    controller({ state, events, host, loader, jsonValidator, commands }) {
         let activeSchema = null, revision = 0, abortController = null;
 
         return {
             load() {
+                // load
                 events.on(state, ["change:schema", "change:src"], "refresh");
                 events.on(state, "change:value", ({ newValue }) => {
                     if (!activeSchema || !isObject(newValue)) return;
@@ -178,21 +183,20 @@ export default {
                 });
                 this.refresh();
             },
-
             unload() {
+                // unload
                 revision++;
                 abortController?.abort();
             },
 
             async refresh() {
-                
+                // refresh
                 const current = ++revision;
                 abortController?.abort();
                 abortController = null;
                 activeSchema = null;
                 state.generated = "";
                 state.error = "";
-
                 try {
                     let schema = state.schema;
 
@@ -213,8 +217,13 @@ export default {
                     if (!isObject(state.value)) throw new Error("x-schema value must be an object.");
 
                     activeSchema = schema;
-                    const updated = applyDefaults(schema, state.value);
-                    if (updated !== state.value) state.value = updated;
+                    const oldValue = state.value;
+                    const updated = applyDefaults(schema, oldValue);
+
+                    if (updated !== oldValue) {
+                        state.value = updated;
+                        commands.enqueue("changed", { event: { detail: { oldValue, newValue: updated } } });
+                    }
                     state.generated = generated;
                 } catch (error) {
                     if (current !== revision || error.name === "AbortError") return;
@@ -225,6 +234,7 @@ export default {
             changed({ event }) {
                 const { oldValue, newValue } = event.detail;
                 state.value = newValue;
+                host.invalidate();
                 host.dispatchEvent(new CustomEvent("change", {
                     detail: { oldValue, newValue },
                     bubbles: true,
