@@ -17,6 +17,11 @@
         "properties": {
           "title": {"type":"string","minLength":1},
           "description": {"type":"string"},
+          "background": {
+            "type": "boolean",
+            "default": true,
+            "description": "Whether the Task is globally visible and may continue independently of its initiating UI."
+          },
           "handler": {"description":"Async function receiving a taskContext and returning the task result."},
           "data": {"description":"Optional input data passed to the handler through context.data."}
         },
@@ -74,6 +79,7 @@
           "id": {"type":"string","description":"Unique task identifier."},
           "title": {"type":"string","description":"Display title."},
           "description": {"type":"string","description":"Current description."},
+          "background": {"type":"boolean","description":"Whether this Task is a background Task."},
           "status": {"type":"string","enum":["pending","running","finished","error","canceled"]},
           "progress": {
             "description": "null for indeterminate progress, otherwise an object with value and max.",
@@ -107,7 +113,7 @@
           "addEventListener": {"description":"Registers a listener for changes to this task."},
           "removeEventListener": {"description":"Removes a previously registered task listener."}
         },
-        "required": ["id","title","description","status","progress","error","createdAt","startedAt","endedAt","getOutput","getResult","wait","cancel"]
+        "required": ["id","title","description","background","status","progress","error","createdAt","startedAt","endedAt","getOutput","getResult","wait","cancel"]
       }
     },
     "taskList": {

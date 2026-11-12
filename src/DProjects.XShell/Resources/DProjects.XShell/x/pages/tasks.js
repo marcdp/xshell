@@ -80,7 +80,7 @@ export default {
             // methods            
             refresh() {
                 // Project live Task objects into X Template-friendly data
-                state.tasks = tasks.list().map(task => ({
+                state.tasks = tasks.list().filter(task => task.background).map(task => ({
                     id: task.id,
                     title: task.title,
                     description: task.description,

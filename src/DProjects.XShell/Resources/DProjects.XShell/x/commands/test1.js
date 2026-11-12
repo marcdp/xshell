@@ -1,9 +1,9 @@
+// command
 export default {
     contract: {
         label: "Test 1",
         description: "Test command that accepts a number between 1 and 10.",
         execute: {
-            description: "Returns the supplied number.",
             parameters: [
                 {name: "value", label: "Value", description: "A number between 1 and 10.", type: "number", required: true, default: 5,
                     schema: {
@@ -19,10 +19,10 @@ export default {
             }
         }
     },
-
     controller({ task }) {
         return {
             async execute(value) {
+                // execute
                 task.setDescription("Starting execution");
                 task.setProgress(0, value);
 

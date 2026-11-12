@@ -101,11 +101,17 @@ export default {
             }
             return null;
         };
-        const getFileCommands = (registry, path) => {
+        const getFileCommands = (registry, entry) => {
             const fileCommands = registry.get("filecommands");
             if (!fileCommands) return [];
             return fileCommands.contributions.filter(command => {
-                return command.extensions.some(ext => path.endsWith(ext));
+                if (command.type === "file" && entry.type === "file") {
+                    return command.extensions.some(ext => entry.path.endsWith(ext));
+                }
+                if (command.type === "directory" && entry.type === "directory") {
+                    return true;
+                }
+                return false;
             });
         };
         return {
@@ -514,7 +520,7 @@ export default {
                 // handle context menu entry event
                 state.entry = event.detail.entry;
                 state.entries = event.detail.entries;
-                state.commands = getFileCommands(registry, state.entry.path);
+                state.commands = getFileCommands(registry, state.entry);
                 state.open = (getFileHandler(resolver, state.entry.path) || state.entry.type == "directory");
                 const contextMenu = host.shadowRoot.querySelector("x-contextmenu");
                 contextMenu.open({x: event.detail.x, y: event.detail.y});

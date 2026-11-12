@@ -472,9 +472,11 @@ export default {
             },
             
             refreshTasks() {
-                // refresh the count of running tasks
+                // refresh the count of pending and running background tasks
                 const runningTasksBefore = state.runningTasks;
-                state.runningTasks = tasks.list().filter(task => task.status === "running").length;
+                state.runningTasks = tasks.list().filter(task =>
+                    task.background && (task.status === "pending" || task.status === "running")
+                ).length;
                 if (runningTasksBefore == 0 && state.runningTasks > 0) {
                     const dropdown = host.shadowRoot.querySelector("x-dropdown.tasks");
                     dropdown.expand();

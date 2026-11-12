@@ -19,6 +19,7 @@ test("tasks run reports description, progress, ordered output and result", async
     });
 
     assert.equal(task.status, "pending");
+    assert.equal(task.background, true);
     await task.wait();
 
     assert.equal(task.status, "finished");
@@ -35,6 +36,20 @@ test("tasks run reports description, progress, ordered output and result", async
 
     tasks.clear();
     assert.deepEqual(tasks.list(), []);
+});
+
+test("tasks support explicit foreground execution and reject invalid background values", async () => {
+    const tasks = new Tasks({ bus: null });
+    const task = tasks.run({ title: "Foreground", background: false, handler() {} });
+
+    assert.equal(task.background, false);
+    assert.deepEqual(tasks.list(), [task]);
+    await task.wait();
+
+    assert.throws(
+        () => tasks.run({ title: "Invalid", background: "yes", handler() {} }),
+        /Task background must be a boolean/
+    );
 });
 
 test("tasks distinguish thrown failures from stderr output", async () => {

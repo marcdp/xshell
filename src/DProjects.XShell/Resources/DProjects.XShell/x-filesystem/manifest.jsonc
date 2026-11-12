@@ -29,7 +29,8 @@
             "filecommands": {
                 "schema": "/schemas/filecommand.schema.json",
                 "contributions": [
-                    {"id": "encrypt-aes", "label": "Encrypt", "icon":"x-lock", "extensions": ["txt", "json", "md"]}
+                    {"id": "encrypt-aes", "label": "Encrypt", "icon":"x-lock", "type": "file", "extensions": ["txt", "json", "md"]},
+                    {"id": "directory-zip", "label": "Create ZIP", "icon":"x-zip", "type": "directory"}
                 ]
             }
         },

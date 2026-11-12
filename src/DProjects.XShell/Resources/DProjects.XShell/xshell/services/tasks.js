@@ -7,6 +7,7 @@ class Task extends EventTarget {
     #id;
     #title;
     #description;
+    #background;
     #status = "pending";
     #progress = null;
     #error = null;
@@ -22,11 +23,12 @@ class Task extends EventTarget {
     #resolveDone;
     #onChange;
 
-    constructor({id, title, description, onChange}) {
+    constructor({id, title, description, background, onChange}) {
         super();
         this.#id = id;
         this.#title = title;
         this.#description = description;
+        this.#background = background;
         this.#onChange = onChange;
         this.#done = new Promise(resolve => { this.#resolveDone = resolve; });
     }
@@ -35,6 +37,7 @@ class Task extends EventTarget {
     get id() { return this.#id; }
     get title() { return this.#title; }
     get description() { return this.#description; }
+    get background() { return this.#background; }
     get status() { return this.#status; }
     get progress() { return this.#progress; }
     get error() { return this.#error; }
@@ -165,15 +168,17 @@ export default class Tasks {
     }
 
     // methods
-    run({title, description = "", handler, data} = {}) {
+    run({title, description = "", background = true, handler, data} = {}) {
         if (typeof title !== "string" || !title.trim()) throw new TypeError("Task title must be a non-empty string");
         if (typeof description !== "string") throw new TypeError("Task description must be a string");
+        if (typeof background !== "boolean") throw new TypeError("Task background must be a boolean");
         if (typeof handler !== "function") throw new TypeError("Task handler must be a function");
 
         const task = new Task({
             id: crypto.randomUUID(),
             title,
             description,
+            background,
             onChange: task => this._bus?.emit("xshell:tasks:updated", {id: task.id, status: task.status})
         });
 

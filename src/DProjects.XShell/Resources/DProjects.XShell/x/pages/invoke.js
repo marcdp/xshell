@@ -219,6 +219,7 @@ export default {
     style: `
         .description { margin-bottom:1.25em; }
         .error { color:var(--x-datafield-error-color); white-space:pre-wrap; }
+        
         .task { margin-top:1.25em; }
         .task x-progress { margin-top:.75em; }
         .output { margin-top:1em; }
@@ -238,6 +239,10 @@ export default {
 
         <x-form x-if="state.ready" command="submit">
             <x-schema ref="arguments" x-prop:schema="state.schema" x-prop:value="state.args" x-on:change="argumentsChanged"></x-schema>
+
+            <x-details label="Advanced">
+                <x-datafield type="checkbox" label="Execution" label-secondary="Run the command in background" x-model="state.background"></x-datafield>
+            </x-details>
 
             <x-button slot="footer" label="Execute" command="submit" class="submit" x-attr:disabled="state.running"></x-button>
             <x-button slot="footer" x-if="state.isDialog || state.running" label="Cancel" command="cancel" class="cancel"></x-button>
@@ -286,6 +291,7 @@ export default {
         loading: true,
         ready: false,
         running: false,
+        background: false,
         isDialog: false,
         completed: false,
         hasResult: false,
@@ -362,6 +368,7 @@ export default {
                 try {
                     // Validate the initial query-supplied arguments object.
                     const initialArgs = state.args;
+                    debugger
                     if (!initialArgs || typeof initialArgs !== "object" || Array.isArray(initialArgs)) {
                         throw new Error("Invocation arguments must be a JSON object.");
                     }
@@ -414,9 +421,13 @@ export default {
             // Marks the controller inactive and releases the invocation adapter.
             unload() {
                 alive = false;
+                const task = currentTask;
                 detachTask();
                 currentTask = null;
                 invocation = null;
+
+                // Page-owned foreground Tasks do not outlive their invocation Page.
+                if (task && !task.background && (task.status === "pending" || task.status === "running")) void task.cancel();
             },
 
             // Synchronizes generated x-schema edits back into Page argument state.
@@ -478,6 +489,7 @@ export default {
                 const task = tasks.run({
                     title: invocation.label,
                     description: invocation.description,
+                    background: state.background,
                     handler: taskContext => invocation.invoke(args, { task: taskContext })
                 });
                 attachTask(task);

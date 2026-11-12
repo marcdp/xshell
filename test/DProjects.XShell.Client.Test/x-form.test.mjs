@@ -355,6 +355,7 @@ test("invoke projects Command task reporting and result in output order", async 
     await invoke.controller.submit();
 
     const task = invoke.tasks.list()[0];
+    assert.equal(task.background, false);
     assert.equal(invoke.contexts[0].task.signal, task._signal);
     assert.equal(task.description, "Working");
     assert.deepEqual(task.progress, { value: 2, max: 2 });
@@ -370,6 +371,16 @@ test("invoke projects Command task reporting and result in output order", async 
         { channel: "stderr", text: "second" }
     ]);
     assert.equal(invoke.state.result, 123);
+});
+
+test("invoke creates a background Task when the Advanced option is selected", async () => {
+    const invoke = createInvoke({ execute: { parameters: [] } });
+    invoke.state.background = true;
+
+    await invoke.controller.load();
+    await invoke.controller.submit();
+
+    assert.equal(invoke.tasks.list()[0].background, true);
 });
 
 test("invoke refreshes description, progress and output while a Command is running", async () => {
@@ -428,7 +439,7 @@ test("invoke cancels a running Command through its task signal", async () => {
     assert.equal(invoke.state.hasResult, false);
 });
 
-test("invoke removes its Task change listener when the Page unloads", async () => {
+test("invoke unload detaches its listener and cancels its foreground Task", async () => {
     const baseTasks = new Tasks({ bus: null });
     let added = 0, removed = 0, started;
     const running = new Promise(resolve => { started = resolve; });
@@ -461,8 +472,35 @@ test("invoke removes its Task change listener when the Page unloads", async () =
     assert.equal(added, 1);
     assert.equal(removed, 1);
 
-    await baseTasks.list()[0].cancel();
     await submission;
+    assert.equal(baseTasks.list()[0].status, "canceled");
+});
+
+test("invoke unload lets a background Task continue to completion", async () => {
+    let started, release;
+    const running = new Promise(resolve => { started = resolve; });
+    const blocked = new Promise(resolve => { release = resolve; });
+    const invoke = createInvoke({ execute: { parameters: [] } }, {}, [], {
+        async execute() {
+            started();
+            await blocked;
+            return "completed";
+        }
+    });
+    invoke.state.background = true;
+
+    await invoke.controller.load();
+    const submission = invoke.controller.submit();
+    await running;
+    const task = invoke.tasks.list()[0];
+    invoke.controller.unload();
+
+    assert.equal(task.background, true);
+    assert.equal(task._signal.aborted, false);
+    release();
+    await submission;
+    assert.equal(task.status, "finished");
+    assert.equal(await task.getResult(), "completed");
 });
 
 test("invoke preserves shared Service invocation semantics", async () => {
