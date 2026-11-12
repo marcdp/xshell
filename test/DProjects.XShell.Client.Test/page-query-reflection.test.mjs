@@ -150,8 +150,7 @@ async function createPageClass(properties, controller = () => ({})) {
     return await createPageClassFromJsDefinition(
         "/page.js",
         createContext(),
-        createDefinition(controller),
-        { properties }
+        { ...createDefinition(controller), contract: { properties } }
     );
 }
 
@@ -208,6 +207,67 @@ test("reflected Page state patches only its own query and removes contract defau
     assert.equal(new URLSearchParams(replaceCalls.at(-1).split("?")[1]).has("page-index"), false);
     assert.doesNotMatch(page.src, /page-index=/);
     assert.equal(replaceCalls.length, 4);
+});
+
+test("reflected Page JSON values serialize, remove defaults, and preserve JSON null", async () => {
+    const host = createXPage("/page.js?external=x#details");
+    const { navigation, replaceCalls } = createNavigation("path", [host]);
+    navigation._stack = [navigation.parseUrl(host.src)];
+    xshell._navigation = navigation;
+    const PageClass = await createPageClass({
+        args: { type: "object", default: {}, state: true, query: true, queryParser: "json", reflect: true },
+        value: { type: "any", default: false, state: true, query: true, queryParser: "json", reflect: true }
+    });
+    const page = new PageClass({ src: host.src, context: {} });
+    page._host = host;
+
+    page._state.args = { path: "/docs/file.txt", options: [1, true] };
+    assert.deepEqual(JSON.parse(navigation._stack[0].params.args), { path: "/docs/file.txt", options: [1, true] });
+    assert.equal(navigation._stack[0].href, "/page.js#details");
+    assert.equal(navigation._stack[0].params.external, "x");
+
+    page._state.value = null;
+    assert.equal(navigation._stack[0].params.value, "null");
+    assert.equal(new URLSearchParams(replaceCalls.at(-1).split("?")[1].split("#")[0]).get("value"), "null");
+
+    page._state.args = {};
+    assert.equal(Object.hasOwn(navigation._stack[0].params, "args"), false);
+});
+
+test("Page JSON reflection rejects JavaScript values that JSON would serialize lossily", async () => {
+    const host = createXPage("/page.js");
+    const { navigation } = createNavigation("path", [host]);
+    navigation._stack = [navigation.parseUrl(host.src)];
+    xshell._navigation = navigation;
+    const PageClass = await createPageClass({
+        value: { type: "any", default: null, state: true, query: true, queryParser: "json", reflect: true }
+    });
+    const page = new PageClass({ src: host.src, context: {} });
+    page._host = host;
+
+    for (const value of [undefined, () => {}, Number.NaN, { omitted: undefined }, [undefined], new Date()]) {
+        assert.throws(() => { page._state.value = value; }, /cannot be serialized losslessly as JSON/);
+    }
+    const cyclic = {};
+    cyclic.self = cyclic;
+    assert.throws(() => { page._state.value = cyclic; }, /cannot be serialized losslessly as JSON/);
+});
+
+test("Page JSON reflection uses existing hash-mode navigation serialization", async () => {
+    const host = createXPage("/page.js");
+    const { navigation, locationReplacements } = createNavigation("hash", [host]);
+    navigation._stack = [navigation.parseUrl(host.src)];
+    xshell._navigation = navigation;
+    const PageClass = await createPageClass({
+        args: { type: "object", default: {}, state: true, query: true, queryParser: "json", reflect: true }
+    });
+    const page = new PageClass({ src: host.src, context: {} });
+    page._host = host;
+
+    page._state.args = { path: "/docs/file.txt" };
+
+    assert.equal(locationReplacements.length, 1);
+    assert.deepEqual(JSON.parse(navigation._browserUrlToStack(locationReplacements[0])[0].params.args), { path: "/docs/file.txt" });
 });
 
 test("stacked Page query reflection preserves other stack items and navigation metadata", () => {
@@ -427,8 +487,11 @@ test("attribute reflection remains independent from Page-query metadata", async 
     const Component = await createComponentClassFromJsDefinition(
         "component.js",
         createContext(),
-        { meta: { id: "query-reflection-component" }, controller: () => ({}) },
-        { properties: { value: { type: "string", default: "default", state: true, attribute: true, query: true, reflect: true } } }
+        {
+            meta: { id: "query-reflection-component" },
+            contract: { properties: { value: { type: "string", default: "default", state: true, attribute: true, reflect: true } } },
+            controller: () => ({})
+        }
     );
     const component = new Component();
 

@@ -44,14 +44,15 @@ export default {
 ```
 
 `page.schema.json` embeds the common contract from `contract.schema.json` and extends public property descriptors with Page-specific `query`,
-`context`, `state`, and `reflect` flags. The common contract fields—label, description, icon, named types, properties, events, methods, and
+`queryParser`, `context`, `state`, and `reflect` fields. The common contract fields—label, description, icon, named types, properties, events, methods, and
 examples—retain the meanings described in [Component Contract](../20-components/10-manifest.md#shared-contract-model). A separate named
 `contract` export is not read.
 
 | Page property field | Runtime behavior |
 | --- | --- |
 | `state: true` | Adds the public property's `default` to the Page state skeleton. |
-| `query: true` | Initializes that state entry from the Page `src` query. It requires `state: true` and a direct `string`, `number`, `integer`, or `boolean` type. |
+| `query: true` | Initializes that state entry from the Page `src` query. It requires `state: true`; without `queryParser`, it supports direct `string`, `number`, `integer`, and `boolean` types. |
+| `queryParser: "json"` | Parses and serializes JSON query values for `object`, `array`, and `any` properties. It requires both `query: true` and `state: true`. |
 | `context: true` | Copies a same-named creation-context value into state after query initialization, without type validation. The loader does not require `state: true`, though both should be declared for a public state-backed value. |
 | `reflect: true` | For a `query: true` property, reflects notified state changes to the Page's query. It has no separate HTML-attribute behavior. Returning to the contract default removes the parameter. |
 
@@ -268,14 +269,35 @@ canonical for public properties, while `definition.state` supplies private/inter
 ## Query-string initialization
 
 Page properties opt into query-string initialization with `query: true`. The Page loader reads the query portion of that Page's own `src`, converts
-the property name from camelCase to kebab-case, and applies the value to state before creating the controller. Only `string`, `number`, `integer`,
-and `boolean` properties are supported, and `query: true` requires `state: true`. Missing parameters leave the contract default unchanged; malformed
-numeric, integer, or boolean values reject Page creation. Boolean values are `true`, `1`, `false`, and `0`, with the textual values matched
-case-insensitively.
+the property name from camelCase to kebab-case, and applies the value to state before creating the controller. Without `queryParser`, only `string`,
+`number`, `integer`, and `boolean` properties are supported. Missing parameters leave the contract default unchanged; malformed numeric, integer, or
+boolean values reject Page creation. Boolean values are `true`, `1`, `false`, and `0`, with the textual values matched case-insensitively.
+
+`queryParser: "json"` is the Page-specific structured-value option. It requires `query: true` and `state: true`, and supports `object`, `array`, and
+`any`. Object properties accept only non-null, non-array JSON objects, array properties accept only arrays, and `any` accepts every valid JSON value,
+including `null` and JSON scalars. Malformed JSON and type mismatches reject Page creation. For example:
+
+```js
+args: {
+    type: "object",
+    default: {},
+    state: true,
+    query: true,
+    queryParser: "json",
+    reflect: true
+}
+```
+
+`/page.js?args=%7B%22path%22%3A%22%2Fdocs%2Ffile.txt%22%7D` initializes `state.args` to `{ path: "/docs/file.txt" }`.
 
 Query binding does not imply HTML attributes or reflection. Properties without `query: true` never consume Page query parameters. When `reflect: true`
 is also present, a state change is serialized back to the Page query using canonical scalar values (`true`/`false` for booleans); returning to the
 contract default removes the parameter. Normal Components do not perform this Page-specific initialization or URL reflection.
+
+JSON-reflected properties use `JSON.stringify`. JSON `null` is the query value `"null"`, distinct from the `null` patch value used internally to
+remove a parameter. Values that JSON would omit or coerce are rejected rather than serialized lossily. Reflection still depends on state-property
+notifications and does not observe deep object or array mutations. It does not add JSON serialization to `navigation.navigate({ params })`;
+Navigation retains ownership of URL encoding and stack handling.
 
 Injected `query` and contract-property query binding can coexist, but they serve different purposes:
 

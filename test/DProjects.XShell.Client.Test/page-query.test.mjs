@@ -1,5 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import ComponentSchema from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/schemas/component.schema.json" with { type: "json" };
+import ContractSchema from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/schemas/contract.schema.json" with { type: "json" };
+import PageSchema from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/schemas/page.schema.json" with { type: "json" };
+import { Validator } from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/vendor/json-schema/4.1.1/json-schema.js";
 
 class FakeElement {
     attachShadow() {
@@ -19,9 +23,7 @@ globalThis.customElements = {
 globalThis.window = { customElements: globalThis.customElements };
 globalThis.document = { baseURI: "https://example.test/" };
 
-const { createComponentClassFromJsDefinition } = await import("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/loaders/component-js.js");
 const { createPageClassFromJsDefinition } = await import("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/loaders/page-js.js");
-const validateComponentContract = (await import("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/validation/component.contract.js")).default;
 const { default: xshell } = await import("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/xshell.js");
 
 class StateEngineFactory {
@@ -74,7 +76,7 @@ function createContract(properties) {
 
 async function createPage(properties, src, controller = () => ({})) {
     configureDefinitionLoaders();
-    const PageClass = await createPageClassFromJsDefinition(src, createContext(), createDefinition(controller), createContract(properties));
+    const PageClass = await createPageClassFromJsDefinition(src, createContext(), { ...createDefinition(controller), contract: createContract(properties) });
     return new PageClass({ src, context: {} });
 }
 
@@ -160,6 +162,58 @@ test("Page query values use contract scalar types and retain defaults when absen
     }
 });
 
+test("Page JSON query parsing initializes objects, arrays, and any JSON value", async () => {
+    const src = "/page.js?args=%7B%22path%22%3A%22%2Fdocs%2Ffile.txt%22%7D&items=%5B1%2C%22two%22%5D&scalar=42&nothing=null#details";
+    const page = await createPage({
+        args: { type: "object", default: {}, state: true, query: true, queryParser: "json" },
+        items: { type: "array", default: [], state: true, query: true, queryParser: "json" },
+        scalar: { type: "any", default: null, state: true, query: true, queryParser: "json" },
+        nothing: { type: "any", default: "default", state: true, query: true, queryParser: "json" },
+        missing: { type: "object", default: { retained: true }, state: true, query: true, queryParser: "json" }
+    }, src);
+
+    assert.deepEqual(page._state.args, { path: "/docs/file.txt" });
+    assert.deepEqual(page._state.items, [1, "two"]);
+    assert.equal(page._state.scalar, 42);
+    assert.equal(page._state.nothing, null);
+    assert.deepEqual(page._state.missing, { retained: true });
+});
+
+test("Page JSON query parsing rejects malformed and incorrectly typed values", async () => {
+    const objectProperty = { type: "object", default: {}, state: true, query: true, queryParser: "json" };
+    const arrayProperty = { type: "array", default: [], state: true, query: true, queryParser: "json" };
+
+    await assert.rejects(() => createPage({ args: objectProperty }, "/page.js?args=%7Bbad"), /Page property 'args'.*invalid JSON query value/);
+    for (const value of ["null", "%5B1%5D", "true"]) {
+        await assert.rejects(() => createPage({ args: objectProperty }, `/page.js?args=${value}`), /Page property 'args'.*does not match type 'object'/);
+    }
+    await assert.rejects(() => createPage({ items: arrayProperty }, "/page.js?items=%7B%7D"), /Page property 'items'.*does not match type 'array'/);
+});
+
+test("Page JSON query metadata requires query, state, and supported types", async () => {
+    await assert.rejects(() => createPage({ value: { type: "object", default: {}, state: true, queryParser: "json" } }, "/page.js"), /Page property 'value'.*does not declare query:true/);
+    await assert.rejects(() => createPage({ value: { type: "object", default: {}, query: true, queryParser: "json" } }, "/page.js"), /Page property 'value'.*not state-backed/);
+    await assert.rejects(() => createPage({ value: { type: "object", default: {}, state: true, query: true, queryParser: "custom" } }, "/page.js"), /Page property 'value'.*unsupported queryParser 'custom'/);
+    for (const type of ["string", "number", "integer", "boolean", "date", "function"]) {
+        await assert.rejects(() => createPage({ value: { type, default: null, state: true, query: true, queryParser: "json", schema: true } }, "/page.js"), new RegExp(`Page property 'value'.*unsupported type '${type}'`));
+    }
+});
+
+test("queryParser is accepted only by the Page schema and only for json", () => {
+    const definition = parser => ({ contract: { properties: {
+        value: { type: "object", default: {}, state: true, query: true, queryParser: parser }
+    } } });
+    const createValidator = schema => {
+        const validator = new Validator(schema, "2020-12");
+        validator.addSchema(ContractSchema, new URL("./contract.schema.json", schema.$id).href);
+        return validator;
+    };
+
+    assert.equal(createValidator(PageSchema).validate(definition("json")).valid, true);
+    assert.equal(createValidator(PageSchema).validate(definition("custom")).valid, false);
+    assert.equal(createValidator(ComponentSchema).validate(definition("json")).valid, false);
+});
+
 test("Page query conversion rejects malformed scalar values", async () => {
     await assert.rejects(() => createPage({ scale: { type: "number", default: 1, state: true, query: true } }, "/page.js?scale=invalid"), /invalid number query value/);
     await assert.rejects(() => createPage({ pageIndex: { type: "integer", default: 0, state: true, query: true } }, "/page.js?page-index=3.5"), /invalid integer query value/);
@@ -171,7 +225,7 @@ test("Page query metadata requires state-backed supported scalar properties", as
     for (const type of ["object", "array", "function", "any", "date"]) {
         await assert.rejects(() => createPage({ value: { type, default: type === "array" ? [] : null, state: true, query: true, schema: { type: "string" } } }, "/page.js?value=query"), new RegExp(`Page property 'value'.*unsupported type '${type}'`));
     }
-    await assert.rejects(() => createPage({ value: { type: "void", default: null, state: true, query: true } }, "/page.js?value=query"), /Invalid component contract/);
+    await assert.rejects(() => createPage({ value: { type: "void", default: null, state: true, query: true } }, "/page.js?value=query"), /unsupported type 'void'/);
 });
 
 test("The controller and load lifecycle see query-derived state", async () => {
@@ -192,12 +246,12 @@ test("The controller and load lifecycle see query-derived state", async () => {
 test("query values are isolated between Page instances", async () => {
     configureDefinitionLoaders();
     const observedQueryIds = [];
-    const PageClass = await createPageClassFromJsDefinition("/page.js", createContext(), createDefinition(({ query }) => {
+    const PageClass = await createPageClassFromJsDefinition("/page.js", createContext(), { ...createDefinition(({ query }) => {
         observedQueryIds.push(query.get("id"));
         return {};
-    }), createContract({
+    }), contract: createContract({
         id: { type: "string", default: "", state: true, query: true }
-    }));
+    }) });
     const pageA = new PageClass({ src: "/page.js?id=A", context: {} });
     const pageB = new PageClass({ src: "/page.js?id=B", context: {} });
 
@@ -206,20 +260,4 @@ test("query values are isolated between Page instances", async () => {
     assert.equal(pageA._state.id, "A");
     assert.equal(pageB._state.id, "B");
     assert.deepEqual(observedQueryIds, ["A", "B"]);
-});
-
-test("the shared schema accepts query booleans and rejects other query values", async () => {
-    await assert.doesNotReject(() => validateComponentContract("component.js", createContract({ value: { type: "string", query: true } })));
-    await assert.doesNotReject(() => validateComponentContract("component.js", createContract({ value: { type: "string", query: false } })));
-    await assert.rejects(() => validateComponentContract("component.js", createContract({ value: { type: "string", query: "yes" } })), /Invalid component contract/);
-});
-
-test("Components accept query metadata without reading Page URL state", async () => {
-    configureDefinitionLoaders();
-    const Component = await createComponentClassFromJsDefinition("component.js?value=query", createContext(), createDefinition(), createContract({
-        value: { type: "string", default: "default", state: true, query: true }
-    }));
-    const component = new Component();
-
-    assert.equal(component._state.value, "default");
 });

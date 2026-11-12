@@ -60,9 +60,31 @@ Page `src`; it is not part of a Component contract.
 The query parameter name is the property name converted from camelCase to kebab-case. For example, `customerId` maps to `customer-id` and
 `pageIndex` maps to `page-index`. A query value overrides the contract default before the controller is created and before its `load()` handler runs.
 
-`query: true` requires `state: true` and supports only `string`, `number`, `integer`, and `boolean` properties. Strings are preserved, numbers must be
-finite, integers must be whole numbers, and booleans accept `true`, `1`, `false`, or `0` (case-insensitive for the words). Empty string values are
-valid for strings; malformed numeric or boolean values reject Page creation. If the parameter is absent, the contract default remains unchanged.
+`query: true` requires `state: true`. Without a parser it supports only `string`, `number`, `integer`, and `boolean` properties. Strings are preserved,
+numbers must be finite, integers must be whole numbers, and booleans accept `true`, `1`, `false`, or `0` (case-insensitive for the words). Empty string
+values are valid for strings; malformed numeric or boolean values reject Page creation. If the parameter is absent, the contract default remains
+unchanged.
+
+A Page property may instead declare `queryParser: "json"` together with `query: true` and `state: true`. This parser supports `object`, `array`, and
+`any`: objects must be non-null, non-array JSON objects; arrays must be JSON arrays; and `any` accepts every valid JSON value, including scalars and
+`null`. Malformed JSON and values that do not match the declared type reject Page creation. `queryParser` is Page-specific and is not accepted by the
+Component schema.
+
+```js
+args: {
+    type: "object",
+    default: {},
+    state: true,
+    query: true,
+    queryParser: "json",
+    reflect: true
+}
+```
+
+For `/page.js?args=%7B%22path%22%3A%22%2Fdocs%2Ffile.txt%22%7D`, the state value is `{ path: "/docs/file.txt" }`. When reflection is enabled,
+notified state changes use `JSON.stringify`; the literal JSON value `null` is reflected as `?args=null`, while returning to the contract default removes
+the parameter. Values that JSON would omit or coerce, including `undefined`, functions, non-finite numbers, sparse arrays, cycles, and non-plain
+objects, are rejected instead of being serialized lossily.
 
 For example, a reflected query-backed Page property follows this lifecycle:
 
@@ -94,6 +116,9 @@ the contract default removes the query parameter.
 
 Query initialization does not imply `attribute` or `reflect`. With `reflect: true`, later state changes patch the Page's own query parameters using
 replacement semantics; properties without `reflect: true` remain input-only. This behavior is Page-specific.
+
+Reflection responds to state-engine property notifications; it does not track deep mutations within an object or array. Navigation continues to
+encode query strings and manage its stack. Objects passed directly through `navigation.navigate({ params })` are not automatically JSON-serialized.
 
 ## Related documentation
 

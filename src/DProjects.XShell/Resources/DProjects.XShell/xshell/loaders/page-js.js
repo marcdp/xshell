@@ -79,7 +79,23 @@ function validateSlots(slots, pageName) {
 function validateQueryProperties(definition, pageName) {
     // validate Page-specific query metadata
     const supportedTypes = new Set(["string", "number", "integer", "boolean"]);
+    const jsonTypes = new Set(["object", "array", "any"]);
     for (const [propertyName, property] of Object.entries(definition.contract.properties || {})) {
+        if (typeof(property.queryParser) !== "undefined") {
+            if (property.query !== true) {
+                throw new Error(`Page property '${propertyName}' declares queryParser but does not declare query:true.`);
+            }
+            if (property.state !== true) {
+                throw new Error(`Page property '${propertyName}' declares queryParser but is not state-backed.`);
+            }
+            if (property.queryParser !== "json") {
+                throw new Error(`Page property '${propertyName}' declares unsupported queryParser '${property.queryParser}'.`);
+            }
+            if (!jsonTypes.has(property.type)) {
+                throw new Error(`Page property '${propertyName}' declares queryParser:'json' with unsupported type '${property.type}'.`);
+            }
+            continue;
+        }
         if (property.query !== true) {
             continue;
         }
@@ -93,6 +109,18 @@ function validateQueryProperties(definition, pageName) {
 }
 function parseQueryPropertyValue(propertyName, property, value) {
     // convert one query-string value according to its contract type
+    if (property.queryParser === "json") {
+        let parsed;
+        try {
+            parsed = JSON.parse(value);
+        } catch {
+            throw new Error(`Page property '${propertyName}' has an invalid JSON query value.`);
+        }
+        if (!matchesJsonQueryType(property.type, parsed)) {
+            throw new Error(`Page property '${propertyName}' has a JSON query value that does not match type '${property.type}'.`);
+        }
+        return parsed;
+    }
     switch (property.type) {
         case "string":
             return value;
@@ -144,6 +172,15 @@ async function validatePage(src, definition) {
 }
 function serializeQueryPropertyValue(propertyName, property, value) {
     // serialize one reflected query value according to its contract type
+    if (property.queryParser === "json") {
+        if (!matchesJsonQueryType(property.type, value)) {
+            throw new Error(`Page property '${propertyName}' has a value that does not match query type '${property.type}'.`);
+        }
+        if (!isJsonValue(value)) {
+            throw new Error(`Page property '${propertyName}' has a value that cannot be serialized losslessly as JSON.`);
+        }
+        return JSON.stringify(value);
+    }
     if (value === null || typeof(value) === "undefined") {
         return null;
     }
@@ -171,6 +208,38 @@ function serializeQueryPropertyValue(propertyName, property, value) {
         default:
             throw new Error(`Page property '${propertyName}' declares query:true with unsupported type '${property.type}'.`);
     }
+}
+function matchesJsonQueryType(type, value) {
+    return type === "any"
+        || type === "array" && Array.isArray(value)
+        || type === "object" && value !== null && !Array.isArray(value) && isPlainObject(value);
+}
+function isJsonValue(value, ancestors = new Set()) {
+    // accept only values represented by JSON.stringify without omission or coercion
+    if (value === null || typeof(value) === "string" || typeof(value) === "boolean") {
+        return true;
+    }
+    if (typeof(value) === "number") {
+        return Number.isFinite(value);
+    }
+    if (typeof(value) !== "object" || ancestors.has(value)) {
+        return false;
+    }
+    ancestors.add(value);
+    let valid;
+    if (Array.isArray(value)) {
+        const keys = Object.keys(value);
+        valid = keys.length === value.length
+            && keys.every((key, index) => key === String(index))
+            && value.every(item => isJsonValue(item, ancestors));
+    } else if (isPlainObject(value)) {
+        valid = Reflect.ownKeys(value).length === Object.keys(value).length
+            && Object.values(value).every(item => isJsonValue(item, ancestors));
+    } else {
+        valid = false;
+    }
+    ancestors.delete(value);
+    return valid;
 }
 function getPageQueryParams(src) {
     // parse query parameters from the Page source without using browser location

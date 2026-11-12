@@ -18,6 +18,7 @@
             "$ref": "./contract.schema.json#/$defs/property",
             "properties": {
               "query": { "type": "boolean", "description": "Whether the property may be initialized from the Page URL query string." },
+              "queryParser": { "type": "string", "enum": ["json"], "description": "Parser used to deserialize and serialize Page query values." },
               "context": { "type": "boolean", "description": "Whether the property may be initialized from Page context." },
               "state": { "type": "boolean", "description": "Whether the property is backed by Page state." },
               "reflect": { "type": "boolean", "description": "Whether property changes are reflected to enabled external representations." }

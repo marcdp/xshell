@@ -238,6 +238,7 @@ export default {
         return {
             
             async load() {
+                // load
                 try {
                     const initialArgs = JSON.parse(state.args);
 
@@ -273,10 +274,12 @@ export default {
 ,
 
             mount() {
+                // mount
                 state.isDialog = page.host?.layout === "dialog";
             },
 
             unload() {
+                // unload
                 alive = false;
                 invocation = null;
             },
