@@ -169,7 +169,7 @@ export default {
             type:   { type: "string", default: "command", state: true, query: true },
             id:     { type: "string", default: "", state: true, query: true },
             method: { type: "string", default: "execute", state: true, query: true },
-            args:   { type: "string", default: "{}", state: true, query: true }
+            args:   { type: "string", default: "{}", state: true, query: true, queryParser: "json" }
         }
     },
     meta: {
@@ -239,6 +239,7 @@ export default {
             
             async load() {
                 // load
+                debugger
                 try {
                     const initialArgs = JSON.parse(state.args);
 
