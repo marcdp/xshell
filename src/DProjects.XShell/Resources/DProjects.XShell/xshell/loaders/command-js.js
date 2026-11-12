@@ -67,11 +67,18 @@ export default class LoaderCommandJs {
             constructor(invocationContext = {}) {
                 const servicesProvider = new Proxy({}, {
                     get(target, prop) {
-                        if (prop === "context") return invocationContext;
-                        if (prop === "definition") return definition;
-                        if (prop === "moduleConfig") return xshell.config.modules[moduleId];
-                        if (prop === "module") return xshell.modules.getModuleById(moduleId);
-                        if (typeof prop === "symbol") return undefined;
+                        debugger
+                        if (prop === "context") {
+                            return invocationContext;
+                        } else if (prop === "definition") {
+                            return definition;
+                        } else if (prop === "moduleConfig") {
+                            return xshell.config.modules[moduleId];
+                        } else if (prop === "module") {
+                            return xshell.modules.getModuleById(moduleId);
+                        } else if (typeof prop === "symbol") {
+                            return undefined;
+                        }
                         return xshell.services.resolve(prop);
                     }
                 });

@@ -26,12 +26,11 @@ export default {
     },
     style: `
         :host {display:block;}
-        .header {display:flex; height:2.5em; align-items:center; padding:0 .5em 0 1em; cursor:pointer; user-select: none;}
+        .header {display:flex; min-height:2.5em; align-items:center; cursor:pointer; user-select: none; line-height:var(--x-datafield-line-height); padding-left:1em; padding-right:.5em; padding-top:.5em; padding-bottom:.5em; box-sizing:border-box;}
         .header > x-icon {margin-right:.5em; transition: transform var(--x-transition-duration); }
-        .header > label {flex:1; cursor:pointer; display:inline}
-        .header > label span.label {font-weight:500;}
-        .header > label span.description {font-weight:normal; color: var(--x-color-text-gray);}
-        .header > label span.description:before { content: ": "; }
+        .header > label {flex:1; cursor:pointer; display:inline; }
+        .header > label .label {font-weight:500;}
+        .header > label .description {font-weight:400; color: var(--x-color-text-gray); }
         .header > .toolbar {margin-right:1em; }
         .header:hover > label {color:var(--x-color-primary)!important; }
         .header:hover > x-icon {color:var(--x-color-primary)!important;}
@@ -57,7 +56,7 @@ export default {
         <div class="header" x-on:click="toggle" x-attr:expanded="state.expanded">
             <x-icon x-if="state.icon" x-attr:icon="state.icon"></x-icon>
             <label>
-                <span class="label" x-text="state.label"></span><span class="description" x-if="state.description" x-text="state.description"></span>
+                <span class="label" x-text="state.label"></span><span class="description" x-if="state.description">: {{state.description}}</span>
             </label>
             <div class="toolbar">
                 <slot name="toolbar"></slot>

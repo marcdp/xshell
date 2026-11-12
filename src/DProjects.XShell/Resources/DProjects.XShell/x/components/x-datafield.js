@@ -738,7 +738,7 @@ export default {
             async objectChanged(args) {
                 if (state.value != null) {
                     state.valueOriginal = state.value;
-                    state.value = null;
+                    state.value = undefined;
                 } else {
                     // state.value = state.valueOriginal;
                     state.value = state.valueOriginal ?? cloneDefaultValue(state.default ?? {});

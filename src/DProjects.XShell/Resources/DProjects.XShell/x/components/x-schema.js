@@ -160,8 +160,7 @@ export default {
 
     template: `
         <x-notice x-if="state.error" type="error" x-prop:message="state.error"></x-notice>
-        <x-template x-if="state.generated" x-prop:template="state.generated" x-prop:value="state.value" x-on:change="changed"></x-template>
-        <x-json x-prop:value="state.value"></x-json>
+        <x-template x-if="state.generated" x-prop:template="state.generated" x-prop:value="state.value" x-on:change="changed"></x-template>        
     `,
 
     state: { 
@@ -216,7 +215,7 @@ export default {
                     const generated = makeTemplate(schema);
                     if (!isObject(state.value)) throw new Error("x-schema value must be an object.");
 
-                    activeSchema = schema;
+                    activeSchema = structuredClone(schema);
                     const oldValue = state.value;
                     const updated = applyDefaults(schema, oldValue);
 

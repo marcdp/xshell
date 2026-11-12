@@ -20,7 +20,7 @@ export default {
     style: `
         :host {display:block;}
 
-        :host .body {padding:1em;}
+        :host .body {}
         :host .footer {text-align:right;}
         :host .footer x-button {
             min-width: var(--x-button-width-wide);
@@ -37,13 +37,7 @@ export default {
     state: {
     },
     template: `        
-        <x-wizard-header x-attr:index="state.index" x-on:index-set="set">
-            <div x-for="panel in state.panels" 
-                x-attr:label="panel.label"
-                x-attr:message="panel.message"
-                x-attr:icon="panel.icon"
-            ></div>
-        </x-wizard-header>
+        <x-wizard-header x-attr:index="state.index" x-prop:panels="state.panels" x-on:indexset="set"></x-wizard-header>
  
         <div class="body">
             <slot x-on:slotchange="refresh"></slot>

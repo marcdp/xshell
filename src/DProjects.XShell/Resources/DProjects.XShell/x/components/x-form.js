@@ -18,7 +18,7 @@ export default {
             wizard:         {type:"boolean", default:false, attribute:true, state:true, description:""},
             wizardDirection:{type:"string", default:"", attribute:true, state:true, description:""},
             wizardIndex:    {type:"number", default:0, attribute:true, state:true, description:""},
-            wizardPanels:   {type:"array", default:[], attribute:true, state:true, description:""},
+            wizardPanels:   {type:"array", default:[], state:true, description:""},
             validated:      {type:"boolean", default:false, attribute:true, state:true, description:""},
             command:        {type:"string", default:"submit", attribute:true, state:true, description:""},
             errors:         {type:"array", default:[], attribute:true, state:true, description:""},
@@ -130,13 +130,7 @@ export default {
         </div>
         <div x-else class="container" x-attr:vertical="state.wizardDirection == 'vertical' ? true : false">
 
-            <x-wizard-header x-if="state.wizard" x-attr:index="state.wizardIndex" x-attr:class="state.wizardDirection" x-on:index-set="wizardSet">
-                <div x-for="wizardPanel in state.wizardPanels" 
-                    x-attr:label="wizardPanel.label"
-                    x-attr:message="wizardPanel.message"
-                    x-attr:icon="wizardPanel.icon"
-                ></div>
-            </x-wizard-header>
+            <x-wizard-header x-if="state.wizard" x-attr:index="state.wizardIndex" x-prop:panels="state.wizardPanels" x-attr:class="state.wizardDirection" x-on:indexset="wizardSet"></x-wizard-header>
 
             <div>
                 <div class="body">

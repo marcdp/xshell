@@ -3,7 +3,7 @@ export default {
     contract: {
         description: "Displays wizard progress and allows navigation to completed panels.",
         events: {
-            "index-set": {
+            "indexset": {
                 description: "Raised when a completed wizard panel is selected.",
                 detail: {
                     index: {type:"number"}
@@ -12,7 +12,7 @@ export default {
         },
         properties: {
             index:  {type:"number", default:0, attribute:true, state:true, description:""},
-            panels: {type:"array", default:[], attribute:true, state:true, description:""}
+            panels: {type:"array", default:[], state:true, description:""}
         },
         methods: {}
     },
@@ -105,31 +105,12 @@ export default {
     `,
     controller({ state, host }) {
         return {
-            load(args) {
-                //load
-                this.refresh();
-            },
-
             click(args) {
                 //click
                 let index = parseInt(args.event.currentTarget.dataset.index);
                 if (index < state.index) {
-                    host.dispatchEvent(new CustomEvent("index-set", {detail: {index: index}, bubbles: false, composed: false}));
+                    host.dispatchEvent(new CustomEvent("indexset", {detail: {index: index}, bubbles: false, composed: false}));
                 }
-            },
-
-            refresh(args) {
-                //refresh
-                let panels = [];
-                host.querySelectorAll(":scope > *").forEach((panel, index) => {
-                    panels.push({
-                        label: panel.getAttribute("label"),
-                        message: panel.getAttribute("message"),
-                        icon: panel.getAttribute("icon") || "",
-                        index: index + 1
-                    });
-                });
-                state.panels = panels;
             }
         };
     }

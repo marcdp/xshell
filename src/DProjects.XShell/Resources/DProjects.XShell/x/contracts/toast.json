@@ -22,12 +22,15 @@
       "parameters": [
         {
           "name": "message",
+          "label": "Message",
           "type": "string",
           "required": true,
+          "default": "Lorem ipsum",
           "description": "Text displayed by the toast."
         },
         {
           "name": "options",
+          "label": "Options",
           "type": "object",
           "required": false,
           "default": {},
@@ -36,21 +39,9 @@
             "type": "object",
             "additionalProperties": false,
             "properties": {
-              "type": {
-                "type": "string",
-                "default": "info",
-                "enum": [ "info", "success", "warning", "error" ],
-                "description": "Notice type used to present the toast."
-              },
-              "duration": {
-                "type": "number",
-                "default": 4000,
-                "description": "Duration in milliseconds before automatic dismissal. Zero or a negative value disables automatic dismissal."
-              },
-              "page": {
-                "type": "object",
-                "description": "Owning Page. When supplied, the toast is rendered in that Page's visual surface; when omitted, the toast is application-scoped."
-              }
+              "type": { "title": "Type",  "type": "string", "default": "info", "enum": [ "info", "success", "warning", "error" ], "description": "Notice type used to present the toast."},
+              "duration": {"title": "Duration","type": "number","default": 4000,"description": "Duration in milliseconds before automatic dismissal. Zero or a negative value disables automatic dismissal."},
+              "page": {"title": "Page","type": "object","description": "Owning Page. When supplied, the toast is rendered in that Page's visual surface; when omitted, the toast is application-scoped."}
             }
           }
         }
