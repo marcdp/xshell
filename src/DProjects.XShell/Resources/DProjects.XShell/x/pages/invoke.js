@@ -1,126 +1,103 @@
 
  // Generic invocation page. V1 supports Commands only.
 
-function getParameterType(parameter, types) {
-    if (parameter.type) return { type: parameter.type, schema: parameter.schema };
-    const namedType = Object.hasOwn(types, parameter.ref) ? types[parameter.ref] : null;
-    if (!namedType) throw new Error(`Unknown parameter type '${parameter.ref}' for '${parameter.name}'.`);
-    return { type: namedType.type, schema: namedType.schema };
-}
+function methodToJsonSchema(method, types) {
+    const properties = {};
+    const required = [];
+    const supported = new Set([
+        "type", "title", "description", "default", "enum", "format", "writeOnly",
+        "minLength", "maxLength", "pattern", "minimum", "maximum"
+    ]);
 
-function createParameter(parameter, types, initialArgs) {
-    const { type, schema } = getParameterType(parameter, types);
+    for (const parameter of method.parameters || []) {
+        if (["__proto__", "prototype", "constructor"].includes(parameter.name)) {
+            throw new Error(`Unsupported parameter name '${parameter.name}'.`);
+        }
+        if (Object.hasOwn(properties, parameter.name)) throw new Error(`Duplicate parameter '${parameter.name}'.`);
+        const namedType = parameter.ref && Object.hasOwn(types, parameter.ref) ? types[parameter.ref] : null;
+        if (parameter.ref && !namedType) throw new Error(`Unknown parameter type '${parameter.ref}' for '${parameter.name}'.`);
 
-    if (type === "function") {
-        throw new Error(`Function parameter '${parameter.name}' cannot be entered in a form.`);
-    }
+        const type = parameter.type || namedType.type;
+        if (["object", "array", "any", "function"].includes(type)) {
+            throw new Error(`Parameter '${parameter.name}' has unsupported type '${type}' for x-schema.`);
+        }
+        if (!["string", "number", "integer", "boolean", "date"].includes(type)) {
+            throw new Error(`Parameter '${parameter.name}' has unknown type '${type}'.`);
+        }
 
-    const enums = parameter.enum || [];
-    const required = parameter.required === true;
-    let editor = "text";
-    let domain = null;
+        const constraints = parameter.schema ?? namedType?.schema ?? {};
+        if (constraints === false) throw new Error(`Parameter '${parameter.name}' has an unsatisfiable schema.`);
+        if (constraints !== true && (constraints === null || typeof constraints !== "object" || Array.isArray(constraints))) {
+            throw new Error(`Parameter '${parameter.name}' has an invalid schema.`);
+        }
+        const definition = constraints === true ? {} : { ...constraints };
+        const unsupported = Object.keys(definition).filter(key => !supported.has(key));
+        if (unsupported.length) {
+            throw new Error(`Parameter '${parameter.name}' uses unsupported schema keyword '${unsupported[0]}'.`);
+        }
 
-    if (enums.length) {
-        editor = "select";
-        domain = enums.map(value => ({ value, label: value }));
-    } else if (type === "boolean") {
-        editor = "select";
-        domain = [
-            { value: "true", label: "True" },
-            { value: "false", label: "False" }
-        ];
-    } else if (type === "number" || type === "integer") {
-        editor = "number";
-    } else if (type === "object" || type === "array" || type === "any") {
-        editor = "textarea";
-    } else if (type === "string" && /password|passphrase/i.test(parameter.name)) {
-        editor = "password";
-    }
-
-    // Initial arguments override contract defaults.
-    const value = Object.hasOwn(initialArgs, parameter.name)
-        ? initialArgs[parameter.name]
-        : parameter.default;
-
-    let input = "";
-    if (value !== undefined && value !== null) {
-        input = ["object", "array", "any"].includes(type)
-            ? JSON.stringify(value)
-            : String(value);
-    } else if (type === "any" && value === null) {
-        input = "null";
-    }
-
-    if (type === "boolean" && (input === "1" || input === "0")) {
-        input = input === "1" ? "true" : "false";
-    }
-
-    return {
-        name: parameter.name,
-        label: parameter.label || parameter.name,
-        description: parameter.description || "",
-        type,
-        schema,
-        required,
-        enumValues: enums,
-        editor,
-        domain,
-        input
-    };
-}
-
-
-function parseParameter(parameter) {
-    const raw = parameter.input;
-    if (raw === "" || raw === null || raw === undefined) {
-        if (parameter.required) throw new Error(`'${parameter.name}' is required.`);
-        return undefined;
-    }
-
-    let value;
-    switch (parameter.type) {
-        case "string":
-        case "date":
-            value = String(raw);
-            break;
-        case "number":
-        case "integer":
-            value = Number(raw);
-            if (!Number.isFinite(value) ||
-                (parameter.type === "integer" && !Number.isInteger(value))) {
-                throw new Error(`'${parameter.name}' must be a valid ${parameter.type}.`);
+        const schemaType = type === "date" ? "string" : type;
+        if (definition.type !== undefined && definition.type !== schemaType) {
+            throw new Error(`Parameter '${parameter.name}' schema type '${definition.type}' is incompatible with '${type}'.`);
+        }
+        if (definition.format !== undefined && definition.format !== "date") {
+            throw new Error(`Parameter '${parameter.name}' uses unsupported format '${definition.format}'.`);
+        }
+        for (const key of ["title", "description"]) {
+            if (definition[key] !== undefined && typeof definition[key] !== "string") {
+                throw new Error(`Parameter '${parameter.name}' has an invalid '${key}' annotation.`);
             }
-            break;
-        case "boolean":
-            if (![true, false, "true", "false"].includes(raw)) {
-                throw new Error(`'${parameter.name}' must be true or false.`);
+        }
+        if (definition.writeOnly !== undefined && typeof definition.writeOnly !== "boolean") {
+            throw new Error(`Parameter '${parameter.name}' has an invalid 'writeOnly' constraint.`);
+        }
+        for (const key of ["minLength", "maxLength"]) {
+            if (definition[key] !== undefined && (!Number.isInteger(definition[key]) || definition[key] < 0)) {
+                throw new Error(`Parameter '${parameter.name}' has an invalid '${key}' constraint.`);
             }
-            value = raw === true || raw === "true";
-            break;
-        case "array":
-        case "object":
-        case "any":
-            try {
-                value = typeof raw === "string" ? JSON.parse(raw) : raw;
-            } catch {
-                throw new Error(`'${parameter.name}' must contain valid JSON.`);
+        }
+        for (const key of ["minimum", "maximum"]) {
+            if (definition[key] !== undefined && (typeof definition[key] !== "number" || !Number.isFinite(definition[key]))) {
+                throw new Error(`Parameter '${parameter.name}' has an invalid '${key}' constraint.`);
             }
-            if (parameter.type === "array" && !Array.isArray(value)) {
-                throw new Error(`'${parameter.name}' must be a JSON array.`);
-            }
-            if (parameter.type === "object" &&
-                (value === null || typeof value !== "object" || Array.isArray(value))) {
-                throw new Error(`'${parameter.name}' must be a JSON object.`);
-            }
-            break;
-        default:
-            throw new Error(`Unsupported parameter type '${parameter.type}'.`);
+        }
+        if (definition.pattern !== undefined) {
+            if (typeof definition.pattern !== "string") throw new Error(`Parameter '${parameter.name}' has an invalid 'pattern' constraint.`);
+            try { new RegExp(definition.pattern); }
+            catch { throw new Error(`Parameter '${parameter.name}' has an invalid 'pattern' constraint.`); }
+        }
+        const stringKeywords = ["format", "writeOnly", "minLength", "maxLength", "pattern"];
+        const numberKeywords = ["minimum", "maximum"];
+        const incompatible = schemaType === "string"
+            ? numberKeywords.find(key => Object.hasOwn(definition, key))
+            : stringKeywords.find(key => Object.hasOwn(definition, key));
+        if (incompatible) {
+            throw new Error(`Parameter '${parameter.name}' uses schema keyword '${incompatible}' with incompatible type '${type}'.`);
+        }
+        if (parameter.enum !== undefined && definition.enum !== undefined &&
+            JSON.stringify(parameter.enum) !== JSON.stringify(definition.enum)) {
+            throw new Error(`Parameter '${parameter.name}' declares incompatible enum constraints.`);
+        }
+
+        definition.type = schemaType;
+        if (type === "date") definition.format = "date";
+        if (parameter.label !== undefined) definition.title = parameter.label;
+        if (parameter.description !== undefined) definition.description = parameter.description;
+        else if (namedType?.description !== undefined && definition.description === undefined) definition.description = namedType.description;
+        if (Object.hasOwn(parameter, "default")) definition.default = parameter.default;
+        if (parameter.enum !== undefined) definition.enum = parameter.enum;
+        if (definition.enum !== undefined && (!Array.isArray(definition.enum) || definition.enum.length === 0 ||
+            new Set(definition.enum).size !== definition.enum.length ||
+            !definition.enum.every(value => typeof value === "string" && !/[|=]/.test(value)))) {
+            throw new Error(`Parameter '${parameter.name}' has an enum unsupported by x-schema.`);
+        }
+        if (schemaType === "string" && /password|passphrase/i.test(parameter.name)) definition.writeOnly = true;
+
+        properties[parameter.name] = definition;
+        if (parameter.required === true) required.push(parameter.name);
     }
 
-    if (parameter.enumValues.length && !parameter.enumValues.includes(value)) {
-        throw new Error(`'${parameter.name}' must be one of: ${parameter.enumValues.join(", ")}.`);
-    }
-    return value;
+    return { type: "object", properties, required };
 }
 
 function formatResult(value) {
@@ -169,7 +146,7 @@ export default {
             type:   { type: "string", default: "command", state: true, query: true },
             id:     { type: "string", default: "", state: true, query: true },
             method: { type: "string", default: "execute", state: true, query: true },
-            args:   { type: "string", default: "{}", state: true, query: true, queryParser: "json" }
+            args:   { type: "object", default: {}, state: true, query: true, queryParser: "json" }
         }
     },
     meta: {
@@ -188,20 +165,8 @@ export default {
             <p x-if="state.error" class="error" x-text="state.error"></p>
 
             <x-form x-if="state.ready" command="submit">
-                <x-datafields x-if="state.parameters.length > 0">
-                    <x-datafield
-                        x-for="param in state.parameters"
-                        x-key="name"
-                        x-attr:type="param.editor"
-                        x-attr:label="param.label"
-                        x-attr:description="param.description"
-                        x-attr:required="param.required"
-                        x-attr:disabled="state.running"
-                        x-prop:domain="param.domain"
-                        x-model="param.input">
-                    </x-datafield>
-                </x-datafields>
-                <p x-if="state.parameters.length == 0">This operation takes no arguments.</p>
+                <x-schema ref="arguments" x-prop:schema="state.schema" x-prop:value="state.args"
+                          x-on:change="argumentsChanged"></x-schema>
 
                 <x-button slot="footer" label="Execute" command="submit" class="submit"
                           x-attr:disabled="state.running"></x-button>
@@ -220,7 +185,7 @@ export default {
     state: {
         title: "Invoke",
         description: "",
-        parameters: [],
+        schema: null,
         loading: true,
         ready: false,
         running: false,
@@ -230,18 +195,15 @@ export default {
         resultText: "",
         error: ""
     },
-    controller({ state, loader, config, page }) {
+    controller({ state, loader, page }) {
         let invocation = null;
         let alive = true;
-        let JsonValidator = null;
 
         return {
             
             async load() {
-                // load
-                debugger
                 try {
-                    const initialArgs = JSON.parse(state.args);
+                    const initialArgs = state.args;
 
                     if (!initialArgs || typeof initialArgs !== "object" ||
                         Array.isArray(initialArgs)) {
@@ -257,9 +219,11 @@ export default {
                     state.title = invocation.label;
                     state.description = invocation.description;
 
-                    state.parameters = invocation.parameters.map(parameter =>
-                        createParameter(parameter, invocation.types, initialArgs)
-                    );
+                    state.schema = methodToJsonSchema({ parameters: invocation.parameters }, invocation.types);
+                    const defaults = Object.entries(state.schema.properties)
+                        .filter(([, definition]) => Object.hasOwn(definition, "default"))
+                        .map(([name, definition]) => [name, structuredClone(definition.default)]);
+                    state.args = { ...Object.fromEntries(defaults), ...initialArgs };
 
                     page.label = invocation.label;
                     page.description = invocation.description;
@@ -271,8 +235,7 @@ export default {
                 } finally {
                     state.loading = false;
                 }
-            }
-,
+            },
 
             mount() {
                 // mount
@@ -285,33 +248,28 @@ export default {
                 invocation = null;
             },
 
+            argumentsChanged({ event }) {
+                state.args = event.detail.newValue;
+            },
+
             async submit() {
                 if (!invocation || !state.ready || state.running) return;
-                state.running = true;
                 state.error = "";
                 state.completed = false;
                 state.hasResult = false;
 
+                const editor = page.host?.querySelector('x-schema[ref="arguments"]');
+                const errors = editor?.validate(true) || [
+                    { label: "Editor", message: "Schema editor is not available." }
+                ];
+                if (errors.length) {
+                    state.error = errors.map(error => `${error.label || error.path || "Field"}: ${error.message}`).join("; ");
+                    return;
+                }
+
+                state.running = true;
                 try {
-                    const args = state.parameters.map(parseParameter);
-                    while (args.length && args[args.length - 1] === undefined) args.pop();
-
-                    // Enforce optional JSON Schema constraints from the command contract.
-                    const withSchema = state.parameters.filter(p => p.schema !== undefined);
-                    if (withSchema.length && !JsonValidator) {
-                        JsonValidator = await loader.load(
-                            `esm:${config.xshell.assets.path}/services/json-validator.js`);
-                    }
-                    const validator = JsonValidator ? new JsonValidator() : null;
-                    for (let index = 0; index < state.parameters.length; index++) {
-                        const parameter = state.parameters[index];
-                        const value = args[index];
-                        if (value === undefined || parameter.schema === undefined || parameter.schema === true) continue;
-                        if (parameter.schema === false || !validator.validate(value, parameter.schema).valid) {
-                            throw new Error(`'${parameter.name}' does not satisfy its schema.`);
-                        }
-                    }
-
+                    const args = invocation.parameters.map(parameter => state.args[parameter.name]);
                     const result = await invocation.invoke(args);
                     if (!alive) return;
                     if (state.isDialog) {

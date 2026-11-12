@@ -35,7 +35,7 @@
              inputType = "select";
              domain = definition.enum.map(value => `${value}=${value}`).join("|");
          } else if (type === "string") {
-             inputType = definition.format === "date" ? "date" : "text";
+             inputType = definition.writeOnly === true ? "password" : definition.format === "date" ? "date" : "text";
          } else if (type === "number" || type === "integer") {
              inputType = "number";
          } else if (type === "boolean") {
