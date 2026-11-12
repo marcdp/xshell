@@ -150,6 +150,7 @@ async function resolveInvocation({ type, id, method }, loader, services, contrac
 
         // Return metadata plus a factory that creates a fresh Command for each execution.
         return {
+            type: "command",
             label: contract.label || id,
             description: contract.description || contract.execute.description || "",
             parameters: contract.execute.parameters || [],
@@ -180,6 +181,7 @@ async function resolveInvocation({ type, id, method }, loader, services, contrac
 
         // Return Service invocation metadata and execution adapter.
         return {
+            type: "service",
             label: `${contract.label || id} - ${definition.label || method}`,
             description: definition.description || contract.description || "",
             parameters: definition.parameters || [],
@@ -211,10 +213,17 @@ export default {
         description: "Lorem ipsum dolor sit amet."
     },
 
-    // Styles invocation errors and result presentation.
+    // Styles invocation errors, task output and result presentation.
     style: `
         .description { margin-bottom:1.25em; }
         .error { color:var(--x-datafield-error-color); white-space:pre-wrap; }
+        .task { margin-top:1.25em; }
+        .task x-progress { margin-top:.75em; }
+        .output { margin-top:1em; }
+        .output-entry { display:grid; grid-template-columns:4.5em minmax(0, 1fr); gap:.75em; align-items:start; }
+        .output-entry strong { font-family:monospace; font-size:.85em; text-transform:uppercase; }
+        .output-entry.stderr strong, .output-entry.stderr pre { color:var(--x-datafield-error-color); }
+        .output-entry pre { margin:0; white-space:pre-wrap; overflow-wrap:anywhere; }
         .result { margin-top:1.25em; }
         .result pre { white-space:pre-wrap; overflow-wrap:anywhere; }
     `,
@@ -228,14 +237,34 @@ export default {
             <x-schema ref="arguments" x-prop:schema="state.schema" x-prop:value="state.args" x-on:change="argumentsChanged"></x-schema>
 
             <x-button slot="footer" label="Execute" command="submit" class="submit" x-attr:disabled="state.running"></x-button>
-            <x-button slot="footer" x-if="state.isDialog" label="Cancel" command="cancel" class="cancel" x-attr:disabled="state.running"></x-button>
+            <x-button slot="footer" x-if="state.isDialog || state.running" label="Cancel" command="cancel" class="cancel"></x-button>
         </x-form>
 
         <x-button x-if="state.isDialog && !state.ready" label="Close" command="cancel"></x-button>
-        <p x-if="state.running">Executing...</p>
+
+        <section x-if="state.taskStatus" class="task">
+            <x-notice
+                x-attr:type="state.taskNoticeType"
+                x-attr:label="state.taskNoticeLabel"
+                x-attr:message="state.taskError ? state.taskError.message : state.taskDescription">
+            </x-notice>
+
+            <x-progress
+                x-if="state.running"
+                x-attr:unknown="state.taskProgress ? false : true"
+                x-attr:value="state.taskProgress.value"
+                x-attr:max="state.taskProgress.max">
+            </x-progress>
+
+            <div x-if="state.taskOutput.length > 0" class="output">
+                <div x-for="entry in state.taskOutput" x-attr:class="'output-entry ' + entry.channel">
+                    <strong x-text="entry.channel"></strong>
+                    <pre x-text="entry.text"></pre>
+                </div>
+            </div>
+        </section>
 
         <div x-if="state.completed && !state.isDialog" class="result">
-            <strong>Completed</strong>
             <x-object x-if="state.hasResult" x-prop:value="state.result" expanded></x-object>
         </div>
     `,
@@ -252,14 +281,69 @@ export default {
         completed: false,
         hasResult: false,
         result: undefined,
-        error: ""
+        error: "",
+        taskStatus: "",
+        taskDescription: "",
+        taskProgress: null,
+        taskOutput: [],
+        taskError: null,
+        taskNoticeType: "",
+        taskNoticeLabel: ""
     },
 
     // Coordinates invocation resolution, argument editing, validation and execution.
-    controller({ state, loader, services, contracts, page }) {
+    controller({ state, loader, services, contracts, page, tasks }) {
         // Store the resolved invocation adapter and Page lifetime state privately.
         let invocation = null;
+        let currentTask = null;
+        let taskListener = null;
+        let outputRevision = 0;
         let alive = true;
+
+        // Stop observing the previous invocation Task.
+        const detachTask = () => {
+            if (currentTask && taskListener) currentTask.removeEventListener("change", taskListener);
+            taskListener = null;
+        };
+
+        // Project a Task handle into plain Page state and retrieve its ordered output.
+        const refreshTask = async task => {
+            if (!alive || task !== currentTask) return;
+
+            const revision = ++outputRevision;
+            state.taskStatus = task.status;
+            state.taskDescription = task.description;
+            state.taskProgress = task.progress ? { ...task.progress } : null;
+            state.taskError = task.error ? { ...task.error } : null;
+            state.running = task.status === "pending" || task.status === "running";
+            state.completed = task.status === "finished";
+            state.taskNoticeType = task.status === "finished" ? "success" :
+                task.status === "error" ? "error" : task.status === "canceled" ? "warning" : "working";
+            state.taskNoticeLabel = task.status === "finished" ? "Completed" :
+                task.status === "error" ? "Failed" : task.status === "canceled" ? "Canceled" : "Executing";
+
+            const output = [];
+            let cursor;
+            while (true) {
+                const outputPage = await task.getOutput({ cursor, limit: 1000 });
+                output.push(...outputPage.entries.map(entry => ({ ...entry })));
+                cursor = outputPage.nextCursor;
+                if (outputPage.entries.length < 1000) break;
+            }
+
+            if (!alive || task !== currentTask || revision !== outputRevision) return;
+            state.taskOutput = output;
+            page.invalidate?.();
+        };
+
+        // Observe one Task until it reaches a terminal state or is replaced.
+        const attachTask = task => {
+            detachTask();
+            currentTask = task;
+            taskListener = () => { void refreshTask(task); };
+            task.addEventListener("change", taskListener);
+            void refreshTask(task);
+        };
 
         return {
             // Resolves invocation metadata and prepares the generated arguments editor.
@@ -317,6 +401,8 @@ export default {
             // Marks the controller inactive and releases the invocation adapter.
             unload() {
                 alive = false;
+                detachTask();
+                currentTask = null;
                 invocation = null;
             },
 
@@ -326,7 +412,7 @@ export default {
                 state.preview = structuredClone(event.detail.newValue);
             },
 
-            // Validates arguments, creates the Command instance and executes the invocation.
+            // Validates arguments and executes Commands through the Tasks service.
             async submit() {
                 // Ignore invalid or concurrent submission attempts.
                 if (!invocation || !state.ready || state.running) return;
@@ -336,6 +422,13 @@ export default {
                 state.completed = false;
                 state.hasResult = false;
                 state.result = undefined;
+                state.taskStatus = "";
+                state.taskDescription = "";
+                state.taskProgress = null;
+                state.taskOutput = [];
+                state.taskError = null;
+                state.taskNoticeType = "";
+                state.taskNoticeLabel = "";
 
                 // Validate the generated argument editor before execution.
                 const editor = page.host?.querySelector('x-schema[ref="arguments"]');
@@ -347,40 +440,59 @@ export default {
                     return;
                 }
 
-                // Mark the invocation as actively executing.
-                state.running = true;
+                // Convert named argument state into the positional method argument list.
+                const args = invocation.parameters.map(parameter => state.args[parameter.name]);
 
-                try {
-                    // Convert named argument state into the positional method argument list.
-                    const args = invocation.parameters.map(parameter => state.args[parameter.name]);
-
-                    // Execute the invocation; Commands create a fresh instance at this point.
-                    const result = await invocation.invoke(args);
-
-                    // Ignore results arriving after the Page has been unloaded.
-                    if (!alive) return;
-
-                    // Close dialogs with the returned value.
-                    if (state.isDialog) {
-                        await page.close(result);
-                    } else {
-                        // Store successful non-dialog results for presentation.
+                // Preserve direct invocation semantics for registered shared Services.
+                if (invocation.type === "service") {
+                    state.running = true;
+                    try {
+                        const result = await invocation.invoke(args);
+                        if (!alive) return;
                         state.completed = true;
                         state.hasResult = result !== undefined;
                         state.result = result;
+                        if (state.isDialog) await page.close(result);
+                    } catch (error) {
+                        if (alive) state.error = error?.message || String(error);
+                    } finally {
+                        if (alive) state.running = false;
                     }
-                } catch (error) {
-                    // Surface execution failures while the Page remains active.
-                    if (alive) state.error = error?.message || String(error);
-                } finally {
-                    // Clear the running state after completion or failure.
-                    if (alive) state.running = false;
+                    return;
                 }
+
+                // Create a registered Task whose execution context constructs this Command instance.
+                const task = tasks.run({
+                    title: invocation.label,
+                    description: invocation.description,
+                    handler: taskContext => invocation.invoke(args, { task: taskContext })
+                });
+                attachTask(task);
+                await task.wait();
+                await refreshTask(task);
+
+                // Stop observing terminal Tasks after their final projection.
+                if (task === currentTask) detachTask();
+                if (!alive || task !== currentTask || task.status !== "finished") return;
+
+                const result = await task.getResult();
+                if (!alive || task !== currentTask) return;
+                state.hasResult = result !== undefined;
+                state.result = result;
+
+                // Close successful dialog invocations with the Command result.
+                if (state.isDialog) await page.close(result);
             },
 
-            // Closes dialog invocations when no execution is currently running.
-            cancel() {
-                if (state.isDialog && !state.running) page.close(null);
+            // Cancels an active Task, or closes an idle dialog invocation.
+            async cancel() {
+                if (currentTask && state.running) {
+                    await currentTask.cancel();
+                    await currentTask.wait();
+                    await refreshTask(currentTask);
+                } else if (state.isDialog) {
+                    await page.close(null);
+                }
             }
         };
     }

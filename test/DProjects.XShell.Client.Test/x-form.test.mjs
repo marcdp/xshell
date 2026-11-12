@@ -5,6 +5,7 @@ import datafieldDefinition from "../../src/DProjects.XShell/Resources/DProjects.
 import formDefinition from "../../src/DProjects.XShell/Resources/DProjects.XShell/x/components/x-form.js";
 import schemaDefinition from "../../src/DProjects.XShell/Resources/DProjects.XShell/x/components/x-schema.js";
 import invokeDefinition from "../../src/DProjects.XShell/Resources/DProjects.XShell/x/pages/invoke.js";
+import Tasks from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/tasks.js";
 
 globalThis.CSSStyleSheet = class { replaceSync() {} };
 globalThis.CustomEvent = class {
@@ -162,7 +163,8 @@ test("x-schema renders write-only strings as password fields", async () => {
         state,
         events: { on() {} },
         host: { shadowRoot: { querySelector() { return null; } }, dispatchEvent() {} },
-        loader: { load() { throw new Error("Unexpected load"); } }
+        loader: { load() { throw new Error("Unexpected load"); } },
+        commands: { enqueue() {} }
     });
 
     await controller.refresh();
@@ -173,11 +175,18 @@ test("x-schema renders write-only strings as password fields", async () => {
 function createInvoke(contract, initialArgs = {}, editorErrors = [], options = {}) {
     const calls = [];
     const closed = [];
+    const contexts = [];
+    let constructions = 0;
     class Command {
         static contract = contract;
+        constructor(context) {
+            constructions++;
+            contexts.push(context);
+            this.context = context;
+        }
         execute(...args) {
             calls.push(args);
-            return options.execute ? options.execute(...args) : "done";
+            return options.execute ? options.execute.call(this, ...args) : "done";
         }
     }
     const editor = { validate: detail => {
@@ -186,11 +195,13 @@ function createInvoke(contract, initialArgs = {}, editorErrors = [], options = {
     } };
     const page = {
         host: { layout: options.layout || "page", querySelector: selector => selector === 'x-schema[ref="arguments"]' ? editor : null },
-        close(value) { closed.push(value); }
+        close(value) { closed.push(value); },
+        invalidate() {}
     };
     const state = { ...structuredClone(invokeDefinition.state), type: "command", id: "test", method: "execute", args: initialArgs };
-    const controller = invokeDefinition.controller({ state, page, loader: { load: async () => Command } });
-    return { calls, closed, controller, page, state };
+    const tasks = options.tasks || new Tasks({ bus: null });
+    const controller = invokeDefinition.controller({ state, page, tasks, loader: { load: async () => Command } });
+    return { calls, closed, contexts, controller, page, state, tasks, get constructions() { return constructions; } };
 }
 
 test("invoke converts command parameters to x-schema and applies defaults", async () => {
@@ -207,6 +218,7 @@ test("invoke converts command parameters to x-schema and applies defaults", asyn
 
     await invoke.controller.load();
 
+    assert.equal(invoke.constructions, 0);
     assert.deepEqual(invoke.state.schema, {
         type: "object",
         properties: {
@@ -232,19 +244,26 @@ test("invoke validates x-schema before executing and preserves positional argume
 
     await invoke.controller.submit();
     assert.deepEqual(invoke.calls, []);
+    assert.equal(invoke.constructions, 0);
+    assert.equal(invoke.tasks.list().length, 0);
     assert.equal(invoke.state.error, "Name: Required");
 
     errors.length = 0;
     await invoke.controller.submit();
     assert.deepEqual(invoke.calls, [["Ada", 2, undefined]]);
+    assert.equal(invoke.constructions, 1);
     assert.equal(invoke.state.completed, true);
-    assert.equal(invoke.state.resultText, '"done"');
+    assert.equal(invoke.state.result, "done");
+
+    await invoke.controller.submit();
+    assert.equal(invoke.constructions, 2);
+    assert.notEqual(invoke.contexts[0], invoke.contexts[1]);
 });
 
 test("invoke rejects unsupported and incompatible parameter schemas clearly", async () => {
-    const unsupportedType = createInvoke({ execute: { parameters: [{ name: "options", type: "object" }] } });
+    const unsupportedType = createInvoke({ execute: { parameters: [{ name: "options", type: "array" }] } });
     await unsupportedType.controller.load();
-    assert.match(unsupportedType.state.error, /unsupported type 'object'/);
+    assert.match(unsupportedType.state.error, /unsupported type 'array'/);
     assert.equal(unsupportedType.state.ready, false);
 
     const unsupportedConstraint = createInvoke({ execute: { parameters: [
@@ -264,7 +283,9 @@ test("invoke displays execution errors and closes dialogs with successful result
     });
     await failing.controller.load();
     await failing.controller.submit();
-    assert.equal(failing.state.error, "Command failed");
+    assert.equal(failing.state.error, "");
+    assert.equal(failing.state.taskStatus, "error");
+    assert.equal(failing.state.taskError.message, "Command failed");
     assert.equal(failing.state.running, false);
 
     const dialog = createInvoke({ execute: { parameters: [] } }, {}, [], { layout: "dialog" });
@@ -272,5 +293,169 @@ test("invoke displays execution errors and closes dialogs with successful result
     dialog.controller.mount();
     await dialog.controller.submit();
     assert.deepEqual(dialog.closed, ["done"]);
-    assert.equal(dialog.state.completed, false);
+    assert.equal(dialog.state.taskStatus, "finished");
+});
+
+test("invoke projects Command task reporting and result in output order", async () => {
+    const invoke = createInvoke({
+        label: "Reporting command",
+        description: "Reports execution",
+        execute: { parameters: [{ name: "value", type: "integer" }] }
+    }, { value: 2 }, [], {
+        execute(value) {
+            const task = this.context.task;
+            task.setDescription("Working");
+            task.setProgress(1, value);
+            task.out("first");
+            task.err("second");
+            task.setProgress(value, value);
+            return 123;
+        }
+    });
+
+    await invoke.controller.load();
+    await invoke.controller.submit();
+
+    const task = invoke.tasks.list()[0];
+    assert.equal(invoke.contexts[0].task.signal, task._signal);
+    assert.equal(task.description, "Working");
+    assert.deepEqual(task.progress, { value: 2, max: 2 });
+    assert.deepEqual((await task.getOutput()).entries.map(({ channel, text }) => ({ channel, text })), [
+        { channel: "stdout", text: "first" },
+        { channel: "stderr", text: "second" }
+    ]);
+    assert.equal(task.status, "finished");
+    assert.equal(await task.getResult(), 123);
+    assert.equal(invoke.state.taskStatus, "finished");
+    assert.deepEqual(invoke.state.taskOutput.map(({ channel, text }) => ({ channel, text })), [
+        { channel: "stdout", text: "first" },
+        { channel: "stderr", text: "second" }
+    ]);
+    assert.equal(invoke.state.result, 123);
+});
+
+test("invoke refreshes description, progress and output while a Command is running", async () => {
+    let started, release;
+    const running = new Promise(resolve => { started = resolve; });
+    const blocked = new Promise(resolve => { release = resolve; });
+    const invoke = createInvoke({ execute: { parameters: [] } }, {}, [], {
+        async execute() {
+            this.context.task.setDescription("Halfway");
+            this.context.task.setProgress(1, 2);
+            this.context.task.out("live output");
+            started();
+            await blocked;
+            return "done";
+        }
+    });
+
+    await invoke.controller.load();
+    const submission = invoke.controller.submit();
+    await running;
+    await new Promise(resolve => setImmediate(resolve));
+
+    assert.equal(invoke.state.running, true);
+    assert.equal(invoke.state.taskDescription, "Halfway");
+    assert.deepEqual(invoke.state.taskProgress, { value: 1, max: 2 });
+    assert.deepEqual(invoke.state.taskOutput.map(({ channel, text }) => ({ channel, text })), [
+        { channel: "stdout", text: "live output" }
+    ]);
+
+    release();
+    await submission;
+});
+
+test("invoke cancels a running Command through its task signal", async () => {
+    let started;
+    const running = new Promise(resolve => { started = resolve; });
+    const invoke = createInvoke({ execute: { parameters: [] } }, {}, [], {
+        async execute() {
+            started();
+            await new Promise((resolve, reject) => {
+                this.context.task.signal.addEventListener("abort", () => reject(this.context.task.signal.reason), { once: true });
+            });
+            return "unreachable";
+        }
+    });
+
+    await invoke.controller.load();
+    const submission = invoke.controller.submit();
+    await running;
+    await invoke.controller.cancel();
+    await submission;
+
+    assert.equal(invoke.tasks.list()[0].status, "canceled");
+    assert.equal(invoke.state.taskStatus, "canceled");
+    assert.equal(invoke.state.completed, false);
+    assert.equal(invoke.state.hasResult, false);
+});
+
+test("invoke removes its Task change listener when the Page unloads", async () => {
+    const baseTasks = new Tasks({ bus: null });
+    let added = 0, removed = 0, started;
+    const running = new Promise(resolve => { started = resolve; });
+    const tasks = {
+        run(options) {
+            const task = baseTasks.run(options);
+            const addEventListener = task.addEventListener.bind(task);
+            const removeEventListener = task.removeEventListener.bind(task);
+            task.addEventListener = (...args) => { added++; return addEventListener(...args); };
+            task.removeEventListener = (...args) => { removed++; return removeEventListener(...args); };
+            return task;
+        },
+        list: () => baseTasks.list()
+    };
+    const invoke = createInvoke({ execute: { parameters: [] } }, {}, [], {
+        tasks,
+        async execute() {
+            started();
+            await new Promise((resolve, reject) => {
+                this.context.task.signal.addEventListener("abort", () => reject(this.context.task.signal.reason), { once: true });
+            });
+        }
+    });
+
+    await invoke.controller.load();
+    const submission = invoke.controller.submit();
+    await running;
+    invoke.controller.unload();
+
+    assert.equal(added, 1);
+    assert.equal(removed, 1);
+
+    await baseTasks.list()[0].cancel();
+    await submission;
+});
+
+test("invoke preserves shared Service invocation semantics", async () => {
+    const calls = [];
+    const instance = { run(value) { calls.push(value); return value * 2; } };
+    const services = {
+        getServiceInfo: id => id === "math" ? { contractId: "math-contract" } : null,
+        resolve: id => id === "math" ? instance : null
+    };
+    const contracts = {
+        getContractById: id => id === "math-contract" ? {
+            label: "Math",
+            methods: { run: { parameters: [{ name: "value", type: "integer" }] } }
+        } : null
+    };
+    const editor = { validate: () => [] };
+    const page = {
+        host: { layout: "page", querySelector: () => editor },
+        invalidate() {}
+    };
+    const state = {
+        ...structuredClone(invokeDefinition.state),
+        type: "service", id: "math", method: "run", args: { value: 4 }
+    };
+    const controller = invokeDefinition.controller({ state, page, services, contracts });
+
+    await controller.load();
+    await controller.submit();
+
+    assert.deepEqual(calls, [4]);
+    assert.equal(state.result, 8);
+    assert.equal(state.completed, true);
+    assert.equal(state.taskStatus, "");
 });

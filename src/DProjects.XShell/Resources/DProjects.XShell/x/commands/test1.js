@@ -11,26 +11,34 @@ export default {
                         maximum: 10
                     }
                 }
-            ]
+            ],
+            returns: {
+                type: "string",
+                format: "blob-url",
+                description: "Browser Blob URL containing the generated file."
+            }
         }
     },
 
-    controller({ context }) {
-        debugger;
+    controller({ task }) {
         return {
             async execute(value) {
+                task.setDescription("Starting execution");
+                task.setProgress(0, value);
 
-                debugger;
-                context.setDescription("starting execution");
+                for (let i = 1; i <= value; i++) {
+                    task.signal.throwIfAborted();
+                    task.setDescription(`Executing step ${i} of ${value}`);
+                    task.out(`Executing step ${i} of ${value}`);
 
-                for (let i = 0; i < value; i++) {
-                    context.setProgress(i, value);
-                    context.out(`Executing step ${i} of ${value}`);
-
-                    await new Promise(resolve => setTimeout(resolve, 1000));
+                    await new Promise(resolve => setTimeout(resolve, 250));
+                    task.setProgress(i, value);
                 }
 
-                return 123;
+                task.setDescription("Completed");
+
+                const blob = new Blob(["hello"], { type: "text/plain" });
+                return URL.createObjectURL(blob);
             }
         };
     }

@@ -67,9 +67,10 @@ export default class LoaderCommandJs {
             constructor(invocationContext = {}) {
                 const servicesProvider = new Proxy({}, {
                     get(target, prop) {
-                        debugger
                         if (prop === "context") {
                             return invocationContext;
+                        } else if (prop === "task") {
+                            return invocationContext.task;
                         } else if (prop === "definition") {
                             return definition;
                         } else if (prop === "moduleConfig") {
