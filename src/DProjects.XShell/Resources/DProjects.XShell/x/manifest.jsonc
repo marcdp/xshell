@@ -91,7 +91,6 @@
                 "markdown": "x-markdown"
             },
             "dialog": {
-                "command": "/pages/dialog-command.js",
                 "confirm": "/pages/dialog-confirm.js",
                 "message": "/pages/dialog-message.js",
                 "prompt": "/pages/dialog-prompt.js",

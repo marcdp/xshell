@@ -13,20 +13,7 @@ export default class Dialog {
         this._i18n = i18n;
     }
 
-    // methods
-    async command({ title, Command, commandContext, values }) {
-        const href = this._config.xshell.ui.dialog.command;
-        return await this._navigation.navigate({ 
-            href, 
-            open:"dialog", 
-            context: {
-                title,
-                Command,
-                commandContext,
-                values
-            } 
-        });
-    }
+    // methods    
     async confirm({ title, message, variant }) {
         const href = this._config.xshell.ui.dialog.confirm;
         return await this._navigation.navigate({ 

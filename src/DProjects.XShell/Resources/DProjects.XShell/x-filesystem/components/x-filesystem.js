@@ -378,10 +378,20 @@ export default {
             },
             async customCommand(command, path) {
                 // handle custom command
-                const Command = await loader.load("command:" + command);
-                // todo ...
-                debugger;
-                await dialog.command({title: "Custom Command", Command: command, commandContext: { path }, values: { path }});
+                return await navigation.navigate({ 
+                    href: "page:x:/pages/invoke.js", 
+                    page: getPage(),
+                    open:"stack",
+                    params: {
+                        type: "command",
+                        id: command,
+                        args: JSON.stringify({
+                            src: state.src,
+                            path: path, 
+                            password: "123456"
+                        }),
+                    } 
+                });
             },
 
 

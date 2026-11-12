@@ -103,6 +103,7 @@
       "additionalProperties": false,
       "properties": {
         "name": { "type": "string", "minLength": 1 },
+        "label": { "type": "string" },
         "description": { "type": "string" },
         "type": { "$ref": "#/$defs/valueType" },
         "ref": { "$ref": "#/$defs/typeReference" },

@@ -251,7 +251,8 @@ export default class Navigation {
             replace = false
         }) {
         //navigate
-        const hrefAbsolute = this.buildUrl({ href: this._resolveCanonicalHref(href, page), params, nav, page });
+        const hrefResolved = this._resolveCanonicalHref(href, page);
+        const hrefAbsolute = this.buildUrl({ href: hrefResolved, params, nav, page });
         // open
         if (open == "auto") {
             // auto

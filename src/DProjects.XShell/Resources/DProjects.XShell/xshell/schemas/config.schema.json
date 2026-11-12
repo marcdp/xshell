@@ -227,7 +227,6 @@
     "xshellUiDialog": {
       "type": "object",
       "properties": {
-        "command": {"type": ["string", "null"], "description": "Page used for command dialogs."},
         "confirm": {"type": ["string", "null"], "description": "Page used for confirmation dialogs."},
         "message": {"type": ["string", "null"], "description": "Page used for message dialogs."},
         "prompt": {"type": ["string", "null"], "description": "Page used for prompt dialogs."},

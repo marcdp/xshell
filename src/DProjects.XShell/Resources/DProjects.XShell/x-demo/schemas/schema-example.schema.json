@@ -1,0 +1,28 @@
+
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Task",
+  "type": "object",
+  "properties": {
+    "title": {
+      "type": "string",
+      "title": "Title",
+      "minLength": 2
+    },
+    "priority": {
+      "type": "string",
+      "title": "Priority",
+      "enum": ["low", "normal", "high"]
+    },
+    "estimate": {
+      "type": "integer",
+      "title": "Estimate (hours)",
+      "minimum": 0
+    },
+    "done": {
+      "type": "boolean",
+      "title": "Completed"
+    }
+  },
+  "required": ["title", "priority"]
+}

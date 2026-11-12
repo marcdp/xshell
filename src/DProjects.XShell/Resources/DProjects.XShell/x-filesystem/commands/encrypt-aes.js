@@ -5,16 +5,17 @@ export default {
         label: "Encrypt (AES)",
         description: "Encrypt the selected file using AES.",
         execute: {
-            description: "Encrypt the selected file using AES.",
             parameters: [
-                {name: "password", type: "string", description: "Password to use for AES encryption.", required:true}
+                {name: "src", label:"Filesystem", type: "string", description: "Filesystem source", required:true},
+                {name: "path", type: "string", description: "Path to the file to encrypt", required:true},
+                {name: "password", type: "string", description: "Password to use for AES encryption", required:true}
             ]
         }        
     },
     // implementation
     controller({ context }) {
         return {
-            execute(password) {
+            execute(src, path, password) {
                 // debugger
                 debugger;
             }
