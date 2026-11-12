@@ -90,6 +90,12 @@ export default {
         :host(.left) .body {transform:translateX(calc(-100% + 3em));}
         :host(.popover.left) .body .helper {left:unset; right:1em;}
         :host(.popover.left) .body .helper2 {left:unset; right:1em;}
+
+        /* fixed */
+        :host(.fixed) .body {
+        min-width:unset;
+            position: fixed;
+        }
             
         /* input-dropdown  (used in search page) */
         :host(.input-dropdown) .header.expanded {

@@ -106,7 +106,7 @@ export default {
                         <slot name="header-actions"></slot>
                     </div>
                     <x-page-info></x-page-info>
-                    <x-button class="round light" icon="x-close" x-on:click="queryClose"></x-button>                                        
+                    <x-button class="round light" icon="x-close" x-on:click="queryClose" tooltip="Close"></x-button>                                        
                 </div>
                 
                 <div class="body">

@@ -1,173 +1,191 @@
 
- // Renders a small, flat JSON Schema object using existing XShell data fields.
- // Unsupported schema shapes fail explicitly instead of rendering incomplete data.
- const protectedNames = new Set(["__proto__", "prototype", "constructor"]);
- function escapeAttribute(value) {
-     return String(value).replaceAll("&", "&amp;").replaceAll('"', "&quot;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll("'", "&#39;");
- }
- function isObject(value) {
-     return value !== null && typeof value === "object" && !Array.isArray(value);
- }
+ // component
+const protectedNames = new Set(["__proto__", "prototype", "constructor"]);
+const isObject = value => value !== null && typeof value === "object" && !Array.isArray(value);
+const escapeAttribute = value => String(value).replaceAll("&", "&amp;").replaceAll('"', "&quot;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll("'", "&#39;");
+const schemaType = schema => Array.isArray(schema.type) && schema.type.length === 2 && schema.type.includes("null") ? schema.type.find(type => type !== "null") : schema.type;
+
+function initialItem(schema) {
+    const type = schemaType(schema);
+    let value = Object.hasOwn(schema, "default") ? structuredClone(schema.default) :
+        type === "object" ? {} : type === "array" ? [] : type === "boolean" ? false :
+        type === "number" || type === "integer" ? 0 : schema.enum?.[0] ?? "";
+
+    if (type === "object" && isObject(value)) {
+        for (const [name, definition] of Object.entries(schema.properties || {})) {
+            if (protectedNames.has(name)) throw new Error(`Unsupported property name '${name}'.`);
+            if (!Object.hasOwn(value, name)) value[name] = initialItem(definition);
+        }
+    }
+    return value;
+}
 
 function makeTemplate(schema) {
     if (!isObject(schema) || schema.type !== "object" || !isObject(schema.properties)) {
         throw new Error("x-schema requires an object schema with properties.");
     }
 
-    function renderFields(schema, parent = "state") {
-        const required = new Set(schema.required || []);
+    function field(definition, path, name, required = false, depth = 0) {
+        if (!isObject(definition)) throw new Error(`Invalid schema for '${name}'.`);
 
-        return Object.entries(schema.properties).map(([name, definition]) => {
-            if (protectedNames.has(name)) throw new Error(`Unsupported property name '${name}'.`);
-            if (!isObject(definition)) throw new Error(`Invalid schema for '${name}'.`);
+        const type = schemaType(definition);
+        const inputType = type === "object" ? "object" : type === "array" ? "list" : type === "boolean" ? "checkbox" :
+            type === "number" || type === "integer" ? "number" : type === "string" ?
+            definition.enum ? "select" : definition.writeOnly ? "password" : definition.format === "date" ? "date" : "text" : null;
 
-            const path = `${parent}[${JSON.stringify(name)}]`;
-            const label = escapeAttribute(definition.title || name);
-            const type = definition.type;
+        if (!inputType) throw new Error(`Unsupported JSON Schema type '${type}' for property '${name}'.`);
 
-            if (type === "object") {
-                if (!isObject(definition.properties)) {
-                    if (required.has(name)) throw new Error(`Required object '${name}' has no editable properties.`);
-                    return `<x-datafield label="${label}">Not editable: no properties defined.</x-datafield>`;
-                }
-                return `<x-datafields columns="1" label="${label}" x-if="${escapeAttribute(path + " != null")}">
-                    ${renderFields(definition, path)}
-                </x-datafields>`;
+        const attributes = [
+            `type="${inputType}"`,
+            `label="${escapeAttribute(definition.title || name)}"`,
+            `x-model="${escapeAttribute(path)}"`
+        ];
+
+        if (definition.description) attributes.push(`description="${escapeAttribute(definition.description)}"`);
+        if (required && (type === "string" || type === "array" || type === "object")) attributes.push("required");
+
+        if (definition.enum) {
+            if (type !== "string" || !Array.isArray(definition.enum) ||
+                !definition.enum.every(value => typeof value === "string" && !/[|=]/.test(value))) {
+                throw new Error(`Unsupported enum for '${name}'.`);
             }
+            attributes.push(`domain="${escapeAttribute(definition.enum.map(value => `${value}=${value}`).join("|"))}"`);
+        }
 
-            let inputType;
-            let domain = "";
+        if (type === "string") {
+            if (definition.minLength !== undefined) attributes.push(`minlength="${escapeAttribute(definition.minLength)}"`);
+            if (definition.maxLength !== undefined) attributes.push(`maxlength="${escapeAttribute(definition.maxLength)}"`);
+            if (definition.pattern !== undefined) attributes.push(`pattern="${escapeAttribute(definition.pattern)}"`);
+        }
 
-            if (definition.enum !== undefined) {
-                if (type !== "string" || !Array.isArray(definition.enum) ||
-                    !definition.enum.every(value => typeof value === "string" && !/[|=]/.test(value))) {
-                    throw new Error(`Unsupported enum for '${name}'.`);
-                }
-                inputType = "select";
-                domain = definition.enum.map(value => `${value}=${value}`).join("|");
-            } else if (type === "string") {
-                inputType = definition.writeOnly ? "password" : definition.format === "date" ? "date" : "text";
-            } else if (type === "number" || type === "integer") {
-                inputType = "number";
-            } else if (type === "boolean") {
-                inputType = "checkbox";
-            } else {
-                throw new Error(`Unsupported JSON Schema type '${type}' for property '${name}'.`);
-            }
+        if (type === "number" || type === "integer") {
+            if (definition.minimum !== undefined) attributes.push(`min="${escapeAttribute(definition.minimum)}"`);
+            if (definition.maximum !== undefined) attributes.push(`max="${escapeAttribute(definition.maximum)}"`);
+            if (type === "integer") attributes.push('step="1"');
+        }
 
-            const attributes = [
-                `type="${inputType}"`,
-                `label="${label}"`,
-                `x-model="${escapeAttribute(path)}"`
-            ];
+        if (type === "object") {
+            attributes.push(`default="${escapeAttribute(JSON.stringify(initialItem(definition)))}"`);
+            const children = isObject(definition.properties) ? fields(definition, path, depth) : "";
+            return `<x-datafield ${attributes.join(" ")}>${children}</x-datafield>`;
+        }
 
-            if (definition.description) attributes.push(`description="${escapeAttribute(definition.description)}"`);
-            if (domain) attributes.push(`domain="${escapeAttribute(domain)}"`);
-            if (required.has(name) && type === "string") attributes.push("required");
+        if (type === "array") {
+            if (!isObject(definition.items)) throw new Error(`Array '${name}' requires a supported items schema.`);
+            const index = `index${depth}`;
+            attributes.push("add", `item-default="${escapeAttribute(JSON.stringify(initialItem(definition.items)))}"`);
+            if (definition.minItems !== undefined) attributes.push(`minlength="${escapeAttribute(definition.minItems)}"`);
+            if (definition.maxItems !== undefined) attributes.push(`maxlength="${escapeAttribute(definition.maxItems)}"`);
 
-            if (type === "string") {
-                if (definition.minLength !== undefined) attributes.push(`minlength="${definition.minLength}"`);
-                if (definition.maxLength !== undefined) attributes.push(`maxlength="${definition.maxLength}"`);
-                if (definition.pattern !== undefined) attributes.push(`pattern="${escapeAttribute(definition.pattern)}"`);
-            }
+            return `<x-datafield ${attributes.join(" ")}>
+                <x-datafields class="grid" columns="1" move remove
+                    x-for="${escapeAttribute(`(item${depth},${index}) in ${path}`)}">
+                    ${field(definition.items, `${path}[${index}]`, definition.items.title || "Item", false, depth + 1)}
+                </x-datafields>
+            </x-datafield>`;
+        }
 
-            if (inputType === "number") {
-                if (definition.minimum !== undefined) attributes.push(`min="${definition.minimum}"`);
-                if (definition.maximum !== undefined) attributes.push(`max="${definition.maximum}"`);
-                if (type === "integer") attributes.push('step="1"');
-            }
-
-            return `<x-datafield ${attributes.join(" ")}></x-datafield>`;
-        }).join("\n");
+        return `<x-datafield ${attributes.join(" ")}></x-datafield>`;
     }
 
-    return `<x-datafields columns="1">${renderFields(schema)}</x-datafields>`;
+    function fields(schema, path, depth) {
+        const required = new Set(schema.required || []);
+        return `<x-datafields columns="1">${Object.entries(schema.properties || {}).map(([name, definition]) => {
+            if (protectedNames.has(name)) throw new Error(`Unsupported property name '${name}'.`);
+            return field(definition, `${path}[${JSON.stringify(name)}]`, name, required.has(name), depth);
+        }).join("\n")}</x-datafields>`;
+    }
+
+    return fields(schema, "state", 0);
 }
-
-
 
 function applyDefaults(schema, value) {
-    const updated = { ...value };
-    let changed = false;
+    if (!isObject(value)) return value;
+    let result = value;
 
-    for (const [name, definition] of Object.entries(schema.properties)) {
-        if (!Object.hasOwn(updated, name) && Object.hasOwn(definition, "default")) {
-            updated[name] = structuredClone(definition.default);
-            changed = true;
+    for (const [name, definition] of Object.entries(schema.properties || {})) {
+        if (protectedNames.has(name)) throw new Error(`Unsupported property name '${name}'.`);
+
+        if (!Object.hasOwn(result, name)) {
+            if (result === value) result = { ...value };
+            result[name] = Object.hasOwn(definition, "default") ? structuredClone(definition.default) : undefined;
         }
 
-        if (definition.type === "object" && isObject(definition.properties)) {
-            if (!Object.hasOwn(updated, name) && (schema.required || []).includes(name)) {
-                updated[name] = {};
-                changed = true;
-            }
-            if (isObject(updated[name])) {
-                const nested = applyDefaults(definition, updated[name]);
-                if (nested !== updated[name]) {
-                    updated[name] = nested;
-                    changed = true;
-                }
-            }
+        const type = schemaType(definition);
+        const current = result[name];
+        let updated = current;
+
+        if (type === "object" && isObject(current)) updated = applyDefaults(definition, current);
+        if (type === "array" && Array.isArray(current) && isObject(definition.items)) {
+            const items = current.map(item => schemaType(definition.items) === "object" ? applyDefaults(definition.items, item) : item);
+            if (items.some((item, index) => item !== current[index])) updated = items;
+        }
+
+        if (updated !== current) {
+            if (result === value) result = { ...value };
+            result[name] = updated;
         }
     }
 
-    return changed ? updated : value;
+    return result;
 }
 
-
-
- // component
- export default {
-     contract: {
-         description: "Edits a flat object from an inline JSON Schema or a schema URL.",
-         properties: {
-             schema: { type: "object", default: null, attribute: true, attributeParser: "json", state: true, description: "Inline JSON Schema; takes precedence over src." },
-             src: { type: "string", default: "", attribute: true, state: true, description: "URL to a JSON Schema, used when schema is null." },
-             value: { type: "object", default: {}, attribute: true, attributeParser: "json", state: true, description: "Data object being edited." }
-         },
-         events: {
-             change: { description: "Raised when the edited value changes.", detail: {
-                 oldValue: { type: "object" },
-                 newValue: { type: "object" }
-             }}
-         },
-         methods: {
-             validate: { description: "Returns errors for the supported fields.",
-                 parameters: [{ name: "detail", type: "boolean" }],
-                 returns: { type: "array" } 
+export default {
+    contract: {
+        description: "Edits an object using JSON Schema, x-datafield and x-datafields.",
+        properties: {
+            schema: { type: "object", default: null, attribute: true, attributeParser: "json", state: true, description: "Inline JSON Schema; takes precedence over src." },
+            src: { type: "string", default: "", attribute: true, state: true, description: "JSON Schema URL or schema: reference." },
+            value: { type: "object", default: {}, attribute: true, attributeParser: "json", state: true, description: "Object being edited." }
+        },
+        events: {
+            change: {
+                description: "Raised when edited values change.",
+                detail: { oldValue: { type: "object" }, newValue: { type: "object" } }
             }
-         },
-         slots: {}
-     },
-     template: `
-         <x-notice x-if="state.error" type="error" x-attr:message="state.error"></x-notice>
-         <x-template x-if="state.generated" x-prop:template="state.generated"
-             x-prop:value="state.value" x-on:change="changed"></x-template>
-     `,
-     state: {
-         generated: "",
-         error: ""
-     },
-     controller({ state, events, host, loader }) {
-         let activeSchema = null;
-         let revision = 0;
-         let abortController = null;
+        },
+        methods: {
+            validate: {
+                description: "Validates the edited object against its schema.",
+                parameters: [{ name: "detail", type: "boolean" }],
+                returns: { type: "array" }
+            }
+        },
+        slots: {}
+    },
 
-         return {
-             load() {
-                // load
-                 events.on(state, ["change:schema", "change:src"], "refresh");
-                 this.refresh();
-             },
-             unload() {
-                // unload
-                 revision++;
-                 abortController?.abort();
-             },
+    template: `
+        <x-notice x-if="state.error" type="error" x-prop:message="state.error"></x-notice>
+        <x-template x-if="state.generated" x-prop:template="state.generated" x-prop:value="state.value" x-on:change="changed"></x-template>
+        <x-json x-prop:value="state.value"></x-json>
+    `,
 
-             
+    state: { 
+        generated: "", 
+        error: "" 
+    },
+
+    controller({ state, events, host, loader, jsonValidator }) {
+        let activeSchema = null, revision = 0, abortController = null;
+
+        return {
+            load() {
+                events.on(state, ["change:schema", "change:src"], "refresh");
+                events.on(state, "change:value", ({ newValue }) => {
+                    if (!activeSchema || !isObject(newValue)) return;
+                    const updated = applyDefaults(activeSchema, newValue);
+                    if (updated !== newValue) state.value = updated;
+                });
+                this.refresh();
+            },
+
+            unload() {
+                revision++;
+                abortController?.abort();
+            },
+
             async refresh() {
-                // Prefer the supplied object. Fetch src only when no schema is provided.
+                
                 const current = ++revision;
                 abortController?.abort();
                 abortController = null;
@@ -179,25 +197,12 @@ function applyDefaults(schema, value) {
                     let schema = state.schema;
 
                     if (schema === null || schema === undefined) {
-                        const src = state.src;
-                        if (!src) return;
-
-                        if (src.startsWith("schema:")) {
-                            // The Loader handles logical XShell schema references.
-                            schema = await loader.load(src);
-                        } else {
-                            // Regular URLs are browser resources, not Loader locators.
+                        if (!state.src) return;
+                        if (state.src.startsWith("schema:")) schema = await loader.load(state.src);
+                        else {
                             abortController = new AbortController();
-                            const response = await fetch(src, {
-                                signal: abortController.signal
-                            });
-
-                            if (!response.ok) {
-                                throw new Error(
-                                    `Cannot load schema '${src}' (${response.status} ${response.statusText}).`
-                                );
-                            }
-
+                            const response = await fetch(state.src, { signal: abortController.signal });
+                            if (!response.ok) throw new Error(`Cannot load schema '${state.src}' (${response.status}).`);
                             schema = await response.json();
                         }
                     }
@@ -205,61 +210,48 @@ function applyDefaults(schema, value) {
                     if (current !== revision) return;
 
                     const generated = makeTemplate(schema);
-                    debugger;
-
-                    if (!isObject(state.value)) {
-                        throw new Error("x-schema value must be an object.");
-                    }
+                    if (!isObject(state.value)) throw new Error("x-schema value must be an object.");
 
                     activeSchema = schema;
-                    state.value = applyDefaults(schema, state.value);
+                    const updated = applyDefaults(schema, state.value);
+                    if (updated !== state.value) state.value = updated;
                     state.generated = generated;
-
                 } catch (error) {
                     if (current !== revision || error.name === "AbortError") return;
                     state.error = error.message || String(error);
                 }
             },
 
+            changed({ event }) {
+                const { oldValue, newValue } = event.detail;
+                state.value = newValue;
+                host.dispatchEvent(new CustomEvent("change", {
+                    detail: { oldValue, newValue },
+                    bubbles: true,
+                    composed: false
+                }));
+            },
 
-             changed({ event }) {
-                // changed
-                 if (state.value !== event.detail.newValue) state.value = event.detail.newValue;
-                 host.dispatchEvent(new CustomEvent("change", {
-                     detail: event.detail,
-                     bubbles: true,
-                     composed: false
-                 }));
-             },
+            validate(detail = false) {
+                if (state.error) return [{ type: "error", label: "Schema", message: state.error }];
+                if (!activeSchema || !state.generated) return [{ type: "error", label: "Schema", message: "Schema not ready." }];
 
-             validate(detail = false) {
-                // validate
-                 if (state.error) return [{ type: "error", label: "Schema", message: state.error }];
-                 if (!activeSchema || !state.generated) return [{ type: "error", label: "Schema", message: "Schema not ready." }];
+                const template = host.shadowRoot.querySelector("x-template");
+                if (!template) return [{ type: "error", label: "Schema", message: "Editor not ready." }];
 
-                 const template = host.shadowRoot.querySelector("x-template");
-                 const errors = template ? template.validate(detail) : [{ type: "error", label: "Schema", message: "Editor not ready." }];
-                 const value = state.value;
-                 for (const name of activeSchema.required || []) {
-                     if (!Object.hasOwn(value, name) || value[name] === null || value[name] === undefined || value[name] === "") {
-                         if (!errors.some(error => error.label === name)) {
-                             errors.push({ type: "error", label: name, message: "Required" });
-                         }
-                     }
-                 }
-                 for (const [name, definition] of Object.entries(activeSchema.properties)) {
-                     const item = value[name];
-                     if (item === undefined || item === null || item === "") continue;
-                     if (definition.type === "integer" && !Number.isInteger(item)) {
-                         errors.push({ type: "error", label: name, message: "Must be an integer" });
-                     } else if (definition.type === "number" && (typeof item !== "number" || !Number.isFinite(item))) {
-                         errors.push({ type: "error", label: name, message: "Must be a number" });
-                     } else if (definition.type === "boolean" && typeof item !== "boolean") {
-                         errors.push({ type: "error", label: name, message: "Must be a boolean" });
-                     }
-                 }
-                 return errors;
-             }
-         };
-     }
- };
+                try {
+                    const data = JSON.parse(JSON.stringify(state.value));
+                    const result = jsonValidator.validate(data, activeSchema);
+                    return result.valid ? [] : (result.errors || []).map(error => ({
+                        type: "error",
+                        label: "Schema",
+                        path: error.instanceLocation || error.path || "",
+                        message: error.message || error.error || JSON.stringify(error)
+                    }));
+                } catch (error) {
+                    return [{ type: "error", label: "Schema", message: error.message || String(error) }];
+                }
+            }
+        };
+    }
+};

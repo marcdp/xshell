@@ -46,8 +46,7 @@ export default {
         div.width100 {width: 100em;}
     `,
     template: `
-        <x-loading x-if="state.status=='loading'"></x-loading>
-        <x-page-info></x-page-info>
+        <x-loading x-if="state.status=='loading'"></x-loading>        
         <div x-attr:class="state.pageClasses">
             <slot></slot>
         </div>

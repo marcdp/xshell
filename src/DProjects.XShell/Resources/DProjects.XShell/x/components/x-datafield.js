@@ -734,12 +734,12 @@ export default {
             },
 
             async objectChanged(args) {
-                // objectChanged
-                if (state.value) {
+                if (state.value != null) {
                     state.valueOriginal = state.value;
                     state.value = null;
                 } else {
-                    state.value = state.valueOriginal;
+                    // state.value = state.valueOriginal;
+                    state.value = state.valueOriginal ?? cloneDefaultValue(state.default ?? {});
                 }
             },
 

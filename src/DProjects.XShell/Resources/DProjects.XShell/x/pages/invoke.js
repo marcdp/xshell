@@ -223,13 +223,10 @@ export default {
             <p x-if="state.error" class="error" x-text="state.error"></p>
 
             <x-form x-if="state.ready" command="submit">
-                <x-schema ref="arguments" x-prop:schema="state.schema" x-prop:value="state.args"
-                          x-on:change="argumentsChanged"></x-schema>
+                <x-schema ref="arguments" x-prop:schema="state.schema" x-prop:value="state.args" x-on:change="argumentsChanged"></x-schema>
 
-                <x-button slot="footer" label="Execute" command="submit" class="submit"
-                          x-attr:disabled="state.running"></x-button>
-                <x-button slot="footer" x-if="state.isDialog" label="Cancel" command="cancel"
-                          class="cancel" x-attr:disabled="state.running"></x-button>
+                <x-button slot="footer" label="Execute" command="submit" class="submit" x-attr:disabled="state.running"></x-button>
+                <x-button slot="footer" x-if="state.isDialog" label="Cancel" command="cancel" class="cancel" x-attr:disabled="state.running"></x-button>
             </x-form>
 
             <x-button x-if="state.isDialog && !state.ready" label="Close" command="cancel"></x-button>
@@ -307,7 +304,9 @@ export default {
             },
 
             argumentsChanged({ event }) {
-                state.args = event.detail.newValue;
+                debugger;
+                if (state.args !== event.detail.newValue) state.args = event.detail.newValue;
+                state.preview = structuredClone(event.detail.newValue);
             },
 
             async submit() {
