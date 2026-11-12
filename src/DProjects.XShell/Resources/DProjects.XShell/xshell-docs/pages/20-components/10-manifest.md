@@ -64,6 +64,18 @@ whose value is a JSON Schema Draft 2020-12 object or boolean. Nested object and 
 }
 ```
 
+A method return descriptor may also declare an optional `format`. The return `type` (or the type selected by `ref`) describes the JavaScript/XShell
+value shape, while `format` describes its semantic meaning and preferred presentation. The initial standardized formats are `text`, `url`, and
+`blob-url`; all require a string return value. Omitting `format` uses the default presentation for the declared type, such as structured display for
+objects and arrays or scalar text for strings, numbers, integers, booleans, and dates.
+
+```js
+returns: { type: "string", format: "url", description: "Generated report URL." }
+```
+
+Return formats are descriptive metadata: the method still returns the actual value, such as the URL string, without a presentation wrapper. A
+`blob-url` remains owned by the code that created it; displaying it does not revoke the object URL.
+
 Named types are local to one contract:
 
 ```js

@@ -122,12 +122,17 @@ accept `void`.
   additional JSON Schema constraints.
 - Events describe labels, descriptions, and a `detail` field map. Each detail field selects exactly one of `type` or `ref`.
 - Methods describe labels, parameters, and returns. Each parameter requires a nonempty `name` and selects exactly one of `type` or `ref`;
-  a return does the same.
+  a return does the same and may add the semantic `format` `text`, `url`, or `blob-url` when its effective type is `string`.
 - Examples require a valid `name` and nonempty `template`, with optional `description` and `state`.
 
 `type` declares an XShell value category directly. `ref` names a definition in the same contract's `types` map and cannot be combined with
 `type` or `schema`. A direct type descriptor or named type definition may add a JSON Schema object or boolean in `schema`; nested object and
 array constraints use standard JSON Schema keywords there.
+
+For method returns, `type` describes the runtime value shape and optional `format` describes its semantic meaning and preferred presentation.
+An omitted format uses the default presentation for the declared type. Formats do not wrap or coerce the value returned by the Service method:
+for example, a method with `returns: { "type": "string", "format": "url" }` still returns the URL string itself. `blob-url` presentation does
+not transfer ownership of the object URL or revoke it.
 
 A named type can be reused throughout one service contract:
 

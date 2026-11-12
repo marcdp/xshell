@@ -288,12 +288,50 @@ test("invoke displays execution errors and closes dialogs with successful result
     assert.equal(failing.state.taskError.message, "Command failed");
     assert.equal(failing.state.running, false);
 
-    const dialog = createInvoke({ execute: { parameters: [] } }, {}, [], { layout: "dialog" });
+    const dialog = createInvoke({ execute: { parameters: [], returns: { type: "string", format: "url" } } }, {}, [], {
+        layout: "dialog", execute() { return "https://example.test/report.pdf"; }
+    });
     await dialog.controller.load();
     dialog.controller.mount();
     await dialog.controller.submit();
-    assert.deepEqual(dialog.closed, ["done"]);
+    assert.deepEqual(dialog.closed, ["https://example.test/report.pdf"]);
     assert.equal(dialog.state.taskStatus, "finished");
+});
+
+test("invoke projects Command return metadata and selects presentation without value guessing", async () => {
+    const cases = [
+        [{ type: "object" }, { processed: 10 }, "object", ""],
+        [{ type: "string", format: "text" }, "Operation completed", "string", "text"],
+        [{ type: "string", format: "url" }, "https://example.test/report.pdf", "string", "url"],
+        [{ type: "string", format: "blob-url" }, "blob:https://example.test/id", "string", "blob-url"],
+        [{ type: "string" }, "https://example.test/plain", "string", ""]
+    ];
+
+    for (const [returns, result, type, format] of cases) {
+        const invoke = createInvoke({ execute: { parameters: [], returns } }, {}, [], { execute() { return result; } });
+        await invoke.controller.load();
+        await invoke.controller.submit();
+        assert.equal(invoke.state.resultType, type);
+        assert.equal(invoke.state.resultFormat, format);
+        assert.strictEqual(invoke.state.result, result);
+    }
+
+    assert.match(invokeDefinition.template, /<x-object[^>]*!state\.resultFormat[^>]*resultType == 'object'/s);
+    assert.match(invokeDefinition.template, /<x-code[^>]*resultFormat == 'text'/s);
+    assert.match(invokeDefinition.template, /<x-anchor[^>]*resultFormat == 'url'[^>]*resultFormat == 'blob-url'/s);
+    assert.doesNotMatch(invokeDefinition.template, /startsWith|https?:|blob:/);
+});
+
+test("invoke resolves named return types for presentation", async () => {
+    const invoke = createInvoke({
+        types: { resourceUrl: { type: "string" } },
+        execute: { parameters: [], returns: { ref: "resourceUrl", format: "url" } }
+    });
+
+    await invoke.controller.load();
+
+    assert.equal(invoke.state.resultType, "string");
+    assert.equal(invoke.state.resultFormat, "url");
 });
 
 test("invoke projects Command task reporting and result in output order", async () => {
@@ -429,7 +467,7 @@ test("invoke removes its Task change listener when the Page unloads", async () =
 
 test("invoke preserves shared Service invocation semantics", async () => {
     const calls = [];
-    const instance = { run(value) { calls.push(value); return value * 2; } };
+    const instance = { run(value) { calls.push(value); return String(value * 2); } };
     const services = {
         getServiceInfo: id => id === "math" ? { contractId: "math-contract" } : null,
         resolve: id => id === "math" ? instance : null
@@ -437,7 +475,7 @@ test("invoke preserves shared Service invocation semantics", async () => {
     const contracts = {
         getContractById: id => id === "math-contract" ? {
             label: "Math",
-            methods: { run: { parameters: [{ name: "value", type: "integer" }] } }
+            methods: { run: { parameters: [{ name: "value", type: "integer" }], returns: { type: "string", format: "text" } } }
         } : null
     };
     const editor = { validate: () => [] };
@@ -455,7 +493,9 @@ test("invoke preserves shared Service invocation semantics", async () => {
     await controller.submit();
 
     assert.deepEqual(calls, [4]);
-    assert.equal(state.result, 8);
+    assert.equal(state.result, "8");
+    assert.equal(state.resultType, "string");
+    assert.equal(state.resultFormat, "text");
     assert.equal(state.completed, true);
     assert.equal(state.taskStatus, "");
 });

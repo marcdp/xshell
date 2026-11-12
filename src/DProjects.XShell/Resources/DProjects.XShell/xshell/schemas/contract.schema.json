@@ -128,9 +128,16 @@
         "description": { "type": "string" },
         "type": { "$ref": "#/$defs/returnType" },
         "ref": { "$ref": "#/$defs/typeReference" },
-        "schema": { "$ref": "#/$defs/jsonSchema" }
+        "schema": { "$ref": "#/$defs/jsonSchema" },
+        "format": { "type": "string", "enum": [ "text", "url", "blob-url" ], "description": "Semantic meaning and preferred presentation of the returned value." }
       },
-      "allOf": [{ "$ref": "#/$defs/typeDescriptor" }]
+      "allOf": [
+        { "$ref": "#/$defs/typeDescriptor" },
+        {
+          "if": { "required": [ "type", "format" ] },
+          "then": { "properties": { "type": { "const": "string" } } }
+        }
+      ]
     },
     "example": {
       "type": "object",

@@ -155,6 +155,7 @@ async function resolveInvocation({ type, id, method }, loader, services, contrac
             description: contract.description || contract.execute.description || "",
             parameters: contract.execute.parameters || [],
             types: contract.types || {},
+            returns: contract.execute.returns || null,
             invoke(args, context = {}) {
                 const instance = new Command(context);
                 return instance.execute(...args);
@@ -186,6 +187,7 @@ async function resolveInvocation({ type, id, method }, loader, services, contrac
             description: definition.description || contract.description || "",
             parameters: definition.parameters || [],
             types: contract.types || {},
+            returns: definition.returns || null,
             invoke: args => instance[method](...args)
         };
     }
@@ -226,6 +228,7 @@ export default {
         .output-entry pre { margin:0; white-space:pre-wrap; overflow-wrap:anywhere; }
         .result { margin-top:1.25em; }
         .result pre { white-space:pre-wrap; overflow-wrap:anywhere; }
+        .result-value { white-space:pre-wrap; overflow-wrap:anywhere; }
     `,
 
     // Renders loading/error state, generated arguments form, execution controls and result.
@@ -265,7 +268,13 @@ export default {
         </section>
 
         <div x-if="state.completed && !state.isDialog" class="result">
-            <x-object x-if="state.hasResult" x-prop:value="state.result" expanded></x-object>
+            <x-object x-if="state.hasResult && !state.resultFormat && (!state.resultType || state.resultType == 'object' || state.resultType == 'array' || state.resultType == 'any' || state.resultType == 'function' || state.resultType == 'date')"
+                x-prop:value="state.result" expanded></x-object>
+            <x-code x-if="state.hasResult && state.resultFormat == 'text'" x-prop:value="state.result" wrap></x-code>
+            <x-anchor x-if="state.hasResult && (state.resultFormat == 'url' || state.resultFormat == 'blob-url')"
+                x-prop:href="state.result" target="_blank" rel="noopener noreferrer"><span x-text="state.result"></span></x-anchor>
+            <span x-if="state.hasResult && !state.resultFormat && state.resultType && state.resultType != 'object' && state.resultType != 'array' && state.resultType != 'any' && state.resultType != 'function' && state.resultType != 'date' && state.resultType != 'void'"
+                class="result-value" x-text="state.result"></span>
         </div>
     `,
 
@@ -281,6 +290,8 @@ export default {
         completed: false,
         hasResult: false,
         result: undefined,
+        resultType: "",
+        resultFormat: "",
         error: "",
         taskStatus: "",
         taskDescription: "",
@@ -362,9 +373,11 @@ export default {
                         method: state.method
                     }, loader, services, contracts);
 
-                    // Publish invocation label and description to Page state.
+                    // Publish invocation and return presentation metadata to Page state.
                     state.title = invocation.label;
                     state.description = invocation.description;
+                    state.resultType = invocation.returns?.type || invocation.types[invocation.returns?.ref]?.type || "";
+                    state.resultFormat = invocation.returns?.format || "";
 
                     // Generate the argument-editing JSON Schema from the method contract.
                     state.schema = methodToJsonSchema({ parameters: invocation.parameters }, invocation.types);
