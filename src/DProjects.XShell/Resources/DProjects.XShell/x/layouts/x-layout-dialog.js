@@ -59,6 +59,7 @@ export default {
         .header div h2 {margin:0; flex:1; font-size: var(--x-font-size-subtitle); margin-right:1em}
         .header div h2 ~ x-page-description {font-size:var(--x-font-size-small);display:block;}
         .header .header-actions {display:flex; gap:0.5em; justify-content:flex-end; padding-right:.5em;}
+        .header x-page-info {margin-left:.5em; margin-right:.5em;}
         .header x-button {_transform:translateY(-0.2em);}
 
         /* fill */
@@ -99,12 +100,12 @@ export default {
                 <div class="header">
                     <div>
                         <h2><x-page-title></x-page-title></h2>
-                        <x-page-description></x-page-description>
-                        <x-page-info></x-page-info>
+                        <x-page-description></x-page-description>                        
                     </div>
                     <div class="header-actions">
                         <slot name="header-actions"></slot>
                     </div>
+                    <x-page-info></x-page-info>
                     <x-button class="round light" icon="x-close" x-on:click="queryClose"></x-button>                                        
                 </div>
                 

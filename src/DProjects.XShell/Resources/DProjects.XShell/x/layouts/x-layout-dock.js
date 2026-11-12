@@ -48,8 +48,9 @@ export default {
             <x-page-title></x-page-title>
             <slot name="header-actions"></slot>
             <span style="flex:1"></span>
+            <x-page-info></x-page-info>
             <x-button icon="x-toggle-panel-bottom" class="round light" x-on:click="onDockToggle"></x-button>
-            <x-button icon="x-close" x-on:click="onClose" class="round light"></x-button>
+            <x-button icon="x-close" x-on:click="onClose" class="round light"></x-button>            
         </x-toolbar>
         <div x-attr:class="'body ' + state.pageClasses">
             <slot></slot>

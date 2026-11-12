@@ -36,7 +36,19 @@ export default class Page {
     get id() { return this._id; }
     set id(value) { this._id = value; }
 
+    get path() {
+        if (!this._src) return {};
+        const url = new URL(this._src, document.baseURI);
+        return url.pathname;
+    }
+    get query() { 
+        if (!this._src) return {};
+        const url = new URL(this._src, document.baseURI);
+        return Object.fromEntries(url.searchParams.entries());
+    }
+
     get src() { return this._src; }
+    get layout() { return this._host?.layout; }
     
     get context() { return this._context; }
 
@@ -71,6 +83,8 @@ export default class Page {
     }
 
     get meta() { return this.constructor.definition?.meta ?? {}; }
+
+    get contract() { return this.constructor.definition?.contract ?? {}; }
 
     get result() { return this._result; }
     set result(value) { 

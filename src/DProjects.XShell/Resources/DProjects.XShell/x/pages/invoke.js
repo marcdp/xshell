@@ -1,12 +1,14 @@
 
  // Generic invocation page. V1 supports Commands only.
 
-function methodToJsonSchema(method, types) {
+
+function methodToJsonSchema(method, types = {}) {
     const properties = {};
     const required = [];
     const supported = new Set([
         "type", "title", "description", "default", "enum", "format", "writeOnly",
-        "minLength", "maxLength", "pattern", "minimum", "maximum"
+        "minLength", "maxLength", "pattern", "minimum", "maximum",
+        "properties", "required", "additionalProperties"
     ]);
 
     for (const parameter of method.parameters || []) {
@@ -14,14 +16,15 @@ function methodToJsonSchema(method, types) {
             throw new Error(`Unsupported parameter name '${parameter.name}'.`);
         }
         if (Object.hasOwn(properties, parameter.name)) throw new Error(`Duplicate parameter '${parameter.name}'.`);
+
         const namedType = parameter.ref && Object.hasOwn(types, parameter.ref) ? types[parameter.ref] : null;
         if (parameter.ref && !namedType) throw new Error(`Unknown parameter type '${parameter.ref}' for '${parameter.name}'.`);
 
-        const type = parameter.type || namedType.type;
-        if (["object", "array", "any", "function"].includes(type)) {
+        const type = parameter.type || namedType?.type;
+        if (["array", "any", "function"].includes(type)) {
             throw new Error(`Parameter '${parameter.name}' has unsupported type '${type}' for x-schema.`);
         }
-        if (!["string", "number", "integer", "boolean", "date"].includes(type)) {
+        if (!["string", "number", "integer", "boolean", "date", "object"].includes(type)) {
             throw new Error(`Parameter '${parameter.name}' has unknown type '${type}'.`);
         }
 
@@ -30,17 +33,16 @@ function methodToJsonSchema(method, types) {
         if (constraints !== true && (constraints === null || typeof constraints !== "object" || Array.isArray(constraints))) {
             throw new Error(`Parameter '${parameter.name}' has an invalid schema.`);
         }
+
         const definition = constraints === true ? {} : { ...constraints };
-        const unsupported = Object.keys(definition).filter(key => !supported.has(key));
-        if (unsupported.length) {
-            throw new Error(`Parameter '${parameter.name}' uses unsupported schema keyword '${unsupported[0]}'.`);
-        }
+        const unsupported = Object.keys(definition).find(key => !supported.has(key));
+        if (unsupported) throw new Error(`Parameter '${parameter.name}' uses unsupported schema keyword '${unsupported}'.`);
 
         const schemaType = type === "date" ? "string" : type;
         if (definition.type !== undefined && definition.type !== schemaType) {
             throw new Error(`Parameter '${parameter.name}' schema type '${definition.type}' is incompatible with '${type}'.`);
         }
-        if (definition.format !== undefined && definition.format !== "date") {
+        if (definition.format !== undefined && (type !== "date" || definition.format !== "date")) {
             throw new Error(`Parameter '${parameter.name}' uses unsupported format '${definition.format}'.`);
         }
         for (const key of ["title", "description"]) {
@@ -49,7 +51,7 @@ function methodToJsonSchema(method, types) {
             }
         }
         if (definition.writeOnly !== undefined && typeof definition.writeOnly !== "boolean") {
-            throw new Error(`Parameter '${parameter.name}' has an invalid 'writeOnly' constraint.`);
+            throw new Error(`Parameter '${parameter.name}' has an invalid 'writeOnly' annotation.`);
         }
         for (const key of ["minLength", "maxLength"]) {
             if (definition[key] !== undefined && (!Number.isInteger(definition[key]) || definition[key] < 0)) {
@@ -66,14 +68,34 @@ function methodToJsonSchema(method, types) {
             try { new RegExp(definition.pattern); }
             catch { throw new Error(`Parameter '${parameter.name}' has an invalid 'pattern' constraint.`); }
         }
+
         const stringKeywords = ["format", "writeOnly", "minLength", "maxLength", "pattern"];
         const numberKeywords = ["minimum", "maximum"];
-        const incompatible = schemaType === "string"
-            ? numberKeywords.find(key => Object.hasOwn(definition, key))
-            : stringKeywords.find(key => Object.hasOwn(definition, key));
+        const objectKeywords = ["properties", "required", "additionalProperties"];
+        const allowed = schemaType === "string" ? stringKeywords : schemaType === "object" ? objectKeywords :
+            ["number", "integer"].includes(schemaType) ? numberKeywords : [];
+        const incompatible = [...stringKeywords, ...numberKeywords, ...objectKeywords]
+            .find(key => Object.hasOwn(definition, key) && !allowed.includes(key));
         if (incompatible) {
             throw new Error(`Parameter '${parameter.name}' uses schema keyword '${incompatible}' with incompatible type '${type}'.`);
         }
+
+        if (schemaType === "object") {
+            if (definition.properties !== undefined && (definition.properties === null ||
+                typeof definition.properties !== "object" || Array.isArray(definition.properties))) {
+                throw new Error(`Parameter '${parameter.name}' has invalid object properties.`);
+            }
+            if (definition.required !== undefined && (!Array.isArray(definition.required) ||
+                !definition.required.every(name => typeof name === "string"))) {
+                throw new Error(`Parameter '${parameter.name}' has an invalid required list.`);
+            }
+            if (definition.additionalProperties !== undefined && typeof definition.additionalProperties !== "boolean" &&
+                (definition.additionalProperties === null || typeof definition.additionalProperties !== "object" ||
+                Array.isArray(definition.additionalProperties))) {
+                throw new Error(`Parameter '${parameter.name}' has invalid additionalProperties.`);
+            }
+        }
+
         if (parameter.enum !== undefined && definition.enum !== undefined &&
             JSON.stringify(parameter.enum) !== JSON.stringify(definition.enum)) {
             throw new Error(`Parameter '${parameter.name}' declares incompatible enum constraints.`);
@@ -86,11 +108,14 @@ function methodToJsonSchema(method, types) {
         else if (namedType?.description !== undefined && definition.description === undefined) definition.description = namedType.description;
         if (Object.hasOwn(parameter, "default")) definition.default = parameter.default;
         if (parameter.enum !== undefined) definition.enum = parameter.enum;
-        if (definition.enum !== undefined && (!Array.isArray(definition.enum) || definition.enum.length === 0 ||
+
+        if (definition.enum !== undefined && (schemaType !== "string" ||
+            !Array.isArray(definition.enum) || definition.enum.length === 0 ||
             new Set(definition.enum).size !== definition.enum.length ||
             !definition.enum.every(value => typeof value === "string" && !/[|=]/.test(value)))) {
             throw new Error(`Parameter '${parameter.name}' has an enum unsupported by x-schema.`);
         }
+
         if (schemaType === "string" && /password|passphrase/i.test(parameter.name)) definition.writeOnly = true;
 
         properties[parameter.name] = definition;
@@ -99,6 +124,7 @@ function methodToJsonSchema(method, types) {
 
     return { type: "object", properties, required };
 }
+
 
 function formatResult(value) {
     if (value === undefined) return "";
@@ -120,24 +146,55 @@ function formatResult(value) {
 }
 
 // Extend this resolver with Service/Component/Page adapters later.
-async function resolveInvocation({ type, id, method }, loader) {
-    if (type !== "command") throw new Error(`Unsupported invocation type '${type}'.`);
+
+async function resolveInvocation({ type, id, method }, loader, services, contracts) {
     if (!id) throw new Error("Missing 'id' query parameter.");
-    if (method !== "execute") throw new Error("Commands only expose the 'execute' method.");
 
-    const Command = await loader.load(`command:${id}`);
-    const contract = Command.contract;
-    if (!contract?.execute) throw new Error(`Command '${id}' has no execute contract.`);
+    if (type === "command") {
+        if (method !== "execute") throw new Error("Commands only expose the 'execute' method.");
 
-    const instance = new Command({});
-    return {
-        label: contract.label || id,
-        description: contract.description || contract.execute.description || "",
-        parameters: contract.execute.parameters || [],
-        types: contract.types || {},
-        invoke: args => instance.execute(...args)
-    };
+        const Command = await loader.load(`command:${id}`);
+        const contract = Command.contract;
+        if (!contract?.execute) throw new Error(`Command '${id}' has no execute contract.`);
+
+        const instance = new Command({});
+        return {
+            label: contract.label || id,
+            description: contract.description || contract.execute.description || "",
+            parameters: contract.execute.parameters || [],
+            types: contract.types || {},
+            invoke: args => instance.execute(...args)
+        };
+    }
+
+    if (type === "service") {
+        const info = services.getServiceInfo(id);
+        if (!info) throw new Error(`Service '${id}' not found.`);
+        if (!info.contractId) throw new Error(`Service '${id}' has no registered contract.`);
+
+        const contract = contracts.getContractById(info.contractId);
+        if (!contract) throw new Error(`Contract '${info.contractId}' not found.`);
+
+        const definition = Object.hasOwn(contract.methods || {}, method) ? contract.methods[method] : null;
+        if (!definition) throw new Error(`Method '${method}' is not declared by Service '${id}'.`);
+
+        const instance = services.resolve(id);
+        if (typeof instance[method] !== "function") {
+            throw new Error(`Service '${id}' does not implement method '${method}'.`);
+        }
+
+        return {
+            label: `${contract.label || id} - ${definition.label || method}`,
+            description: definition.description || contract.description || "",
+            parameters: definition.parameters || [],
+            types: contract.types || {},
+            invoke: args => instance[method](...args)
+        };
+    }
+
+    throw new Error(`Unsupported invocation type '${type}'.`);
 }
+
 
 // page
 export default {
@@ -150,7 +207,8 @@ export default {
         }
     },
     meta: {
-        title: "Invoke"
+        title: "Invoke",
+        description: "Lorem ipsum dolor sit amet."
     },
     style: `
         .invocation { max-width: 46rem; }
@@ -195,7 +253,7 @@ export default {
         resultText: "",
         error: ""
     },
-    controller({ state, loader, page }) {
+    controller({ state, loader, services, contracts, page }) {
         let invocation = null;
         let alive = true;
 
@@ -214,7 +272,7 @@ export default {
                         type: state.type,
                         id: state.id,
                         method: state.method
-                    }, loader);
+                    }, loader, services, contracts);
 
                     state.title = invocation.label;
                     state.description = invocation.description;

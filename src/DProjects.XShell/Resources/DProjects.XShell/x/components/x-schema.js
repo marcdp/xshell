@@ -8,79 +8,112 @@
  function isObject(value) {
      return value !== null && typeof value === "object" && !Array.isArray(value);
  }
- function makeTemplate(schema) {
-     if (!isObject(schema) || schema.type !== "object" || !isObject(schema.properties)) {
-         throw new Error("x-schema V1 requires a JSON Schema object with type 'object' and 'properties'.");
-     }
 
-     const required = new Set(schema.required || []);
-     const fields = [];
+function makeTemplate(schema) {
+    if (!isObject(schema) || schema.type !== "object" || !isObject(schema.properties)) {
+        throw new Error("x-schema requires an object schema with properties.");
+    }
 
-     for (const [name, definition] of Object.entries(schema.properties)) {
-         if (protectedNames.has(name)) {
-             throw new Error(`Unsupported property name '${name}'.`);
-         }
-         if (!isObject(definition)) {
-             throw new Error(`Invalid schema for property '${name}'.`);
-         }
-         const type = definition.type;
-         let inputType;
-         let domain = "";
+    function renderFields(schema, parent = "state") {
+        const required = new Set(schema.required || []);
 
-         if (definition.enum !== undefined) {
-             if (type !== "string" || !Array.isArray(definition.enum) ||
-                 !definition.enum.every(value => typeof value === "string" && !/[|=]/.test(value))) {
-                 throw new Error(`x-schema V1 supports only string enums without '|' or '=' (${name}).`);
-             }
-             inputType = "select";
-             domain = definition.enum.map(value => `${value}=${value}`).join("|");
-         } else if (type === "string") {
-             inputType = definition.writeOnly === true ? "password" : definition.format === "date" ? "date" : "text";
-         } else if (type === "number" || type === "integer") {
-             inputType = "number";
-         } else if (type === "boolean") {
-             inputType = "checkbox";
-         } else {
-             throw new Error(`Unsupported JSON Schema type '${type}' for property '${name}'.`);
-         }
+        return Object.entries(schema.properties).map(([name, definition]) => {
+            if (protectedNames.has(name)) throw new Error(`Unsupported property name '${name}'.`);
+            if (!isObject(definition)) throw new Error(`Invalid schema for '${name}'.`);
 
-         const attributes = [
-             `type="${inputType}"`,
-             `label="${escapeAttribute(definition.title || name)}"`,
-             `x-model="${escapeAttribute(`state[${JSON.stringify(name)}]`)}"`
-         ];
-         if (definition.description) attributes.push(`description="${escapeAttribute(definition.description)}"`);
-         if (domain) attributes.push(`domain="${escapeAttribute(domain)}"`);
-         // x-datafield currently considers 0 and false empty, so those types
-         // are checked in x-schema.validate() instead of using its required flag.
-         if (required.has(name) && type === "string") attributes.push("required");
-         if (type === "string") {
-             if (definition.minLength !== undefined) attributes.push(`minlength="${escapeAttribute(definition.minLength)}"`);
-             if (definition.maxLength !== undefined) attributes.push(`maxlength="${escapeAttribute(definition.maxLength)}"`);
-             if (definition.pattern !== undefined) attributes.push(`pattern="${escapeAttribute(definition.pattern)}"`);
-         }
-         if (inputType === "number") {
-             if (definition.minimum !== undefined) attributes.push(`min="${escapeAttribute(definition.minimum)}"`);
-             if (definition.maximum !== undefined) attributes.push(`max="${escapeAttribute(definition.maximum)}"`);
-             if (type === "integer") attributes.push('step="1"');
-         }
-         fields.push(`    <x-datafield ${attributes.join(" ")}></x-datafield>`);
-     }
+            const path = `${parent}[${JSON.stringify(name)}]`;
+            const label = escapeAttribute(definition.title || name);
+            const type = definition.type;
 
-     return `<x-datafields columns="1">\n${fields.join("\n")}\n</x-datafields>`;
- }
+            if (type === "object") {
+                if (!isObject(definition.properties)) {
+                    if (required.has(name)) throw new Error(`Required object '${name}' has no editable properties.`);
+                    return `<x-datafield label="${label}">Not editable: no properties defined.</x-datafield>`;
+                }
+                return `<x-datafields columns="1" label="${label}" x-if="${escapeAttribute(path + " != null")}">
+                    ${renderFields(definition, path)}
+                </x-datafields>`;
+            }
 
- function applyDefaults(schema, value) {
-     const updated = { ...value };
-     let changed = false;
-     for (const [name, definition] of Object.entries(schema.properties)) {
-         if (!Object.hasOwn(updated, name) && Object.hasOwn(definition, "default")) {
-             updated[name] = structuredClone(definition.default);
-             changed = true;
-         }
-     }
-     return changed ? updated : value;
- }
+            let inputType;
+            let domain = "";
+
+            if (definition.enum !== undefined) {
+                if (type !== "string" || !Array.isArray(definition.enum) ||
+                    !definition.enum.every(value => typeof value === "string" && !/[|=]/.test(value))) {
+                    throw new Error(`Unsupported enum for '${name}'.`);
+                }
+                inputType = "select";
+                domain = definition.enum.map(value => `${value}=${value}`).join("|");
+            } else if (type === "string") {
+                inputType = definition.writeOnly ? "password" : definition.format === "date" ? "date" : "text";
+            } else if (type === "number" || type === "integer") {
+                inputType = "number";
+            } else if (type === "boolean") {
+                inputType = "checkbox";
+            } else {
+                throw new Error(`Unsupported JSON Schema type '${type}' for property '${name}'.`);
+            }
+
+            const attributes = [
+                `type="${inputType}"`,
+                `label="${label}"`,
+                `x-model="${escapeAttribute(path)}"`
+            ];
+
+            if (definition.description) attributes.push(`description="${escapeAttribute(definition.description)}"`);
+            if (domain) attributes.push(`domain="${escapeAttribute(domain)}"`);
+            if (required.has(name) && type === "string") attributes.push("required");
+
+            if (type === "string") {
+                if (definition.minLength !== undefined) attributes.push(`minlength="${definition.minLength}"`);
+                if (definition.maxLength !== undefined) attributes.push(`maxlength="${definition.maxLength}"`);
+                if (definition.pattern !== undefined) attributes.push(`pattern="${escapeAttribute(definition.pattern)}"`);
+            }
+
+            if (inputType === "number") {
+                if (definition.minimum !== undefined) attributes.push(`min="${definition.minimum}"`);
+                if (definition.maximum !== undefined) attributes.push(`max="${definition.maximum}"`);
+                if (type === "integer") attributes.push('step="1"');
+            }
+
+            return `<x-datafield ${attributes.join(" ")}></x-datafield>`;
+        }).join("\n");
+    }
+
+    return `<x-datafields columns="1">${renderFields(schema)}</x-datafields>`;
+}
+
+
+
+function applyDefaults(schema, value) {
+    const updated = { ...value };
+    let changed = false;
+
+    for (const [name, definition] of Object.entries(schema.properties)) {
+        if (!Object.hasOwn(updated, name) && Object.hasOwn(definition, "default")) {
+            updated[name] = structuredClone(definition.default);
+            changed = true;
+        }
+
+        if (definition.type === "object" && isObject(definition.properties)) {
+            if (!Object.hasOwn(updated, name) && (schema.required || []).includes(name)) {
+                updated[name] = {};
+                changed = true;
+            }
+            if (isObject(updated[name])) {
+                const nested = applyDefaults(definition, updated[name]);
+                if (nested !== updated[name]) {
+                    updated[name] = nested;
+                    changed = true;
+                }
+            }
+        }
+    }
+
+    return changed ? updated : value;
+}
+
 
 
  // component
@@ -172,6 +205,7 @@
                     if (current !== revision) return;
 
                     const generated = makeTemplate(schema);
+                    debugger;
 
                     if (!isObject(state.value)) {
                         throw new Error("x-schema value must be an object.");

@@ -19,6 +19,9 @@ export default {
         slots: {
             "": {
                 description: "Default slot for the layout content."
+            },
+            "header-actions": {
+                description: "Slot for header action buttons."
             }
         }
     },
@@ -123,13 +126,16 @@ export default {
             box-sizing:border-box;
             padding: var(--x-layout-main-page-padding-vertical) var(--x-layout-main-page-padding-horizontal) var(--x-layout-main-page-padding-vertical) var(--x-layout-main-page-padding-horizontal);            
         }
-        h1 {
+        .title {display:flex}
+        .title > div:first-child {flex:1; }
+        .title > div h1 {
+            flex:1;
             margin-top:0;
             font-size:var(--x-font-size-title);
             line-height:125%;
             font-weight:700;
         }
-        h1 ~ x-page-description {
+        .title x-page-description {
             font-size:var(--x-font-size-small);
             transform:translateY(-1.2em);
             display:block;
@@ -340,12 +346,20 @@ export default {
                     </nav>
                     <div class="divider"></div>
                     <main>           
-                        <div>     
-                            <h1>
-                                <x-page-title></x-page-title>
-                            </h1>
-                            <x-page-description></x-page-description>
-                            <x-page-info></x-page-info>
+                        <div>   
+                            <div class="title">
+                                <div>
+                                    <h1>
+                                        <x-page-title></x-page-title>
+                                    </h1>
+                                    <x-page-description></x-page-description>                            
+                                </div>
+                                <div class="header-actions">
+                                    <slot name="header-actions"></slot>
+                                    <x-page-info></x-page-info>
+                                </div>
+                            </div>                                                          
+                            
                             <slot></slot>
                         </div>
                     </main>

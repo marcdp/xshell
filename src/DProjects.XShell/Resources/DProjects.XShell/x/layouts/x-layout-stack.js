@@ -82,7 +82,7 @@ export default {
         div.panel .header div.title {margin-right:1.5em;}
         div.panel .header div.title h2 {margin:0; font-size: var(--x-font-size-subtitle); }
         div.panel .header div.title h2 ~ x-page-description {font-size:var(--x-font-size-x-small);display:block;}
-        div.panel .header .header-actions {display:flex; flex:1; gap:0.5em; justify-content:start; padding-right:.5em;}
+        div.panel .header .header-actions {display:flex; flex:1; gap:0.5em; justify-content:start;}
         div.panel .header x-button {}
 
         div.panel .body {padding:0em var(--x-layout-stack-page-padding-horizontal);}    
@@ -123,14 +123,14 @@ export default {
                 <div class="title">
                     <h2><x-page-title></x-page-title></h2>
                     <x-page-description></x-page-description>
-                    <x-page-info></x-page-info>
+                    
                 </div>
                 <div class="header-actions">
                     <slot name="header-actions"></slot>
                 </div>
-                <!--
-                <x-button class="light round" icon="x-close" x-on:click="queryClose"></x-button>               
-                -->
+                <x-page-info></x-page-info>
+                
+            
             </div>            
             <div x-attr:class="'body' + (state.pageClasses ? ' ' + state.pageClasses : '')" tabIndex="1">
                 <slot></slot>
