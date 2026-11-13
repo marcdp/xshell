@@ -18,6 +18,7 @@ export default {
             <div slot="dropdown" x-if="state.id">
                 <h3>Page information</h3>
                 <x-object x-prop:value="state" expanded="true"></x-object>
+                <x-anchor x-attr:href="state.href" target="_blank" class="plain">Open page in new browser tab <x-icon icon="x-open-in-new"></x-icon></x-anchor>
             </div>
         </x-dropdown>
         
@@ -56,7 +57,6 @@ export default {
                 // refresh
                 const page = getPage();
                 const url = areas.resolveHref(page.src);   
-                console.log(url)
                 state.id = page.id; 
                 state.label = page.label; 
                 state.description = page.description; 

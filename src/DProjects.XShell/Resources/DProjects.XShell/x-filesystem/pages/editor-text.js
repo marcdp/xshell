@@ -181,9 +181,8 @@ export default {
                     // save
                     const editor = page.host.querySelector(".editor");
                     editor.refreshValue();
-                    state.value = editor.value;
                     event.preventDefault();
-                    await this.save();
+                    commands.enqueue("save");
                 }
             }
         };

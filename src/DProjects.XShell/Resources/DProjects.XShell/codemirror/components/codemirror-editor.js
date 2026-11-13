@@ -33,7 +33,11 @@ export default {
         },
         methods: {
             refreshValue: {
-                description: "Refreshes the content of the editor with the current state value."
+                description: "Refreshes the content of the editor with the current state value.",
+                returns: {
+                    description: "The refreshed value of the editor.",
+                    type: "string"
+                }
             } 
         }
     },
@@ -140,7 +144,12 @@ export default {
                 if (!editor) return;
                 avoidRefresh = true;
                 state.value = editor.state.doc.toString();
+                host.dispatchEvent(new CustomEvent("change", {
+                    detail: { value: state.value },
+                    bubbles: true
+                }));
                 avoidRefresh = false;
+                return state.value;
             },
         }
     }

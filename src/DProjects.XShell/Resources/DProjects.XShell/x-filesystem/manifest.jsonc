@@ -29,8 +29,11 @@
             "filecommands": {
                 "schema": "/schemas/filecommand.schema.json",
                 "contributions": [
-                    {"id": "encrypt-aes", "label": "Encrypt", "icon":"x-lock", "type": "file", "extensions": ["txt", "json", "md"]},
-                    {"id": "directory-zip", "label": "Create ZIP", "icon":"x-zip", "type": "directory"}
+                    {"id": "page:x-filesystem:/pages/editor-text.js", "label": "Open", "icon":"x-preview", "type": "file", "extensions": ["txt", "txt.aes", "json", "md", "md.aes", "env", "css", "xml", "js", "html", "cs", "yaml", "yml", "php", "ps1"], "actions": ["open"]},
+                    {"id": "page:x-filesystem:/pages/editor-image.js", "label": "Open", "icon":"x-preview", "type": "file", "extensions": ["png", "png.aes", "jpg", "jpg.aes", "jpeg", "jpeg.aes", "gif", "gif.aes", "svg", "svg"], "actions": ["open"]},
+                    {"id": "page:x-filesystem:/pages/editor-iframe.js", "label": "Open", "icon":"x-preview", "type": "file", "extensions": ["pdf"], "actions": ["open"]},
+                    {"id": "command:encrypt-aes", "label": "Encrypt", "icon":"x-lock", "type": "file", "extensions": ["txt", "json", "md"], "actions": []},
+                    {"id": "command:directory-zip", "label": "Create ZIP", "icon":"x-zip", "type": "directory", "actions": []}
                 ]
             }
         },
@@ -43,40 +46,8 @@
                 "https:{url}": {"src": "/js/filesystem-http.js", "loader": "instance-js"},
                 "opfs:": {"src": "/js/filesystem-opfs.js", "loader": "instance-js"},
                 "file:": {"src": "/js/filesystem-file.js", "loader": "instance-js"}
-            },
-            "filehandler": {
-
-                /* images */
-                "png": {"src": "/pages/editor-image.js", "loader": "page-js"},
-                "png.aes": {"src": "/pages/editor-image.js", "loader": "page-js"},
-                "jpg": {"src": "/pages/editor-image.js", "loader": "page-js"},
-                "jpg.aes": {"src": "/pages/editor-image.js", "loader": "page-js"},
-                "jpeg": {"src": "/pages/editor-image.js", "loader": "page-js"},
-                "jpeg.aes": {"src": "/pages/editor-image.js", "loader": "page-js"},
-                "gif": {"src": "/pages/editor-image.js", "loader": "page-js"},
-                "svg": {"src": "/pages/editor-image.js", "loader": "page-js"},  
-
-                /* text files */
-                "txt": {"src": "/pages/editor-text.js", "loader": "page-js"},
-                "txt.aes": {"src": "/pages/editor-text.js", "loader": "page-js"},
-                "md": {"src": "/pages/editor-text.js", "loader": "page-js"},
-                "md.aes": {"src": "/pages/editor-text.js", "loader": "page-js"},
-                "env": {"src": "/pages/editor-text.js", "loader": "page-js"},
-                "css": {"src": "/pages/editor-text.js", "loader": "page-js"},
-                "xml": {"src": "/pages/editor-text.js", "loader": "page-js"},
-                "js": {"src": "/pages/editor-text.js", "loader": "page-js"},   
-                "json": {"src": "/pages/editor-text.js", "loader": "page-js"},   
-                "html": {"src": "/pages/editor-text.js", "loader": "page-js"},
-                "cs": {"src": "/pages/editor-text.js", "loader": "page-js"},
-                "yaml": {"src": "/pages/editor-text.js", "loader": "page-js"},
-                "yml": {"src": "/pages/editor-text.js", "loader": "page-js"},
-                "php": {"src": "/pages/editor-text.js", "loader": "page-js"},
-                "ps1": {"src": "/pages/editor-text.js", "loader": "page-js"},
-
-                /* other */
-                "pdf": {"src": "/pages/editor-iframe.js", "loader": "page-js"}
-
             }
+            
         }
     }
 

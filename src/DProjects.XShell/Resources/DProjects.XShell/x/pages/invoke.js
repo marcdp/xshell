@@ -238,7 +238,8 @@ export default {
         <p x-if="state.error" class="error" x-text="state.error"></p>
 
         <x-form x-if="state.ready" command="submit">
-            <x-schema ref="arguments" x-prop:schema="state.schema" x-prop:value="state.args" x-on:change="argumentsChanged"></x-schema>
+            <!--<x-schema ref="arguments" x-prop:schema="state.schema" x-prop:value="state.args" x-on:change="argumentsChanged"></x-schema>-->
+            <x-schema ref="arguments" x-prop:schema="state.schema" x-model="state.args"></x-schema>
 
             <x-details label="Advanced">
                 <x-datafield type="checkbox" label="Execution" label-secondary="Run the command in background" x-model="state.background"></x-datafield>
@@ -368,7 +369,6 @@ export default {
                 try {
                     // Validate the initial query-supplied arguments object.
                     const initialArgs = state.args;
-                    debugger
                     if (!initialArgs || typeof initialArgs !== "object" || Array.isArray(initialArgs)) {
                         throw new Error("Invocation arguments must be a JSON object.");
                     }

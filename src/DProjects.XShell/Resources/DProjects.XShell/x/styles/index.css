@@ -183,8 +183,10 @@ fieldset {
 fieldset legend {font-weight:600; padding-left:.5em; padding-right:.5em;}
 b {font-weight: 600;}
 
-x-page[layout='stack'] + x-page[layout='stack'] {--x-layout-stack-width: 78vw; --x-layout-stack-backdrop:none;}
-x-page[layout='stack'] + x-page[layout='stack'] + x-page[layout='stack'] {--x-layout-stack-width: 76vw;}
+x-page[layout='stack'] + x-page[layout='stack'] {--x-layout-stack-width: 73vw; --x-layout-stack-backdrop:none;}
+x-page[layout='stack'] + x-page[layout='stack'] + x-page[layout='stack'] {--x-layout-stack-width: 71vw;}
+x-page[layout='stack'] + x-page[layout='stack'] + x-page[layout='stack'] + x-page[layout='stack'] {--x-layout-stack-width: 69vw;}
+x-page[layout='stack'] + x-page[layout='stack'] + x-page[layout='stack'] + x-page[layout='stack'] + x-page[layout='stack'] {--x-layout-stack-width: 67vw;}
 
 x-datatable > table {width:100%;}
 x-datatable > table > thead > tr > th {text-align:left; font-weight:600;}

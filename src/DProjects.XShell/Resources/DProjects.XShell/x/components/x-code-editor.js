@@ -20,8 +20,12 @@ export default {
         },
         methods: {
             refreshValue: {
-                description: "Refreshes the content of the editor with the current state value."
-            } 
+                description: "Refreshes the content of the editor with the current state value.",
+                returns: {
+                    description: "The refreshed value of the editor.",
+                    type:"string"
+                }
+            }
         }
     },
     style: `
@@ -63,7 +67,7 @@ export default {
             refreshValue() {
                 // refresh the editor with the current state value
                 const editor = host.shadowRoot.querySelector(".editor");
-                editor.refreshValue();
+                return editor.refreshValue();
             },
 
             // events

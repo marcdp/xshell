@@ -160,7 +160,7 @@ export default {
 
     template: `
         <x-notice x-if="state.error" type="error" x-prop:message="state.error"></x-notice>
-        <x-template x-if="state.generated" x-prop:template="state.generated" x-prop:value="state.value" x-on:change="changed"></x-template>        
+        <x-template x-if="state.generated" x-prop:template="state.generated" x-prop:value="state.value" x-on:change="changed"></x-template>
     `,
 
     state: { 
@@ -179,9 +179,11 @@ export default {
                     if (!activeSchema || !isObject(newValue)) return;
                     const updated = applyDefaults(activeSchema, newValue);
                     if (updated !== newValue) state.value = updated;
-                });
-                this.refresh();
+                });                
             },
+            mount() {
+                this.refresh();
+            },  
             unload() {
                 // unload
                 revision++;
@@ -215,19 +217,28 @@ export default {
                     const generated = makeTemplate(schema);
                     if (!isObject(state.value)) throw new Error("x-schema value must be an object.");
 
-                    activeSchema = structuredClone(schema);
+                    activeSchema = schema;
                     const oldValue = state.value;
                     const updated = applyDefaults(schema, oldValue);
 
                     if (updated !== oldValue) {
                         state.value = updated;
-                        commands.enqueue("changed", { event: { detail: { oldValue, newValue: updated } } });
+                        commands.enqueue("defaultChanged", { event: { detail: { oldValue, newValue: updated } } });
                     }
                     state.generated = generated;
                 } catch (error) {
                     if (current !== revision || error.name === "AbortError") return;
                     state.error = error.message || String(error);
                 }
+            },
+
+            defaultChanged({ event }) {
+                const { oldValue, newValue } = event.detail;
+                host.dispatchEvent(new CustomEvent("change", {
+                    detail: { oldValue, newValue: state.value },
+                    bubbles: true,
+                    composed: false
+                }));
             },
 
             changed({ event }) {

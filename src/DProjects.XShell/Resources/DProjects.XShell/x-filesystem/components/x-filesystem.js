@@ -60,9 +60,8 @@ export default {
         </div>
 
         <x-contextmenu x-on:command="onCommand">        
-            <x-menuitem label="Open" icon="x-open" command="open" x-attr:disabled="!state.entry || !state.open"></x-menuitem>
             <x-menuitem x-for="command in state.commands" x-attr:label="command.label" x-attr:icon="command.icon" command="customCommand" x-attr:data-command="command.id" x-attr:disabled="!state.entry"></x-menuitem>
-            <x-menuitem label="-" ></x-menuitem>
+            <x-menuitem x-if="state.commands.length" label="-" ></x-menuitem>
             <x-menuitem label="New file ..." icon="x-file" command="newFile" x-attr:disabled="(state.entry && state.entry.type != 'directory' ? true : false)"></x-menuitem>
             <x-menuitem label="New folder ..." icon="x-folder" command="newFolder" x-attr:disabled="(state.entry && state.entry.type != 'directory' ? true : false)"></x-menuitem>
             <x-menuitem label="Upload files ..." icon="x-file" command="uploadFiles" x-attr:disabled="(state.entry && state.entry.type != 'directory' ? true : false)"></x-menuitem>
@@ -84,23 +83,9 @@ export default {
         commands: [],
         history: ["/"],
         historyIndex: 0,
-        open: false,
         root: false
     },
     controller({ state, events, loader, navigation, getPage, host, dialog, tasks, resolver, registry }) {
-        const getFileHandler = (resolver, path) => {
-            // scan all possible file extensions
-            const name = path.split('/').pop();
-            const parts = name.split('.');
-            for (let i = 0; i < parts.length; i++) {
-                const extension = parts.slice(i).join('.');
-                const resource = "filehandler:" + extension;
-                if (resolver.has(resource)) {
-                    return resolver.resolve(resource);
-                }
-            }
-            return null;
-        };
         const getFileCommands = (registry, entry) => {
             const fileCommands = registry.get("filecommands");
             if (!fileCommands) return [];
@@ -131,7 +116,6 @@ export default {
             // commands
             async refresh( options = {} ) {
                 // handle refresh event
-                console.log("refresh");
                 const list = host.shadowRoot.querySelector("x-filesystem-list");
                 const tree = host.shadowRoot.querySelector("x-filesystem-tree");
                 if (list) await list.refresh( options ); 
@@ -157,18 +141,11 @@ export default {
                     }
                 }
                 for(const entry of entries) {
-                    const page = getPage();
-                    const resolverDefinition = getFileHandler(resolver, entry.path);
-                    if (resolverDefinition) {
-                        navigation.navigate( {
-                            href: resolverDefinition.path,
-                            page: page,
-                            params: {
-                                src: state.src,
-                                path: entry.path,
-                            },
-                            open: "stack"
-                        });
+                    const commands = getFileCommands(registry, entry)
+                    for(const command of commands) {
+                        if (command.actions?.includes("open")) {
+                            this.customCommand(command.id, [entry]);
+                        }
                     }
                 }
             },
@@ -382,22 +359,55 @@ export default {
                 }
                 return true;
             },
-            async customCommand(command, path) {
+            async customCommand(command, entries) {
                 // handle custom command
-                return await navigation.navigate({ 
-                    href: "page:x:/pages/invoke.js", 
-                    page: getPage(),
-                    open:"stack",
-                    params: {
-                        type: "command",
-                        id: command,
-                        args: JSON.stringify({
-                            src: state.src,
-                            path: path, 
-                            password: "123456"
-                        }),
-                    } 
-                });
+                if (command.startsWith("command:")) {
+                    command = command.substring(command.indexOf(":") + 1);
+                    for(const entry of entries) {
+                        await navigation.navigate({ 
+                            href: "page:x:/pages/invoke.js", 
+                            page: getPage(),
+                            open:"stack",
+                            params: {
+                                type: "command",
+                                id: command,
+                                args: JSON.stringify({
+                                    src: state.src,
+                                    path: entry.path
+                                }),
+                            } 
+                        });
+                    }
+                } else if (command.startsWith("page:")) {
+                    const page = getPage();
+                    for(const entry of entries) {
+                        navigation.navigate( {
+                            href: command,
+                            page: page,
+                            params: {
+                                src: state.src,
+                                path: entry.path,
+                            },
+                            open: "stack"
+                        });
+                    }
+                }
+                /*
+                for(const entry of entries) {
+                    const page = getPage();
+                    const resolverDefinition = getFileHandler(resolver, entry.path);
+                    if (resolverDefinition) {
+                        navigation.navigate( {
+                            href: resolverDefinition.path,
+                            page: page,
+                            params: {
+                                src: state.src,
+                                path: entry.path,
+                            },
+                            open: "stack"
+                        });
+                    }
+                }*/
             },
 
 
@@ -423,7 +433,7 @@ export default {
                     if (state.entry) this.rename(state.entry.path);
                 } else if (event.detail.command === "customCommand") {
                     const command = event.target.dataset.command;
-                    if (state.entry) this.customCommand(command, state.entry.path);
+                    if (state.entry) this.customCommand(command, state.entries);
                 } else {
                     alert("UNHANDLED COMMAND: " + event.detail.command)
                 }
@@ -521,7 +531,6 @@ export default {
                 state.entry = event.detail.entry;
                 state.entries = event.detail.entries;
                 state.commands = getFileCommands(registry, state.entry);
-                state.open = (getFileHandler(resolver, state.entry.path) || state.entry.type == "directory");
                 const contextMenu = host.shadowRoot.querySelector("x-contextmenu");
                 contextMenu.open({x: event.detail.x, y: event.detail.y});
             }
