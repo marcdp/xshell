@@ -58,6 +58,10 @@
 
         // services
         "services": {
+            "commands": {
+                "contract": "commands",
+                "implementation": "/services/commands.js"
+            },
             "jsonValidator": {
                 "contract": "json-validator",
                 "implementation": "/services/json-validator.js"

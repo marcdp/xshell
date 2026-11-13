@@ -22,7 +22,7 @@ Both kinds use the same Task class, registry, execution context, status model, c
 `task.background` property reports the selected mode. `tasks.list()` returns both foreground and background Tasks; UI consumers apply visibility
 filtering themselves. `get()`, `clear()`, and `remove()` likewise operate across both kinds.
 
-The generic Command invocation Page runs Commands through `tasks.run()` as foreground Tasks by default. It continues to display the current Task's
-status, progress, output, error, and result locally. Closing or unloading that Page requests cancellation of a pending or running foreground Task.
-Selecting **Advanced / Run in background** creates a background Task instead, so it is also globally visible and survives Page unload. Explicit
-Cancel still requests cancellation in either mode.
+The [Commands](90-commands.md) service uses `tasks.run()` for Command execution. The generic Command invocation Page calls that service with
+`background: false` by default and continues to display the returned Task's status, progress, output, error, and result locally. Closing or
+unloading that Page requests cancellation of a pending or running foreground Task. Selecting **Advanced / Run in background** creates a background
+Task instead, so it is also globally visible and survives Page unload. Explicit Cancel still requests cancellation in either mode.

@@ -5,6 +5,8 @@ import datafieldDefinition from "../../src/DProjects.XShell/Resources/DProjects.
 import formDefinition from "../../src/DProjects.XShell/Resources/DProjects.XShell/x/components/x-form.js";
 import schemaDefinition from "../../src/DProjects.XShell/Resources/DProjects.XShell/x/components/x-schema.js";
 import invokeDefinition from "../../src/DProjects.XShell/Resources/DProjects.XShell/x/pages/invoke.js";
+import Commands from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/commands.js";
+import JsonValidator from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/json-validator.js";
 import Tasks from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/tasks.js";
 
 globalThis.CSSStyleSheet = class { replaceSync() {} };
@@ -200,9 +202,25 @@ function createInvoke(contract, initialArgs = {}, editorErrors = [], options = {
     };
     const state = { ...structuredClone(invokeDefinition.state), type: "command", id: "test", method: "execute", args: initialArgs };
     const tasks = options.tasks || new Tasks({ bus: null });
-    const controller = invokeDefinition.controller({ state, page, tasks, loader: { load: async () => Command } });
-    return { calls, closed, contexts, controller, page, state, tasks, get constructions() { return constructions; } };
+    const loader = { load: async () => Command };
+    const commands = options.commands || new Commands({ loader, tasks, jsonValidator: new JsonValidator() });
+    const controller = invokeDefinition.controller({ state, page, commands, loader });
+    return { calls, closed, commands, contexts, controller, page, state, tasks, get constructions() { return constructions; } };
 }
+
+test("invoke delegates named Command arguments and execution mode to commands.run", async () => {
+    const calls = [];
+    const task = new Tasks({ bus: null }).run({ title: "Delegated", background: false, handler: () => "done" });
+    const commands = { async run(options) { calls.push(options); return task; } };
+    const invoke = createInvoke({ execute: { parameters: [{ name: "value", type: "integer" }] } }, { value: 0 }, [], { commands });
+
+    await invoke.controller.load();
+    await invoke.controller.submit();
+
+    assert.deepEqual(calls, [{ id: "test", args: { value: 0 }, background: false }]);
+    assert.equal(invoke.constructions, 0);
+    assert.equal(invoke.state.result, "done");
+});
 
 test("invoke converts command parameters to x-schema and applies defaults", async () => {
     const invoke = createInvoke({

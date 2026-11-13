@@ -148,18 +148,14 @@ async function resolveInvocation({ type, id, method }, loader, services, contrac
         const contract = Command.contract;
         if (!contract?.execute) throw new Error(`Command '${id}' has no execute contract.`);
 
-        // Return metadata plus a factory that creates a fresh Command for each execution.
+        // Return presentation metadata; execution belongs to the Commands service.
         return {
             type: "command",
             label: contract.label || id,
             description: contract.description || contract.execute.description || "",
             parameters: contract.execute.parameters || [],
             types: contract.types || {},
-            returns: contract.execute.returns || null,
-            invoke(args, context = {}) {
-                const instance = new Command(context);
-                return instance.execute(...args);
-            }
+            returns: contract.execute.returns || null
         };
     }
 
@@ -311,13 +307,14 @@ export default {
     },
 
     // Coordinates invocation resolution, argument editing, validation and execution.
-    controller({ state, loader, services, contracts, page, tasks }) {
+    controller({ state, loader, services, contracts, page, commands }) {
         // Store the resolved invocation adapter and Page lifetime state privately.
         let invocation = null;
         let currentTask = null;
         let taskListener = null;
         let outputRevision = 0;
         let alive = true;
+        let submitting = false;
 
         // Stop observing the previous invocation Task.
         const detachTask = () => {
@@ -437,10 +434,10 @@ export default {
                 state.preview = structuredClone(event.detail.newValue);
             },
 
-            // Validates arguments and executes Commands through the Tasks service.
+            // Validates arguments and delegates Command execution to the Commands service.
             async submit() {
                 // Ignore invalid or concurrent submission attempts.
-                if (!invocation || !state.ready || state.running) return;
+                if (!invocation || !state.ready || state.running || submitting) return;
 
                 // Reset previous execution result and error state.
                 state.error = "";
@@ -465,16 +462,40 @@ export default {
                     return;
                 }
 
-                // Convert named argument state into the positional method argument list.
-                const args = invocation.parameters.map(parameter => state.args[parameter.name]);
+                // Preserve direct shared-instance invocation for ordinary Service methods.
+                if (invocation.type === "service") {
+                    submitting = true;
+                    try {
+                        const args = invocation.parameters.map(parameter => state.args[parameter.name]);
+                        const result = await invocation.invoke(args);
+                        if (!alive) return;
+                        state.completed = true;
+                        state.hasResult = result !== undefined;
+                        state.result = result;
+                        if (state.isDialog) await page.close(result);
+                    } catch (error) {
+                        state.error = error?.message || String(error);
+                    } finally {
+                        submitting = false;
+                    }
+                    return;
+                }
 
-                // Create a registered Task whose execution context constructs this Command instance.
-                const task = tasks.run({
-                    title: invocation.label,
-                    description: invocation.description,
-                    background: state.background,
-                    handler: taskContext => invocation.invoke(args, { task: taskContext })
-                });
+                // The Commands service owns argument preparation, validation and Task creation.
+                let task;
+                submitting = true;
+                try {
+                    task = await commands.run({
+                        id: state.id,
+                        args: state.args,
+                        background: state.background
+                    });
+                } catch (error) {
+                    state.error = error?.message || String(error);
+                    return;
+                } finally {
+                    submitting = false;
+                }
                 attachTask(task);
                 await task.wait();
                 await refreshTask(task);

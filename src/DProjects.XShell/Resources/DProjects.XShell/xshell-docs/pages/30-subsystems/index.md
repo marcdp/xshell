@@ -10,6 +10,7 @@ Implemented V0 runtime capabilities:
 - [Authentication](60-authentication.md) — Optional server-driven sign-in and cookie-backed session endpoints.
 - [Identity](70-identity.md) — Optional Principal state synchronized from the authoritative server session.
 - [Tasks](80-tasks.md) — Asynchronous execution, reporting, cancellation, ownership, and global visibility.
+- [Commands](90-commands.md) — Command resolution, argument validation, and Task-backed execution.
 
 Authentication and identity are supplied by the optional `x-identity` module; they do not introduce an `xshell.identity` Core configuration section.
 

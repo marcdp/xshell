@@ -1,0 +1,34 @@
+{
+  "$schema": "../schemas/contract.schema.json",
+  "label": "Commands",
+  "description": "Resolves executable Commands, validates their named arguments, and executes them through the Tasks service.",
+  "types": {
+    "commandRunOptions": {
+      "type": "object",
+      "description": "Options used to resolve and execute one Command.",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "id": {"type":"string","minLength":1,"description":"Command identifier resolved through the command Loader."},
+          "args": {"type":"object","default":{},"description":"Named Command arguments. Values are validated and ordered using the Command execute contract."},
+          "background": {"type":"boolean","default":true,"description":"Whether the Task is globally visible and may continue independently of its initiating UI."}
+        },
+        "required": ["id"],
+        "additionalProperties": false
+      }
+    },
+    "task": {
+      "type": "object",
+      "description": "Stable live Task handle created by tasks.run(). It exposes Task observation, cancellation, output, wait, and result APIs."
+    }
+  },
+  "properties": {},
+  "events": {},
+  "methods": {
+    "run": {
+      "description": "Asynchronously loads a Command and validates its arguments before creating a Task. Resolves to the live Task handle; Command execution continues through that Task.",
+      "parameters": [{"name":"options","ref":"commandRunOptions","required":true}],
+      "returns": {"ref":"task","description":"A Promise resolving to the newly created live Task handle."}
+    }
+  }
+}

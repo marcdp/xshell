@@ -104,10 +104,10 @@ For example, `x/contracts/toast.json` defines id `toast` and registration `xshel
 The implementation URL is imported through `esm:` and must default-export a class.
 
 Framework contracts use the same JSON format and validation. For example, `xshell/contracts/temp.json` defines `temp`; XShell associates it with
-the framework-owned default provider declared as `xshell.services.temp`, whose implementation is `xshell/temp.js`. Bootstrap normalizes framework
-implementation paths into the framework asset namespace and generates an `esm:` resolver rule with `moduleId: "xshell"`, so framework services
-use the same loading and inspection pipeline as module-provided services. Applications may replace the Temp implementation through normal
-configuration merging without assigning it to the `x` module.
+the framework-owned default provider declared as `xshell.services.temp`, whose implementation is selected by that registration. Bootstrap
+normalizes framework implementation paths into the framework asset namespace and generates an `esm:` resolver rule with `moduleId: "xshell"`,
+so framework services use the same loading and inspection pipeline as module-provided services. Applications may replace the Temp implementation
+through normal configuration merging without assigning it to the `x` module.
 
 ## Service contract schema
 
@@ -188,8 +188,9 @@ After a configured service is first constructed and validated, XShell emits `xsh
 created event. Consumers can re-read `services.registry` to inspect the current state.
 
 The directly registered core names are `areas`, `bus`, `config`, `dialog`, `i18n`, `loader`, `modules`, `navigation`, `resolver`,
-`runtime`, `contracts`, and `services`. `temp` is a framework-owned configured service registered through `xshell.services`; its compatibility
-`xshell.temp` accessor resolves that same lazy singleton. There is no auth/identity registration. A Diagnostics getter is not a registered service
-contract.
+`runtime`, `contracts`, and `services`. `commands`, `jsonValidator`, `tasks`, and `temp` are framework-owned configured services registered through
+`xshell.services`; the compatibility `xshell.temp` accessor resolves the same lazy Temp singleton. There is no auth/identity registration. A
+Diagnostics getter is not a registered service contract.
 
-See [Bus](../30-subsystems/20-bus.md), [Dialogs](../30-subsystems/30-dialogs.md), and [Temp](../30-subsystems/50-temp.md).
+See [Bus](../30-subsystems/20-bus.md), [Dialogs](../30-subsystems/30-dialogs.md), [Temp](../30-subsystems/50-temp.md),
+[Tasks](../30-subsystems/80-tasks.md), and [Commands](../30-subsystems/90-commands.md).
