@@ -327,7 +327,7 @@ export default {
                 <!-- breadcrumb -->
                 <nav class="header breadcrumb">
                     <div x-if="state.menuNavigation">
-                        <x-icon icon="x-menu" x-on:click="toggleMenu" class="toggle" x-class:toggled="state.toggled"></x-icon>
+                        <x-icon icon="x-menu" x-on:click="onToggleMenu" class="toggle" x-class:toggled="state.toggled"></x-icon>
                     </div>
                     <x-page-breadcrumb></x-page-breadcrumb>
 

@@ -7,16 +7,20 @@ export default class JsonValidator {
 
     // methods
     validate(data, schema, schemas) {
+        // Compile a private mutable schema because the vendor validator annotates schema objects.
         let validator = this._validators.get(schema);
         if (!validator) {
-            validator = new Validator(schema, "2020-12");
+            validator = new Validator(structuredClone(schema), "2020-12");
             this._validators.set(schema, validator);
         }
+
+        // Clone referenced schemas too because addSchema() may annotate them.
         if (schemas) {
             for (const [path, referencedSchema] of Object.entries(schemas)) {
-                validator.addSchema(referencedSchema, new URL(path, schema.$id).href);
+                validator.addSchema(structuredClone(referencedSchema), new URL(path, schema.$id).href);
             }
         }
+
         return validator.validate(data);
     }
     assert(data, schema) {

@@ -109,10 +109,10 @@ class Task extends EventTarget {
         this.#notify();
     }
 
-    _write(channel, text) {
+    _write(level, text) {
         if (this.#status !== "running" || this._signal.aborted) return;
 
-        this.#output.push(Object.freeze({timestamp: new Date(), channel, text: String(text)}));
+        this.#output.push(Object.freeze({timestamp: new Date(), level, text: String(text)}));
 
         if (this.#output.length > MAX_OUTPUT_ENTRIES) {
             this.#output.shift();
@@ -196,9 +196,10 @@ export default class Tasks {
                     signal: task._signal,
                     setDescription: description => task._setDescription(description),
                     setProgress: (value, max = 100) => task._setProgress(value, max),
-                    write: text => task._write("stdout", text),
-                    out: text => task._write("stdout", text),
-                    err: text => task._write("stderr", text)
+                    log: text => task._write("log", text),
+                    info: text => task._write("info", text),
+                    warn: text => task._write("warn", text),
+                    error: text => task._write("error", text)
                 });
 
                 task._signal.throwIfAborted();

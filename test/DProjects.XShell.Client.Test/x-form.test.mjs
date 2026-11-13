@@ -335,6 +335,9 @@ test("invoke resolves named return types for presentation", async () => {
 });
 
 test("invoke projects Command task reporting and result in output order", async () => {
+    assert.match(invokeDefinition.template, /entry\.level/);
+    assert.doesNotMatch(invokeDefinition.template, /entry\.channel/);
+
     const invoke = createInvoke({
         label: "Reporting command",
         description: "Reports execution",
@@ -344,8 +347,8 @@ test("invoke projects Command task reporting and result in output order", async 
             const task = this.context.task;
             task.setDescription("Working");
             task.setProgress(1, value);
-            task.out("first");
-            task.err("second");
+            task.log("first");
+            task.error("second");
             task.setProgress(value, value);
             return 123;
         }
@@ -359,16 +362,16 @@ test("invoke projects Command task reporting and result in output order", async 
     assert.equal(invoke.contexts[0].task.signal, task._signal);
     assert.equal(task.description, "Working");
     assert.deepEqual(task.progress, { value: 2, max: 2 });
-    assert.deepEqual((await task.getOutput()).entries.map(({ channel, text }) => ({ channel, text })), [
-        { channel: "stdout", text: "first" },
-        { channel: "stderr", text: "second" }
+    assert.deepEqual((await task.getOutput()).entries.map(({ level, text }) => ({ level, text })), [
+        { level: "log", text: "first" },
+        { level: "error", text: "second" }
     ]);
     assert.equal(task.status, "finished");
     assert.equal(await task.getResult(), 123);
     assert.equal(invoke.state.taskStatus, "finished");
-    assert.deepEqual(invoke.state.taskOutput.map(({ channel, text }) => ({ channel, text })), [
-        { channel: "stdout", text: "first" },
-        { channel: "stderr", text: "second" }
+    assert.deepEqual(invoke.state.taskOutput.map(({ level, text }) => ({ level, text })), [
+        { level: "log", text: "first" },
+        { level: "error", text: "second" }
     ]);
     assert.equal(invoke.state.result, 123);
 });
@@ -391,7 +394,7 @@ test("invoke refreshes description, progress and output while a Command is runni
         async execute() {
             this.context.task.setDescription("Halfway");
             this.context.task.setProgress(1, 2);
-            this.context.task.out("live output");
+            this.context.task.log("live output");
             started();
             await blocked;
             return "done";
@@ -406,8 +409,8 @@ test("invoke refreshes description, progress and output while a Command is runni
     assert.equal(invoke.state.running, true);
     assert.equal(invoke.state.taskDescription, "Halfway");
     assert.deepEqual(invoke.state.taskProgress, { value: 1, max: 2 });
-    assert.deepEqual(invoke.state.taskOutput.map(({ channel, text }) => ({ channel, text })), [
-        { channel: "stdout", text: "live output" }
+    assert.deepEqual(invoke.state.taskOutput.map(({ level, text }) => ({ level, text })), [
+        { level: "log", text: "live output" }
     ]);
 
     release();

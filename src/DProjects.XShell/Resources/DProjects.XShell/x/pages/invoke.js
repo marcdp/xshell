@@ -31,8 +31,8 @@ function methodToJsonSchema(method, types = {}) {
             throw new Error(`Parameter '${parameter.name}' has an invalid schema.`);
         }
 
-        // Copy the schema definition and reject unsupported schema keywords.
-        const definition = constraints === true ? {} : { ...constraints };
+        // Clone contract schema constraints because loaded contracts may be deeply frozen.
+        const definition = constraints === true ? {} : structuredClone(constraints);
         const unsupported = Object.keys(definition).find(key => !supported.has(key));
         if (unsupported) throw new Error(`Parameter '${parameter.name}' uses unsupported schema keyword '${unsupported}'.`);
 
@@ -111,8 +111,8 @@ function methodToJsonSchema(method, types = {}) {
         if (parameter.label !== undefined) definition.title = parameter.label;
         if (parameter.description !== undefined) definition.description = parameter.description;
         else if (namedType?.description !== undefined && definition.description === undefined) definition.description = namedType.description;
-        if (Object.hasOwn(parameter, "default")) definition.default = parameter.default;
-        if (parameter.enum !== undefined) definition.enum = parameter.enum;
+        if (Object.hasOwn(parameter, "default")) definition.default = structuredClone(parameter.default);
+        if (parameter.enum !== undefined) definition.enum = structuredClone(parameter.enum);
 
         // Validate enum values supported by the generated x-schema editor.
         if (definition.enum !== undefined && (schemaType !== "string" || !Array.isArray(definition.enum) || definition.enum.length === 0 ||
@@ -225,7 +225,8 @@ export default {
         .output { margin-top:1em; }
         .output-entry { display:grid; grid-template-columns:4.5em minmax(0, 1fr); gap:.75em; align-items:start; }
         .output-entry strong { font-family:monospace; font-size:.85em; text-transform:uppercase; }
-        .output-entry.stderr strong, .output-entry.stderr pre { color:var(--x-datafield-error-color); }
+        .output-entry.warn strong, .output-entry.warn pre { color:var(--x-notice-color-warning); }
+        .output-entry.error strong, .output-entry.error pre { color:var(--x-datafield-error-color); }
         .output-entry pre { margin:0; white-space:pre-wrap; overflow-wrap:anywhere; }
         .result { margin-top:1.25em; }
         .result pre { white-space:pre-wrap; overflow-wrap:anywhere; }
@@ -266,8 +267,8 @@ export default {
             </x-progress>
 
             <div x-if="state.taskOutput.length > 0" class="output">
-                <div x-for="entry in state.taskOutput" x-attr:class="'output-entry ' + entry.channel">
-                    <strong x-text="entry.channel"></strong>
+                <div x-for="entry in state.taskOutput" x-attr:class="'output-entry ' + entry.level">
+                    <strong x-text="entry.level"></strong>
                     <pre x-text="entry.text"></pre>
                 </div>
             </div>
@@ -468,6 +469,7 @@ export default {
                 const args = invocation.parameters.map(parameter => state.args[parameter.name]);
 
                 // Preserve direct invocation semantics for registered shared Services.
+                /*
                 if (invocation.type === "service") {
                     state.running = true;
                     try {
@@ -483,7 +485,7 @@ export default {
                         if (alive) state.running = false;
                     }
                     return;
-                }
+                }*/
 
                 // Create a registered Task whose execution context constructs this Command instance.
                 const task = tasks.run({

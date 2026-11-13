@@ -1,7 +1,7 @@
 {
   "$schema": "../schemas/contract.schema.json",
   "label": "Tasks",
-  "description": "Manages asynchronous tasks, execution, progress, output, results and cancellation. Tasks expose live handles independently of their execution backend.",
+  "description": "Creates and manages asynchronous Tasks. This contract owns both the execution-side taskContext and the stable Task handles used for observation and control.",
   "types": {
     "taskId": {"type":"string","description":"Automatically generated unique task identifier."},
     "taskStatus": {
@@ -11,51 +11,52 @@
     },
     "taskOptions": {
       "type": "object",
-      "description": "Options used to create and execute a task.",
+      "description": "Options passed to tasks.run() to create and start Task execution.",
       "schema": {
         "type": "object",
         "properties": {
-          "title": {"type":"string","minLength":1},
-          "description": {"type":"string"},
+          "title": {"type":"string","minLength":1,"description":"Non-empty display title for the Task."},
+          "description": {"type":"string","description":"Initial execution description."},
           "background": {
             "type": "boolean",
             "default": true,
             "description": "Whether the Task is globally visible and may continue independently of its initiating UI."
           },
-          "handler": {"description":"Async function receiving a taskContext and returning the task result."},
-          "data": {"description":"Optional input data passed to the handler through context.data."}
+          "handler": {"description":"Function invoked asynchronously with a taskContext. Its returned value becomes the result; throwing or rejecting fails the Task."},
+          "data": {"description":"Optional arbitrary input exposed to the handler as taskContext.data."}
         },
         "required": ["title","handler"]
       }
     },
     "taskContext": {
       "type": "object",
-      "description": "Execution context passed to the task handler.",
+      "description": "Execution-side context passed to tasks.run() handlers and injected into Commands as task. It is distinct from the public Task handle.",
       "schema": {
         "type": "object",
         "properties": {
-          "data": {"description":"Input supplied through taskOptions.data."},
+          "data": {"description":"Optional arbitrary input supplied through taskOptions.data."},
           "signal": {"description":"AbortSignal used for cooperative cancellation."},
-          "setDescription": {"description":"Function setDescription(description) updating the task description."},
-          "setProgress": {"description":"Function setProgress(value, max = 100). Passing null makes progress indeterminate."},
-          "write": {"description":"Function write(text), equivalent to out(text)."},
-          "out": {"description":"Function out(text) writing to stdout."},
-          "err": {"description":"Function err(text) writing to stderr without automatically failing the task."}
+          "setDescription": {"description":"Function setDescription(description) updating the live Task description while execution is running."},
+          "setProgress": {"description":"Function setProgress(value, max = 100) reporting execution progress. Passing null makes progress indeterminate."},
+          "log": {"description":"Function log(text) appending general execution output."},
+          "info": {"description":"Function info(text) appending an informational execution message."},
+          "warn": {"description":"Function warn(text) appending a non-fatal warning."},
+          "error": {"description":"Function error(text) appending error-level output. It does not fail the Task; only throwing or rejecting from the handler changes lifecycle status to error."}
         },
-        "required": ["signal","setDescription","setProgress","write","out","err"]
+        "required": ["signal","setDescription","setProgress","log","info","warn","error"]
       }
     },
     "taskOutput": {
       "type": "object",
-      "description": "One entry in a task's output stream.",
+      "description": "One ordered execution-output entry. Its level is independent of Task lifecycle status.",
       "schema": {
         "type": "object",
         "properties": {
-          "timestamp": {"description":"Timestamp of the output entry."},
-          "channel": {"type":"string","enum":["stdout","stderr"]},
-          "text": {"type":"string"}
+          "timestamp": {"description":"Date recording when the output entry was appended."},
+          "level": {"type":"string","enum":["log","info","warn","error"],"description":"Execution-output severity; error does not imply that the Task failed."},
+          "text": {"type":"string","description":"Output text."}
         },
-        "required": ["timestamp","channel","text"]
+        "required": ["timestamp","level","text"]
       }
     },
     "taskOutputPage": {
@@ -67,12 +68,12 @@
           "entries": {"type":"array","items":{"type":"object","description":"An entry conforming to taskOutput."}},
           "nextCursor": {"type":"string","description":"Cursor for retrieving subsequent output."}
         },
-        "required": ["entries"]
+        "required": ["entries","nextCursor"]
       }
     },
     "task": {
       "type": "object",
-      "description": "Live observable Task object. References remain stable while the task is registered.",
+      "description": "Stable live Task handle returned by tasks.run(), tasks.get() and tasks.list(). This is the observation/control side of execution, not taskContext.",
       "schema": {
         "type": "object",
         "properties": {
@@ -80,9 +81,9 @@
           "title": {"type":"string","description":"Display title."},
           "description": {"type":"string","description":"Current description."},
           "background": {"type":"boolean","description":"Whether this Task is a background Task."},
-          "status": {"type":"string","enum":["pending","running","finished","error","canceled"]},
+          "status": {"type":"string","enum":["pending","running","finished","error","canceled"],"description":"Lifecycle status. It becomes error only when the handler throws or rejects, not when taskContext.error() writes output."},
           "progress": {
-            "description": "null for indeterminate progress, otherwise an object with value and max.",
+            "description": "null before determinate progress is reported or when progress is indeterminate; otherwise an object with value and max.",
             "oneOf": [
               {"type":"null"},
               {
@@ -93,7 +94,7 @@
             ]
           },
           "error": {
-            "description": "Failure details, or null.",
+            "description": "Handler failure details when lifecycle status is error, otherwise null. Error-level output is not a failure.",
             "oneOf": [
               {"type":"null"},
               {
@@ -103,22 +104,22 @@
               }
             ]
           },
-          "createdAt": {"description":"Date when the task was registered."},
-          "startedAt": {"description":"Date when execution started, or null."},
-          "endedAt": {"description":"Date when execution ended, or null."},
-          "getOutput": { "description": "Async method getOutput({cursor?, limit?}) returning a taskOutputPage. Output may be retrieved from local memory or a remote server."},
+          "createdAt": {"description":"Cloned Date recording when the Task was registered."},
+          "startedAt": {"description":"Cloned Date recording when execution started, or null."},
+          "endedAt": {"description":"Cloned Date recording when execution ended, or null."},
+          "getOutput": { "description": "Async method getOutput({cursor?, limit?}) returning a chronological taskOutputPage. The limit defaults to 100 and must be between 1 and 1000."},
           "getResult": { "description": "Async method getResult() returning the task's result. Waits for successful completion and rejects on error or cancellation. Results may be strings, objects, URLs or file references."},
           "wait": { "description": "Async method wait() resolving when the task reaches finished, error or canceled. Does not reject merely because the task failed."},
           "cancel": { "description": "Async method cancel() requesting cancellation. Resolves when the cancellation request has been processed."},
-          "addEventListener": {"description":"Registers a listener for changes to this task."},
+          "addEventListener": {"description":"EventTarget method registering a listener, including for change events emitted when this Task changes."},
           "removeEventListener": {"description":"Removes a previously registered task listener."}
         },
-        "required": ["id","title","description","background","status","progress","error","createdAt","startedAt","endedAt","getOutput","getResult","wait","cancel"]
+        "required": ["id","title","description","background","status","progress","error","createdAt","startedAt","endedAt","getOutput","getResult","wait","cancel","addEventListener","removeEventListener"]
       }
     },
     "taskList": {
       "type": "array",
-      "description": "Snapshot array of references to live Task objects.",
+      "description": "Snapshot array containing stable references to live Task handles.",
       "schema": {"type":"array","items":{"type":"object","description":"Live Task object conforming to the task type."}}
     }
   },
@@ -139,7 +140,7 @@
   },
   "methods": {
     "run": {
-      "description": "Creates and starts a task. Executes options.handler(context) asynchronously and immediately returns a live Task object. A returned value becomes the result; an exception marks the task as failed.",
+      "description": "Creates and starts a Task. Executes options.handler(taskContext) asynchronously and immediately returns its live Task handle. A returned value becomes the result; throwing or rejecting marks the Task as failed.",
       "parameters": [{"name":"options","ref":"taskOptions","required":true}],
       "returns": {"ref":"task","description":"The newly created live Task object."}
     },

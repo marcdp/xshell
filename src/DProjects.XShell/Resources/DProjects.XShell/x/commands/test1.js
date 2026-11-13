@@ -29,7 +29,7 @@ export default {
                 for (let i = 1; i <= value; i++) {
                     task.signal.throwIfAborted();
                     task.setDescription(`Executing step ${i} of ${value}`);
-                    task.out(`Executing step ${i} of ${value}`);
+                    task.log(`Executing step ${i} of ${value}`);
 
                     await new Promise(resolve => setTimeout(resolve, 250));
                     task.setProgress(i, value);

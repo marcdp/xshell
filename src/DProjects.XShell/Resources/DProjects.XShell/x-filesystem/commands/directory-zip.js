@@ -41,14 +41,14 @@ export default {
 
                 // Create the ZIP archive.
                 task.setDescription("Creating ZIP archive...");
-                task.out(`Creating ZIP archive from ${path}`);
+                task.log(`Creating ZIP archive from ${path}`);
                 const blob = await createZip(filesystem, [path], {signal:task.signal});
                 task.signal.throwIfAborted();
 
                 // Create the browser URL returned by the Command.
                 const url = URL.createObjectURL(blob);
                 task.setDescription("ZIP archive created");
-                task.out(`ZIP archive created (${blob.size} bytes)`);
+                task.log(`ZIP archive created (${blob.size} bytes)`);
 
                 return url;
             }

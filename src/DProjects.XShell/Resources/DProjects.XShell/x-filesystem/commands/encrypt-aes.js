@@ -13,7 +13,7 @@ export default {
         }        
     },
     // implementation
-    controller({ context }) {
+    controller({ task }) {
         return {
             execute(src, path, password) {
                 // debugger
