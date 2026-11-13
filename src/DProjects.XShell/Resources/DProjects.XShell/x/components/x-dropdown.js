@@ -134,7 +134,7 @@ export default {
     state: {
         expanded: false,
     },
-    controller({ state, events, bus, host, commands }) {
+    controller({ state, events, bus, host, postRender }) {
         return {
             load() {
                 //load
@@ -210,7 +210,7 @@ export default {
                 if (!state.expanded) {
                     this._expandedAt = performance.now();
                     state.expanded = true;
-                    commands.enqueue("focus");
+                    postRender("focus");
                 }
             },
 

@@ -164,7 +164,7 @@ test("x-schema renders write-only strings as password fields", async () => {
         events: { on() {} },
         host: { shadowRoot: { querySelector() { return null; } }, dispatchEvent() {} },
         loader: { load() { throw new Error("Unexpected load"); } },
-        commands: { enqueue() {} }
+        postRender() {}
     });
 
     await controller.refresh();

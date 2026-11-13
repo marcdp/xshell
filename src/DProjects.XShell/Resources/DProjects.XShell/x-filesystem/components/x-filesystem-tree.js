@@ -112,7 +112,7 @@ export default {
         entries: null,
         root: false
     },
-    controller({ state, events, host, commands }) {
+    controller({ state, events, host, postRender }) {
         return {
             async load(args) {
                 // load
@@ -228,7 +228,7 @@ export default {
                     const entry = this.getEntryByPathRecursive(selectedPath);
                     if (entry) {
                         state.selectedPath = selectedPath;
-                        commands.enqueue("select", selectedPath);
+                        postRender("select", selectedPath);
                     }
                 }
             },

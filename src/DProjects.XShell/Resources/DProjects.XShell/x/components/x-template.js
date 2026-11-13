@@ -61,7 +61,7 @@ export default {
         renderingError: ""
     },
 
-    controller({events, state, dependencies, loader, host, getPage, commands}) {
+    controller({events, state, dependencies, loader, host, getPage, postRender}) {
         let renderEngine = null;
         let revision = 0;
         let renderPending = false;
@@ -149,7 +149,7 @@ export default {
             mount() {
                 // The component's own XTemplate has not rendered yet when
                 // mount() is called. Run refresh after the first outer render.
-                commands.enqueue("refresh");
+                postRender("refresh");
             },
 
             unmount() {

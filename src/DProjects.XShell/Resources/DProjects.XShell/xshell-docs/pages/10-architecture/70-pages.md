@@ -185,7 +185,8 @@ The Page-specific values are:
 
 * `definition` — the frozen Page definition object used to create the Page class. This is shared definition metadata/context rather than
   Page-instance state and normally is not needed by Page code. Modifying it is not supported.
-* `commands` — exposes `enqueue(command, ...params)` for dispatch after the next render.
+* `postRender` — a function that queues a local controller method by name and optional arguments for FIFO execution after the next render. Calling it
+  does not schedule a render.
 * `state` — the Page-instance state object created by the configured state engine and consumed by the render engine/template. State is private
   implementation data unless a value is explicitly exposed through the Page contract; public properties and private state are not interchangeable.
 * `context` — the context supplied when that Page instance is created. It is Page-instance framework context; XShell does not establish arbitrary

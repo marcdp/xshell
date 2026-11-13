@@ -140,7 +140,7 @@ export default {
     state: {
         pageClasses: null
     },
-    controller({ state, events, bus,runtime, host, commands, getPage }) {
+    controller({ state, events, bus,runtime, host, postRender, getPage }) {
         let resolveClose = null;
         let previousFocus = null;
         return {
@@ -152,7 +152,7 @@ export default {
                 } else {
                     setTimeout(() => {
                         state.expanded = true;
-                        commands.enqueue("focus");
+                        postRender("focus");
                     }, 50);
                 }
                 events.on(bus, "xshell:page:load", (event)=>{

@@ -52,7 +52,7 @@ export default {
         aes_password: null,
     },
 
-    controller({state, page, loader, dialog, commands, markdown}) {
+    controller({state, page, loader, dialog, postRender, markdown}) {
         return {
             async load() {
                 // load
@@ -88,14 +88,14 @@ export default {
                     state.aes_password = await dialog.prompt({ title: "Enter password", inputType: "password", required:true});
                     if (!state.aes_password) {
                         state.error = "Password is required.";
-                        commands.enqueue("close");
+                        postRender("close");
                         return;
                     }
                     try {
                         value = await aes.decrypt(value, state.aes_password);
                     } catch (error) {
                         state.error = error.message || "Unable to decrypt file.";
-                        commands.enqueue("close");
+                        postRender("close");
                         return;
                     }
                 }   
@@ -182,7 +182,7 @@ export default {
                     const editor = page.host.querySelector(".editor");
                     editor.refreshValue();
                     event.preventDefault();
-                    commands.enqueue("save");
+                    postRender("save");
                 }
             }
         };

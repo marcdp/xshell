@@ -59,7 +59,7 @@ export default {
         x: undefined,
         y: undefined,
     },
-    controller({ state, host, commands }) {
+    controller({ state, host, postRender }) {
         const outsideClick = (event) => {
             if (!event.composedPath().includes(host)) {
                 host.close();
@@ -85,7 +85,7 @@ export default {
                 document.addEventListener("pointerdown", outsideClick, true);
                 document.addEventListener("scroll", scroll, true);
                 // focus the menu after opening
-                commands.enqueue("focus");
+                postRender("focus");
             },
             command({ event }) {
                 this.close();

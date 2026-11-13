@@ -239,7 +239,7 @@ export async function createComponentClassFromJsDefinition(src, context, definit
         _mutationObserver = null;
         _renderPending = false;
         _renderCount = 0;
-        _commandsPending = [];
+        _postRenderPending = [];
         _unloaded = false;
         // static
         static get observedAttributes() { 
@@ -318,10 +318,10 @@ export async function createComponentClassFromJsDefinition(src, context, definit
                     } else if (prop == "dependencies") {
                         // get dependencies
                         return dependencies;
-                    } else if (prop == "commands") {
-                        // get commands
-                        return {
-                            enqueue: (command, ...params) => { self._commandsPending.push( { command, params: [...params] }); }
+                    } else if (prop == "postRender") {
+                        // queue a controller method for execution after the next render
+                        return (methodName, ...args) => {
+                            self._postRenderPending.push({ methodName, args: [...args] });
                         };
                     } else {
                         // resolve from services
@@ -451,9 +451,9 @@ export async function createComponentClassFromJsDefinition(src, context, definit
                 this._stateChanges = [];
                 this._renderPending = false;
                 renderEngine.render();
-                while (this._commandsPending.length > 0) {
-                    const cmd = this._commandsPending.shift();
-                    this.onCommand(cmd.command, ...cmd.params);
+                while (this._postRenderPending.length > 0) {
+                    const pending = this._postRenderPending.shift();
+                    this.onCommand(pending.methodName, ...pending.args);
                 }
             });
         }

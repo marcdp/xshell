@@ -131,6 +131,9 @@ The generated Web Component owns browser integration, its public contract surfac
 implementation behavior, private methods, lifecycle handlers, and template handlers. Controller methods execute with the controller as `this`; code
 that needs the generated element requests the injected `host` value. Only names in `contract.methods` are proxied onto the element.
 
+Controllers can request `postRender`, a function that queues a local controller method by name and optional arguments for FIFO execution after the
+next render. Calling `postRender(methodName, ...args)` does not schedule a render; it only adds work to the Component instance's post-render queue.
+
 ## State and rendering
 
 A definition resolves `renderEngine` and `stateEngine` from its `meta` overrides and then its owning module's `defaults.component`. Page definitions

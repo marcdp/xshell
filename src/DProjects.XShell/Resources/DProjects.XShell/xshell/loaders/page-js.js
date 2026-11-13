@@ -319,7 +319,7 @@ export async function createPageClassFromJsDefinition(src, context, definition) 
         _styleSheets = [];
         _disposables = [];
         _initializingQuery = true;
-        _commandsPending = [];
+        _postRenderPending = [];
         // ctor
         constructor({ src, context }) {
             super({ src, context });
@@ -388,10 +388,10 @@ export async function createPageClassFromJsDefinition(src, context, definition) 
                     } else if (prop == "query") {
                         // get query
                         return getPageQueryParams(self.src);
-                    } else if (prop == "commands") {
-                        // get commands
-                        return {
-                            enqueue: (command, ...params) => { self._commandsPending.push( { command, params: [...params] }); }
+                    } else if (prop == "postRender") {
+                        // queue a controller method for execution after the next render
+                        return (methodName, ...args) => {
+                            self._postRenderPending.push({ methodName, args: [...args] });
                         };
                     } else if (prop == "moduleInstance") {
                         // get module instance
@@ -508,9 +508,12 @@ export async function createPageClassFromJsDefinition(src, context, definition) 
                 this._stateChanges = [];
                 this._renderPending = false;
                 renderEngine.render();
-                while (this._commandsPending.length > 0) {
-                    const cmd = this._commandsPending.shift();
-                    this.onCommand(cmd.command, ...cmd.params);
+                while (this._postRenderPending.length > 0) {
+                    const pending = this._postRenderPending.shift();
+                    const handler = this._controller[pending.methodName];
+                    if (typeof(handler) === "function") {
+                        handler.apply(this._controller, pending.args);
+                    }
                 }
             });
         }

@@ -468,25 +468,6 @@ export default {
                 // Convert named argument state into the positional method argument list.
                 const args = invocation.parameters.map(parameter => state.args[parameter.name]);
 
-                // Preserve direct invocation semantics for registered shared Services.
-                /*
-                if (invocation.type === "service") {
-                    state.running = true;
-                    try {
-                        const result = await invocation.invoke(args);
-                        if (!alive) return;
-                        state.completed = true;
-                        state.hasResult = result !== undefined;
-                        state.result = result;
-                        if (state.isDialog) await page.close(result);
-                    } catch (error) {
-                        if (alive) state.error = error?.message || String(error);
-                    } finally {
-                        if (alive) state.running = false;
-                    }
-                    return;
-                }*/
-
                 // Create a registered Task whose execution context constructs this Command instance.
                 const task = tasks.run({
                     title: invocation.label,

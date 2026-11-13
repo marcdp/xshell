@@ -168,7 +168,7 @@ export default {
         error: "" 
     },
 
-    controller({ state, events, host, loader, jsonValidator, commands }) {
+    controller({ state, events, host, loader, jsonValidator, postRender }) {
         let activeSchema = null, revision = 0, abortController = null;
 
         return {
@@ -223,7 +223,7 @@ export default {
 
                     if (updated !== oldValue) {
                         state.value = updated;
-                        commands.enqueue("defaultChanged", { event: { detail: { oldValue, newValue: updated } } });
+                        postRender("defaultChanged", { event: { detail: { oldValue, newValue: updated } } });
                     }
                     state.generated = generated;
                 } catch (error) {

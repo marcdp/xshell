@@ -64,7 +64,7 @@ The loader batches `stateChange` and rendering through `requestAnimationFrame`; 
 ## State-engine boundary
 
 The engine owns state creation, change detection, notification, and invalidation. It does not own contracts, public API, controllers, lifecycle,
-rendering, or navigation. The loader coordinates engines, lifecycle, and queued commands.
+rendering, or navigation. The loader coordinates engines, lifecycle, and queued post-render controller calls.
 
 See [Properties](20-properties.md), [Lifecycle](60-lifecycle.md), [Rendering Engines](70-rendering.md), and [ADR-0004](../60-adr/0004-properties-and-state.md).
 

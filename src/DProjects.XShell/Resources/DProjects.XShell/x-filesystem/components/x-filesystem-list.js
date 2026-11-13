@@ -99,7 +99,7 @@ export default {
         selectedPaths: [],
         dragOver: false,
     },
-    controller({ state, events, host, commands }) {
+    controller({ state, events, host, postRender }) {
         return {
             async load() {
                 // load
@@ -136,12 +136,12 @@ export default {
                             state.selectedPath = selectedPath;
                             state.selectedPaths = [selectedPath];
                             host.dispatchEvent(new CustomEvent("select", {bubbles: true, detail: {path: selectedPath, entry}}));
-                            commands.enqueue("select", selectedPath);
+                            postRender("select", selectedPath);
                         }
                     }
                     // if previously focused, try to restore focus to the list items
                     if (hasFocus) {
-                        commands.enqueue("focus");                        
+                        postRender("focus");
                     }
                 }
             },

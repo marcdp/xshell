@@ -119,7 +119,7 @@ export default {
     state: {
         pageClasses: ""
     },
-    controller({ state, events, bus, getPage, host, commands }) {
+    controller({ state, events, bus, getPage, host, postRender }) {
         let previousFocus = null;
         return {
             load() {
@@ -132,7 +132,7 @@ export default {
                     }
                 });
                 // enqueue open
-                commands.enqueue("open");
+                postRender("open");
                 this.refresh();
             },
             mount() {

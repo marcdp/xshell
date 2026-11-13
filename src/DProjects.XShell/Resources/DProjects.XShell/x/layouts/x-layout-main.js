@@ -389,7 +389,7 @@ export default {
         dockPosition:    "bottom",
         dockSrc:         ""
     },
-    controller({ state, events, areas, bus, getPage, host, tasks, commands }) {
+    controller({ state, events, areas, bus, getPage, host, tasks, postRender }) {
         return {
             async load(params) {
                 // toggled
@@ -434,7 +434,7 @@ export default {
                         localStorage.removeItem("xshell.dockSrc");
                     }
                     localStorage.setItem("xshell.dockPosition", state.dockPosition);
-                    commands.enqueue("refreshMenuHeight");
+                    postRender("refreshMenuHeight");
                 });
             },
 

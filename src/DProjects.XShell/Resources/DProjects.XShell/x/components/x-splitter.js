@@ -62,7 +62,7 @@ export default {
             x-on:keydown="keydown">
         </div>
     `,
-    controller({ state, host, commands }) {
+    controller({ state, host, postRender }) {
         let drag = null;
 
         const size = (element, axis) => element.getBoundingClientRect()[axis];
@@ -134,7 +134,7 @@ export default {
 
         return {
             mount() {
-                if (host.parentElement) commands.enqueue("orientation");
+                if (host.parentElement) postRender("orientation");
             },
             orientation() {
                 return orientation();

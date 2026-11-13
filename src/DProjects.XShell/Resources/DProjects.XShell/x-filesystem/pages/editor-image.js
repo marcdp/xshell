@@ -86,7 +86,7 @@ export default {
         aes: false
     },
 
-    controller({ state, page, loader, dialog, commands}) {
+    controller({ state, page, loader, dialog, postRender}) {
         let filesystem = null;
         let readUrl = null;
         let viewport = null;
@@ -203,7 +203,7 @@ export default {
                         const aes_password = await dialog.prompt({ title: "Enter password", inputType: "password", required:true});
                         if (!aes_password) {
                             state.error = "Password is required.";
-                            commands.enqueue("close");
+                            postRender("close");
                             return;
                         }
                         try {
@@ -213,7 +213,7 @@ export default {
                             state.url = value;
                         } catch (error) {
                             state.error = error.message || "Unable to decrypt file.";                           
-                            commands.enqueue("close");
+                            postRender("close");
                         }
                         
                     } else {
