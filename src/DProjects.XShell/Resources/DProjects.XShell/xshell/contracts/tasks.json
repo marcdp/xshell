@@ -107,6 +107,10 @@
           "createdAt": {"description":"Cloned Date recording when the Task was registered."},
           "startedAt": {"description":"Cloned Date recording when execution started, or null."},
           "endedAt": {"description":"Cloned Date recording when execution ended, or null."},
+          "duration": {
+            "description": "Elapsed Task execution time in milliseconds. Null before execution starts, live while running, and fixed after reaching a terminal status.",
+            "oneOf": [{"type":"null"},{"type":"number","minimum":0}]
+          },
           "getOutput": { "description": "Async method getOutput({cursor?, limit?}) returning a chronological taskOutputPage. The limit defaults to 100 and must be between 1 and 1000."},
           "getResult": { "description": "Async method getResult() returning the task's result. Waits for successful completion and rejects on error or cancellation. Results may be strings, objects, URLs or file references."},
           "wait": { "description": "Async method wait() resolving when the task reaches finished, error or canceled. Does not reject merely because the task failed."},
@@ -114,7 +118,7 @@
           "addEventListener": {"description":"EventTarget method registering a listener, including for change events emitted when this Task changes."},
           "removeEventListener": {"description":"Removes a previously registered task listener."}
         },
-        "required": ["id","title","description","background","status","progress","error","createdAt","startedAt","endedAt","getOutput","getResult","wait","cancel","addEventListener","removeEventListener"]
+        "required": ["id","title","description","background","status","progress","error","createdAt","startedAt","endedAt","duration","getOutput","getResult","wait","cancel","addEventListener","removeEventListener"]
       }
     },
     "taskList": {

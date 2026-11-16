@@ -4,7 +4,7 @@ import { createZip } from "../utils/zip.js";
 export default {
     // contract
     contract: {
-        label: "Create directory ZIP",
+        label: "Download directory as ZIP",
         description: "Creates a ZIP archive containing a filesystem directory.",
         execute: {
             parameters: [
@@ -42,7 +42,10 @@ export default {
                 // Create the ZIP archive.
                 task.setDescription("Creating ZIP archive...");
                 task.log(`Creating ZIP archive from ${path}`);
-                const blob = await createZip(filesystem, [path], {signal:task.signal});
+                const blob = await createZip(filesystem, [path], {
+                    signal: task.signal,
+                    logger: message => task.info(message)
+                });
                 task.signal.throwIfAborted();
 
                 // Create the browser URL returned by the Command.

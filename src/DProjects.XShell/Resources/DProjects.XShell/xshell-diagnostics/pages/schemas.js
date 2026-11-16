@@ -18,19 +18,18 @@ export default {
                 <x-listview-column width="10em"><x-datafield type="search" x-model="state.moduleId" placeholder="Module"></x-datafield></x-listview-column>
                 <x-listview-column><x-datafield type="search" x-model="state.path" placeholder="Path"></x-datafield></x-listview-column>
                 <x-listview-column label="Size" width="5em" style="text-align:right"></x-listview-column>
+                <x-listview-column label="File" width="3em" style="text-align:right"></x-listview-column>
             </x-listview-head>
             <x-listview-body>
             <x-listview-item x-for="schema in state.schemas"
-                x-attr:href="schema.url"
                 x-attr:label="schema.id"
                 x-attr:icon="schema.icon"
                 target="_blank"
             >
                 <div>{{ schema.moduleId }}</div>
-                <x-anchor x-attr:href="schema.url" class="plain" target="_blank">
-                    {{ schema.path }}
-                </x-anchor>
+                <div>{{ schema.path }}</div>
                 <x-file-size x-prop:value="schema.size" style="text-align:right"></x-file-size>
+                <x-anchor style="text-align:right" x-attr:href="schema.url" target="_blank" class="plain"><x-icon icon="x-open-in-new" ></x-icon></x-anchor>
             </x-listview-item>
             </x-listview-body>
         </x-listview>

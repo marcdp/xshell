@@ -18,10 +18,10 @@ export default {
                 <x-listview-column label="Size" width="5em" style="text-align:right"></x-listview-column>
                 <x-listview-column label="Time" width="5em" style="text-align:right"></x-listview-column>
                 <x-listview-column label="Status" width="5em" style="text-align:right"></x-listview-column>
+                <x-listview-column label="File" width="3em" style="text-align:right"></x-listview-column>
             </x-listview-head>
             <x-listview-body>
             <x-listview-item x-for="item in state.items"
-                x-attr:href="item.url" 
                 x-attr:label="item.id"
                 x-attr:icon="item.id"
                 x-attr:description="item.moduleId"
@@ -32,6 +32,7 @@ export default {
                 <x-file-size x-prop:value="item.size" style="text-align:right"></x-file-size>
                 <div style="text-align:right"><x-time-ms x-prop:value="item.time"></x-time-ms></div>
                 <div style="text-align:right">{{ item.status }}</div>
+                <x-anchor style="text-align:right" x-attr:href="item.url" target="_blank" class="plain"><x-icon icon="x-open-in-new" ></x-icon></x-anchor>
             </x-listview-item>
             </x-listview-body>
         </x-listview>

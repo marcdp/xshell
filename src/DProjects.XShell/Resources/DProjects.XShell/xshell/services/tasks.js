@@ -14,6 +14,8 @@ class Task extends EventTarget {
     #createdAt = new Date();
     #startedAt = null;
     #endedAt = null;
+    #startedPerformance = null;
+    #duration = null;
     #controller = new AbortController();
     #output = [];
     #outputStart = 0;
@@ -44,6 +46,11 @@ class Task extends EventTarget {
     get createdAt() { return new Date(this.#createdAt); }
     get startedAt() { return this.#startedAt && new Date(this.#startedAt); }
     get endedAt() { return this.#endedAt && new Date(this.#endedAt); }
+    get duration() {
+        if (this.#duration !== null) return this.#duration;
+        if (this.#startedPerformance === null) return null;
+        return performance.now() - this.#startedPerformance;
+    }
 
     // methods
     async wait() {
@@ -83,6 +90,7 @@ class Task extends EventTarget {
     _start() {
         this.#status = "running";
         this.#startedAt = new Date();
+        this.#startedPerformance = performance.now();
         this.#notify();
     }
 
@@ -148,6 +156,7 @@ class Task extends EventTarget {
     #complete(status) {
         this.#status = status;
         this.#endedAt = new Date();
+        this.#duration = this.#startedPerformance === null ? 0 : performance.now() - this.#startedPerformance;
         this.#notify();
         this.#resolveDone();
     }

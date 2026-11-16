@@ -38,7 +38,7 @@ export default {
         :host > div.success .header x-icon {color:var(--x-notice-color-success);}
 
         :host > div.working {background-color:var(--x-notice-background-working); border:var(--x-notice-border-working);}
-        :host > div.working .header x-spinner {color:var(--x-notice-color-working); margin-left:.3em; margin-right:.4em; align-self: self-start;}
+        :host > div.working .header x-spinner {color:var(--x-notice-color-working); margin-left:.65em; margin-right:.6em; align-self: self-start;}
 
         :host(.close) > div > .close {display:block;}
 

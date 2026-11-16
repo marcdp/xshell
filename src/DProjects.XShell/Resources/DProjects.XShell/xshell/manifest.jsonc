@@ -66,6 +66,10 @@
                 "contract": "json-validator",
                 "implementation": "/services/json-validator.js"
             },
+            "secrets": {
+                "contract": "secrets",
+                "implementation": "/services/secrets.js"
+            },
             "tasks":{
                 "contract": "tasks",
                 "implementation": "/services/tasks.js"

@@ -22,6 +22,8 @@ test("tasks contract owns the complete Task vocabulary and validates structurall
     assert.deepEqual(output.properties.level.enum, ["log", "info", "warn", "error"]);
     assert.deepEqual(output.required, ["timestamp", "level", "text"]);
     assert.deepEqual(tasksContract.types.taskOutputPage.schema.required, ["entries", "nextCursor"]);
+    assert.deepEqual(task.properties.duration.oneOf, [{ type: "null" }, { type: "number", minimum: 0 }]);
+    assert.equal(task.required.includes("duration"), true);
     assert.equal(task.required.includes("addEventListener"), true);
     assert.equal(task.required.includes("removeEventListener"), true);
     assert.equal(tasksContract.methods.run.returns.ref, "task");
@@ -49,6 +51,7 @@ test("tasks run reports description, progress, ordered level output and result",
     });
 
     assert.equal(task.status, "pending");
+    assert.equal(task.duration, null);
     assert.equal(task.background, true);
     await task.wait();
 
@@ -68,6 +71,33 @@ test("tasks run reports description, progress, ordered level output and result",
 
     tasks.clear();
     assert.deepEqual(tasks.list(), []);
+});
+
+test("tasks expose live monotonic duration and freeze it on completion", async () => {
+    const tasks = new Tasks({ bus: null });
+    let started, release;
+    const running = new Promise(resolve => { started = resolve; });
+    const blocked = new Promise(resolve => { release = resolve; });
+    const task = tasks.run({
+        title: "Timed",
+        async handler() {
+            started();
+            await blocked;
+        }
+    });
+
+    assert.equal(task.duration, null);
+    await running;
+    assert.equal(typeof task.duration, "number");
+    assert.ok(task.duration >= 0);
+
+    release();
+    await task.wait();
+    const duration = task.duration;
+    assert.equal(typeof duration, "number");
+    assert.ok(duration >= 0);
+    await new Promise(resolve => setTimeout(resolve, 10));
+    assert.equal(task.duration, duration);
 });
 
 test("tasks support explicit foreground execution and reject invalid background values", async () => {
@@ -97,6 +127,8 @@ test("tasks distinguish thrown failures from error-level output", async () => {
         { level: "error", text: "warning" }
     ]);
     assert.equal(failedTask.status, "error");
+    assert.equal(typeof failedTask.duration, "number");
+    assert.ok(failedTask.duration >= 0);
     assert.equal(failedTask.error.message, "broken");
     await assert.rejects(failedTask.getResult(), /broken/);
 });
@@ -147,6 +179,8 @@ test("tasks cancel through AbortSignal without producing a successful result", a
     await task.wait();
 
     assert.equal(task.status, "canceled");
+    assert.equal(typeof task.duration, "number");
+    assert.ok(task.duration >= 0);
     assert.equal(task.error, null);
     await assert.rejects(task.getResult(), error => error?.name === "AbortError");
     assert.doesNotThrow(() => tasks.remove(task.id + "-missing"));

@@ -133,7 +133,7 @@ function methodToJsonSchema(method, types = {}) {
 }
 
 
-// Resolves invocation metadata without creating per-invocation Command instances.
+// Resolves invocation metadata and its type-specific execution adapter.
 async function resolveInvocation({ type, id, method }, loader, services, contracts) {
     // Require a target identifier for every invocation.
     if (!id) throw new Error("Missing 'id' query parameter.");
@@ -148,14 +148,15 @@ async function resolveInvocation({ type, id, method }, loader, services, contrac
         const contract = Command.contract;
         if (!contract?.execute) throw new Error(`Command '${id}' has no execute contract.`);
 
-        // Return presentation metadata; execution belongs to the Commands service.
+        // Return Command presentation metadata and its per-execution adapter.
         return {
             type: "command",
             label: contract.label || id,
             description: contract.description || contract.execute.description || "",
             parameters: contract.execute.parameters || [],
             types: contract.types || {},
-            returns: contract.execute.returns || null
+            returns: contract.execute.returns || null,
+            invoke: (args, context) => new Command(context).execute(...args)
         };
     }
 
@@ -211,15 +212,17 @@ export default {
         description: "Lorem ipsum dolor sit amet."
     },
 
-    // Styles invocation errors, task output and result presentation.
+    // Styles invocation panels, errors, Task output and result presentation.
     style: `
+        .arguments h2, .execution h2 { margin-top:0; }
         .description { margin-bottom:1.25em; }
         .error { color:var(--x-datafield-error-color); white-space:pre-wrap; }
         
         .task { margin-top:1.25em; }
         .task x-progress { margin-top:.75em; }
+        .duration { margin:.75em 0 0; }
         .output { margin-top:1em; }
-        .output-entry { display:grid; grid-template-columns:4.5em minmax(0, 1fr); gap:.75em; align-items:start; }
+        .output-entry { display:grid; grid-template-columns:15em 4.5em minmax(0, 1fr); gap:.75em; align-items:start; }
         .output-entry strong { font-family:monospace; font-size:.85em; text-transform:uppercase; }
         .output-entry.warn strong, .output-entry.warn pre { color:var(--x-notice-color-warning); }
         .output-entry.error strong, .output-entry.error pre { color:var(--x-datafield-error-color); }
@@ -229,61 +232,71 @@ export default {
         .result-value { white-space:pre-wrap; overflow-wrap:anywhere; }
     `,
 
-    // Renders loading/error state, generated arguments form, execution controls and result.
+    // Renders distinct argument editing and execution panels.
     template: `
         <p x-if="state.loading">Loading operation...</p>
         <p x-if="state.error" class="error" x-text="state.error"></p>
 
-        <x-form x-if="state.ready" command="submit">
-            <!--<x-schema ref="arguments" x-prop:schema="state.schema" x-prop:value="state.args" x-on:change="argumentsChanged"></x-schema>-->
-            <x-schema ref="arguments" x-prop:schema="state.schema" x-model="state.args"></x-schema>
+        <section x-if="state.ready && state.phase == 'arguments'" class="arguments">
+            <h2>Arguments</h2>
+            <x-form command="submit">
+                <x-schema ref="arguments" x-prop:schema="state.schema" x-model="state.args"></x-schema>
 
-            <x-details label="Advanced">
-                <x-datafield type="checkbox" label="Execution" label-secondary="Run the command in background" x-model="state.background"></x-datafield>
-            </x-details>
+                <x-datafield type="checkbox" label="Advanced" label-secondary="Run in background" x-model="state.background" collapsible collapsed></x-datafield>
 
-            <x-button slot="footer" label="Execute" command="submit" class="submit" x-attr:disabled="state.running"></x-button>
-            <x-button slot="footer" x-if="state.isDialog || state.running" label="Cancel" command="cancel" class="cancel"></x-button>
-        </x-form>
+                <x-button slot="footer" label="Execute" command="submit" class="submit"></x-button>
+                <x-button slot="footer" x-if="state.isDialog" label="Close" command="cancel" class="cancel"></x-button>
+            </x-form>
+        </section>
 
         <x-button x-if="state.isDialog && !state.ready" label="Close" command="cancel"></x-button>
 
-        <section x-if="state.taskStatus" class="task">
+        <section x-if="state.phase == 'execution'" class="execution task">
+            <h2>Execution</h2>
             <x-notice
                 x-attr:type="state.taskNoticeType"
                 x-attr:label="state.taskNoticeLabel"
                 x-attr:message="state.taskError ? state.taskError.message : state.taskDescription">
+
+                <p x-if="state.taskDuration != null" class="duration">Execution time: <span x-text="state.taskDurationText"></span></p>
+
+                <x-progress
+                    x-if="state.running"
+                    x-attr:unknown="state.taskProgress ? false : true"
+                    x-attr:value="state.taskProgress.value"
+                    x-attr:max="state.taskProgress.max">
+                </x-progress>
+
+                <div x-if="state.taskOutput.length > 0" class="output">
+                    <div x-for="entry in state.taskOutput" x-attr:class="'output-entry ' + entry.level">
+                        <span x-text="entry.timestamp"></span>
+                        <strong x-text="entry.level"></strong>
+                        <pre x-text="entry.text"></pre>
+                    </div>
+                </div>
+
+                <div x-if="state.completed && !state.isDialog" class="result">
+                    Result: 
+                    <x-object x-if="state.hasResult && !state.resultFormat && (!state.resultType || state.resultType == 'object' || state.resultType == 'array' || state.resultType == 'any' || state.resultType == 'function' || state.resultType == 'date')"
+                            x-prop:value="state.result" expanded></x-object>
+                    <x-code x-if="state.hasResult && state.resultFormat == 'text'" x-prop:value="state.result" wrap></x-code>
+                    <x-anchor x-if="state.hasResult && (state.resultFormat == 'url' || state.resultFormat == 'blob-url')"
+                        x-prop:href="state.result" target="_blank" rel="noopener noreferrer"><span x-text="state.result"></span></x-anchor>
+                    <span x-if="state.hasResult && !state.resultFormat && state.resultType && state.resultType != 'object' && state.resultType != 'array' && state.resultType != 'any' && state.resultType != 'function' && state.resultType != 'date' && state.resultType != 'void'"
+                        class="result-value" x-text="state.result"></span>
+                </div>                
             </x-notice>
 
-            <x-progress
-                x-if="state.running"
-                x-attr:unknown="state.taskProgress ? false : true"
-                x-attr:value="state.taskProgress.value"
-                x-attr:max="state.taskProgress.max">
-            </x-progress>
-
-            <div x-if="state.taskOutput.length > 0" class="output">
-                <div x-for="entry in state.taskOutput" x-attr:class="'output-entry ' + entry.level">
-                    <strong x-text="entry.level"></strong>
-                    <pre x-text="entry.text"></pre>
-                </div>
-            </div>
+            <x-button x-if="state.running" label="Cancel" command="cancel" class="cancel"></x-button>
+            <x-button x-if="!state.running" label="Edit arguments" command="editArguments"></x-button>
+            <x-button x-if="state.isDialog && !state.running" label="Close" command="cancel" class="cancel"></x-button>
         </section>
-
-        <div x-if="state.completed && !state.isDialog" class="result">
-            <x-object x-if="state.hasResult && !state.resultFormat && (!state.resultType || state.resultType == 'object' || state.resultType == 'array' || state.resultType == 'any' || state.resultType == 'function' || state.resultType == 'date')"
-                x-prop:value="state.result" expanded></x-object>
-            <x-code x-if="state.hasResult && state.resultFormat == 'text'" x-prop:value="state.result" wrap></x-code>
-            <x-anchor x-if="state.hasResult && (state.resultFormat == 'url' || state.resultFormat == 'blob-url')"
-                x-prop:href="state.result" target="_blank" rel="noopener noreferrer"><span x-text="state.result"></span></x-anchor>
-            <span x-if="state.hasResult && !state.resultFormat && state.resultType && state.resultType != 'object' && state.resultType != 'array' && state.resultType != 'any' && state.resultType != 'function' && state.resultType != 'date' && state.resultType != 'void'"
-                class="result-value" x-text="state.result"></span>
-        </div>
     `,
 
     // Stores Page presentation and invocation execution state.
     state: {
         title: "Invoke",
+        phase: "arguments",
         description: "",
         schema: null,
         loading: true,
@@ -300,6 +313,8 @@ export default {
         taskStatus: "",
         taskDescription: "",
         taskProgress: null,
+        taskDuration: null,
+        taskDurationText: "",
         taskOutput: [],
         taskError: null,
         taskNoticeType: "",
@@ -307,19 +322,54 @@ export default {
     },
 
     // Coordinates invocation resolution, argument editing, validation and execution.
-    controller({ state, loader, services, contracts, page, commands }) {
+    controller({ state, loader, services, contracts, page, tasks }) {
         // Store the resolved invocation adapter and Page lifetime state privately.
         let invocation = null;
         let currentTask = null;
         let taskListener = null;
+        let durationInterval = null;
         let outputRevision = 0;
         let alive = true;
         let submitting = false;
 
+        // Stop the local live-duration refresh interval.
+        const stopDurationRefresh = () => {
+            if (durationInterval !== null) clearInterval(durationInterval);
+            durationInterval = null;
+        };
+
+        // Project the canonical Task duration into presentation state.
+        const refreshDuration = task => {
+            if (!alive || task !== currentTask) return;
+            const duration = task.duration;
+            state.taskDuration = duration;
+            state.taskDurationText = duration === null ? "" : `${duration.toFixed(2)} ms`;
+            page.invalidate?.();
+            if (task.status !== "pending" && task.status !== "running") stopDurationRefresh();
+        };
+
         // Stop observing the previous invocation Task.
         const detachTask = () => {
+            stopDurationRefresh();
             if (currentTask && taskListener) currentTask.removeEventListener("change", taskListener);
             taskListener = null;
+        };
+
+        // Clear presentation from the previous Task while preserving invocation inputs.
+        const resetExecutionState = () => {
+            state.error = "";
+            state.completed = false;
+            state.hasResult = false;
+            state.result = undefined;
+            state.taskStatus = "";
+            state.taskDescription = "";
+            state.taskProgress = null;
+            state.taskDuration = null;
+            state.taskDurationText = "";
+            state.taskOutput = [];
+            state.taskError = null;
+            state.taskNoticeType = "";
+            state.taskNoticeLabel = "";
         };
 
         // Project a Task handle into plain Page state and retrieve its ordered output.
@@ -330,6 +380,7 @@ export default {
             state.taskStatus = task.status;
             state.taskDescription = task.description;
             state.taskProgress = task.progress ? { ...task.progress } : null;
+            refreshDuration(task);
             state.taskError = task.error ? { ...task.error } : null;
             state.running = task.status === "pending" || task.status === "running";
             state.completed = task.status === "finished";
@@ -358,6 +409,7 @@ export default {
             currentTask = task;
             taskListener = () => { void refreshTask(task); };
             task.addEventListener("change", taskListener);
+            durationInterval = setInterval(() => refreshDuration(task), 100);
             void refreshTask(task);
         };
 
@@ -371,7 +423,7 @@ export default {
                         throw new Error("Invocation arguments must be a JSON object.");
                     }
 
-                    // Resolve target metadata without instantiating a Command.
+                    // Resolve target metadata without instantiating a Command yet.
                     invocation = await resolveInvocation({
                         type: state.type,
                         id: state.id,
@@ -434,25 +486,13 @@ export default {
                 state.preview = structuredClone(event.detail.newValue);
             },
 
-            // Validates arguments and delegates Command execution to the Commands service.
+            // Validates arguments and executes the invocation through a registered Task.
             async submit() {
                 // Ignore invalid or concurrent submission attempts.
-                if (!invocation || !state.ready || state.running || submitting) return;
-
-                // Reset previous execution result and error state.
-                state.error = "";
-                state.completed = false;
-                state.hasResult = false;
-                state.result = undefined;
-                state.taskStatus = "";
-                state.taskDescription = "";
-                state.taskProgress = null;
-                state.taskOutput = [];
-                state.taskError = null;
-                state.taskNoticeType = "";
-                state.taskNoticeLabel = "";
+                if (!invocation || !state.ready || state.phase !== "arguments" || state.running || submitting) return;
 
                 // Validate the generated argument editor before execution.
+                state.error = "";
                 const editor = page.host?.querySelector('x-schema[ref="arguments"]');
                 const errors = editor?.validate(true) || [{ label: "Editor", message: "Schema editor is not available." }];
 
@@ -462,33 +502,19 @@ export default {
                     return;
                 }
 
-                // Preserve direct shared-instance invocation for ordinary Service methods.
-                if (invocation.type === "service") {
-                    submitting = true;
-                    try {
-                        const args = invocation.parameters.map(parameter => state.args[parameter.name]);
-                        const result = await invocation.invoke(args);
-                        if (!alive) return;
-                        state.completed = true;
-                        state.hasResult = result !== undefined;
-                        state.result = result;
-                        if (state.isDialog) await page.close(result);
-                    } catch (error) {
-                        state.error = error?.message || String(error);
-                    } finally {
-                        submitting = false;
-                    }
-                    return;
-                }
+                // Prepare positional arguments and clear the previous execution presentation.
+                const args = invocation.parameters.map(parameter => state.args[parameter.name]);
+                resetExecutionState();
 
-                // The Commands service owns argument preparation, validation and Task creation.
+                // Execute the invocation through a registered Task.
                 let task;
                 submitting = true;
                 try {
-                    task = await commands.run({
-                        id: state.id,
-                        args: state.args,
-                        background: state.background
+                    task = tasks.run({
+                        title: invocation.label,
+                        description: invocation.description,
+                        background: state.background,
+                        handler: taskContext => invocation.invoke(args, {task: taskContext})
                     });
                 } catch (error) {
                     state.error = error?.message || String(error);
@@ -496,6 +522,7 @@ export default {
                 } finally {
                     submitting = false;
                 }
+                state.phase = "execution";
                 attachTask(task);
                 await task.wait();
                 await refreshTask(task);
@@ -509,8 +536,16 @@ export default {
                 state.hasResult = result !== undefined;
                 state.result = result;
 
-                // Close successful dialog invocations with the Command result.
+                // Close successful dialog invocations with the raw result.
                 if (state.isDialog) await page.close(result);
+            },
+
+            // Returns to argument editing without reconstructing entered values.
+            editArguments() {
+                if (!state.running) {
+                    stopDurationRefresh();
+                    state.phase = "arguments";
+                }
             },
 
             // Cancels an active Task, or closes an idle dialog invocation.

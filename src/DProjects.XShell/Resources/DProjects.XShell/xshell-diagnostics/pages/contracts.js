@@ -20,10 +20,11 @@ export default {
                 <x-listview-column label="Size" width="5em" style="text-align:right"></x-listview-column>
                 <x-listview-column label="Time" width="5em" style="text-align:right"></x-listview-column>
                 <x-listview-column label="Status" width="5em" style="text-align:right"></x-listview-column>
+                <x-listview-column label="File" width="3em" style="text-align:right"></x-listview-column>
+               
             </x-listview-head>
             <x-listview-body>
             <x-listview-item x-for="contractItem in state.contractItems"
-                x-attr:href="contractItem.url" 
                 x-attr:label="contractItem.id"
                 x-attr:icon="contractItem.icon || 'x-contract'"
                 target="_blank"
@@ -34,6 +35,7 @@ export default {
                 <x-file-size x-prop:value="contractItem.size" style="text-align:right"></x-file-size>
                 <x-time-ms x-prop:value="contractItem.time" style="text-align:right"></x-time-ms>
                 <div style="text-align:right">{{ contractItem.status }}</div>
+                <x-anchor style="text-align:right" x-attr:href="contractItem.url" target="_blank" class="plain"><x-icon icon="x-open-in-new" ></x-icon></x-anchor>
             </x-listview-item>
             </x-listview-body>
         </x-listview>

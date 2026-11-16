@@ -81,6 +81,7 @@ export default {
         .header x-dropdown {margin-left:.5em; }        
         .header.shell {z-index:6; padding-left:.65em;}
         .header.breadcrumb {z-index:5; padding-right:1.5em;}
+        .header-actions {display:flex; gap:.5em;}
 
         /* areas */
         .areas {color:var(--x-color-text); margin-left:.75em; margin-right:.5em; display:block;}

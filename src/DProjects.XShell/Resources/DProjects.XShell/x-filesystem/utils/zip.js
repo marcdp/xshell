@@ -51,11 +51,15 @@ function normalizePaths(paths) {
 /**
  * Create a ZIP archive of the selected XShell filesystem paths.
  * Uses ZIP STORE (no compression), with UTF-8 filenames and CRC-32.
+ * An optional logger(message) callback receives human-readable traversal and archive progress.
  * Note: output is held in memory; ZIP64 and files >= 4 GiB are unsupported.
  */
-export async function createZip(filesystem, paths, {signal} = {}) {
+export async function createZip(filesystem, paths, {signal, logger} = {}) {
     if (!filesystem?.getEntry || !filesystem?.getEntries || !filesystem?.loadReadStream) {
         throw new TypeError("filesystem must implement getEntry, getEntries and loadReadStream");
+    }
+    if (logger !== undefined && typeof logger !== "function") {
+        throw new TypeError("logger must be a function");
     }
 
     const roots = normalizePaths(paths);
@@ -92,6 +96,8 @@ export async function createZip(filesystem, paths, {signal} = {}) {
         const localOffset = offset;
 
         if (localOffset > max32) throw new RangeError("ZIP64 is required for archives over 4 GiB");
+
+        logger?.(`Adding ${directory ? "directory" : "file"}: ${zipName}`);
 
         // The data descriptor allows streaming without knowing the size or CRC upfront.
         const flags = 0x0808; // UTF-8 names + data descriptor.
@@ -140,6 +146,8 @@ export async function createZip(filesystem, paths, {signal} = {}) {
                 signal?.removeEventListener("abort", onAbort);
                 reader.releaseLock();
             }
+
+            logger?.(`Added file: ${zipName} (${size} bytes)`);
         }
 
         crc = (crc ^ 0xffffffff) >>> 0;
@@ -171,6 +179,8 @@ export async function createZip(filesystem, paths, {signal} = {}) {
 
     const centralOffset = offset;
     if (centralOffset > max32) throw new RangeError("ZIP64 is required for archives over 4 GiB");
+
+    logger?.("Writing ZIP central directory...");
 
     for (const entry of central) {
         addChunk(header(46, v => {
@@ -204,5 +214,6 @@ export async function createZip(filesystem, paths, {signal} = {}) {
     }));
 
     checkAbort(signal);
+    logger?.(`ZIP archive finalized with ${count} entries`);
     return new Blob(chunks, {type:"application/zip"});
 }

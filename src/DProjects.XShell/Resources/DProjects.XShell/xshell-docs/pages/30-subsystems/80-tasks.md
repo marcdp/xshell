@@ -8,6 +8,10 @@ The Tasks service owns both sides of execution: `taskContext` is the producer-si
 `task`), while the stable `Task` handle returned by `run()`, `get()`, and `list()` is the consumer-side interface for observation and control.
 Both concepts, along with `taskOutput`, are declared by the single `tasks` service contract.
 
+Task handles expose `createdAt`, `startedAt`, and `endedAt` as wall-clock `Date` values. The read-only `duration` property is `null` before
+execution starts, reports live monotonic elapsed execution time in milliseconds while running, and remains fixed after the Task reaches a terminal
+status.
+
 `log` records general execution output, `info` records informational messages, `warn` records non-fatal warnings, and `error` records error-level
 output. Output severity is independent of the Task lifecycle: calling `taskContext.error(...)` (or the injected `task.error(...)` in a Command)
 does not fail the Task. A Task enters the `error` status only when its handler throws or rejects.

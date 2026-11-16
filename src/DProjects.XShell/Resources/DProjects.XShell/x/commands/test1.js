@@ -8,7 +8,7 @@ export default {
                 {name: "value", label: "Value", description: "A number between 1 and 10.", type: "number", required: true, default: 5,
                     schema: {
                         minimum: 1,
-                        maximum: 10
+                        maximum: 100
                     }
                 }
             ],

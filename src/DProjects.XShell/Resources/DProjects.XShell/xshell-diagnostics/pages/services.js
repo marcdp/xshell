@@ -20,20 +20,22 @@ export default {
                 <x-listview-column label="Size" width="5em" style="text-align:right"></x-listview-column>
                 <x-listview-column label="Time" width="5em" style="text-align:right"></x-listview-column>
                 <x-listview-column label="Status" width="5em" style="text-align:right"></x-listview-column>
+                <x-listview-column label="File" width="3em" style="text-align:right"></x-listview-column>
             </x-listview-head>
             <x-listview-body>
-            <x-listview-item x-for="item in state.items" x-attr:href="item.url" x-attr:label="item.serviceId" x-attr:icon="item.icon" target="_blank">
+            <x-listview-item x-for="item in state.items" x-attr:label="item.serviceId" x-attr:icon="item.icon" target="_blank">
                 <div>{{ item.moduleId }}</div>
                 <div>
+                    {{ item.contractId }}
                     <x-anchor x-if="item.contractUrl" x-attr:href="item.contractUrl" target="_blank" class="plain">
-                        {{ item.contractId }}
+                        <x-icon icon="x-open-in-new" ></x-icon>
                     </x-anchor>
-                    <span x-if="!item.contractUrl">{{ item.contractId }}</span>
                 </div>
                 <x-truncate x-attr:text="item.description"></x-truncate>
                 <x-file-size style="text-align:right" x-prop:value="item.size" ></x-file-size>
                 <div style="text-align:right"><x-time-ms x-prop:value="item.time"></x-time-ms></div>
                 <div style="text-align:right">{{ item.status }}</div>
+                <x-anchor style="text-align:right" x-if="item.url" x-attr:href="item.url" target="_blank" class="plain"><x-icon icon="x-open-in-new" ></x-icon></x-anchor>
             </x-listview-item>
             </x-listview-body>
         </x-listview>

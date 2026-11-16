@@ -50,7 +50,9 @@ export default {
             display: flex;
             position: relative;
             width: 100%;
+            padding:.1em;
             min-width: 0;
+            box-sizing:border-box;
             --x-listview-grid-template-columns: minmax(0, 1fr);
             --x-listview-view: 'details';
         }
