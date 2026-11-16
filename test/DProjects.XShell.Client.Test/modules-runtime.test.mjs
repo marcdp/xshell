@@ -174,6 +174,11 @@ test("module requirements accept configured lazy services without constructing t
     let constructions = 0;
     class IdentityService {
 
+        static optionsSchema = {
+            type: "object",
+            additionalProperties: false
+        };
+
         constructor() {
             constructions++;
         }

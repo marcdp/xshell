@@ -196,6 +196,11 @@ test("configured services load eagerly but instantiate lazily as singletons", as
     let constructions = 0;
     class ExampleService {
 
+        static optionsSchema = {
+            type: "object",
+            additionalProperties: false
+        };
+
         constructor() {
             constructions++;
         }
@@ -232,11 +237,33 @@ test("configured services receive private implementation options alongside lazy 
     const originalOptions = structuredClone(options);
     class DependencyService {
 
+        static optionsSchema = {
+            type: "object",
+            additionalProperties: false
+        };
+
         getValue() {
             return 42;
         }
     }
     class ConsumerService {
+
+        static optionsSchema = {
+            type: "object",
+            properties: {
+                path: { type: "string" },
+                enabled: { type: "boolean" },
+                nested: {
+                    type: "object",
+                    properties: { retries: { type: "integer" } },
+                    required: ["retries"],
+                    additionalProperties: false
+                },
+                modes: { type: "array" }
+            },
+            required: ["path", "enabled", "nested", "modes"],
+            additionalProperties: false
+        };
 
         constructor({ dependency }, configuredOptions) {
             constructions++;
@@ -277,6 +304,11 @@ test("configured services receive private implementation options alongside lazy 
 test("services without configured options receive an empty object", async () => {
     class ExampleService {
 
+        static optionsSchema = {
+            type: "object",
+            additionalProperties: false
+        };
+
         constructor(services, options) {
             this.options = options;
         }
@@ -292,6 +324,13 @@ test("services without configured options receive an empty object", async () => 
 
 test("service registrations sharing an implementation receive their own configured options", async () => {
     class SharedService {
+
+        static optionsSchema = {
+            type: "object",
+            properties: { name: { type: "string" } },
+            required: ["name"],
+            additionalProperties: false
+        };
 
         constructor(services, options) {
             this.options = options;
@@ -326,8 +365,162 @@ test("service configuration schema accepts object options and rejects other JSON
     }
 });
 
+test("service options require a valid static JSON Schema object", async () => {
+    const invalidImplementations = [
+        [class MissingSchema {}, /must define a static optionsSchema object/],
+        [class NullSchema { static optionsSchema = null; }, /expected a JSON Schema object/],
+        [class ArraySchema { static optionsSchema = []; }, /expected a JSON Schema object/],
+        [class MalformedSchema {
+            static optionsSchema = { type: "object", patternProperties: { "[": { type: "string" } } };
+        }, /invalid static optionsSchema/]
+    ];
+
+    for (const [implementation, expected] of invalidImplementations) {
+        const definitions = { example: { contract: "example", implementation: "/_assets/test/services/example.js" } };
+        const implementations = { "esm:/_assets/test/services/example.js": implementation };
+        const { services } = createServices(definitions, implementations, { example: createContractItem("example") });
+
+        await services.init();
+
+        assert.throws(() => services.resolve("example"), expected);
+        assert.equal(services.getServiceInfo("example").state, "registered");
+    }
+});
+
+test("service option validation rejects missing, incorrectly typed, and unknown options", async () => {
+    let constructions = 0;
+    class ExampleService {
+        static optionsSchema = {
+            type: "object",
+            properties: { timeout: { type: "integer", minimum: 0 } },
+            required: ["timeout"],
+            additionalProperties: false
+        };
+        constructor() { constructions++; }
+    }
+    const invalidOptions = [
+        [{}, /required property "timeout"/],
+        [{ timeout: "30" }, /#\/timeout.*type "string" is invalid/],
+        [{ timeout: 30, unknown: true }, /additional properties schema/]
+    ];
+
+    for (const [options, expected] of invalidOptions) {
+        const definitions = {
+            example: { contract: "example", implementation: "/_assets/test/services/example.js", options }
+        };
+        const implementations = { "esm:/_assets/test/services/example.js": ExampleService };
+        const { emitted, services } = createServices(definitions, implementations, { example: createContractItem("example") });
+
+        await services.init();
+
+        assert.throws(() => services.resolve("example"), expected);
+        assert.equal(services.getServiceInfo("example").state, "registered");
+        assert.deepEqual(emitted, []);
+    }
+    assert.equal(constructions, 0);
+});
+
+test("valid service options are validated immediately before construction without mutation", async () => {
+    const order = [];
+    const options = { timeout: 30 };
+    const schema = {
+        type: "object",
+        properties: { timeout: { type: "integer", minimum: 0 } },
+        required: ["timeout"],
+        additionalProperties: false
+    };
+    const originalOptions = structuredClone(options);
+    const originalSchema = structuredClone(schema);
+    class ExampleService {
+        static get optionsSchema() {
+            order.push("validate");
+            return schema;
+        }
+        constructor(services, configuredOptions) {
+            order.push("construct");
+            this.options = configuredOptions;
+        }
+    }
+    const definitions = {
+        example: { contract: "example", implementation: "/_assets/test/services/example.js", options }
+    };
+    const implementations = { "esm:/_assets/test/services/example.js": ExampleService };
+    const { emitted, services } = createServices(definitions, implementations, { example: createContractItem("example") });
+
+    await services.init();
+    assert.deepEqual(order, []);
+
+    const instance = services.resolve("example");
+
+    assert.strictEqual(instance.options, options);
+    assert.deepEqual(order, ["validate", "construct"]);
+    assert.deepEqual(options, originalOptions);
+    assert.deepEqual(schema, originalSchema);
+    assert.deepEqual(emitted, [{ type: "xshell:service:created", detail: { id: "example" }, state: "created" }]);
+});
+
+test("omitted service options validate as an empty object", async () => {
+    class ExampleService {
+        static optionsSchema = {
+            type: "object",
+            additionalProperties: false
+        };
+        constructor(services, options) { this.options = options; }
+    }
+    const definitions = { example: { contract: "example", implementation: "/_assets/test/services/example.js" } };
+    const implementations = { "esm:/_assets/test/services/example.js": ExampleService };
+    const { services } = createServices(definitions, implementations, { example: createContractItem("example") });
+
+    await services.init();
+
+    assert.deepEqual(services.resolve("example").options, {});
+});
+
+test("failed service option validation preserves retry behavior and validation inputs", async () => {
+    let constructions = 0;
+    const options = { timeout: "30" };
+    const schema = {
+        type: "object",
+        properties: { timeout: { type: "integer", minimum: 0 } },
+        required: ["timeout"],
+        additionalProperties: false
+    };
+    const originalOptions = structuredClone(options);
+    const originalSchema = structuredClone(schema);
+    class ExampleService {
+        static optionsSchema = schema;
+        constructor() { constructions++; }
+    }
+    const definitions = {
+        example: { contract: "example", implementation: "/_assets/test/services/example.js", options }
+    };
+    const implementations = { "esm:/_assets/test/services/example.js": ExampleService };
+    const { emitted, services } = createServices(definitions, implementations, { example: createContractItem("example") });
+
+    await services.init();
+
+    assert.throws(() => services.resolve("example"), /#\/timeout.*type "string" is invalid/);
+    assert.equal(constructions, 0);
+    assert.equal(services.getServiceInfo("example").state, "registered");
+    assert.deepEqual(emitted, []);
+    assert.deepEqual(options, originalOptions);
+    assert.deepEqual(schema, originalSchema);
+
+    options.timeout = 30;
+    assert.ok(services.resolve("example") instanceof ExampleService);
+    assert.equal(constructions, 1);
+    assert.equal(services.getServiceInfo("example").state, "created");
+    assert.deepEqual(emitted, [{ type: "xshell:service:created", detail: { id: "example" }, state: "created" }]);
+});
+
 test("successful lazy creation emits once after validation with only the service ID", async () => {
-    class ExampleService { execute() {} }
+    class ExampleService {
+        static optionsSchema = {
+            type: "object",
+            additionalProperties: false
+        };
+        execute() {}
+    }
     const definitions = { example: { contract: "example", implementation: "/_assets/test/services/example.js" } };
     const implementations = { "esm:/_assets/test/services/example.js": ExampleService };
     const contractItems = { example: createContractItem("example", { execute: {} }) };
@@ -343,6 +536,10 @@ test("successful lazy creation emits once after validation with only the service
 test("failed lazy construction emits no created event and can be retried", async () => {
     let attempts = 0;
     class ExampleService {
+        static optionsSchema = {
+            type: "object",
+            additionalProperties: false
+        };
         constructor() {
             if (++attempts === 1) throw new Error("construction failed");
         }
@@ -362,6 +559,11 @@ test("failed lazy construction emits no created event and can be retried", async
 
 test("service inspection returns independent read-only metadata snapshots", async () => {
     class ExampleService {
+
+        static optionsSchema = {
+            type: "object",
+            additionalProperties: false
+        };
 
         execute() {
             return 42;
@@ -420,6 +622,11 @@ test("service inspection returns independent read-only metadata snapshots", asyn
 test("has reports runtime and configured services without constructing lazy implementations", async () => {
     let constructions = 0;
     class ExampleService {
+
+        static optionsSchema = {
+            type: "object",
+            additionalProperties: false
+        };
 
         constructor() {
             constructions++;
@@ -486,6 +693,10 @@ test("the framework Temp service loads lazily, validates its contract, and remai
 
 test("an alternative configured Temp implementation replaces the framework default", async () => {
     class AlternativeTemp {
+        static optionsSchema = {
+            type: "object",
+            additionalProperties: false
+        };
         upload() { return Promise.resolve([]); }
         getAbsoluteUrl(url) { return `alternative:${url}`; }
     }
@@ -539,7 +750,12 @@ test("unknown contract references fail before implementation loading", async () 
 });
 
 test("service creation rejects an implementation missing a required method", async () => {
-    class InvalidService {}
+    class InvalidService {
+        static optionsSchema = {
+            type: "object",
+            additionalProperties: false
+        };
+    }
     const definitions = { toast: { contract: "toast", implementation: "/_assets/test/services/toast.js" } };
     const implementations = { "esm:/_assets/test/services/toast.js": InvalidService };
     const contractItems = { toast: createContractItem("toast", { show: {} }) };
@@ -553,6 +769,11 @@ test("service creation rejects an implementation missing a required method", asy
 
 test("service creation accepts a declared own property", async () => {
     class IdentityService {
+
+        static optionsSchema = {
+            type: "object",
+            additionalProperties: false
+        };
 
         constructor() {
             this.currentUser = null;
@@ -570,6 +791,11 @@ test("service creation accepts a declared own property", async () => {
 test("service creation accepts a prototype getter without executing it during validation", async () => {
     let getterCalls = 0;
     class IdentityService {
+
+        static optionsSchema = {
+            type: "object",
+            additionalProperties: false
+        };
 
         get currentUser() {
             getterCalls++;
@@ -589,7 +815,12 @@ test("service creation accepts a prototype getter without executing it during va
 });
 
 test("service creation rejects an implementation missing a required property", async () => {
-    class InvalidIdentityService {}
+    class InvalidIdentityService {
+        static optionsSchema = {
+            type: "object",
+            additionalProperties: false
+        };
+    }
     const definitions = { identity: { contract: "identity", implementation: "/_assets/test/services/identity.js" } };
     const implementations = { "esm:/_assets/test/services/identity.js": InvalidIdentityService };
     const contractItems = { identity: createContractItem("identity", {}, { currentUser: { type: "object", readonly: true } }) };
@@ -603,11 +834,21 @@ test("service creation rejects an implementation missing a required property", a
 test("circular constructor dependencies fail with the service path", async () => {
     class ServiceA {
 
+        static optionsSchema = {
+            type: "object",
+            additionalProperties: false
+        };
+
         constructor(services) {
             this.b = services.b;
         }
     }
     class ServiceB {
+
+        static optionsSchema = {
+            type: "object",
+            additionalProperties: false
+        };
 
         constructor(services) {
             this.a = services.a;
@@ -631,11 +872,21 @@ test("circular constructor dependencies fail with the service path", async () =>
 test("different service names may use the same contract", async () => {
     class FirstService {
 
+        static optionsSchema = {
+            type: "object",
+            additionalProperties: false
+        };
+
         execute() {
             return "first";
         }
     }
     class SecondService {
+
+        static optionsSchema = {
+            type: "object",
+            additionalProperties: false
+        };
 
         execute() {
             return "second";
@@ -660,11 +911,21 @@ test("different service names may use the same contract", async () => {
 test("services receive other lazily-created services through constructor injection", async () => {
     class DependencyService {
 
+        static optionsSchema = {
+            type: "object",
+            additionalProperties: false
+        };
+
         getValue() {
             return 42;
         }
     }
     class ConsumerService {
+
+        static optionsSchema = {
+            type: "object",
+            additionalProperties: false
+        };
 
         constructor({ dependency }) {
             this.dependency = dependency;
