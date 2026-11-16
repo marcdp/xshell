@@ -2,8 +2,19 @@ import { Validator } from "../vendor/json-schema/4.1.1/json-schema.js";
 
 export default class JsonValidator {
 
+    // options schema
+    static optionsSchema = {
+        type: "object",
+        properties: {},
+        additionalProperties: false
+    }
+
     // vars
     _validators = new WeakMap();
+
+    // ctor
+    constructor(services = {}, options = {}) {
+    }
 
     // methods
     validate(data, schema, schemas) {

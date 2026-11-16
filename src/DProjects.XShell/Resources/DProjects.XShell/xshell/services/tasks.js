@@ -168,6 +168,15 @@ class Task extends EventTarget {
 }
 
 export default class Tasks {
+
+    // options schema
+    static optionsSchema = {
+        type: "object",
+        properties: {},
+        additionalProperties: false
+    }
+
+    // vars
     _bus;
     _tasks = [];
 

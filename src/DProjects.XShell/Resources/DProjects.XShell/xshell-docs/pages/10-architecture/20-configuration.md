@@ -186,21 +186,23 @@ The host can override values below `config.xshell` without changing an authored 
 ```
 
 Paths are dotted and relative to `config.xshell`. For example, `services.temp.options.url=/uploads` produces
-`xshell:services.temp.options.url` and targets `config.xshell.services.temp.options.url`; the path must not begin with `xshell.`. Metadata whose
-path begins with `app.` is reserved for application and hosting inputs and is excluded from generic override processing.
+`xshell:services.temp.options.url` and targets `config.xshell.services.temp.options.url`; the path must not begin with `xshell.`. The host rejects
+`app.*` override paths because that namespace is reserved for application and hosting inputs.
 
 Bootstrap applies overrides after manifest normalization and merging and after framework and resolver rules are generated. It applies them before
 Service Worker mappings are generated, before the effective configuration is frozen, and before `xshell.init(config)`.
 
 Override content is parsed with `JSON.parse`. JSON objects, arrays, numbers, booleans, `null`, and quoted strings therefore retain their JSON value;
-content that is not valid JSON remains a string. No schema-specific coercion is performed. The effective configuration is subsequently validated
-during `XShell.init()`.
+content that is not valid JSON remains a string. To pass a string that resembles a JSON literal, use JSON string encoding: for example, `"true"`
+produces the string `true`, while `true` produces a boolean. No schema-specific coercion or URL normalization is performed. The effective
+configuration is subsequently validated during `XShell.init()`.
 
 Override paths have these current restrictions:
 
 - segments are case-sensitive and cannot be empty or named `__proto__`, `prototype`, or `constructor`;
 - every intermediate segment must already be an own property whose value is a non-null, non-array object;
-- arrays cannot be traversed by index, and missing intermediate objects are not created;
+- arrays cannot be traversed by index, and missing intermediate objects are not created, except that `options` is created when traversing an
+  existing `services.<id>` registration;
 - the final property is assigned directly and may replace or add a property on the resolved object; and
 - overrides do not rerun manifest normalization or resolver-rule generation.
 

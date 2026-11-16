@@ -2,6 +2,14 @@ const MODES = Object.freeze(["system", "light", "dark"]);
 
 export default class Theme {
 
+    // options
+    static optionsSchema = {
+        type: "object",
+        properties: {
+        },
+        additionalProperties: false
+    };
+
     // fields
     _bus = null;
     _mode = "system";
@@ -10,7 +18,7 @@ export default class Theme {
     get mode() { return this._mode; }
 
     // ctor
-    constructor({ bus }) {
+    constructor({ bus }, options) {
         this._bus = bus;
 
         const saved = localStorage.getItem("xshell.theme");

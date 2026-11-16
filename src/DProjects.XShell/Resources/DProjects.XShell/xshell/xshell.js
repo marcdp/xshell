@@ -106,7 +106,10 @@ class XShell {
         const result = new JsonValidator().validate(config, configSchema);
         if (!result.valid) {
             console.error(`Invalid config:`, result.errors);
-            throw new Error(`Invalid config:`, { cause: result.errors });
+            const detail = result.errors.find(error => error.instanceLocation && error.error) ?? result.errors[0];
+            const location = detail?.instanceLocation ?? "#";
+            const message = detail?.error ?? "Schema validation failed.";
+            throw new Error(`Invalid config at '${location}': ${message}`, { cause: result.errors });
         }
         // validate static Area configuration
         const definitions = config.xshell.areas.definitions;

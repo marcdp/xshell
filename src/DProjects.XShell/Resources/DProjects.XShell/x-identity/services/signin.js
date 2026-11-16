@@ -86,6 +86,11 @@ function resolveEndpoint(config) {
 
 export default class SignIn {
 
+    static optionsSchema = {
+        type: "object",
+        additionalProperties: false
+    };
+
     constructor({ config }) {
         this._config = config;
     }

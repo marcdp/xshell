@@ -44,8 +44,7 @@ function checkRememberMinutes(value, fallback, maximum) {
     return minutes;
 }
 
-function sessionPolicy(config) {
-    const policy = config?.xshell?.services?.secrets?.options || {};
+function sessionPolicy(policy = {}) {
     const maximum = policy.maxRememberMinutes ?? 0;
     const fallback = policy.rememberMinutes ?? 0;
     if (!Number.isSafeInteger(maximum) || maximum < 0 || maximum > MAX_REMEMBER_MINUTES) {
@@ -236,6 +235,18 @@ function passkeyError(error, operation) {
 }
 
 export default class Secrets {
+
+    // options schema
+    static optionsSchema = {
+        type: "object",
+        properties: {
+            maxRememberMinutes: { type: "integer", minimum: 0, maximum: MAX_REMEMBER_MINUTES },
+            rememberMinutes: { type: "integer", minimum: 0, maximum: MAX_REMEMBER_MINUTES }
+        },
+        additionalProperties: false
+    };
+
+    // vars
     #bus;
     #database;
     #ready;
@@ -249,9 +260,9 @@ export default class Secrets {
     #epoch = 0;
     #writeTransactions = new Set();
 
-    constructor({ bus, config } = {}) {
+    constructor({ bus, config } = {}, options = config?.xshell?.services?.secrets?.options ?? {}) {
         this.#bus = bus;
-        this.#policy = sessionPolicy(config);
+        this.#policy = sessionPolicy(options);
         const epoch = this.#epoch;
         this.#ready = this.#open().then(async db => {
             this.#metadata = await this.#request(META_STORE, "readonly", store => store.get(VAULT_ID)) || null;

@@ -96,7 +96,7 @@ DProjects.XShell server --override navigation.mode=hash --override services.temp
 ```
 
 Programmatic hosts set the equivalent `Extensions.Configuration.Overrides` dictionary, as shown above. Do not include the `xshell.` prefix in a
-path. `app.*` metadata is reserved and excluded from generic override processing. Bootstrap applies overrides after manifest merging and resolver
+path. The host rejects `app.*` override paths because that namespace is reserved. Bootstrap applies overrides after manifest merging and resolver
 generation and before initialization. See [Configuration](20-configuration.md#host-overrides) for JSON parsing and the exact path restrictions.
 
 ## Known server-command inconsistency

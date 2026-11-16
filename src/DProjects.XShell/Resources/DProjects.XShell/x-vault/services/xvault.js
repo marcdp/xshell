@@ -92,6 +92,16 @@ function preserveCiphertext(handler, original, edited) {
 }
 
 export default class XVault {
+
+    // options schema
+    static optionsSchema = {
+        type: "object",
+        properties: {
+        },
+        additionalProperties: false
+    };
+
+    // methods
     async decrypt(text, password, options = {}) {
         checkText(text);
         if (!options || typeof options !== "object" || Array.isArray(options)) throw new Error("Invalid xvault options.");

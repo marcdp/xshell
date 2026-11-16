@@ -1,4 +1,5 @@
 using System.Net;
+using System.Reflection;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using DProjects.XShell.Services;
@@ -38,6 +39,46 @@ namespace DProjects.XShell.Test {
             var index = BuildIndex([]);
 
             Assert.Equal("", GetContentAttribute(GetAppParamsTag(index)));
+        }
+        [Fact]
+        public void Build_GeneratesTempOverrideAndExplicitValueTakesPrecedence() {
+            var generated = BuildIndex(new Extensions.Configuration {
+                Temp = new Extensions.TempConfig { BasePath = "/generated-temp" }
+            });
+            var explicitValue = BuildIndex(new Extensions.Configuration {
+                Temp = new Extensions.TempConfig { BasePath = "/generated-temp" },
+                Overrides = new Dictionary<string, string> { ["services.temp.options.url"] = "/explicit-temp" }
+            });
+
+            Assert.Equal(["/generated-temp"], GetOverrideValues(generated, "services.temp.options.url"));
+            Assert.Equal(["/explicit-temp"], GetOverrideValues(explicitValue, "services.temp.options.url"));
+        }
+        [Fact]
+        public void Build_EmitsMultipleOverridesWithHtmlEncodedPathsAndValues() {
+            var index = BuildIndex(new Extensions.Configuration {
+                Overrides = new Dictionary<string, string> {
+                    ["navigation.mode"] = "\"hash\"",
+                    ["services.commands.options.label\""] = "España & <commands> \"quoted\""
+                }
+            });
+
+            Assert.Equal(["\"hash\""], GetOverrideValues(index, "navigation.mode"));
+            Assert.Equal(["España & <commands> \"quoted\""], GetOverrideValues(index, "services.commands.options.label\""));
+            Assert.Contains("&amp;", index);
+            Assert.Contains("&lt;commands&gt;", index);
+            Assert.Contains("&quot;", index);
+            Assert.DoesNotContain("name=\"xshell:services.commands.options.label\"\"", index);
+        }
+        [Fact]
+        public void Build_PreservesReservedBootstrapMetadataAlongsideLegitimateOverrides() {
+            var index = BuildIndex(new Extensions.Configuration {
+                App = new Extensions.AppConfig { Module = "module:app:1.0.0", BasePath = "/app" },
+                Overrides = new Dictionary<string, string> { ["navigation.mode"] = "\"hash\"" }
+            });
+
+            Assert.Contains("name=\"xshell:app.module\" content=\"module:app:1.0.0\"", index);
+            Assert.Contains("name=\"xshell:app.basePath\" content=\"/app\"", index);
+            Assert.Equal(["\"hash\""], GetOverrideValues(index, "navigation.mode"));
         }
         [Fact]
         public async Task GeneratedIndex_ResolvesExactXShellVersion() {
@@ -107,7 +148,7 @@ namespace DProjects.XShell.Test {
         }
         [Fact]
         public void GeneratedIndex_UsesEntryUrlForRelativeAndAbsoluteHttpsManifests() {
-            var index = new BootstrapFilesBuilder().Build(new Extensions.Configuration(), "Development")["/index.js"];
+            var index = new BootstrapFilesBuilder().Build(new Extensions.Configuration(), "Development", GetBootstrapPath())["/index.js"];
 
             Assert.Contains("new URL(entry.url, indexUrl)", index);
             Assert.Contains("new URL(\".\", manifestUrl)", index);
@@ -120,16 +161,19 @@ namespace DProjects.XShell.Test {
 
         // methods (private)
         private static string BuildIndex(Dictionary<string, string> parameters) {
-            return new BootstrapFilesBuilder().Build(new Extensions.Configuration {
+            return BuildIndex(new Extensions.Configuration {
                 App = new Extensions.AppConfig { Params = parameters }
-            }, "Development")["/index.html"];
+            });
+        }
+        private static string BuildIndex(Extensions.Configuration config) {
+            return new BootstrapFilesBuilder().Build(config, "Development", GetBootstrapPath())["/index.html"];
         }
         private static async Task<JsonDocument> RunGeneratedIndexAsync(string xshellReference, string firstVersions, string? secondVersions = null) {
             var directory = Path.Combine(Path.GetTempPath(), "DProjects.XShell.Test", Guid.NewGuid().ToString("N"));
             Directory.CreateDirectory(directory);
             try {
                 File.WriteAllText(Path.Combine(directory, "package.json"), """{"type":"module"}""");
-                File.WriteAllText(Path.Combine(directory, "index.mjs"), new BootstrapFilesBuilder().Build(new Extensions.Configuration(), "Development")["/index.js"]);
+                File.WriteAllText(Path.Combine(directory, "index.mjs"), new BootstrapFilesBuilder().Build(new Extensions.Configuration(), "Development", GetBootstrapPath())["/index.js"]);
                 var indexes = new Dictionary<string, JsonElement> {
                     ["first/app/index.json"] = JsonSerializer.Deserialize<JsonElement>(JsonSerializer.Serialize(new {
                         module = "app", versions = new Dictionary<string, object> {
@@ -187,6 +231,17 @@ namespace DProjects.XShell.Test {
         }
         private static string GetContentAttribute(string tag) {
             return Regex.Match(tag, "content=\"(?<value>[^\"]*)\"").Groups["value"].Value;
+        }
+        private static string[] GetOverrideValues(string index, string path) {
+            return Regex.Matches(index, "<meta name=\"(?<name>[^\"]*)\" content=\"(?<value>[^\"]*)\">")
+                .Where(match => WebUtility.HtmlDecode(match.Groups["name"].Value) == "xshell:" + path)
+                .Select(match => WebUtility.HtmlDecode(match.Groups["value"].Value))
+                .ToArray();
+        }
+        private static string GetBootstrapPath() {
+            var projectDirectory = typeof(Extensions).Assembly.GetCustomAttributes<AssemblyMetadataAttribute>()
+                .Single(attribute => attribute.Key == "ProjectDirectory").Value!;
+            return Path.Combine(projectDirectory, "Resources", "DProjects.XShell", "bootstrap");
         }
         private static Dictionary<string, string> ParseUrlSearchParams(string serializedParams) {
             return serializedParams.Split('&', StringSplitOptions.RemoveEmptyEntries).ToDictionary(

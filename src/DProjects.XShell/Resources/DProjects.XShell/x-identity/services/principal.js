@@ -47,6 +47,12 @@ function normalizeIdentities(identities) {
 
 export default class Principal {
 
+    // options schema
+    static optionsSchema = {
+        type: "object",
+        additionalProperties: false
+    };
+
     constructor({ bus }) {
         this._bus = bus;
         this._identities = Object.freeze([]);

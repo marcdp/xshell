@@ -55,6 +55,49 @@ function showBootstrapError(error) {
     }
 }
 
+function parseXShellOverrideValue(content) {
+    try {
+        return JSON.parse(content);
+    } catch {
+        return content;
+    }
+}
+
+function fillXShellOverrides(config) {
+    const elements = document.querySelectorAll('meta[name^="xshell:"]');
+    const forbidden = new Set(["__proto__", "prototype", "constructor"]);
+    for (const element of elements) {
+        const path = element.name.substring("xshell:".length);
+
+        if (path.startsWith("app.")) continue;
+
+        const keys = path.split(".");
+        if (keys.some(key => !key || forbidden.has(key))) {
+            throw new Error(`Invalid configuration override: ${path}`);
+        }
+
+        let target = config.xshell;
+
+        for (const [index, key] of keys.slice(0, -1).entries()) {
+            if (!Object.hasOwn(target, key)) {
+                const missingServiceOptions = index === 2 && key === "options" && keys[0] === "services";
+                if (!missingServiceOptions) throw new Error(`Unknown configuration path: ${path}`);
+                target.options = {};
+            }
+
+            target = target[key];
+
+            if (!target || typeof target !== "object" || Array.isArray(target)) {
+                throw new Error(`Invalid configuration path: ${path}`);
+            }
+        }
+
+        target[keys.at(-1)] = parseXShellOverrideValue(element.content);
+    }
+
+    return config;
+}
+
 
 // main
 async function main() {
@@ -715,48 +758,6 @@ async function main() {
                     modulePath: moduleAssetsPathCommands
                 };
                 addCommandDeclarations("module", moduleId, moduleAssetsPath, module.files);
-            }
-
-            return config;
-        }
-        function fillXShellOverrides(config) {
-            const elements = document.querySelectorAll('meta[name^="xshell:"]');
-            const excludedPrefixes = ["app."];
-            const forbidden = new Set(["__proto__", "prototype", "constructor"]);
-            for (const element of elements) {
-                const path = element.name.substring("xshell:".length);
-
-                if (excludedPrefixes.some(prefix => path.startsWith(prefix))) {
-                    continue;
-                }
-
-                const keys = path.split(".");
-                if (keys.some(key => !key || forbidden.has(key))) {
-                    throw new Error(`Invalid configuration override: ${path}`);
-                }
-
-                let target = config.xshell;
-
-                for (const key of keys.slice(0, -1)) {
-                    if (!Object.hasOwn(target, key)) {
-                        throw new Error(`Unknown configuration path: ${path}`);
-                    }
-
-                    target = target[key];
-
-                    if (!target || typeof target !== "object" || Array.isArray(target)) {
-                        throw new Error(`Invalid configuration path: ${path}`);
-                    }
-                }
-
-                let value = element.content;
-                try {
-                    value = JSON.parse(value);
-                } catch {
-                    // Preserve string values.
-                }
-
-                target[keys.at(-1)] = value;
             }
 
             return config;

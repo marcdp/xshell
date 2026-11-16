@@ -164,6 +164,12 @@ namespace DProjects.XShell {
             if (config.Server == null) throw new ArgumentNullException(nameof(config.Server), "XShell Server configuration is required.");
             if (config.App.Description == null) throw new ArgumentNullException(nameof(config.App.Description), "XShell App.Description must not be null.");
             if (config.App.Params == null) throw new ArgumentNullException(nameof(config.App.Params), "XShell App.Params must not be null.");
+            if (config.Overrides == null) throw new ArgumentNullException(nameof(config.Overrides), "XShell Overrides must not be null.");
+            foreach (var path in config.Overrides.Keys) {
+                if (path.StartsWith("app.", StringComparison.Ordinal)) {
+                    throw new ArgumentException($"XShell configuration override '{path}' is reserved for host/bootstrap metadata and cannot be set through Overrides.", nameof(config));
+                }
+            }
 
             // validate required paths and numeric Temp limits
             if (string.IsNullOrWhiteSpace(config.App.Module)) throw new ArgumentException("XShell App.Module must be a non-empty module specification.", nameof(config));

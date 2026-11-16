@@ -1,12 +1,20 @@
 export default class Toast extends EventTarget {
 
+    // options schema
+    static optionsSchema = {
+        type: "object",
+        properties: {
+        },
+        additionalProperties: false
+    };
+
     // fields
     _containers = new Map();
     _items = new Map();
     _nextId = 1;
 
     // ctor
-    constructor({ loader }) {
+    constructor({ loader }, options) {
         super();
 
         // x-notice owns the visual representation of a toast.

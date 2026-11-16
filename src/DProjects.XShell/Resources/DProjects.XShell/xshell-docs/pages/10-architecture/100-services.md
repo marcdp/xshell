@@ -51,11 +51,21 @@ This fixed topology provides deterministic service resolution and prevents provi
 configured service. `Services.resolve(name)` returns an existing runtime instance or lazily constructs the configured implementation as a singleton.
 The implementation is validated against the contract's declared methods and properties when that singleton is first created.
 
-Each configured service may declare an optional `options` object. XShell passes the existing lazy service-injection proxy as the first constructor
-argument and that service's `options` object as the second:
+Each configured service may declare an optional `options` object. Every configured implementation class must declare a static `optionsSchema`
+JSON Schema object describing that private constructor configuration. XShell passes the existing lazy service-injection proxy as the first
+constructor argument and the validated `options` object as the second:
 
 ```js
 export default class Audit {
+    static optionsSchema = {
+        type: "object",
+        properties: {
+            endpoint: { type: "string", minLength: 1 }
+        },
+        required: ["endpoint"],
+        additionalProperties: false
+    };
+
     constructor({ bus, loader }, options = {}) {
         this._bus = bus;
         this._loader = loader;
@@ -64,10 +74,23 @@ export default class Audit {
 }
 ```
 
-Injected services and implementation configuration are distinct: dependencies continue to resolve by name through the first argument, while
-`options` is ordinary configuration interpreted by the implementation. When `options` is absent, XShell passes an empty object. XShell requires `options`
-to be a JSON object but does not validate its internal structure; the service implementation owns any additional interpretation and validation.
-Options remain private construction data and are not included in `services.registry` or `services.getServiceInfo()` metadata.
+An implementation with no configurable settings still declares a restrictive schema:
+
+```js
+static optionsSchema = {
+    type: "object",
+    additionalProperties: false
+};
+```
+
+`optionsSchema` uses JSON Schema Draft 2020-12 syntax and belongs to the implementation class, not the public service contract. Injected services,
+implementation configuration, and the public contract remain distinct: dependencies resolve by name through the first constructor argument,
+`options` is private implementation configuration, and the contract describes the public runtime API.
+
+`Services.resolve()` validates the complete configured options object immediately before invoking the constructor. When `options` is absent, it
+validates and passes a new empty object. A missing or invalid `optionsSchema`, or options that fail it, produce a service-specific error without
+invoking the constructor or emitting `xshell:service:created`; the service remains registered and may be resolved again. Validation does not mutate
+the schema or options. Options remain private construction data and are not included in `services.registry` or `services.getServiceInfo()` metadata.
 
 `Services` owns its mutable runtime service records internally. `services.registry` returns a read-only snapshot of the current service metadata:
 each entry has `id`, `state`, `contractId`, `contractUrl`, `description`, `icon`, `moduleId`, `implementationName`, `url`, `size`, and `time`.
@@ -90,7 +113,7 @@ startup
 
 runtime
     -> Services.has(name)       existence only
-    -> Services.resolve(name)   lazy singleton construction and contract validation
+    -> Services.resolve(name)   options validation, lazy singleton construction, and contract validation
     -> Services.registry        read-only snapshot of service metadata
 ```
 
@@ -201,9 +224,10 @@ it does not evaluate property getters. This validation runs when a configured si
 associated with a contract. Defaults, enums, readonly, and property types are descriptive, as are method parameters/returns and events. An
 implementation must emit any promised events itself.
 
-Construction receives the proxy resolving other services by name as its first argument and its implementation `options` as the second. Resolving a
-service already being constructed detects a circular constructor dependency and reports the resolution chain. A failed construction/validation
-resets that record so a later resolve can retry.
+Construction receives the proxy resolving other services by name as its first argument and its implementation `options` as the second. Immediately
+before construction, XShell validates those options against the implementation's mandatory static `optionsSchema`. Resolving a service already
+being constructed detects a circular constructor dependency and reports the resolution chain. Failed options validation, construction, or contract
+validation resets that record so a later resolve can retry.
 Duplicate registrations, including collisions with core names, fail.
 
 After a configured service is first constructed and validated, XShell emits `xshell:service:created` on the Bus with `{ id }`. Failed attempts emit no

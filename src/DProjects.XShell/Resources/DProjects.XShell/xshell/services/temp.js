@@ -7,6 +7,16 @@ function toAbsoluteUrl(url) {
 // class
 export default class Temp {
 
+    // options
+    static optionsSchema = {
+        type: "object",
+        properties: {
+            url: {type: "string", minLength: 1, format: "uri-reference", description: "Base URL of the temporary storage endpoint."}
+        },
+        required: ["url"],
+        additionalProperties: false
+    };
+
     // vars
     _url = null;
 

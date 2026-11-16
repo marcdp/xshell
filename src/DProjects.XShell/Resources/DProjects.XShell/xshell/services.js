@@ -1,4 +1,6 @@
 
+import JsonValidator from "./services/json-validator.js";
+
 // class
 export default class Services {
 
@@ -10,6 +12,7 @@ export default class Services {
     _areas = null;
     _bus = null;
     _creationPath = [];
+    _jsonValidator = new JsonValidator();
 
     // props
     get registry() {
@@ -93,11 +96,14 @@ export default class Services {
             this._creationPath.push(name);
             try {
                 const self = this;
-                const instance = new result.implementationItem.class(new Proxy({}, {
+                const dependencies = new Proxy({}, {
                     get(target, prop) {
                         return self.resolve(prop);
                     }
-                }), result.options ?? {});
+                });
+                const options = result.options ?? {};
+                this._validateOptions(name, result.implementationItem.class, options);
+                const instance = new result.implementationItem.class(dependencies, options);
                 this._validateImplementation(name, instance, result.contractItem);
                 result.instance = instance;
                 result.state = "created";
@@ -137,6 +143,38 @@ export default class Services {
             size: item.implementationItem?.size ?? null,
             time: item.implementationItem?.time ?? null
         });
+    }
+    _validateOptions(serviceName, implementation, options) {
+        let schema;
+        try {
+            schema = implementation?.optionsSchema;
+        } catch (cause) {
+            throw new Error(`Service '${serviceName}' has an invalid static optionsSchema: ${cause.message}`, { cause });
+        }
+        if (schema === undefined) {
+            throw new Error(`Service '${serviceName}' implementation must define a static optionsSchema object.`);
+        }
+        if (!schema || typeof schema !== "object" || Array.isArray(schema)) {
+            throw new Error(`Service '${serviceName}' has an invalid static optionsSchema: expected a JSON Schema object.`);
+        }
+
+        let optionsResult;
+        try {
+            optionsResult = this._jsonValidator.validate(options, schema);
+        } catch (cause) {
+            throw new Error(`Service '${serviceName}' has an invalid static optionsSchema: ${cause.message}`, { cause });
+        }
+        if (!optionsResult.valid) {
+            throw new Error(`Invalid options for service '${serviceName}'${this._formatValidationFailure(optionsResult.errors)}.`, {
+                cause: optionsResult.errors
+            });
+        }
+    }
+    _formatValidationFailure(errors) {
+        const wrappers = new Set(["$ref", "anyOf", "oneOf", "allOf", "properties", "items", "false"]);
+        const detail = errors?.findLast(error => error.instanceLocation && error.error && !wrappers.has(error.keyword)) ?? errors?.at(-1);
+        if (!detail) return "";
+        return ` at '${detail.instanceLocation ?? "#"}': ${detail.error}`;
     }
     _validateImplementation(serviceName, instance, contractItem) {
         // validate the reliable callable surface declared by the contract

@@ -79,6 +79,11 @@ async function fetchEndpoint(url, options, signal, operationName) {
 
 export default class Session {
 
+    static optionsSchema = {
+        type: "object",
+        additionalProperties: false
+    };
+
     constructor({ config, principal }) {
         this._config = config;
         this._principal = principal;

@@ -8,12 +8,21 @@ const JSON_TYPES = {
 };
 
 export default class Commands {
+
+    // options schema
+    static optionsSchema = {
+        type: "object",
+        properties: {},
+        additionalProperties: false
+    }
+
+    // vars
     _loader;
     _tasks;
     _jsonValidator;
 
     // ctor
-    constructor({loader, tasks, jsonValidator}) {
+    constructor({loader, tasks, jsonValidator}, options) {
         this._loader = loader;
         this._tasks = tasks;
         this._jsonValidator = jsonValidator;
