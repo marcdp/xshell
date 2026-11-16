@@ -435,6 +435,7 @@ export default {
                         localStorage.removeItem("xshell.dockSrc");
                     }
                     localStorage.setItem("xshell.dockPosition", state.dockPosition);
+                    postRender("restoreDockSize");
                     postRender("refreshMenuHeight");
                 });
             },
@@ -451,6 +452,10 @@ export default {
                 window.addEventListener("scroll", () => this.refreshMenuHeight(), { passive: true });
                 window.addEventListener("resize", () => this.refreshMenuHeight());
                 this.refreshMenuHeight();
+                if (state.dockSrc) {
+                    postRender("restoreDockSize");
+                    postRender("refreshMenuHeight");
+                }
             },
 
             refreshMenuHeight() {
@@ -540,9 +545,50 @@ export default {
                 // dock toggle
                 state.dockPosition = state.dockPosition === "bottom" ? "right" : "bottom";
             },
-            onDockResize() {
-                // dock resize
+            onDockResize({ event }) {
+                // Keep menu sizing current throughout splitter changes.
                 this.refreshMenuHeight();
+                if (event.type !== "resize") return;
+
+                // Persist the measured dock dimension only when resizing finishes.
+                const panel = host.shadowRoot.querySelector(".docked-page");
+                if (!panel) return;
+                const dimension = state.dockPosition === "right" ? "width" : "height";
+                const size = Math.round(panel.getBoundingClientRect()[dimension]);
+                if (!Number.isFinite(size) || size <= 0) return;
+                try {
+                    localStorage.setItem(`xshell.dockSize.${state.dockPosition}`, size);
+                } catch { }
+            },
+            restoreDockSize() {
+                // Find the rendered dock and read the saved size for its current position.
+                const panel = host.shadowRoot.querySelector(".docked-page");
+                if (!panel) return;
+                let size;
+                try {
+                    size = Number(localStorage.getItem(`xshell.dockSize.${state.dockPosition}`));
+                } catch { }
+                if (!Number.isFinite(size) || size <= 0) {
+                    panel.style.removeProperty("flex");
+                    return;
+                }
+
+                // Clamp the dock while preserving the existing minimum size of both panes.
+                const container = host.shadowRoot.querySelector(".dock-container");
+                const main = host.shadowRoot.querySelector(".docked-main");
+                const splitter = host.shadowRoot.querySelector("x-splitter");
+                if (!container || !main) return;
+                const dimension = state.dockPosition === "right" ? "width" : "height";
+                const minimum = dimension === "width" ? "minWidth" : "minHeight";
+                const panelMin = parseFloat(getComputedStyle(panel)[minimum]) || 0;
+                const mainMin = parseFloat(getComputedStyle(main)[minimum]) || 0;
+                const splitterSize = splitter?.getBoundingClientRect()[dimension] || 0;
+                const maximum = container.getBoundingClientRect()[dimension] - splitterSize - mainMin;
+                if (!Number.isFinite(maximum) || maximum < panelMin) {
+                    panel.style.removeProperty("flex");
+                    return;
+                }
+                panel.style.flex = `0 0 ${Math.min(Math.max(size, panelMin), maximum)}px`;
             },
             onScroll() {
                 // handle scroll

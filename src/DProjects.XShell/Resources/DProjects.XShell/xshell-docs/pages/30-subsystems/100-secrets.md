@@ -13,6 +13,12 @@ The master password does not encrypt individual secrets. PBKDF2-SHA-256 derives 
 and 600,000 iterations. That KEK authenticates and decrypts one password-wrapped copy of the random DEK. The password mechanism is always retained
 as the vault recovery path when passkeys are added or removed.
 
+After first-time vault initialization, the authentication Page offers optional passkey enrollment when the browser supports WebAuthn credential
+creation and retrieval. Enrollment starts only when the user selects **Create passkey**; **Not now** completes initialization without one. The Page
+retains the initialization password privately only for this optional step because `addPasskey()` reauthenticates against the master password. A
+failed or cancelled WebAuthn ceremony leaves the initialized vault intact and allows another attempt or completion without a passkey. The master
+password remains the permanent recovery method whether or not a passkey is enrolled.
+
 ## Lifecycle and API
 
 Construction remains synchronous while IndexedDB discovery and an eligible remembered-session restoration attempt are asynchronous. Consumers can
@@ -69,9 +75,10 @@ active IndexedDB writes. Operations verify the epoch after asynchronous cryptogr
 restore an unlocked session. `secrets:status-changed` reports lifecycle changes and the current `sessionExpiresAt` on the Bus. Leaving the Secrets
 Page clears its password, decrypted value, and secret-description editor state but does not lock the Service; Lock remains an explicit security
 action. The Secrets Manager delegates initialization and unlocking to the dedicated authentication Page while retaining secret CRUD, passkey
-management, metadata display, and explicit Lock. The authentication Page calls only `ready()`, `listPasskeys()`, `initialize()`, `unlock()`, and
-`unlockWithPasskey()`; it never calls `get()`, so transparent authentication cannot recurse. Passwords, keys, and secret values are neither Page
-context nor dialog results. The Page closes with only `{ unlocked: true }`, and the Service treats that as a UI result rather than proof of access.
+management, metadata display, and explicit Lock. The authentication Page calls only `ready()`, `listPasskeys()`, `initialize()`, `addPasskey()`,
+`unlock()`, and `unlockWithPasskey()`; it never calls `get()`, so transparent authentication cannot recurse. Passwords, keys, and secret values are
+neither Page context nor dialog results. The Page closes with only `{ unlocked: true }`, and the Service treats that as a UI result rather than
+proof of access.
 
 ## Unlock-session policy
 

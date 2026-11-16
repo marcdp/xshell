@@ -6,15 +6,17 @@ import splitter from "../../src/DProjects.XShell/Resources/DProjects.XShell/x/co
 function setup({ vertical = true, paneSize = 200, nextSize = 300, parentSize = 502,
     min = "100px", minNext = "120px", contentBox = false } = {}) {
     const dimension = vertical ? "width" : "height";
-    const pane = { style: {}, getBoundingClientRect() {
-        return { [dimension]: pane.style.flex ? parseFloat(pane.style.flex.split(" ").at(-1)) + (contentBox ? 20 : 0) : paneSize };
+    const total = paneSize + nextSize;
+    const nextPane = { style: {}, getBoundingClientRect() {
+        return { [dimension]: nextPane.style.flex ? parseFloat(nextPane.style.flex.split(" ").at(-1)) : nextSize };
     } };
-    const nextPane = { getBoundingClientRect() { return { [dimension]: paneSize + nextSize - pane.getBoundingClientRect()[dimension] }; } };
+    const pane = { getBoundingClientRect() { return { [dimension]: total - nextPane.getBoundingClientRect()[dimension] }; } };
     const events = [];
     const host = {
         previousElementSibling: pane,
         nextElementSibling: nextPane,
         parentElement: { [vertical ? "clientWidth" : "clientHeight"]: parentSize },
+        shadowRoot: { querySelector: () => ({ setAttribute() {} }) },
         getBoundingClientRect() { return { [dimension]: 2 }; },
         dispatchEvent(event) { events.push(event); }
     };
@@ -26,6 +28,7 @@ function setup({ vertical = true, paneSize = 200, nextSize = 300, parentSize = 5
     const originalStyle = globalThis.getComputedStyle;
     const originalEvent = globalThis.CustomEvent;
     globalThis.getComputedStyle = element => ({
+        flexDirection: element === host.parentElement ? (vertical ? "row" : "column") : undefined,
         [vertical ? "minWidth" : "minHeight"]: element === pane ? min : element === nextPane ? minNext : "auto",
         boxSizing: element === pane && contentBox ? "content-box" : "border-box",
         paddingLeft: element === pane && contentBox ? "10px" : "0px",
@@ -37,7 +40,7 @@ function setup({ vertical = true, paneSize = 200, nextSize = 300, parentSize = 5
     globalThis.CustomEvent = class { constructor(type, options) { Object.assign(this, { type }, options); } };
     const controller = splitter.controller({ state: { orientation: vertical ? "vertical" : "horizontal", disabled: false }, host });
     return {
-        pane, events, controller,
+        pane, nextPane, events, controller,
         drag(delta) {
             controller.pointerDown({ event: { button: 0, pointerId: 1, clientX: 0, clientY: 0, currentTarget: handle, preventDefault() {} } });
             controller.pointerMove({ event: { pointerId: 1, clientX: delta, clientY: delta } });
@@ -51,9 +54,9 @@ test("pointer resizing stops at both CSS minimums", () => {
     const ui = setup();
     try {
         ui.drag(1000);
-        assert.equal(ui.pane.style.flex, "0 0 380px");
+        assert.equal(ui.nextPane.style.flex, "0 0 120px");
         ui.drag(-1000);
-        assert.equal(ui.pane.style.flex, "0 0 100px");
+        assert.equal(ui.nextPane.style.flex, "0 0 400px");
     } finally { ui.restore(); }
 });
 
@@ -62,9 +65,9 @@ test("keyboard resizing uses the same limits for horizontal panes", () => {
         min: "100px", minNext: "120px" });
     try {
         ui.key("ArrowDown");
-        assert.equal(ui.pane.style.flex, "0 0 130px");
+        assert.equal(ui.nextPane.style.flex, "0 0 120px");
         for (let i = 0; i < 10; i++) ui.key("ArrowUp");
-        assert.equal(ui.pane.style.flex, "0 0 100px");
+        assert.equal(ui.nextPane.style.flex, "0 0 150px");
         assert.equal(ui.events.at(-1).detail.size, 100);
     } finally { ui.restore(); }
 });
@@ -73,18 +76,18 @@ test("content-box pane uses a content-box flex basis and ignores nonnumeric mini
     const ui = setup({ contentBox: true, min: "auto", minNext: "none" });
     try {
         ui.drag(-1000);
-        assert.equal(ui.pane.style.flex, "0 0 0px");
+        assert.equal(ui.nextPane.style.flex, "0 0 480px");
         ui.drag(1000);
-        assert.equal(ui.pane.style.flex, "0 0 480px");
+        assert.equal(ui.nextPane.style.flex, "0 0 0px");
     } finally { ui.restore(); }
 });
 
 test("impossible minimums leave the pane at its current size", () => {
-    const ui = setup({ parentSize: 200 });
+    const ui = setup({ paneSize: 100, nextSize: 100, parentSize: 200 });
     try {
         ui.drag(1000);
-        assert.equal(ui.pane.style.flex, "0 0 200px");
+        assert.equal(ui.nextPane.style.flex, "0 0 100px");
         ui.key("ArrowLeft");
-        assert.equal(ui.pane.style.flex, "0 0 200px");
+        assert.equal(ui.nextPane.style.flex, "0 0 100px");
     } finally { ui.restore(); }
 });

@@ -94,8 +94,6 @@ await secrets.delete("x-demo:secrets-example");</code></pre>
 
         <p>Locking the vault affects other Pages using the same Secrets service.
         Passwords, passkeys, and vault administration are handled by Secrets Manager.</p>
-
-        <p>Return to <x-anchor href="01-services.js">Services</x-anchor>.</p>
     `,
 
     state: {

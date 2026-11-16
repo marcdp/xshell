@@ -5,9 +5,9 @@ let registrationQueue = Promise.resolve();
 
 // deployment constants
 const DEPLOYMENT_NAME = self.location.pathname.substring(0, self.location.pathname.lastIndexOf("/")).replaceAll("/", "-");
-const DB_NAME = "xshell-sw" + DEPLOYMENT_NAME;
+const DB_NAME = "xshell-sw";
 const DB_VERSION = 1;
-const STORE_NAME = "state";
+const STORE_NAME = "state" + DEPLOYMENT_NAME;
 
 // resolve MIME type from a resource path
 function getMimeType(path) {

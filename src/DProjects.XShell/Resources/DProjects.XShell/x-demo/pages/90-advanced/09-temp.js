@@ -47,7 +47,7 @@ const absoluteUrl = temp.getAbsoluteUrl(results[0]);</code></pre>
         are ignored so they cannot update stale Page state.</p>
         <p>Compare this with <x-anchor href="07-tasks.js">Tasks</x-anchor> and <x-anchor href="08-commands.js">Commands</x-anchor>. The existing
         <x-anchor href="../05-filesystem/01-selection.js">File Selection</x-anchor> Page demonstrates the higher-level file datafield.</p>
-        <p>Return to <x-anchor href="01-services.js">Services</x-anchor> for service discovery and injection.</p>
+        
     `,
 
     state: {
