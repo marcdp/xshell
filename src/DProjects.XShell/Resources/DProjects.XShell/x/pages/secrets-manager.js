@@ -36,7 +36,7 @@ export default {
                     <p>
                         Vault unlocked
                         <span x-if="state.sessionExpiresAt">
-                            (session expires in <x-countdown x-attr:value="state.sessionExpiresAt" format="{hh}h {mm}m {ss}s"></x-countdown>)
+                            (session expires in <x-countdown x-attr:value="state.sessionExpiresAt" format="{d}d {hh}h {mm}m {ss}s"></x-countdown>)
                         </span>
                     </p>
                     <div class="toolbar">

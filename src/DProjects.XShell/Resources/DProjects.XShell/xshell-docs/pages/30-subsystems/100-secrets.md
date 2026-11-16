@@ -85,7 +85,7 @@ without the `x` UI module never prompt. The `x` module supplies the default UI P
             "options": {
                 "page": "page:x:/pages/secrets-unlock.js",
                 "rememberMinutes": 0,
-                "maxRememberMinutes": 60
+                "maxRememberMinutes": 43200
             }
         }
     }
@@ -109,7 +109,7 @@ object is the application-enforced maximum. Both are nonnegative integer minutes
     "secrets": {
         "options": {
             "rememberMinutes": 0,
-            "maxRememberMinutes": 60
+            "maxRememberMinutes": 43200
         }
     }
 }

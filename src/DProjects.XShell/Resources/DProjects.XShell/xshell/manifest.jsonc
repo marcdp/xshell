@@ -71,7 +71,7 @@
                 "options": {
                     "page": null,
                     "rememberMinutes": 60,
-                    "maxRememberMinutes": 60
+                    "maxRememberMinutes": 43200
                 }
             },
             "tasks":{

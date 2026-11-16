@@ -170,6 +170,11 @@ export default {
         :host .input.file x-icon {vertical-align:text-bottom; display:inline-block; margin-top:-.1em;}
         :host .input.file .error {color:var(--x-datafield-error-color);}
 
+        :host .input.radios div {}
+        :host .input.radios x-icon {margin-right:.25em;}
+        :host .input.radios .description {display:block; font-size:var(--x-font-size-x-small); color:var(--x-datafield-color-placeholder);}
+        
+
         input[type='range'] {
             padding:.35em;            
         }
@@ -303,10 +308,15 @@ export default {
             <option x-for="option in state.domainNormalized" x-attr:value="option.value" x-text="option.label" x-attr:disabled="option.disabled" x-attr:selected="state.selectedOptions[option.value]"></option>
         </select>
 
-        <div x-elseif="state.type=='radios'" class="input container">
+        <div x-elseif="state.type=='radios'" class="input container radios">
             <div x-for="(option,index) in state.domainNormalized">
                 <input type="radio" x-attr:value="option.value" name="radio" x-attr:id="'radio' + index" x-model="state.value" x-attr:disabled="option.disabled"/>
-                <label x-text="option.label" x-attr:for="'radio' + index"></label>
+                <x-icon x-if="option.icon" x-attr:icon="option.icon"></x-icon>
+                <label x-attr:for="'radio' + index">
+                    <span x-text="option.label" class="label"></span>
+                    <span x-if="option.description" x-text="option.description" class="description"></span>
+                </label>
+                
             </div>
         </div>
 
