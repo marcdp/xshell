@@ -8,7 +8,7 @@ function createPage({ rememberMinutes = 0, maxRememberMinutes = 0, mode = "manag
     state.mode = mode;
     state.secretId = secretId;
     state.passkeyId = passkeyId;
-    const calls = { lock: 0, list: 0, unlock: [], unlockWithPasskey: [], set: [], addPasskey: [], updatePasskey: [], close: [] };
+    const calls = { lock: 0, list: 0, get: [], open: [], set: [], addPasskey: [], updatePasskey: [], close: [] };
     const secrets = {
         status: mode == "manage" ? "locked" : "unlocked",
         rememberMinutes,
@@ -17,56 +17,39 @@ function createPage({ rememberMinutes = 0, maxRememberMinutes = 0, mode = "manag
         async ready() { return this.status; },
         async listPasskeys() { return [{ id: "passkey", label: "Laptop", description: "Work computer", createdAt: "2026-01-01T00:00:00.000Z" }]; },
         async list() { calls.list++; return []; },
-        async get() { return "decrypted value"; },
+        async get(...args) { calls.get.push(args); return "decrypted value"; },
         async getInfo() { return { id:"token", description:"API credential", createdAt:"2026-01-02T00:00:00.000Z" }; },
         async set(...args) { calls.set.push(args); },
         async addPasskey(options) { calls.addPasskey.push(options); },
         async updatePasskey(...args) { calls.updatePasskey.push(args); },
-        async unlock(options) { calls.unlock.push(options); },
-        async unlockWithPasskey(options) { calls.unlockWithPasskey.push(options); },
         lock() { calls.lock++; this.status = "locked"; }
     };
     const controller = SecretsPage.controller({
         state,
         secrets,
         page: { invalidate() {}, async close(result) { calls.close.push(result); } },
-        dialog: {},
+        dialog: { async open(options) { calls.open.push(options); return null; } },
         bus: {},
         events: { on() {} }
     });
     return { state, secrets, calls, controller };
 }
 
-test("Secrets Page offers only policy-allowed remembered durations and uses one selection for both unlock methods", async () => {
-    const { state, calls, controller } = createPage({ rememberMinutes: 30, maxRememberMinutes: 60 });
+test("Secrets Manager delegates initialization and unlocking to the dedicated authentication Page", async () => {
+    const { calls, controller } = createPage();
     await controller.load();
-    assert.equal(state.rememberMinutes, 30);
-    assert.deepEqual(state.rememberOptions, [
-        { value: 0, label: "This session only" },
-        { value: 15, label: "15 minutes" },
-        { value: 30, label: "30 minutes" },
-        { value: 60, label: "60 minutes" }
-    ]);
-
-    state.password = "password";
-    state.rememberMinutes = "60";
-    await controller.unlock();
-    assert.deepEqual(calls.unlock, [{ password: "password", rememberMinutes: 60 }]);
-    assert.equal(calls.list, 0, "unlock completion waits for the status-change event instead of refreshing twice");
-
-    state.busy = false;
-    state.passkeySupported = true;
-    state.passkeys = [{ id: "passkey" }];
-    await controller.unlockPasskey();
-    assert.deepEqual(calls.unlockWithPasskey, [{ rememberMinutes: 60 }]);
+    await controller.openUnlock();
+    assert.deepEqual(calls.open, [{
+        href:"page:x:/pages/secrets-unlock.js",
+        title:"Secrets vault",
+        context:{}
+    }]);
 });
 
-test("Secrets Page hides remembered-session choices when disabled and unload clears sensitive state without locking", async () => {
+test("Secrets Manager unload clears sensitive state without locking", async () => {
     const { state, calls, controller } = createPage();
     await controller.load();
-    assert.deepEqual(state.rememberOptions, []);
     state.password = "password";
-    state.confirmPassword = "password";
     state.passkeyLabel = "Laptop";
     state.description = "sensitive description";
     state.createdAt = "2026-01-01T00:00:00.000Z";
@@ -78,7 +61,6 @@ test("Secrets Page hides remembered-session choices when disabled and unload cle
     controller.unload();
     assert.equal(calls.lock, 0);
     assert.equal(state.password, "");
-    assert.equal(state.confirmPassword, "");
     assert.equal(state.passkeyLabel, "");
     assert.equal(state.description, "");
     assert.equal(state.createdAt, null);
@@ -91,6 +73,7 @@ test("Secrets Page hides remembered-session choices when disabled and unload cle
 test("Secrets Page loads and saves encrypted secret metadata", async () => {
     const { state, calls, controller } = createPage({ mode:"edit", secretId:"token" });
     await controller.load();
+    assert.deepEqual(calls.get, [["token", {interactive:false}]]);
     assert.equal(state.editorValue, "decrypted value");
     assert.equal(state.description, "API credential");
     assert.notEqual(state.createdDisplay, "");

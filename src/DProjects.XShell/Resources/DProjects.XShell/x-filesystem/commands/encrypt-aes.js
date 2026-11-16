@@ -9,7 +9,11 @@ export default {
                 {name: "src", label:"Filesystem", type: "string", description: "Filesystem source", required:true},
                 {name: "path", type: "string", description: "Path to the file to encrypt", required:true},
                 {name: "password", type: "string", description: "Password to use for AES encryption", required:true}
-            ]
+            ],
+            returns: { 
+                type: "string", 
+                description: "Encrypted file path" 
+            }
         }        
     },
     // implementation
@@ -18,6 +22,7 @@ export default {
             execute(src, path, password) {
                 // debugger
                 debugger;
+                return "asdas";
             }
         }
     }

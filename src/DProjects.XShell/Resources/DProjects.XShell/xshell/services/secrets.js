@@ -58,6 +58,10 @@ function checkRememberMinutes(value, fallback, maximum) {
 }
 
 function sessionPolicy(policy = {}) {
+    const page = policy.page ?? null;
+    if (page !== null && (typeof page !== "string" || !page.startsWith("page:") || !page.slice(5).trim())) {
+        throw new TypeError("xshell.services.secrets.options.page must be a non-empty Page resource reference or null.");
+    }
     const maximum = policy.maxRememberMinutes ?? 0;
     const fallback = policy.rememberMinutes ?? 0;
     if (!Number.isSafeInteger(maximum) || maximum < 0 || maximum > MAX_REMEMBER_MINUTES) {
@@ -67,7 +71,21 @@ function sessionPolicy(policy = {}) {
         throw new TypeError(`xshell.services.secrets.options.rememberMinutes must be an integer from 0 through ${MAX_REMEMBER_MINUTES}.`);
     }
     if (fallback > maximum) throw new RangeError("xshell.services.secrets.options.rememberMinutes cannot exceed maxRememberMinutes.");
-    return { rememberMinutes: fallback, maxRememberMinutes: maximum };
+    return { page, rememberMinutes: fallback, maxRememberMinutes: maximum };
+}
+
+function interactiveAccess(options) {
+    if (options === undefined) return true;
+    if (!options || typeof options !== "object" || Array.isArray(options)) {
+        throw new TypeError("Secret access options must be an object.");
+    }
+    if (Object.keys(options).some(key => key !== "interactive")) {
+        throw new TypeError("Secret access options contain an unknown property.");
+    }
+    if (options.interactive !== undefined && typeof options.interactive !== "boolean") {
+        throw new TypeError("Secret access interactive must be a boolean.");
+    }
+    return options.interactive !== false;
 }
 
 function bytes(value, length) {
@@ -254,6 +272,12 @@ export default class Secrets {
     static optionsSchema = {
         type: "object",
         properties: {
+            page: {
+                anyOf: [
+                    { type: "string", pattern: "^page:.+" },
+                    { type: "null" }
+                ]
+            },
             maxRememberMinutes: { type: "integer", minimum: 0, maximum: MAX_REMEMBER_MINUTES },
             rememberMinutes: { type: "integer", minimum: 0, maximum: MAX_REMEMBER_MINUTES }
         },
@@ -262,6 +286,7 @@ export default class Secrets {
 
     // vars
     #bus;
+    #dialog;
     #database;
     #ready;
     #policy;
@@ -273,9 +298,11 @@ export default class Secrets {
     #expirationTimer = null;
     #epoch = 0;
     #writeTransactions = new Set();
+    #unlockPromise = null;
 
-    constructor({ bus, config } = {}, options) {
+    constructor({ bus, dialog } = {}, options) {
         this.#bus = bus;
+        this.#dialog = dialog;
         this.#policy = sessionPolicy(options);
         const epoch = this.#epoch;
         this.#ready = this.#open().then(async db => {
@@ -464,8 +491,9 @@ export default class Secrets {
             .sort((left, right) => left.id.localeCompare(right.id));
     }
 
-    async get(id) {
+    async get(id, options) {
         checkId(id);
+        await this.#ensureUnlocked(interactiveAccess(options));
         const { key, epoch } = await this.#session();
         const record = await this.#request(SECRET_STORE, "readonly", store => store.get(id));
         this.#assertCurrent(epoch);
@@ -910,6 +938,41 @@ export default class Secrets {
         validateMetadata(metadata);
         this.#metadata = metadata;
         return metadata;
+    }
+
+    async #ensureUnlocked(interactive) {
+        await this.#ready;
+        if (this.#sessionExpiresAt && Date.parse(this.#sessionExpiresAt) <= Date.now()) this.lock();
+        if (this.#status === "unlocked" && this.#key) return;
+        if (!interactive || this.#policy.page === null) throw new Error("Secrets vault is locked.");
+        if (!this.#dialog || typeof this.#dialog.open !== "function") {
+            throw new Error("Secrets vault authentication requires the Dialog service.");
+        }
+
+        if (!this.#unlockPromise) {
+            const pending = this.#openUnlockDialog();
+            this.#unlockPromise = pending;
+            void pending.then(
+                () => { if (this.#unlockPromise === pending) this.#unlockPromise = null; },
+                () => { if (this.#unlockPromise === pending) this.#unlockPromise = null; }
+            );
+        }
+
+        await this.#unlockPromise;
+        if (this.#status !== "unlocked" || !this.#key) {
+            throw new DOMException("Secrets access cancelled.", "AbortError");
+        }
+    }
+
+    async #openUnlockDialog() {
+        await this.#dialog.open({
+            href: this.#policy.page,
+            title: "Secrets vault",
+            context: {}
+        });
+        if (this.#status !== "unlocked" || !this.#key) {
+            throw new DOMException("Secrets access cancelled.", "AbortError");
+        }
     }
 
     async #session() {

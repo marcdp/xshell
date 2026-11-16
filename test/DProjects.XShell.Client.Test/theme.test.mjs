@@ -4,7 +4,7 @@ import test from "node:test";
 import ThemeContract from "../../src/DProjects.XShell/Resources/DProjects.XShell/x/contracts/theme.json" with { type: "json" };
 import XModule from "../../src/DProjects.XShell/Resources/DProjects.XShell/x/module.js";
 import settingsDefinition from "../../src/DProjects.XShell/Resources/DProjects.XShell/x/pages/settings.js";
-import Theme from "../../src/DProjects.XShell/Resources/DProjects.XShell/x/services/theme.js";
+import Theme from "../../src/DProjects.XShell/Resources/DProjects.XShell/x/services/theme-default.js";
 import Services from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services.js";
 import validateServiceContract from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/validation/service.js";
 

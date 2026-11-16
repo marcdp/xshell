@@ -69,6 +69,11 @@
 
         // services
         "services": {
+            "secrets": {
+                "options": {
+                    "page": "page:x:/pages/secrets-unlock.js"
+                }
+            },
             "markdown": {
                 "contract": "markdown",
                 "implementation": "/services/markdown-default.js"

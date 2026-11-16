@@ -34,6 +34,7 @@ function makeTemplate(schema) {
             definition.enum ? "select" : definition.writeOnly ? "password" : definition.format === "date" ? "date" : "text" : null;
 
         if (!inputType) throw new Error(`Unsupported JSON Schema type '${type}' for property '${name}'.`);
+        const autocomplete = definition.autocomplete ?? (inputType === "password" ? "off" : undefined);
 
         const attributes = [
             `type="${inputType}"`,
@@ -50,6 +51,9 @@ function makeTemplate(schema) {
                 throw new Error(`Unsupported enum for '${name}'.`);
             }
             attributes.push(`domain="${escapeAttribute(definition.enum.map(value => `${value}=${value}`).join("|"))}"`);
+        }
+        if (autocomplete) {
+            attributes.push(`autocomplete="${escapeAttribute(autocomplete)}"`);
         }
 
         if (type === "string") {

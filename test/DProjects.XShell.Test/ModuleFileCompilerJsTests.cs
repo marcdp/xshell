@@ -238,6 +238,29 @@ namespace DProjects.XShell.Test {
             Assert.DoesNotContain("oldRenderer", result.Content);
             Assert.Equal(1, result.Content.Split("templateRenderer:", StringSplitOptions.None).Length - 1);
         }
+        [Theory]
+        [InlineData("pages/90-advanced/07-tasks.js")]
+        [InlineData("pages/90-advanced/08-commands.js")]
+        [InlineData("pages/90-advanced/09-temp.js")]
+        public void Compile_CookbookServiceDemoPages(string relativePath) {
+            var repositoryPath = FindRepositoryPath();
+            var modulePath = Path.Combine(repositoryPath, "src", "DProjects.XShell", "Resources", "DProjects.XShell", "x-demo");
+            var filePath = Path.Combine(modulePath, relativePath.Replace('/', Path.DirectorySeparatorChar));
+            var config = new ModuleFileCompiler.Config {
+                Modules = new Dictionary<string, ModuleFileCompiler.ModuleConfig> {
+                    ["x-demo"] = new ModuleFileCompiler.ModuleConfig {
+                        Defaults = new ModuleFileCompiler.Defaults {
+                            Page = new ModuleFileCompiler.PageDefaults { RenderEngine = "x" }
+                        }
+                    }
+                }
+            };
+            var context = new ModuleFileCompilerContext(config, "x-demo", modulePath, filePath);
+
+            var result = new ModuleFileCompilerJs().Compile(context, File.ReadAllText(filePath));
+
+            Assert.Contains("templateRenderer: {", result.Content);
+        }
 
         // methods (private)
         private static ModuleFileCompiler.FileContent Compile(string source, string moduleRenderEngine) {
@@ -270,6 +293,13 @@ namespace DProjects.XShell.Test {
             };
             var modulePath = Path.GetFullPath(AppContext.BaseDirectory);
             return new ModuleFileCompilerContext(config, "test", modulePath, Path.Combine(modulePath, relativePath));
+        }
+        private static string FindRepositoryPath() {
+            var directory = new DirectoryInfo(AppContext.BaseDirectory);
+            while (directory != null && !File.Exists(Path.Combine(directory.FullName, "XShell.slnx"))) {
+                directory = directory.Parent;
+            }
+            return directory?.FullName ?? throw new DirectoryNotFoundException("Unable to find the XShell repository root.");
         }
         private static string ReadProperty(string source, string property) {
             var value = JavaScriptSource.Parse(source).FindDefaultExportObject()?.FindProperty(property)?.Value.GetStaticString();

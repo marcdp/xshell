@@ -97,8 +97,8 @@ export default {
         :host(.anchor) {display:inline;}
         :host(.anchor) > div {display:inline;}
         :host(.anchor) .button {padding:unset; border:none; color:var(--x-color-text);}
-        :host(.anchor) .button > div span.label {font-weight: normal; text-decoration:underline;}
-        :host(.anchor) .button:hover {background: none; color:var(--x-color-primary)}
+        :host(.anchor) .button > div span.label {font-weight: normal; }
+        :host(.anchor) .button:hover {background: none; color:var(--x-color-primary); }
         :host(.anchor) .button:active {background: none; color:var(--x-color-primary-dark)}
         :host(.anchor) div.more {border:none;}
         :host(.anchor.big) .button {padding:.25em .25em;}
@@ -135,6 +135,7 @@ export default {
 
         :host(.icon-big) .button {padding:.25em .5em;}
         :host(.icon-big) .button x-icon {font-size:1.1em;}
+        
         
         ::slotted(x-contextmenu) {left:0;  top:calc(100% + .1em); }
        

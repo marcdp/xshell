@@ -2,7 +2,7 @@
 
 The framework-owned `secrets` service stores named JSON-compatible values in a browser-local encrypted vault. Its default implementation is
 `xshell/services/secrets.js`, its contract is `xshell/contracts/secrets.json`, and XShell Core registers it through `xshell.services.secrets`.
-The management Page is `x/pages/secrets.js`.
+The management Page is `x/pages/secrets.js`; the dedicated initialization and unlock Page is `x/pages/secrets-unlock.js`.
 
 Secrets V2 uses envelope encryption. Vault creation generates a random 256-bit data encryption key (DEK). The DEK, imported as a non-extractable
 AES-GCM key for the active session, encrypts every secret. Each secret record has a fresh random 96-bit IV, authenticated ciphertext containing the
@@ -29,7 +29,8 @@ await secrets.unlockWithPasskey({ id, rememberMinutes: 60 });
 const expiration = secrets.sessionExpiresAt; // ISO 8601 UTC string or null
 
 await secrets.set("api-token", "secret", { description: "Production API token" });
-const value = await secrets.get("api-token");
+const token = await secrets.get("api-token");
+const tokenWithoutPrompt = await secrets.get("api-token", { interactive: false });
 const info = await secrets.getInfo("api-token");
 const entries = await secrets.list();
 await secrets.delete("api-token");
@@ -41,11 +42,22 @@ await secrets.removePasskey(registration.id);
 secrets.lock();
 ```
 
-Secret CRUD and metadata access, passkey enrollment, passkey metadata updates, and passkey removal require an unlocked vault. `get()` continues to
-return only the decrypted value. `getInfo()` returns `id`, decrypted `description`, and immutable `createdAt`; `list()` returns the same metadata for
-each secret without values. Descriptions default to an empty string. Passing `{ description }` to `set()` changes it, including clearing it with
-`""`; omitting the option preserves the current description. Existing records without metadata report an empty description and `createdAt: null`,
-and an update does not invent or change their creation time.
+Secret CRUD and metadata access, passkey enrollment, passkey metadata updates, and passkey removal require an unlocked vault. `get()` is the one
+operation that can authenticate transparently: after the remembered-session restoration attempt, it opens the configured Page when the vault is
+locked or uninitialized, waits for initialization or unlocking, verifies the actual Service status, and continues the original lookup. A missing
+secret still returns `undefined`, including after creating an empty vault. Cancellation rejects with an `AbortError`; it is never represented by
+`undefined`. Pass `{ interactive: false }` in automated Tasks, background work, or any call path where UI must not appear. Other methods retain their
+existing non-interactive unlock requirement.
+
+Concurrent interactive `get()` calls share one authentication dialog and resume independently, so each caller receives the value for its own id.
+Cancellation rejects every caller waiting on that dialog. The pending attempt is cleared after success, cancellation, or load failure, and a later
+request may open a new dialog. A non-interactive caller neither opens nor joins an interactive attempt. Expiration and epoch checks run again before
+and during decryption, so authentication success cannot make a later lock or expiration return plaintext.
+
+`getInfo()` returns `id`, decrypted `description`, and immutable `createdAt`; `list()` returns the same metadata for each secret without values.
+Descriptions default to an empty string. Passing `{ description }` to `set()` changes it, including clearing it with `""`; omitting the option
+preserves the current description. Existing records without metadata report an empty description and `createdAt: null`, and an update does not
+invent or change their creation time.
 
 `listPasskeys()` is safe while locked and returns only `id`, `label`, `description`, and `createdAt`. `addPasskey()` intentionally requires the
 master password as well as an unlocked session. It reauthenticates the password-wrapped DEK and creates another wrapping without exporting the
@@ -56,26 +68,37 @@ or alter the label, creation time, PRF salt, or wrapped DEK.
 active IndexedDB writes. Operations verify the epoch after asynchronous cryptographic, WebAuthn, and storage work so a late completion cannot
 restore an unlocked session. `secrets:status-changed` reports lifecycle changes and the current `sessionExpiresAt` on the Bus. Leaving the Secrets
 Page clears its password, decrypted value, and secret-description editor state but does not lock the Service; Lock remains an explicit security
-action.
+action. The Secrets Manager delegates initialization and unlocking to the dedicated authentication Page while retaining secret CRUD, passkey
+management, metadata display, and explicit Lock. The authentication Page calls only `ready()`, `listPasskeys()`, `initialize()`, `unlock()`, and
+`unlockWithPasskey()`; it never calls `get()`, so transparent authentication cannot recurse. Passwords, keys, and secret values are neither Page
+context nor dialog results. The Page closes with only `{ unlocked: true }`, and the Service treats that as a UI result rather than proof of access.
 
 ## Unlock-session policy
 
-Memory-only sessions are the default and most restrictive mode. `rememberMinutes: 0` keeps the non-extractable DEK only in the current JavaScript
-process, does not create session material, and requires password or passkey authentication after an application reload. Both policy values default
-to zero when omitted, and the framework manifest makes those defaults explicit:
+`page` is a Secrets implementation option using the ordinary Service options mechanism. The framework's headless default is `null`, so applications
+without the `x` UI module never prompt. The `x` module supplies the default UI Page when it participates in the application:
 
 ```jsonc
 "xshell": {
     "services": {
         "secrets": {
             "options": {
+                "page": "page:x:/pages/secrets-unlock.js",
                 "rememberMinutes": 0,
-                "maxRememberMinutes": 0
+                "maxRememberMinutes": 60
             }
         }
     }
 }
 ```
+
+Set `page: null` to disable automatic dialogs. A non-null value must be a Page resource reference. The Service does not hardcode or navigate to an
+`x` resource; it asks the existing Dialog Service to open the configured Page with an empty context. A configured Page is an interaction policy,
+not an authorization boundary for same-origin Services.
+
+Memory-only sessions are the most restrictive mode. `rememberMinutes: 0` keeps the non-extractable DEK only in the current JavaScript process, does
+not create session material, and requires password or passkey authentication after an application reload. Both duration values default to zero when
+omitted.
 
 `xshell.services.secrets.options.rememberMinutes` is the default used when an unlock call omits a duration. `maxRememberMinutes` in the same options
 object is the application-enforced maximum. Both are nonnegative integer minutes, are limited to 1,440, and `rememberMinutes` cannot exceed
@@ -93,8 +116,8 @@ object is the application-enforced maximum. Both are nonnegative integer minutes
 ```
 
 Setting both values to `60` remembers successful unlocks for one hour by default. A caller may explicitly request any permitted integer duration;
-values above the maximum fail rather than being clamped. The Secrets Manager offers session-only, 15-minute, and 60-minute choices when allowed,
-plus a configured non-preset default.
+values above the maximum fail rather than being clamped. The authentication Page offers session-only, 15-minute, and 60-minute choices when
+allowed, plus a configured non-preset default.
 
 A positive duration creates a remembered session with an absolute expiration. Reloading or using secrets never extends it. A timer updates state
 promptly while per-operation checks enforce expiration after tab suspension or delayed timers. Expiration and explicit Lock invalidate the epoch,

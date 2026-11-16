@@ -17,7 +17,6 @@ export default {
         .spacer {flex:1;}
         .actions {display:flex; gap:.25em;}
         .hint {color:var(--x-color-gray); margin-bottom:1em;}
-        .passkey-unlock {margin-bottom:1em;}
         .passkeys {margin-top:2em;}
         .passkeys h2 {font-size:1.1em;}
     `,
@@ -26,38 +25,21 @@ export default {
         <x-notice x-if="state.error" type="error" label="Error" x-attr:message="state.error"></x-notice>
         <x-notice x-if="state.busy" type="working" label="Working"></x-notice>
 
-        <!-- Initialize -->
-        <x-form x-if="state.mode == 'manage' && state.ready && state.status == 'uninitialized'" command="initialize">
-            <p>Create a master password to protect your secrets.</p>
-            <x-datafields>
-                <x-datafield type="password" label="Master password" autocomplete="new-password" required x-model="state.password"></x-datafield>
-                <x-datafield type="password" label="Confirm password" autocomplete="new-password" required x-model="state.confirmPassword"></x-datafield>
-            </x-datafields>
-            <x-button slot="footer" class="submit" label="Create vault" command="initialize" x-attr:disabled="state.busy"></x-button>
-        </x-form>
-
-        <!-- Unlock -->
-        <x-form x-if="state.mode == 'manage' && state.ready && state.status == 'locked'" command="unlock">
-            <div class="passkey-unlock" x-if="state.passkeySupported && state.passkeys.length > 0">
-                <p>Use a registered passkey to unlock this browser-local vault.</p>
-                <x-button label="Unlock with passkey" icon="x-key" command="unlockPasskey" x-attr:disabled="state.busy"></x-button>
-                <p class="hint">Or use the master password.</p>
-            </div>
-            <p x-if="!state.passkeySupported || state.passkeys.length == 0">Enter your master password to unlock the vault.</p>
-            <x-datafields>
-                <x-datafield type="password" label="Master password" autocomplete="current-password" required autofocus x-model="state.password"></x-datafield>
-                <x-datafield x-if="state.rememberOptions.length > 0" type="select" label="Keep unlocked" x-prop:domain="state.rememberOptions" x-model="state.rememberMinutes"></x-datafield>
-            </x-datafields>
-            <x-button slot="footer" class="submit" label="Unlock with password" command="unlock" x-attr:disabled="state.busy"></x-button>
-        </x-form>
+        <!-- Vault access -->
+        <div x-if="state.mode == 'manage' && state.ready && state.status != 'unlocked'">
+            <p x-text="state.status == 'uninitialized' ? 'Create a vault before managing secrets.' : 'Unlock the vault to manage secrets.'"></p>
+            <x-button x-attr:label="state.status == 'uninitialized' ? 'Create vault' : 'Unlock vault'" icon="x-key" command="openUnlock" x-attr:disabled="state.busy"></x-button>
+        </div>
 
         <!-- Secrets list -->
-        <div class="toolbar" slot="header-actions" x-if="state.mode == 'manage' && state.ready && state.status == 'unlocked'">
-            <span class="spacer"></span>
-            <x-button class="light" label="Add secret" icon="x-add" command="add" x-attr:disabled="state.busy"></x-button>
-            <x-button class="light" label="Lock" icon="x-lock" command="lock" x-attr:disabled="state.busy"></x-button>
-        </div>
+       
         <div x-if="state.mode == 'manage' && state.ready && state.status == 'unlocked'">
+            <div class="toolbar" slot="header-actions" x-if="state.mode == 'manage' && state.ready && state.status == 'unlocked'">
+                <h2>Secrets</h2>
+                <span class="spacer"></span>
+                <x-button class="light" label="Add secret" icon="x-add" command="add" x-attr:disabled="state.busy"></x-button>
+                <x-button class="light" label="Lock" icon="x-lock" command="lock" x-attr:disabled="state.busy"></x-button>
+            </div>
             <p class="hint" x-if="state.sessionExpiresAt">Remembered session expires at <span x-text="state.sessionExpiresAt"></span>.</p>
             <x-listview x-if="state.items.length > 0" view="details">
                 <x-listview-head>
@@ -158,7 +140,6 @@ export default {
         passkeys: [],
         passkeySupported: false,
         password: "",
-        confirmPassword: "",
         passkeyLabel: "",
         passkeyId: "",
         secretId: "",
@@ -167,8 +148,6 @@ export default {
         createdDisplay: "",
         valueType: "text",
         editorValue: "",
-        rememberMinutes: 0,
-        rememberOptions: [],
         sessionExpiresAt: null,
         valueTypes: [
             {value:"text", label:"Text"},
@@ -180,7 +159,6 @@ export default {
         let alive = true;
         const clear = () => {
             state.password = "";
-            state.confirmPassword = "";
             state.passkeyLabel = "";
             state.description = "";
             state.createdAt = null;
@@ -198,13 +176,6 @@ export default {
         return {
             async load() {
                 events.on(bus, "secrets:status-changed", "onStatusChanged");
-                const maximum = secrets.maxRememberMinutes;
-                const fallback = secrets.rememberMinutes;
-                state.rememberMinutes = fallback;
-                if (maximum > 0) {
-                    const minutes = [...new Set([0, 15, 60, fallback].filter(value => value >= 0 && value <= maximum))].sort((left, right) => left - right);
-                    state.rememberOptions = minutes.map(value => ({value, label:value === 0 ? "This session only" : `${value} minutes`}));
-                }
                 state.passkeySupported = globalThis.isSecureContext === true &&
                     typeof globalThis.navigator?.credentials?.get === "function";
 
@@ -219,7 +190,7 @@ export default {
                 if (state.mode == "edit") {
                     state.busy = true;
                     try {
-                        const [value, info] = await Promise.all([secrets.get(state.secretId), secrets.getInfo(state.secretId)]);
+                        const [value, info] = await Promise.all([secrets.get(state.secretId, {interactive:false}), secrets.getInfo(state.secretId)]);
                         if (!alive) return;
                         if (value === undefined || !info) throw new Error("Secret not found.");
                         state.valueType = typeof value === "string" ? "text" : "json";
@@ -301,47 +272,20 @@ export default {
                 }
             },
 
-            async initialize() {
-                if (state.busy) return;
-                state.error = "";
-                if (!state.password) return void (state.error = "Enter a master password.");
-                if (state.password !== state.confirmPassword) return void (state.error = "Passwords do not match.");
-
-                state.busy = true;
-                try {
-                    await secrets.initialize({password:state.password});
-                } catch (error) {
-                    if (alive) state.error = message(error);
-                } finally {
-                    clear();
-                    if (alive) state.busy = false;
-                }
-            },
-
-            async unlock() {
-                if (state.busy) return;
+            async openUnlock() {
+                if (state.busy || secrets.status == "unlocked") return;
                 state.error = "";
                 state.busy = true;
                 try {
-                    await secrets.unlock({password:state.password, rememberMinutes:Number(state.rememberMinutes)});
+                    const result = await dialog.open({
+                        href: "page:x:/pages/secrets-unlock.js",
+                        title: "Secrets vault",
+                        context: {}
+                    });
+                    if (alive && result?.unlocked && secrets.status == "unlocked" && state.status != "unlocked") await this.refresh();
                 } catch (error) {
                     if (alive) state.error = message(error);
                 } finally {
-                    clear();
-                    if (alive) state.busy = false;
-                }
-            },
-
-            async unlockPasskey() {
-                if (state.busy || !state.passkeySupported || !state.passkeys.length) return;
-                state.error = "";
-                state.busy = true;
-                try {
-                    await secrets.unlockWithPasskey({rememberMinutes:Number(state.rememberMinutes)});
-                } catch (error) {
-                    if (alive) state.error = message(error);
-                } finally {
-                    clear();
                     if (alive) state.busy = false;
                 }
             },

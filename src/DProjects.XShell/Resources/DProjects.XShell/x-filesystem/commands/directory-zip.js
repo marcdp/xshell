@@ -33,6 +33,10 @@ export default {
                 const filesystem = await loader.load("filesystem:" + src);
                 task.signal.throwIfAborted();
 
+                task.warn("Ensure the directory exists and is accessible.");
+
+                task.error("Ensure the directory exists and is accessible.");
+
                 // Validate the source directory.
                 task.setDescription("Reading directory...");
                 const entry = await filesystem.getEntry(path, {signal:task.signal});

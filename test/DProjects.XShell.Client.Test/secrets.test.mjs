@@ -174,8 +174,8 @@ function createSessionStorage(seed = {}) {
     };
 }
 
-function secretsConfig(rememberMinutes = 0, maxRememberMinutes = 0) {
-    return { xshell: { services: { secrets: { options: { rememberMinutes, maxRememberMinutes } } } } };
+function secretsConfig(rememberMinutes = 0, maxRememberMinutes = 0, page = null) {
+    return { xshell: { services: { secrets: { options: { page, rememberMinutes, maxRememberMinutes } } } } };
 }
 
 function createSecrets(config, dependencies = { config }) {
@@ -333,6 +333,78 @@ test("Secrets V2 initializes a random-DEK vault and preserves JSON CRUD across p
     await reopened.delete("text");
     assert.equal(await reopened.get("text"), undefined);
     assert.ok(events.some(event => event.name === "secrets:status-changed" && event.detail.status === "unlocked"));
+});
+
+test("get transparently shares one configured authentication dialog and resumes each caller", async () => {
+    const database = createIndexedDB();
+    installEnvironment(database);
+    const config = secretsConfig(0, 0, "page:x:/pages/secrets-unlock.js");
+    let secrets;
+    const calls = [];
+    const dialog = {
+        async open(options) {
+            calls.push(options);
+            await secrets.unlock({password:"master password"});
+            return {unlocked:true};
+        }
+    };
+    secrets = createSecrets(config, {config, dialog});
+    await secrets.ready();
+    await secrets.initialize({password:"master password"});
+    await secrets.set("first", "one");
+    await secrets.set("second", "two");
+    assert.equal(await secrets.get("first"), "one");
+    assert.deepEqual(calls, []);
+    secrets.lock();
+
+    assert.deepEqual(await Promise.all([secrets.get("first"), secrets.get("second")]), ["one", "two"]);
+    assert.deepEqual(calls, [{href:"page:x:/pages/secrets-unlock.js", title:"Secrets vault", context:{}}]);
+});
+
+test("get distinguishes authentication cancellation, retries later, and honors non-interactive policy", async () => {
+    const database = createIndexedDB();
+    installEnvironment(database);
+    const config = secretsConfig(0, 0, "page:x:/pages/secrets-unlock.js");
+    let opens = 0;
+    const secrets = createSecrets(config, {config, dialog:{async open() { opens++; return null; }}});
+    await secrets.ready();
+    await secrets.initialize({password:"master password"});
+    await secrets.set("token", "value");
+    secrets.lock();
+
+    const cancelled = await Promise.allSettled([secrets.get("token"), secrets.get("token")]);
+    assert.equal(opens, 1);
+    assert.ok(cancelled.every(result => result.status === "rejected" && result.reason.name === "AbortError"));
+    await assert.rejects(secrets.get("token"), error => error.name === "AbortError");
+    assert.equal(opens, 2, "a later request starts a fresh authentication attempt");
+    await assert.rejects(secrets.get("token", {interactive:false}), /locked/u);
+    assert.equal(opens, 2);
+
+    const disabled = createSecrets(secretsConfig(), {dialog:{async open() { throw new Error("must not open"); }}});
+    assert.equal(await disabled.ready(), "locked");
+    await assert.rejects(disabled.get("token"), /locked/u);
+});
+
+test("get supports dialog initialization without creating a missing secret and preserves dialog load failures", async () => {
+    const database = createIndexedDB();
+    installEnvironment(database);
+    const config = secretsConfig(0, 0, "page:x:/pages/secrets-unlock.js");
+    let secrets;
+    let received;
+    secrets = createSecrets(config, {config, dialog:{async open(options) {
+        received = options;
+        await secrets.initialize({password:"master password"});
+        return {unlocked:true};
+    }}});
+    assert.equal(await secrets.get("missing"), undefined);
+    assert.deepEqual(received.context, {});
+    assert.equal(JSON.stringify(received).includes("master password"), false);
+
+    secrets.lock();
+    const failure = new Error("Authentication Page could not be loaded.");
+    const failing = createSecrets(config, {config, dialog:{async open() { throw failure; }}});
+    assert.equal(await failing.ready(), "locked");
+    await assert.rejects(failing.get("missing"), error => error === failure);
 });
 
 test("secret descriptions are encrypted and creation metadata survives updates and legacy records", async () => {
@@ -532,6 +604,41 @@ test("locking invalidates in-flight password unlock and encrypted writes", async
     assert.equal(database.records("secrets").some(record => record.id === "late"), false);
 });
 
+test("locking during an in-flight get never returns the decrypted value", async () => {
+    const database = createIndexedDB();
+    installEnvironment(database);
+    const secrets = new Secrets();
+    await secrets.ready();
+    await secrets.initialize({password:"master password"});
+    await secrets.set("token", "must not return");
+
+    const nativeCrypto = globalThis.crypto;
+    let releaseDecryption;
+    let decryptionStarted;
+    const started = new Promise(resolve => { decryptionStarted = resolve; });
+    const gate = new Promise(resolve => { releaseDecryption = resolve; });
+    const subtle = new Proxy(nativeCrypto.subtle, {
+        get(target, property) {
+            if (property === "decrypt") {
+                return async (...args) => {
+                    decryptionStarted();
+                    await gate;
+                    return target.decrypt(...args);
+                };
+            }
+            const value = Reflect.get(target, property, target);
+            return typeof value === "function" ? value.bind(target) : value;
+        }
+    });
+    setGlobal("crypto", {subtle, getRandomValues(value) { return nativeCrypto.getRandomValues(value); }});
+
+    const reading = secrets.get("token");
+    await started;
+    secrets.lock();
+    releaseDecryption();
+    await assert.rejects(reading, /locked during the operation/u);
+});
+
 test("locking during passkey registration does not persist a registration", async () => {
     const database = createIndexedDB();
     let releaseCreation;
@@ -575,6 +682,8 @@ test("remembered-session policy defaults to memory-only and validates durations"
     assert.throws(() => createSecrets(secretsConfig(-1, 60)), /integer from 0/u);
     assert.throws(() => createSecrets(secretsConfig(0, 1.5)), /integer from 0/u);
     assert.throws(() => createSecrets(secretsConfig(0, 1441)), /integer from 0/u);
+    assert.throws(() => createSecrets(secretsConfig(0, 0, "page:")), /Page resource reference/u);
+    assert.throws(() => createSecrets(secretsConfig(0, 0, "/pages/unlock.js")), /Page resource reference/u);
 
     const configurable = createSecrets(secretsConfig(15, 60));
     await configurable.ready();
@@ -623,7 +732,7 @@ test("password unlock persists a non-extractable session key and restores withou
     });
     setGlobal("crypto", { subtle, getRandomValues(value) { return nativeCrypto.getRandomValues(value); } });
     setGlobal("navigator", { credentials: { async get() { throw new Error("WebAuthn must not run during restoration."); } } });
-    const restored = createSecrets(config);
+    const restored = createSecrets(config, {config, dialog:{async open() { throw new Error("restored access must not open a dialog"); }}});
     assert.equal(await restored.ready(), "unlocked");
     assert.equal(await restored.get("token"), "remembered");
     assert.deepEqual(await restored.restoreSession(), {
