@@ -530,14 +530,14 @@ export default class Navigation {
     }
     _resolvePublicTarget(href, params, page) {
         // leave external targets under native browser control
-        if (/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(href)) return { href, params };
+        if (!href.startsWith("page:") && /^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(href)) return { href, params };
         const canonicalHref = this._resolveCanonicalHref(href, page);
         const { identity, suffix } = this._splitHref(canonicalHref);
         const areaId = this._areas.resolveAreaId?.(identity);
         const area = this._areas.getArea?.(areaId);
         const menuitem = area ? this._areas.resolveHref?.(identity, area.id) : null;
         if (menuitem) return { href: (menuitem.path || identity) + suffix, params };
-        for (const routeArea of this._getPublicRouteAreas(href, page)) {
+        for (const routeArea of this._getPublicRouteAreas(href.startsWith("page:") ? canonicalHref : href, page)) {
             const routeTarget = this._resolvePublicRouteTarget(canonicalHref, params, routeArea);
             if (routeTarget) return routeTarget;
         }
@@ -546,8 +546,10 @@ export default class Navigation {
     _resolveCanonicalHref(href, page) {
         // resolve relative targets and apply the originating navigation context
         if (href.startsWith("page:")) {
-            const aux = this._resolver.resolve(href);
-            href = aux.path;
+            const { identity, suffix } = this._splitHref(href);
+            const resolved = this._resolver.resolve(identity);
+            if (!resolved?.path) throw new Error(`Navigation: unable to resolve Page reference '${identity}' to a browser path.`);
+            href = resolved.path + suffix;
         }
         if (/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(href)) return href;
         if (href.startsWith("#!")) href = href.substring(2);

@@ -133,6 +133,22 @@ existing utilities, explicit APIs, minimal dependencies, and CSP-compatible code
 Keep documentation lines reasonably readable (approximately 150 characters where practical). Add comments only for non-obvious behavior. Preserve
 public APIs unless the task explicitly changes them. Never claim a test or validation passed unless it was executed.
 
+### Code Generation Style
+
+When generating, modifying, or refactoring code for XShell, follow these conventions:
+
+1. **Comments:** Add a short, single-line `//` comment before each meaningful block of functionality, explaining its purpose. Avoid comments on individual statements or obvious operations. Do not use multiline comments unless necessary. The comments for the function should be declared after the header of the function, not before.
+
+2. **Compact formatting:** Prefer compact, readable code. Avoid unnecessary line breaks, especially in object literals, function parameters, conditions, and short expressions. Assume a screen width of at least 120 characters. Do not artificially wrap lines at 80 characters.
+
+3. **Controller structure:** In XShell Components and Pages, define controller methods inside the returned object (`return { ... }`) whenever practical. Avoid defining helper functions before `return { ... }`; instead, implement the functionality as named controller methods and call them through `this.methodName()`.
+
+4. **Exceptions:** Use functions outside `return { ... }` only when justified by reusable logic, closures, callbacks, or architectural requirements. Prefer clarity and correctness over strict adherence to formatting rules.
+
+5. **Consistency:** Preserve existing XShell naming conventions, indentation, lifecycle methods, and architectural patterns. Do not introduce unnecessary abstractions or refactor unrelated code.
+
+6. **Complete code:** When asked to generate a Component, Page, or Service, provide complete, directly usable code unless a partial implementation is explicitly requested.
+
 ## Avoid
 
 Do not merge the boundaries listed above; invent contract fields or X Template syntax; convert JSONC to JSON; rename `/_assets` casually; call the

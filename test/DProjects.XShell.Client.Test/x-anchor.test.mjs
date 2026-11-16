@@ -59,8 +59,10 @@ globalThis.window = {
 const { createComponentClassFromJsDefinition } = await import("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/loaders/component-js.js");
 const { default: Areas } = await import("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/areas.js");
 const { default: Navigation } = await import("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/navigation.js");
+const { default: Resolver } = await import("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/resolver.js");
 const { default: xshell } = await import("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/xshell.js");
-const { contract, default: anchorDefinition } = await import("../../src/DProjects.XShell/Resources/DProjects.XShell/x/components/x-anchor.js");
+const { default: anchorDefinition } = await import("../../src/DProjects.XShell/Resources/DProjects.XShell/x/components/x-anchor.js");
+const contract = anchorDefinition.contract;
 
 class StateEngineFactory {
     constructor(state) {
@@ -79,7 +81,7 @@ class RenderEngineFactory {
     init() {}
 }
 
-function createNavigation({ areas = null, mode = "path", basePath = "", baseUrl = "https://example.test/" } = {}) {
+function createNavigation({ areas = null, mode = "path", basePath = "", baseUrl = "https://example.test/", resolver = null } = {}) {
     return new Navigation({
         areas: areas || {
             resolveAreaId() { return null; },
@@ -94,8 +96,16 @@ function createNavigation({ areas = null, mode = "path", basePath = "", baseUrl 
             app: { basePath, baseUrl },
             xshell: { navigation: { mode } }
         },
-        container: {}
+        container: {},
+        resolver
     });
+}
+
+function createPageResolver() {
+    return new Resolver({ config: {
+        app: { basePath: "/app", baseUrl: "https://example.test/app/" },
+        xshell: { resolver: { page: { "x-demo:/{path}": { src: "/_assets/x-demo/{path}", loader: "page-js" } } } }
+    }});
 }
 
 function createRouteAreas() {
@@ -137,6 +147,7 @@ async function createAnchor(attributes = {}, navigation = createNavigation()) {
 
     xshell._loader = {
         async load(resource) {
+            if (resource === "schema:component") return {};
             return resource.startsWith("state-engine:") ? StateEngineFactory : RenderEngineFactory;
         }
     };
@@ -295,6 +306,48 @@ test("x-anchor delegates route-aware native href generation to Navigation while 
     assert.equal(navigateCalls[0].href, "/_assets/x-demo/pages/items.js");
     assert.deepEqual(navigateCalls[0].params, { repositoryId: "12", sort: "name" });
     assert.equal(event.defaultPrevented, true);
+});
+
+test("x-anchor renders a resolved Page URL and delegates normal clicks with navigation options", async () => {
+    for (const [mode, prefix] of [["path", "/app"], ["hash", "/app/#!"]]) {
+        const navigation = createNavigation({ areas: createRouteAreas(), mode, basePath: "/app", resolver: createPageResolver() });
+        const { anchor, navigateCalls } = await createAnchor({}, navigation);
+        anchor.parentNode.page.src = "/demo/_assets/x-demo/pages/origin.js";
+        anchor.href = "page:x-demo:/pages/items.js";
+        anchor.query = { repositoryId: "12", sort: "name" };
+        anchor.open = "stack";
+        anchor.replace = true;
+        anchor.outlet = "content";
+        anchor.title = "Items";
+        anchor.onCommand("stateChange", {});
+        assert.equal(anchor._state.hrefReal.startsWith(`${prefix}/demo/repository/12/items?sort=name`), true);
+        assert.equal(anchor._state.hrefReal.includes("page:"), false);
+
+        const event = { button: 0, defaultPrevented: false, preventDefault() { this.defaultPrevented = true; } };
+        anchor.onCommand("click", { event });
+        assert.equal(event.defaultPrevented, true);
+        assert.equal(navigateCalls.length, 1);
+        assert.equal(navigateCalls[0].href, "page:x-demo:/pages/items.js");
+        assert.deepEqual(navigateCalls[0].params, { repositoryId: "12", sort: "name" });
+        assert.equal(navigateCalls[0].open, "stack");
+        assert.equal(navigateCalls[0].replace, true);
+        assert.equal(navigateCalls[0].outlet, "content");
+        assert.equal(navigateCalls[0].nav.title, "Items");
+
+        anchor.open = "dialog";
+        anchor.onCommand("click", { event: { ...event, defaultPrevented: false } });
+        assert.equal(navigateCalls[1].open, "dialog");
+        for (const variant of [{ button: 1 }, { button: 0, ctrlKey: true }]) {
+            const nativeEvent = { ...event, ...variant, defaultPrevented: false };
+            anchor.onCommand("click", { event: nativeEvent });
+            assert.equal(nativeEvent.defaultPrevented, false);
+        }
+        anchor.target = "_blank";
+        const targetEvent = { ...event, defaultPrevented: false };
+        anchor.onCommand("click", { event: targetEvent });
+        assert.equal(targetEvent.defaultPrevented, false);
+        assert.equal(navigateCalls.length, 2);
+    }
 });
 
 test("x-anchor leaves target and modifier clicks to native browser behavior", async () => {

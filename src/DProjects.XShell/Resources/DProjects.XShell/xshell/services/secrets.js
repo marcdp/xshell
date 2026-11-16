@@ -318,7 +318,8 @@ export default class Secrets {
     get rememberMinutes() { return this.#policy.rememberMinutes; }
     get maxRememberMinutes() { return this.#policy.maxRememberMinutes; }
     get sessionExpiresAt() { return this.#sessionExpiresAt; }
-
+    get page() { return this.#policy.page; }
+    
     async ready() {
         await this.#ready;
         return this.#status;
@@ -967,7 +968,6 @@ export default class Secrets {
     async #openUnlockDialog() {
         await this.#dialog.open({
             href: this.#policy.page,
-            title: "Secrets vault",
             context: {}
         });
         if (this.#status !== "unlocked" || !this.#key) {

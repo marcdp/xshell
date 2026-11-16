@@ -82,11 +82,12 @@ public:    /demo/repository/12/items
 forward:   /demo/repository/12/items → /demo/_assets/x-demo/<generation>/pages/items.js?repositoryId=12
 ```
 
-`x-anchor` preserves its logical `href` as the canonical target and delegates its rendered native `<a href>` to
+`x-anchor` preserves its logical `href` (a canonical target or `page:` resource reference) and delegates its rendered native `<a href>` to
 `Navigation.buildUrlAbsolute(...)`. The native href can therefore expose the friendly route for status-bar previews, copying, middle-click, and new
-tabs, while intercepted navigation still sends the unchanged canonical href to Navigation. The component does not read `area.routes`, parse route
-patterns, or substitute placeholders. Path and hash modes apply `App.BasePath` and the configured hash prefix only after Navigation has selected the
-menu alias, reverse route, or canonical fallback.
+tabs, while intercepted navigation still sends the unchanged logical href to Navigation. For `page:` references, Navigation uses Resolver to obtain
+the canonical Page-resource href before selecting the public URL; an unresolved reference fails URL generation. The component does not read
+`area.routes`, parse route patterns, or substitute placeholders. Path and hash modes apply `App.BasePath` and the configured hash prefix only after
+Navigation has selected the menu alias, reverse route, or canonical fallback.
 
 A menu item may provide both `path` and `href`. `path` is an optional friendly/public navigation path; `href` is the canonical XShell navigation
 target. `path` is an alias, not a replacement for `href`. A menu item without `path` remains valid and menu-facing UI naturally falls back to
@@ -125,8 +126,9 @@ canonical, so normal clicks and native browser link actions share the same desti
 module resource. The loader/resolver therefore sees `/_assets/x-demo/<generation>/pages/01-components/index.js`; it does not know about menu `path` values or
 perform path-to-href translation.
 
-Module-qualified Page locators such as `page:x-demo:/pages/index.js` are logical Loader inputs, not automatically browser-facing navigation URLs.
-Navigation continues to operate on friendly paths and canonical Page-resource hrefs; it does not translate module-qualified locator syntax.
+Module-qualified Page locators such as `page:x-demo:/pages/index.js` are logical resource references. `x-anchor` accepts them and Navigation resolves
+them through Resolver to canonical Page-resource hrefs, then generates browser-facing paths or hash URLs using the same Area, menu, and route rules.
+Normal clicks retain the original reference and honor the requested opening mode; native link actions use the generated browser URL.
 
 ## Ordinary Page anchors
 

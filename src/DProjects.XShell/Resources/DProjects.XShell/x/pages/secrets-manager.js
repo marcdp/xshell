@@ -9,7 +9,7 @@ export default {
         }
     },
 
-    meta: {title:"Secrets vault", icon:"x-key"},
+    meta: {title:"Secrets manager", icon:"x-key"},
 
     style: `
         :scope {display:block;}
@@ -27,13 +27,18 @@ export default {
         <!-- Secrets list -->
         <x-tabs x-if="state.mode == 'manage' && state.ready" use-hash>
        
-            <x-tab label="Vault"  x-if="state.mode == 'manage' && state.ready" hash="">
+            <x-tab label="Vault"  x-if="state.mode == 'manage' && state.ready" hash="vault">
                 <div x-if="state.status != 'unlocked'">
                     <p x-text="state.status == 'uninitialized' ? 'Create a vault before managing secrets and passkeys.' : 'Unlock the vault to manage secrets and passkeys.'"></p>
                     <x-button x-attr:label="state.status == 'uninitialized' ? 'Create vault' : 'Unlock vault'" icon="x-key" command="openUnlock" x-attr:disabled="state.busy"></x-button>
                 </div>
                 <div x-if="state.status == 'unlocked'">
-                    <p>Vault unlocked <span x-text="state.sessionExpiresAt ? ' (session expires at ' + state.sessionExpiresAt + ')' : 'session not remembered'"></span></p>
+                    <p>
+                        Vault unlocked
+                        <span x-if="state.sessionExpiresAt">
+                            (session expires in <x-countdown x-attr:value="state.sessionExpiresAt" format="{hh}h {mm}m {ss}s"></x-countdown>)
+                        </span>
+                    </p>
                     <div class="toolbar">
                         <x-button label="Lock" icon="x-lock" command="lock" x-attr:disabled="state.busy"></x-button>
                     </div>
@@ -125,10 +130,9 @@ export default {
             <p>Create a passkey that can unwrap this vault's data encryption key.</p>
             <x-datafields>
                 <x-datafield type="text" label="Label" required autofocus x-model="state.passkeyLabel"></x-datafield>
-                <x-datafield type="textarea" label="Description" x-model="state.description"></x-datafield>
-                <x-datafield type="password" label="Master password" autocomplete="current-password" required x-model="state.password" placeholder="The master password reauthenticates enrollment and remains the recovery method"></x-datafield>
+                <x-datafield type="textarea" label="Description" x-model="state.description" description="Passkey descriptions are stored as plaintext local metadata. Do not put secrets in this field"></x-datafield>
+                <x-datafield type="password" label="Master password" autocomplete="current-password" required x-model="state.password" description="The master password reauthenticates enrollment and remains the recovery method"></x-datafield>
             </x-datafields>
-            <p class="hint">The master password reauthenticates enrollment and remains the recovery method. </p>
             <x-button slot="footer" class="submit" label="Add passkey" command="enrollPasskey" x-attr:disabled="state.busy"></x-button>
             <x-button slot="cancel" class="cancel" label="Cancel" command="cancel"></x-button>
         </x-form>
@@ -136,11 +140,10 @@ export default {
         <!-- Edit passkey dialog -->
         <x-form x-if="state.mode == 'edit-passkey' && state.ready" command="savePasskey">
             <x-datafields>
-                <x-datafield type="text" label="Passkey label" readonly x-model="state.passkeyLabel"></x-datafield>
-                <x-datafield type="textarea" label="Description" autofocus x-model="state.description"></x-datafield>
+                <x-datafield type="text" label="Label" readonly x-model="state.passkeyLabel"></x-datafield>
+                <x-datafield type="textarea" label="Description" autofocus x-model="state.description" description="Passkey descriptions are stored as plaintext local metadata. Do not put secrets in this field"></x-datafield>
                 <x-datafield type="text" label="Created" readonly x-model="state.createdDisplay"></x-datafield>
-            </x-datafields>
-            <p class="hint">Passkey descriptions are stored as plaintext local metadata. Do not put secrets in this field.</p>
+            </x-datafields>            
             <x-button slot="footer" class="submit" label="Save" command="savePasskey" x-attr:disabled="state.busy"></x-button>
             <x-button slot="cancel" class="cancel" label="Cancel" command="cancel"></x-button>
         </x-form>
@@ -289,12 +292,12 @@ export default {
 
             async openUnlock() {
                 if (state.busy || secrets.status == "unlocked") return;
+                var aaaa =secrets;
                 state.error = "";
                 state.busy = true;
                 try {
                     const result = await dialog.open({
-                        href: "page:x:/pages/secrets-unlock.js",
-                        title: "Secrets vault",
+                        href: secrets.page,
                         context: {}
                     });
                     if (alive && result?.unlocked && secrets.status == "unlocked" && state.status != "unlocked") await this.refresh();

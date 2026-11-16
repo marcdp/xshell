@@ -3,6 +3,7 @@ import test from "node:test";
 
 import Areas from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/areas.js";
 import Navigation from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/navigation.js";
+import Resolver from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/resolver.js";
 
 test("Areas.init rejects an unknown configured module", () => {
     const config = { xshell: { assets: { basePath: "/_assets" }, areas: { default: "admin", global: [], definitions: { admin: { modules: ["missing"] } } } } };
@@ -152,7 +153,7 @@ function createAreas() {
     return areas;
 }
 
-function createNavigation({ areas = createAreas(), mode = "path", basePath = "", baseUrl = "https://example.test/" } = {}) {
+function createNavigation({ areas = createAreas(), mode = "path", basePath = "", baseUrl = "https://example.test/", resolver = null } = {}) {
     return new Navigation({
         areas,
         bus: { emit() {} },
@@ -160,9 +161,58 @@ function createNavigation({ areas = createAreas(), mode = "path", basePath = "",
             app: { basePath, baseUrl },
             xshell: { assets: { basePath: "/_assets" }, navigation: { mode } }
         },
-        container: { querySelectorAll() { return []; } }
+        container: { querySelectorAll() { return []; } },
+        resolver
     });
 }
+
+function createPageResolver() {
+    return new Resolver({ config: {
+        app: { basePath: "/app", baseUrl: "https://example.test/app/" },
+        xshell: { resolver: { page: {
+            "x-demo:/{path}": { src: "/_assets/x-demo/{path}", loader: "page-js" },
+            "x:/{path}": { src: "/_assets/x/{path}", loader: "page-js" }
+        } } }
+    }});
+}
+
+test("Navigation resolves Page resources through Resolver into public URLs in path and hash modes", () => {
+    const href = "page:x-demo:/pages/items.js?repositoryId=12#details";
+    const page = { src: "/demo/_assets/x-demo/pages/origin.js" };
+    for (const mode of ["path", "hash"]) {
+        const navigation = createNavigation({ mode, basePath: "/app", resolver: createPageResolver() });
+        const prefix = mode === "hash" ? "/app/#!" : "/app";
+        assert.equal(navigation._resolveCanonicalHref(href, page), "/demo/_assets/x-demo/pages/items.js?repositoryId=12#details");
+        assert.equal(navigation.buildUrlAbsolute({ href, page, params: { sort: "name" } }), `${prefix}/demo/repository/12/items?sort=name#details`);
+        assert.equal(navigation.buildUrlAbsolute({ href: "page:x-demo:/pages/about.js", page }), `${prefix}/demo/something`);
+        assert.equal(navigation.buildUrlAbsolute({ href: "page:x:/pages/secrets-manager.js", page }), `${prefix}/demo/_assets/x/pages/secrets-manager.js`);
+        assert.equal(navigation.buildUrlAbsolute({ href: "/_assets/x-demo/pages/about.js", page }), `${prefix}/demo/something`);
+        assert.equal(navigation.buildUrlAbsolute({ href: "relative.js", page }), `${prefix}/demo/_assets/x-demo/pages/relative.js`);
+        for (const external of ["https://example.com", "mailto:user@example.com", "tel:+123456789", "custom:outside"]) {
+            assert.equal(navigation.buildUrlAbsolute({ href: external, page }), external);
+        }
+    }
+});
+
+test("Navigation rejects unresolved Page references before generating a browser URL", () => {
+    const navigation = createNavigation({ resolver: createPageResolver() });
+    assert.throws(() => navigation.buildUrlAbsolute({ href: "page:missing:/pages/index.js" }), /unable to resolve Page reference/);
+    assert.throws(() => navigation.buildUrlAbsolute({ href: "page:x-demo:/../index.js" }), /unable to resolve Page reference/);
+});
+
+test("Navigation opens resolved Page resources in stack and dialog modes", async () => {
+    const navigation = createNavigation({ resolver: createPageResolver() });
+    const page = { src: "/demo/_assets/x-demo/pages/origin.js" };
+    let stack;
+    let dialog;
+    navigation._stackToBrowser = async value => { stack = value; };
+    navigation._showDialog = async value => { dialog = value; };
+    await navigation.navigate({ href: "page:x-demo:/pages/items.js", params: { repositoryId: "12" }, page, open: "stack" });
+    assert.deepEqual(stack[0].params, { repositoryId: "12" });
+    assert.equal(stack[0].href, "/demo/_assets/x-demo/pages/items.js");
+    await navigation.navigate({ href: "page:x-demo:/pages/about.js", page, open: "dialog" });
+    assert.equal(dialog.href, "/demo/_assets/x-demo/pages/about.js");
+});
 
 test("Navigation.init preserves path-mode fragments on load and popstate without changing root home selection", async (t) => {
     const areas = createAreas();
