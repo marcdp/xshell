@@ -19,6 +19,10 @@ The host supplies these meta values:
 `xshell:app.source` is repeatable. Source order is repository precedence. The bootstrap normalizes every configured source against
 `document.baseURI` and requires its URL to end in `index.json`.
 
+The `xshell:app.*` elements are dedicated host inputs and are not generic configuration overrides. Other generated `xshell:<path>` elements use a
+dotted path relative to `config.xshell`; the Temp element above therefore targets `config.xshell.services.temp.options.url`. See
+[Configuration](20-configuration.md#host-overrides) for value parsing, precedence, and path restrictions.
+
 ## Startup sequence
 
 ```mermaid
@@ -28,10 +32,10 @@ flowchart TD
     V --> G[Root and recursive dependency generations]
     G --> M[Selected manifests]
     M --> C[Normalized and merged config.app, config.modules, config.xshell]
-    C --> W[Service Worker mappings]
-    C --> E[Generated resolver rules]
+    C --> E[Framework defaults and generated resolver rules]
+    E --> O[Host configuration overrides]
+    O --> W[Generated Service Worker mappings]
     W --> I[Import selected XShell runtime]
-    E --> I
     I --> F[Deep-freeze and xshell.init]
 ```
 
@@ -46,6 +50,7 @@ host index.html
     -> generate asset paths and normalize manifest values
     -> merge XShell, dependencies, dependents, and root
     -> construct config.app and fill framework/resolver defaults
+    -> apply host configuration overrides
     -> register generated Service Worker mappings
     -> import the selected XShell runtime entry
     -> deep-freeze config and await xshell.init(config)
@@ -151,6 +156,9 @@ unavailable during this startup. Host parameters replace the effective root modu
 After filling resolver rules, bootstrap generates one `xshell.serviceWorker.mappings` entry for the framework and one for every effective module.
 It registers `<app.basePath>/sw.js`, waits for the worker to control the page, sends `registerMappings`, and waits up to five seconds for the
 acknowledgement. A newly installed worker that does not yet control the page causes a reload.
+
+Immediately before generating those mappings, bootstrap applies the non-`app.*` `xshell:<path>` metadata to `config.xshell`. This occurs after the
+manifest merge and resolver generation and before runtime import, freezing, validation, and initialization.
 
 Finally, bootstrap resolves the runtime URL from the selected framework's `resolver.esm.xshell.src`, dynamically imports it, recursively freezes the
 effective configuration, and calls:

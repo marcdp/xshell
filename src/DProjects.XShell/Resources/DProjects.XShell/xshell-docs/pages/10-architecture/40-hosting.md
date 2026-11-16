@@ -16,6 +16,9 @@ app.UseXShell(new Extensions.Configuration {
     Temp = new Extensions.TempConfig {
         Path = Path.Combine(Path.GetTempPath(), "DProjects.XShell", "temp"),
         BasePath = "/prefix/temp"
+    },
+    Overrides = new Dictionary<string, string> {
+        ["navigation.mode"] = "hash"
     }
 });
 app.Run();
@@ -30,7 +33,8 @@ index is served at `<App.BasePath>/_resources/DProjects.XShell/index.json`; modu
 `BootstrapFilesBuilder` reads every file under the bundled `bootstrap/` directory. It substitutes host values only in `index.html`, and the host
 serves the generated set at the application base. The checked-in set is:
 
-- `index.html`, containing application module, base path, parameters, environment, repository sources, Temp URL, CSP, and the module script;
+- `index.html`, containing application module, base path, parameters, environment, repository sources, configuration overrides, CSP, and the module
+  script;
 - `index.js`, containing the complete repository-driven browser bootstrap; and
 - `sw.js`, the application Service Worker.
 
@@ -48,6 +52,10 @@ The generated HTML uses these current interfaces:
 
 There is one `xshell:app.source` element per configured source. The current host does not use `xshell:source`,
 `xshell:app.configPath`, or `xshell:xshell.environment`.
+
+`BootstrapFilesBuilder` generates `xshell:services.temp.options.url` automatically from `Temp.BasePath`. It then adds entries from
+`Configuration.Overrides`, so an explicit `services.temp.options.url` value replaces the automatic one. Every override becomes a
+`<meta name="xshell:<path>" content="<value>">` element; its dotted path is relative to `config.xshell`.
 
 `index.js` owns the complete startup pipeline. It resolves the root and dependencies, downloads manifests, merges effective configuration,
 registers mappings, imports the selected runtime, freezes the configuration, and calls `xshell.init(config)`. It does not import a framework
@@ -78,6 +86,18 @@ endpoint handles them or the remaining path starts with a configured `Server.Unh
 `Server.Environment` overrides the ASP.NET environment when nonempty. It becomes `xshell:app.environment` and later
 `config.app.environment`. Development resources come from the project directory; other environments use resources beside the assembly.
 `Server.ContentSecurityPolicy` becomes the HTML CSP meta value.
+
+## Configuration overrides
+
+The `server` command accepts repeatable `--override path=value` arguments:
+
+```text
+DProjects.XShell server --override navigation.mode=hash --override services.temp.options.url=/uploads
+```
+
+Programmatic hosts set the equivalent `Extensions.Configuration.Overrides` dictionary, as shown above. Do not include the `xshell.` prefix in a
+path. `app.*` metadata is reserved and excluded from generic override processing. Bootstrap applies overrides after manifest merging and resolver
+generation and before initialization. See [Configuration](20-configuration.md#host-overrides) for JSON parsing and the exact path restrictions.
 
 ## Known server-command inconsistency
 

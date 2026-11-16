@@ -175,10 +175,42 @@ Dependency traversal is deterministic and rejects cycles. The root contributes l
 
 The root module's effective `params` is replaced with the parsed `xshell:app.params` host value. The same object becomes `config.app.params`.
 
+## Host overrides
+
+The host can override values below `config.xshell` without changing an authored manifest. The `server` command accepts repeatable
+`--override path=value` arguments, and programmatic ASP.NET hosting supplies the same entries through
+`Extensions.Configuration.Overrides`. Each path is emitted in generated `index.html` as:
+
+```html
+<meta name="xshell:<path>" content="<value>">
+```
+
+Paths are dotted and relative to `config.xshell`. For example, `services.temp.options.url=/uploads` produces
+`xshell:services.temp.options.url` and targets `config.xshell.services.temp.options.url`; the path must not begin with `xshell.`. Metadata whose
+path begins with `app.` is reserved for application and hosting inputs and is excluded from generic override processing.
+
+Bootstrap applies overrides after manifest normalization and merging and after framework and resolver rules are generated. It applies them before
+Service Worker mappings are generated, before the effective configuration is frozen, and before `xshell.init(config)`.
+
+Override content is parsed with `JSON.parse`. JSON objects, arrays, numbers, booleans, `null`, and quoted strings therefore retain their JSON value;
+content that is not valid JSON remains a string. No schema-specific coercion is performed. The effective configuration is subsequently validated
+during `XShell.init()`.
+
+Override paths have these current restrictions:
+
+- segments are case-sensitive and cannot be empty or named `__proto__`, `prototype`, or `constructor`;
+- every intermediate segment must already be an own property whose value is a non-null, non-array object;
+- arrays cannot be traversed by index, and missing intermediate objects are not created;
+- the final property is assigned directly and may replace or add a property on the resolved object; and
+- overrides do not rerun manifest normalization or resolver-rule generation.
+
+The host always generates `services.temp.options.url` from `Extensions.Configuration.Temp.BasePath`. It adds that default before copying explicit
+`Overrides`, so an explicit entry with the same path takes precedence.
+
 ## Generated framework and resolver configuration
 
-Bootstrap applies host overrides such as `xshell.services.temp.options.url`, fills the fixed effective `xshell.assets.basePath`, and adds resolver
-rules for selected module generations. File inventories also generate exact contract and schema entries. Module defaults under
+Bootstrap fills the fixed effective `xshell.assets.basePath` and adds resolver rules for selected module generations before applying the host
+overrides described above. File inventories also generate exact contract and schema entries. Module defaults under
 `modules.<id>.defaults` select render and state engines for definition-based
 resources; they remain distinct from global infrastructure under `xshell.ui`.
 
