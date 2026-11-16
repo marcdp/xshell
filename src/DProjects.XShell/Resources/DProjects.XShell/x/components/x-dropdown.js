@@ -56,7 +56,7 @@ export default {
 
         /* popover */
         :host(.popover) .body {            
-            margin-top:1em;
+            margin-top: .5em;
             margin-left:-.5em;
             max-width:90vw;
             min-width: clamp(22em, 100%, 200%);                        

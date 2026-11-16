@@ -256,13 +256,13 @@ export default {
                 if (state.wizard) {
                     let wizardPanel = state.wizardPanels[state.wizardIndex];
                     let wizardPanelElement = host.querySelector(`:scope > *:nth-child(${ wizardPanel.index })`);
-                    wizardPanelElement.querySelectorAll("x-datafield, x-form-assert").forEach((element) => {
+                    wizardPanelElement.querySelectorAll("x-datafield, x-form-assert, x-schema").forEach((element) => {
                         for(let error of element.validate(true)) {
                             errors.push(error);
                         }                    
                     });
                 } else {
-                    host.querySelectorAll("x-datafield, x-form-assert").forEach((element) => {
+                    host.querySelectorAll("x-datafield, x-form-assert, x-schema").forEach((element) => {
                         for(let error of element.validate(true)) {
                             errors.push(error);
                         }

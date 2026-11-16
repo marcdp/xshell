@@ -165,6 +165,40 @@ export default {
 &lt;x-datafield type="text" label="Readonly" readonly&gt;&lt;/x-datafield&gt;
 &lt;x-datafield type="number" label="Quantity" min="1" max="10"&gt;&lt;/x-datafield&gt;</code></pre>
 
+        <h2>Form submission and validation</h2>
+        <p>Click Submit to validate all fields. The form displays errors and executes the Page command only when every field is valid. The Code pattern requires three uppercase letters, a hyphen, and three digits (for example, ABC-123).</p>
+        <x-form command="submitValidationDemo" x-on:change="clearValidationResult">
+            <x-datafields columns="2">
+                <x-datafield type="text" label="Name" required minlength="3" x-model="state.validationName"></x-datafield>
+                <x-datafield type="email" label="Email" required x-model="state.validationEmail"></x-datafield>
+                <x-datafield type="number" label="Age" required min="18" max="100" x-model="state.validationAge"></x-datafield>
+                <x-datafield type="text" label="Code" pattern="^[A-Z]{3}-[0-9]{3}$" placeholder="ABC-123" x-model="state.validationCode"></x-datafield>
+                <x-datafield type="textarea" label="Description" maxlength="100" x-model="state.validationDescription"></x-datafield>
+            </x-datafields>
+            <x-button slot="footer" class="submit" label="Submit" command="submit"></x-button>
+        </x-form>
+        <x-notice x-if="state.validationSubmitted" type="success" label="Form submitted" message="All fields passed validation."></x-notice>
+        <x-json x-if="state.validationSubmitted" x-prop:value="state.validationResult"></x-json>
+        <pre x-pre><code>&lt;x-form command="submitValidationDemo" x-on:change="clearValidationResult"&gt;
+    &lt;x-datafield type="text" label="Name" required minlength="3" x-model="state.validationName"&gt;&lt;/x-datafield&gt;
+    &lt;x-datafield type="email" label="Email" required x-model="state.validationEmail"&gt;&lt;/x-datafield&gt;
+    &lt;x-datafield type="number" label="Age" required min="18" max="100" x-model="state.validationAge"&gt;&lt;/x-datafield&gt;
+    &lt;x-datafield type="text" label="Code" pattern="^[A-Z]{3}-[0-9]{3}$" x-model="state.validationCode"&gt;&lt;/x-datafield&gt;
+    &lt;x-datafield type="textarea" label="Description" maxlength="100" x-model="state.validationDescription"&gt;&lt;/x-datafield&gt;
+    &lt;x-button slot="footer" class="submit" label="Submit" command="submit"&gt;&lt;/x-button&gt;
+&lt;/x-form&gt;
+controller({state}) {
+    return {
+        clearValidationResult() { state.validationSubmitted = false; },
+        submitValidationDemo() {
+            state.validationResult = { name: state.validationName, email: state.validationEmail, age: state.validationAge,
+                code: state.validationCode, description: state.validationDescription };
+            state.validationSubmitted = true;
+        }
+    };
+}</code></pre>
+        <p>The button's <code>command="submit"</code> starts built-in form validation. The form's <code>command="submitValidationDemo"</code> reaches the Page controller only after validation succeeds.</p>
+
         <h2>Reactive form values</h2>
         <p>The <code>x-model</code> directive synchronizes field values with private Page state.</p>
         <x-form>
@@ -196,6 +230,13 @@ export default {
     state: {
         name: "Ada",
         age: 36,
+        validationName: "",
+        validationEmail: "",
+        validationAge: "",
+        validationCode: "",
+        validationDescription: "",
+        validationSubmitted: false,
+        validationResult: null,
         countries: [
             { value: "es", label: "Spain" },
             { value: "fr", label: "France" },
@@ -241,5 +282,24 @@ export default {
             ]
         },
         addressDefault: { street: "", city: "", file:null },
+    },
+
+    controller({state}) {
+        return {
+            clearValidationResult() {
+                state.validationSubmitted = false;
+                state.validationResult = null;
+            },
+            submitValidationDemo() {
+                state.validationResult = {
+                    name: state.validationName,
+                    email: state.validationEmail,
+                    age: state.validationAge,
+                    code: state.validationCode,
+                    description: state.validationDescription
+                };
+                state.validationSubmitted = true;
+            }
+        };
     }
 };

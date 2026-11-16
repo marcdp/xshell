@@ -32,36 +32,38 @@ export default {
         </div>
 
         <!-- Secrets list -->
+        <x-tabs x-if="state.mode == 'manage' && state.ready && state.status == 'unlocked'">
        
-        <div x-if="state.mode == 'manage' && state.ready && state.status == 'unlocked'">
-            <div class="toolbar" slot="header-actions" x-if="state.mode == 'manage' && state.ready && state.status == 'unlocked'">
-                <h2>Secrets</h2>
-                <span class="spacer"></span>
-                <x-button class="light" label="Add secret" icon="x-add" command="add" x-attr:disabled="state.busy"></x-button>
-                <x-button class="light" label="Lock" icon="x-lock" command="lock" x-attr:disabled="state.busy"></x-button>
-            </div>
-            <p class="hint" x-if="state.sessionExpiresAt">Remembered session expires at <span x-text="state.sessionExpiresAt"></span>.</p>
-            <x-listview x-if="state.items.length > 0" view="details">
-                <x-listview-head>
-                    <x-listview-column label="Secret"></x-listview-column>
-                    <x-listview-column label="Description"></x-listview-column>
-                    <x-listview-column label="Created"></x-listview-column>
-                    <x-listview-column label="Actions" slot="right" width="5em" style="text-align:right"></x-listview-column>
-                </x-listview-head>
-                <x-listview-body>
-                    <x-listview-item x-for="item in state.items" x-attr:key="item.id" x-attr:path="item.id" x-attr:label="item.id" icon="x-key">
-                        <span x-text="item.description || '—'"></span>
-                        <span x-text="item.createdDisplay"></span>
-                        <div class="actions" style="text-align:right">
-                            <x-button class="plain" icon="x-edit" tooltip="Edit" x-attr:data-id="item.id" x-on:click="edit" ></x-button>
-                            <x-button class="plain" icon="x-trash" tooltip="Delete" x-attr:data-id="item.id" x-on:click="remove"></x-button>
-                        </div>
-                    </x-listview-item>                    
-                </x-listview-body>
-            </x-listview>
-            <x-empty x-if="state.items.length == 0" icon="x-key" label="No secrets" message="Add a secret to your vault."></x-empty>
+            <x-tab label="Secrets" class="secrets">
+                <div class="toolbar" slot="header-actions" x-if="state.mode == 'manage' && state.ready && state.status == 'unlocked'">
+                    <h2>Secrets</h2>
+                    <span class="spacer"></span>
+                    <x-button class="light" label="Add secret" icon="x-add" command="add" x-attr:disabled="state.busy"></x-button>
+                    <x-button class="light" label="Lock" icon="x-lock" command="lock" x-attr:disabled="state.busy"></x-button>
+                </div>
+                <p class="hint" x-if="state.sessionExpiresAt">Remembered session expires at <span x-text="state.sessionExpiresAt"></span>.</p>
+                <x-listview x-if="state.items.length > 0" view="details">
+                    <x-listview-head>
+                        <x-listview-column label="Secret"></x-listview-column>
+                        <x-listview-column label="Description"></x-listview-column>
+                        <x-listview-column label="Created"></x-listview-column>
+                        <x-listview-column label="Actions" slot="right" width="5em" style="text-align:right"></x-listview-column>
+                    </x-listview-head>
+                    <x-listview-body>
+                        <x-listview-item x-for="item in state.items" x-attr:key="item.id" x-attr:path="item.id" x-attr:label="item.id" icon="x-key">
+                            <span x-text="item.description || '—'"></span>
+                            <span x-text="item.createdDisplay"></span>
+                            <div class="actions" style="text-align:right">
+                                <x-button class="plain" icon="x-edit" tooltip="Edit" x-attr:data-id="item.id" x-on:click="edit" ></x-button>
+                                <x-button class="plain" icon="x-trash" tooltip="Delete" x-attr:data-id="item.id" x-on:click="remove"></x-button>
+                            </div>
+                        </x-listview-item>
+                    </x-listview-body>
+                </x-listview>
+                <x-empty x-if="state.items.length == 0" icon="x-key" label="No secrets" message="Add a secret to your vault."></x-empty>
+            </x-tab>
 
-            <section class="passkeys">
+            <x-tab label="Passkeys" class="passkeys">
                 <div class="toolbar">
                     <h2>Passkeys</h2>
                     <span class="spacer"></span>
@@ -87,8 +89,8 @@ export default {
                     </x-listview-body>
                 </x-listview>
                 <x-empty x-if="state.passkeys.length == 0" icon="x-key" label="No passkeys" message="Password recovery remains available after passkeys are added."></x-empty>
-            </section>
-        </div>
+            </x-tab>
+        </x-tabs>
 
         <!-- Add / Edit dialog -->
         <x-form x-if="(state.mode == 'add' || state.mode == 'edit') && state.ready" command="save">

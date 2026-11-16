@@ -181,8 +181,8 @@ export default {
         .task x-progress {margin-top:.9em; width:33%}
         .duration {color:var(--x-color-text-gray); }
 
-        .output-controls {display:flex; ajustify-content:flex-end; margin-bottom:.5em; margin-top:1em;}
-        .output-entries {margin-top:1em; background:rgba(0,0,0,0.25); padding:.25em; max-height:50vh; overflow:auto;}
+        .output-controls {display:flex; ajustify-content:flex-end; margin-bottom:.25em; margin-top:.75em;}
+        .output-entries {margin-top:1em; background:rgba(0,0,0,0.25); padding:.5em 1em; max-height:50vh; overflow:auto; border-radius:.5em;}
         .output-entry {font-family:monospace; display:grid; grid-template-columns:13.5em 3.5em minmax(0, 1fr); gap:.25em; align-items:start;}
         .output-entry strong {}
         .output-entry.warn strong, .output-entry.warn pre {color:var(--x-notice-color-warning);}
@@ -420,15 +420,6 @@ export default {
 
             async submit() {
                 if (!invocation || !state.ready || state.phase !== "arguments" || state.running || submitting) return;
-
-                state.errors = [];
-                const editor = page.host?.querySelector('x-schema[ref="arguments"]');
-                const errors = editor?.validate(true) || [{label:"Editor", message:"Schema editor is not available."}];
-
-                if (errors.length) {
-                    state.errors = errors.map(error => ({ label: error.label || error.path || "Field", message: error.message }));
-                    return;
-                }
 
                 const args = invocation.parameters.map(parameter => state.args[parameter.name]);
                 resetExecutionState();
