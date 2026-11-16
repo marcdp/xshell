@@ -12,7 +12,6 @@
             "basePath": "app:/_assets",
             "url": "url:./"
         },
-
         // areas
         "areas": {
             "default": "main",
@@ -68,7 +67,11 @@
             },
             "secrets": {
                 "contract": "secrets",
-                "implementation": "/services/secrets.js"
+                "implementation": "/services/secrets.js",
+                "options": {
+                    "rememberMinutes": 0,
+                    "maxRememberMinutes": 0
+                }
             },
             "tasks":{
                 "contract": "tasks",

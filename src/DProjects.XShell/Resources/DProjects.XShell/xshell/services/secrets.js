@@ -2,11 +2,15 @@
 // Secrets V2 uses a random DEK for values and password/passkey-derived KEKs only to wrap that DEK.
 
 const DB_NAME = "xshell-secrets";
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 const FORMAT_VERSION = 2;
+const SESSION_FORMAT_VERSION = 1;
+const MAX_REMEMBER_MINUTES = 1_440;
 const META_STORE = "metadata";
 const PASSKEY_STORE = "passkeys";
 const SECRET_STORE = "secrets";
+const SESSION_STORE = "sessions";
+const SESSION_STORAGE_KEY = "xshell-secrets:session:v1";
 const VAULT_ID = "vault";
 const KDF_ITERATIONS = 600_000;
 const ENCODER = new TextEncoder();
@@ -31,6 +35,27 @@ function checkLabel(label) {
         throw new TypeError("A non-empty passkey label is required.");
     }
     return label.trim();
+}
+
+function checkRememberMinutes(value, fallback, maximum) {
+    const minutes = value === undefined ? fallback : value;
+    if (!Number.isSafeInteger(minutes) || minutes < 0) throw new TypeError("Remembered session duration must be a nonnegative integer.");
+    if (minutes > maximum) throw new RangeError(`Remembered session duration cannot exceed ${maximum} minutes.`);
+    return minutes;
+}
+
+function sessionPolicy(config) {
+    const policy = config?.xshell?.services?.secrets?.options || {};
+    const maximum = policy.maxRememberMinutes ?? 0;
+    const fallback = policy.rememberMinutes ?? 0;
+    if (!Number.isSafeInteger(maximum) || maximum < 0 || maximum > MAX_REMEMBER_MINUTES) {
+        throw new TypeError(`xshell.services.secrets.options.maxRememberMinutes must be an integer from 0 through ${MAX_REMEMBER_MINUTES}.`);
+    }
+    if (!Number.isSafeInteger(fallback) || fallback < 0 || fallback > MAX_REMEMBER_MINUTES) {
+        throw new TypeError(`xshell.services.secrets.options.rememberMinutes must be an integer from 0 through ${MAX_REMEMBER_MINUTES}.`);
+    }
+    if (fallback > maximum) throw new RangeError("xshell.services.secrets.options.rememberMinutes cannot exceed maxRememberMinutes.");
+    return { rememberMinutes: fallback, maxRememberMinutes: maximum };
 }
 
 function bytes(value, length) {
@@ -58,6 +83,15 @@ function base64urlDecode(value) {
     const padded = value.replaceAll("-", "+").replaceAll("_", "/").padEnd(Math.ceil(value.length / 4) * 4, "=");
     const binary = atob(padded);
     return Uint8Array.from(binary, character => character.charCodeAt(0));
+}
+
+function sessionBytes(value, length) {
+    try {
+        const result = base64urlDecode(value);
+        return result.length === length ? result : null;
+    } catch {
+        return null;
+    }
 }
 
 function aad(purpose) {
@@ -133,6 +167,24 @@ async function decrypt(key, record, purpose) {
     ));
 }
 
+function sessionPurpose(record) {
+    return `session-wrapped-dek:${record.sessionId}:${record.vaultId}:${record.createdAt}:${record.expiresAt}`;
+}
+
+function validateSessionMetadata(record, metadata, maximum, now = Date.now()) {
+    const createdAt = typeof record?.createdAt === "string" ? Date.parse(record.createdAt) : NaN;
+    const expiresAt = typeof record?.expiresAt === "string" ? Date.parse(record.expiresAt) : NaN;
+    if (!record || record.version !== SESSION_FORMAT_VERSION || !sessionBytes(record.sessionId, 16) ||
+        record.vaultId !== metadata.vaultId || !Number.isFinite(createdAt) || !Number.isFinite(expiresAt) ||
+        new Date(createdAt).toISOString() !== record.createdAt || new Date(expiresAt).toISOString() !== record.expiresAt ||
+        createdAt > now || expiresAt <= createdAt || expiresAt <= now || maximum === 0 ||
+        expiresAt - createdAt > maximum * 60_000 || !sessionBytes(record.wrappedDek?.iv, 12) ||
+        !sessionBytes(record.wrappedDek?.ciphertext, 48)) {
+        throw new Error("Remembered Secrets session metadata is invalid or expired.");
+    }
+    return { createdAt, expiresAt };
+}
+
 function validateMetadata(metadata) {
     if (!metadata || metadata.id !== VAULT_ID) throw new Error("Secrets vault is not initialized.");
     if (metadata.version !== FORMAT_VERSION) {
@@ -187,26 +239,47 @@ export default class Secrets {
     #bus;
     #database;
     #ready;
+    #policy;
     #status = "locked";
     #metadata = null;
     #key = null;
+    #sessionId = null;
+    #sessionExpiresAt = null;
+    #expirationTimer = null;
     #epoch = 0;
     #writeTransactions = new Set();
 
-    constructor({ bus } = {}) {
+    constructor({ bus, config } = {}) {
         this.#bus = bus;
+        this.#policy = sessionPolicy(config);
+        const epoch = this.#epoch;
         this.#ready = this.#open().then(async db => {
             this.#metadata = await this.#request(META_STORE, "readonly", store => store.get(VAULT_ID)) || null;
             this.#setStatus(this.#metadata ? "locked" : "uninitialized");
+            if (this.#metadata) await this.#restore(epoch);
+            else await this.#discardStoredSession(this.#readStoredSession());
         });
         void this.#ready.catch(() => {});
     }
 
     get status() { return this.#status; }
+    get sessionExpiresAt() { return this.#sessionExpiresAt; }
 
     async ready() {
         await this.#ready;
         return this.#status;
+    }
+
+    async restoreSession() {
+        const startEpoch = this.#epoch;
+        await this.#ready;
+        if (this.#status === "unlocked") {
+            return { restored: false, status: this.#status, sessionExpiresAt: this.#sessionExpiresAt, reason: "already-unlocked" };
+        }
+        if (startEpoch !== this.#epoch) {
+            return { restored: false, status: this.#status, sessionExpiresAt: null, reason: "interrupted" };
+        }
+        return this.#restore(++this.#epoch);
     }
 
     async initialize(options) {
@@ -255,30 +328,30 @@ export default class Secrets {
             this.#setStatus("locked");
             throw new Error("Vault was locked during initialization; unlock it again.");
         }
+        this.#clearStoredSession();
         this.#key = dek;
+        this.#sessionId = null;
+        this.#sessionExpiresAt = null;
         this.#setStatus("unlocked");
     }
 
     async unlock(options) {
         const password = checkPassword(options);
-        const epoch = this.#epoch;
+        const rememberMinutes = checkRememberMinutes(options?.rememberMinutes, this.#policy.rememberMinutes, this.#policy.maxRememberMinutes);
+        const epoch = ++this.#epoch;
         await this.#ready;
         const metadata = await this.#loadMetadata();
         const rawDek = await this.#unwrapWithPassword(password, metadata);
-        let dek;
         try {
-            dek = await importDek(rawDek);
+            await this.#activate(rawDek, metadata, rememberMinutes, epoch, "unlocking");
         } finally {
             rawDek.fill(0);
         }
-        if (epoch !== this.#epoch) throw new Error("Vault was locked during unlocking.");
-        this.#metadata = metadata;
-        this.#key = dek;
-        this.#setStatus("unlocked");
     }
 
     async unlockWithPasskey(options = {}) {
-        const epoch = this.#epoch;
+        const rememberMinutes = checkRememberMinutes(options?.rememberMinutes, this.#policy.rememberMinutes, this.#policy.maxRememberMinutes);
+        const epoch = ++this.#epoch;
         await this.#ready;
         this.#requirePasskeys();
         const metadata = await this.#loadMetadata();
@@ -333,25 +406,26 @@ export default class Secrets {
         } catch (error) {
             throw new Error("The passkey could not unlock this vault or its wrapped key is damaged.", { cause: error });
         }
-        let dek;
         try {
-            dek = await importDek(rawDek);
+            await this.#activate(rawDek, metadata, rememberMinutes, epoch, "passkey unlocking");
         } finally {
             rawDek?.fill(0);
         }
-        if (epoch !== this.#epoch) throw new Error("Vault was locked during passkey unlocking.");
-        this.#metadata = metadata;
-        this.#key = dek;
-        this.#setStatus("unlocked");
     }
 
     lock() {
         this.#epoch++;
         this.#key = null;
+        const sessionId = this.#sessionId || this.#readStoredSession()?.sessionId;
+        this.#sessionId = null;
+        this.#sessionExpiresAt = null;
+        this.#clearExpirationTimer();
+        this.#removeStoredMetadata(sessionId);
         for (const transaction of this.#writeTransactions) {
             try { transaction.abort(); } catch { /* The transaction might already be complete. */ }
         }
         this.#writeTransactions.clear();
+        if (sessionId) this.#deleteSessionRecordWhenReady(sessionId);
         if (this.#metadata && this.#status !== "locked") this.#setStatus("locked");
     }
 
@@ -525,6 +599,162 @@ export default class Secrets {
         this.#assertCurrent(epoch);
     }
 
+    async #activate(rawDek, metadata, rememberMinutes, epoch, operation) {
+        let session = null;
+        const dek = await importDek(rawDek);
+        if (epoch !== this.#epoch) throw new Error(`Vault was locked during ${operation}.`);
+        try {
+            if (rememberMinutes > 0) session = await this.#persistSession(rawDek, metadata, rememberMinutes, epoch);
+            else await this.#revokeRememberedSession();
+            if (epoch !== this.#epoch) throw new Error(`Vault was locked during ${operation}.`);
+            this.#metadata = metadata;
+            this.#key = dek;
+            this.#sessionId = session?.sessionId || null;
+            this.#sessionExpiresAt = session?.expiresAt || null;
+            this.#scheduleExpiration();
+            this.#setStatus("unlocked", true);
+        } catch (error) {
+            if (session) await this.#discardStoredSession(session);
+            if (epoch !== this.#epoch) throw new Error(`Vault was locked during ${operation}.`, { cause: error });
+            throw error;
+        }
+    }
+
+    async #persistSession(rawDek, metadata, rememberMinutes, epoch) {
+        if (!globalThis.sessionStorage) throw new Error("Remembered Secrets sessions require sessionStorage.");
+        const sessionId = base64urlEncode(randomBytes(16));
+        const now = Date.now();
+        const createdAt = new Date(now).toISOString();
+        const expiresAt = new Date(now + rememberMinutes * 60_000).toISOString();
+        const record = { version: SESSION_FORMAT_VERSION, sessionId, vaultId: metadata.vaultId, createdAt, expiresAt };
+        const key = await crypto.subtle.generateKey({ name: "AES-GCM", length: 256 }, false, ["encrypt", "decrypt"]);
+        this.#assertCurrent(epoch, false);
+        const wrappedDek = await encrypt(key, rawDek, sessionPurpose(record));
+        record.wrappedDek = { iv: base64urlEncode(wrappedDek.iv), ciphertext: base64urlEncode(wrappedDek.ciphertext) };
+        const previous = this.#readStoredSession();
+        try {
+            await this.#request(SESSION_STORE, "readwrite", store => store.put({ id: sessionId, key }));
+            this.#assertCurrent(epoch, false);
+            sessionStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(record));
+            this.#assertCurrent(epoch, false);
+        } catch (error) {
+            this.#removeStoredMetadata(sessionId);
+            await this.#deleteSessionRecord(sessionId).catch(() => {});
+            throw new Error("Remembered Secrets session could not be persisted.", { cause: error });
+        }
+        if (previous?.sessionId && previous.sessionId !== sessionId) void this.#deleteSessionRecord(previous.sessionId).catch(() => {});
+        return record;
+    }
+
+    async #restore(epoch) {
+        const record = this.#readStoredSession();
+        if (!record) return { restored: false, status: this.#status, sessionExpiresAt: null, reason: "not-found" };
+        try {
+            validateMetadata(this.#metadata);
+            const { expiresAt } = validateSessionMetadata(record, this.#metadata, this.#policy.maxRememberMinutes);
+            const stored = await this.#request(SESSION_STORE, "readonly", store => store.get(record.sessionId));
+            if (!stored?.key || stored.id !== record.sessionId || stored.key.extractable !== false ||
+                stored.key.algorithm?.name !== "AES-GCM" || !stored.key.usages?.includes("decrypt")) {
+                throw new Error("Remembered Secrets session key is missing or invalid.");
+            }
+            const rawDek = await decrypt(stored.key, {
+                iv: sessionBytes(record.wrappedDek.iv, 12),
+                ciphertext: sessionBytes(record.wrappedDek.ciphertext, 48)
+            }, sessionPurpose(record));
+            let dek;
+            try {
+                dek = await importDek(rawDek);
+            } finally {
+                rawDek.fill(0);
+            }
+            if (epoch !== this.#epoch) throw new Error("Vault was locked during session restoration.");
+            this.#key = dek;
+            this.#sessionId = record.sessionId;
+            this.#sessionExpiresAt = new Date(expiresAt).toISOString();
+            this.#scheduleExpiration();
+            this.#setStatus("unlocked", true);
+            return { restored: true, status: this.#status, sessionExpiresAt: this.#sessionExpiresAt };
+        } catch (error) {
+            await this.#discardStoredSession(record);
+            if (epoch !== this.#epoch) {
+                return { restored: false, status: this.#status, sessionExpiresAt: this.#sessionExpiresAt, reason: "interrupted" };
+            }
+            this.#key = null;
+            this.#sessionId = null;
+            this.#sessionExpiresAt = null;
+            this.#clearExpirationTimer();
+            this.#setStatus(this.#metadata ? "locked" : "uninitialized");
+            return { restored: false, status: this.#status, sessionExpiresAt: null, reason: "invalid" };
+        }
+    }
+
+    #readStoredSession() {
+        try {
+            const value = globalThis.sessionStorage?.getItem(SESSION_STORAGE_KEY);
+            return value ? JSON.parse(value) : null;
+        } catch {
+            try { globalThis.sessionStorage?.removeItem(SESSION_STORAGE_KEY); } catch { /* Storage can be unavailable or blocked. */ }
+            return null;
+        }
+    }
+
+    #removeStoredMetadata(sessionId) {
+        try {
+            const current = this.#readStoredSession();
+            if (!sessionId || current?.sessionId === sessionId) globalThis.sessionStorage?.removeItem(SESSION_STORAGE_KEY);
+        } catch { /* Storage can be unavailable or blocked. */ }
+    }
+
+    #clearStoredSession() {
+        const record = this.#readStoredSession();
+        if (!record) return;
+        this.#removeStoredMetadata(record.sessionId);
+        if (record.sessionId) this.#deleteSessionRecordWhenReady(record.sessionId);
+    }
+
+    async #revokeRememberedSession() {
+        const sessionId = this.#sessionId || this.#readStoredSession()?.sessionId;
+        this.#removeStoredMetadata(sessionId);
+        if (sessionId) {
+            try { await this.#deleteSessionRecord(sessionId); }
+            catch (error) { throw new Error("Existing remembered Secrets session could not be revoked.", { cause: error }); }
+        }
+    }
+
+    async #discardStoredSession(record) {
+        if (!record) return;
+        this.#removeStoredMetadata(record.sessionId);
+        if (record.sessionId) await this.#deleteSessionRecord(record.sessionId).catch(() => {});
+    }
+
+    async #deleteSessionRecord(sessionId) {
+        if (!this.#database) return;
+        await this.#request(SESSION_STORE, "readwrite", store => store.delete(sessionId), false);
+    }
+
+    #deleteSessionRecordWhenReady(sessionId) {
+        if (this.#database) void this.#deleteSessionRecord(sessionId).catch(() => {});
+        else void this.#ready.then(() => this.#deleteSessionRecord(sessionId)).catch(() => {});
+    }
+
+    #scheduleExpiration() {
+        this.#clearExpirationTimer();
+        if (!this.#sessionExpiresAt) return;
+        const delay = Date.parse(this.#sessionExpiresAt) - Date.now();
+        if (delay <= 0) return void this.lock();
+        this.#expirationTimer = globalThis.setTimeout(() => {
+            this.#expirationTimer = null;
+            if (this.#sessionExpiresAt && Date.parse(this.#sessionExpiresAt) <= Date.now()) this.lock();
+            else this.#scheduleExpiration();
+        }, delay);
+        this.#expirationTimer?.unref?.();
+    }
+
+    #clearExpirationTimer() {
+        if (this.#expirationTimer !== null) globalThis.clearTimeout(this.#expirationTimer);
+        this.#expirationTimer = null;
+    }
+
     async #unwrapWithPassword(password, metadata) {
         const { kdf, wrappedDek } = validateMetadata(metadata).password;
         const key = await derivePasswordKey(password, bytes(kdf.salt, 16), kdf.iterations);
@@ -553,6 +783,7 @@ export default class Secrets {
 
     async #session() {
         await this.#ready;
+        if (this.#sessionExpiresAt && Date.parse(this.#sessionExpiresAt) <= Date.now()) this.lock();
         if (this.#status !== "unlocked" || !this.#key) throw new Error("Secrets vault is locked.");
         return { key: this.#key, epoch: this.#epoch };
     }
@@ -571,20 +802,21 @@ export default class Secrets {
         }
     }
 
-    #setStatus(status) {
-        if (this.#status === status) return;
+    #setStatus(status, force = false) {
+        if (this.#status === status && !force) return;
         this.#status = status;
-        this.#bus?.emit("secrets:status-changed", { status });
+        this.#bus?.emit("secrets:status-changed", { status, sessionExpiresAt: this.#sessionExpiresAt });
     }
 
-    #request(name, mode, operation) {
+    #request(name, mode, operation, trackWrite = true) {
         return new Promise((resolve, reject) => {
             let transaction;
             try {
                 transaction = this.#database.transaction(name, mode);
-                if (mode === "readwrite") this.#writeTransactions.add(transaction);
+                const tracked = mode === "readwrite" && trackWrite;
+                if (tracked) this.#writeTransactions.add(transaction);
                 let result;
-                const cleanup = () => this.#writeTransactions.delete(transaction);
+                const cleanup = () => { if (tracked) this.#writeTransactions.delete(transaction); };
                 transaction.oncomplete = () => {
                     cleanup();
                     resolve(result);
@@ -603,7 +835,7 @@ export default class Secrets {
                     try { transaction.abort(); } catch { /* The transaction might already be inactive. */ }
                 };
             } catch (error) {
-                if (mode === "readwrite" && transaction) this.#writeTransactions.delete(transaction);
+                if (mode === "readwrite" && trackWrite && transaction) this.#writeTransactions.delete(transaction);
                 try { transaction?.abort(); } catch { /* The transaction might already be inactive. */ }
                 reject(error);
             }
@@ -622,6 +854,7 @@ export default class Secrets {
                 if (!database.objectStoreNames.contains(META_STORE)) database.createObjectStore(META_STORE, { keyPath: "id" });
                 if (!database.objectStoreNames.contains(PASSKEY_STORE)) database.createObjectStore(PASSKEY_STORE, { keyPath: "id" });
                 if (!database.objectStoreNames.contains(SECRET_STORE)) database.createObjectStore(SECRET_STORE, { keyPath: "id" });
+                if (!database.objectStoreNames.contains(SESSION_STORE)) database.createObjectStore(SESSION_STORE, { keyPath: "id" });
             };
             request.onerror = () => reject(request.error || new Error("Secrets database could not be opened."));
             request.onblocked = () => reject(new Error("Secrets database upgrade is blocked by another tab."));

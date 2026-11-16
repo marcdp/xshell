@@ -45,6 +45,7 @@ export default {
             <p x-if="!state.passkeySupported || state.passkeys.length == 0">Enter your master password to unlock the vault.</p>
             <x-datafields>
                 <x-datafield type="password" label="Master password" autocomplete="current-password" required autofocus x-model="state.password"></x-datafield>
+                <x-datafield x-if="state.rememberOptions.length > 0" type="select" label="Keep unlocked" x-prop:domain="state.rememberOptions" x-model="state.rememberMinutes"></x-datafield>
             </x-datafields>
             <x-button slot="footer" class="submit" label="Unlock with password" command="unlock" x-attr:disabled="state.busy"></x-button>
         </x-form>
@@ -56,6 +57,7 @@ export default {
             <x-button class="light" label="Lock" icon="x-lock" command="lock" x-attr:disabled="state.busy"></x-button>
         </div>
         <div x-if="state.mode == 'manage' && state.ready && state.status == 'unlocked'">
+            <p class="hint" x-if="state.sessionExpiresAt">Remembered session expires at <span x-text="state.sessionExpiresAt"></span>.</p>
             <x-listview x-if="state.items.length > 0" view="details">
                 <x-listview-head>
                     <x-listview-column label="Secret"></x-listview-column>
@@ -138,13 +140,16 @@ export default {
         secretId: "",
         valueType: "text",
         editorValue: "",
+        rememberMinutes: 0,
+        rememberOptions: [],
+        sessionExpiresAt: null,
         valueTypes: [
             {value:"text", label:"Text"},
             {value:"json", label:"JSON"}
         ]
     },
 
-    controller({state, page, secrets, dialog, bus, events}) {
+    controller({state, page, secrets, dialog, bus, events, config}) {
         let alive = true;
         const clear = () => {
             state.password = "";
@@ -157,6 +162,14 @@ export default {
         return {
             async load() {
                 events.on(bus, "secrets:status-changed", "onStatusChanged");
+                const policy = config?.xshell?.services?.secrets?.options || {};
+                const maximum = policy.maxRememberMinutes ?? 0;
+                const fallback = policy.rememberMinutes ?? 0;
+                state.rememberMinutes = fallback;
+                if (maximum > 0) {
+                    const minutes = [...new Set([0, 15, 60, fallback].filter(value => value >= 0 && value <= maximum))].sort((left, right) => left - right);
+                    state.rememberOptions = minutes.map(value => ({value, label:value === 0 ? "This session only" : `${value} minutes`}));
+                }
                 state.passkeySupported = globalThis.isSecureContext === true &&
                     typeof globalThis.navigator?.credentials?.get === "function";
 
@@ -191,12 +204,12 @@ export default {
                 clear();
                 state.items = [];
                 state.passkeys = [];
-                if (state.mode == "manage") secrets.lock();
             },
 
             async onStatusChanged() {
                 if (!alive) return;
                 state.status = secrets.status;
+                state.sessionExpiresAt = secrets.sessionExpiresAt;
                 if (state.status != "unlocked") {
                     clear();
                     state.items = [];
@@ -211,6 +224,7 @@ export default {
                     await secrets.ready();
                     if (!alive) return;
                     state.status = secrets.status;
+                    state.sessionExpiresAt = secrets.sessionExpiresAt;
                     state.passkeys = state.status == "uninitialized" ? [] : await secrets.listPasskeys();
                     state.items = state.status == "unlocked" ? await secrets.list() : [];
                     state.error = "";
@@ -219,6 +233,7 @@ export default {
                     state.items = [];
                     state.passkeys = [];
                     state.status = secrets.status;
+                    state.sessionExpiresAt = secrets.sessionExpiresAt;
                     state.error = message(error);
                 } finally {
                     if (alive) {
@@ -238,7 +253,6 @@ export default {
                 state.busy = true;
                 try {
                     await secrets.initialize({password:state.password});
-                    if (alive) await this.refresh();
                 } catch (error) {
                     if (alive) state.error = message(error);
                 } finally {
@@ -252,8 +266,7 @@ export default {
                 state.error = "";
                 state.busy = true;
                 try {
-                    await secrets.unlock({password:state.password});
-                    if (alive) await this.refresh();
+                    await secrets.unlock({password:state.password, rememberMinutes:Number(state.rememberMinutes)});
                 } catch (error) {
                     if (alive) state.error = message(error);
                 } finally {
@@ -267,8 +280,7 @@ export default {
                 state.error = "";
                 state.busy = true;
                 try {
-                    await secrets.unlockWithPasskey();
-                    if (alive) await this.refresh();
+                    await secrets.unlockWithPasskey({rememberMinutes:Number(state.rememberMinutes)});
                 } catch (error) {
                     if (alive) state.error = message(error);
                 } finally {
@@ -282,8 +294,8 @@ export default {
                 clear();
                 state.items = [];
                 state.status = secrets.status;
+                state.sessionExpiresAt = secrets.sessionExpiresAt;
                 state.error = "";
-                if (alive) await this.refresh();
             },
 
             async openEditor(mode, id = "") {

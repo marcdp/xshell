@@ -5,6 +5,29 @@ import ConfigSchema from "../../src/DProjects.XShell/Resources/DProjects.XShell/
 import { Validator } from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/vendor/json-schema/4.1.1/json-schema.js";
 
 const validator = new Validator(ConfigSchema.$defs.resolverEntry, "2020-12");
+const configValidator = new Validator(ConfigSchema, "2020-12");
+
+function effectiveConfig() {
+    return {
+        app: { id: "test", label: "Test", version: "1.0.0", copyright: "", icon: "", basePath: "/", baseUrl: "https://example.test/", params: {} },
+        modules: {},
+        xshell: {
+            version: "1.0.0",
+            assets: { basePath: "/_assets", path: "/_assets/xshell", url: "https://example.test/xshell/" },
+            areas: { default: null, global: [], definitions: {} },
+            navigation: { mode: "path" },
+            resolver: {},
+            services: { secrets: { contract: "secrets", implementation: "/services/secrets.js",
+                options: { rememberMinutes: 15, maxRememberMinutes: 60 } } },
+            ui: { layout: {}, component: {}, dialog: {} },
+            i18n: { lang: "en", langs: [{ id: "en", label: "English", main: true }], datetime: { options: {}, formats: {} }, strings: {} },
+            configUrl: "https://example.test/xshell/manifest.json",
+            serviceWorker: { mappings: [] },
+            files: [],
+            registry: {}
+        }
+    };
+}
 
 test("resolver schema accepts the supported cache modes", () => {
     const defaultResult = validator.validate({ src: "/resource", loader: "test", cache: true });
@@ -28,4 +51,12 @@ test("resolver schema requires src and rejects the former url field", () => {
 
     assert.equal(valid.valid, true, JSON.stringify(valid.errors));
     assert.equal(invalid.valid, false);
+});
+
+test("effective configuration treats Secrets options like other service options", () => {
+    const config = effectiveConfig();
+    assert.equal(configValidator.validate(config).valid, true, JSON.stringify(configValidator.validate(config).errors));
+
+    config.xshell.secrets = config.xshell.services.secrets.options;
+    assert.equal(configValidator.validate(config).valid, false);
 });
