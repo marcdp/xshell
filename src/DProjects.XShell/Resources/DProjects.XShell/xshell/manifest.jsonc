@@ -76,17 +76,15 @@
             },
             "temp": {
                 "contract": "temp",
-                "implementation": "/services/temp.js"
+                "implementation": "/services/temp.js",
+                "options": {
+                    "url": null
+                }
             }
         },
 
         // service worker defaults
         "serviceWorker": {
-        },
-
-        // temp
-        "temp": {
-            "url": "app:/temp"   
         },
 
         // ui

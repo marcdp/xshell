@@ -4,10 +4,12 @@ import test from "node:test";
 
 import TempContract from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/contracts/temp.json" with { type: "json" };
 import ToastContract from "../../src/DProjects.XShell/Resources/DProjects.XShell/x/contracts/toast.json" with { type: "json" };
-import Temp from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/temp.js";
+import ConfigSchema from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/schemas/config.schema.json" with { type: "json" };
+import Temp from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/temp.js";
 import Toast from "../../src/DProjects.XShell/Resources/DProjects.XShell/x/services/toast-default.js";
 import Contracts from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/contracts.js";
 import Services from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services.js";
+import { Validator } from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/vendor/json-schema/4.1.1/json-schema.js";
 import validateServiceContract from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/validation/service.js";
 
 function createContractItem(id, methods = {}, properties = {}) {
@@ -34,7 +36,6 @@ function createServices(definitions, implementations, contractItems, { moduleId 
         },
         xshell: {
             services: definitions,
-            temp: { url: "https://example.test/temp" },
             files: frameworkFiles
         }
     };
@@ -220,6 +221,111 @@ test("configured services load eagerly but instantiate lazily as singletons", as
     assert.equal(services.getServiceInfo("example").state, "created");
 });
 
+test("configured services receive private implementation options alongside lazy dependency injection", async () => {
+    let constructions = 0;
+    const options = {
+        path: "/data/",
+        enabled: false,
+        nested: { retries: 3 },
+        modes: ["safe", { name: "fast" }]
+    };
+    const originalOptions = structuredClone(options);
+    class DependencyService {
+
+        getValue() {
+            return 42;
+        }
+    }
+    class ConsumerService {
+
+        constructor({ dependency }, configuredOptions) {
+            constructions++;
+            this.dependency = dependency;
+            this.options = configuredOptions;
+        }
+    }
+    const definitions = {
+        dependency: { contract: "dependency", implementation: "/_assets/test/services/dependency.js" },
+        consumer: { contract: "consumer", implementation: "/_assets/test/services/consumer.js", options }
+    };
+    const implementations = {
+        "esm:/_assets/test/services/dependency.js": DependencyService,
+        "esm:/_assets/test/services/consumer.js": ConsumerService
+    };
+    const contractItems = {
+        dependency: createContractItem("dependency", { getValue: {} }),
+        consumer: createContractItem("consumer")
+    };
+    const { services } = createServices(definitions, implementations, contractItems);
+
+    await services.init();
+
+    assert.equal(constructions, 0);
+    const first = services.resolve("consumer");
+    const second = services.resolve("consumer");
+    assert.strictEqual(first, second);
+    assert.equal(constructions, 1);
+    assert.equal(first.dependency.getValue(), 42);
+    assert.strictEqual(first.options, options);
+    assert.deepEqual(first.options, originalOptions);
+    assert.deepEqual(options, originalOptions);
+    assert.equal(services.getServiceInfo("dependency").state, "created");
+    assert.equal("options" in services.getServiceInfo("consumer"), false);
+    assert.equal("options" in services.registry.find(item => item.id === "consumer"), false);
+});
+
+test("services without configured options receive an empty object", async () => {
+    class ExampleService {
+
+        constructor(services, options) {
+            this.options = options;
+        }
+    }
+    const definitions = { example: { contract: "example", implementation: "/_assets/test/services/example.js" } };
+    const implementations = { "esm:/_assets/test/services/example.js": ExampleService };
+    const { services } = createServices(definitions, implementations, { example: createContractItem("example") });
+
+    await services.init();
+
+    assert.deepEqual(services.resolve("example").options, {});
+});
+
+test("service registrations sharing an implementation receive their own configured options", async () => {
+    class SharedService {
+
+        constructor(services, options) {
+            this.options = options;
+        }
+    }
+    const implementation = "/_assets/test/services/shared.js";
+    const firstOptions = { name: "first" };
+    const secondOptions = { name: "second" };
+    const definitions = {
+        first: { contract: "shared", implementation, options: firstOptions },
+        second: { contract: "shared", implementation, options: secondOptions }
+    };
+    const implementations = { [`esm:${implementation}`]: SharedService };
+    const { services } = createServices(definitions, implementations, { shared: createContractItem("shared") });
+
+    await services.init();
+
+    assert.strictEqual(services.resolve("first").options, firstOptions);
+    assert.strictEqual(services.resolve("second").options, secondOptions);
+    assert.notStrictEqual(services.resolve("first"), services.resolve("second"));
+});
+
+test("service configuration schema accepts object options and rejects other JSON types", () => {
+    const validator = new Validator(ConfigSchema.$defs.xshellService, "2020-12");
+    const service = { contract: "example", implementation: "/services/example.js" };
+
+    assert.equal(validator.validate(service).valid, true);
+    assert.equal(validator.validate({ ...service, options: { nested: { enabled: true }, values: [1, "two", null] } }).valid, true);
+    assert.equal(validator.validate({ ...service, args: {} }).valid, false);
+    for (const options of ["invalid", ["invalid"], null]) {
+        assert.equal(validator.validate({ ...service, options }).valid, false, JSON.stringify(options));
+    }
+});
+
 test("successful lazy creation emits once after validation with only the service ID", async () => {
     class ExampleService { execute() {} }
     const definitions = { example: { contract: "example", implementation: "/_assets/test/services/example.js" } };
@@ -348,7 +454,7 @@ test("the framework Temp service loads lazily, validates its contract, and remai
     const implementation = "/_assets/xshell/0.9.0.dev/temp.js";
     const contractItem = { ...createContractItem("temp"), moduleId: "xshell", contract: TempContract };
     const { config, loads, services } = createServices(
-        { temp: { contract: "temp", implementation } },
+        { temp: { contract: "temp", implementation, options: { url: "https://example.test/temp" } } },
         { [`esm:${implementation}`]: Temp },
         { temp: contractItem },
         { moduleId: "xshell", frameworkFiles: [{ path: implementation, size: 321 }] }
@@ -769,7 +875,7 @@ test("toast contract is structurally valid and its implementation exposes every 
 
 test("Temp contract is valid and describes the existing public methods", async () => {
     await validateContract("temp.json", TempContract);
-    const temp = new Temp({ config: { xshell: { temp: { url: "https://example.test/temp" } } } });
+    const temp = new Temp({}, { url: "https://example.test/temp" });
 
     assert.deepEqual(Object.keys(TempContract.methods), ["upload", "getAbsoluteUrl"]);
     assert.deepEqual(TempContract.methods.upload.parameters.map(parameter => parameter.name), ["files", "onProgress"]);

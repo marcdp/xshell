@@ -8,13 +8,16 @@ The `temp` service uploads files to ASP.NET Temp middleware and returns logical 
 "services": {
     "temp": {
         "contract": "temp",
-        "implementation": "/temp.js"
+        "implementation": "/services/temp.js",
+        "options": {
+            "url": "app:/temp"
+        }
     }
 }
 ```
 
 Bootstrap resolves the implementation path relative to the XShell framework assets, so the default implementation remains
-`xshell/temp.js`; it does not belong to the `x` UI module. Its public contract is `xshell/contracts/temp.json`, discovered from the framework file
+`xshell/services/temp.js`; it does not belong to the `x` UI module. Its public contract is `xshell/contracts/temp.json`, discovered from the framework file
 inventory as `contract:temp`.
 
 The implementation class and contract are loaded during service initialization. The singleton is constructed lazily on first resolution, receives
@@ -27,9 +30,9 @@ controller({ temp }) {
 }
 ```
 
-The compatibility accessor `xshell.temp` resolves the same singleton from the service registry. Applications can replace the implementation with
-another class through `xshell.services.temp.implementation`; the replacement uses the same merge, loading, dependency-injection, singleton, and
-contract-validation behavior as every configured service. The `xshell.temp.url` setting remains the endpoint used by the default implementation.
+Applications can replace the implementation through `xshell.services.temp.implementation`; the replacement uses the same merge, loading,
+dependency-injection, singleton, and contract-validation behavior as every configured service. The default implementation receives its endpoint
+from `xshell.services.temp.options.url`.
 
 ## Browser API
 
@@ -51,8 +54,8 @@ Success entries contain unchanged response text. Each rejected upload becomes `"
 Progress receives `{ name, loaded, total, percent }` only for length-computable events. `name` is the input file name; each concurrent request
 reports independently. There is no cancellation argument.
 
-`getAbsoluteUrl(resource)` replaces leading `temp:/` with `xshell.temp.url`, preserving path/query. It performs string conversion rather than
-validation or Resolver/Loader processing; call it only on a successful identifier. The host supplies this URL from `Temp.BasePath`.
+`getAbsoluteUrl(resource)` replaces leading `temp:/` with `xshell.services.temp.options.url`, preserving path/query. It performs string conversion
+rather than validation or Resolver/Loader processing; call it only on a successful identifier. The host supplies this URL from `Temp.BasePath`.
 
 ## HTTP contract
 

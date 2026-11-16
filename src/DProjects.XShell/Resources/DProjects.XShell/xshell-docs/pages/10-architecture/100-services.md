@@ -6,9 +6,12 @@ concrete ES module class selected by `xshell.services`.
 ```jsonc
 "xshell": {
     "services": {
-        "toast": {
-            "contract": "toast",
-            "implementation": "/services/toast-default.js"
+        "audit": {
+            "contract": "audit",
+            "implementation": "/services/audit.js",
+            "options": {
+                "endpoint": "/api/audit"
+            }
         }
     }
 }
@@ -47,6 +50,24 @@ This fixed topology provides deterministic service resolution and prevents provi
 `Services.has(name)` reports whether a runtime or configured service name is registered. It only checks registry membership and never constructs a
 configured service. `Services.resolve(name)` returns an existing runtime instance or lazily constructs the configured implementation as a singleton.
 The implementation is validated against the contract's declared methods and properties when that singleton is first created.
+
+Each configured service may declare an optional `options` object. XShell passes the existing lazy service-injection proxy as the first constructor
+argument and that service's `options` object as the second:
+
+```js
+export default class Audit {
+    constructor({ bus, loader }, options = {}) {
+        this._bus = bus;
+        this._loader = loader;
+        this._endpoint = options.endpoint;
+    }
+}
+```
+
+Injected services and implementation configuration are distinct: dependencies continue to resolve by name through the first argument, while
+`options` is ordinary configuration interpreted by the implementation. When `options` is absent, XShell passes an empty object. XShell requires `options`
+to be a JSON object but does not validate its internal structure; the service implementation owns any additional interpretation and validation.
+Options remain private construction data and are not included in `services.registry` or `services.getServiceInfo()` metadata.
 
 `Services` owns its mutable runtime service records internally. `services.registry` returns a read-only snapshot of the current service metadata:
 each entry has `id`, `state`, `contractId`, `contractUrl`, `description`, `icon`, `moduleId`, `implementationName`, `url`, `size`, and `time`.
@@ -180,8 +201,9 @@ it does not evaluate property getters. This validation runs when a configured si
 associated with a contract. Defaults, enums, readonly, and property types are descriptive, as are method parameters/returns and events. An
 implementation must emit any promised events itself.
 
-Construction receives a proxy resolving other services by name. Resolving a service already being constructed detects a circular constructor
-dependency and reports the resolution chain. A failed construction/validation resets that record so a later resolve can retry.
+Construction receives the proxy resolving other services by name as its first argument and its implementation `options` as the second. Resolving a
+service already being constructed detects a circular constructor dependency and reports the resolution chain. A failed construction/validation
+resets that record so a later resolve can retry.
 Duplicate registrations, including collisions with core names, fail.
 
 After a configured service is first constructed and validated, XShell emits `xshell:service:created` on the Bus with `{ id }`. Failed attempts emit no
@@ -189,7 +211,7 @@ created event. Consumers can re-read `services.registry` to inspect the current 
 
 The directly registered core names are `areas`, `bus`, `config`, `dialog`, `i18n`, `loader`, `modules`, `navigation`, `resolver`,
 `runtime`, `contracts`, and `services`. `commands`, `jsonValidator`, `secrets`, `tasks`, and `temp` are framework-owned configured services registered through
-`xshell.services`; the compatibility `xshell.temp` accessor resolves the same lazy Temp singleton. There is no auth/identity registration. A
+`xshell.services`. There is no auth/identity registration. A
 Diagnostics getter is not a registered service contract.
 
 See [Bus](../30-subsystems/20-bus.md), [Dialogs](../30-subsystems/30-dialogs.md), [Temp](../30-subsystems/50-temp.md),

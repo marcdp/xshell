@@ -9,15 +9,13 @@
     <meta http-equiv="Content-Security-Policy" content="{config.Server.ContentSecurityPolicy}">
     <link rel="icon" href="{config.App.BasePath}/favicon.svg" type="image/svg+xml">
 
-    <!-- XShell application -->
+    <!-- XShell -->
     <meta name="xshell:app.basePath" content="{config.App.BasePath}">
     <meta name="xshell:app.module" content="{config.App.Module}">
     <meta name="xshell:app.params" content="{config.App.Params}">
     <meta name="xshell:app.environment" content="{environment}">
     {config.App.Sources}
-
-    <!-- XShell other -->
-    <meta name="xshell:xshell.temp.url" content="{config.Temp.BasePath}">
+    {config.Overrides}
 
     <!-- index -->
     <script type="module" src="{config.App.BasePath}/index.js"></script>

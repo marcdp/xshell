@@ -1,3 +1,9 @@
+// utils
+function toAbsoluteUrl(url) {
+    if (/^[a-zA-Z][a-zA-Z\d+.-]*:/.test(url)) return url;
+    return new URL(url, document.baseURI).href;
+}
+
 // class
 export default class Temp {
 
@@ -5,8 +11,8 @@ export default class Temp {
     _url = null;
 
     // ctor
-    constructor({ config }) {
-        this._url = config.xshell.temp.url.replace(/\/+$/, "");
+    constructor(services, options) {
+        this._url = toAbsoluteUrl(options.url.replace(/\/+$/, ""));
     }
 
     // methods

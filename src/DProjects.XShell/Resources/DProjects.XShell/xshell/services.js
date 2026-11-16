@@ -59,6 +59,7 @@ export default class Services {
                         url: new URL(service.implementation.replace(/^\/+/, ""), this._config.app.baseUrl).href
                     }
                 });
+                this._items[serviceName].options = service.options ?? {};
             })());
         }
         await Promise.all(tasks);
@@ -96,7 +97,7 @@ export default class Services {
                     get(target, prop) {
                         return self.resolve(prop);
                     }
-                }));
+                }), result.options ?? {});
                 this._validateImplementation(name, instance, result.contractItem);
                 result.instance = instance;
                 result.state = "created";

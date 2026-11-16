@@ -84,6 +84,22 @@ test("effective schema accepts optional UTC package build times for modules and 
     assert.equal(validator.validate(config).valid, false);
 });
 
+test("effective schema rejects obsolete Temp configuration and accepts service options", () => {
+    const config = configuration(moduleDefinition());
+    config.xshell.temp = { url: "https://example.test/temp" };
+    assert.equal(validator.validate(config).valid, false);
+
+    delete config.xshell.temp;
+    config.xshell.services = {
+        temp: {
+            contract: "temp",
+            implementation: "/_assets/xshell/services/temp.js",
+            options: { url: "https://example.test/temp" }
+        }
+    };
+    assert.equal(validator.validate(config).valid, true, JSON.stringify(validator.validate(config).errors));
+});
+
 test("effective schema enforces the lexical module ID grammar", () => {
     for (const moduleId of ["x", "app", "orders", "x-demo", "orders-v2", "xshell-docs"]) {
         const config = configuration(moduleDefinition());

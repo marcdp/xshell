@@ -42,7 +42,7 @@ The generated HTML uses these current interfaces:
 <meta name="xshell:app.params" content="tenant=acme">
 <meta name="xshell:app.environment" content="Development">
 <meta name="xshell:app.source" content="/prefix/_resources/DProjects.XShell/index.json">
-<meta name="xshell:xshell.temp.url" content="/prefix/temp">
+<meta name="xshell:services.temp.options.url" content="/prefix/temp">
 <script type="module" src="/prefix/index.js"></script>
 ```
 

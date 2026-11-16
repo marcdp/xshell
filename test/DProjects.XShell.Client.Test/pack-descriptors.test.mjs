@@ -136,7 +136,7 @@ test("pack discovers a dependency graph, rewrites references, and commits one co
         assert.match(index, new RegExp(`content="/${release.root}"`));
         assert.match(index, new RegExp(`src="/${dirname(release.xshell)}/bootstrap\\.js"`));
         assert.match(index, /xshell:xshell.environment"\s+content="Production"/);
-        assert.match(index, /xshell:xshell.temp.url"\s+content="\/temp"/);
+        assert.match(index, /xshell:services.temp.options.url"\s+content="\/temp"/);
         assert.match(worker, new RegExp(`importScripts\\("/${dirname(release.xshell)}/sw\\.js"\\)`));
         assert.equal(release.packages.some(path => path === "index.html" || path === "sw.js"), false);
         for (const name of ["main", "isRoot", "moduleType"]) assert.equal(Object.hasOwn(descriptor(output, release.root).modules.app, name), false);
@@ -708,12 +708,12 @@ test("deployment bootstrap options create distinct root generations without chan
         assert.ok(index.includes(`src="/demo/${dirname(packed.xshell)}/bootstrap.js"`));
         assert.match(index, /xshell:app.basePath"\s+content="\/demo"/);
         assert.match(index, /xshell:xshell.environment"\s+content="Staging"/);
-        assert.match(index, /xshell:xshell.temp.url"\s+content="\/uploads"/);
+        assert.match(index, /xshell:services.temp.options.url"\s+content="\/uploads"/);
         assert.match(index, /tenant=acme%20%26%20co/);
         assert.match(index, /mode=a%3Db/);
         assert.ok(worker.includes(`importScripts("/demo/${dirname(packed.xshell)}/sw.js")`));
         const defaultTemp = check(["--app-base-path", "/demo"]);
-        assert.match(readFileSync(join(output, dirname(defaultTemp.root), "index.html"), "utf8"), /xshell:xshell.temp.url"\s+content="\/demo\/temp"/);
+        assert.match(readFileSync(join(output, dirname(defaultTemp.root), "index.html"), "utf8"), /xshell:services.temp.options.url"\s+content="\/demo\/temp"/);
         for (const args of [["--environment", "Staging"], ["--param", "tenant=other"], ["--temp-base-path", "/uploads"]]) check(args);
         const canonical = entries(archivePath(output, packed.root));
         const canonicalIndex = canonical.get("index.html").toString("utf8");
@@ -764,7 +764,7 @@ test("root self-hash publication preserves placeholder text in user bootstrap va
         for (const index of [canonicalIndex, publishedIndex]) {
             assert.equal(metaContent(index, "xshell:app.params"), "token=__XSHELL_ROOT_HASH__");
             assert.equal(metaContent(index, "xshell:xshell.environment"), "__XSHELL_ROOT_HASH__");
-            assert.equal(metaContent(index, "xshell:xshell.temp.url"), "/__XSHELL_ROOT_HASH__");
+            assert.equal(metaContent(index, "xshell:services.temp.options.url"), "/__XSHELL_ROOT_HASH__");
         }
         assert.equal(contentHash(archive), hash);
         assert.deepEqual(readFileSync(join(directory, "sw.js")), archive.get("sw.js"));

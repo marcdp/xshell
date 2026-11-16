@@ -30,8 +30,10 @@ namespace DProjects.XShell.Commands {
         public Dictionary<string, string> Param { get; init; } = new();
         [Flag('s', "App source", "")]
         public string[] AppSource { get; init; } = [];
-        [Flag('s', "Share connection string", "")]
+        [Flag('S', "Share connection string", "")]
         public string[] Share { get; init; } = Array.Empty<string>();
+        [Flag('o', "Configuration override", "")]
+        public Dictionary<string, string> Override { get; init; } = new();
 
         // methods
         public async Task<int> ExecuteAsync(CancellationToken cancellationToken) {
@@ -80,7 +82,8 @@ namespace DProjects.XShell.Commands {
                         var options = DProjects.Utils.StringUtils.DeserializeConnectionString<FilesystemHttpMiddleware.Options>(connectionString);
                         return options;
                     }).ToArray()
-                }
+                },
+                Overrides = Override
             };
         }
     }

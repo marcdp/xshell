@@ -13,7 +13,7 @@ The host supplies these meta values:
 <meta name="xshell:app.params" content="">
 <meta name="xshell:app.environment" content="Development">
 <meta name="xshell:app.source" content="/_resources/DProjects.XShell/index.json">
-<meta name="xshell:xshell.temp.url" content="/temp">
+<meta name="xshell:services.temp.options.url" content="/temp">
 ```
 
 `xshell:app.source` is repeatable. Source order is repository precedence. The bootstrap normalizes every configured source against

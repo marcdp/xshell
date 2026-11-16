@@ -243,7 +243,6 @@ async function main() {
         const appBasePath = (meta("xshell:app.basePath") ?? "").replace(/\/+$/, "");
         const appBaseUrl = new URL(`${appBasePath}/`, document.location.origin).href;
         const assetsBasePath = "/_assets";
-        const xshellTempUrl = meta("xshell:xshell.temp.url");
         const environment = meta("xshell:app.environment");
         function normalizeUrl(value, module, declaringPath = "/manifest.json") {
             if (typeof value !== "string") return value;
@@ -355,7 +354,6 @@ async function main() {
 
         // Fill config
         function fillXShell(config) {
-            config.xshell.temp.url ??= new URL(xshellTempUrl, document.baseURI).href;
             config.xshell.assets.basePath = assetsBasePath;
             return config;
         }
@@ -721,9 +719,54 @@ async function main() {
 
             return config;
         }
-        config = fillXShell(config)
-        config = fillXShellResolverRules(config)
+        function fillXShellOverrides(config) {
+            const elements = document.querySelectorAll('meta[name^="xshell:"]');
+            const excludedPrefixes = ["app."];
+            const forbidden = new Set(["__proto__", "prototype", "constructor"]);
+            for (const element of elements) {
+                const path = element.name.substring("xshell:".length);
+
+                if (excludedPrefixes.some(prefix => path.startsWith(prefix))) {
+                    continue;
+                }
+
+                const keys = path.split(".");
+                if (keys.some(key => !key || forbidden.has(key))) {
+                    throw new Error(`Invalid configuration override: ${path}`);
+                }
+
+                let target = config.xshell;
+
+                for (const key of keys.slice(0, -1)) {
+                    if (!Object.hasOwn(target, key)) {
+                        throw new Error(`Unknown configuration path: ${path}`);
+                    }
+
+                    target = target[key];
+
+                    if (!target || typeof target !== "object" || Array.isArray(target)) {
+                        throw new Error(`Invalid configuration path: ${path}`);
+                    }
+                }
+
+                let value = element.content;
+                try {
+                    value = JSON.parse(value);
+                } catch {
+                    // Preserve string values.
+                }
+
+                target[keys.at(-1)] = value;
+            }
+
+            return config;
+        }
+        config = fillXShell(config);
+        config = fillXShellResolverRules(config);
+        config = fillXShellOverrides(config);
         checkpoint("app config filled with missing values");
+
+        //
 
         // Install service worker
         async function installServiceWorker(config) {

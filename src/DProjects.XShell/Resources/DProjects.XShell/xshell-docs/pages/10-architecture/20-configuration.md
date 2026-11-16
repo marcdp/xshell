@@ -177,8 +177,9 @@ The root module's effective `params` is replaced with the parsed `xshell:app.par
 
 ## Generated framework and resolver configuration
 
-Bootstrap fills `xshell.temp.url`, the fixed effective `xshell.assets.basePath`, and resolver rules for selected module generations. File inventories
-also generate exact contract and schema entries. Module defaults under `modules.<id>.defaults` select render and state engines for definition-based
+Bootstrap applies host overrides such as `xshell.services.temp.options.url`, fills the fixed effective `xshell.assets.basePath`, and adds resolver
+rules for selected module generations. File inventories also generate exact contract and schema entries. Module defaults under
+`modules.<id>.defaults` select render and state engines for definition-based
 resources; they remain distinct from global infrastructure under `xshell.ui`.
 
 Bootstrap then generates `xshell.serviceWorker.mappings`. An authored `mappings` value is replaced, not appended. The effective array describes this

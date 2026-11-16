@@ -42,7 +42,7 @@ const metaValues = {
     "xshell:app.params": "mode=host",
     "xshell:app.basePath": "/app",
     "xshell:xshell.environment": "",
-    "xshell:xshell.temp.url": ""
+    "xshell:services.temp.options.url": "/temp"
 };
 const context = vm.createContext({
     URL,
@@ -56,6 +56,12 @@ const context = vm.createContext({
                 const name = selector.match(/meta\[name="(.+)"\]/)?.[1];
                 return name && Object.hasOwn(metaValues, name) ? { content: metaValues[name] } : null;
             }
+        },
+        querySelectorAll(selector) {
+            if (selector !== 'meta[name^="xshell:services."]') return [];
+            return Object.entries(metaValues)
+                .filter(([name]) => name.startsWith("xshell:services."))
+                .map(([name, content]) => ({ name, content }));
         },
         location: { origin: "https://example.test" }
     },
@@ -196,7 +202,11 @@ test("module discovery rejects malformed and reserved external reference ids bef
 test("checked-in assets.basePath resolves for root and subpath hosting", () => {
     const defaults = api.parseJsonc(readFileSync(new URL("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/manifest.jsonc", import.meta.url), "utf8"));
     assert.deepEqual(plain(defaults.xshell.assets), { basePath: "app:/_assets", url: "url:./" });
-    assert.deepEqual(plain(defaults.xshell.services.temp), { contract: "temp", implementation: "/temp.js" });
+    assert.deepEqual(plain(defaults.xshell.services.temp), {
+        contract: "temp",
+        implementation: "/services/temp.js",
+        options: { url: "app:/temp" }
+    });
     assert.deepEqual(plain(defaults.xshell.serviceWorker), {});
     for (const field of ["assetsBasePath", "assetsPath", "assetsUrl"]) assert.equal(Object.hasOwn(defaults.xshell, field), false);
     for (const [basePath, effectiveUrl] of [["", "https://example.test/_assets"], ["/myapp", "https://example.test/myapp/_assets"]]) {
@@ -289,7 +299,8 @@ test("bootstrap loads the authored XShell JSONC source through the canonical run
     const config = plain(effective);
     assert.deepEqual(config.xshell.services.temp, {
         contract: "temp",
-        implementation: "/_assets/xshell/0.9.0.dev/temp.js"
+        implementation: "/_assets/xshell/0.9.0.dev/services/temp.js",
+        options: { url: "https://example.test/app/temp" }
     });
     api.fillResolverRules(config);
     const resolver = new Resolver({ config });
@@ -299,7 +310,7 @@ test("bootstrap loads the authored XShell JSONC source through the canonical run
     assert.equal(resolver.resolve("render-engine:x").url, "https://example.test/app/_assets/xshell/0.9.0.dev/render-engines/x.js");
     assert.equal(resolver.resolve("schema:config").url, "https://example.test/app/_assets/xshell/0.9.0.dev/schemas/config.json");
     const tempImplementation = resolver.resolve("esm:" + config.xshell.services.temp.implementation);
-    assert.equal(tempImplementation.url, "https://example.test/app/_assets/xshell/0.9.0.dev/temp.js");
+    assert.equal(tempImplementation.url, "https://example.test/app/_assets/xshell/0.9.0.dev/services/temp.js");
     assert.equal(tempImplementation.definition.moduleId, "xshell");
 });
 
@@ -315,7 +326,8 @@ test("application configuration can replace the framework Temp implementation th
 
     assert.deepEqual(config.xshell.services.temp, {
         contract: "temp",
-        implementation: "/_assets/app/1.0.0.dev/services/custom-temp.js"
+        implementation: "/_assets/app/1.0.0.dev/services/custom-temp.js",
+        options: { url: "https://example.test/app/temp" }
     });
 });
 
@@ -503,7 +515,7 @@ test("authored generated asset fields and obsolete flat fields are rejected", as
     const xshellUrl = "https://example.test/xshell/manifest.json";
     fetchedResources.set(rootUrl, { modules: { app: definition("app") } });
     fetchedResources.set(xshellUrl, { modules: {}, xshell: { assets: { basePath: "app:/_assets", path: "/authored", url: "url:./" }, environment: "Development",
-        version: "0.9.0", temp: { url: "url:./" }, resolver: {} } });
+        version: "0.9.0", resolver: {} } });
     await assert.rejects(api.loadConfig(), /must not define xshell\.assets\.path/);
 });
 
@@ -530,7 +542,7 @@ test("Service Worker registration sends the effective configuration mappings unc
     context.clearTimeout = () => {};
     fetchedResources.set("https://example.test/xshell/manifest.json", {
         modules: {}, xshell: { assets: { basePath: "app:/runtime", url: "url:./" }, environment: "Development", version: "0.9.0",
-            temp: { url: "url:./" }, resolver: {} }
+            resolver: {} }
     });
     fetchedResources.set(rootUrl, { modules: { app: definition("app") } });
     const config = await api.loadConfig();
@@ -594,7 +606,7 @@ test("descriptor-provided module and XShell inventories normalize to generation-
     fetchedResources.set(xshellUrl, {
         modules: {},
         xshell: {
-            assets: { basePath: "app:/_assets", url: "url:./" }, environment: "Development", version: "0.9.0", temp: { url: "url:./" }, resolver: {},
+            assets: { basePath: "app:/_assets", url: "url:./" }, environment: "Development", version: "0.9.0", resolver: {},
             files: [{ path: "/bootstrap.js", size: 11, hash: "xshell-hash" }]
         }
     });
@@ -767,7 +779,7 @@ test("loadConfig derives effective app metadata from the selected root module", 
     const xshellUrl = "https://example.test/xshell/manifest.json";
     fetchedResources.set(xshellUrl, {
         modules: {},
-        xshell: { assets: { basePath: "app:/_assets", url: "url:./" }, environment: "Production", version: "0.9.0", hash: "31d04ab8e220a581", temp: { url: "url:./" }, resolver: {} }
+        xshell: { assets: { basePath: "app:/_assets", url: "url:./" }, environment: "Production", version: "0.9.0", hash: "31d04ab8e220a581", resolver: {} }
     });
     fetchedResources.set(rootUrl, {
         modules: { app: definition("app", { hash: "a82c31f943e01abc", label: "Root application", copyright: "Owner", icon: "logo" }) }
@@ -808,7 +820,7 @@ test("loadConfig derives effective app metadata from the selected root module", 
 test("authored top-level app is rejected in root, dependency, and XShell configurations", async () => {
     const xshellUrl = "https://example.test/xshell/manifest.json";
     const framework = { modules: {}, xshell: { assets: { basePath: "app:/_assets", url: "url:./" }, environment: "Development", version: "0.9.0",
-        temp: { url: "url:./" }, resolver: {} } };
+        resolver: {} } };
     fetchedResources.set(xshellUrl, framework);
     fetchedResources.set(rootUrl, { app: {}, modules: { app: definition("app") } });
     await assert.rejects(api.loadConfig(), /must not define top-level app/);
@@ -831,7 +843,7 @@ test("authored xshell.serviceWorker is merged and generated mappings replace aut
             version: "1.0.0", name: "app", exceptions: [rootUrl] }
     ];
     const framework = { modules: {}, xshell: { assets: { basePath: "app:/_assets", url: "url:./" }, environment: "Development", version: "0.9.0",
-        temp: { url: "url:./" }, resolver: {}, serviceWorker: {} } };
+        resolver: {}, serviceWorker: {} } };
     fetchedResources.set(xshellUrl, framework);
     fetchedResources.set(rootUrl, {
         modules: { app: definition("app"), child: reference(childUrl) },
@@ -861,7 +873,7 @@ test("loadConfig derives every assets.path from a custom assets.basePath", async
     const xUrl = "https://example.test/modules/x/manifest.jsonc";
     fetchedResources.set(xshellUrl, {
         modules: {},
-        xshell: { assets: { basePath: "app:/runtime", url: "url:./" }, environment: "Production", version: "0.9.0", hash: "31d04ab8e220a581", temp: { url: "url:./" }, resolver: {} }
+        xshell: { assets: { basePath: "app:/runtime", url: "url:./" }, environment: "Production", version: "0.9.0", hash: "31d04ab8e220a581", resolver: {} }
     });
     fetchedResources.set(rootUrl, {
         modules: { app: definition("app", { hash: "app-hash" }), x: reference(xUrl) }
@@ -893,7 +905,7 @@ test("root assets.basePath override is normalized before module discovery", asyn
     const xshellUrl = "https://example.test/xshell/manifest.json";
     fetchedResources.set(xshellUrl, {
         modules: {},
-        xshell: { assets: { basePath: "app:/_assets", url: "url:./" }, environment: "Development", version: "0.9.0", temp: { url: "url:./" }, resolver: {} }
+        xshell: { assets: { basePath: "app:/_assets", url: "url:./" }, environment: "Development", version: "0.9.0", resolver: {} }
     });
     fetchedResources.set(rootUrl, {
         modules: { app: definition("app") },
@@ -910,7 +922,7 @@ test("root assets.basePath override is normalized before module discovery", asyn
 test("loadConfig resolves XShell assets.url from the application base", async () => {
     fetchedResources.set("https://example.test/xshell/manifest.json", {
         modules: {},
-        xshell: { assets: { basePath: "app:/_assets", url: "app:/framework/" }, environment: "Development", version: "0.9.0", temp: { url: "url:./" }, resolver: {} }
+        xshell: { assets: { basePath: "app:/_assets", url: "app:/framework/" }, environment: "Development", version: "0.9.0", resolver: {} }
     });
     fetchedResources.set(rootUrl, { modules: { app: definition("app") } });
 
@@ -924,7 +936,7 @@ test("loadConfig resolves XShell assets.url from the application base", async ()
 test("host Development override selects mutable generations without package hashes", async () => {
     fetchedResources.set("https://example.test/xshell/manifest.json", {
         modules: {},
-        xshell: { assets: { basePath: "app:/_assets", url: "url:./" }, environment: "Production", version: "0.9.0", temp: { url: "url:./" }, resolver: {} }
+        xshell: { assets: { basePath: "app:/_assets", url: "url:./" }, environment: "Production", version: "0.9.0", resolver: {} }
     });
     fetchedResources.set(rootUrl, { modules: { app: definition("app") } });
     const hostedDocument = {
@@ -945,7 +957,7 @@ test("host Development override selects mutable generations without package hash
 test("non-Development XShell without a package hash fails clearly", async () => {
     fetchedResources.set("https://example.test/xshell/manifest.json", {
         modules: {},
-        xshell: { assets: { basePath: "app:/_assets", url: "url:./" }, environment: "Production", version: "0.9.0", temp: { url: "url:./" }, resolver: {} }
+        xshell: { assets: { basePath: "app:/_assets", url: "url:./" }, environment: "Production", version: "0.9.0", resolver: {} }
     });
     fetchedResources.set(rootUrl, { modules: { app: definition("app", { hash: "app-hash" }) } });
     await assert.rejects(api.loadConfig(), /Published module 'xshell'.*hash/);

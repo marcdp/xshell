@@ -18,6 +18,7 @@ namespace DProjects.XShell {
             public TempConfig Temp { get; init; } = new TempConfig();            
             public ServerConfig Server { get; init; } = new ServerConfig();
             public SharesConfig Shares { get; init; } = new SharesConfig();
+            public Dictionary<string, string> Overrides { get; init; } = new();
         }
         public class AppConfig {
             public string BasePath { get; init; } = "";
@@ -50,10 +51,6 @@ namespace DProjects.XShell {
             ArgumentNullException.ThrowIfNull(app);
             ArgumentNullException.ThrowIfNull(config);
             ValidateConfiguration(config);
-
-            // compute xshell baseurl
-            // TODO ...
-            //const string xshellBasePath = config.Sources[0].Replace("{module}", "xshell");
 
             // config webapplication
             var assembly = typeof(Extensions).Assembly;

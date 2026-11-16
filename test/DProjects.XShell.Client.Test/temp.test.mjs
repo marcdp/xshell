@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import Temp from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/temp.js";
+import Temp from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/temp.js";
 
 class FakeFile {
     constructor(name) {
@@ -80,7 +80,7 @@ test("Temp uploads in parallel, preserves input order, reports named progress, a
     const restore = installBrowserFakes();
     FakeXMLHttpRequest.instances = [];
     try {
-        const temp = new Temp({ config: { xshell: { temp: { url: "https://example.test/temp///" } } } });
+        const temp = new Temp({}, { url: "https://example.test/temp///" });
         const first = new FakeFile("first.txt");
         const second = new FakeFile("second.txt");
         const progress = [];
@@ -109,7 +109,7 @@ test("Temp accepts one File and preserves network-error and URL-resolution behav
     const restore = installBrowserFakes();
     FakeXMLHttpRequest.instances = [];
     try {
-        const temp = new Temp({ config: { xshell: { temp: { url: "https://example.test/temp/" } } } });
+        const temp = new Temp({}, { url: "https://example.test/temp/" });
         const resultPromise = temp.upload(new FakeFile("failed.txt"));
         FakeXMLHttpRequest.instances[0].fail();
 

@@ -66,13 +66,24 @@ for (const item of items) {
         <p>Configured services have a stable public contract and an implementation class selected through <code>xshell.services</code>.</p>
         <pre x-pre><code>"xshell": {
     "services": {
-        "toast": {
-            "contract": "toast",
-            "implementation": "/services/toast-default.js"
+        "audit": {
+            "contract": "audit",
+            "implementation": "/services/audit.js",
+            "options": {
+                "endpoint": "/api/audit"
+            }
         }
     }
 }</code></pre>
-        <p>XShell discovers the contract, loads the implementation class during initialization, and creates its instance when first resolved.</p>
+        <pre x-pre><code>export default class Audit {
+    constructor({bus, loader}, options = {}) {
+        this.bus = bus;
+        this.loader = loader;
+        this.endpoint = options.endpoint;
+    }
+}</code></pre>
+        <p>XShell discovers the contract, loads the implementation class during initialization, and creates its instance when first resolved.
+        The first constructor argument injects services lazily; the second contains service-specific configuration and defaults to an empty object.</p>
 
         <h2>Service contracts</h2>
         <p>A contract describes the public methods and properties expected from a service. XShell validates their presence when constructing a configured service instance.</p>

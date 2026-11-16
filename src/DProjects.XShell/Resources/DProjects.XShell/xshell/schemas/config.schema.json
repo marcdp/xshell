@@ -64,7 +64,6 @@
         "navigation": {"$ref": "#/$defs/xshellNavigation", "description": "Navigation configuration."},
         "resolver": {"$ref": "#/$defs/resolver", "description": "Logical resource resolver configuration."},
         "services": {"$ref": "#/$defs/xshellServices", "description": "Services configuration."},
-        "temp": {"$ref": "#/$defs/xshellTemp", "description": "Temp configuration."},
         "files": {"type": "array", "items": {"$ref": "#/$defs/file"}, "description": "Normalized virtual resource inventory for the XShell framework."},
         "registry": {"$ref": "#/$defs/xshellRegistry", "description": "Extensible registry populated by application modules."}
       },
@@ -265,15 +264,6 @@
       "additionalProperties": false,
       "description": "Resolution rule for a concrete resource."
     },
-    "xshellTemp": {
-      "type": "object",
-      "required": ["url"],
-      "properties": {
-        "url": {"type": "string", "description": "Absolute browser URL for temporary storage after host-path normalization (e.g. https://example.test/temp)."}
-      },
-      "additionalProperties": false,
-      "description": "Temporary storage configuration."
-    },
     "xshellServices": {
       "type": "object",
       "additionalProperties": {
@@ -286,7 +276,12 @@
       "required": ["contract", "implementation"],
       "properties": {
         "contract": {"type": "string", "description": "Service contract identifier."},
-        "implementation": {"type": "string", "description": "Service implementation URL or path."}
+        "implementation": {"type": "string", "description": "Service implementation URL or path."},
+        "options": {
+          "type": "object",
+          "additionalProperties": true,
+          "description": "Service-specific configuration passed as the second argument to the implementation constructor."
+        }
       },
       "additionalProperties": false,
       "description": "Configuration for a single service."

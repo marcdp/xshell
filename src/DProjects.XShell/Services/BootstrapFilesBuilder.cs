@@ -33,7 +33,18 @@ namespace DProjects.XShell.Services {
             content = content.Replace("{environment}", EncodeAttribute(environment));
             content = content.Replace("{config.Temp.BasePath}", EncodeAttribute(config.Temp.BasePath));
             content = content.Replace("{config.App.Sources}", string.Join("\n", config.App.Sources.Select(s => $"<meta name=\"xshell:app.source\" content=\"{EncodeAttribute(s)}\">")));
-
+            var overrides = new Dictionary<string, string> {
+                ["services.temp.options.url"] = config.Temp.BasePath
+            };
+            foreach (var item in config.Overrides) {
+                overrides[item.Key] = item.Value;
+            }
+            content = content.Replace(
+                "{config.Overrides}",
+                string.Join("\n", overrides.Select(item =>
+                    $"<meta name=\"xshell:{EncodeAttribute(item.Key)}\" content=\"{EncodeAttribute(item.Value)}\">"
+                ))
+            );
             return content;
         }
         private string EncodeAttribute(string value) {
