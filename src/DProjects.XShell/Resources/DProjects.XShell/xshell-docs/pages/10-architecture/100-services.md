@@ -188,9 +188,9 @@ After a configured service is first constructed and validated, XShell emits `xsh
 created event. Consumers can re-read `services.registry` to inspect the current state.
 
 The directly registered core names are `areas`, `bus`, `config`, `dialog`, `i18n`, `loader`, `modules`, `navigation`, `resolver`,
-`runtime`, `contracts`, and `services`. `commands`, `jsonValidator`, `tasks`, and `temp` are framework-owned configured services registered through
+`runtime`, `contracts`, and `services`. `commands`, `jsonValidator`, `secrets`, `tasks`, and `temp` are framework-owned configured services registered through
 `xshell.services`; the compatibility `xshell.temp` accessor resolves the same lazy Temp singleton. There is no auth/identity registration. A
 Diagnostics getter is not a registered service contract.
 
 See [Bus](../30-subsystems/20-bus.md), [Dialogs](../30-subsystems/30-dialogs.md), [Temp](../30-subsystems/50-temp.md),
-[Tasks](../30-subsystems/80-tasks.md), and [Commands](../30-subsystems/90-commands.md).
+[Tasks](../30-subsystems/80-tasks.md), [Commands](../30-subsystems/90-commands.md), and [Secrets](../30-subsystems/100-secrets.md).

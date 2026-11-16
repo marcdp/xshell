@@ -16,6 +16,9 @@ export default {
         .spacer {flex:1;}
         .actions {display:flex; gap:.25em;}
         .hint {color:var(--x-color-gray); margin-bottom:1em;}
+        .passkey-unlock {margin-bottom:1em;}
+        .passkeys {margin-top:2em;}
+        .passkeys h2 {font-size:1.1em;}
     `,
 
     template: `
@@ -34,11 +37,16 @@ export default {
 
         <!-- Unlock -->
         <x-form x-if="state.mode == 'manage' && state.ready && state.status == 'locked'" command="unlock">
-            <p>Enter your master password to unlock the vault.</p>
+            <div class="passkey-unlock" x-if="state.passkeySupported && state.passkeys.length > 0">
+                <p>Use a registered passkey to unlock this browser-local vault.</p>
+                <x-button label="Unlock with passkey" icon="x-key" command="unlockPasskey" x-attr:disabled="state.busy"></x-button>
+                <p class="hint">Or use the master password.</p>
+            </div>
+            <p x-if="!state.passkeySupported || state.passkeys.length == 0">Enter your master password to unlock the vault.</p>
             <x-datafields>
                 <x-datafield type="password" label="Master password" autocomplete="current-password" required autofocus x-model="state.password"></x-datafield>
             </x-datafields>
-            <x-button slot="footer" class="submit" label="Unlock" command="unlock" x-attr:disabled="state.busy"></x-button>
+            <x-button slot="footer" class="submit" label="Unlock with password" command="unlock" x-attr:disabled="state.busy"></x-button>
         </x-form>
 
         <!-- Secrets list -->
@@ -63,6 +71,31 @@ export default {
                 </x-listview-body>
             </x-listview>
             <x-empty x-if="state.items.length == 0" icon="x-key" label="No secrets" message="Add a secret to your vault."></x-empty>
+
+            <section class="passkeys">
+                <div class="toolbar">
+                    <h2>Passkeys</h2>
+                    <span class="spacer"></span>
+                    <x-button class="light" label="Add passkey" icon="x-add" command="openPasskey" x-attr:disabled="state.busy || !state.passkeySupported"></x-button>
+                </div>
+                <p class="hint" x-if="!state.passkeySupported">Passkeys require WebAuthn on a secure origin. Password unlocking remains available.</p>
+                <x-listview x-if="state.passkeys.length > 0" view="details">
+                    <x-listview-head>
+                        <x-listview-column label="Passkey"></x-listview-column>
+                        <x-listview-column label="Created"></x-listview-column>
+                        <x-listview-column label="Actions" slot="right" width="3em" style="text-align:right"></x-listview-column>
+                    </x-listview-head>
+                    <x-listview-body>
+                        <x-listview-item x-for="passkey in state.passkeys" x-attr:key="passkey.id" x-attr:label="passkey.label" icon="x-key">
+                            <span x-text="passkey.createdAt"></span>
+                            <div class="actions" style="text-align:right">
+                                <x-button class="plain" icon="x-trash" tooltip="Remove" x-attr:data-id="passkey.id" x-on:click="removePasskey"></x-button>
+                            </div>
+                        </x-listview-item>
+                    </x-listview-body>
+                </x-listview>
+                <x-empty x-if="state.passkeys.length == 0" icon="x-key" label="No passkeys" message="Password recovery remains available after passkeys are added."></x-empty>
+            </section>
         </div>
 
         <!-- Add / Edit dialog -->
@@ -77,6 +110,18 @@ export default {
             <x-button slot="footer" class="submit" label="Save" command="save" x-attr:disabled="state.busy"></x-button>
             <x-button slot="cancel" class="cancel" label="Cancel" command="cancel"></x-button>
         </x-form>
+
+        <!-- Add passkey dialog -->
+        <x-form x-if="state.mode == 'add-passkey' && state.ready" command="enrollPasskey">
+            <p>Create a passkey that can unwrap this vault's data encryption key.</p>
+            <x-datafields>
+                <x-datafield type="text" label="Passkey label" required autofocus x-model="state.passkeyLabel"></x-datafield>
+                <x-datafield type="password" label="Master password" autocomplete="current-password" required x-model="state.password"></x-datafield>
+            </x-datafields>
+            <p class="hint">The master password reauthenticates enrollment and remains the recovery method. The passkey must support WebAuthn PRF.</p>
+            <x-button slot="footer" class="submit" label="Add passkey" command="enrollPasskey" x-attr:disabled="state.busy"></x-button>
+            <x-button slot="cancel" class="cancel" label="Cancel" command="cancel"></x-button>
+        </x-form>
     `,
 
     state: {
@@ -85,8 +130,11 @@ export default {
         error: "",
         status: "locked",
         items: [],
+        passkeys: [],
+        passkeySupported: false,
         password: "",
         confirmPassword: "",
+        passkeyLabel: "",
         secretId: "",
         valueType: "text",
         editorValue: "",
@@ -101,6 +149,7 @@ export default {
         const clear = () => {
             state.password = "";
             state.confirmPassword = "";
+            state.passkeyLabel = "";
             state.editorValue = "";
         };
         const message = error => error?.message || "The operation failed.";
@@ -108,10 +157,12 @@ export default {
         return {
             async load() {
                 events.on(bus, "secrets:status-changed", "onStatusChanged");
+                state.passkeySupported = globalThis.isSecureContext === true &&
+                    typeof globalThis.navigator?.credentials?.get === "function";
 
                 if (state.mode == "manage") return await this.refresh();
 
-                if (state.mode == "add") {
+                if (state.mode == "add" || state.mode == "add-passkey") {
                     state.status = secrets.status;
                     state.ready = true;
                     return;
@@ -139,6 +190,8 @@ export default {
                 alive = false;
                 clear();
                 state.items = [];
+                state.passkeys = [];
+                if (state.mode == "manage") secrets.lock();
             },
 
             async onStatusChanged() {
@@ -155,16 +208,18 @@ export default {
             async refresh() {
                 state.busy = true;
                 try {
-                    const items = await secrets.list();
+                    await secrets.ready();
                     if (!alive) return;
-                    state.items = items;
-                    state.status = "unlocked";
+                    state.status = secrets.status;
+                    state.passkeys = state.status == "uninitialized" ? [] : await secrets.listPasskeys();
+                    state.items = state.status == "unlocked" ? await secrets.list() : [];
                     state.error = "";
                 } catch (error) {
                     if (!alive) return;
                     state.items = [];
+                    state.passkeys = [];
                     state.status = secrets.status;
-                    if (error?.message !== "Secrets vault is locked.") state.error = message(error);
+                    state.error = message(error);
                 } finally {
                     if (alive) {
                         state.ready = true;
@@ -207,12 +262,28 @@ export default {
                 }
             },
 
-            lock() {
+            async unlockPasskey() {
+                if (state.busy || !state.passkeySupported || !state.passkeys.length) return;
+                state.error = "";
+                state.busy = true;
+                try {
+                    await secrets.unlockWithPasskey();
+                    if (alive) await this.refresh();
+                } catch (error) {
+                    if (alive) state.error = message(error);
+                } finally {
+                    clear();
+                    if (alive) state.busy = false;
+                }
+            },
+
+            async lock() {
                 secrets.lock();
                 clear();
                 state.items = [];
                 state.status = secrets.status;
                 state.error = "";
+                if (alive) await this.refresh();
             },
 
             async openEditor(mode, id = "") {
@@ -231,6 +302,20 @@ export default {
 
             async add() {
                 await this.openEditor("add");
+            },
+
+            async openPasskey() {
+                if (secrets.status != "unlocked") return void (state.error = "Unlock the vault first.");
+                try {
+                    const result = await dialog.open({
+                        href: "page:x:/pages/secrets.js",
+                        title: "Add passkey",
+                        context: {mode:"add-passkey"}
+                    });
+                    if (alive && result?.saved) await this.refresh();
+                } catch (error) {
+                    if (alive) state.error = message(error);
+                }
             },
 
             async edit({event}) {
@@ -278,6 +363,50 @@ export default {
                     state.busy = true;
                     state.error = "";
                     await secrets.delete(id);
+                    if (alive) await this.refresh();
+                } catch (error) {
+                    if (alive) state.error = message(error);
+                } finally {
+                    if (alive) state.busy = false;
+                }
+            },
+
+            async enrollPasskey() {
+                if (state.busy || secrets.status != "unlocked") return;
+                const label = state.passkeyLabel.trim();
+                if (!label) return void (state.error = "Passkey label is required.");
+                if (!state.password) return void (state.error = "Enter the master password.");
+
+                state.error = "";
+                state.busy = true;
+                try {
+                    await secrets.addPasskey({label, password:state.password});
+                    if (!alive) return;
+                    clear();
+                    await page.close({saved:true});
+                } catch (error) {
+                    if (alive) state.error = message(error);
+                } finally {
+                    clear();
+                    if (alive) state.busy = false;
+                }
+            },
+
+            async removePasskey({event}) {
+                if (state.busy || secrets.status != "unlocked") return;
+                const id = event.currentTarget.dataset.id;
+                const passkey = state.passkeys.find(item => item.id === id);
+                if (!passkey) return;
+
+                try {
+                    const result = await dialog.confirm({
+                        title:"Remove passkey",
+                        message:"Remove passkey '" + passkey.label + "' from this local vault?"
+                    });
+                    if (result != "yes" || !alive) return;
+                    state.busy = true;
+                    state.error = "";
+                    await secrets.removePasskey(id);
                     if (alive) await this.refresh();
                 } catch (error) {
                     if (alive) state.error = message(error);
