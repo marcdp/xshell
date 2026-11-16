@@ -4,7 +4,8 @@ export default {
         description: "Manage encrypted secrets.",
         properties: {
             mode: {type:"string", default:"manage", state:true, context:true},
-            secretId: {type:"string", default:"", state:true, context:true}
+            secretId: {type:"string", default:"", state:true, context:true},
+            passkeyId: {type:"string", default:"", state:true, context:true}
         }
     },
 
@@ -61,10 +62,14 @@ export default {
             <x-listview x-if="state.items.length > 0" view="details">
                 <x-listview-head>
                     <x-listview-column label="Secret"></x-listview-column>
+                    <x-listview-column label="Description"></x-listview-column>
+                    <x-listview-column label="Created"></x-listview-column>
                     <x-listview-column label="Actions" slot="right" width="5em" style="text-align:right"></x-listview-column>
                 </x-listview-head>
                 <x-listview-body>
                     <x-listview-item x-for="item in state.items" x-attr:key="item.id" x-attr:path="item.id" x-attr:label="item.id" icon="x-key">
+                        <span x-text="item.description || '—'"></span>
+                        <span x-text="item.createdDisplay"></span>
                         <div class="actions" style="text-align:right">
                             <x-button class="plain" icon="x-edit" tooltip="Edit" x-attr:data-id="item.id" x-on:click="edit" ></x-button>
                             <x-button class="plain" icon="x-trash" tooltip="Delete" x-attr:data-id="item.id" x-on:click="remove"></x-button>
@@ -84,13 +89,16 @@ export default {
                 <x-listview x-if="state.passkeys.length > 0" view="details">
                     <x-listview-head>
                         <x-listview-column label="Passkey"></x-listview-column>
+                        <x-listview-column label="Description"></x-listview-column>
                         <x-listview-column label="Created"></x-listview-column>
-                        <x-listview-column label="Actions" slot="right" width="3em" style="text-align:right"></x-listview-column>
+                        <x-listview-column label="Actions" slot="right" width="5em" style="text-align:right"></x-listview-column>
                     </x-listview-head>
                     <x-listview-body>
                         <x-listview-item x-for="passkey in state.passkeys" x-attr:key="passkey.id" x-attr:label="passkey.label" icon="x-key">
-                            <span x-text="passkey.createdAt"></span>
+                            <span x-text="passkey.description || '—'"></span>
+                            <span x-text="passkey.createdDisplay"></span>
                             <div class="actions" style="text-align:right">
+                                <x-button class="plain" icon="x-edit" tooltip="Edit" x-attr:data-id="passkey.id" x-on:click="editPasskey"></x-button>
                                 <x-button class="plain" icon="x-trash" tooltip="Remove" x-attr:data-id="passkey.id" x-on:click="removePasskey"></x-button>
                             </div>
                         </x-listview-item>
@@ -104,9 +112,11 @@ export default {
         <x-form x-if="(state.mode == 'add' || state.mode == 'edit') && state.ready" command="save">
             <x-datafields>
                 <x-datafield type="text" label="Secret ID" required x-model="state.secretId" x-attr:readonly="state.mode == 'edit'"></x-datafield>
+                <x-datafield type="textarea" label="Description" x-model="state.description"></x-datafield>
                 <x-datafield type="select" label="Value type" x-prop:domain="state.valueTypes" x-model="state.valueType"></x-datafield>
                 <x-datafield x-if="state.valueType == 'text'" type="password" label="Secret value" autocomplete="off" x-model="state.editorValue"></x-datafield>
                 <x-datafield x-if="state.valueType == 'json'" type="textarea" label="JSON value" x-model="state.editorValue"></x-datafield>
+                <x-datafield x-if="state.mode == 'edit' && state.createdAt" type="text" label="Created" readonly x-model="state.createdDisplay"></x-datafield>
             </x-datafields>
             <p class="hint">Values are encrypted before being stored.</p>
             <x-button slot="footer" class="submit" label="Save" command="save" x-attr:disabled="state.busy"></x-button>
@@ -118,10 +128,23 @@ export default {
             <p>Create a passkey that can unwrap this vault's data encryption key.</p>
             <x-datafields>
                 <x-datafield type="text" label="Passkey label" required autofocus x-model="state.passkeyLabel"></x-datafield>
+                <x-datafield type="textarea" label="Description" x-model="state.description"></x-datafield>
                 <x-datafield type="password" label="Master password" autocomplete="current-password" required x-model="state.password"></x-datafield>
             </x-datafields>
-            <p class="hint">The master password reauthenticates enrollment and remains the recovery method. The passkey must support WebAuthn PRF.</p>
+            <p class="hint">The master password reauthenticates enrollment and remains the recovery method. The passkey must support WebAuthn PRF. The description is plaintext local metadata; do not put secrets in it.</p>
             <x-button slot="footer" class="submit" label="Add passkey" command="enrollPasskey" x-attr:disabled="state.busy"></x-button>
+            <x-button slot="cancel" class="cancel" label="Cancel" command="cancel"></x-button>
+        </x-form>
+
+        <!-- Edit passkey dialog -->
+        <x-form x-if="state.mode == 'edit-passkey' && state.ready" command="savePasskey">
+            <x-datafields>
+                <x-datafield type="text" label="Passkey label" readonly x-model="state.passkeyLabel"></x-datafield>
+                <x-datafield type="textarea" label="Description" autofocus x-model="state.description"></x-datafield>
+                <x-datafield type="text" label="Created" readonly x-model="state.createdDisplay"></x-datafield>
+            </x-datafields>
+            <p class="hint">Passkey descriptions are stored as plaintext local metadata. Do not put secrets in this field.</p>
+            <x-button slot="footer" class="submit" label="Save" command="savePasskey" x-attr:disabled="state.busy"></x-button>
             <x-button slot="cancel" class="cancel" label="Cancel" command="cancel"></x-button>
         </x-form>
     `,
@@ -137,7 +160,11 @@ export default {
         password: "",
         confirmPassword: "",
         passkeyLabel: "",
+        passkeyId: "",
         secretId: "",
+        description: "",
+        createdAt: null,
+        createdDisplay: "",
         valueType: "text",
         editorValue: "",
         rememberMinutes: 0,
@@ -149,22 +176,30 @@ export default {
         ]
     },
 
-    controller({state, page, secrets, dialog, bus, events, config}) {
+    controller({state, page, secrets, dialog, bus, events}) {
         let alive = true;
         const clear = () => {
             state.password = "";
             state.confirmPassword = "";
             state.passkeyLabel = "";
+            state.description = "";
+            state.createdAt = null;
+            state.createdDisplay = "";
             state.editorValue = "";
         };
         const message = error => error?.message || "The operation failed.";
+        const formatDate = value => {
+            if (!value) return "Unknown";
+            const date = new Date(value);
+            return Number.isNaN(date.getTime()) ? "Unknown" : date.toLocaleDateString();
+        };
+        const displayInfo = item => ({...item, createdDisplay:formatDate(item.createdAt)});
 
         return {
             async load() {
                 events.on(bus, "secrets:status-changed", "onStatusChanged");
-                const policy = config?.xshell?.services?.secrets?.options || {};
-                const maximum = policy.maxRememberMinutes ?? 0;
-                const fallback = policy.rememberMinutes ?? 0;
+                const maximum = secrets.maxRememberMinutes;
+                const fallback = secrets.rememberMinutes;
                 state.rememberMinutes = fallback;
                 if (maximum > 0) {
                     const minutes = [...new Set([0, 15, 60, fallback].filter(value => value >= 0 && value <= maximum))].sort((left, right) => left - right);
@@ -184,11 +219,33 @@ export default {
                 if (state.mode == "edit") {
                     state.busy = true;
                     try {
-                        const value = await secrets.get(state.secretId);
+                        const [value, info] = await Promise.all([secrets.get(state.secretId), secrets.getInfo(state.secretId)]);
                         if (!alive) return;
-                        if (value === undefined) throw new Error("Secret not found.");
+                        if (value === undefined || !info) throw new Error("Secret not found.");
                         state.valueType = typeof value === "string" ? "text" : "json";
                         state.editorValue = typeof value === "string" ? value : JSON.stringify(value, null, 2);
+                        state.description = info.description;
+                        state.createdAt = info.createdAt;
+                        state.createdDisplay = formatDate(info.createdAt);
+                        state.status = secrets.status;
+                        state.ready = true;
+                    } catch (error) {
+                        if (alive) state.error = message(error);
+                    } finally {
+                        if (alive) state.busy = false;
+                    }
+                }
+
+                if (state.mode == "edit-passkey") {
+                    state.busy = true;
+                    try {
+                        const passkey = (await secrets.listPasskeys()).find(item => item.id === state.passkeyId);
+                        if (!alive) return;
+                        if (!passkey) throw new Error("Passkey not found.");
+                        state.passkeyLabel = passkey.label;
+                        state.description = passkey.description;
+                        state.createdAt = passkey.createdAt;
+                        state.createdDisplay = formatDate(passkey.createdAt);
                         state.status = secrets.status;
                         state.ready = true;
                     } catch (error) {
@@ -225,8 +282,8 @@ export default {
                     if (!alive) return;
                     state.status = secrets.status;
                     state.sessionExpiresAt = secrets.sessionExpiresAt;
-                    state.passkeys = state.status == "uninitialized" ? [] : await secrets.listPasskeys();
-                    state.items = state.status == "unlocked" ? await secrets.list() : [];
+                    state.passkeys = state.status == "uninitialized" ? [] : (await secrets.listPasskeys()).map(displayInfo);
+                    state.items = state.status == "unlocked" ? (await secrets.list()).map(displayInfo) : [];
                     state.error = "";
                 } catch (error) {
                     if (!alive) return;
@@ -330,9 +387,28 @@ export default {
                 }
             },
 
+            async openPasskeyEditor(id) {
+                if (secrets.status != "unlocked") return void (state.error = "Unlock the vault first.");
+                try {
+                    const result = await dialog.open({
+                        href: "page:x:/pages/secrets.js",
+                        title: "Edit passkey",
+                        context: {mode:"edit-passkey", passkeyId:id}
+                    });
+                    if (alive && result?.saved) await this.refresh();
+                } catch (error) {
+                    if (alive) state.error = message(error);
+                }
+            },
+
             async edit({event}) {
                 const id = event.currentTarget.dataset.id;
                 if (id) await this.openEditor("edit", id);
+            },
+
+            async editPasskey({event}) {
+                const id = event.currentTarget.dataset.id;
+                if (id) await this.openPasskeyEditor(id);
             },
 
             async save() {
@@ -353,7 +429,7 @@ export default {
                         const items = await secrets.list();
                         if (items.some(item => item.id === id)) throw new Error("A secret with this ID already exists.");
                     }
-                    await secrets.set(id, value);
+                    await secrets.set(id, value, {description:state.description});
                     if (!alive) return;
                     clear();
                     await page.close({saved:true});
@@ -392,7 +468,7 @@ export default {
                 state.error = "";
                 state.busy = true;
                 try {
-                    await secrets.addPasskey({label, password:state.password});
+                    await secrets.addPasskey({label, password:state.password, description:state.description});
                     if (!alive) return;
                     clear();
                     await page.close({saved:true});
@@ -400,6 +476,22 @@ export default {
                     if (alive) state.error = message(error);
                 } finally {
                     clear();
+                    if (alive) state.busy = false;
+                }
+            },
+
+            async savePasskey() {
+                if (state.busy || secrets.status != "unlocked") return;
+                state.error = "";
+                state.busy = true;
+                try {
+                    await secrets.updatePasskey(state.passkeyId, {description:state.description});
+                    if (!alive) return;
+                    clear();
+                    await page.close({saved:true});
+                } catch (error) {
+                    if (alive) state.error = message(error);
+                } finally {
                     if (alive) state.busy = false;
                 }
             },

@@ -37,6 +37,19 @@ function checkLabel(label) {
     return label.trim();
 }
 
+function checkDescription(description) {
+    if (typeof description !== "string") throw new TypeError("Description must be a string.");
+    return description;
+}
+
+function secretDescription(options) {
+    if (options !== undefined && (!options || typeof options !== "object" || Array.isArray(options))) {
+        throw new TypeError("Secret metadata must be an object.");
+    }
+    const provided = options !== undefined && Object.hasOwn(options, "description");
+    return { provided, value: provided ? checkDescription(options.description) : "" };
+}
+
 function checkRememberMinutes(value, fallback, maximum) {
     const minutes = value === undefined ? fallback : value;
     if (!Number.isSafeInteger(minutes) || minutes < 0) throw new TypeError("Remembered session duration must be a nonnegative integer.");
@@ -208,6 +221,7 @@ function validateMetadata(metadata) {
 function validatePasskey(record) {
     if (!record || record.version !== FORMAT_VERSION || typeof record.id !== "string" || !record.id ||
         typeof record.label !== "string" || !record.label || typeof record.createdAt !== "string" ||
+        (record.description !== undefined && typeof record.description !== "string") ||
         !bytes(record.prfSalt, 32) || !bytes(record.wrappedDek?.iv, 12) || !bytes(record.wrappedDek?.ciphertext, 48)) {
         throw new Error("A passkey registration is damaged.");
     }
@@ -260,7 +274,7 @@ export default class Secrets {
     #epoch = 0;
     #writeTransactions = new Set();
 
-    constructor({ bus, config } = {}, options = config?.xshell?.services?.secrets?.options ?? {}) {
+    constructor({ bus, config } = {}, options) {
         this.#bus = bus;
         this.#policy = sessionPolicy(options);
         const epoch = this.#epoch;
@@ -274,6 +288,8 @@ export default class Secrets {
     }
 
     get status() { return this.#status; }
+    get rememberMinutes() { return this.#policy.rememberMinutes; }
+    get maxRememberMinutes() { return this.#policy.maxRememberMinutes; }
     get sessionExpiresAt() { return this.#sessionExpiresAt; }
 
     async ready() {
@@ -441,10 +457,11 @@ export default class Secrets {
     }
 
     async list() {
-        const { epoch } = await this.#session();
-        const ids = await this.#request(SECRET_STORE, "readonly", store => store.getAllKeys());
+        const { key, epoch } = await this.#session();
+        const records = await this.#request(SECRET_STORE, "readonly", store => store.getAll());
         this.#assertCurrent(epoch);
-        return ids.sort().map(id => ({ id }));
+        return (await Promise.all(records.map(record => this.#secretInfo(record, key, epoch))))
+            .sort((left, right) => left.id.localeCompare(right.id));
     }
 
     async get(id) {
@@ -467,8 +484,17 @@ export default class Secrets {
         }
     }
 
-    async set(id, value) {
+    async getInfo(id) {
         checkId(id);
+        const { key, epoch } = await this.#session();
+        const record = await this.#request(SECRET_STORE, "readonly", store => store.get(id));
+        this.#assertCurrent(epoch);
+        return record ? this.#secretInfo(record, key, epoch) : undefined;
+    }
+
+    async set(id, value, options) {
+        checkId(id);
+        const description = secretDescription(options);
         const { key, epoch } = await this.#session();
         let json;
         try {
@@ -478,14 +504,31 @@ export default class Secrets {
         }
         if (typeof json !== "string") throw new TypeError("Secret value must be JSON-serializable.");
         const plaintext = ENCODER.encode(json);
+        const descriptionPlaintext = ENCODER.encode(description.value);
         let encrypted;
+        let encryptedDescription;
         try {
-            encrypted = await encrypt(key, plaintext, `secret:${id}`);
+            [encrypted, encryptedDescription] = await Promise.all([
+                encrypt(key, plaintext, `secret:${id}`),
+                encrypt(key, descriptionPlaintext, `secret-description:${id}`)
+            ]);
         } finally {
             plaintext.fill(0);
+            descriptionPlaintext.fill(0);
         }
         this.#assertCurrent(epoch);
-        await this.#request(SECRET_STORE, "readwrite", store => store.put({ id, version: FORMAT_VERSION, ...encrypted }));
+        await this.#updateRecord(SECRET_STORE, id, existing => {
+            this.#assertCurrent(epoch);
+            if (existing && existing.version !== FORMAT_VERSION) throw new Error("Secret uses an unsupported encrypted format.");
+            const record = { id, version: FORMAT_VERSION, ...encrypted };
+            if (existing) {
+                if (Object.hasOwn(existing, "createdAt")) record.createdAt = existing.createdAt;
+            } else {
+                record.createdAt = new Date().toISOString();
+            }
+            record.description = description.provided ? encryptedDescription : existing?.description ?? encryptedDescription;
+            return record;
+        });
         this.#assertCurrent(epoch);
     }
 
@@ -499,6 +542,7 @@ export default class Secrets {
 
     async addPasskey(options) {
         const label = checkLabel(options?.label);
+        const description = options?.description === undefined ? "" : checkDescription(options.description);
         const password = checkPassword(options);
         const { epoch } = await this.#session();
         this.#requirePasskeys(true);
@@ -583,13 +627,14 @@ export default class Secrets {
             id,
             version: FORMAT_VERSION,
             label,
+            description,
             prfSalt,
             wrappedDek,
             createdAt: new Date().toISOString()
         };
         await this.#request(PASSKEY_STORE, "readwrite", store => store.add(record));
         this.#assertCurrent(epoch);
-        return { id, label, createdAt: record.createdAt };
+        return { id, label, description, createdAt: record.createdAt };
     }
 
     async listPasskeys() {
@@ -598,8 +643,25 @@ export default class Secrets {
         validateMetadata(this.#metadata);
         const records = await this.#request(PASSKEY_STORE, "readonly", store => store.getAll());
         return records.map(validatePasskey)
-            .map(({ id, label, createdAt }) => ({ id, label, createdAt }))
+            .map(({ id, label, description = "", createdAt }) => ({ id, label, description, createdAt }))
             .sort((left, right) => left.createdAt.localeCompare(right.createdAt));
+    }
+
+    async updatePasskey(id, options) {
+        checkId(id, "Passkey");
+        if (!options || typeof options !== "object" || Array.isArray(options) || !Object.hasOwn(options, "description")) {
+            throw new TypeError("Passkey metadata with a description is required.");
+        }
+        const description = checkDescription(options.description);
+        const { epoch } = await this.#session();
+        this.#assertCurrent(epoch);
+        await this.#updateRecord(PASSKEY_STORE, id, existing => {
+            this.#assertCurrent(epoch);
+            if (!existing) throw new Error("The selected passkey is not registered in this local vault.");
+            validatePasskey(existing);
+            return { ...existing, description };
+        });
+        this.#assertCurrent(epoch);
     }
 
     async removePasskey(id) {
@@ -608,6 +670,64 @@ export default class Secrets {
         this.#assertCurrent(epoch);
         await this.#request(PASSKEY_STORE, "readwrite", store => store.delete(id));
         this.#assertCurrent(epoch);
+    }
+
+    async #secretInfo(record, key, epoch) {
+        if (record.version !== FORMAT_VERSION) throw new Error("Secret uses an unsupported encrypted format.");
+        let description = "";
+        let plaintext;
+        if (record.description !== undefined) {
+            try {
+                plaintext = await decrypt(key, record.description, `secret-description:${record.id}`);
+                this.#assertCurrent(epoch);
+                description = DECODER.decode(plaintext);
+            } catch (error) {
+                if (epoch !== this.#epoch) throw error;
+                throw new Error("Secret description cannot be decrypted or is damaged.", { cause: error });
+            } finally {
+                plaintext?.fill(0);
+            }
+        }
+        return {
+            id: record.id,
+            description,
+            createdAt: typeof record.createdAt === "string" ? record.createdAt : null
+        };
+    }
+
+    #updateRecord(name, id, update) {
+        return new Promise((resolve, reject) => {
+            let transaction;
+            let failure;
+            try {
+                transaction = this.#database.transaction(name, "readwrite");
+                this.#writeTransactions.add(transaction);
+                const cleanup = () => this.#writeTransactions.delete(transaction);
+                transaction.oncomplete = () => { cleanup(); resolve(); };
+                transaction.onabort = () => { cleanup(); reject(failure || transaction.error || new Error("IndexedDB transaction aborted.")); };
+                transaction.onerror = () => { cleanup(); reject(failure || transaction.error || new Error("IndexedDB transaction failed.")); };
+                const store = transaction.objectStore(name);
+                const request = store.get(id);
+                request.onsuccess = () => {
+                    try {
+                        const result = store.put(update(request.result));
+                        result.onerror = () => {
+                            try { transaction.abort(); } catch { /* The transaction might already be inactive. */ }
+                        };
+                    } catch (error) {
+                        failure = error;
+                        try { transaction.abort(); } catch { /* The transaction might already be inactive. */ }
+                    }
+                };
+                request.onerror = () => {
+                    try { transaction.abort(); } catch { /* The transaction might already be inactive. */ }
+                };
+            } catch (error) {
+                if (transaction) this.#writeTransactions.delete(transaction);
+                try { transaction?.abort(); } catch { /* The transaction might already be inactive. */ }
+                reject(error);
+            }
+        });
     }
 
     async #activate(rawDek, metadata, rememberMinutes, epoch, operation) {

@@ -178,6 +178,10 @@ function secretsConfig(rememberMinutes = 0, maxRememberMinutes = 0) {
     return { xshell: { services: { secrets: { options: { rememberMinutes, maxRememberMinutes } } } } };
 }
 
+function createSecrets(config, dependencies = { config }) {
+    return new Secrets(dependencies, config?.xshell?.services?.secrets?.options);
+}
+
 function installClock(initial) {
     const NativeDate = globalThis.Date;
     let now = initial;
@@ -300,14 +304,19 @@ test("Secrets V2 initializes a random-DEK vault and preserves JSON CRUD across p
 
     await secrets.set("text", "sensitive value");
     await secrets.set("structured", { enabled: true, values: [1, "two", null] });
-    assert.deepEqual(await secrets.list(), [{ id: "structured" }, { id: "text" }]);
+    const listed = await secrets.list();
+    assert.deepEqual(listed.map(item => ({ id:item.id, description:item.description })), [
+        { id: "structured", description: "" },
+        { id: "text", description: "" }
+    ]);
+    assert.ok(listed.every(item => typeof item.createdAt === "string"));
     assert.equal(await secrets.get("text"), "sensitive value");
     assert.deepEqual(await secrets.get("structured"), { enabled: true, values: [1, "two", null] });
     assert.equal(await secrets.get("missing"), undefined);
 
     const storedSecrets = database.records("secrets");
     assert.equal(storedSecrets.length, 2);
-    assert.ok(storedSecrets.every(record => record.version === 2 && record.iv.byteLength === 12));
+    assert.ok(storedSecrets.every(record => record.version === 2 && record.iv.byteLength === 12 && record.description.iv.byteLength === 12));
     assert.equal(storedSecrets.some(record => JSON.stringify(record).includes("sensitive value")), false);
     assert.notDeepEqual([...storedSecrets[0].iv], [...storedSecrets[1].iv]);
 
@@ -326,6 +335,47 @@ test("Secrets V2 initializes a random-DEK vault and preserves JSON CRUD across p
     assert.ok(events.some(event => event.name === "secrets:status-changed" && event.detail.status === "unlocked"));
 });
 
+test("secret descriptions are encrypted and creation metadata survives updates and legacy records", async () => {
+    const database = createIndexedDB();
+    installEnvironment(database);
+    const secrets = new Secrets();
+    await secrets.ready();
+    await secrets.initialize({ password: "master password" });
+
+    await secrets.set("api-token", "first", { description: "Production API token" });
+    const originalInfo = await secrets.getInfo("api-token");
+    const originalRecord = database.records("secrets")[0];
+    assert.equal(originalInfo.description, "Production API token");
+    assert.equal(typeof originalInfo.createdAt, "string");
+    assert.equal(JSON.stringify(originalRecord).includes("Production API token"), false);
+    assert.deepEqual(Object.keys(originalRecord).sort(), ["ciphertext", "createdAt", "description", "id", "iv", "version"]);
+
+    await secrets.set("api-token", "second");
+    const preservedRecord = database.records("secrets")[0];
+    assert.deepEqual(preservedRecord.description, originalRecord.description, "omitted descriptions are not re-encrypted");
+    assert.equal((await secrets.getInfo("api-token")).createdAt, originalInfo.createdAt);
+    assert.equal((await secrets.getInfo("api-token")).description, "Production API token");
+
+    await Promise.all([
+        secrets.set("api-token", "third", { description: "Rotated token" }),
+        secrets.set("api-token", "fourth")
+    ]);
+    assert.equal((await secrets.getInfo("api-token")).createdAt, originalInfo.createdAt);
+
+    await secrets.set("api-token", "fifth", { description: "" });
+    assert.equal((await secrets.getInfo("api-token")).description, "");
+    assert.equal((await secrets.getInfo("missing")), undefined);
+
+    const legacy = database.records("secrets")[0];
+    delete legacy.createdAt;
+    delete legacy.description;
+    database.putRecord("secrets", legacy);
+    assert.deepEqual(await secrets.getInfo("api-token"), { id:"api-token", description:"", createdAt:null });
+    assert.deepEqual(await secrets.list(), [{ id:"api-token", description:"", createdAt:null }]);
+    await secrets.set("api-token", "legacy update");
+    assert.deepEqual(await secrets.getInfo("api-token"), { id:"api-token", description:"", createdAt:null });
+});
+
 test("multiple PRF passkeys wrap the same DEK without re-encrypting secrets", async () => {
     const database = createIndexedDB();
     const webauthn = installEnvironment(database, createWebAuthn());
@@ -335,13 +385,13 @@ test("multiple PRF passkeys wrap the same DEK without re-encrypting secrets", as
     await secrets.set("token", { value: "unchanged" });
     const encryptedSecret = database.records("secrets")[0];
 
-    const laptop = await secrets.addPasskey({ label: "Laptop", password: "master password" });
+    const laptop = await secrets.addPasskey({ label: "Laptop", password: "master password", description: "Work computer" });
     const phone = await secrets.addPasskey({ label: "Phone", password: "master password" });
     assert.equal(webauthn.calls.create.length, 2);
     assert.equal(webauthn.calls.get.length, 2, "registration without PRF output must obtain an assertion");
     assert.deepEqual(await secrets.listPasskeys(), [
-        { id: laptop.id, label: "Laptop", createdAt: laptop.createdAt },
-        { id: phone.id, label: "Phone", createdAt: phone.createdAt }
+        { id: laptop.id, label: "Laptop", description: "Work computer", createdAt: laptop.createdAt },
+        { id: phone.id, label: "Phone", description: "", createdAt: phone.createdAt }
     ]);
     assert.deepEqual(database.records("secrets")[0], encryptedSecret);
 
@@ -350,7 +400,17 @@ test("multiple PRF passkeys wrap the same DEK without re-encrypting secrets", as
     assert.notDeepEqual([...registrations[0].prfSalt], [...registrations[1].prfSalt]);
     assert.notDeepEqual([...new Uint8Array(registrations[0].wrappedDek.ciphertext)],
         [...new Uint8Array(registrations[1].wrappedDek.ciphertext)]);
-    assert.deepEqual(Object.keys(registrations[0]).sort(), ["createdAt", "id", "label", "prfSalt", "version", "wrappedDek"]);
+    assert.deepEqual(Object.keys(registrations[0]).sort(), ["createdAt", "description", "id", "label", "prfSalt", "version", "wrappedDek"]);
+
+    const laptopRegistration = registrations[0];
+    await secrets.updatePasskey(laptop.id, { description: "Primary workstation" });
+    const updatedLaptop = database.records("passkeys").find(item => item.id === laptop.id);
+    assert.deepEqual(updatedLaptop, { ...laptopRegistration, description:"Primary workstation" });
+    assert.equal((await secrets.listPasskeys()).find(item => item.id === laptop.id).description, "Primary workstation");
+    const legacyPhone = database.records("passkeys").find(item => item.id === phone.id);
+    delete legacyPhone.description;
+    database.putRecord("passkeys", legacyPhone);
+    assert.equal((await secrets.listPasskeys()).find(item => item.id === phone.id).description, "");
 
     secrets.lock();
     await secrets.unlockWithPasskey({ id: laptop.id });
@@ -511,12 +571,12 @@ test("remembered-session policy defaults to memory-only and validates durations"
     assert.equal(sessionStorage.value("xshell-secrets:session:v1"), null);
     assert.deepEqual(database.records("sessions"), []);
 
-    assert.throws(() => new Secrets({ config: secretsConfig(15, 0) }), /cannot exceed/u);
-    assert.throws(() => new Secrets({ config: secretsConfig(-1, 60) }), /integer from 0/u);
-    assert.throws(() => new Secrets({ config: secretsConfig(0, 1.5) }), /integer from 0/u);
-    assert.throws(() => new Secrets({ config: secretsConfig(0, 1441) }), /integer from 0/u);
+    assert.throws(() => createSecrets(secretsConfig(15, 0)), /cannot exceed/u);
+    assert.throws(() => createSecrets(secretsConfig(-1, 60)), /integer from 0/u);
+    assert.throws(() => createSecrets(secretsConfig(0, 1.5)), /integer from 0/u);
+    assert.throws(() => createSecrets(secretsConfig(0, 1441)), /integer from 0/u);
 
-    const configurable = new Secrets({ config: secretsConfig(15, 60) });
+    const configurable = createSecrets(secretsConfig(15, 60));
     await configurable.ready();
     await assert.rejects(configurable.unlock({ password: "master password", rememberMinutes: -1 }), /nonnegative integer/u);
     await assert.rejects(configurable.unlock({ password: "master password", rememberMinutes: 1.5 }), /nonnegative integer/u);
@@ -528,12 +588,12 @@ test("password unlock persists a non-extractable session key and restores withou
     const database = createIndexedDB();
     const environment = installEnvironment(database);
     const config = secretsConfig(15, 60);
-    const secrets = new Secrets({ config });
+    const secrets = createSecrets(config);
     await secrets.ready();
     await secrets.initialize({ password: "master password" });
     await secrets.set("token", "remembered");
     secrets.lock();
-    const waiting = new Secrets({ config });
+    const waiting = createSecrets(config);
     assert.equal(await waiting.ready(), "locked");
     await secrets.unlock({ password: "master password" });
 
@@ -563,7 +623,7 @@ test("password unlock persists a non-extractable session key and restores withou
     });
     setGlobal("crypto", { subtle, getRandomValues(value) { return nativeCrypto.getRandomValues(value); } });
     setGlobal("navigator", { credentials: { async get() { throw new Error("WebAuthn must not run during restoration."); } } });
-    const restored = new Secrets({ config });
+    const restored = createSecrets(config);
     assert.equal(await restored.ready(), "unlocked");
     assert.equal(await restored.get("token"), "remembered");
     assert.deepEqual(await restored.restoreSession(), {
@@ -578,7 +638,7 @@ test("passkey unlock can create a remembered session", async () => {
     const database = createIndexedDB();
     const webauthn = installEnvironment(database, createWebAuthn());
     const config = secretsConfig(0, 60);
-    const secrets = new Secrets({ config });
+    const secrets = createSecrets(config);
     await secrets.ready();
     await secrets.initialize({ password: "master password" });
     const registration = await secrets.addPasskey({ label: "Laptop", password: "master password" });
@@ -586,7 +646,7 @@ test("passkey unlock can create a remembered session", async () => {
     await secrets.unlockWithPasskey({ id: registration.id, rememberMinutes: 60 });
     assert.match(secrets.sessionExpiresAt, /Z$/u);
     assert.equal(webauthn.calls.get.length, 2);
-    const restored = new Secrets({ config });
+    const restored = createSecrets(config);
     assert.equal(await restored.ready(), "unlocked");
     assert.equal(webauthn.calls.get.length, 2, "restoration must not invoke WebAuthn");
 });
@@ -596,7 +656,7 @@ test("remembered sessions retain an absolute expiration across reloads and expir
     const database = createIndexedDB();
     const environment = installEnvironment(database);
     const config = secretsConfig(0, 60);
-    const secrets = new Secrets({ config });
+    const secrets = createSecrets(config);
     await secrets.ready();
     await secrets.initialize({ password: "master password" });
     await secrets.set("token", "value");
@@ -605,7 +665,7 @@ test("remembered sessions retain an absolute expiration across reloads and expir
     const expiration = secrets.sessionExpiresAt;
 
     clock.advance(14 * 60_000);
-    const restored = new Secrets({ config });
+    const restored = createSecrets(config);
     assert.equal(await restored.ready(), "unlocked");
     assert.equal(restored.sessionExpiresAt, expiration);
     assert.equal(await restored.get("token"), "value");
@@ -615,7 +675,7 @@ test("remembered sessions retain an absolute expiration across reloads and expir
     assert.equal(restored.status, "locked");
     assert.equal(environment.sessionStorage.value("xshell-secrets:session:v1"), null);
     await assert.rejects(restored.get("token"), /locked/u);
-    const afterExpiration = new Secrets({ config });
+    const afterExpiration = createSecrets(config);
     assert.equal(await afterExpiration.ready(), "locked");
 });
 
@@ -623,7 +683,7 @@ test("explicit lock revokes remembered access and a memory-only unlock removes s
     const database = createIndexedDB();
     const environment = installEnvironment(database);
     const config = secretsConfig(0, 60);
-    const secrets = new Secrets({ config });
+    const secrets = createSecrets(config);
     await secrets.ready();
     await secrets.initialize({ password: "master password" });
     secrets.lock();
@@ -635,21 +695,21 @@ test("explicit lock revokes remembered access and a memory-only unlock removes s
     assert.equal(secrets.sessionExpiresAt, null);
     await new Promise(resolve => setImmediate(resolve));
     assert.deepEqual(database.records("sessions"), []);
-    assert.equal(await new Secrets({ config }).ready(), "locked");
+    assert.equal(await createSecrets(config).ready(), "locked");
 
     await secrets.unlock({ password: "master password", rememberMinutes: 15 });
     await secrets.unlock({ password: "master password", rememberMinutes: 0 });
     assert.equal(secrets.status, "unlocked");
     assert.equal(secrets.sessionExpiresAt, null);
     assert.equal(environment.sessionStorage.value("xshell-secrets:session:v1"), null);
-    assert.equal(await new Secrets({ config }).ready(), "locked");
+    assert.equal(await createSecrets(config).ready(), "locked");
 });
 
 test("remembering fails closed when session storage is unavailable or persistence is interrupted", async () => {
     const database = createIndexedDB();
     const environment = installEnvironment(database);
     const config = secretsConfig(0, 60);
-    const secrets = new Secrets({ config });
+    const secrets = createSecrets(config);
     await secrets.ready();
     await secrets.initialize({ password: "master password" });
     secrets.lock();
@@ -671,7 +731,7 @@ test("damaged remembered material, tampered metadata, and vault mismatches are d
         const database = createIndexedDB();
         const environment = installEnvironment(database);
         const config = secretsConfig(0, 60);
-        const secrets = new Secrets({ config });
+        const secrets = createSecrets(config);
         await secrets.ready();
         await secrets.initialize({ password: "master password" });
         secrets.lock();
@@ -683,7 +743,7 @@ test("damaged remembered material, tampered metadata, and vault mismatches are d
         const { database, environment, config } = await remembered();
         const record = JSON.parse(environment.sessionStorage.value("xshell-secrets:session:v1"));
         database.deleteRecord("sessions", record.sessionId);
-        assert.equal(await new Secrets({ config }).ready(), "locked");
+        assert.equal(await createSecrets(config).ready(), "locked");
         assert.equal(environment.sessionStorage.value("xshell-secrets:session:v1"), null);
     }
     {
@@ -691,36 +751,36 @@ test("damaged remembered material, tampered metadata, and vault mismatches are d
         const record = JSON.parse(environment.sessionStorage.value("xshell-secrets:session:v1"));
         record.wrappedDek.ciphertext = record.wrappedDek.ciphertext.slice(0, -2) + "aa";
         environment.sessionStorage.setItem("xshell-secrets:session:v1", JSON.stringify(record));
-        assert.equal(await new Secrets({ config }).ready(), "locked");
+        assert.equal(await createSecrets(config).ready(), "locked");
     }
     {
         const { environment, config } = await remembered();
         const record = JSON.parse(environment.sessionStorage.value("xshell-secrets:session:v1"));
         record.expiresAt = new Date(Date.parse(record.expiresAt) - 60_000).toISOString();
         environment.sessionStorage.setItem("xshell-secrets:session:v1", JSON.stringify(record));
-        assert.equal(await new Secrets({ config }).ready(), "locked");
+        assert.equal(await createSecrets(config).ready(), "locked");
     }
     {
         const { environment, config } = await remembered();
         const record = JSON.parse(environment.sessionStorage.value("xshell-secrets:session:v1"));
         record.vaultId = "different-vault";
         environment.sessionStorage.setItem("xshell-secrets:session:v1", JSON.stringify(record));
-        assert.equal(await new Secrets({ config }).ready(), "locked");
+        assert.equal(await createSecrets(config).ready(), "locked");
     }
 });
 
 test("restoration enforces a more restrictive application policy", async () => {
     const database = createIndexedDB();
     const environment = installEnvironment(database);
-    const secrets = new Secrets({ config: secretsConfig(0, 60) });
+    const secrets = createSecrets(secretsConfig(0, 60));
     await secrets.ready();
     await secrets.initialize({ password: "master password" });
     secrets.lock();
     await secrets.unlock({ password: "master password", rememberMinutes: 60 });
-    assert.equal(await new Secrets({ config: secretsConfig(0, 15) }).ready(), "locked");
+    assert.equal(await createSecrets(secretsConfig(0, 15)).ready(), "locked");
     assert.equal(environment.sessionStorage.value("xshell-secrets:session:v1"), null);
     await secrets.unlock({ password: "master password", rememberMinutes: 60 });
-    assert.equal(await new Secrets({ config: secretsConfig(0, 0) }).ready(), "locked");
+    assert.equal(await createSecrets(secretsConfig(0, 0)).ready(), "locked");
     assert.equal(environment.sessionStorage.value("xshell-secrets:session:v1"), null);
 });
 
@@ -728,7 +788,7 @@ test("locking during asynchronous restoration cannot reactivate the vault", asyn
     const database = createIndexedDB();
     installEnvironment(database);
     const config = secretsConfig(0, 60);
-    const secrets = new Secrets({ config });
+    const secrets = createSecrets(config);
     await secrets.ready();
     await secrets.initialize({ password: "master password" });
     secrets.lock();
@@ -747,7 +807,7 @@ test("locking during asynchronous restoration cannot reactivate the vault", asyn
         }
     });
     setGlobal("crypto", { subtle, getRandomValues(value) { return nativeCrypto.getRandomValues(value); } });
-    const restoring = new Secrets({ config });
+    const restoring = createSecrets(config);
     const ready = restoring.ready();
     await started;
     restoring.lock();
@@ -760,12 +820,12 @@ test("an explicit unlock supersedes a concurrent restoration attempt", async () 
     const database = createIndexedDB();
     installEnvironment(database);
     const config = secretsConfig(0, 60);
-    const source = new Secrets({ config });
+    const source = createSecrets(config);
     await source.ready();
     await source.initialize({ password: "master password" });
     source.lock();
 
-    const target = new Secrets({ config });
+    const target = createSecrets(config);
     assert.equal(await target.ready(), "locked");
     await source.unlock({ password: "master password", rememberMinutes: 60 });
 

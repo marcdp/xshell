@@ -6,7 +6,8 @@ The management Page is `x/pages/secrets.js`.
 
 Secrets V2 uses envelope encryption. Vault creation generates a random 256-bit data encryption key (DEK). The DEK, imported as a non-extractable
 AES-GCM key for the active session, encrypts every secret. Each secret record has a fresh random 96-bit IV, authenticated ciphertext containing the
-JSON value, and additional authenticated data that binds the ciphertext to its secret identifier and V2 purpose.
+JSON value, and additional authenticated data that binds the ciphertext to its secret identifier and V2 purpose. Its optional description is
+encrypted independently with a fresh IV and a distinct authenticated-data purpose.
 
 The master password does not encrypt individual secrets. PBKDF2-SHA-256 derives a key encryption key (KEK) from the password, a random 128-bit salt,
 and 600,000 iterations. That KEK authenticates and decrypts one password-wrapped copy of the random DEK. The password mechanism is always retained
@@ -27,25 +28,35 @@ await secrets.unlockWithPasskey({ id }); // id may be omitted for browser select
 await secrets.unlockWithPasskey({ id, rememberMinutes: 60 });
 const expiration = secrets.sessionExpiresAt; // ISO 8601 UTC string or null
 
-await secrets.set("api-token", "secret");
+await secrets.set("api-token", "secret", { description: "Production API token" });
 const value = await secrets.get("api-token");
+const info = await secrets.getInfo("api-token");
 const entries = await secrets.list();
 await secrets.delete("api-token");
 
-const registration = await secrets.addPasskey({ label: "Laptop", password });
+const registration = await secrets.addPasskey({ label: "Laptop", password, description: "Work computer" });
 const registrations = await secrets.listPasskeys();
+await secrets.updatePasskey(registration.id, { description: "Primary workstation" });
 await secrets.removePasskey(registration.id);
 secrets.lock();
 ```
 
-CRUD, passkey enrollment, and passkey removal require an unlocked vault. `listPasskeys()` is safe while locked and returns only `id`, `label`, and
-`createdAt`. `addPasskey()` intentionally requires the master password as well as an unlocked session. It reauthenticates the password-wrapped DEK
-and creates another wrapping without exporting the active non-extractable DEK. A wrong password fails before registration.
+Secret CRUD and metadata access, passkey enrollment, passkey metadata updates, and passkey removal require an unlocked vault. `get()` continues to
+return only the decrypted value. `getInfo()` returns `id`, decrypted `description`, and immutable `createdAt`; `list()` returns the same metadata for
+each secret without values. Descriptions default to an empty string. Passing `{ description }` to `set()` changes it, including clearing it with
+`""`; omitting the option preserves the current description. Existing records without metadata report an empty description and `createdAt: null`,
+and an update does not invent or change their creation time.
+
+`listPasskeys()` is safe while locked and returns only `id`, `label`, `description`, and `createdAt`. `addPasskey()` intentionally requires the
+master password as well as an unlocked session. It reauthenticates the password-wrapped DEK and creates another wrapping without exporting the
+active non-extractable DEK. A wrong password fails before registration. `updatePasskey()` changes only the description; it does not invoke WebAuthn
+or alter the label, creation time, PRF salt, or wrapped DEK.
 
 `lock()` immediately invalidates the session epoch, clears the active DEK reference, revokes the current tab's remembered material, and aborts
 active IndexedDB writes. Operations verify the epoch after asynchronous cryptographic, WebAuthn, and storage work so a late completion cannot
 restore an unlocked session. `secrets:status-changed` reports lifecycle changes and the current `sessionExpiresAt` on the Bus. Leaving the Secrets
-Page clears its password and decrypted editor state but does not lock the Service; Lock remains an explicit security action.
+Page clears its password, decrypted value, and secret-description editor state but does not lock the Service; Lock remains an explicit security
+action.
 
 ## Unlock-session policy
 
@@ -109,11 +120,12 @@ The database remains `xshell-secrets`. Database schema version 3 adds a fourth s
 | Store | Contents |
 | --- | --- |
 | `metadata` | Format version, non-sensitive vault/WebAuthn user identity, PBKDF2 parameters, and the password-wrapped DEK with its IV. |
-| `passkeys` | Base64url credential id, label, creation time, PRF salt, and that credential's wrapped DEK with its IV. |
-| `secrets` | Secret id, format version, fresh IV, and AES-GCM ciphertext of the JSON value. |
+| `passkeys` | Base64url credential id, label, plaintext description, creation time, PRF salt, and that credential's wrapped DEK with its IV. |
+| `secrets` | Secret id, format version, immutable creation time, and separate fresh-IV AES-GCM ciphertexts for the JSON value and description. |
 | `sessions` | Random session id and its structured-cloned, non-extractable AES-256-GCM session-wrapping `CryptoKey`. |
 
-Plaintext values, passwords, raw DEKs, derived KEKs, and PRF outputs are never persisted. For a remembered session, `sessionStorage` holds a version,
+Plaintext secret values, secret descriptions, passwords, raw DEKs, derived KEKs, and PRF outputs are never persisted. Passkey descriptions are
+ordinary plaintext local metadata and must not contain sensitive information. For a remembered session, `sessionStorage` holds a version,
 random session id, vault id, creation and absolute expiration times, and an AES-GCM-wrapped DEK with its fresh IV. The separate non-extractable
 session-wrapping key is structured-cloned into IndexedDB. Additional authenticated data binds the wrapping to its purpose, session id, vault id,
 creation time, and expiration. Persistence publishes tab metadata only after the key record and cleans up interrupted attempts.
