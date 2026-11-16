@@ -284,7 +284,7 @@ const example = entries.find(
             async openManager() {
                 try {
                     await navigation.navigate({
-                        href: "page:x:/pages/secrets.js",
+                        href: "page:x:/pages/secrets-manager.js",
                         page,
                         open: "stack"
                     });

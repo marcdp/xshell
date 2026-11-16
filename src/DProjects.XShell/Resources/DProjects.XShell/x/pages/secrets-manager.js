@@ -9,16 +9,13 @@ export default {
         }
     },
 
-    meta: {title:"Secrets", icon:"x-key"},
+    meta: {title:"Secrets vault", icon:"x-key"},
 
     style: `
         :scope {display:block;}
         .toolbar {display:inline-flex; align-items:center; gap:.5em; margin-bottom:1em;}
         .spacer {flex:1;}
-        .actions {display:flex; gap:.25em;}
-        .hint {color:var(--x-color-gray); margin-bottom:1em;}
-        .passkeys {margin-top:2em;}
-        .passkeys h2 {font-size:1.1em;}
+        .hint {color:var(--x-color-gray); margin-bottom:1em;}        
     `,
 
     template: `
@@ -26,69 +23,85 @@ export default {
         <x-notice x-if="state.busy" type="working" label="Working"></x-notice>
 
         <!-- Vault access -->
-        <div x-if="state.mode == 'manage' && state.ready && state.status != 'unlocked'">
-            <p x-text="state.status == 'uninitialized' ? 'Create a vault before managing secrets.' : 'Unlock the vault to manage secrets.'"></p>
-            <x-button x-attr:label="state.status == 'uninitialized' ? 'Create vault' : 'Unlock vault'" icon="x-key" command="openUnlock" x-attr:disabled="state.busy"></x-button>
-        </div>
 
         <!-- Secrets list -->
-        <x-tabs x-if="state.mode == 'manage' && state.ready && state.status == 'unlocked'">
+        <x-tabs x-if="state.mode == 'manage' && state.ready" use-hash>
        
-            <x-tab label="Secrets" class="secrets">
-                <div class="toolbar" slot="header-actions" x-if="state.mode == 'manage' && state.ready && state.status == 'unlocked'">
-                    <h2>Secrets</h2>
-                    <span class="spacer"></span>
-                    <x-button class="light" label="Add secret" icon="x-add" command="add" x-attr:disabled="state.busy"></x-button>
-                    <x-button class="light" label="Lock" icon="x-lock" command="lock" x-attr:disabled="state.busy"></x-button>
+            <x-tab label="Vault"  x-if="state.mode == 'manage' && state.ready" hash="">
+                <div x-if="state.status != 'unlocked'">
+                    <p x-text="state.status == 'uninitialized' ? 'Create a vault before managing secrets and passkeys.' : 'Unlock the vault to manage secrets and passkeys.'"></p>
+                    <x-button x-attr:label="state.status == 'uninitialized' ? 'Create vault' : 'Unlock vault'" icon="x-key" command="openUnlock" x-attr:disabled="state.busy"></x-button>
                 </div>
-                <p class="hint" x-if="state.sessionExpiresAt">Remembered session expires at <span x-text="state.sessionExpiresAt"></span>.</p>
-                <x-listview x-if="state.items.length > 0" view="details">
-                    <x-listview-head>
-                        <x-listview-column label="Secret"></x-listview-column>
-                        <x-listview-column label="Description"></x-listview-column>
-                        <x-listview-column label="Created"></x-listview-column>
-                        <x-listview-column label="Actions" slot="right" width="5em" style="text-align:right"></x-listview-column>
-                    </x-listview-head>
-                    <x-listview-body>
-                        <x-listview-item x-for="item in state.items" x-attr:key="item.id" x-attr:path="item.id" x-attr:label="item.id" icon="x-key">
-                            <span x-text="item.description || '—'"></span>
-                            <span x-text="item.createdDisplay"></span>
-                            <div class="actions" style="text-align:right">
-                                <x-button class="plain" icon="x-edit" tooltip="Edit" x-attr:data-id="item.id" x-on:click="edit" ></x-button>
-                                <x-button class="plain" icon="x-trash" tooltip="Delete" x-attr:data-id="item.id" x-on:click="remove"></x-button>
-                            </div>
-                        </x-listview-item>
-                    </x-listview-body>
-                </x-listview>
-                <x-empty x-if="state.items.length == 0" icon="x-key" label="No secrets" message="Add a secret to your vault."></x-empty>
+                <div x-if="state.status == 'unlocked'">
+                    <p>Vault unlocked <span x-text="state.sessionExpiresAt ? ' (session expires at ' + state.sessionExpiresAt + ')' : 'session not remembered'"></span></p>
+                    <div class="toolbar">
+                        <x-button label="Lock" icon="x-lock" command="lock" x-attr:disabled="state.busy"></x-button>
+                    </div>
+                </div>
             </x-tab>
 
-            <x-tab label="Passkeys" class="passkeys">
-                <div class="toolbar">
-                    <h2>Passkeys</h2>
-                    <span class="spacer"></span>
-                    <x-button class="light" label="Add passkey" icon="x-add" command="openPasskey" x-attr:disabled="state.busy || !state.passkeySupported"></x-button>
-                </div>
-                <p class="hint" x-if="!state.passkeySupported">Passkeys require WebAuthn on a secure origin. Password unlocking remains available.</p>
-                <x-listview x-if="state.passkeys.length > 0" view="details">
-                    <x-listview-head>
-                        <x-listview-column label="Passkey"></x-listview-column>
-                        <x-listview-column label="Description"></x-listview-column>
-                        <x-listview-column label="Created"></x-listview-column>
-                        <x-listview-column label="Actions" slot="right" width="5em" style="text-align:right"></x-listview-column>
-                    </x-listview-head>
-                    <x-listview-body>
-                        <x-listview-item x-for="passkey in state.passkeys" x-attr:key="passkey.id" x-attr:label="passkey.label" icon="x-key">
-                            <span x-text="passkey.description || '—'"></span>
-                            <span x-text="passkey.createdDisplay"></span>
-                            <div class="actions" style="text-align:right">
-                                <x-button class="plain" icon="x-edit" tooltip="Edit" x-attr:data-id="passkey.id" x-on:click="editPasskey"></x-button>
-                                <x-button class="plain" icon="x-trash" tooltip="Remove" x-attr:data-id="passkey.id" x-on:click="removePasskey"></x-button>
-                            </div>
-                        </x-listview-item>
-                    </x-listview-body>
-                </x-listview>
-                <x-empty x-if="state.passkeys.length == 0" icon="x-key" label="No passkeys" message="Password recovery remains available after passkeys are added."></x-empty>
+            <x-tab label="Secrets" class="secrets" x-if="state.mode == 'manage' && state.ready && state.status == 'unlocked'" hash="secrets">
+                <x-form>
+                    <p>
+                        Here you can add, edit, and delete your secrets as needed.
+                    </p>
+
+                    <x-empty x-if="state.items.length == 0" icon="x-key" label="No secrets" message="Add a secret to your vault."></x-empty>
+
+                    <x-listview x-if="state.items.length > 0" view="details">
+                        <x-listview-head>
+                            <x-listview-column label="Secret"></x-listview-column>
+                            <x-listview-column label="Description"></x-listview-column>
+                            <x-listview-column label="Created"></x-listview-column>
+                            <x-listview-column label="Actions" slot="right" width="5em" style="text-align:right"></x-listview-column>
+                        </x-listview-head>
+                        <x-listview-body>
+                            <x-listview-item x-for="item in state.items" x-attr:key="item.id" x-attr:path="item.id" x-attr:label="item.id" icon="x-key">
+                                <span x-text="item.description || '—'"></span>
+                                <span x-text="item.createdDisplay"></span>
+                                <div class="actions" style="text-align:right">
+                                    <x-button class="plain" icon="x-edit" tooltip="Edit" x-attr:data-id="item.id" x-on:click="edit" ></x-button>
+                                    <x-button class="plain" icon="x-trash" tooltip="Delete" x-attr:data-id="item.id" x-on:click="remove"></x-button>
+                                </div>
+                            </x-listview-item>
+                        </x-listview-body>
+                    </x-listview>
+                    <x-button slot="footer" label="Add secret" icon="x-add" command="add" x-attr:disabled="state.busy"></x-button>
+                </x-form>
+                
+            </x-tab>
+
+            <x-tab label="Passkeys" class="passkeys" x-if="state.mode == 'manage' && state.ready && state.status == 'unlocked'" hash="passkeys">
+                <x-form>
+                    <p>
+                        Here you can add, edit, and delete your passkeys as needed.
+                    </p>
+                    <p class="hint" x-if="!state.passkeySupported">Passkeys require WebAuthn on a secure origin. Password unlocking remains available.</p>
+
+                    <x-empty x-if="state.passkeys.length == 0" icon="x-key" label="No passkeys" message="Password recovery remains available after passkeys are added."></x-empty>
+
+                    <x-listview x-if="state.passkeys.length > 0" view="details">
+                        <x-listview-head>
+                            <x-listview-column label="Passkey"></x-listview-column>
+                            <x-listview-column label="Description"></x-listview-column>
+                            <x-listview-column label="Created"></x-listview-column>
+                            <x-listview-column label="Actions" slot="right" width="5em" style="text-align:right"></x-listview-column>
+                        </x-listview-head>
+                        <x-listview-body>
+                            <x-listview-item x-for="passkey in state.passkeys" x-attr:key="passkey.id" x-attr:label="passkey.label" icon="x-key">
+                                <span x-text="passkey.description || '—'"></span>
+                                <span x-text="passkey.createdDisplay"></span>
+                                <div class="actions" style="text-align:right">
+                                    <x-button class="plain" icon="x-edit" tooltip="Edit" x-attr:data-id="passkey.id" x-on:click="editPasskey"></x-button>
+                                    <x-button class="plain" icon="x-trash" tooltip="Remove" x-attr:data-id="passkey.id" x-on:click="removePasskey"></x-button>
+                                </div>
+                            </x-listview-item>
+                        </x-listview-body>
+                    </x-listview>
+
+                    <x-button slot="footer" label="Add passkey" icon="x-add" command="openPasskey" x-attr:disabled="state.busy || !state.passkeySupported"></x-button>
+                </x-form>   
+                
             </x-tab>
         </x-tabs>
 
@@ -111,11 +124,11 @@ export default {
         <x-form x-if="state.mode == 'add-passkey' && state.ready" command="enrollPasskey">
             <p>Create a passkey that can unwrap this vault's data encryption key.</p>
             <x-datafields>
-                <x-datafield type="text" label="Passkey label" required autofocus x-model="state.passkeyLabel"></x-datafield>
+                <x-datafield type="text" label="Label" required autofocus x-model="state.passkeyLabel"></x-datafield>
                 <x-datafield type="textarea" label="Description" x-model="state.description"></x-datafield>
-                <x-datafield type="password" label="Master password" autocomplete="current-password" required x-model="state.password"></x-datafield>
+                <x-datafield type="password" label="Master password" autocomplete="current-password" required x-model="state.password" placeholder="The master password reauthenticates enrollment and remains the recovery method"></x-datafield>
             </x-datafields>
-            <p class="hint">The master password reauthenticates enrollment and remains the recovery method. The passkey must support WebAuthn PRF. The description is plaintext local metadata; do not put secrets in it.</p>
+            <p class="hint">The master password reauthenticates enrollment and remains the recovery method. </p>
             <x-button slot="footer" class="submit" label="Add passkey" command="enrollPasskey" x-attr:disabled="state.busy"></x-button>
             <x-button slot="cancel" class="cancel" label="Cancel" command="cancel"></x-button>
         </x-form>
@@ -305,7 +318,7 @@ export default {
                 if (secrets.status != "unlocked") return void (state.error = "Unlock the vault first.");
                 try {
                     const result = await dialog.open({
-                        href: "page:x:/pages/secrets.js",
+                        href: "page:x:/pages/secrets-manager.js",
                         title: mode == "add" ? "Add secret" : "Edit secret",
                         context: {mode, secretId:id}
                     });
@@ -323,7 +336,7 @@ export default {
                 if (secrets.status != "unlocked") return void (state.error = "Unlock the vault first.");
                 try {
                     const result = await dialog.open({
-                        href: "page:x:/pages/secrets.js",
+                        href: "page:x:/pages/secrets-manager.js",
                         title: "Add passkey",
                         context: {mode:"add-passkey"}
                     });
@@ -337,7 +350,7 @@ export default {
                 if (secrets.status != "unlocked") return void (state.error = "Unlock the vault first.");
                 try {
                     const result = await dialog.open({
-                        href: "page:x:/pages/secrets.js",
+                        href: "page:x:/pages/secrets-manager.js",
                         title: "Edit passkey",
                         context: {mode:"edit-passkey", passkeyId:id}
                     });

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import SecretsPage from "../../src/DProjects.XShell/Resources/DProjects.XShell/x/pages/secrets.js";
+import SecretsPage from "../../src/DProjects.XShell/Resources/DProjects.XShell/x/pages/secrets-manager.js";
 
 function createPage({ rememberMinutes = 0, maxRememberMinutes = 0, mode = "manage", secretId = "", passkeyId = "" } = {}) {
     const state = structuredClone(SecretsPage.state);
