@@ -39,8 +39,12 @@ export default {
             <x-datafields>
                 <x-datafield x-if="state.credentials.length > 1" type="radios" label="Method" x-prop:domain="state.credentials" x-model="state.credential" required></x-datafield>
                 <x-datafield x-if="state.credential == 'password'" type="password" label="Master password" autocomplete="current-password" required autofocus x-model="state.password"></x-datafield>
-                <x-datafield type="select" label="Keep unlocked" x-prop:domain="state.rememberOptions" x-model="state.rememberMinutes" required></x-datafield>
             </x-datafields>
+            <x-details label="Advanced">
+                <x-datafields>
+                    <x-datafield type="select" label="Keep unlocked" x-prop:domain="state.rememberOptions" x-model="state.rememberMinutes" required></x-datafield>
+                </x-datafields>
+            </x-details>
             <x-button slot="footer" class="submit" label="Unlock" command="submit" x-attr:disabled="state.busy"></x-button>
             <x-button slot="cancel" class="cancel" label="Cancel" command="cancel" x-attr:disabled="state.busy"></x-button>
         </x-form>

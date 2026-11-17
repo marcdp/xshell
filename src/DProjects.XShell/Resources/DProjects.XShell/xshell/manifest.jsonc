@@ -65,6 +65,10 @@
                 "contract": "json-validator",
                 "implementation": "/services/json-validator.js"
             },
+            "preferences": {
+                "contract": "preferences",
+                "implementation": "/services/preferences.js"
+            },
             "secrets": {
                 "contract": "secrets",
                 "implementation": "/services/secrets.js",

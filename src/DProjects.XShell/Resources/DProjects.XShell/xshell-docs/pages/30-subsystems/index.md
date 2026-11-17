@@ -12,6 +12,7 @@ Implemented V0 runtime capabilities:
 - [Tasks](80-tasks.md) — Asynchronous execution, reporting, cancellation, ownership, and global visibility.
 - [Commands](90-commands.md) — Command resolution, argument validation, and Task-backed execution.
 - [Secrets](100-secrets.md) — Browser-local envelope encryption with password and passkey unlocking.
+- [Preferences](110-preferences.md) — Browser-local structured-clone settings persisted with IndexedDB.
 
 Authentication and identity are supplied by the optional `x-identity` module; they do not introduce an `xshell.identity` Core configuration section.
 

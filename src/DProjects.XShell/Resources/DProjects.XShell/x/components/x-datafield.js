@@ -172,6 +172,7 @@ export default {
 
         :host .input.radios div {}
         :host .input.radios x-icon {margin-right:.25em;}
+        :host .input.radios label {cursor:pointer;}
         :host .input.radios .description {display:block; font-size:var(--x-font-size-x-small); color:var(--x-datafield-color-placeholder);}
         
 

@@ -65,6 +65,7 @@ export default {
             padding-left:0;
             cursor: pointer;
             user-select: none;
+            font-weight:500;
         }
 
         :host([disabled]) .header { cursor: default; opacity: .6; }

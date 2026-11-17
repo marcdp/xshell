@@ -22,6 +22,7 @@
                 "shortcuts": [
                     {"label": "", "icon": "x-more-vert", "class": "menu", "children": [
                         {"label": "Home", "icon": "x-folder", "href": "app:/"},
+                        {"label": "Preferences", "href": "/pages/preferences.js"},
                         {"label": "Settings", "href": "/pages/settings.js", "embedded":true},
                         {"label": "About", "href": "/pages/about.js"}
                     ] }

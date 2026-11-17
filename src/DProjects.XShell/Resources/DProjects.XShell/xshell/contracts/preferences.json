@@ -1,0 +1,78 @@
+{
+  "$schema": "../../xshell/schemas/contract.schema.json",
+  "label": "Preferences",
+  "description": "Browser-local persistent named values stored directly through IndexedDB structured cloning.",
+  "types": {
+    "preferenceValue": {
+      "type": "any",
+      "description": "Any value supported by the browser's IndexedDB structured-clone implementation."
+    },
+    "preferenceMetadata": {
+      "type": "object",
+      "description": "Optional display metadata. Omitted fields preserve their current values during an update.",
+      "schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "label": { "type": "string", "description": "Human-readable label. Defaults to the preference name when the record is created." },
+          "description": { "type": "string", "description": "Human-readable description. Defaults to an empty string when the record is created." }
+        }
+      }
+    },
+    "preferenceRecords": {
+      "type": "array",
+      "description": "Preference records ordered by their unique names.",
+      "schema": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["id", "name", "label", "description", "createdAt", "modifiedAt", "revision", "value"],
+          "properties": {
+            "id": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+              "description": "Immutable UUID generated when the preference is created."
+            },
+            "name": { "type": "string", "minLength": 1, "pattern": "\\S", "description": "Unique, case-sensitive preference key." },
+            "label": { "type": "string" },
+            "description": { "type": "string" },
+            "createdAt": { "type": "string", "format": "date-time", "description": "Immutable creation timestamp in UTC." },
+            "modifiedAt": { "type": "string", "format": "date-time", "description": "Timestamp of the last successful write in UTC." },
+            "revision": { "type": "integer", "minimum": 1, "description": "Current revision, starting at one and incrementing on every successful update." },
+            "value": { "description": "Native structured-clone value. No JSON-only schema is applied." }
+          }
+        }
+      }
+    }
+  },
+  "methods": {
+    "set": {
+      "description": "Creates or atomically updates a preference. Updates preserve id, name, createdAt, and omitted metadata while replacing value and incrementing revision.",
+      "parameters": [
+        { "name": "key", "type": "string", "required": true, "schema": { "minLength": 1, "pattern": "\\S" } },
+        { "name": "value", "ref": "preferenceValue", "required": true },
+        { "name": "options", "ref": "preferenceMetadata", "required": false }
+      ],
+      "returns": { "type": "void" }
+    },
+    "get": {
+      "description": "Returns the stored value, or defaultValue only when no record exists. A stored undefined value remains distinguishable from absence.",
+      "parameters": [
+        { "name": "key", "type": "string", "required": true, "schema": { "minLength": 1, "pattern": "\\S" } },
+        { "name": "defaultValue", "ref": "preferenceValue", "required": false }
+      ],
+      "returns": { "ref": "preferenceValue" }
+    },
+    "delete": {
+      "description": "Deletes the preference with the supplied name when present.",
+      "parameters": [{ "name": "key", "type": "string", "required": true, "schema": { "minLength": 1, "pattern": "\\S" } }],
+      "returns": { "type": "void" }
+    },
+    "list": {
+      "description": "Lists full preference records in deterministic name order. A non-empty prefix is applied through the unique name index.",
+      "parameters": [{ "name": "keyPrefix", "type": "string", "required": false, "default": "" }],
+      "returns": { "ref": "preferenceRecords" }
+    }
+  }
+}

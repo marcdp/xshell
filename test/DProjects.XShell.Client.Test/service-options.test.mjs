@@ -4,6 +4,7 @@ import test from "node:test";
 import Services from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services.js";
 import Commands from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/commands.js";
 import JsonValidator from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/json-validator.js";
+import Preferences from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/preferences.js";
 import Secrets from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/secrets.js";
 import Tasks from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/tasks.js";
 import Temp from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/temp.js";
@@ -46,7 +47,7 @@ const timeoutSchema = {
 
 test("every repository-configured service implementation declares an optionsSchema object", () => {
     for (const implementation of [
-        Commands, JsonValidator, Secrets, Tasks, Temp,
+        Commands, JsonValidator, Preferences, Secrets, Tasks, Temp,
         Markdown, Theme, Toast,
         Principal, Session, SignIn,
         XVault
