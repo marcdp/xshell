@@ -1,3 +1,4 @@
+
 export default {
     contract: {
         description: "Manage browser-local preferences.",
@@ -11,44 +12,31 @@ export default {
 
     style: `
         :scope {display:block;}
-        .toolbar {display:flex; align-items:end; gap:.5em; margin-bottom:1em;}
-        .toolbar x-datafield {flex:1;}
         .hint {color:var(--x-color-gray);}
         .actions {text-align:right;}
     `,
 
     template: `
+        <p>Settings for managing browser-local preferences.</p>
+
         <x-notice x-if="state.error" type="error" label="Error" x-attr:message="state.error"></x-notice>
         <x-notice x-if="state.busy" type="working" label="Loading preferences"></x-notice>
 
-        <!-- Preferences list -->
-        <x-form x-if="state.mode == 'manage' && state.ready && !state.busy" command="refresh">
-            <div class="toolbar">
-                <x-datafield type="text" label="Key prefix" x-model="state.prefix" description="Leave empty to list every preference"></x-datafield>
-                <x-button label="Filter" command="refresh" x-attr:disabled="state.busy"></x-button>
-            </div>
-
-            <x-empty x-if="state.items.length == 0" icon="x-settings" label="No preferences" message="No preferences match this key prefix."></x-empty>
-
-            <x-listview x-if="state.items.length > 0" view="details">
+        <!-- Preferences list with live column searches -->
+        <x-form x-if="state.mode == 'manage' && state.ready" command="refresh">
+            <x-listview view="details">
                 <x-listview-head>
-                    <x-listview-column label="Label"></x-listview-column>
-                    <x-listview-column label="Name"></x-listview-column>
-                    <x-listview-column label="Value"></x-listview-column>
-                    <x-listview-column label="Description"></x-listview-column>
-                    <x-listview-column label="Revision"></x-listview-column>
-                    <x-listview-column label="Created"></x-listview-column>
-                    <x-listview-column label="Modified"></x-listview-column>
+                    <x-listview-column>
+                        <x-datafield type="search" x-model="state.queryName" placeholder="Name"></x-datafield>
+                    </x-listview-column>
+                    <x-listview-column>
+                        <x-datafield type="search" x-model="state.queryValue" placeholder="Value"></x-datafield>
+                    </x-listview-column>
                     <x-listview-column label="Actions" slot="right" width="5em"></x-listview-column>
                 </x-listview-head>
                 <x-listview-body>
-                    <x-listview-item x-for="item in state.items" x-attr:key="item.id" x-attr:path="item.id" x-attr:label="item.label" icon="x-settings">
-                        <span x-text="item.name"></span>
+                    <x-listview-item x-for="item in state.items" x-attr:key="item.id" x-attr:path="item.id" x-attr:label="item.name" icon="x-settings">
                         <span x-text="item.valueSummary"></span>
-                        <span x-text="item.description || '—'"></span>
-                        <span x-text="item.revision"></span>
-                        <span x-text="item.createdDisplay"></span>
-                        <span x-text="item.modifiedDisplay"></span>
                         <div class="actions">
                             <x-button class="plain" icon="x-edit" tooltip="Edit" x-attr:data-name="item.name" x-on:click="edit"></x-button>
                             <x-button class="plain" icon="x-trash" tooltip="Delete" x-attr:data-name="item.name" x-on:click="remove"></x-button>
@@ -56,6 +44,7 @@ export default {
                     </x-listview-item>
                 </x-listview-body>
             </x-listview>
+            <x-empty x-if="state.items.length == 0" icon="x-settings" label="No preferences" message="No preferences match the current search."></x-empty>
             <x-button slot="footer" label="Add preference" icon="x-add" command="add" x-attr:disabled="state.busy"></x-button>
         </x-form>
 
@@ -90,7 +79,9 @@ export default {
         ready: false,
         busy: false,
         error: "",
-        prefix: "",
+        queryName: "",
+        queryValue: "",
+        allItems: [],
         items: [],
         label: "",
         description: "",
@@ -107,8 +98,9 @@ export default {
         ]
     },
 
-    controller({state, page, preferences, dialog}) {
+    controller({state, page, preferences, dialog, events, bus}) {
         let alive = true;
+        let refreshRevision = 0;
         let originalValue;
 
         return {
@@ -178,9 +170,24 @@ export default {
                 state.editorValue = "";
             },
 
+            filter() {
+                // Filter cached display summaries immediately, without reopening IndexedDB on each keystroke.
+                const queryName = state.queryName.trim().toLowerCase();
+                const queryValue = state.queryValue.trim().toLowerCase();
+                state.items = state.allItems.filter(item =>
+                    (!queryName || item.name.toLowerCase().includes(queryName)) &&
+                    (!queryValue || item.valueSummary.toLowerCase().includes(queryValue))
+                );
+            },
+
             async load() {
                 // Load either the list or the selected record according to the Page context.
-                if (state.mode == "manage") return await this.refresh();
+                if (state.mode == "manage") {
+                    events.on(state, "change:queryName", "filter");
+                    events.on(state, "change:queryValue", "filter");
+                    events.on(bus, "preferences:changed", "refresh");
+                    return await this.refresh();
+                }
                 if (state.mode == "add") {
                     state.ready = true;
                     return;
@@ -213,17 +220,21 @@ export default {
             unload() {
                 // Ignore late asynchronous completions and release structured-clone values held by the editor.
                 alive = false;
+                refreshRevision++;
                 originalValue = undefined;
+                state.allItems = [];
                 state.items = [];
             },
 
             async refresh() {
-                // Apply the current prefix through the service and prepare display-only list records.
+                // Load all preferences once, project safe summaries, then apply the current live column filters.
+                if (!alive) return;
+                const revision = ++refreshRevision;
                 state.busy = true;
                 try {
-                    const records = await preferences.list(state.prefix);
-                    if (!alive) return;
-                    state.items = records.map(record => ({
+                    const records = await preferences.list();
+                    if (!alive || revision !== refreshRevision) return;
+                    state.allItems = records.map(record => ({
                         id: record.id,
                         name: record.name,
                         label: record.label,
@@ -233,14 +244,16 @@ export default {
                         modifiedDisplay: this.formatDate(record.modifiedAt),
                         valueSummary: this.summarizeValue(record.value)
                     }));
+                    this.filter();
                     state.error = "";
                 } catch (error) {
-                    if (alive) {
+                    if (alive && revision === refreshRevision) {
+                        state.allItems = [];
                         state.items = [];
                         state.error = this.message(error);
                     }
                 } finally {
-                    if (alive) {
+                    if (alive && revision === refreshRevision) {
                         state.ready = true;
                         state.busy = false;
                         page.invalidate();
@@ -251,12 +264,12 @@ export default {
             async openEditor(mode, name = "") {
                 // Open add and edit flows as ordinary XShell Page dialogs.
                 try {
-                    const result = await dialog.open({
+                    // The committed save emits a Bus event that refreshes the manager.
+                    await dialog.open({
                         href: "page:x:/pages/preferences.js",
                         title: mode == "add" ? "Add preference" : "Edit preference",
                         context: {mode, preferenceName:name}
                     });
-                    if (alive && result?.saved) await this.refresh();
                 } catch (error) {
                     if (alive) state.error = this.message(error);
                 }
@@ -308,7 +321,7 @@ export default {
             },
 
             async remove({event}) {
-                // Confirm destructive changes and refresh only after the delete transaction commits.
+                // Confirm destructive changes; the committed delete notifies the manager through the Bus.
                 if (state.busy) return;
                 const name = event.currentTarget.dataset.name;
                 if (!name) return;
@@ -318,7 +331,6 @@ export default {
                     state.busy = true;
                     state.error = "";
                     await preferences.delete(name);
-                    if (alive) await this.refresh();
                 } catch (error) {
                     if (alive) state.error = this.message(error);
                 } finally {

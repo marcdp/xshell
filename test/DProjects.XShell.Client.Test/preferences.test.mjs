@@ -36,6 +36,8 @@ function createIndexedDB() {
     let version = 0;
     let blockNextOpen = false;
     let failNextOpen = false;
+    let abortNextWrite = false;
+    let completedWrites = 0;
     const opens = [];
 
     function schemaStore(definition) {
@@ -124,8 +126,14 @@ function createIndexedDB() {
                             queueMicrotask(() => {
                                 completionQueued = false;
                                 if (finished || aborted || pending !== 0) return;
+                                if (mode === "readwrite" && abortNextWrite) {
+                                    abortNextWrite = false;
+                                    transaction.abort();
+                                    return;
+                                }
                                 finished = true;
                                 releaseWriteLock();
+                                if (mode === "readwrite") completedWrites++;
                                 transaction.oncomplete?.();
                             });
                         }
@@ -225,6 +233,8 @@ function createIndexedDB() {
         hasStore(name) { return stores.has(name); },
         index(name, indexName) { return stores.get(name)?.indexes.get(indexName); },
         failPut(name = "preferences") { stores.get(name).failNextPut = true; },
+        abortWrite() { abortNextWrite = true; },
+        get completedWrites() { return completedWrites; },
         blockOpen() { blockNextOpen = true; },
         failOpen() { failNextOpen = true; }
     };
@@ -257,9 +267,71 @@ test("Preferences contract validates and the framework manifest registers the se
     // Validate the service contract through the same schemas used by runtime contract loading.
     const result = new JsonValidator().validate(contract, serviceSchema, {"./contract.schema.json":commonSchema});
     assert.equal(result.valid, true, JSON.stringify(result.errors, null, 2));
+    assert.deepEqual(Object.keys(contract.events["preferences:changed"].detail), ["name", "action"]);
+    assert.deepEqual(contract.events["preferences:changed"].detail.action.schema.enum, ["added", "updated", "removed"]);
     const manifest = readFileSync(new URL("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/manifest.jsonc", import.meta.url), "utf8");
     assert.match(manifest, /"preferences"\s*:\s*\{\s*"contract"\s*:\s*"preferences",\s*"implementation"\s*:\s*"\/services\/preferences\.js"/u);
-    assert.deepEqual(Preferences.optionsSchema, {type:"object", properties:{}, additionalProperties:false});
+    assert.deepEqual(Preferences.optionsSchema, {
+        type:"object", properties:{page:{anyOf:[{type:"string"}, {type:"null"}]}}, additionalProperties:false
+    });
+});
+
+test("Preferences emits value-free change events only after committed modifications", async () => {
+    // Observe transaction completion before notification, including unchanged updates and a missing deletion.
+    const database = createIndexedDB();
+    installEnvironment(database);
+    const events = [];
+    const preferences = new Preferences({bus:{emit(type, detail) {
+        assert.equal(database.completedWrites, events.length + 1);
+        events.push({type, detail});
+    }}});
+    const value = {secret:"not in the event"};
+    await preferences.set("x-editor:fontSize", value);
+    await preferences.set("x-editor:fontSize", value);
+    await preferences.delete("x-editor:fontSize");
+    await preferences.delete("missing");
+    assert.deepEqual(events, [
+        {type:"preferences:changed", detail:{name:"x-editor:fontSize", action:"added"}},
+        {type:"preferences:changed", detail:{name:"x-editor:fontSize", action:"updated"}},
+        {type:"preferences:changed", detail:{name:"x-editor:fontSize", action:"removed"}}
+    ]);
+});
+
+test("Preferences emits nothing for validation, opening, write, or commit failures", async () => {
+    // Request success is insufficient when the enclosing transaction later aborts.
+    const database = createIndexedDB();
+    installEnvironment(database);
+    const events = [];
+    const preferences = new Preferences({bus:{emit(type, detail) { events.push({type, detail}); }}});
+    await assert.rejects(preferences.set(" ", 1), /non-empty/u);
+    database.failOpen();
+    await assert.rejects(preferences.set("key", 1), /Injected open failure/u);
+    assert.deepEqual(events, []);
+    await preferences.set("key", 1);
+    events.length = 0;
+    database.failPut();
+    await assert.rejects(preferences.set("key", 2), /Injected put failure/u);
+    database.abortWrite();
+    await assert.rejects(preferences.set("key", 3), /aborted/u);
+    database.abortWrite();
+    await assert.rejects(preferences.delete("key"), /aborted/u);
+    assert.deepEqual(events, []);
+    assert.equal(await preferences.get("key"), 1);
+});
+
+test("Preferences keeps a committed write successful when Bus dispatch throws", async () => {
+    // A notification failure cannot turn a committed write into a reported storage failure.
+    const database = createIndexedDB();
+    installEnvironment(database);
+    const originalError = console.error;
+    console.error = () => {};
+    try {
+        const preferences = new Preferences({bus:{emit() { throw new Error("Dispatch failed."); }}});
+        await preferences.set("key", 1);
+        assert.equal(await preferences.get("key"), 1);
+    } finally {
+        console.error = originalError;
+    }
 });
 
 test("Preferences lazily creates the version-one database, store, and unique name index", async () => {
@@ -272,6 +344,24 @@ test("Preferences lazily creates the version-one database, store, and unique nam
     assert.deepEqual(database.opens, [{name:"xshell-preferences", version:1}]);
     assert.equal(database.hasStore("preferences"), true);
     assert.deepEqual(database.index("preferences", "name"), {keyPath:"name", unique:true});
+});
+
+test("Preferences namespaces independent databases by normalized application base path", async () => {
+    // Different application prefixes produce distinct names while equivalent trailing-slash forms converge.
+    const cases = [
+        ["", "xshell-preferences"],
+        ["/admin", "admin-xshell-preferences"],
+        ["/admin/", "admin-xshell-preferences"],
+        ["/company/admin/", "company-admin-xshell-preferences"],
+        ["/encoded%20path/", "encoded%2520path-xshell-preferences"]
+    ];
+    for (const [basePath, name] of cases) {
+        const database = createIndexedDB();
+        installEnvironment(database);
+        await new Preferences({config:{app:{basePath}}}).list();
+        assert.deepEqual(database.opens, [{name, version:1}]);
+    }
+    assert.notEqual(cases[1][1], cases[3][1]);
 });
 
 test("Preferences creates UUID records with default metadata and updates them without changing identity", async () => {

@@ -20,8 +20,7 @@ export default {
         return {
             load() {
                 // Show the current page option for debugging purposes
-                alert(secrets.page)
-                state.src = secrets.page;
+                state.src = secrets.options.pageManager;
             }
         };
     }

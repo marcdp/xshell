@@ -35,10 +35,29 @@ const editorPreferences = await preferences.list("x-editor:");
 await preferences.delete("x-editor:fontSize");
 ```
 
+## Change event
+
+After a successful `set()` or deletion of an existing record commits, Preferences emits `preferences:changed` on the XShell Bus:
+
+```js
+{name: "x-editor:fontSize", action: "updated"}
+```
+
+The action is `added` for a new record, `updated` for an existing record (even when the supplied value is unchanged), or `removed` for a deleted
+record. Deleting a missing name and failed or aborted writes emit nothing. The payload contains no stored value. Listeners in the current XShell
+runtime can use the event to refresh their views; it does not synchronize other tabs or persist event history.
+
 ## Storage model
 
-The service lazily opens the origin-scoped IndexedDB database `xshell-preferences` at version `1`. It uses the `preferences` object store with
-`id` as its primary key and a unique `name` index. A record has this shape:
+The Service lazily opens a prefix-specific database at version `1`. It derives the prefix from `config.app.basePath`, normalizes an empty path to `/`
+and otherwise ensures leading and trailing slashes, and places its encoded path segments before `xshell-preferences`. URL path separators become `-`,
+literal hyphens remain escaped, and empty segments remain encoded so names never start with `-` or contain `--`. For example, `/admin` and `/admin/`
+both use `admin-xshell-preferences`; the root application uses `xshell-preferences`.
+
+IndexedDB remains origin-scoped. The database name prevents accidental collisions between XShell applications at different URL prefixes, but it
+does not establish a security boundary between same-origin code. Changing `config.app.basePath` selects a different database; there is no migration
+from the previous or another prefix's database. The database uses the `preferences` object store with `id` as its primary key and a unique `name`
+index. A record has this shape:
 
 ```js
 {

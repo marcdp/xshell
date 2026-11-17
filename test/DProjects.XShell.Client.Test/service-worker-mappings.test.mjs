@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 import vm from "node:vm";
 
-const workerPath = new URL("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/sw.js", import.meta.url);
+const workerPath = new URL("../../src/DProjects.XShell/Resources/DProjects.XShell/bootstrap/sw.js", import.meta.url);
 const workerSource = readFileSync(workerPath, "utf8");
 
 function clone(value) {
@@ -49,13 +49,66 @@ function createIndexedDB(storage, events) {
     };
 }
 
-function createWorker(storage = new Map()) {
+function createNamespacedIndexedDB() {
+    // Model IndexedDB's database-name isolation so workers on one origin can be tested together.
+    const databases = new Map();
+    const opens = [];
+    return {
+        databases,
+        opens,
+        indexedDB: {
+            open(name, version) {
+                opens.push({name, version});
+                const request = {};
+                queueMicrotask(() => {
+                    let definition = databases.get(name);
+                    const upgrade = !definition;
+                    if (!definition) {
+                        definition = {stores:new Set(), records:new Map()};
+                        databases.set(name, definition);
+                    }
+                    const database = {
+                        objectStoreNames: {contains(storeName) { return definition.stores.has(storeName); }},
+                        createObjectStore(storeName) { definition.stores.add(storeName); },
+                        transaction(storeName) {
+                            assert.equal(definition.stores.has(storeName), true);
+                            const transaction = {oncomplete:null, onerror:null, error:null};
+                            transaction.objectStore = () => ({
+                                put(value, key) {
+                                    queueMicrotask(() => {
+                                        definition.records.set(key, clone(value));
+                                        transaction.oncomplete?.();
+                                    });
+                                },
+                                get(key) {
+                                    const getRequest = {};
+                                    queueMicrotask(() => {
+                                        getRequest.result = clone(definition.records.get(key));
+                                        getRequest.onsuccess?.();
+                                    });
+                                    return getRequest;
+                                }
+                            });
+                            return transaction;
+                        }
+                    };
+                    request.result = database;
+                    if (upgrade) request.onupgradeneeded?.();
+                    request.onsuccess?.();
+                });
+                return request;
+            }
+        }
+    };
+}
+
+function createWorker(storage = new Map(), options = {}) {
     const listeners = new Map();
     const events = [];
     const fetches = [];
     const self = {
-        location: { origin: "https://example.test", pathname: "/app/sw.js" },
-        registration: { scope: "https://example.test/app/" },
+        location: { origin: "https://example.test", pathname: options.scriptPath || "/app/sw.js" },
+        registration: { scope: options.scope || "https://example.test/app/" },
         clients: { async claim() {} },
         async skipWaiting() {},
         addEventListener(type, listener) { listeners.set(type, listener); }
@@ -63,7 +116,7 @@ function createWorker(storage = new Map()) {
     const context = vm.createContext({
         URL, Headers, Request, Response, queueMicrotask,
         console: { log() {} },
-        indexedDB: createIndexedDB(storage, events),
+        indexedDB: options.indexedDB || createIndexedDB(storage, events),
         self,
         async fetch(input) {
             const url = input instanceof Request ? input.url : String(input);
@@ -181,6 +234,37 @@ test("a restarted worker restores the complete persisted registry", async () => 
     const restartedWorker = createWorker(storage);
     await restartedWorker.fetch("https://example.test/app/_assets/reports/2.0.0.bbb/pages/index.js?mode=full");
     assert.deepEqual(restartedWorker.fetches, ["https://cdn.test/reports/2.0.0/pages/index.js?mode=full"]);
+});
+
+test("Service Workers namespace fixed state stores by normalized registration scope", async () => {
+    // Workers sharing an origin retain independent registries, and script locations do not select the database.
+    const shared = createNamespacedIndexedDB();
+    const admin = createWorker(new Map(), {scope:"https://example.test/admin/", scriptPath:"/assets/worker.js", indexedDB:shared.indexedDB});
+    const projects = createWorker(new Map(), {scope:"https://example.test/projects", scriptPath:"/admin/sw.js", indexedDB:shared.indexedDB});
+    await admin.register([{src:"https://example.test/admin/_assets/x", dst:"https://cdn.test/admin/"}]);
+    await projects.register([{src:"https://example.test/projects/_assets/x", dst:"https://cdn.test/projects/"}]);
+
+    assert.deepEqual([...new Set(shared.opens.map(item => item.name))], ["admin-xshell-sw", "projects-xshell-sw"]);
+    assert.equal(shared.opens.every(item => !item.name.startsWith("-") && !item.name.includes("--")), true);
+    assert.deepEqual([...shared.databases.values()].map(database => [...database.stores]), [["state"], ["state"]]);
+    assert.equal(shared.databases.get("admin-xshell-sw").records.get("state").rules[0].dst, "https://cdn.test/admin/");
+    assert.equal(shared.databases.get("projects-xshell-sw").records.get("state").rules[0].dst, "https://cdn.test/projects/");
+});
+
+test("Service Worker scope naming covers root and URL-encoded nested paths", async () => {
+    // Scope URL pathnames use the same encoded normalized-prefix convention as application Services.
+    for (const [scope, expected] of [
+        ["https://example.test/", "xshell-sw"],
+        ["https://example.test/company/admin/", "company-admin-xshell-sw"],
+        ["https://example.test/company//admin/", "company-%2F-admin-xshell-sw"],
+        ["https://example.test/encoded%20path/", "encoded%2520path-xshell-sw"]
+    ]) {
+        const shared = createNamespacedIndexedDB();
+        const worker = createWorker(new Map(), {scope, indexedDB:shared.indexedDB});
+        await worker.register([{src:new URL("_assets/x", scope).href, dst:"https://cdn.test/x/"}]);
+        assert.equal(shared.opens[0].name, expected);
+        assert.equal(expected.startsWith("-") || expected.includes("--"), false);
+    }
 });
 
 test("concurrent registrations are serialized and persist their union", async () => {

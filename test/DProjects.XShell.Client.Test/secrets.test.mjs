@@ -29,6 +29,7 @@ function copy(value) {
 
 function createIndexedDB(seed = {}) {
     const stores = new Map();
+    const opens = [];
     let version = seed.version || 0;
     for (const [name, definition] of Object.entries(seed.stores || {})) {
         stores.set(name, {
@@ -200,7 +201,8 @@ function createIndexedDB(seed = {}) {
     }
 
     const indexedDB = {
-        open(_name, requestedVersion) {
+        open(name, requestedVersion) {
+            opens.push({name, version:requestedVersion});
             const request = { result: null, transaction: null, error: null, onupgradeneeded: null, onsuccess: null, onerror: null, onblocked: null };
             queueMicrotask(() => {
                 const database = {
@@ -228,6 +230,7 @@ function createIndexedDB(seed = {}) {
 
     return {
         indexedDB,
+        opens,
         records(name) {
             const definition = stores.get(name);
             return definition ? [...definition.records.values()].map(copy) : [];
@@ -262,8 +265,8 @@ function createSessionStorage(seed = {}) {
     };
 }
 
-function secretsConfig(rememberMinutes = 0, maxRememberMinutes = 0, page = null) {
-    return { xshell: { services: { secrets: { options: { page, rememberMinutes, maxRememberMinutes } } } } };
+function secretsConfig(rememberMinutes = 0, maxRememberMinutes = 0, pageUnlock = null, pageManager = null) {
+    return { xshell: { services: { secrets: { options: { pageUnlock, pageManager, rememberMinutes, maxRememberMinutes } } } } };
 }
 
 function createSecrets(config, dependencies = { config }) {
@@ -368,6 +371,20 @@ function installEnvironment(database, webauthn = createWebAuthn(), storage = cre
 test("Secrets V2 contract validates against the service contract schema", () => {
     const result = new JsonValidator().validate(contract, serviceSchema, { "./contract.schema.json": commonSchema });
     assert.equal(result.valid, true, JSON.stringify(result.errors, null, 2));
+    assert.deepEqual(Object.keys(contract.properties).filter(name => name === "options" || name === "page" || name === "rememberMinutes" || name === "maxRememberMinutes"), ["options"]);
+    assert.deepEqual(contract.types.options.schema.required, ["rememberMinutes", "maxRememberMinutes", "pageUnlock", "pageManager"]);
+    assert.equal(contract.types.options.schema.additionalProperties, false);
+    assert.equal(contract.properties.options.readonly, true);
+});
+
+test("Secrets Service options schema accepts normalized Pages and rejects obsolete or invalid options", () => {
+    const validator = new JsonValidator();
+    for (const page of [null, "page:x:/pages/secrets-unlock.js", "/_assets/x/pages/secrets-unlock.js", "https://example.test/pages/unlock.js"]) {
+        assert.equal(validator.validate({pageUnlock:page, pageManager:page}, Secrets.optionsSchema).valid, true);
+    }
+    for (const options of [{page:"page:x:/pages/secrets-unlock.js"}, {pageUnlock:"page:"}, {pageManager:" "}, {rememberMinutes:-1}, {maxRememberMinutes:43201}]) {
+        assert.equal(validator.validate(options, Secrets.optionsSchema).valid, false);
+    }
 });
 
 test("Secrets V2 initializes a random-DEK vault and preserves JSON CRUD across password unlocks", async () => {
@@ -427,10 +444,30 @@ test("Secrets V2 initializes a random-DEK vault and preserves JSON CRUD across p
     assert.ok(events.some(event => event.name === "secrets:status-changed" && event.detail.status === "unlocked"));
 });
 
+test("Secrets namespaces independent databases by normalized application base path", async () => {
+    // The configured hosting prefix selects storage without changing the schema or Service API.
+    const cases = [
+        ["", "xshell-secrets"],
+        ["/admin", "admin-xshell-secrets"],
+        ["/admin/", "admin-xshell-secrets"],
+        ["/company/admin/", "company-admin-xshell-secrets"],
+        ["/encoded%20path/", "encoded%2520path-xshell-secrets"]
+    ];
+    for (const [basePath, name] of cases) {
+        const database = createIndexedDB();
+        installEnvironment(database);
+        const secrets = new Secrets({config:{app:{basePath}}});
+        assert.equal(await secrets.ready(), "uninitialized");
+        assert.deepEqual(database.opens, [{name, version:1}]);
+        assert.equal(database.hasIndex("secrets", "name"), true);
+    }
+    assert.notEqual(cases[1][1], cases[3][1]);
+});
+
 test("get transparently shares one configured authentication dialog and resumes each caller", async () => {
     const database = createIndexedDB();
     installEnvironment(database);
-    const config = secretsConfig(0, 0, "page:x:/pages/secrets-unlock.js");
+    const config = secretsConfig(0, 0, "page:x:/pages/secrets-unlock.js", "page:x:/pages/secrets-manager.js");
     let secrets;
     const calls = [];
     const dialog = {
@@ -441,6 +478,7 @@ test("get transparently shares one configured authentication dialog and resumes 
         }
     };
     secrets = createSecrets(config, {config, dialog});
+    assert.equal(secrets.options.pageManager, "page:x:/pages/secrets-manager.js");
     await secrets.ready();
     await secrets.initialize({password:"master password"});
     await secrets.set("first", "one");
@@ -929,7 +967,18 @@ test("remembered-session policy defaults to memory-only and validates durations"
     assert.throws(() => createSecrets(secretsConfig(0, 1.5)), /integer from 0/u);
     assert.throws(() => createSecrets(secretsConfig(0, 43201)), /integer from 0/u);
     assert.throws(() => createSecrets(secretsConfig(0, 0, "page:")), /Page resource reference/u);
-    assert.throws(() => createSecrets(secretsConfig(0, 0, "/pages/unlock.js")), /Page resource reference/u);
+    assert.throws(() => createSecrets(secretsConfig(0, 0, " ")), /Page resource reference/u);
+    assert.throws(() => createSecrets(secretsConfig(0, 0, null, "page:")), /Page resource reference/u);
+    assert.throws(() => new Secrets({}, {page:null}), /unknown option/u);
+
+    const configuredOptions = {rememberMinutes:15, maxRememberMinutes:60, pageUnlock:"/_assets/x/pages/secrets-unlock.js", pageManager:"page:x:/pages/secrets-manager.js"};
+    const configured = new Secrets({}, configuredOptions);
+    assert.deepEqual(configured.options, configuredOptions);
+    assert.equal(Object.isFrozen(configured.options), true);
+    configuredOptions.rememberMinutes = 30;
+    assert.equal(configured.options.rememberMinutes, 15);
+    assert.throws(() => { configured.options.pageManager = null; }, TypeError);
+    assert.deepEqual(new Secrets().options, {rememberMinutes:0, maxRememberMinutes:0, pageUnlock:null, pageManager:null});
 
     const configurable = createSecrets(secretsConfig(15, 60));
     await configurable.ready();

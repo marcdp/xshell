@@ -76,9 +76,10 @@
                 "contract": "secrets",
                 "implementation": "/services/secrets.js",
                 "options": {
-                    "page": null,
                     "rememberMinutes": 60,
-                    "maxRememberMinutes": 43200
+                    "maxRememberMinutes": 43200,
+                    "pageUnlock": null,
+                    "pageManager": null
                 }
             },
             "tasks":{

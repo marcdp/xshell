@@ -1,7 +1,8 @@
 // Browser-local encrypted named secrets.
 // Secrets V2 uses a random DEK for values and password/passkey-derived KEKs only to wrap that DEK.
 
-const DB_NAME = "xshell-secrets";
+import {indexedDBName} from "../utils/urls.js";
+
 const DB_VERSION = 1;
 const FORMAT_VERSION = 2;
 const SESSION_FORMAT_VERSION = 1;
@@ -92,13 +93,20 @@ function checkRememberMinutes(value, fallback, maximum) {
     return minutes;
 }
 
-function sessionPolicy(policy = {}) {
-    const page = policy.page ?? null;
-    if (page !== null && (typeof page !== "string")) {
-        throw new TypeError("xshell.services.secrets.options.page must be a non-empty Page resource reference or null.");
+function effectiveOptions(options = {}) {
+    // Accept canonical Page references and paths produced by manifest URL normalization.
+    if (Object.keys(options).some(name => !["rememberMinutes", "maxRememberMinutes", "pageUnlock", "pageManager"].includes(name))) {
+        throw new TypeError("xshell.services.secrets.options contains an unknown option.");
     }
-    const maximum = policy.maxRememberMinutes ?? 0;
-    const fallback = policy.rememberMinutes ?? 0;
+    for (const name of ["pageUnlock", "pageManager"]) {
+        const page = options[name] ?? null;
+        if (page !== null && (typeof page !== "string" || !page.trim() ||
+            !(/^(?:page:[^:\s]+:\/\S+|\/\S+|https?:\/\/\S+)$/u).test(page))) {
+            throw new TypeError(`xshell.services.secrets.options.${name} must be a non-empty Page resource reference or null.`);
+        }
+    }
+    const maximum = options.maxRememberMinutes ?? 0;
+    const fallback = options.rememberMinutes ?? 0;
     if (!Number.isSafeInteger(maximum) || maximum < 0 || maximum > MAX_REMEMBER_MINUTES) {
         throw new TypeError(`xshell.services.secrets.options.maxRememberMinutes must be an integer from 0 through ${MAX_REMEMBER_MINUTES}.`);
     }
@@ -106,7 +114,7 @@ function sessionPolicy(policy = {}) {
         throw new TypeError(`xshell.services.secrets.options.rememberMinutes must be an integer from 0 through ${MAX_REMEMBER_MINUTES}.`);
     }
     if (fallback > maximum) throw new RangeError("xshell.services.secrets.options.rememberMinutes cannot exceed maxRememberMinutes.");
-    return { page, rememberMinutes: fallback, maxRememberMinutes: maximum };
+    return Object.freeze({ rememberMinutes: fallback, maxRememberMinutes: maximum, pageUnlock: options.pageUnlock ?? null, pageManager: options.pageManager ?? null });
 }
 
 function interactiveAccess(options) {
@@ -307,12 +315,8 @@ export default class Secrets {
     static optionsSchema = {
         type: "object",
         properties: {
-            page: {
-                anyOf: [
-                    { type: "string"},
-                    { type: "null" }
-                ]
-            },
+            pageUnlock: { anyOf: [{ type: "string", pattern: "^(?:page:[^:\\s]+:/\\S+|/\\S+|https?://\\S+)$" }, { type: "null" }] },
+            pageManager: { anyOf: [{ type: "string", pattern: "^(?:page:[^:\\s]+:/\\S+|/\\S+|https?://\\S+)$" }, { type: "null" }] },
             maxRememberMinutes: { type: "integer", minimum: 0, maximum: MAX_REMEMBER_MINUTES },
             rememberMinutes: { type: "integer", minimum: 0, maximum: MAX_REMEMBER_MINUTES }
         },
@@ -323,8 +327,9 @@ export default class Secrets {
     #bus;
     #dialog;
     #database;
+    #databaseName;
     #ready;
-    #policy;
+    #options;
     #status = "locked";
     #metadata = null;
     #key = null;
@@ -335,10 +340,11 @@ export default class Secrets {
     #writeTransactions = new Set();
     #unlockPromise = null;
 
-    constructor({ bus, dialog } = {}, options) {
+    constructor({ bus, dialog, config } = {}, options) {
         this.#bus = bus;
         this.#dialog = dialog;
-        this.#policy = sessionPolicy(options);
+        this.#databaseName = indexedDBName("secrets", config?.app?.basePath ?? "");
+        this.#options = effectiveOptions(options);
         const epoch = this.#epoch;
         this.#ready = this.#open().then(async db => {
             this.#metadata = await this.#request(META_STORE, "readonly", store => store.get(VAULT_ID)) || null;
@@ -350,10 +356,8 @@ export default class Secrets {
     }
 
     get status() { return this.#status; }
-    get rememberMinutes() { return this.#policy.rememberMinutes; }
-    get maxRememberMinutes() { return this.#policy.maxRememberMinutes; }
+    get options() { return this.#options; }
     get sessionExpiresAt() { return this.#sessionExpiresAt; }
-    get page() { return this.#policy.page; }
     
     async ready() {
         await this.#ready;
@@ -427,7 +431,7 @@ export default class Secrets {
 
     async unlock(options) {
         const password = checkPassword(options);
-        const rememberMinutes = checkRememberMinutes(options?.rememberMinutes, this.#policy.rememberMinutes, this.#policy.maxRememberMinutes);
+        const rememberMinutes = checkRememberMinutes(options?.rememberMinutes, this.#options.rememberMinutes, this.#options.maxRememberMinutes);
         const epoch = ++this.#epoch;
         await this.#ready;
         const metadata = await this.#loadMetadata();
@@ -440,7 +444,7 @@ export default class Secrets {
     }
 
     async unlockWithPasskey(options = {}) {
-        const rememberMinutes = checkRememberMinutes(options?.rememberMinutes, this.#policy.rememberMinutes, this.#policy.maxRememberMinutes);
+        const rememberMinutes = checkRememberMinutes(options?.rememberMinutes, this.#options.rememberMinutes, this.#options.maxRememberMinutes);
         const epoch = ++this.#epoch;
         await this.#ready;
         this.#requirePasskeys();
@@ -1044,7 +1048,7 @@ export default class Secrets {
         if (!record) return { restored: false, status: this.#status, sessionExpiresAt: null, reason: "not-found" };
         try {
             validateMetadata(this.#metadata);
-            const { expiresAt } = validateSessionMetadata(record, this.#metadata, this.#policy.maxRememberMinutes);
+            const { expiresAt } = validateSessionMetadata(record, this.#metadata, this.#options.maxRememberMinutes);
             const stored = await this.#request(SESSION_STORE, "readonly", store => store.get(record.sessionId));
             if (!stored?.key || stored.id !== record.sessionId || stored.key.extractable !== false ||
                 stored.key.algorithm?.name !== "AES-GCM" || !stored.key.usages?.includes("decrypt")) {
@@ -1178,7 +1182,7 @@ export default class Secrets {
         await this.#ready;
         if (this.#sessionExpiresAt && Date.parse(this.#sessionExpiresAt) <= Date.now()) this.lock();
         if (this.#status === "unlocked" && this.#key) return;
-        if (!interactive || this.#policy.page === null) throw new Error("Secrets vault is locked.");
+        if (!interactive || this.#options.pageUnlock === null) throw new Error("Secrets vault is locked.");
         if (!this.#dialog || typeof this.#dialog.open !== "function") {
             throw new Error("Secrets vault authentication requires the Dialog service.");
         }
@@ -1200,7 +1204,7 @@ export default class Secrets {
 
     async #openUnlockDialog() {
         await this.#dialog.open({
-            href: this.#policy.page,
+            href: this.#options.pageUnlock,
             context: {}
         });
         if (this.#status !== "unlocked" || !this.#key) {
@@ -1275,7 +1279,7 @@ export default class Secrets {
                 reject(new Error("Secrets requires IndexedDB and Web Crypto."));
                 return;
             }
-            const request = indexedDB.open(DB_NAME, DB_VERSION);
+            const request = indexedDB.open(this.#databaseName, DB_VERSION);
             request.onupgradeneeded = () => {
                 const database = request.result;
                 database.createObjectStore(META_STORE, { keyPath: "id" });

@@ -254,9 +254,10 @@ await secrets.delete("x-demo:secrets-example");</code></pre>
             },
 
             async openManager() {
+                if (!secrets.options.pageManager) return void (state.error = "Secrets Manager Page is not configured.");
                 try {
                     await navigation.navigate({
-                        href: "page:x:/pages/secrets-manager.js",
+                        href: secrets.options.pageManager,
                         page,
                         open: "stack"
                     });

@@ -4,7 +4,7 @@ import test from "node:test";
 import vm from "node:vm";
 import { deflateRawSync } from "node:zlib";
 
-const workerPath = new URL("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/sw.js", import.meta.url);
+const workerPath = new URL("../../src/DProjects.XShell/Resources/DProjects.XShell/bootstrap/sw.js", import.meta.url);
 const workerSource = readFileSync(workerPath, "utf8");
 const packageUrl = "https://cdn.test/orders/1.0.0.hash/module.zip";
 const virtualRoot = "https://example.test/app/_assets/orders/1.0.0.hash";

@@ -1,0 +1,35 @@
+{
+    // module
+    "modules": {
+        "x-stores": {
+            "label": "x-stores",
+            "version": "0.9.0",
+            "icon": "",
+            "copyright": "",
+            "defaults": {
+                "component": {
+                    "renderEngine": "x",
+                    "stateEngine": "proxy"
+                },
+                "page": {
+                    "renderEngine": "x",
+                    "stateEngine": "proxy"
+                }
+            },
+            "dependencies": {
+                "x": "module:x:latest",
+                "xshell": "module:xshell:latest"
+            }
+        }
+    },
+
+    "xshell": {
+        // Store providers use the shared instance-js factory loader. Caching gives each logical identity one application-lifetime instance.
+        "resolver": {
+            "store": {
+                "mem:": {"src": "/js/store-mem.js", "loader": "instance-js", "cache": true},
+                "mem:{identity}": {"src": "/js/store-mem.js", "loader": "instance-js", "cache": true}
+            }
+        }
+    }
+}

@@ -3,19 +3,26 @@ import test from "node:test";
 
 import PreferencesPage from "../../src/DProjects.XShell/Resources/DProjects.XShell/x/pages/preferences.js";
 
-function createPage({mode = "manage", preferenceName = "", records = [], confirmResult = "yes", dialogResult = null} = {}) {
+function createPage({mode = "manage", preferenceName = "", records = [], confirmResult = "yes", dialogResult = null, list, onDelete} = {}) {
     // Create the controller with lightweight service and dialog doubles used by existing Page tests.
     const state = structuredClone(PreferencesPage.state);
     state.mode = mode;
     state.preferenceName = preferenceName;
-    const calls = {list:[], set:[], delete:[], open:[], confirm:[], close:[], invalidate:0};
+    const calls = {list:[], set:[], delete:[], open:[], confirm:[], close:[], invalidate:0, subscriptions:[]};
+    const bus = new EventTarget();
+    let controller;
+    const events = {on(target, type, command) {
+        calls.subscriptions.push({target, type, command});
+        if (target === bus) target.addEventListener(type, () => controller[command]());
+    }};
     const preferences = {
         async list(prefix = "") {
             calls.list.push(prefix);
+            if (list) return await list(prefix);
             return records.filter(record => record.name.startsWith(prefix));
         },
         async set(name, value, options) { calls.set.push([name, value, options]); },
-        async delete(name) { calls.delete.push(name); }
+        async delete(name) { calls.delete.push(name); onDelete?.(bus); }
     };
     const page = {
         invalidate() { calls.invalidate++; },
@@ -25,8 +32,8 @@ function createPage({mode = "manage", preferenceName = "", records = [], confirm
         async open(options) { calls.open.push(options); return dialogResult; },
         async confirm(options) { calls.confirm.push(options); return confirmResult; }
     };
-    const controller = PreferencesPage.controller({state, page, preferences, dialog});
-    return {calls, controller, state};
+    controller = PreferencesPage.controller({state, page, preferences, dialog, events, bus});
+    return {calls, controller, state, bus};
 }
 
 const record = {
@@ -40,7 +47,7 @@ const record = {
     value:14
 };
 
-test("Preferences Page loads, summarizes, and prefix-filters records", async () => {
+test("Preferences Page loads, summarizes, and filters from header searches", async () => {
     // The manager strips raw values from reactive list state and exposes all required metadata columns.
     const native = {...record, id:"650e8400-e29b-41d4-a716-446655440000", name:"x-native:map", label:"Native map", value:new Map([["a", 1]])};
     const manager = createPage({records:[native, record]});
@@ -53,11 +60,11 @@ test("Preferences Page loads, summarizes, and prefix-filters records", async () 
     assert.notEqual(manager.state.items[1].modifiedDisplay, "—");
     assert.equal(manager.state.items[1].revision, 2);
 
-    manager.state.prefix = "x-editor:";
-    await manager.controller.refresh();
-    assert.deepEqual(manager.calls.list, ["", "x-editor:"]);
+    manager.state.queryName = "x-editor:";
+    manager.controller.filter();
     assert.deepEqual(manager.state.items.map(item => item.name), ["x-editor:fontSize"]);
-    assert.match(PreferencesPage.template, /x-listview[\s\S]*label="Name"[\s\S]*label="Value"[\s\S]*label="Revision"[\s\S]*label="Created"[\s\S]*label="Modified"/u);
+    assert.deepEqual(manager.calls.list, [""]);
+    assert.match(PreferencesPage.template, /x-listview-column>[\s\S]*x-model="state.queryName"[\s\S]*x-listview-column>[\s\S]*x-model="state.queryValue"/u);
     assert.match(PreferencesPage.template, /x-empty[\s\S]*No preferences/u);
 });
 
@@ -117,7 +124,7 @@ test("Preferences Page preserves browser-native values during metadata-only edit
     assert.match(PreferencesPage.template, /metadata edits preserve the original value/u);
 });
 
-test("Preferences Page opens editors and confirms deletion before refreshing", async () => {
+test("Preferences Page opens editors and confirms deletion without duplicate reads", async () => {
     // Manager actions follow the established dialog Page and confirm-service conventions.
     const manager = createPage({records:[record], dialogResult:{saved:true}});
     await manager.controller.load();
@@ -127,12 +134,20 @@ test("Preferences Page opens editors and confirms deletion before refreshing", a
         title:"Edit preference",
         context:{mode:"edit", preferenceName:record.name}
     }]);
-    assert.deepEqual(manager.calls.list, ["", ""]);
+    assert.deepEqual(manager.calls.list, [""]);
 
     await manager.controller.remove({event:{currentTarget:{dataset:{name:record.name}}}});
     assert.deepEqual(manager.calls.confirm, [{title:"Delete preference", message:`Delete preference '${record.name}'?`}]);
     assert.deepEqual(manager.calls.delete, [record.name]);
-    assert.deepEqual(manager.calls.list, ["", "", ""]);
+    assert.deepEqual(manager.calls.list, [""]);
+});
+
+test("Preferences Page reads once after the delete event", async () => {
+    // A committed modification's Bus event is the sole refresh trigger.
+    const manager = createPage({records:[record], onDelete:bus => bus.dispatchEvent(new Event("preferences:changed"))});
+    await manager.controller.load();
+    await manager.controller.remove({event:{currentTarget:{dataset:{name:record.name}}}});
+    assert.deepEqual(manager.calls.list, ["", ""]);
 });
 
 test("Preferences Page leaves a preference intact when deletion is cancelled", async () => {
@@ -142,4 +157,53 @@ test("Preferences Page leaves a preference intact when deletion is cancelled", a
     await manager.controller.remove({event:{currentTarget:{dataset:{name:record.name}}}});
     assert.deepEqual(manager.calls.delete, []);
     assert.equal(manager.state.busy, false);
+});
+
+test("Preferences Page subscribes in manage mode and refreshes external changes without resetting searches", async () => {
+    // The Bus drives one new read while the search fields and their filtered results remain in place.
+    const records = [record];
+    const manager = createPage({records});
+    await manager.controller.load();
+    assert.ok(manager.calls.subscriptions.some(item => item.target === manager.bus && item.type === "preferences:changed" && item.command === "refresh"));
+    manager.state.queryName = "x-editor";
+    manager.state.queryValue = "16";
+    manager.controller.filter();
+    records.push({...record, id:"650e8400-e29b-41d4-a716-446655440000", value:16});
+    manager.bus.dispatchEvent(new Event("preferences:changed"));
+    await new Promise(resolve => setImmediate(resolve));
+    assert.deepEqual(manager.calls.list, ["", ""]);
+    assert.equal(manager.state.queryName, "x-editor");
+    assert.equal(manager.state.queryValue, "16");
+    assert.equal(manager.state.items.length, 1);
+    assert.equal(manager.state.items[0].valueSummary, "16");
+});
+
+test("Preferences Page ignores stale refresh results and events after unload", async () => {
+    // An older list completion cannot replace newer state, and an unloaded Page issues no further reads.
+    const pending = [];
+    const manager = createPage({list:() => new Promise(resolve => pending.push(resolve))});
+    const initial = manager.controller.load();
+    pending.shift()([record]);
+    await initial;
+    manager.bus.dispatchEvent(new Event("preferences:changed"));
+    manager.bus.dispatchEvent(new Event("preferences:changed"));
+    assert.equal(pending.length, 2);
+    pending.pop()([{...record, value:20}]);
+    await new Promise(resolve => setImmediate(resolve));
+    pending.pop()([{...record, value:10}]);
+    await new Promise(resolve => setImmediate(resolve));
+    assert.equal(manager.state.items[0].valueSummary, "20");
+    manager.controller.unload();
+    const reads = manager.calls.list.length;
+    manager.bus.dispatchEvent(new Event("preferences:changed"));
+    await new Promise(resolve => setImmediate(resolve));
+    assert.equal(manager.calls.list.length, reads);
+    assert.deepEqual(manager.state.items, []);
+});
+
+test("Preferences editor modes do not subscribe to change events", async () => {
+    // Only the management list needs to reload in response to external modifications.
+    const add = createPage({mode:"add"});
+    await add.controller.load();
+    assert.equal(add.calls.subscriptions.length, 0);
 });

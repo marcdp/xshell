@@ -3,9 +3,13 @@ let state = null;
 let stateLoadPromise = null;
 let registrationQueue = Promise.resolve();
 
-// Deployment-specific persistent storage
+// Scope-specific persistent storage
 const DEPLOYMENT_NAME = self.location.pathname.substring(0, self.location.pathname.lastIndexOf("/")).replaceAll("/", "-");
-const DB_NAME = "xshell-sw" + DEPLOYMENT_NAME;
+const scopePathname = new URL(self.registration.scope).pathname;
+const scopeInnerPath = scopePathname.replace(/^\/+|\/+$/g, "");
+const SCOPE_PREFIX = scopeInnerPath ? `/${scopeInnerPath}/` : "/";
+const DB_PREFIX = scopeInnerPath ? scopeInnerPath.split("/").map(segment => segment ? encodeURIComponent(segment).replaceAll("-", "%2D") : "%2F").join("-") : "";
+const DB_NAME = DB_PREFIX ? `${DB_PREFIX}-xshell-sw` : "xshell-sw";
 const DB_VERSION = 1;
 const STORE_NAME = "state";
 

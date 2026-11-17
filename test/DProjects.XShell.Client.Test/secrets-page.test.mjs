@@ -3,7 +3,7 @@ import test from "node:test";
 
 import SecretsPage from "../../src/DProjects.XShell/Resources/DProjects.XShell/x/pages/secrets-manager.js";
 
-function createPage({ rememberMinutes = 0, maxRememberMinutes = 0, mode = "manage", secretName = "", passkeyId = "", status, items = [], dialogResult = null, confirmResult = "yes", renameError = null } = {}) {
+function createPage({ rememberMinutes = 0, maxRememberMinutes = 0, pageUnlock = "page:x:/pages/secrets-unlock.js", pageManager = "page:x:/pages/secrets-manager.js", mode = "manage", secretName = "", passkeyId = "", status, items = [], dialogResult = null, confirmResult = "yes", renameError = null } = {}) {
     const state = structuredClone(SecretsPage.state);
     state.mode = mode;
     state.secretName = secretName;
@@ -11,9 +11,7 @@ function createPage({ rememberMinutes = 0, maxRememberMinutes = 0, mode = "manag
     const calls = { lock:0, list:0, listPasskeys:0, get:[], open:[], confirm:[], set:[], rename:[], delete:[], addPasskey:[], updatePasskey:[], removePasskey:[], close:[], invalidate:0, replaceHash:[] };
     const secrets = {
         status: status ?? (mode == "manage" ? "locked" : "unlocked"),
-        page: "page:x:/pages/secrets-unlock.js",
-        rememberMinutes,
-        maxRememberMinutes,
+        options: {pageUnlock, pageManager, rememberMinutes, maxRememberMinutes},
         sessionExpiresAt: null,
         async ready() { return this.status; },
         async listPasskeys() { calls.listPasskeys++; return [{ id: "passkey", label: "Laptop", description: "Work computer", createdAt: "2026-01-01T00:00:00.000Z" }]; },
@@ -61,11 +59,11 @@ function createPage({ rememberMinutes = 0, maxRememberMinutes = 0, mode = "manag
 }
 
 test("Secrets Manager delegates initialization and unlocking to the dedicated authentication Page", async () => {
-    const { state, secrets, calls, controller } = createPage({dialogResult:{unlocked:true}});
+    const { state, secrets, calls, controller } = createPage({dialogResult:{unlocked:true}, pageUnlock:"/_assets/custom/unlock.js"});
     await controller.load();
     await controller.openUnlock();
     assert.deepEqual(calls.open, [{
-        href:"page:x:/pages/secrets-unlock.js",
+        href:"/_assets/custom/unlock.js",
         context:{}
     }]);
     assert.equal(calls.list, 1);
@@ -73,8 +71,22 @@ test("Secrets Manager delegates initialization and unlocking to the dedicated au
     assert.equal(state.status, "unlocked");
 });
 
+test("Secrets Manager reports missing configured Pages without opening a dialog", async () => {
+    const locked = createPage({pageUnlock:null});
+    await locked.controller.openUnlock();
+    assert.match(locked.state.error, /not configured/u);
+    assert.deepEqual(locked.calls.open, []);
+
+    const unlocked = createPage({status:"unlocked", pageManager:null});
+    await unlocked.controller.openEditor("add");
+    await unlocked.controller.openPasskey();
+    await unlocked.controller.openPasskeyEditor("passkey");
+    assert.match(unlocked.state.error, /not configured/u);
+    assert.deepEqual(unlocked.calls.open, []);
+});
+
 test("Secrets Manager refreshes after successful secret and passkey dialogs without changing the tab hash", async () => {
-    const page = createPage({status:"unlocked", dialogResult:{saved:true}});
+    const page = createPage({status:"unlocked", dialogResult:{saved:true}, pageManager:"/_assets/custom/manager.js"});
     await page.controller.load();
     const initialLists = page.calls.list;
     const initialPasskeyLists = page.calls.listPasskeys;
@@ -90,6 +102,7 @@ test("Secrets Manager refreshes after successful secret and passkey dialogs with
         {mode:"add-passkey"},
         {mode:"edit-passkey", passkeyId:"passkey"}
     ]);
+    assert.ok(page.calls.open.every(item => item.href === page.secrets.options.pageManager));
     assert.deepEqual(page.calls.replaceHash, [], "normal refreshes leave the hash-selected x-tab untouched");
     assert.match(SecretsPage.template, /<x-tabs[^>]*use-hash/u);
 });

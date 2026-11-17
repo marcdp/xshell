@@ -1,0 +1,48 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://xshell.dev/schemas/store.schema.json",
+    "title": "XShell Store Schema",
+    "description": "Metadata and embedded document schemas exposed by a Store.",
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["label", "collections"],
+    "properties": {
+        "label": {"type": "string", "minLength": 1},
+        "description": {"type": "string"},
+        "collections": {
+            "type": "object",
+            "minProperties": 1,
+            "propertyNames": {"type": "string", "minLength": 1},
+            "additionalProperties": {"$ref": "#/$defs/collection"}
+        }
+    },
+    "$defs": {
+        "collection": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["label", "schema"],
+            "properties": {
+                "label": {"type": "string", "minLength": 1},
+                "description": {"type": "string"},
+                "schema": {
+                    "type": "object",
+                    "required": ["type", "properties"],
+                    "properties": {
+                        "type": {"const": "object"},
+                        "properties": {
+                            "type": "object",
+                            "required": ["id"],
+                            "properties": {
+                                "id": {
+                                    "type": "object",
+                                    "required": ["type"],
+                                    "properties": {"type": {"const": "string"}}
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

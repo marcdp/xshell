@@ -46,6 +46,15 @@
       }
     }
   },
+  "events": {
+    "preferences:changed": {
+      "description": "Emitted on the Bus after a successful IndexedDB transaction commits a preference creation, update, or removal in the current XShell runtime.",
+      "detail": {
+        "name": { "type": "string", "required": true, "description": "Name of the modified preference." },
+        "action": { "type": "string", "schema": { "enum": ["added", "updated", "removed"] }, "required": true, "description": "Committed modification type." }
+      }
+    }
+  },
   "methods": {
     "set": {
       "description": "Creates or atomically updates a preference. Updates preserve id, name, createdAt, and omitted metadata while replacing value and incrementing revision.",

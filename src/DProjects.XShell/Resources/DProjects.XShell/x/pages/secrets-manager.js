@@ -19,6 +19,7 @@ export default {
     `,
 
     template: `
+
         <x-notice x-if="state.error" type="error" label="Error" x-attr:message="state.error"></x-notice>
         <x-notice x-if="state.busy" type="working" label="Working"></x-notice>
 
@@ -32,6 +33,7 @@ export default {
                 </div>
                 <div x-if="state.status == 'unlocked'">
                     <p>
+                        <x-icon icon="x-unlock"></x-icon>
                         Vault unlocked
                         <span x-if="state.sessionExpiresAt">
                             (session expires in <x-countdown x-attr:value="state.sessionExpiresAt" format="{d}d {hh}h {mm}m {ss}s"></x-countdown>)
@@ -49,7 +51,7 @@ export default {
                         Here you can add, edit, and delete your secrets as needed.
                     </p>
 
-                    <x-empty x-if="state.items.length == 0" icon="x-key" label="No secrets" message="Add a secret to your vault."></x-empty>
+                    <x-empty x-if="state.items.length == 0" icon="x-password" label="No secrets" message="Add a secret to your vault."></x-empty>
 
                     <x-listview x-if="state.items.length > 0" view="details">
                         <x-listview-head>
@@ -325,11 +327,12 @@ export default {
 
             async openUnlock() {
                 if (state.busy || secrets.status == "unlocked") return;
+                if (!secrets.options.pageUnlock) return void (state.error = "Secrets unlock Page is not configured.");
                 state.error = "";
                 state.busy = true;
                 try {
                     const result = await dialog.open({
-                        href: secrets.page,
+                        href: secrets.options.pageUnlock,
                         context: {}
                     });
                     // Refresh after the entire initialization and optional passkey setup completes.
@@ -352,9 +355,10 @@ export default {
 
             async openEditor(mode, name = "") {
                 if (secrets.status != "unlocked") return void (state.error = "Unlock the vault first.");
+                if (!secrets.options.pageManager) return void (state.error = "Secrets Manager Page is not configured.");
                 try {
                     const result = await dialog.open({
-                        href: "page:x:/pages/secrets-manager.js",
+                        href: secrets.options.pageManager,
                         title: mode == "add" ? "Add secret" : "Edit secret",
                         context: {mode, secretName:name}
                     });
@@ -370,9 +374,10 @@ export default {
 
             async openPasskey() {
                 if (secrets.status != "unlocked") return void (state.error = "Unlock the vault first.");
+                if (!secrets.options.pageManager) return void (state.error = "Secrets Manager Page is not configured.");
                 try {
                     const result = await dialog.open({
-                        href: "page:x:/pages/secrets-manager.js",
+                        href: secrets.options.pageManager,
                         title: "Add passkey",
                         context: {mode:"add-passkey"}
                     });
@@ -384,9 +389,10 @@ export default {
 
             async openPasskeyEditor(id) {
                 if (secrets.status != "unlocked") return void (state.error = "Unlock the vault first.");
+                if (!secrets.options.pageManager) return void (state.error = "Secrets Manager Page is not configured.");
                 try {
                     const result = await dialog.open({
-                        href: "page:x:/pages/secrets-manager.js",
+                        href: secrets.options.pageManager,
                         title: "Edit passkey",
                         context: {mode:"edit-passkey", passkeyId:id}
                     });

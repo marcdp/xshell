@@ -400,7 +400,7 @@ export default {
         return {
             async load(params) {
                 // Start restoration while listeners can still capture newer user changes.
-                const keys = ["xshell.toggled", "xshell.dockSrc", "xshell.dockPosition"];
+                const keys = ["x-layout-main.toggled", "x-layout-main.dockSrc", "x-layout-main.dockPosition"];
                 const savedPromise = Promise.allSettled(keys.map(key => preferences.get(key)));
                 events.on(state, "change:toggled", () => { if (!restoring) menuChanged = true; });
                 // auto close menu on navigation start (mobile)
@@ -438,9 +438,9 @@ export default {
                         document.documentElement.removeAttribute("data-scrollbar");
                     }
                     // Queue both changes in event order while rendering remains synchronous.
-                    if (state.dockSrc) this.savePreference("xshell.dockSrc", state.dockSrc);
-                    else this.deletePreference("xshell.dockSrc");
-                    this.savePreference("xshell.dockPosition", state.dockPosition);
+                    if (state.dockSrc) this.savePreference("x-layout-main.dockSrc", state.dockSrc);
+                    else this.deletePreference("x-layout-main.dockSrc");
+                    this.savePreference("x-layout-main.dockPosition", state.dockPosition);
                     postRender("restoreDockSize");
                     postRender("refreshMenuHeight");
                 });
@@ -582,7 +582,7 @@ export default {
                 const size = Math.round(panel.getBoundingClientRect()[dimension]);
                 if (!Number.isFinite(size) || size <= 0) return;
                 dockSizeRevision++;
-                this.savePreference(`xshell.dockSize.${state.dockPosition}`, String(size));
+                this.savePreference(`x-layout-main.dockSize.${state.dockPosition}`, String(size));
             },
             async restoreDockSize() {
                 // Find the rendered dock and read the saved size for its current position.
@@ -593,7 +593,7 @@ export default {
                 let size;
                 try {
                     await pendingWrite;
-                    size = Number(await preferences.get(`xshell.dockSize.${position}`));
+                    size = Number(await preferences.get(`x-layout-main.dockSize.${position}`));
                 } catch { }
                 // A newer resize, position change, or render takes precedence over this read.
                 if (revision !== dockSizeRevision || position !== state.dockPosition || panel !== host.shadowRoot.querySelector(".docked-page")) return;

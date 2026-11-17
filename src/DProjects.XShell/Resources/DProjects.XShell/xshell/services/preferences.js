@@ -1,6 +1,7 @@
 // Browser-local preferences persisted as native structured-clone values.
 
-const DB_NAME = "xshell-preferences";
+import {indexedDBName} from "../utils/urls.js";
+
 const DB_VERSION = 1;
 const STORE_NAME = "preferences";
 const NAME_INDEX = "name";
@@ -75,10 +76,14 @@ export default class Preferences {
     // vars
     #databasePromise = null;
     #options = {};
+    #bus;
+    #databaseName;
 
     // ctor
-    constructor(_services = {}, _options = {}) {
+    constructor({bus, config} = {}, _options = {}) {
+        this.#bus = bus;
         this.#options = _options;
+        this.#databaseName = indexedDBName("preferences", config?.app?.basePath ?? "");
     }
 
     // props
@@ -92,6 +97,7 @@ export default class Preferences {
         const name = checkName(key);
         const metadata = preferenceMetadata(options);
         const database = await this.#open();
+        let action;
 
         // Read and write within one transaction so concurrent updates serialize revisions atomically.
         await new Promise((resolve, reject) => {
@@ -107,6 +113,7 @@ export default class Preferences {
             lookup.onsuccess = () => {
                 try {
                     const existing = lookup.result;
+                    action = existing ? "updated" : "added";
                     const timestamp = new Date().toISOString();
                     const record = existing ? {
                         ...existing,
@@ -133,6 +140,7 @@ export default class Preferences {
                 }
             };
         });
+        this.#notify(name, action);
     }
 
     async get(key, defaultValue) {
@@ -155,6 +163,7 @@ export default class Preferences {
         // Resolve the indexed name and delete its immutable primary key in one transaction.
         const name = checkName(key);
         const database = await this.#open();
+        let removed = false;
         await new Promise((resolve, reject) => {
             const transaction = database.transaction(STORE_NAME, "readwrite");
             const store = transaction.objectStore(STORE_NAME);
@@ -166,6 +175,7 @@ export default class Preferences {
             lookup.onerror = () => { requestError = lookup.error; };
             lookup.onsuccess = () => {
                 if (lookup.result === undefined) return;
+                removed = true;
                 try {
                     const removal = store.delete(lookup.result.id);
                     removal.onerror = () => { requestError = removal.error; };
@@ -175,6 +185,7 @@ export default class Preferences {
                 }
             };
         });
+        if (removed) this.#notify(name, "removed");
     }
 
     async list(keyPrefix) {
@@ -196,6 +207,12 @@ export default class Preferences {
     }
 
     // methods (private)
+    #notify(name, action) {
+        // A committed write remains successful even if Bus notification fails.
+        try { this.#bus?.emit("preferences:changed", {name, action}); }
+        catch (error) { console.error("Preferences change notification failed:", error); }
+    }
+
     #open() {
         // Share one lazy open attempt per instance and allow a later retry after failure.
         if (this.#databasePromise) return this.#databasePromise;
@@ -203,7 +220,7 @@ export default class Preferences {
 
         let opening;
         opening = new Promise((resolve, reject) => {
-            const request = globalThis.indexedDB.open(DB_NAME, DB_VERSION);
+            const request = globalThis.indexedDB.open(this.#databaseName, DB_VERSION);
             let settled = false;
             const fail = error => {
                 if (settled) return;

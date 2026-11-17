@@ -1,0 +1,53 @@
+{
+    "$schema": "../../xshell/schemas/contract.schema.json",
+    "label": "Store",
+    "description": "Provider-independent asynchronous interface for named collections of JSON documents identified by their id property.",
+    "types": {
+        "document": {
+            "type": "object",
+            "description": "A JSON-compatible object whose string id property identifies it within a collection."
+        }
+    },
+    "properties": {
+        "schema": {"type": "object", "readonly": true, "description": "Validated Store metadata, named collections, and embedded document schemas."}
+    },
+    "methods": {
+        "get": {
+            "description": "Returns a defensive copy of a document, or null when its id does not exist.",
+            "parameters": [
+                {"name": "collection", "type": "string", "required": true},
+                {"name": "id", "type": "string", "required": true}
+            ],
+            "returns": {"ref": "document", "description": "Promise resolving to a document copy or null."}
+        },
+        "list": {
+            "description": "Returns defensive copies of all documents in a collection in provider-defined order.",
+            "parameters": [{"name": "collection", "type": "string", "required": true}],
+            "returns": {"type": "array", "description": "Promise resolving to document copies."}
+        },
+        "add": {
+            "description": "Creates and returns a document copy. A provider may generate id when omitted; an existing id is rejected.",
+            "parameters": [
+                {"name": "collection", "type": "string", "required": true},
+                {"name": "document", "ref": "document", "required": true}
+            ],
+            "returns": {"ref": "document", "description": "Promise resolving to the created document, including any generated id."}
+        },
+        "save": {
+            "description": "Creates or replaces the document identified by its required id and returns a defensive copy.",
+            "parameters": [
+                {"name": "collection", "type": "string", "required": true},
+                {"name": "document", "ref": "document", "required": true}
+            ],
+            "returns": {"ref": "document", "description": "Promise resolving to the saved document copy."}
+        },
+        "remove": {
+            "description": "Deletes a document by id and returns whether a document was removed.",
+            "parameters": [
+                {"name": "collection", "type": "string", "required": true},
+                {"name": "id", "type": "string", "required": true}
+            ],
+            "returns": {"type": "boolean", "description": "Promise resolving to true when a document was removed, otherwise false."}
+        }
+    }
+}

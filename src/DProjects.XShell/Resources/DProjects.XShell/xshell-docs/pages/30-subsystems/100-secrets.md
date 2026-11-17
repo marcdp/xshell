@@ -2,7 +2,7 @@
 
 The framework-owned `secrets` service stores named JSON-compatible values in a browser-local encrypted vault. Its default implementation is
 `xshell/services/secrets.js`, its contract is `xshell/contracts/secrets.json`, and XShell Core registers it through `xshell.services.secrets`.
-The management Page is `x/pages/secrets.js`; the dedicated initialization and unlock Page is `x/pages/secrets-unlock.js`.
+The management Page is `x/pages/secrets-manager.js`; the dedicated initialization and unlock Page is `x/pages/secrets-unlock.js`.
 
 Secrets V2 uses envelope encryption. Vault creation generates a random 256-bit data encryption key (DEK). The DEK, imported as a non-extractable
 AES-GCM key for the active session, encrypts every secret. Each secret record has a fresh random 96-bit IV, authenticated ciphertext containing the
@@ -39,6 +39,7 @@ await secrets.unlock({ password, rememberMinutes: 60 });
 await secrets.unlockWithPasskey({ id }); // id may be omitted for browser selection
 await secrets.unlockWithPasskey({ id, rememberMinutes: 60 });
 const expiration = secrets.sessionExpiresAt; // ISO 8601 UTC string or null
+const { rememberMinutes, maxRememberMinutes, pageUnlock, pageManager } = secrets.options;
 
 await secrets.set("api-token", "secret", { label: "Production token", description: "Production API token" });
 const token = await secrets.get("api-token");
@@ -101,16 +102,18 @@ proof of access.
 
 ## Unlock-session policy
 
-`page` is a Secrets implementation option using the ordinary Service options mechanism. The framework's headless default is `null`, so applications
-without the `x` UI module never prompt. The `x` module supplies the default UI Page when it participates in the application:
+`secrets.options` is a read-only, immutable snapshot of the effective Service configuration. It contains exactly `rememberMinutes`,
+`maxRememberMinutes`, `pageUnlock`, and `pageManager`. The framework sets both Pages to `null`, so applications without the `x` UI module never
+prompt. The `x` module supplies the authentication and management Pages when it participates in the application:
 
 ```jsonc
 "xshell": {
     "services": {
         "secrets": {
             "options": {
-                "page": "page:x:/pages/secrets-unlock.js",
-                "rememberMinutes": 0,
+                "pageUnlock": "page:x:/pages/secrets-unlock.js",
+                "pageManager": "page:x:/pages/secrets-manager.js",
+                "rememberMinutes": 60,
                 "maxRememberMinutes": 43200
             }
         }
@@ -118,9 +121,10 @@ without the `x` UI module never prompt. The `x` module supplies the default UI P
 }
 ```
 
-Set `page: null` to disable automatic dialogs. A non-null value must be a Page resource reference. The Service does not hardcode or navigate to an
-`x` resource; it asks the existing Dialog Service to open the configured Page with an empty context. A configured Page is an interaction policy,
-not an authorization boundary for same-origin Services.
+Set `pageUnlock: null` to disable automatic dialogs. `pageUnlock` identifies the initialization and authentication Page opened by interactive
+`get()` through the Dialog Service with an empty context. `pageManager` identifies the Page used for explicit management navigation; ordinary
+Secrets calls never open it. Either Page option may be null or a nonempty Page reference, including a path normalized from a module manifest.
+The Service does not hardcode an `x` resource. A configured Page is an interaction policy, not an authorization boundary for same-origin Services.
 
 Memory-only sessions are the most restrictive mode. `rememberMinutes: 0` keeps the non-extractable DEK only in the current JavaScript process, does
 not create session material, and requires password or passkey authentication after an application reload. Both duration values default to zero when
@@ -176,7 +180,11 @@ credential from an authenticator, alter other registrations, or change master-pa
 
 ## IndexedDB V2 layout
 
-The database remains `xshell-secrets`. Database schema version 1 creates all four stores and the unique `name` index on `secrets`:
+The Service derives a normalized application prefix from `config.app.basePath` and places its encoded path segments before `xshell-secrets`. URL path
+separators become `-`, literal hyphens remain escaped to avoid path-boundary collisions, and empty segments remain encoded so names never start with
+`-` or contain `--`. The normalized prefix starts and ends with `/`; an empty base path is `/`. For example, `/admin` and `/admin/` both use
+`admin-xshell-secrets`, while the root application uses `xshell-secrets`. Database schema version 1
+creates all four stores and the unique `name` index on `secrets`:
 
 | Store | Contents |
 | --- | --- |
@@ -192,8 +200,9 @@ random session id, vault id, creation and absolute expiration times, and an AES-
 session-wrapping key is structured-cloned into IndexedDB. Additional authenticated data binds the wrapping to its purpose, session id, vault id,
 creation time, and expiration. Persistence publishes tab metadata only after the key record and cleans up interrupted attempts.
 
-This development schema has no upgrade or encrypted-record migration path from earlier experimental layouts. Existing development data using a
-different database version or name-keyed secret records must be cleared and recreated.
+IndexedDB remains origin-scoped. Prefix-based names prevent accidental storage collisions between XShell applications at different paths on the
+same origin; they are not a security boundary between same-origin code. Changing `config.app.basePath` selects a different database. This
+development schema has no upgrade or encrypted-record migration path from earlier experimental layouts or database names.
 
 ## Browser-local boundary
 

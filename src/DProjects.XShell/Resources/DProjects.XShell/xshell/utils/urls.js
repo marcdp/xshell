@@ -15,6 +15,18 @@ export function resolveAppUrl(value, appBaseUrl) {
     const relative = logicalUrl.pathname.substring(logicalRoot.pathname.length) + logicalUrl.search + logicalUrl.hash;
     return new URL(relative, appBaseUrl).href;
 }
+export function normalizeUrlPrefix(value) {
+    // Normalize a URL or path to one encoded-path-preserving prefix with boundary slashes.
+    const pathname = new URL(value || "/", "https://xshell-prefix.invalid/").pathname;
+    const innerPath = pathname.replace(/^\/+|\/+$/g, "");
+    return innerPath ? `/${innerPath}/` : "/";
+}
+export function indexedDBName(service, prefix) {
+    // Encode path segments before the service name without leading or repeated database-name separators.
+    const path = normalizeUrlPrefix(prefix).slice(1, -1);
+    const namespace = path ? path.split("/").map(segment => segment ? encodeURIComponent(segment).replaceAll("-", "%2D") : "%2F").join("-") : "";
+    return namespace ? `${namespace}-xshell-${service}` : `xshell-${service}`;
+}
 export function combineUrls(a, b) {
     if (a.indexOf("?") != -1) a = a.substring(0, a.indexOf("?"));
     if (/^[A-Za-z][A-Za-z0-9+.-]*:/.test(b)) return b;

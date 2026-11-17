@@ -1,0 +1,46 @@
+{
+    "schema": {
+        "label": "Sample Store",
+        "description": "Example document store backed only by browser memory.",
+        "collections": {
+            "customers": {
+                "label": "Customers",
+                "description": "Customer records",
+                "schema": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                        "id": {"type": "string", "title": "ID", "minLength": 1},
+                        "name": {"type": "string", "title": "Name", "minLength": 1},
+                        "email": {"type": "string", "title": "Email", "format": "email"}
+                    },
+                    "required": ["id", "name"]
+                }
+            },
+            "products": {
+                "label": "Products",
+                "description": "Product records",
+                "schema": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                        "id": {"type": "string", "title": "ID", "minLength": 1},
+                        "name": {"type": "string", "title": "Name", "minLength": 1},
+                        "price": {"type": "number", "title": "Price", "minimum": 0}
+                    },
+                    "required": ["id", "name"]
+                }
+            }
+        }
+    },
+    "documents": {
+        "customers": [
+            {"id": "customer-1", "name": "Ada Lovelace", "email": "ada@example.test"},
+            {"id": "customer-2", "name": "Grace Hopper", "email": "grace@example.test"}
+        ],
+        "products": [
+            {"id": "product-1", "name": "Notebook", "price": 12.5},
+            {"id": "product-2", "name": "Pencil", "price": 1.25}
+        ]
+    }
+}

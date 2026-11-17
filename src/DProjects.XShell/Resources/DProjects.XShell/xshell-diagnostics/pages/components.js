@@ -23,7 +23,7 @@ export default {
             </x-listview-head>
             <x-listview-body>
             <x-listview-item x-for="component in state.components"
-                x-attr:_href="component.url" 
+                x-attr:path="component.url"
                 x-attr:label="component.id"
                 x-attr:icon="component.icon"
                 target="_blank"

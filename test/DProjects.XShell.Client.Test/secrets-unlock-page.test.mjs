@@ -19,8 +19,7 @@ function createPage({status = "locked", rememberMinutes = 0, maxRememberMinutes 
     const calls = {get:0, initialize:[], addPasskey:[], unlock:[], unlockWithPasskey:[], close:[], lock:0};
     const secrets = {
         status,
-        rememberMinutes,
-        maxRememberMinutes,
+        options: {rememberMinutes, maxRememberMinutes, pageUnlock:null, pageManager:null},
         async ready() { return this.status; },
         async listPasskeys() {
             return this.status == "uninitialized" ? [] : [{id:"passkey", label:"Laptop", description:"", createdAt:"2026-01-01T00:00:00.000Z"}];

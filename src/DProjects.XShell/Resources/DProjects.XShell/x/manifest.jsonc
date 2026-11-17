@@ -81,7 +81,8 @@
             },
             "secrets": {
                 "options": {
-                    "page": "/pages/secrets-unlock.js"
+                    "pageUnlock": "/pages/secrets-unlock.js",
+                    "pageManager": "/pages/secrets-manager.js"
                 }
             },
             "theme": {

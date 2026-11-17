@@ -42,7 +42,7 @@ test('cookbook navigation derives ordered Pages from the file inventory', () => 
     const menu = areas.getMenu('navigation');
     assert.equal(areas.getArea('cookbook').home, '/cookbook/');
     assert.deepEqual(menu[0].children.map(item => item.label),
-        ['Components', 'Pages', 'Navigation', 'Dialogs', 'Filesystem', 'Modules', 'Templates', 'Ai', 'Advanced']);
+        ['Components', 'Pages', 'Navigation', 'Dialogs', 'Filesystem', 'Stores', 'Modules', 'Templates', 'Ai', 'Advanced']);
     assert.deepEqual(menu[0].children[0].children.map(item => item.label),
         ['Anchors', 'Buttons', 'Indicators', 'Forms', 'Data Display', 'Listviews', 'Treeviews', 'Layout', 'Editors', 'Composition', 'Contract', 'Lifecycle']);
     assert.deepEqual(menu[0].children[2].children.map(item => item.label),

@@ -49,10 +49,21 @@ Pack and rejects malformed, encrypted, ZIP64, duplicate-name, unsupported-compre
 The mapped fetch has no explicit `mode` option; the source's `same-origin` option is commented out. Cross-origin destinations remain subject to
 fetch/CORS and the host CSP, whose default connect policy is same-origin. Arbitrary CDN backing is not a supported deployment guarantee.
 
-The worker owns one application-scope mapping registry and persists it in IndexedDB. Bootstrap sends `registerMappings`; the worker durably merges
-the complete registration batch before replying with `registered`. Inventory discovery does not require worker mappings: development and published
-runtime descriptors already contain `modules.<localId>.files` or `xshell.files`. Bootstrap normalizes those embedded package-relative paths while
-preparing each descriptor, before Service Worker registration, and later uses them to generate resolver rules.
+The worker owns one application-scope mapping registry and persists it in a scope-specific version-one IndexedDB database, in the fixed `state`
+object store. It derives the prefix independently from the pathname of `self.registration.scope`, normalizes it to leading and trailing slashes,
+and places its encoded path segments before `xshell-sw`. URL path separators become `-`, literal hyphens remain escaped, and empty segments remain
+encoded so names never start with `-` or contain `--`. It does not use the worker script URL, application initialization, messages, or configuration
+for the database name. For example, scope `/admin/` uses `admin-xshell-sw`, while root scope uses `xshell-sw`.
+
+Bootstrap registers `<app.basePath>/sw.js` with scope `<app.basePath>/`, so the application Services and worker normally derive equivalent prefixes.
+A host that registers the worker under a different scope intentionally selects another worker database. IndexedDB remains origin-scoped: these
+names prevent accidental collisions between path-hosted XShell applications but do not create a security boundary between same-origin code. A scope
+change selects a different database, with no migration from the previous name.
+
+Bootstrap sends `registerMappings`; the worker durably merges the complete registration batch before replying with `registered`. Inventory discovery
+does not require worker mappings: development and published runtime descriptors already contain `modules.<localId>.files` or `xshell.files`.
+Bootstrap normalizes those embedded package-relative paths while preparing each descriptor, before Service Worker registration, and later uses them
+to generate resolver rules.
 
 `config.xshell.serviceWorker.mappings` records only the mappings requested by this application bootstrap generation. The worker's IndexedDB registry
 is the durable additive union of registrations from active and historical generations. For example, two tabs can have different effective mapping

@@ -220,6 +220,7 @@ export default {
                 // dblClick
                 let event = args.event;
                 let item = event.target.closest("x-listview-item");
+                debugger;
                 if (item) {
                     item.dispatchEvent(new CustomEvent("activate", {bubbles: true, detail: {path: item.path, paths: [item.path]}}));
                 }
@@ -350,6 +351,7 @@ export default {
                     event.preventDefault();
                 } else if (event.key == "Enter" && !event.altKey) {
                     let paths = selecteds.map(item => item.path);
+                    debugger;
                     firstSelected.dispatchEvent(new CustomEvent("activate", {bubbles: true, detail: {path: firstSelected.path, paths}}));
                     event.preventDefault();
                 }

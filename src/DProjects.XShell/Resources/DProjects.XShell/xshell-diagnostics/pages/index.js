@@ -35,18 +35,20 @@ export default {
         menuitems: [],
         selectedIndex: 0
     },
-    controller({ state, areas, page }) {
+    controller({ state, areas, page, preferences }) {
         return {
-            load() {
+            async load() {
                // load
                const area = areas.getArea("xshell-diagnostics");
                const menuitems = area.menus.navigation[0].children;
                state.menuitems = menuitems;
+               state.selectedIndex = await preferences.get("xshell-diagnostics.selectedIndex", 0);
             },
 
             // events
-            selectTab(data){
+            async selectTab(data){
                 state.selectedIndex = parseInt(data.index);
+                await preferences.set("xshell-diagnostics.selectedIndex", state.selectedIndex);
             }
         };
     }

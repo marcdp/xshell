@@ -122,8 +122,8 @@ export default {
                 events.on(bus, "secrets:status-changed", "onStatusChanged");
 
                 // Build session-duration choices and respect the configured service maximum.
-                const maximum = secrets.maxRememberMinutes;
-                const fallback = secrets.rememberMinutes;
+                const maximum = secrets.options.maxRememberMinutes;
+                const fallback = secrets.options.rememberMinutes;
                 const durations = [
                     {value:0, label:"Do not keep unlocked"},
                     {value:15, label:"15 minutes"},
