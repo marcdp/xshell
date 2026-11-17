@@ -1,9 +1,12 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import listViewDefinition, { contract } from "../../src/DProjects.XShell/Resources/DProjects.XShell/x/components/x-listview.js";
+import listViewDefinition from "../../src/DProjects.XShell/Resources/DProjects.XShell/x/components/x-listview.js";
 import columnDefinition from "../../src/DProjects.XShell/Resources/DProjects.XShell/x/components/x-listview-column.js";
-import itemDefinition, { contract as itemContract } from "../../src/DProjects.XShell/Resources/DProjects.XShell/x/components/x-listview-item.js";
+import itemDefinition from "../../src/DProjects.XShell/Resources/DProjects.XShell/x/components/x-listview-item.js";
+
+const contract = listViewDefinition.contract;
+const itemContract = itemDefinition.contract;
 
 class TestCustomEvent {
     constructor(type, options = {}) {
@@ -32,6 +35,7 @@ class TestMutationObserver {
 
 globalThis.CustomEvent ??= TestCustomEvent;
 globalThis.MutationObserver = TestMutationObserver;
+globalThis.document ??= {activeElement:{localName:"x-listview"}};
 
 function createAttributeHost(localName, attributes = {}) {
     const values = new Map(Object.entries(attributes).map(([name, value]) => [name, String(value)]));
@@ -53,9 +57,12 @@ function createItem(label, attributes = {}) {
     item.label = label;
     item.category = attributes.category || "";
     item.href = attributes.href || "";
+    item.path = attributes.path || "";
+    item.value = attributes.value ?? null;
     item.selected = Boolean(attributes.selected);
     item.events = [];
     item.dispatchEvent = event => { item.events.push(event); return true; };
+    item.closest = selector => selector === "x-listview-item" ? item : null;
     item.scrollIntoView = options => { item.scrolled = options; };
     item.activate = () => { item.activated = true; };
     item.shadowRoot = {
@@ -96,6 +103,7 @@ function createListView(options = {}) {
         querySelectorAll(selector) {
             if (selector === ":scope > x-listview-head > x-listview-column") return columns;
             if (selector === ":scope > x-listview-body > x-listview-item") return items;
+            if (selector === "x-listview-item") return items;
             return [];
         },
         checkVisibility() { return true; }
@@ -169,6 +177,66 @@ test("column headers accept arbitrary default-slot content with a label fallback
     assert.match(columnDefinition.template, /<slot>[\s\S]*state\.label[\s\S]*<\/slot>/);
     assert.match(columnDefinition.style, /::slotted\(\*\)/);
     assert.match(columnDefinition.style, /\.content > span \{flex:1/);
+});
+
+test("x-listview-item exposes an attribute-enabled, state-backed generic value", () => {
+    assert.deepEqual(itemContract.properties.value, {
+        type:"any",
+        default:null,
+        attribute:true,
+        state:true,
+        description:"Application-defined value identifying this list item."
+    });
+});
+
+test("selection detail preserves exact values, order, and existing paths", () => {
+    const firstValue = {id:42};
+    const secondValue = 20;
+    const first = createItem("First", {path:"/first", value:firstValue});
+    const second = createItem("Second", {path:"/second", value:secondValue});
+    const {controller} = createListView({items:[first, second], multiple:true});
+    const detail = controller.getEventDetail(second, [first, second]);
+    assert.strictEqual(detail.value, secondValue);
+    assert.strictEqual(detail.values[0], firstValue);
+    assert.deepEqual(detail.values, [firstValue, secondValue]);
+    assert.equal(detail.path, "/second");
+    assert.deepEqual(detail.paths, ["/first", "/second"]);
+});
+
+test("pointer and keyboard selection expose generic values without requiring paths", async () => {
+    const firstValue = {id:1};
+    const secondValue = {id:2};
+    const first = createItem("First", {selected:true, value:firstValue});
+    const second = createItem("Second", {value:secondValue});
+    const {controller, host} = createListView({items:[first, second]});
+    await controller.click({event:pointerEvent([second, host])});
+    assert.strictEqual(second.events.at(-1).detail.value, secondValue);
+    assert.strictEqual(second.events.at(-1).detail.values[0], secondValue);
+    const up = pointerEvent([]);
+    up.key = "ArrowUp";
+    controller.keydown({event:up});
+    assert.strictEqual(first.events.at(-1).detail.value, firstValue);
+    assert.strictEqual(first.events.at(-1).detail.values[0], firstValue);
+});
+
+test("double-click and Enter activation expose value collections with unchanged path collections", () => {
+    const firstValue = {id:1};
+    const secondValue = {id:2};
+    const first = createItem("First", {path:"/first", value:firstValue, selected:true});
+    const second = createItem("Second", {path:"/second", value:secondValue, selected:true});
+    const {controller} = createListView({items:[first, second], multiple:true});
+    controller.dblClick({event:{target:{closest() { return second; }}}});
+    const doubleClickDetail = second.events.at(-1).detail;
+    assert.strictEqual(doubleClickDetail.value, secondValue);
+    assert.deepEqual(doubleClickDetail.values, [secondValue]);
+    assert.deepEqual(doubleClickDetail.paths, ["/second"]);
+    const enter = pointerEvent([]);
+    enter.key = "Enter";
+    controller.keydown({event:enter});
+    const enterDetail = first.events.at(-1).detail;
+    assert.strictEqual(enterDetail.value, firstValue);
+    assert.deepEqual(enterDetail.values, [firstValue, secondValue]);
+    assert.deepEqual(enterDetail.paths, ["/first", "/second"]);
 });
 
 test("single selection replaces the previous item and emits useful detail", () => {

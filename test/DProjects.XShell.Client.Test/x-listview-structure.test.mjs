@@ -105,6 +105,9 @@ test("demo covers view switching, default-slot cells, selection, and navigation"
     assert.match(demo, /<x-listview[^>]*x-on:select="onSelect"[^>]*x-on:activate="onActivate"/);
     assert.match(demo, /<x-listview[^>]*multiple[^>]*x-on:select="onMultiSelect"/);
     assert.match(demo, /<x-listview-item[^>]*href="01-buttons\.js"/);
+    assert.match(demo, /<x-listview-item[^>]*x-prop:value="customer\.id"/);
+    assert.match(demo, /event\.detail\.values/);
+    assert.match(demo, /event\.detail\.value/);
     assert.match(demo, /<x-listview-item[^>]*>[\s\S]*?<span>Folder<\/span>/);
     assert.doesNotMatch(demo, /<x-listview-item[\s\S]*?slot="column"/);
 });

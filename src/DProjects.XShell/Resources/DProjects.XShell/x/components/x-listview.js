@@ -6,6 +6,8 @@ export default {
             select: {
                 description: "Raised when an item's selected state changes through list interaction.",
                 detail: {
+                    value: {type:"any", required:true},
+                    values: {type:"array", required:true},
                     path: {type:"string", required:true},
                     paths: {type:"array", required:true},
                 }
@@ -13,6 +15,8 @@ export default {
             activate: {
                 description: "Raised when an item is activated by Enter, a link click, or a double click.",
                 detail: {
+                    value: {type:"any", required:true},
+                    values: {type:"array", required:true},
                     path: {type:"string", required:true},
                     paths: {type:"array", required:true},
                 }
@@ -138,7 +142,7 @@ export default {
                     if (!selected && items.length > 0) {
                         items[0].selected = true;
                         items[0].focus();        
-                        items[0].dispatchEvent(new CustomEvent("select", {bubbles: true, detail: {path: items[0].path, paths: [items[0].path]}}));            
+                        items[0].dispatchEvent(new CustomEvent("select", {bubbles: true, detail: this.getEventDetail(items[0], [items[0]])}));
                     }
                 }, 100);
             },
@@ -149,6 +153,10 @@ export default {
             select(path) {
                 const items = [...host.querySelectorAll(":scope > x-listview-body > x-listview-item")];
                 items.forEach(item => { item.selected = (item.path === path); });
+            },
+            getEventDetail(item, items) {
+                // expose generic values alongside the existing path identities
+                return {value:item.value, values:items.map(item => item.value), path:item.path, paths:items.map(item => item.path)};
             },
             changeView( { event }) {
                 const view = event.currentTarget.dataset.view;
@@ -222,7 +230,7 @@ export default {
                 let item = event.target.closest("x-listview-item");
                 debugger;
                 if (item) {
-                    item.dispatchEvent(new CustomEvent("activate", {bubbles: true, detail: {path: item.path, paths: [item.path]}}));
+                    item.dispatchEvent(new CustomEvent("activate", {bubbles: true, detail: this.getEventDetail(item, [item])}));
                 }
             },
             async click(args) {
@@ -254,8 +262,8 @@ export default {
                         });
                         item.selected = true;
                     }
-                    let paths = Array.from(host.querySelectorAll("x-listview-item")).filter(item => item.selected).map(item => item.path);
-                    item.dispatchEvent(new CustomEvent("select", {bubbles: true, detail: {path: item.path, paths}}));  
+                    const selectedItems = Array.from(host.querySelectorAll("x-listview-item")).filter(item => item.selected);
+                    item.dispatchEvent(new CustomEvent("select", {bubbles: true, detail: this.getEventDetail(item, selectedItems)}));
                 }
                 // set selection anchor
                 if (!event.shiftKey || !selectionAnchor) selectionAnchor = item;
@@ -292,12 +300,11 @@ export default {
                     if (index > 0) {
                         if (event.shiftKey) {
                             newSelecteds = [...selecteds, items[index-1]];
-                            let paths = newSelecteds.map(item => item.path);
-                            newSelecteds[newSelecteds.length-1].dispatchEvent(new CustomEvent("select", {bubbles: true, detail: {path: items[index-1].path, paths}}));
+                            newSelecteds[newSelecteds.length-1].dispatchEvent(new CustomEvent("select", {bubbles: true, detail: this.getEventDetail(items[index-1], newSelecteds)}));
                             newSelecteds[newSelecteds.length-1].scrollIntoView({block: "nearest", inline: "nearest", behavior: "instant"});
                         } else {
                             newSelecteds = [items[index-1]];
-                            newSelecteds[0].dispatchEvent(new CustomEvent("select", {bubbles: true, detail: {path: items[index-1].path, paths:[items[index-1].path]}}));
+                            newSelecteds[0].dispatchEvent(new CustomEvent("select", {bubbles: true, detail: this.getEventDetail(items[index-1], [items[index-1]])}));
                             newSelecteds[0].scrollIntoView({block: "nearest", inline: "nearest", behavior: "instant"});
                         }
                     }
@@ -307,12 +314,11 @@ export default {
                     if (index < items.length - 1) {
                         if (event.shiftKey) {
                             newSelecteds = [...selecteds, items[index+1]];
-                            let paths = newSelecteds.map(item => item.path);
-                            newSelecteds[newSelecteds.length-1].dispatchEvent(new CustomEvent("select", {bubbles: true, detail: {path: items[index+1].path, paths}}));
+                            newSelecteds[newSelecteds.length-1].dispatchEvent(new CustomEvent("select", {bubbles: true, detail: this.getEventDetail(items[index+1], newSelecteds)}));
                             newSelecteds[newSelecteds.length-1].scrollIntoView({block: "nearest", inline: "nearest", behavior: "instant"});
                         } else {
                             newSelecteds = [items[index+1]];
-                            newSelecteds[0].dispatchEvent(new CustomEvent("select", {bubbles: true, detail: {path: items[index+1].path, paths:[items[index+1].path]}}));
+                            newSelecteds[0].dispatchEvent(new CustomEvent("select", {bubbles: true, detail: this.getEventDetail(items[index+1], [items[index+1]])}));
                             newSelecteds[0].scrollIntoView({block: "nearest", inline: "nearest", behavior: "instant"});
                         }
                     }
@@ -323,12 +329,11 @@ export default {
                     if (index > 0) {
                         if (event.shiftKey) {
                             newSelecteds = [...selecteds, items[Math.max(index-inc, 0)]];
-                            let paths = newSelecteds.map(item => item.path);
-                            newSelecteds[newSelecteds.length-1].dispatchEvent(new CustomEvent("select", {bubbles: true, detail: {path: items[Math.max(index-inc, 0)].path, paths}}));
+                            newSelecteds[newSelecteds.length-1].dispatchEvent(new CustomEvent("select", {bubbles: true, detail: this.getEventDetail(items[Math.max(index-inc, 0)], newSelecteds)}));
                             newSelecteds[newSelecteds.length-1].scrollIntoView({block: "nearest", inline: "nearest", behavior: "instant"});
                         } else {
                             newSelecteds = [items[Math.max(index-inc, 0)]];
-                            newSelecteds[0].dispatchEvent(new CustomEvent("select", {bubbles: true, detail: {path: items[Math.max(index-inc, 0)].path, paths:[items[Math.max(index-inc, 0)].path]}}));
+                            newSelecteds[0].dispatchEvent(new CustomEvent("select", {bubbles: true, detail: this.getEventDetail(items[Math.max(index-inc, 0)], [items[Math.max(index-inc, 0)]])}));
                             newSelecteds[0].scrollIntoView({block: "nearest", inline: "nearest", behavior: "instant"});
                         }
                     }
@@ -339,20 +344,18 @@ export default {
                     if (index < items.length - 1) {
                         if (event.shiftKey) {
                             newSelecteds = [...selecteds, items[Math.min(index+inc, items.length-1)]];
-                            let paths = newSelecteds.map(item => item.path);
-                            newSelecteds[newSelecteds.length-1].dispatchEvent(new CustomEvent("select", {bubbles: true, detail: {path: items[Math.min(index+inc, items.length-1)].path, paths}}));
+                            newSelecteds[newSelecteds.length-1].dispatchEvent(new CustomEvent("select", {bubbles: true, detail: this.getEventDetail(items[Math.min(index+inc, items.length-1)], newSelecteds)}));
                             newSelecteds[newSelecteds.length-1].scrollIntoView({block: "nearest", inline: "nearest", behavior: "instant"});
                         } else {
                             newSelecteds = [items[Math.min(index+inc, items.length-1)]];
-                            newSelecteds[0].dispatchEvent(new CustomEvent("select", {bubbles: true, detail: {path: items[Math.min(index+inc, items.length-1)].path, paths:[items[Math.min(index+inc, items.length-1)].path]}}));
+                            newSelecteds[0].dispatchEvent(new CustomEvent("select", {bubbles: true, detail: this.getEventDetail(items[Math.min(index+inc, items.length-1)], [items[Math.min(index+inc, items.length-1)]])}));
                             newSelecteds[0].scrollIntoView({block: "nearest", inline: "nearest", behavior: "instant"});
                         }
                     }
                     event.preventDefault();
                 } else if (event.key == "Enter" && !event.altKey) {
-                    let paths = selecteds.map(item => item.path);
                     debugger;
-                    firstSelected.dispatchEvent(new CustomEvent("activate", {bubbles: true, detail: {path: firstSelected.path, paths}}));
+                    firstSelected.dispatchEvent(new CustomEvent("activate", {bubbles: true, detail: this.getEventDetail(firstSelected, selecteds)}));
                     event.preventDefault();
                 }
                 // reselect
@@ -369,8 +372,8 @@ export default {
                         target.selected = false;
                     }
                     item.selected = true;
-                    let paths = Array.from(host.querySelectorAll("x-listview-item")).filter(item => item.selected).map(item => item.path);
-                    item.dispatchEvent(new CustomEvent("select", {bubbles: true, detail: {path: item.path, paths}}));
+                    const selectedItems = Array.from(host.querySelectorAll("x-listview-item")).filter(item => item.selected);
+                    item.dispatchEvent(new CustomEvent("select", {bubbles: true, detail: this.getEventDetail(item, selectedItems)}));
                     host.invalidate();
                 }
                 const customEvent = new CustomEvent("contextmenuitem", {

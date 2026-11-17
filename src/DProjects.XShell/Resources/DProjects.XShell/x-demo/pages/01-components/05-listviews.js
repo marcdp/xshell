@@ -65,6 +65,23 @@ export default {
     &lt;/x-listview-body&gt;
 &lt;/x-listview&gt;</code></pre>
 
+        <h2>Application values</h2>
+        <p>Use <code>value</code> for application identity independently from filesystem-style <code>path</code>. Property binding preserves the original JavaScript value.</p>
+        <x-listview view="details" x-on:select="onCustomerSelect" x-on:activate="onCustomerActivate">
+            <x-listview-head>
+                <x-listview-column label="Name"></x-listview-column>
+                <x-listview-column label="Email"></x-listview-column>
+            </x-listview-head>
+            <x-listview-body>
+                <x-listview-item x-for="customer in state.customers" x-prop:value="customer.id" x-attr:label="customer.name">
+                    <span x-text="customer.email"></span>
+                </x-listview-item>
+            </x-listview-body>
+        </x-listview>
+        <p>Customer selection: {{ state.customerSelection }}</p>
+        <p>Activated customer: {{ state.activatedCustomer }}</p>
+        <pre x-pre><code>&lt;x-listview-item x-prop:value="customer.id" x-attr:label="customer.name"&gt;&lt;/x-listview-item&gt;</code></pre>
+
         <h2>Navigation</h2>
         <p>Set <code>href</code> on an item to make it a navigable link. The listview uses <code>x-anchor</code> internally for navigation.</p>
         <x-listview view="list">
@@ -80,7 +97,13 @@ export default {
     state: {
         selected: "None",
         activated: "None",
-        multipleSelection: "None"
+        multipleSelection: "None",
+        customerSelection: "None",
+        activatedCustomer: "None",
+        customers: [
+            {id:101, name:"Ada", email:"ada@example.com"},
+            {id:102, name:"Linus", email:"linus@example.com"}
+        ]
     },
 
     controller({ state }) {
@@ -97,6 +120,14 @@ export default {
                 const list = event.currentTarget;
                 const selected = [...list.querySelectorAll("x-listview-item[selected]")];
                 state.multipleSelection = selected.map(item => item.label).join(", ") || "None";
+            },
+            onCustomerSelect({ event }) {
+                // display exact application values from the selection event
+                state.customerSelection = event.detail.values.join(", ") || "None";
+            },
+            onCustomerActivate({ event }) {
+                // use the activated item's generic identity without requiring a path
+                state.activatedCustomer = event.detail.value ?? "None";
             }
         };
     }

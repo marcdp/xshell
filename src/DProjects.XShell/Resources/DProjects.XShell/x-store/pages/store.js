@@ -143,7 +143,7 @@ export default {
                 // Pass only provider identity and document coordinates across the Page boundary.
                 try {
                     const result = await navigation.navigate({
-                        href: "page:x-stores:/pages/store-detail.js", page, open: "stack",
+                        href: "page:x-store:/pages/store-detail.js", page, open: "stack",
                         params: {src: state.src, collection: state.collection, id}
                     });
                     if (alive && result?.saved) await this.refresh();

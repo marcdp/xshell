@@ -2,12 +2,12 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 
-import StoreContract from "../../src/DProjects.XShell/Resources/DProjects.XShell/x-stores/contracts/store.json" with { type: "json" };
-import StoreSchema from "../../src/DProjects.XShell/Resources/DProjects.XShell/x-stores/schemas/store.schema.json" with { type: "json" };
-import SampleStore from "../../src/DProjects.XShell/Resources/DProjects.XShell/x-stores/samples/store.json" with { type: "json" };
-import MemoryStore from "../../src/DProjects.XShell/Resources/DProjects.XShell/x-stores/js/store-mem.js";
-import StorePage from "../../src/DProjects.XShell/Resources/DProjects.XShell/x-stores/pages/store.js";
-import DetailPage from "../../src/DProjects.XShell/Resources/DProjects.XShell/x-stores/pages/store-detail.js";
+import StoreContract from "../../src/DProjects.XShell/Resources/DProjects.XShell/x-store/contracts/store.json" with { type: "json" };
+import StoreSchema from "../../src/DProjects.XShell/Resources/DProjects.XShell/x-store/schemas/store.schema.json" with { type: "json" };
+import SampleStore from "../../src/DProjects.XShell/Resources/DProjects.XShell/x-store/samples/store.json" with { type: "json" };
+import MemoryStore from "../../src/DProjects.XShell/Resources/DProjects.XShell/x-store/js/store-mem.js";
+import StorePage from "../../src/DProjects.XShell/Resources/DProjects.XShell/x-store/pages/store.js";
+import DetailPage from "../../src/DProjects.XShell/Resources/DProjects.XShell/x-store/pages/store-detail.js";
 import ContractSchema from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/schemas/contract.schema.json" with { type: "json" };
 import PageSchema from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/schemas/page.schema.json" with { type: "json" };
 import JsonValidator from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/json-validator.js";
@@ -79,7 +79,7 @@ test("memory Store returns defensive copies and accepts only JSON-compatible doc
 test("store resources resolve through instance-js and cache each memory identity", async () => {
     // Construct the real Resolver/Loader path with file URLs so the instance-js factory is exercised in Node.
     globalThis.window ??= {customElements: {get() { return undefined; }}};
-    const providerUrl = new URL("../../src/DProjects.XShell/Resources/DProjects.XShell/x-stores/js/store-mem.js", import.meta.url).href;
+    const providerUrl = new URL("../../src/DProjects.XShell/Resources/DProjects.XShell/x-store/js/store-mem.js", import.meta.url).href;
     const instanceLoaderUrl = new URL("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/loaders/instance-js.js", import.meta.url).href;
     const config = {
         app: {basePath: "", baseUrl: new URL("../../", import.meta.url).href},

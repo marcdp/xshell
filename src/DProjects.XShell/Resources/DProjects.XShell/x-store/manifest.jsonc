@@ -1,8 +1,8 @@
 {
     // module
     "modules": {
-        "x-stores": {
-            "label": "x-stores",
+        "x-store": {
+            "label": "x-store",
             "version": "0.9.0",
             "icon": "",
             "copyright": "",

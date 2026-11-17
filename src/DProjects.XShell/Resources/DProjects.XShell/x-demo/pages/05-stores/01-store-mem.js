@@ -12,7 +12,7 @@ export default {
         return {
             openExplorer() {
                 // Open the module Page through its logical resource and pass the provider source as a Page parameter.
-                return navigation.navigate({href: "page:x-stores:/pages/store.js", page, open: "stack", params: {src: "mem:demo"}});
+                return navigation.navigate({href: "page:x-store:/pages/store.js", page, open: "stack", params: {src: "mem:demo"}});
             }
         };
     }

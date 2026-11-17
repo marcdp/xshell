@@ -4,6 +4,7 @@ export default {
         description: "Displays one selectable item in an x-listview collection.",
         events: {},
         properties: {
+            value:       {type:"any", default:null, attribute:true, state:true, description:"Application-defined value identifying this list item."},
             icon:        {type:"string", default:"x-file", attribute:true, state:true, description:"Item icon."},
             label:       {type:"string", default:"", attribute:true, state:true, description:"Primary item label."},
             description: {type:"string", default:"", attribute:true, state:true, description:"Secondary item description."},
