@@ -227,7 +227,7 @@ export default {
 
                 try {
                     // Initialize the vault and establish the requested remembered session.
-                    await secrets.initialize({password, rememberMinutes});
+                    await secrets.initialize({password});
                     vaultCreated = true;
                     if (!alive || closing) return;
                     if (rememberMinutes > 0) await secrets.unlock({password, rememberMinutes});

@@ -67,7 +67,10 @@
             },
             "preferences": {
                 "contract": "preferences",
-                "implementation": "/services/preferences.js"
+                "implementation": "/services/preferences.js",
+                "options": {
+                    "page": null
+                }
             },
             "secrets": {
                 "contract": "secrets",

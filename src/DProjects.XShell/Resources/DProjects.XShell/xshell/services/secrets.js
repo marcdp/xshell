@@ -94,7 +94,7 @@ function checkRememberMinutes(value, fallback, maximum) {
 
 function sessionPolicy(policy = {}) {
     const page = policy.page ?? null;
-    if (page !== null && (typeof page !== "string" || !page.startsWith("page:") || !page.slice(5).trim())) {
+    if (page !== null && (typeof page !== "string")) {
         throw new TypeError("xshell.services.secrets.options.page must be a non-empty Page resource reference or null.");
     }
     const maximum = policy.maxRememberMinutes ?? 0;
@@ -309,7 +309,7 @@ export default class Secrets {
         properties: {
             page: {
                 anyOf: [
-                    { type: "string", pattern: "^page:.+" },
+                    { type: "string"},
                     { type: "null" }
                 ]
             },

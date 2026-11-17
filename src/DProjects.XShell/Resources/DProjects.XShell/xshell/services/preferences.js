@@ -61,15 +61,30 @@ export default class Preferences {
     // options schema
     static optionsSchema = {
         type: "object",
-        properties: {},
+        properties: {
+            page: {
+                anyOf: [
+                    { type: "string"},
+                    { type: "null" }
+                ]
+            }
+        },
         additionalProperties: false
     };
 
     // vars
     #databasePromise = null;
+    #options = {};
 
     // ctor
-    constructor(_services = {}, _options = {}) {}
+    constructor(_services = {}, _options = {}) {
+        this.#options = _options;
+    }
+
+    // props
+    get options() {
+        return this.#options;
+    }
 
     // methods
     async set(key, value, options) {

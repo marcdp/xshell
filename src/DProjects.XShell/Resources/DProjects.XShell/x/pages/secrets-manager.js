@@ -53,21 +53,15 @@ export default {
 
                     <x-listview x-if="state.items.length > 0" view="details">
                         <x-listview-head>
+                            <x-listview-column label="Name" width="10em"></x-listview-column>
                             <x-listview-column label="Label"></x-listview-column>
-                            <x-listview-column label="Name"></x-listview-column>
                             <x-listview-column label="Description"></x-listview-column>
-                            <x-listview-column label="Revision"></x-listview-column>
-                            <x-listview-column label="Created"></x-listview-column>
-                            <x-listview-column label="Modified"></x-listview-column>
                             <x-listview-column label="Actions" slot="right" width="5em" style="text-align:right"></x-listview-column>
                         </x-listview-head>
                         <x-listview-body>
-                            <x-listview-item x-for="item in state.items" x-attr:key="item.id" x-attr:path="item.id" x-attr:label="item.label" icon="x-key">
-                                <span x-text="item.name"></span>
+                            <x-listview-item x-for="item in state.items" x-attr:key="item.id" x-attr:path="item.id" x-attr:label="item.name" icon="x-password">
+                                <span x-text="item.label"></span>
                                 <span x-text="item.description || '—'"></span>
-                                <span x-text="item.revision"></span>
-                                <span x-text="item.createdDisplay"></span>
-                                <span x-text="item.modifiedDisplay"></span>
                                 <div class="actions" style="text-align:right">
                                     <x-button class="plain" icon="x-edit" tooltip="Edit" x-attr:data-name="item.name" x-on:click="edit" ></x-button>
                                     <x-button class="plain" icon="x-trash" tooltip="Delete" x-attr:data-name="item.name" x-on:click="remove"></x-button>
@@ -91,15 +85,13 @@ export default {
 
                     <x-listview x-if="state.passkeys.length > 0" view="details">
                         <x-listview-head>
-                            <x-listview-column label="Passkey"></x-listview-column>
+                            <x-listview-column label="Passkey" width="10em"></x-listview-column>
                             <x-listview-column label="Description"></x-listview-column>
-                            <x-listview-column label="Created"></x-listview-column>
                             <x-listview-column label="Actions" slot="right" width="5em" style="text-align:right"></x-listview-column>
                         </x-listview-head>
                         <x-listview-body>
                             <x-listview-item x-for="passkey in state.passkeys" x-attr:key="passkey.id" x-attr:label="passkey.label" icon="x-key">
                                 <span x-text="passkey.description || '—'"></span>
-                                <span x-text="passkey.createdDisplay"></span>
                                 <div class="actions" style="text-align:right">
                                     <x-button class="plain" icon="x-edit" tooltip="Edit" x-attr:data-id="passkey.id" x-on:click="editPasskey"></x-button>
                                     <x-button class="plain" icon="x-trash" tooltip="Remove" x-attr:data-id="passkey.id" x-on:click="removePasskey"></x-button>
@@ -124,11 +116,11 @@ export default {
                 <x-datafield x-if="state.valueType == 'text'" type="password" label="Secret value" autocomplete="off" x-model="state.editorValue" required></x-datafield>
                 <x-datafield x-if="state.valueType == 'json'" type="textarea" label="JSON value" x-model="state.editorValue" required></x-datafield>
             </x-datafields>
-            <x-details label="Advanced">
+            <x-details label="Advanced" x-if="state.mode == 'edit'">
                 <x-datafields columns="2">
-                    <x-datafield x-if="state.mode == 'edit'" type="text" label="Created" readonly x-model="state.createdDisplay"></x-datafield>
-                    <x-datafield x-if="state.mode == 'edit'" type="text" label="Modified" readonly x-model="state.modifiedDisplay"></x-datafield>
-                    <x-datafield x-if="state.mode == 'edit'" type="text" label="Revision" readonly x-model="state.revision"></x-datafield>
+                    <x-datafield type="datetime" label="Created" readonly x-model="state.createdDisplay"></x-datafield>
+                    <x-datafield type="datetime" label="Modified" readonly x-model="state.modifiedDisplay"></x-datafield>
+                    <x-datafield type="number" label="Revision" readonly x-model="state.revision"></x-datafield>
                 </x-datafields>
             </x-details>
             <x-button slot="footer" class="submit" label="Save" command="save" x-attr:disabled="state.busy"></x-button>

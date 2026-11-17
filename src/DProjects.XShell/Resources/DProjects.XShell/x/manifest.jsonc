@@ -70,14 +70,19 @@
 
         // services
         "services": {
-            "secrets": {
-                "options": {
-                    "page": "page:x:/pages/secrets-unlock.js"
-                }
-            },
             "markdown": {
                 "contract": "markdown",
                 "implementation": "/services/markdown-default.js"
+            },
+            "preferences": {
+                "options": {
+                    "page": "/pages/preferences.js"
+                }
+            },
+            "secrets": {
+                "options": {
+                    "page": "/pages/secrets-unlock.js"
+                }
             },
             "theme": {
                 "contract": "theme",
