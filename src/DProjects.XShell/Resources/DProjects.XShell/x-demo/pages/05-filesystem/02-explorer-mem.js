@@ -11,11 +11,12 @@ export default {
         <h2>Sample filesystem</h2>
         <p>The example contains documents, images, source files, and nested directories.</p>
 
-        <x-filesystem root x-prop:filesystem="state.filesystem" x-prop:path="state.path"></x-filesystem>
+        <x-filesystem root x-prop:src="state.src" x-prop:path="state.path"></x-filesystem>
 
     `,
 
     state: {
+        src: "mem:demo",
         filesystem: null,
         path: "/"
 
@@ -24,7 +25,7 @@ export default {
         return {
             async mount() {
                 // load
-                const fs = await loader.load("filesystem:mem:");
+                const fs = await loader.load("filesystem:" +state.src);
 
                 await fs.createDirectory("/documents");
                 await fs.createDirectory("/documents/reports");

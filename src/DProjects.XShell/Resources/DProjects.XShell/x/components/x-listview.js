@@ -228,7 +228,6 @@ export default {
                 // dblClick
                 let event = args.event;
                 let item = event.target.closest("x-listview-item");
-                debugger;
                 if (item) {
                     item.dispatchEvent(new CustomEvent("activate", {bubbles: true, detail: this.getEventDetail(item, [item])}));
                 }

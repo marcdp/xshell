@@ -34,7 +34,9 @@ function matchesPattern(name, pattern) {
 export default class FilesystemFile extends Filesystem {
 
     // create
-    static create(url) {
+    static create({ url, services }) {
+        // Create the browser file-picker provider; this provider needs no runtime services.
+        void services;
         if (url && url !== "file" && url !== "file:") throw new TypeError(`Unsupported local filesystem URL: ${url}`);
         return new FilesystemFile();
     }

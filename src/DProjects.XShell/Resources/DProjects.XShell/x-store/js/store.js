@@ -31,13 +31,13 @@ export function cloneDocument(document) {
 }
 
 export default class Store {
-    constructor({ schema, schemaDefinition, validator } = {}) {
+    constructor({ schema, schemaDefinition, jsonValidator } = {}) {
         // Validate and snapshot Store metadata once so providers and callers cannot mutate it.
         if (!schemaDefinition) throw new TypeError("schemaDefinition is required");
-        if (!validator?.validate) throw new TypeError("validator with validate() is required");
-        const result = validator.validate(schema, schemaDefinition);
+        if (!jsonValidator?.validate) throw new TypeError("jsonValidator with validate() is required");
+        const result = jsonValidator.validate(schema, schemaDefinition);
         if (!result.valid) throw new Error("Invalid Store schema", { cause: result.errors });
-        this._validator = validator;
+        this._jsonValidator = jsonValidator;
         this._schema = structuredClone(schema);
     }
 
@@ -58,7 +58,7 @@ export default class Store {
         // Validate a JSON document against its collection schema without changing provider state.
         const definition = this.collection(collection);
         const copy = cloneDocument(document);
-        const result = this._validator.validate(copy, definition.schema);
+        const result = this._jsonValidator.validate(copy, definition.schema);
         if (!result.valid) throw new Error(`Invalid document for collection '${collection}'`, { cause: result.errors });
         return copy;
     }
