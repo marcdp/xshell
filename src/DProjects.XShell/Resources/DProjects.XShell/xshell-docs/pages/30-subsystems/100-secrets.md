@@ -14,11 +14,16 @@ The master password does not encrypt individual secrets. PBKDF2-SHA-256 derives 
 and 600,000 iterations. That KEK authenticates and decrypts one password-wrapped copy of the random DEK. The password mechanism is always retained
 as the vault recovery path when passkeys are added or removed.
 
-After first-time vault initialization, the authentication Page offers optional passkey enrollment when the browser supports WebAuthn credential
-creation and retrieval. Enrollment starts only when the user selects **Create passkey**; **Not now** completes initialization without one. The Page
-retains the initialization password privately only for this optional step because `addPasskey()` reauthenticates against the master password. A
-failed or cancelled WebAuthn ceremony leaves the initialized vault intact and allows another attempt or completion without a passkey. The master
-password remains the permanent recovery method whether or not a passkey is enrolled.
+During first-time vault creation, the authentication Page offers **Set up a default passkey** when the secure browser context exposes both WebAuthn
+credential creation and retrieval. The checkbox is selected by default. After the master-password vault is initialized and the selected **Keep
+unlocked** policy is established, the Page automatically attempts enrollment with the label **This device** and description **Use this device to
+unlock the vault.** The Page retains the initialization password in private controller closure state only for this optional step because
+`addPasskey()` reauthenticates against the master password; it does not expose the password through reactive Page state or the dialog result.
+
+The checkbox can be cleared to finish without enrollment. If automatic registration is cancelled or fails, the initialized vault remains intact
+and the Page exposes **Create passkey** for a user-initiated retry and **Not now** to finish without one. A separate click can be necessary in browser
+environments that require fresh user activation for `navigator.credentials.create()`. Automatic enrollment is therefore a best-effort convenience,
+not a guarantee. The master password remains the permanent recovery method whether or not a passkey is enrolled.
 
 ## Lifecycle and API
 
@@ -121,8 +126,13 @@ Memory-only sessions are the most restrictive mode. `rememberMinutes: 0` keeps t
 not create session material, and requires password or passkey authentication after an application reload. Both duration values default to zero when
 omitted.
 
+The authentication Page shows the **Keep unlocked** selector during both vault creation and later password or passkey authentication. During vault
+creation, zero leaves the session memory-only. A positive selection initializes the vault and then establishes the requested remembered session
+before optional passkey enrollment begins. If remembered-session establishment fails, the vault metadata remains initialized but the Page returns
+to locked authentication so the user can retry; it does not report successful completion with a silently different policy.
+
 `xshell.services.secrets.options.rememberMinutes` is the default used when an unlock call omits a duration. `maxRememberMinutes` in the same options
-object is the application-enforced maximum. Both are nonnegative integer minutes, are limited to 1,440, and `rememberMinutes` cannot exceed
+object is the application-enforced maximum. Both are nonnegative integer minutes, are limited to 43,200 (30 days), and `rememberMinutes` cannot exceed
 `maxRememberMinutes`. Zero maximum disables persistence. An application that allows an optional one-hour session overrides the service options:
 
 ```jsonc
@@ -144,11 +154,18 @@ A positive duration creates a remembered session with an absolute expiration. Re
 promptly while per-operation checks enforce expiration after tab suspension or delayed timers. Expiration and explicit Lock invalidate the epoch,
 abort active writes, discard the active key, remove the tab metadata, and delete its session-key record.
 
+Remembered metadata is stored in `sessionStorage`, so restoration is scoped to the current browser tab under normal browser behavior. Each tab has
+its own session id and wrapping key record. Explicit Lock revokes the current tab's remembered session; it does not synchronize unlocked state to
+other tabs. Browser tab duplication and session restoration policies vary, so tab closure must not be treated as a cryptographic revocation event.
+
 ## Passkey wrapping
 
 Passkey enrollment and unlocking require a secure origin, user verification, WebAuthn, and a credential/authenticator combination that implements
-the WebAuthn PRF extension. Registration requests PRF capability and confirms `prf.enabled`. If registration does not return a PRF evaluation, the
-service obtains one through a follow-up assertion. An assertion without a usable PRF output cannot unlock the vault.
+the WebAuthn PRF extension. These are distinct checkpoints: exposing `navigator.credentials.create()` means the browser can start credential
+creation, not that the selected authenticator supports PRF or registration will succeed. Registration requests PRF capability and confirms
+`prf.enabled`. If registration does not return a PRF evaluation, the service obtains one through a follow-up assertion. A stored registration proves
+that enrollment completed locally, but later authentication can still be cancelled, return an unexpected credential, or omit a usable PRF output.
+An assertion without a usable PRF result cannot unlock the vault.
 
 Each local registration stores a random 256-bit PRF input salt. The credential-specific PRF output is passed through HKDF-SHA-256 with the stable
 local vault user id as salt and credential-specific, domain-separated context. The resulting AES-256-GCM KEK authenticates and decrypts that
@@ -197,16 +214,41 @@ is application logic based on the local clock, not hardware-backed cryptographic
 duplication, browser session restoration, and browser closing behavior vary and must not be treated as guaranteed deletion. Storage restrictions,
 missing Web Crypto, malformed metadata, policy changes, missing keys, and authentication failures leave the vault locked.
 
-## Manual PRF verification
+## Release validation
 
-Automated client tests use deterministic WebAuthn responses while retaining native Web Crypto operations. Real compatibility still depends on the
-browser, platform, and authenticator. To verify an environment, serve XShell from its normal secure origin and:
+The client test suite deterministically covers vault initialization, password and mocked-PRF passkey unlock, optional automatic enrollment,
+registration failure and retry, remembered restoration and expiration, explicit locking, secret CRUD and rename behavior, encrypted metadata,
+revision tracking, concurrent writes, in-flight locking, authentication dialog closure, Manager refreshes, and Page/dialog hash isolation. Run:
 
-1. Create a vault, store both a text value and a structured JSON value, and add a labeled passkey.
-2. Lock and reload the Page, choose **Unlock with passkey** from a direct button click, complete user verification, and confirm both values decrypt.
-3. Add a second passkey, confirm either credential unlocks the same values, remove one, and confirm the other and the master password still work.
-4. Enable a remembered duration, unlock, reload before expiry, and confirm restoration does not display WebAuthn or password UI and does not extend
-   `sessionExpiresAt`; then use Lock and confirm reload requires authentication.
-5. Inspect IndexedDB and `sessionStorage`. Confirm they contain only the documented vault/passkey/secret records, a non-extractable session key, and
-   wrapped session metadata—not passwords, plaintext values, raw DEKs, KEKs, or PRF outputs.
-6. Repeat with a credential that lacks PRF support or cancel the ceremony and confirm the Page reports the failure while password unlock still works.
+```sh
+node --test test/DProjects.XShell.Client.Test/secrets.test.mjs
+node --test test/DProjects.XShell.Client.Test/secrets-page.test.mjs
+node --test test/DProjects.XShell.Client.Test/secrets-unlock-page.test.mjs
+cd test/DProjects.XShell.Client.Test && npm test
+```
+
+Mocked WebAuthn verifies XShell's request, response, error, and lifecycle handling but cannot prove browser, operating-system, or authenticator
+compatibility. Before release, serve XShell from its normal secure origin and complete this checklist with a real PRF-capable authenticator in each
+supported browser:
+
+- Create a fresh vault with **Set up a default passkey** enabled and a positive **Keep unlocked** duration. Complete automatic registration, confirm
+  that the dialog closes only after registration, and verify **This device** appears in the Manager.
+- Repeat after cancelling the browser ceremony and after reproducing a missing-user-activation rejection. Confirm the vault remains initialized,
+  **Create passkey** retries from a fresh click, and **Not now** finishes without a passkey.
+- Clear **Set up a default passkey** and verify that vault creation completes without a WebAuthn prompt. Repeat where credential creation is
+  unavailable and confirm password initialization and unlocking remain usable.
+- Lock and unlock with the registered passkey using zero and positive remembered durations. Then lock and recover with the master password.
+- Reload before remembered-session expiration and confirm restoration prompts for neither password nor passkey and does not extend
+  `sessionExpiresAt`. Verify expiration and explicit Lock require authentication again in that tab.
+- Create text and structured secrets; edit values, labels, and descriptions; rename and delete them; and verify revision and `modifiedAt` changes
+  while immutable ids and `createdAt` remain stable.
+- Add, edit, and remove a passkey through the Manager and verify its list refreshes after every successful dialog or removal.
+- Change the selected Manager tab while dialogs are open, complete or cancel those dialogs, and verify normal refreshes do not replace the tab hash.
+- Reload the application and verify vault discovery, remembered restoration when eligible, and locked password/passkey authentication otherwise.
+- Inspect IndexedDB and `sessionStorage`. Confirm they contain only the documented records and wrapping material—not passwords, plaintext secret
+  values, raw DEKs, KEKs, or PRF outputs.
+
+Record the browser version, operating system, authenticator, whether automatic enrollment retained user activation, PRF registration result, and
+password/passkey unlock outcome. Chromium, Firefox, and WebKit/Safari may differ in WebAuthn PRF and user-activation behavior; a successful check in
+one does not validate the others. Environments without credential creation, PRF support, a secure context, or an eligible authenticator remain
+password-only and must not be reported as passkey-validated.

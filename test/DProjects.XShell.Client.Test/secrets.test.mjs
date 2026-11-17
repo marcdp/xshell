@@ -450,7 +450,7 @@ test("get transparently shares one configured authentication dialog and resumes 
     secrets.lock();
 
     assert.deepEqual(await Promise.all([secrets.get("first"), secrets.get("second")]), ["one", "two"]);
-    assert.deepEqual(calls, [{href:"page:x:/pages/secrets-unlock.js", title:"Secrets vault", context:{}}]);
+    assert.deepEqual(calls, [{href:"page:x:/pages/secrets-unlock.js", context:{}}]);
 });
 
 test("get distinguishes authentication cancellation, retries later, and honors non-interactive policy", async () => {
@@ -927,7 +927,7 @@ test("remembered-session policy defaults to memory-only and validates durations"
     assert.throws(() => createSecrets(secretsConfig(15, 0)), /cannot exceed/u);
     assert.throws(() => createSecrets(secretsConfig(-1, 60)), /integer from 0/u);
     assert.throws(() => createSecrets(secretsConfig(0, 1.5)), /integer from 0/u);
-    assert.throws(() => createSecrets(secretsConfig(0, 1441)), /integer from 0/u);
+    assert.throws(() => createSecrets(secretsConfig(0, 43201)), /integer from 0/u);
     assert.throws(() => createSecrets(secretsConfig(0, 0, "page:")), /Page resource reference/u);
     assert.throws(() => createSecrets(secretsConfig(0, 0, "/pages/unlock.js")), /Page resource reference/u);
 

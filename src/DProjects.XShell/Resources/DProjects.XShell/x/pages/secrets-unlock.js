@@ -243,6 +243,8 @@ export default {
                 } catch (error) {
                     this.clearEnrollmentPassword();
                     if (alive && !closing) {
+                        // Keep a created vault retryable when remembered-session establishment fails.
+                        if (vaultCreated && secrets.status === "unlocked") secrets.lock();
                         state.status = secrets.status;
                         state.error = vaultCreated
                             ? `Vault created, but the requested session could not be established: ${error?.message || error}`

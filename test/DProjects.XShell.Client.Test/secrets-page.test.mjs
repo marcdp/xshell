@@ -3,12 +3,12 @@ import test from "node:test";
 
 import SecretsPage from "../../src/DProjects.XShell/Resources/DProjects.XShell/x/pages/secrets-manager.js";
 
-function createPage({ rememberMinutes = 0, maxRememberMinutes = 0, mode = "manage", secretName = "", passkeyId = "", status, items = [], dialogResult = null, renameError = null } = {}) {
+function createPage({ rememberMinutes = 0, maxRememberMinutes = 0, mode = "manage", secretName = "", passkeyId = "", status, items = [], dialogResult = null, confirmResult = "yes", renameError = null } = {}) {
     const state = structuredClone(SecretsPage.state);
     state.mode = mode;
     state.secretName = secretName;
     state.passkeyId = passkeyId;
-    const calls = { lock: 0, list: 0, get: [], open: [], set: [], rename: [], addPasskey: [], updatePasskey: [], close: [] };
+    const calls = { lock:0, list:0, listPasskeys:0, get:[], open:[], confirm:[], set:[], rename:[], delete:[], addPasskey:[], updatePasskey:[], removePasskey:[], close:[], invalidate:0, replaceHash:[] };
     const secrets = {
         status: status ?? (mode == "manage" ? "locked" : "unlocked"),
         page: "page:x:/pages/secrets-unlock.js",
@@ -16,7 +16,7 @@ function createPage({ rememberMinutes = 0, maxRememberMinutes = 0, mode = "manag
         maxRememberMinutes,
         sessionExpiresAt: null,
         async ready() { return this.status; },
-        async listPasskeys() { return [{ id: "passkey", label: "Laptop", description: "Work computer", createdAt: "2026-01-01T00:00:00.000Z" }]; },
+        async listPasskeys() { calls.listPasskeys++; return [{ id: "passkey", label: "Laptop", description: "Work computer", createdAt: "2026-01-01T00:00:00.000Z" }]; },
         async list() { calls.list++; return items; },
         async get(...args) { calls.get.push(args); return "decrypted value"; },
         async getInfo() {
@@ -32,15 +32,28 @@ function createPage({ rememberMinutes = 0, maxRememberMinutes = 0, mode = "manag
         },
         async set(...args) { calls.set.push(args); },
         async rename(...args) { calls.rename.push(args); if (renameError) throw renameError; },
+        async delete(...args) { calls.delete.push(args); },
         async addPasskey(options) { calls.addPasskey.push(options); },
         async updatePasskey(...args) { calls.updatePasskey.push(args); },
+        async removePasskey(...args) { calls.removePasskey.push(args); },
         lock() { calls.lock++; this.status = "locked"; }
     };
     const controller = SecretsPage.controller({
         state,
         secrets,
-        page: { invalidate() {}, async close(result) { calls.close.push(result); } },
-        dialog: { async open(options) { calls.open.push(options); return dialogResult; } },
+        page: {
+            invalidate() { calls.invalidate++; },
+            replaceHash(value) { calls.replaceHash.push(value); },
+            async close(result) { calls.close.push(result); }
+        },
+        dialog: {
+            async open(options) {
+                calls.open.push(options);
+                if (dialogResult?.unlocked) secrets.status = "unlocked";
+                return dialogResult;
+            },
+            async confirm(options) { calls.confirm.push(options); return confirmResult; }
+        },
         bus: {},
         events: { on() {} }
     });
@@ -48,14 +61,68 @@ function createPage({ rememberMinutes = 0, maxRememberMinutes = 0, mode = "manag
 }
 
 test("Secrets Manager delegates initialization and unlocking to the dedicated authentication Page", async () => {
-    const { calls, controller } = createPage();
+    const { state, secrets, calls, controller } = createPage({dialogResult:{unlocked:true}});
     await controller.load();
     await controller.openUnlock();
     assert.deepEqual(calls.open, [{
         href:"page:x:/pages/secrets-unlock.js",
-        title:"Secrets vault",
         context:{}
     }]);
+    assert.equal(calls.list, 1);
+    assert.equal(calls.listPasskeys, 2, "the Manager refreshes passkeys after authentication completes");
+    assert.equal(state.status, "unlocked");
+});
+
+test("Secrets Manager refreshes after successful secret and passkey dialogs without changing the tab hash", async () => {
+    const page = createPage({status:"unlocked", dialogResult:{saved:true}});
+    await page.controller.load();
+    const initialLists = page.calls.list;
+    const initialPasskeyLists = page.calls.listPasskeys;
+
+    await page.controller.openEditor("edit", "token");
+    await page.controller.openPasskey();
+    await page.controller.openPasskeyEditor("passkey");
+
+    assert.equal(page.calls.list, initialLists + 3);
+    assert.equal(page.calls.listPasskeys, initialPasskeyLists + 3);
+    assert.deepEqual(page.calls.open.map(item => item.context), [
+        {mode:"edit", secretName:"token"},
+        {mode:"add-passkey"},
+        {mode:"edit-passkey", passkeyId:"passkey"}
+    ]);
+    assert.deepEqual(page.calls.replaceHash, [], "normal refreshes leave the hash-selected x-tab untouched");
+    assert.match(SecretsPage.template, /<x-tabs[^>]*use-hash/u);
+});
+
+test("Secrets Manager refreshes after removing secrets and passkeys", async () => {
+    const page = createPage({status:"unlocked"});
+    await page.controller.load();
+    const initialLists = page.calls.list;
+    const initialPasskeyLists = page.calls.listPasskeys;
+
+    await page.controller.remove({event:{currentTarget:{dataset:{name:"token"}}}});
+    await page.controller.removePasskey({event:{currentTarget:{dataset:{id:"passkey"}}}});
+
+    assert.deepEqual(page.calls.delete, [["token"]]);
+    assert.deepEqual(page.calls.removePasskey, [["passkey"]]);
+    assert.equal(page.calls.list, initialLists + 2);
+    assert.equal(page.calls.listPasskeys, initialPasskeyLists + 2);
+});
+
+test("Secrets Manager status changes clear locked data and reload unlocked data", async () => {
+    const page = createPage({status:"unlocked", items:[{id:"id", name:"token", label:"Token", description:"", createdAt:"2026-01-01T00:00:00.000Z", modifiedAt:"2026-01-01T00:00:00.000Z", revision:1}]});
+    await page.controller.load();
+    assert.equal(page.state.items.length, 1);
+
+    page.secrets.status = "locked";
+    await page.controller.onStatusChanged();
+    assert.deepEqual(page.state.items, []);
+    assert.equal(page.state.status, "locked");
+
+    page.secrets.status = "unlocked";
+    await page.controller.onStatusChanged();
+    assert.equal(page.state.items.length, 1);
+    assert.equal(page.state.status, "unlocked");
 });
 
 test("Secrets Manager unload clears sensitive state without locking", async () => {
