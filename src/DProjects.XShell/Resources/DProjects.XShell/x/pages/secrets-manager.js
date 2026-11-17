@@ -338,7 +338,6 @@ export default {
                 try {
                     const result = await dialog.open({
                         href: secrets.page,
-                        title: "Secrets vault",
                         context: {}
                     });
                     // Refresh after the entire initialization and optional passkey setup completes.
