@@ -390,14 +390,19 @@ export default {
         dockPosition:    "bottom",
         dockSrc:         ""
     },
-    controller({ state, events, areas, bus, getPage, host, tasks, postRender }) {
+    controller({ state, events, areas, bus, getPage, host, tasks, postRender, preferences }) {
+        let pendingWrite = Promise.resolve();
+        let dockSizeRevision = 0;
+        let restoring = false;
+        let menuChanged = false;
+        let dockSrcChanged = false;
+        let dockPositionChanged = false;
         return {
             async load(params) {
-                // toggled
-                state.toggled = localStorage.getItem("xshell.toggled") == "true";
-                state.dockSrc = localStorage.getItem("xshell.dockSrc") || "";
-                state.dockPosition = localStorage.getItem("xshell.dockPosition") || "bottom";                
-                if (state.dockSrc) document.documentElement.setAttribute("data-scrollbar", "none");
+                // Start restoration while listeners can still capture newer user changes.
+                const keys = ["xshell.toggled", "xshell.dockSrc", "xshell.dockPosition"];
+                const savedPromise = Promise.allSettled(keys.map(key => preferences.get(key)));
+                events.on(state, "change:toggled", () => { if (!restoring) menuChanged = true; });
                 // auto close menu on navigation start (mobile)
                 events.on(bus, "xshell:navigation:start", (e) => {
                     if (probablyPhone()) {
@@ -424,20 +429,32 @@ export default {
                     state.dockSrc = event.detail.src;
                 });
                 events.on(state, ["change:dockSrc", "change:dockPosition"], (event) => {
+                    if (restoring) return;
+                    if (event.prop === "dockSrc") dockSrcChanged = true;
+                    if (event.prop === "dockPosition") dockPositionChanged = true;
                     if (state.dockSrc) {
                         document.documentElement.setAttribute("data-scrollbar", "none");
                     } else {
                         document.documentElement.removeAttribute("data-scrollbar");
                     }
-                    if (state.dockSrc) {
-                        localStorage.setItem("xshell.dockSrc", state.dockSrc);
-                    } else {
-                        localStorage.removeItem("xshell.dockSrc");
-                    }
-                    localStorage.setItem("xshell.dockPosition", state.dockPosition);
+                    // Queue both changes in event order while rendering remains synchronous.
+                    if (state.dockSrc) this.savePreference("xshell.dockSrc", state.dockSrc);
+                    else this.deletePreference("xshell.dockSrc");
+                    this.savePreference("xshell.dockPosition", state.dockPosition);
                     postRender("restoreDockSize");
                     postRender("refreshMenuHeight");
                 });
+                // Apply only fields that remained untouched while IndexedDB was loading.
+                const saved = await savedPromise;
+                restoring = true;
+                try {
+                    if (!menuChanged) state.toggled = saved[0].status === "fulfilled" && saved[0].value === "true";
+                    if (!dockSrcChanged) state.dockSrc = saved[1].status === "fulfilled" ? saved[1].value || "" : "";
+                    if (!dockPositionChanged) state.dockPosition = saved[2].status === "fulfilled" ? saved[2].value || "bottom" : "bottom";
+                    if (state.dockSrc) document.documentElement.setAttribute("data-scrollbar", "none");
+                    else document.documentElement.removeAttribute("data-scrollbar");
+                } finally { restoring = false; }
+                if (state.dockSrc) postRender("restoreDockSize");
             },
 
             async mount(params) {
@@ -527,7 +544,15 @@ export default {
             async onToggleMenu(params) {
                 //toggle-menu
                 state.toggled = !state.toggled;
-                localStorage.setItem("xshell.toggled", state.toggled);
+                this.savePreference("xshell.toggled", String(state.toggled));
+            },
+            savePreference(key, value) {
+                // Keep writes ordered and absorb storage failures without blocking interaction.
+                pendingWrite = pendingWrite.then(() => preferences.set(key, value)).catch(() => {});
+            },
+            deletePreference(key) {
+                // Keep deletions ordered with adjacent dock updates.
+                pendingWrite = pendingWrite.then(() => preferences.delete(key)).catch(() => {});
             },
             onPageLoaded({ event }) {
                 // page loaded
@@ -556,18 +581,22 @@ export default {
                 const dimension = state.dockPosition === "right" ? "width" : "height";
                 const size = Math.round(panel.getBoundingClientRect()[dimension]);
                 if (!Number.isFinite(size) || size <= 0) return;
-                try {
-                    localStorage.setItem(`xshell.dockSize.${state.dockPosition}`, size);
-                } catch { }
+                dockSizeRevision++;
+                this.savePreference(`xshell.dockSize.${state.dockPosition}`, String(size));
             },
-            restoreDockSize() {
+            async restoreDockSize() {
                 // Find the rendered dock and read the saved size for its current position.
                 const panel = host.shadowRoot.querySelector(".docked-page");
                 if (!panel) return;
+                const position = state.dockPosition;
+                const revision = ++dockSizeRevision;
                 let size;
                 try {
-                    size = Number(localStorage.getItem(`xshell.dockSize.${state.dockPosition}`));
+                    await pendingWrite;
+                    size = Number(await preferences.get(`xshell.dockSize.${position}`));
                 } catch { }
+                // A newer resize, position change, or render takes precedence over this read.
+                if (revision !== dockSizeRevision || position !== state.dockPosition || panel !== host.shadowRoot.querySelector(".docked-page")) return;
                 if (!Number.isFinite(size) || size <= 0) {
                     panel.style.removeProperty("flex");
                     return;

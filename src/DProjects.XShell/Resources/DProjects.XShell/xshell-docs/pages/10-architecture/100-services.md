@@ -28,15 +28,15 @@ validates every configured contract reference, eagerly loads each configured imp
 finalizes the registry. Configured service instances are not constructed during initialization.
 
 The `theme` service is the one explicit startup exception. The X module controller declares `theme` as a constructor dependency, so normal service
-injection resolves it while modules initialize and before navigation renders UI. The saved `system`, `light`, or `dark` mode is therefore applied to
-the root `data-theme` attribute without waiting for a Page or layout. The service remains the single source of truth and emits
-`x:theme:changed` with `{ mode }` on the Bus when the selected mode changes. Restoring the selected mode at startup and operating-system appearance
-changes while `system` is selected do not emit this event. Native CSS `color-scheme` and `light-dark()` continue to resolve the visual palette;
+injection resolves it while modules initialize. The service starts with `system` and restores a saved `system`, `light`, or `dark` mode asynchronously
+through Preferences. It applies a saved forced mode to the root `data-theme` attribute when the read completes. The service remains the single source
+of truth and emits `x:theme:changed` with `{ mode }` on the Bus when a selection or restoration changes the mode. A newer selection takes precedence
+over an unfinished restore. Native CSS `color-scheme` and `light-dark()` continue to resolve the visual palette;
 `system` is represented by an absent root attribute.
 
-This startup integration does not run until asynchronous configuration, contract, and implementation discovery reaches `XShell.init()`. It avoids
-an incorrect theme during XShell UI rendering, but it cannot guarantee that a browser will not paint the host document once before a saved forced
-mode is restored. Preventing that earlier host-document flash would require integration before the current asynchronous bootstrap boundary.
+This startup integration does not run until asynchronous configuration, contract, and implementation discovery reaches `XShell.init()`. A saved forced
+mode may take effect after the initial UI render because the preference read is asynchronous. Preventing an earlier host-document flash would require
+integration before the current asynchronous bootstrap boundary.
 
 `Services.register()` is therefore an initialization-time API. Core/runtime services are registered before `Services.init()`, and configured
 services from `xshell.services` are registered during it. Once initialization completes, the registry topology is immutable: modules, Components,

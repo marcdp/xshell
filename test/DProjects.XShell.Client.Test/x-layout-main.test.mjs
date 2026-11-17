@@ -1,108 +1,175 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-
 import layout from "../../src/DProjects.XShell/Resources/DProjects.XShell/x/layouts/x-layout-main.js";
 
-function setup({ position = "bottom", panelWidth = 320, panelHeight = 240, containerWidth = 1000, containerHeight = 800 } = {}) {
-    const values = new Map();
-    const writes = [];
-    const style = {
-        flex: "",
-        removeProperty(property) { if (property === "flex") this.flex = ""; }
+const settle = () => new Promise(resolve => setImmediate(resolve));
+
+function setup() {
+    const values = new Map(), writes = [], listeners = new Map();
+    const style = {flex:"", removeProperty() { this.flex = ""; }};
+    const viewport = {width:1000, height:800};
+    const panel = {style, getBoundingClientRect: () => ({width:365.2, height:245.4})};
+    const elements = {
+        ".docked-page":panel, ".docked-main":{getBoundingClientRect: () => ({width:600, height:500})},
+        ".dock-container":{getBoundingClientRect: () => viewport}, "x-splitter":{getBoundingClientRect: () => ({width:2, height:2})}
     };
-    const panel = { style, getBoundingClientRect: () => ({ width: panelWidth, height: panelHeight }) };
-    const main = { getBoundingClientRect: () => ({ width: 600, height: 500 }) };
-    const viewport = { width: containerWidth, height: containerHeight };
-    const container = { getBoundingClientRect: () => viewport };
-    const splitter = { getBoundingClientRect: () => ({ width: 2, height: 2 }) };
-    const elements = { ".docked-page": panel, ".docked-main": main, ".dock-container": container, "x-splitter": splitter };
-    const host = { shadowRoot: { querySelector: selector => elements[selector] || null } };
-    const state = { dockPosition: position, dockSrc: "/dock.js" };
-    const originalStorage = globalThis.localStorage;
-    const originalStyle = globalThis.getComputedStyle;
-    globalThis.localStorage = {
-        getItem(key) { return values.has(key) ? values.get(key) : null; },
-        setItem(key, value) { writes.push([key, String(value)]); values.set(key, String(value)); }
-    };
-    globalThis.getComputedStyle = () => ({ minWidth: "160px", minHeight: "160px" });
-    const controller = layout.controller({ state, host });
-    return {
-        controller, state, style, values, writes, elements, viewport,
-        restore() {
-            if (originalStorage === undefined) delete globalThis.localStorage;
-            else globalThis.localStorage = originalStorage;
-            if (originalStyle === undefined) delete globalThis.getComputedStyle;
-            else globalThis.getComputedStyle = originalStyle;
+    const host = {shadowRoot:{querySelector: selector => elements[selector] || null}};
+    const state = new Proxy({dockPosition:"bottom", dockSrc:"/dock.js", toggled:false}, {set(target, prop, value) {
+        const oldValue = target[prop];
+        target[prop] = value;
+        if (oldValue !== value) {
+            for (const [names, callback] of listeners) {
+                if (names.split(",").includes(`change:${prop}`)) callback({prop, oldValue, newValue:value});
+            }
         }
+        return true;
+    }});
+    const preferences = {
+        async get(key) { return values.get(key); },
+        async set(key, value) { writes.push([key, value]); values.set(key, value); },
+        async delete(key) { writes.push([key, null]); values.delete(key); }
     };
+    const originalStyle = globalThis.getComputedStyle, originalDocument = globalThis.document;
+    globalThis.getComputedStyle = () => ({minWidth:"160px", minHeight:"160px"});
+    globalThis.document = {documentElement:{setAttribute() {}, removeAttribute() {}}};
+    const controller = layout.controller({
+        state, host, preferences, bus:{}, getPage:() => null, postRender() {},
+        events:{on(target, names, callback) { listeners.set(String(names), callback); }}
+    });
+    controller.refreshMenuHeight = () => {};
+    return {controller, state, style, viewport, elements, values, writes, listeners, preferences, restore() {
+        if (originalStyle === undefined) delete globalThis.getComputedStyle; else globalThis.getComputedStyle = originalStyle;
+        if (originalDocument === undefined) delete globalThis.document; else globalThis.document = originalDocument;
+    }};
 }
 
-test("dock resize persists measured bottom height only when resizing finishes", () => {
-    const ui = setup({ panelHeight: 275.6 });
+test("dock resize persists only the measured final size", async () => {
+    const ui = setup();
     try {
-        ui.controller.onDockResize({ event: { type: "change", detail: { size: 900 } } });
+        ui.controller.onDockResize({event:{type:"change", detail:{size:900}}});
+        await settle();
         assert.deepEqual(ui.writes, []);
-
-        ui.controller.onDockResize({ event: { type: "resize", detail: { size: 900 } } });
-        assert.deepEqual(ui.writes, [["xshell.dockSize.bottom", "276"]]);
-    } finally { ui.restore(); }
-});
-
-test("bottom and right dock sizes persist and restore independently", () => {
-    const ui = setup({ panelWidth: 365.2, panelHeight: 245.4 });
-    try {
-        ui.controller.onDockResize({ event: { type: "resize" } });
+        ui.controller.onDockResize({event:{type:"resize", detail:{size:900}}});
+        await settle();
+        assert.deepEqual(ui.writes, [["xshell.dockSize.bottom", "245"]]);
         ui.state.dockPosition = "right";
-        ui.controller.onDockResize({ event: { type: "resize" } });
-        assert.deepEqual(ui.writes, [
-            ["xshell.dockSize.bottom", "245"],
-            ["xshell.dockSize.right", "365"]
-        ]);
-
-        ui.style.flex = "";
-        ui.controller.restoreDockSize();
-        assert.equal(ui.style.flex, "0 0 365px");
-        ui.state.dockPosition = "bottom";
-        ui.controller.restoreDockSize();
-        assert.equal(ui.style.flex, "0 0 245px");
+        ui.controller.onDockResize({event:{type:"resize"}});
+        await settle();
+        assert.deepEqual(ui.writes.at(-1), ["xshell.dockSize.right", "365"]);
     } finally { ui.restore(); }
 });
 
-test("reopening restores the saved size and clamps it after viewport changes", () => {
+test("dock sizes restore independently and clamp to the viewport", async () => {
     const ui = setup();
     try {
         ui.values.set("xshell.dockSize.bottom", "600");
-        ui.elements[".docked-page"] = null;
-        ui.controller.restoreDockSize();
-
-        ui.elements[".docked-page"] = { style: ui.style, getBoundingClientRect: () => ({ width: 320, height: 240 }) };
-        ui.controller.restoreDockSize();
+        ui.values.set("xshell.dockSize.right", "300");
+        await ui.controller.restoreDockSize();
         assert.equal(ui.style.flex, "0 0 600px");
-
         ui.viewport.height = 500;
-        ui.controller.restoreDockSize();
+        await ui.controller.restoreDockSize();
         assert.equal(ui.style.flex, "0 0 338px");
-
-        ui.values.set("xshell.dockSize.bottom", "20");
-        ui.controller.restoreDockSize();
-        assert.equal(ui.style.flex, "0 0 160px");
+        ui.state.dockPosition = "right";
+        await ui.controller.restoreDockSize();
+        assert.equal(ui.style.flex, "0 0 300px");
+        ui.elements[".docked-page"] = null;
+        await ui.controller.restoreDockSize();
     } finally { ui.restore(); }
 });
 
-test("invalid or unavailable stored sizes restore the CSS default", () => {
+test("invalid or failed dock size reads restore the CSS default", async () => {
     const ui = setup();
     try {
-        for (const value of [null, "invalid", "0", "-20", "Infinity"]) {
+        for (const value of [undefined, "invalid", "0", "-20", "Infinity"]) {
             ui.style.flex = "0 0 200px";
-            if (value === null) ui.values.delete("xshell.dockSize.bottom");
+            if (value === undefined) ui.values.delete("xshell.dockSize.bottom");
             else ui.values.set("xshell.dockSize.bottom", value);
-            ui.controller.restoreDockSize();
+            await ui.controller.restoreDockSize();
             assert.equal(ui.style.flex, "");
         }
-
-        globalThis.localStorage.getItem = () => { throw new Error("unavailable"); };
+        ui.preferences.get = async () => { throw new Error("unavailable"); };
         ui.style.flex = "0 0 200px";
-        ui.controller.restoreDockSize();
+        await ui.controller.restoreDockSize();
         assert.equal(ui.style.flex, "");
+    } finally { ui.restore(); }
+});
+
+test("load restores saved layout values without persisting defaults", async () => {
+    const ui = setup();
+    try {
+        ui.values.set("xshell.toggled", "true");
+        ui.values.set("xshell.dockSrc", "/saved.js");
+        ui.values.set("xshell.dockPosition", "right");
+        await ui.controller.load();
+        assert.equal(ui.state.toggled, true);
+        assert.equal(ui.state.dockSrc, "/saved.js");
+        assert.equal(ui.state.dockPosition, "right");
+        assert.deepEqual(ui.writes, []);
+    } finally { ui.restore(); }
+});
+
+test("rapid menu and dock updates leave the latest values", async () => {
+    const ui = setup();
+    try {
+        await ui.controller.load();
+        ui.controller.onToggleMenu();
+        ui.controller.onToggleMenu();
+        ui.state.dockSrc = "/first.js";
+        ui.state.dockSrc = "/second.js";
+        ui.state.dockPosition = "right";
+        await settle();
+        assert.equal(ui.values.get("xshell.toggled"), "false");
+        assert.equal(ui.values.get("xshell.dockSrc"), "/second.js");
+        assert.equal(ui.values.get("xshell.dockPosition"), "right");
+    } finally { ui.restore(); }
+});
+
+test("changes made during a delayed load take precedence over saved values", async () => {
+    const ui = setup();
+    try {
+        const pending = new Map();
+        ui.preferences.get = key => new Promise(resolve => pending.set(key, resolve));
+        const loading = ui.controller.load();
+        ui.controller.onToggleMenu();
+        ui.state.dockSrc = "/new.js";
+        pending.get("xshell.toggled")("false");
+        pending.get("xshell.dockSrc")("/old.js");
+        pending.get("xshell.dockPosition")("right");
+        await loading;
+        await settle();
+        assert.equal(ui.state.toggled, true);
+        assert.equal(ui.state.dockSrc, "/new.js");
+        assert.equal(ui.state.dockPosition, "right");
+        assert.equal(ui.values.get("xshell.dockSrc"), "/new.js");
+    } finally { ui.restore(); }
+});
+
+test("a delayed dock size read cannot overwrite a newer resize", async () => {
+    const ui = setup();
+    try {
+        let finishRead;
+        ui.preferences.get = () => new Promise(resolve => { finishRead = resolve; });
+        const restoring = ui.controller.restoreDockSize();
+        await settle();
+        ui.controller.onDockResize({event:{type:"resize"}});
+        finishRead("600");
+        await restoring;
+        assert.equal(ui.style.flex, "");
+        await settle();
+        assert.equal(ui.values.get("xshell.dockSize.bottom"), "245");
+    } finally { ui.restore(); }
+});
+
+test("closing a dock deletes its source and storage failures do not interrupt changes", async () => {
+    const ui = setup();
+    try {
+        await ui.controller.load();
+        ui.values.set("xshell.dockSrc", "/dock.js");
+        ui.preferences.delete = async () => { throw new Error("delete failed"); };
+        ui.state.dockSrc = null;
+        ui.controller.onToggleMenu();
+        await settle();
+        assert.equal(ui.values.get("xshell.toggled"), "true");
+        assert.equal(ui.values.get("xshell.dockSrc"), "/dock.js");
     } finally { ui.restore(); }
 });

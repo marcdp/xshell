@@ -21,7 +21,7 @@ export default {
         themes: [],
         languages: []
     },
-    controller({state, events, theme, i18n}) {
+    controller({state, events, theme, i18n, bus}) {
         return {
             load() {
                 // theme
@@ -35,6 +35,8 @@ export default {
                 events.on(state, "change:theme", ()=>{
                     theme.setMode(state.theme);
                 });
+                // Keep the selection current when the theme preference finishes loading.
+                events.on(bus, "x:theme:changed", () => { state.theme = theme.mode; });
                 // language
                 events.on(state, "change:language", ()=>{
                     i18n.setLanguage(state.language);
