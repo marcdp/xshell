@@ -407,14 +407,25 @@ export default class Navigation {
     async _reconcileStackToDom() {
         //navigate
         const xpages = this.getXPages();
-        let domStack = xpages.map(xpage => { return this.parseUrl(xpage.src); });
-        // close open dialogs through their final Page destruction path
-        let allXPages = Array.from(this._container.querySelectorAll(":scope > x-page"));
-        for (let i = allXPages.length - 1; i >= 0; i--) {
-            let xpage = allXPages[i];
-            if (xpage.getAttribute("layout") != "dialog") break;
-            xpage.close();
+        const domStack = xpages.map(xpage => this.parseUrl(xpage.src));
+
+        // Detect structural navigation, ignoring query parameters and URL fragments.
+        const structuralChange = domStack.length !== this._stack.length ||
+            domStack.some((before, index) => {
+                const targetHref = this.parseUrl(this._buildUrlFinal(this._stack[index])).href;
+                return this._splitHref(before.href).identity !== this._splitHref(targetHref).identity;
+            });
+
+        // Close dialogs only when the navigation stack changes structurally.
+        if (structuralChange) {
+            const allXPages = Array.from(this._container.querySelectorAll(":scope > x-page"));
+            for (let i = allXPages.length - 1; i >= 0; i--) {
+                const xpage = allXPages[i];
+                if (xpage.getAttribute("layout") !== "dialog") break;
+                xpage.close();
+            }
         }
+
         //process stack
         for (let i = 0; i < Math.max(this._stack.length, domStack.length); i++) {
             let itemBefore = domStack[i];

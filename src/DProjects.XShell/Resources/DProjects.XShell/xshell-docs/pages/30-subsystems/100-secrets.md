@@ -6,8 +6,9 @@ The management Page is `x/pages/secrets.js`; the dedicated initialization and un
 
 Secrets V2 uses envelope encryption. Vault creation generates a random 256-bit data encryption key (DEK). The DEK, imported as a non-extractable
 AES-GCM key for the active session, encrypts every secret. Each secret record has a fresh random 96-bit IV, authenticated ciphertext containing the
-JSON value, and additional authenticated data that binds the ciphertext to its secret identifier and V2 purpose. Its optional description is
-encrypted independently with a fresh IV and a distinct authenticated-data purpose.
+JSON value, and additional authenticated data that binds the ciphertext to its immutable UUID and V2 purpose. Its optional description and custom
+label are encrypted independently with fresh IVs and distinct authenticated-data purposes. UUID-bound encryption lets a name change without
+decrypting or re-encrypting the value or other encrypted metadata.
 
 The master password does not encrypt individual secrets. PBKDF2-SHA-256 derives a key encryption key (KEK) from the password, a random 128-bit salt,
 and 600,000 iterations. That KEK authenticates and decrypts one password-wrapped copy of the random DEK. The password mechanism is always retained
@@ -34,12 +35,13 @@ await secrets.unlockWithPasskey({ id }); // id may be omitted for browser select
 await secrets.unlockWithPasskey({ id, rememberMinutes: 60 });
 const expiration = secrets.sessionExpiresAt; // ISO 8601 UTC string or null
 
-await secrets.set("api-token", "secret", { description: "Production API token" });
+await secrets.set("api-token", "secret", { label: "Production token", description: "Production API token" });
 const token = await secrets.get("api-token");
 const tokenWithoutPrompt = await secrets.get("api-token", { interactive: false });
-const info = await secrets.getInfo("api-token");
-const entries = await secrets.list();
-await secrets.delete("api-token");
+const info = await secrets.getInfo("api-token"); // includes immutable id, name, effective label, timestamps, and revision
+const entries = await secrets.list(); // the same metadata for every secret
+await secrets.rename("api-token", "api-token-production");
+await secrets.delete("api-token-production");
 
 const registration = await secrets.addPasskey({ label: "Laptop", password, description: "Work computer" });
 const registrations = await secrets.listPasskeys();
@@ -55,15 +57,27 @@ secret still returns `undefined`, including after creating an empty vault. Cance
 `undefined`. Pass `{ interactive: false }` in automated Tasks, background work, or any call path where UI must not appear. Other methods retain their
 existing non-interactive unlock requirement.
 
-Concurrent interactive `get()` calls share one authentication dialog and resume independently, so each caller receives the value for its own id.
+Concurrent interactive `get()` calls share one authentication dialog and resume independently, so each caller receives the value for its own name.
 Cancellation rejects every caller waiting on that dialog. The pending attempt is cleared after success, cancellation, or load failure, and a later
 request may open a new dialog. A non-interactive caller neither opens nor joins an interactive attempt. Expiration and epoch checks run again before
 and during decryption, so authentication success cannot make a later lock or expiration return plaintext.
 
-`getInfo()` returns `id`, decrypted `description`, and immutable `createdAt`; `list()` returns the same metadata for each secret without values.
-Descriptions default to an empty string. Passing `{ description }` to `set()` changes it, including clearing it with `""`; omitting the option
-preserves the current description. Existing records without metadata report an empty description and `createdAt: null`, and an update does not
-invent or change their creation time.
+Each secret has three distinct identity fields. `id` is an immutable UUID generated with `crypto.randomUUID()` and used as the IndexedDB primary
+key and encryption identity. `name` is the required, unique, case-sensitive identifier used by `set()`, `get()`, `getInfo()`, `rename()`, and
+`delete()`. `label` is a non-unique display value. A missing or cleared custom label falls back to the current name; a custom label survives a
+rename. Labels cannot retrieve secrets. Renaming removes the old name without creating an alias, so application references to it must be updated.
+
+`getInfo()` and `list()` return `id`, `name`, the effective decrypted `label`, decrypted `description`, immutable `createdAt`, latest `modifiedAt`,
+and current `revision`, without secret values. A new secret receives one timestamp for both `createdAt` and `modifiedAt` and starts at revision `1`.
+Every successful `set()` preserves `id` and `createdAt`, replaces `modifiedAt`, and increments the revision exactly once, even when the value is
+unchanged. A successful `rename()` also updates `modifiedAt` and increments the revision; renaming to the current name is a no-op. Renaming to a
+name owned by another secret fails atomically without changing either record.
+
+Descriptions default to an empty string. Passing `{ description }` or `{ label }` to `set()` changes that encrypted field; omitting a field
+preserves it. An empty description clears the description, while an empty label removes the custom label and restores name fallback.
+
+Revisions are current metadata, not stored historical versions. The Secrets service provides no revision history, rollback, or optimistic-
+concurrency guarantee. Callers cannot supply ids, timestamps, or revisions through `set()` options.
 
 `listPasskeys()` is safe while locked and returns only `id`, `label`, `description`, and `createdAt`. `addPasskey()` intentionally requires the
 master password as well as an unlocked session. It reauthenticates the password-wrapped DEK and creates another wrapping without exporting the
@@ -145,23 +159,24 @@ credential from an authenticator, alter other registrations, or change master-pa
 
 ## IndexedDB V2 layout
 
-The database remains `xshell-secrets`. Database schema version 3 adds a fourth store without changing the Secrets V2 encryption format:
+The database remains `xshell-secrets`. Database schema version 1 creates all four stores and the unique `name` index on `secrets`:
 
 | Store | Contents |
 | --- | --- |
 | `metadata` | Format version, non-sensitive vault/WebAuthn user identity, PBKDF2 parameters, and the password-wrapped DEK with its IV. |
 | `passkeys` | Base64url credential id, label, plaintext description, creation time, PRF salt, and that credential's wrapped DEK with its IV. |
-| `secrets` | Secret id, format version, immutable creation time, and separate fresh-IV AES-GCM ciphertexts for the JSON value and description. |
+| `secrets` | UUID primary key, plaintext indexed name, format version, timestamps, revision, and separate fresh-IV AES-GCM ciphertexts for the JSON value, description, and optional custom label. |
 | `sessions` | Random session id and its structured-cloned, non-extractable AES-256-GCM session-wrapping `CryptoKey`. |
 
-Plaintext secret values, secret descriptions, passwords, raw DEKs, derived KEKs, and PRF outputs are never persisted. Passkey descriptions are
+Secret names are plaintext at rest because IndexedDB uses them for efficient unique lookup. Secret values, secret descriptions, custom secret
+labels, passwords, raw DEKs, derived KEKs, and PRF outputs are never persisted as plaintext. Passkey descriptions are
 ordinary plaintext local metadata and must not contain sensitive information. For a remembered session, `sessionStorage` holds a version,
 random session id, vault id, creation and absolute expiration times, and an AES-GCM-wrapped DEK with its fresh IV. The separate non-extractable
 session-wrapping key is structured-cloned into IndexedDB. Additional authenticated data binds the wrapping to its purpose, session id, vault id,
 creation time, and expiration. Persistence publishes tab metadata only after the key record and cleans up interrupted attempts.
 
-Database upgrades do not overwrite vault metadata, passkeys, or secrets. Metadata from Secrets V1 is rejected with an unsupported version error.
-There is no V1 migration or parallel legacy decryption path.
+This development schema has no upgrade or encrypted-record migration path from earlier experimental layouts. Existing development data using a
+different database version or name-keyed secret records must be cleared and recreated.
 
 ## Browser-local boundary
 

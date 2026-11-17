@@ -8,6 +8,7 @@ import JsonValidator from "../../src/DProjects.XShell/Resources/DProjects.XShell
 import Secrets from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/secrets.js";
 
 const originalDescriptors = new Map();
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/u;
 
 function setGlobal(name, value) {
     if (!originalDescriptors.has(name)) originalDescriptors.set(name, Object.getOwnPropertyDescriptor(globalThis, name));
@@ -32,18 +33,69 @@ function createIndexedDB(seed = {}) {
     for (const [name, definition] of Object.entries(seed.stores || {})) {
         stores.set(name, {
             keyPath: definition.keyPath || "id",
-            records: new Map((definition.records || []).map(record => [record[definition.keyPath || "id"], copy(record)]))
+            records: new Map((definition.records || []).map(record => [record[definition.keyPath || "id"], copy(record)])),
+            indexes: new Map((definition.indexes || []).map(index => [index.name, { keyPath:index.keyPath, unique:index.unique === true }])),
+            writeActive: false,
+            writeQueue: [],
+            failNextPut: false
         });
+    }
+
+    function schemaStore(definition) {
+        return {
+            indexNames: { contains(name) { return definition.indexes.has(name); } },
+            createIndex(name, keyPath, options = {}) {
+                if (options.unique) {
+                    const values = new Set();
+                    for (const record of definition.records.values()) {
+                        const value = record[keyPath];
+                        if (value === undefined) continue;
+                        if (values.has(value)) throw new DOMException("Index value already exists.", "ConstraintError");
+                        values.add(value);
+                    }
+                }
+                definition.indexes.set(name, {keyPath, unique:options.unique === true});
+            }
+        };
     }
 
     function createTransaction(name, mode) {
         const definition = stores.get(name);
         if (!definition) throw new Error(`Missing object store ${name}.`);
-        const before = mode === "readwrite" ? new Map([...definition.records].map(([key, value]) => [key, copy(value)])) : null;
+        let before = null;
         let pending = 0;
         let completionQueued = false;
         let finished = false;
         let aborted = false;
+        let active = mode !== "readwrite";
+        let ownsWriteLock = false;
+        const deferred = [];
+        const releaseWriteLock = () => {
+            if (!ownsWriteLock) return;
+            ownsWriteLock = false;
+            const next = definition.writeQueue.shift();
+            if (next) queueMicrotask(next);
+            else definition.writeActive = false;
+        };
+        const start = () => {
+            if (finished || aborted) {
+                const next = definition.writeQueue.shift();
+                if (next) queueMicrotask(next);
+                else definition.writeActive = false;
+                return;
+            }
+            active = true;
+            ownsWriteLock = true;
+            before = new Map([...definition.records].map(([key, value]) => [key, copy(value)]));
+            for (const operation of deferred.splice(0)) queueMicrotask(operation);
+        };
+        if (mode === "readwrite") {
+            if (definition.writeActive) definition.writeQueue.push(start);
+            else {
+                definition.writeActive = true;
+                start();
+            }
+        }
         const transaction = {
             error: null,
             oncomplete: null,
@@ -57,6 +109,7 @@ function createIndexedDB(seed = {}) {
                 queueMicrotask(() => {
                     if (finished) return;
                     finished = true;
+                    releaseWriteLock();
                     transaction.onabort?.();
                 });
             },
@@ -65,7 +118,7 @@ function createIndexedDB(seed = {}) {
                     if (finished || aborted) throw new Error("Transaction is inactive.");
                     pending++;
                     const request = { result: undefined, error: null, onsuccess: null, onerror: null };
-                    queueMicrotask(() => {
+                    const run = () => {
                         if (aborted) return;
                         try {
                             request.result = callback();
@@ -84,14 +137,26 @@ function createIndexedDB(seed = {}) {
                             queueMicrotask(() => {
                                 if (finished || aborted || pending !== 0) return;
                                 finished = true;
+                                releaseWriteLock();
                                 transaction.oncomplete?.();
                             });
                         }
-                    });
+                    };
+                    if (active) queueMicrotask(run);
+                    else deferred.push(run);
                     return request;
                 };
                 const keyFor = value => value[definition.keyPath];
+                const checkUniqueIndexes = (value, key) => {
+                    for (const index of definition.indexes.values()) {
+                        if (!index.unique || value[index.keyPath] === undefined) continue;
+                        if ([...definition.records].some(([existingKey, record]) => existingKey !== key && record[index.keyPath] === value[index.keyPath])) {
+                            throw new DOMException("Index value already exists.", "ConstraintError");
+                        }
+                    }
+                };
                 return {
+                    ...schemaStore(definition),
                     get(key) { return operation(() => copy(definition.records.get(key))); },
                     getAll() { return operation(() => [...definition.records.values()].map(copy)); },
                     getAllKeys() { return operation(() => [...definition.records.keys()]); },
@@ -99,19 +164,34 @@ function createIndexedDB(seed = {}) {
                         return operation(() => {
                             const key = keyFor(value);
                             if (definition.records.has(key)) throw new DOMException("Key already exists.", "ConstraintError");
+                            checkUniqueIndexes(value, key);
                             definition.records.set(key, copy(value));
                             return key;
                         });
                     },
                     put(value) {
                         return operation(() => {
+                            if (definition.failNextPut) {
+                                definition.failNextPut = false;
+                                throw new Error("Injected put failure.");
+                            }
                             const key = keyFor(value);
+                            checkUniqueIndexes(value, key);
                             definition.records.set(key, copy(value));
                             return key;
                         });
                     },
                     delete(key) {
                         return operation(() => { definition.records.delete(key); });
+                    },
+                    index(name) {
+                        const index = definition.indexes.get(name);
+                        if (!index) throw new DOMException("Index not found.", "NotFoundError");
+                        return {
+                            get(value) {
+                                return operation(() => copy([...definition.records.values()].find(record => record[index.keyPath] === value)));
+                            }
+                        };
                     }
                 };
             }
@@ -121,14 +201,14 @@ function createIndexedDB(seed = {}) {
 
     const indexedDB = {
         open(_name, requestedVersion) {
-            const request = { result: null, error: null, onupgradeneeded: null, onsuccess: null, onerror: null, onblocked: null };
+            const request = { result: null, transaction: null, error: null, onupgradeneeded: null, onsuccess: null, onerror: null, onblocked: null };
             queueMicrotask(() => {
                 const database = {
                     onversionchange: null,
                     objectStoreNames: { contains(name) { return stores.has(name); } },
                     createObjectStore(name, { keyPath }) {
-                        if (!stores.has(name)) stores.set(name, { keyPath, records: new Map() });
-                        return stores.get(name);
+                        if (!stores.has(name)) stores.set(name, { keyPath, records: new Map(), indexes: new Map(), writeActive: false, writeQueue: [], failNextPut: false });
+                        return schemaStore(stores.get(name));
                     },
                     transaction(name, mode) { return createTransaction(name, mode); },
                     close() {}
@@ -136,7 +216,9 @@ function createIndexedDB(seed = {}) {
                 request.result = database;
                 if (requestedVersion > version) {
                     version = requestedVersion;
+                    request.transaction = { objectStore(name) { return schemaStore(stores.get(name)); } };
                     request.onupgradeneeded?.();
+                    request.transaction = null;
                 }
                 request.onsuccess?.();
             });
@@ -156,6 +238,12 @@ function createIndexedDB(seed = {}) {
         putRecord(name, value) {
             const definition = stores.get(name);
             definition.records.set(value[definition.keyPath], copy(value));
+        },
+        failNextPut(name) {
+            stores.get(name).failNextPut = true;
+        },
+        hasIndex(name, index) {
+            return stores.get(name)?.indexes.has(index) === true;
         }
     };
 }
@@ -289,6 +377,7 @@ test("Secrets V2 initializes a random-DEK vault and preserves JSON CRUD across p
     const secrets = new Secrets({ bus: { emit(name, detail) { events.push({ name, detail }); } } });
 
     assert.equal(await secrets.ready(), "uninitialized");
+    assert.equal(database.hasIndex("secrets", "name"), true);
     await secrets.initialize({ password: "correct horse battery staple" });
     assert.equal(secrets.status, "unlocked");
 
@@ -305,11 +394,14 @@ test("Secrets V2 initializes a random-DEK vault and preserves JSON CRUD across p
     await secrets.set("text", "sensitive value");
     await secrets.set("structured", { enabled: true, values: [1, "two", null] });
     const listed = await secrets.list();
-    assert.deepEqual(listed.map(item => ({ id:item.id, description:item.description })), [
-        { id: "structured", description: "" },
-        { id: "text", description: "" }
+    assert.deepEqual(listed.map(item => ({ name:item.name, label:item.label, description:item.description })), [
+        { name: "structured", label:"structured", description: "" },
+        { name: "text", label:"text", description: "" }
     ]);
+    assert.ok(listed.every(item => UUID_PATTERN.test(item.id)));
+    assert.equal(new Set(listed.map(item => item.id)).size, 2);
     assert.ok(listed.every(item => typeof item.createdAt === "string"));
+    assert.ok(listed.every(item => item.modifiedAt === item.createdAt && item.revision === 1));
     assert.equal(await secrets.get("text"), "sensitive value");
     assert.deepEqual(await secrets.get("structured"), { enabled: true, values: [1, "two", null] });
     assert.equal(await secrets.get("missing"), undefined);
@@ -407,45 +499,198 @@ test("get supports dialog initialization without creating a missing secret and p
     await assert.rejects(failing.get("missing"), error => error === failure);
 });
 
-test("secret descriptions are encrypted and creation metadata survives updates and legacy records", async () => {
+test("secret metadata tracks timestamps, revisions, and encrypted descriptions", async () => {
     const database = createIndexedDB();
     installEnvironment(database);
     const secrets = new Secrets();
     await secrets.ready();
     await secrets.initialize({ password: "master password" });
 
-    await secrets.set("api-token", "first", { description: "Production API token" });
+    const NativeDate = Date;
+    let now = Date.parse("2026-11-17T10:00:00.000Z");
+    class ControlledDate extends NativeDate {
+        constructor(...args) { super(...(args.length ? args : [now])); }
+        static now() { return now; }
+    }
+    setGlobal("Date", ControlledDate);
+
+    await secrets.set("api-token", "first", { label:"Production token", description: "Production API token" });
     const originalInfo = await secrets.getInfo("api-token");
     const originalRecord = database.records("secrets")[0];
-    assert.equal(originalInfo.description, "Production API token");
-    assert.equal(typeof originalInfo.createdAt, "string");
+    assert.deepEqual(originalInfo, {
+        id:originalRecord.id,
+        name:"api-token",
+        label:"Production token",
+        description:"Production API token",
+        createdAt:"2026-11-17T10:00:00.000Z",
+        modifiedAt:"2026-11-17T10:00:00.000Z",
+        revision:1
+    });
+    assert.match(originalInfo.id, UUID_PATTERN);
+    assert.equal(await secrets.get("api-token"), "first", "get() continues to return only the decrypted value");
     assert.equal(JSON.stringify(originalRecord).includes("Production API token"), false);
-    assert.deepEqual(Object.keys(originalRecord).sort(), ["ciphertext", "createdAt", "description", "id", "iv", "version"]);
+    assert.equal(JSON.stringify(originalRecord).includes("Production token"), false);
+    assert.deepEqual(Object.keys(originalRecord).sort(), ["ciphertext", "createdAt", "description", "id", "iv", "label", "modifiedAt", "name", "revision", "version"]);
 
-    await secrets.set("api-token", "second");
+    now = Date.parse("2026-11-17T10:05:00.000Z");
+    await secrets.set("api-token", "first");
     const preservedRecord = database.records("secrets")[0];
     assert.deepEqual(preservedRecord.description, originalRecord.description, "omitted descriptions are not re-encrypted");
-    assert.equal((await secrets.getInfo("api-token")).createdAt, originalInfo.createdAt);
-    assert.equal((await secrets.getInfo("api-token")).description, "Production API token");
+    assert.deepEqual(await secrets.getInfo("api-token"), {
+        ...originalInfo,
+        modifiedAt:"2026-11-17T10:05:00.000Z",
+        revision:2
+    });
+
+    now = Date.parse("2026-11-17T10:10:00.000Z");
+    await secrets.set("api-token", "first", { description: "Rotated token" });
+    assert.deepEqual(await secrets.getInfo("api-token"), {
+        ...originalInfo,
+        description:"Rotated token",
+        modifiedAt:"2026-11-17T10:10:00.000Z",
+        revision:3
+    });
+    assert.deepEqual(await secrets.list(), [await secrets.getInfo("api-token")]);
+
+    database.failNextPut("secrets");
+    await assert.rejects(secrets.set("api-token", "failed update"), /Injected put failure/u);
+    assert.equal((await secrets.getInfo("api-token")).revision, 3, "a failed write does not persist a revision increment");
+    assert.equal(await secrets.get("api-token"), "first");
+
+    const invalid = database.records("secrets")[0];
+    for (const revision of [0, -1, 1.5, Number.MAX_SAFE_INTEGER + 1]) {
+        database.putRecord("secrets", {...invalid, revision});
+        await assert.rejects(secrets.getInfo("api-token"), /positive safe integer/u);
+        await assert.rejects(secrets.set("api-token", "invalid revision update"), /positive safe integer/u);
+        assert.equal(database.records("secrets")[0].revision, revision);
+    }
+    database.putRecord("secrets", {...invalid, revision:Number.MAX_SAFE_INTEGER});
+    await assert.rejects(secrets.set("api-token", "overflow update"), /maximum safe integer/u);
+    assert.equal(database.records("secrets")[0].revision, Number.MAX_SAFE_INTEGER);
+
+    await secrets.delete("api-token");
+    now = Date.parse("2026-11-17T10:20:00.000Z");
+    await secrets.set("api-token", "recreated");
+    const recreated = await secrets.getInfo("api-token");
+    assert.deepEqual(recreated, {
+        id:recreated.id,
+        name:"api-token",
+        label:"api-token",
+        description:"",
+        createdAt:"2026-11-17T10:20:00.000Z",
+        modifiedAt:"2026-11-17T10:20:00.000Z",
+        revision:1
+    });
+    assert.match(recreated.id, UUID_PATTERN);
+    assert.notEqual(recreated.id, originalInfo.id);
+});
+
+test("concurrent secret updates serialize revision increments", async () => {
+    const database = createIndexedDB();
+    installEnvironment(database);
+    const secrets = new Secrets();
+    await secrets.ready();
+    await secrets.initialize({ password: "master password" });
+    await secrets.set("api-token", "first");
 
     await Promise.all([
-        secrets.set("api-token", "third", { description: "Rotated token" }),
+        secrets.set("api-token", "second"),
+        secrets.set("api-token", "third"),
         secrets.set("api-token", "fourth")
     ]);
-    assert.equal((await secrets.getInfo("api-token")).createdAt, originalInfo.createdAt);
 
-    await secrets.set("api-token", "fifth", { description: "" });
-    assert.equal((await secrets.getInfo("api-token")).description, "");
-    assert.equal((await secrets.getInfo("missing")), undefined);
+    assert.equal((await secrets.getInfo("api-token")).revision, 4);
+    assert.equal(database.records("secrets")[0].revision, 4);
+});
 
-    const legacy = database.records("secrets")[0];
-    delete legacy.createdAt;
-    delete legacy.description;
-    database.putRecord("secrets", legacy);
-    assert.deepEqual(await secrets.getInfo("api-token"), { id:"api-token", description:"", createdAt:null });
-    assert.deepEqual(await secrets.list(), [{ id:"api-token", description:"", createdAt:null }]);
-    await secrets.set("api-token", "legacy update");
-    assert.deepEqual(await secrets.getInfo("api-token"), { id:"api-token", description:"", createdAt:null });
+test("secret names, labels, and renaming preserve immutable encrypted identities", async () => {
+    const database = createIndexedDB();
+    installEnvironment(database);
+    const secrets = new Secrets();
+    await secrets.ready();
+    await secrets.initialize({ password:"master password" });
+
+    const NativeDate = Date;
+    let now = Date.parse("2026-11-17T11:00:00.000Z");
+    class ControlledDate extends NativeDate {
+        constructor(...args) { super(...(args.length ? args : [now])); }
+        static now() { return now; }
+    }
+    setGlobal("Date", ControlledDate);
+
+    await secrets.set("token", "value", {description:"Primary token"});
+    const created = await secrets.getInfo("token");
+    assert.match(created.id, UUID_PATTERN);
+    assert.equal(created.label, "token");
+
+    now += 60_000;
+    await secrets.set("token", "value", {label:"Readable token"});
+    assert.equal((await secrets.getInfo("token")).id, created.id);
+    now += 60_000;
+    await secrets.set("token", "value");
+    assert.equal((await secrets.getInfo("token")).label, "Readable token");
+    now += 60_000;
+    await secrets.set("token", "value", {label:""});
+    assert.equal((await secrets.getInfo("token")).label, "token");
+
+    const beforeRename = database.records("secrets").find(record => record.id === created.id);
+    now += 60_000;
+    await secrets.rename("token", "Token");
+    const renamed = await secrets.getInfo("Token");
+    const afterRename = database.records("secrets").find(record => record.id === created.id);
+    assert.equal(renamed.id, created.id);
+    assert.equal(renamed.name, "Token");
+    assert.equal(renamed.label, "Token");
+    assert.equal(renamed.createdAt, created.createdAt);
+    assert.equal(renamed.modifiedAt, "2026-11-17T11:04:00.000Z");
+    assert.equal(renamed.revision, 5);
+    assert.equal(await secrets.get("Token"), "value");
+    assert.equal(await secrets.get("token"), undefined);
+    assert.deepEqual(afterRename.iv, beforeRename.iv);
+    assert.deepEqual(afterRename.ciphertext, beforeRename.ciphertext);
+    assert.deepEqual(afterRename.description, beforeRename.description);
+
+    const noOp = await secrets.getInfo("Token");
+    await secrets.rename("Token", "Token");
+    assert.deepEqual(await secrets.getInfo("Token"), noOp);
+
+    await secrets.set("second", "two", {label:"Shared"});
+    await secrets.set("third", "three", {label:"Shared"});
+    const secondId = (await secrets.getInfo("second")).id;
+    await secrets.rename("second", "second-prod");
+    assert.equal((await secrets.getInfo("second-prod")).id, secondId);
+    assert.equal((await secrets.getInfo("second-prod")).label, "Shared");
+    await assert.rejects(secrets.rename("second-prod", "third"), /already exists/u);
+    assert.equal((await secrets.getInfo("second-prod")).id, secondId);
+    assert.equal(await secrets.get("third"), "three");
+
+    await secrets.set("case", "lower");
+    await secrets.set("Case", "upper");
+    assert.equal(await secrets.get("case"), "lower");
+    assert.equal(await secrets.get("Case"), "upper");
+    await assert.rejects(secrets.set("   ", "invalid"), /name must be a non-empty string/u);
+    await assert.rejects(secrets.get(""), /name must be a non-empty string/u);
+    await assert.rejects(secrets.rename("Case", "  "), /name must be a non-empty string/u);
+    await assert.rejects(secrets.set("managed", "value", {id:"caller-id"}), /unknown property/u);
+});
+
+test("concurrent creation uses one unique name and monotonic revisions", async () => {
+    const database = createIndexedDB();
+    installEnvironment(database);
+    const secrets = new Secrets();
+    await secrets.ready();
+    await secrets.initialize({ password:"master password" });
+
+    await Promise.all([
+        secrets.set("shared", "first"),
+        secrets.set("shared", "second"),
+        secrets.set("shared", "third")
+    ]);
+
+    const matches = (await secrets.list()).filter(item => item.name === "shared");
+    assert.equal(matches.length, 1);
+    assert.match(matches[0].id, UUID_PATTERN);
+    assert.equal(matches[0].revision, 3);
 });
 
 test("multiple PRF passkeys wrap the same DEK without re-encrypting secrets", async () => {
@@ -593,6 +838,7 @@ test("locking invalidates in-flight password unlock and encrypted writes", async
     });
     setGlobal("crypto", {
         subtle,
+        randomUUID() { return nativeCrypto.randomUUID(); },
         getRandomValues(value) { return nativeCrypto.getRandomValues(value); }
     });
 
@@ -630,7 +876,7 @@ test("locking during an in-flight get never returns the decrypted value", async 
             return typeof value === "function" ? value.bind(target) : value;
         }
     });
-    setGlobal("crypto", {subtle, getRandomValues(value) { return nativeCrypto.getRandomValues(value); }});
+    setGlobal("crypto", {subtle, randomUUID() { return nativeCrypto.randomUUID(); }, getRandomValues(value) { return nativeCrypto.getRandomValues(value); }});
 
     const reading = secrets.get("token");
     await started;
@@ -730,7 +976,7 @@ test("password unlock persists a non-extractable session key and restores withou
             return typeof value === "function" ? value.bind(target) : value;
         }
     });
-    setGlobal("crypto", { subtle, getRandomValues(value) { return nativeCrypto.getRandomValues(value); } });
+    setGlobal("crypto", { subtle, randomUUID() { return nativeCrypto.randomUUID(); }, getRandomValues(value) { return nativeCrypto.getRandomValues(value); } });
     setGlobal("navigator", { credentials: { async get() { throw new Error("WebAuthn must not run during restoration."); } } });
     const restored = createSecrets(config, {config, dialog:{async open() { throw new Error("restored access must not open a dialog"); }}});
     assert.equal(await restored.ready(), "unlocked");
@@ -915,7 +1161,7 @@ test("locking during asynchronous restoration cannot reactivate the vault", asyn
             return typeof value === "function" ? value.bind(target) : value;
         }
     });
-    setGlobal("crypto", { subtle, getRandomValues(value) { return nativeCrypto.getRandomValues(value); } });
+    setGlobal("crypto", { subtle, randomUUID() { return nativeCrypto.randomUUID(); }, getRandomValues(value) { return nativeCrypto.getRandomValues(value); } });
     const restoring = createSecrets(config);
     const ready = restoring.ready();
     await started;
@@ -954,7 +1200,7 @@ test("an explicit unlock supersedes a concurrent restoration attempt", async () 
             return typeof value === "function" ? value.bind(target) : value;
         }
     });
-    setGlobal("crypto", { subtle, getRandomValues(value) { return nativeCrypto.getRandomValues(value); } });
+    setGlobal("crypto", { subtle, randomUUID() { return nativeCrypto.randomUUID(); }, getRandomValues(value) { return nativeCrypto.getRandomValues(value); } });
     const restoring = target.restoreSession();
     await started;
     const unlocking = target.unlock({ password: "master password", rememberMinutes: 0 });
@@ -963,24 +1209,6 @@ test("an explicit unlock supersedes a concurrent restoration attempt", async () 
     assert.equal((await restoring).reason, "interrupted");
     assert.equal(target.status, "unlocked");
     assert.equal(target.sessionExpiresAt, null);
-});
-
-test("the IndexedDB v3 upgrade preserves existing vault, passkey, and secret records", async () => {
-    const vault = { id: "vault", version: 2, vaultId: "existing" };
-    const passkey = { id: "credential", version: 2 };
-    const secret = { id: "token", version: 2 };
-    const database = createIndexedDB({ version: 2, stores: {
-        metadata: { records: [vault] },
-        passkeys: { records: [passkey] },
-        secrets: { records: [secret] }
-    } });
-    installEnvironment(database);
-    const secrets = new Secrets();
-    assert.equal(await secrets.ready(), "locked");
-    assert.deepEqual(database.records("metadata"), [vault]);
-    assert.deepEqual(database.records("passkeys"), [passkey]);
-    assert.deepEqual(database.records("secrets"), [secret]);
-    assert.deepEqual(database.records("sessions"), []);
 });
 
 test("legacy V1 metadata is rejected without deletion or replacement", async () => {

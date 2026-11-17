@@ -4,7 +4,7 @@ export default {
         description: "Manage encrypted secrets.",
         properties: {
             mode: {type:"string", default:"manage", state:true, context:true},
-            secretId: {type:"string", default:"", state:true, context:true},
+            secretName: {type:"string", default:"", state:true, context:true},
             passkeyId: {type:"string", default:"", state:true, context:true}
         }
     },
@@ -22,10 +22,8 @@ export default {
         <x-notice x-if="state.error" type="error" label="Error" x-attr:message="state.error"></x-notice>
         <x-notice x-if="state.busy" type="working" label="Working"></x-notice>
 
-        <!-- Vault access -->
-
         <!-- Secrets list -->
-        <x-tabs x-if="state.mode == 'manage' && state.ready" use-hash>
+        <x-tabs x-if="state.mode == 'manage' && state.ready && !state.busy" use-hash>
        
             <x-tab label="Vault"  x-if="state.mode == 'manage' && state.ready" hash="vault">
                 <div x-if="state.status != 'unlocked'">
@@ -55,18 +53,24 @@ export default {
 
                     <x-listview x-if="state.items.length > 0" view="details">
                         <x-listview-head>
-                            <x-listview-column label="Secret"></x-listview-column>
+                            <x-listview-column label="Label"></x-listview-column>
+                            <x-listview-column label="Name"></x-listview-column>
                             <x-listview-column label="Description"></x-listview-column>
+                            <x-listview-column label="Revision"></x-listview-column>
                             <x-listview-column label="Created"></x-listview-column>
+                            <x-listview-column label="Modified"></x-listview-column>
                             <x-listview-column label="Actions" slot="right" width="5em" style="text-align:right"></x-listview-column>
                         </x-listview-head>
                         <x-listview-body>
-                            <x-listview-item x-for="item in state.items" x-attr:key="item.id" x-attr:path="item.id" x-attr:label="item.id" icon="x-key">
+                            <x-listview-item x-for="item in state.items" x-attr:key="item.id" x-attr:path="item.id" x-attr:label="item.label" icon="x-key">
+                                <span x-text="item.name"></span>
                                 <span x-text="item.description || '—'"></span>
+                                <span x-text="item.revision"></span>
                                 <span x-text="item.createdDisplay"></span>
+                                <span x-text="item.modifiedDisplay"></span>
                                 <div class="actions" style="text-align:right">
-                                    <x-button class="plain" icon="x-edit" tooltip="Edit" x-attr:data-id="item.id" x-on:click="edit" ></x-button>
-                                    <x-button class="plain" icon="x-trash" tooltip="Delete" x-attr:data-id="item.id" x-on:click="remove"></x-button>
+                                    <x-button class="plain" icon="x-edit" tooltip="Edit" x-attr:data-name="item.name" x-on:click="edit" ></x-button>
+                                    <x-button class="plain" icon="x-trash" tooltip="Delete" x-attr:data-name="item.name" x-on:click="remove"></x-button>
                                 </div>
                             </x-listview-item>
                         </x-listview-body>
@@ -112,15 +116,21 @@ export default {
 
         <!-- Add / Edit dialog -->
         <x-form x-if="(state.mode == 'add' || state.mode == 'edit') && state.ready" command="save">
-            <x-datafields>
-                <x-datafield type="text" label="Secret ID" required x-model="state.secretId" x-attr:readonly="state.mode == 'edit'"></x-datafield>
-                <x-datafield type="textarea" label="Description" x-model="state.description"></x-datafield>
+            <x-datafields columns="1">
+                <x-datafield type="text" label="Name" required x-model="state.secretName" description="Unique identifier for the secret" autofocus></x-datafield>
+                <x-datafield type="text" label="Label" x-model="state.label" description="Optional friendly display name"></x-datafield>
+                <x-datafield type="text" label="Description" x-model="state.description"></x-datafield>
                 <x-datafield type="select" label="Value type" x-prop:domain="state.valueTypes" x-model="state.valueType"></x-datafield>
-                <x-datafield x-if="state.valueType == 'text'" type="password" label="Secret value" autocomplete="off" x-model="state.editorValue"></x-datafield>
-                <x-datafield x-if="state.valueType == 'json'" type="textarea" label="JSON value" x-model="state.editorValue"></x-datafield>
-                <x-datafield x-if="state.mode == 'edit' && state.createdAt" type="text" label="Created" readonly x-model="state.createdDisplay"></x-datafield>
+                <x-datafield x-if="state.valueType == 'text'" type="password" label="Secret value" autocomplete="off" x-model="state.editorValue" required></x-datafield>
+                <x-datafield x-if="state.valueType == 'json'" type="textarea" label="JSON value" x-model="state.editorValue" required></x-datafield>
             </x-datafields>
-            <p class="hint">Values are encrypted before being stored.</p>
+            <x-details label="Advanced">
+                <x-datafields columns="2">
+                    <x-datafield x-if="state.mode == 'edit'" type="text" label="Created" readonly x-model="state.createdDisplay"></x-datafield>
+                    <x-datafield x-if="state.mode == 'edit'" type="text" label="Modified" readonly x-model="state.modifiedDisplay"></x-datafield>
+                    <x-datafield x-if="state.mode == 'edit'" type="text" label="Revision" readonly x-model="state.revision"></x-datafield>
+                </x-datafields>
+            </x-details>
             <x-button slot="footer" class="submit" label="Save" command="save" x-attr:disabled="state.busy"></x-button>
             <x-button slot="cancel" class="cancel" label="Cancel" command="cancel"></x-button>
         </x-form>
@@ -160,10 +170,19 @@ export default {
         password: "",
         passkeyLabel: "",
         passkeyId: "",
-        secretId: "",
+        secretName: "",
+        label: "",
         description: "",
         createdAt: null,
         createdDisplay: "",
+        modifiedAt: null,
+        modifiedDisplay: "",
+        revision: null,
+        originalName: "",
+        originalLabel: "",
+        originalDescription: "",
+        originalValueType: "text",
+        originalEditorValue: "",
         valueType: "text",
         editorValue: "",
         sessionExpiresAt: null,
@@ -178,27 +197,43 @@ export default {
         const clear = () => {
             state.password = "";
             state.passkeyLabel = "";
+            state.secretName = "";
+            state.label = "";
             state.description = "";
             state.createdAt = null;
             state.createdDisplay = "";
+            state.modifiedAt = null;
+            state.modifiedDisplay = "";
+            state.revision = null;
+            state.originalName = "";
+            state.originalLabel = "";
+            state.originalDescription = "";
+            state.originalValueType = "text";
+            state.originalEditorValue = "";
             state.editorValue = "";
         };
         const message = error => error?.message || "The operation failed.";
         const formatDate = value => {
-            if (!value) return "Unknown";
+            if (!value) return "—";
             const date = new Date(value);
-            return Number.isNaN(date.getTime()) ? "Unknown" : date.toLocaleDateString();
+            return Number.isNaN(date.getTime()) ? "—" : date.toLocaleDateString();
         };
-        const displayInfo = item => ({...item, createdDisplay:formatDate(item.createdAt)});
+        const displayInfo = item => ({...item, createdDisplay:formatDate(item.createdAt), modifiedDisplay:formatDate(item.modifiedAt)});
 
         return {
+            captureSecret(name = state.secretName) {
+                // Retain the loaded values so edits and partial saves can be distinguished.
+                state.originalName = name;
+                state.originalLabel = state.label;
+                state.originalDescription = state.description;
+                state.originalValueType = state.valueType;
+                state.originalEditorValue = state.editorValue;
+            },
+
             async load() {
                 events.on(bus, "secrets:status-changed", "onStatusChanged");
-                state.passkeySupported = globalThis.isSecureContext === true &&
-                    typeof globalThis.navigator?.credentials?.get === "function";
-
+                state.passkeySupported = globalThis.isSecureContext === true && typeof globalThis.navigator?.credentials?.get === "function";
                 if (state.mode == "manage") return await this.refresh();
-
                 if (state.mode == "add" || state.mode == "add-passkey") {
                     state.status = secrets.status;
                     state.ready = true;
@@ -208,14 +243,20 @@ export default {
                 if (state.mode == "edit") {
                     state.busy = true;
                     try {
-                        const [value, info] = await Promise.all([secrets.get(state.secretId, {interactive:false}), secrets.getInfo(state.secretId)]);
+                        const [value, info] = await Promise.all([secrets.get(state.secretName, {interactive:false}), secrets.getInfo(state.secretName)]);
                         if (!alive) return;
                         if (value === undefined || !info) throw new Error("Secret not found.");
                         state.valueType = typeof value === "string" ? "text" : "json";
                         state.editorValue = typeof value === "string" ? value : JSON.stringify(value, null, 2);
+                        state.secretName = info.name;
+                        state.label = info.label;
                         state.description = info.description;
                         state.createdAt = info.createdAt;
                         state.createdDisplay = formatDate(info.createdAt);
+                        state.modifiedAt = info.modifiedAt;
+                        state.modifiedDisplay = formatDate(info.modifiedAt);
+                        state.revision = info.revision;
+                        this.captureSecret();
                         state.status = secrets.status;
                         state.ready = true;
                     } catch (error) {
@@ -292,15 +333,16 @@ export default {
 
             async openUnlock() {
                 if (state.busy || secrets.status == "unlocked") return;
-                var aaaa =secrets;
                 state.error = "";
                 state.busy = true;
                 try {
                     const result = await dialog.open({
                         href: secrets.page,
+                        title: "Secrets vault",
                         context: {}
                     });
-                    if (alive && result?.unlocked && secrets.status == "unlocked" && state.status != "unlocked") await this.refresh();
+                    // Refresh after the entire initialization and optional passkey setup completes.
+                    if (alive && result?.unlocked && secrets.status === "unlocked") await this.refresh();
                 } catch (error) {
                     if (alive) state.error = message(error);
                 } finally {
@@ -317,13 +359,13 @@ export default {
                 state.error = "";
             },
 
-            async openEditor(mode, id = "") {
+            async openEditor(mode, name = "") {
                 if (secrets.status != "unlocked") return void (state.error = "Unlock the vault first.");
                 try {
                     const result = await dialog.open({
                         href: "page:x:/pages/secrets-manager.js",
                         title: mode == "add" ? "Add secret" : "Edit secret",
-                        context: {mode, secretId:id}
+                        context: {mode, secretName:name}
                     });
                     if (alive && result?.saved) await this.refresh();
                 } catch (error) {
@@ -364,8 +406,8 @@ export default {
             },
 
             async edit({event}) {
-                const id = event.currentTarget.dataset.id;
-                if (id) await this.openEditor("edit", id);
+                const name = event.currentTarget.dataset.name;
+                if (name) await this.openEditor("edit", name);
             },
 
             async editPasskey({event}) {
@@ -375,8 +417,8 @@ export default {
 
             async save() {
                 if (state.busy || secrets.status != "unlocked") return;
-                const id = state.mode == "add" ? state.secretId.trim() : state.secretId;
-                if (!id) return void (state.error = "Secret ID is required.");
+                const name = state.secretName;
+                if (!name.trim()) return void (state.error = "Secret name is required.");
 
                 let value = state.editorValue;
                 if (state.valueType == "json") {
@@ -386,17 +428,31 @@ export default {
 
                 state.error = "";
                 state.busy = true;
+                let changesSaved = false;
                 try {
                     if (state.mode == "add") {
                         const items = await secrets.list();
-                        if (items.some(item => item.id === id)) throw new Error("A secret with this ID already exists.");
+                        if (items.some(item => item.name === name)) throw new Error("A secret with this name already exists.");
+                        await secrets.set(name, value, {label:state.label, description:state.description});
+                    } else {
+                        const metadata = {};
+                        if (state.label !== state.originalLabel) metadata.label = state.label;
+                        if (state.description !== state.originalDescription) metadata.description = state.description;
+                        const valueChanged = state.valueType !== state.originalValueType || state.editorValue !== state.originalEditorValue;
+                        if (valueChanged || Object.keys(metadata).length) {
+                            await secrets.set(state.originalName, value, metadata);
+                            changesSaved = true;
+                            this.captureSecret(state.originalName);
+                        }
+                        if (name !== state.originalName) await secrets.rename(state.originalName, name);
                     }
-                    await secrets.set(id, value, {description:state.description});
                     if (!alive) return;
                     clear();
                     await page.close({saved:true});
                 } catch (error) {
-                    if (alive) state.error = message(error);
+                    if (alive) state.error = changesSaved && name !== state.originalName
+                        ? `Secret changes were saved under '${state.originalName}', but the rename failed: ${message(error)}`
+                        : message(error);
                 } finally {
                     if (alive) state.busy = false;
                 }
@@ -404,15 +460,15 @@ export default {
 
             async remove({event}) {
                 if (state.busy || secrets.status != "unlocked") return;
-                const id = event.currentTarget.dataset.id;
-                if (!id) return;
+                const name = event.currentTarget.dataset.name;
+                if (!name) return;
 
                 try {
-                    const result = await dialog.confirm({title:"Delete secret", message:"Delete secret '" + id + "'?"});
+                    const result = await dialog.confirm({title:"Delete secret", message:"Delete secret '" + name + "'?"});
                     if (result != "yes" || !alive) return;
                     state.busy = true;
                     state.error = "";
-                    await secrets.delete(id);
+                    await secrets.delete(name);
                     if (alive) await this.refresh();
                 } catch (error) {
                     if (alive) state.error = message(error);

@@ -2,19 +2,21 @@
 // Secrets V2 uses a random DEK for values and password/passkey-derived KEKs only to wrap that DEK.
 
 const DB_NAME = "xshell-secrets";
-const DB_VERSION = 3;
+const DB_VERSION = 1;
 const FORMAT_VERSION = 2;
 const SESSION_FORMAT_VERSION = 1;
 const MAX_REMEMBER_MINUTES = 43_200;
 const META_STORE = "metadata";
 const PASSKEY_STORE = "passkeys";
 const SECRET_STORE = "secrets";
+const SECRET_NAME_INDEX = "name";
 const SESSION_STORE = "sessions";
 const SESSION_STORAGE_KEY = "xshell-secrets:session:v1";
 const VAULT_ID = "vault";
 const KDF_ITERATIONS = 600_000;
 const ENCODER = new TextEncoder();
 const DECODER = new TextDecoder("utf-8", { fatal: true });
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/u;
 
 function checkPassword(options) {
     const password = options?.password;
@@ -30,6 +32,11 @@ function checkId(id, kind = "Secret") {
     }
 }
 
+function checkName(name) {
+    if (typeof name !== "string" || !name.trim()) throw new TypeError("Secret name must be a non-empty string.");
+    return name;
+}
+
 function checkLabel(label) {
     if (typeof label !== "string" || !label.trim()) {
         throw new TypeError("A non-empty passkey label is required.");
@@ -42,12 +49,40 @@ function checkDescription(description) {
     return description;
 }
 
-function secretDescription(options) {
+function checkSecretLabel(label) {
+    if (typeof label !== "string") throw new TypeError("Secret label must be a string.");
+    return label;
+}
+
+function secretMetadata(options) {
+    // Validate writable metadata without accepting service-managed fields.
     if (options !== undefined && (!options || typeof options !== "object" || Array.isArray(options))) {
         throw new TypeError("Secret metadata must be an object.");
     }
-    const provided = options !== undefined && Object.hasOwn(options, "description");
-    return { provided, value: provided ? checkDescription(options.description) : "" };
+    if (options && Object.keys(options).some(key => key !== "label" && key !== "description")) {
+        throw new TypeError("Secret metadata contains an unknown property.");
+    }
+    const descriptionProvided = options !== undefined && Object.hasOwn(options, "description");
+    const labelProvided = options !== undefined && Object.hasOwn(options, "label");
+    const description = descriptionProvided ? checkDescription(options.description) : "";
+    const label = labelProvided ? checkSecretLabel(options.label) : "";
+    return { descriptionProvided, description, labelProvided, label };
+}
+
+function secretRevision(record) {
+    // Reject metadata that cannot be incremented safely.
+    if (!Number.isSafeInteger(record.revision) || record.revision < 1) {
+        throw new Error("Secret revision metadata must be a positive safe integer.");
+    }
+    return record.revision;
+}
+
+function newSecretId() {
+    // Generate the stable storage identity with the browser's secure UUID API.
+    if (typeof crypto.randomUUID !== "function") throw new Error("Secrets requires crypto.randomUUID().");
+    const id = crypto.randomUUID();
+    if (typeof id !== "string" || !UUID_PATTERN.test(id)) throw new Error("crypto.randomUUID() returned an invalid UUID.");
+    return id;
 }
 
 function checkRememberMinutes(value, fallback, maximum) {
@@ -489,20 +524,20 @@ export default class Secrets {
         const records = await this.#request(SECRET_STORE, "readonly", store => store.getAll());
         this.#assertCurrent(epoch);
         return (await Promise.all(records.map(record => this.#secretInfo(record, key, epoch))))
-            .sort((left, right) => left.id.localeCompare(right.id));
+            .sort((left, right) => left.name.localeCompare(right.name));
     }
 
-    async get(id, options) {
-        checkId(id);
+    async get(name, options) {
+        checkName(name);
         await this.#ensureUnlocked(interactiveAccess(options));
         const { key, epoch } = await this.#session();
-        const record = await this.#request(SECRET_STORE, "readonly", store => store.get(id));
+        const record = await this.#findSecret(name);
         this.#assertCurrent(epoch);
         if (!record) return undefined;
-        if (record.version !== FORMAT_VERSION) throw new Error("Secret uses an unsupported encrypted format.");
+        this.#validateSecretRecord(record);
         let plaintext;
         try {
-            plaintext = await decrypt(key, record, `secret:${id}`);
+            plaintext = await decrypt(key, record, `secret:${record.id}`);
             this.#assertCurrent(epoch);
             return JSON.parse(DECODER.decode(plaintext));
         } catch (error) {
@@ -513,17 +548,17 @@ export default class Secrets {
         }
     }
 
-    async getInfo(id) {
-        checkId(id);
+    async getInfo(name) {
+        checkName(name);
         const { key, epoch } = await this.#session();
-        const record = await this.#request(SECRET_STORE, "readonly", store => store.get(id));
+        const record = await this.#findSecret(name);
         this.#assertCurrent(epoch);
         return record ? this.#secretInfo(record, key, epoch) : undefined;
     }
 
-    async set(id, value, options) {
-        checkId(id);
-        const description = secretDescription(options);
+    async set(name, value, options) {
+        checkName(name);
+        const metadata = secretMetadata(options);
         const { key, epoch } = await this.#session();
         let json;
         try {
@@ -533,39 +568,69 @@ export default class Secrets {
         }
         if (typeof json !== "string") throw new TypeError("Secret value must be JSON-serializable.");
         const plaintext = ENCODER.encode(json);
-        const descriptionPlaintext = ENCODER.encode(description.value);
-        let encrypted;
-        let encryptedDescription;
+        const descriptionPlaintext = ENCODER.encode(metadata.description);
+        const labelPlaintext = metadata.labelProvided && metadata.label ? ENCODER.encode(metadata.label) : null;
         try {
-            [encrypted, encryptedDescription] = await Promise.all([
-                encrypt(key, plaintext, `secret:${id}`),
-                encrypt(key, descriptionPlaintext, `secret-description:${id}`)
-            ]);
+            // Retry only when a concurrent name change invalidates the pre-encryption lookup.
+            while (true) {
+                const existing = await this.#findSecret(name);
+                const expectedId = existing?.id ?? null;
+                const id = expectedId || newSecretId();
+                const [encrypted, encryptedDescription, encryptedLabel] = await Promise.all([
+                    encrypt(key, plaintext, `secret:${id}`),
+                    encrypt(key, descriptionPlaintext, `secret-description:${id}`),
+                    labelPlaintext ? encrypt(key, labelPlaintext, `secret-label:${id}`) : null
+                ]);
+                this.#assertCurrent(epoch);
+                const committed = await this.#writeSecret(name, expectedId, current => {
+                    this.#assertCurrent(epoch);
+                    if (current) this.#validateSecretRecord(current);
+                    const record = { id, name, version: FORMAT_VERSION, ...encrypted };
+                    if (current) {
+                        const revision = secretRevision(current);
+                        if (revision === Number.MAX_SAFE_INTEGER) throw new RangeError("Secret revision cannot exceed the maximum safe integer.");
+                        record.createdAt = current.createdAt;
+                        record.modifiedAt = new Date().toISOString();
+                        record.revision = revision + 1;
+                    } else {
+                        const timestamp = new Date().toISOString();
+                        record.createdAt = timestamp;
+                        record.modifiedAt = timestamp;
+                        record.revision = 1;
+                    }
+                    record.description = metadata.descriptionProvided ? encryptedDescription : current?.description ?? encryptedDescription;
+                    if (metadata.labelProvided) {
+                        if (encryptedLabel) record.label = encryptedLabel;
+                    } else if (current?.label !== undefined) {
+                        record.label = current.label;
+                    }
+                    return record;
+                });
+                if (committed) break;
+                this.#assertCurrent(epoch);
+            }
         } finally {
             plaintext.fill(0);
             descriptionPlaintext.fill(0);
+            labelPlaintext?.fill(0);
         }
-        this.#assertCurrent(epoch);
-        await this.#updateRecord(SECRET_STORE, id, existing => {
-            this.#assertCurrent(epoch);
-            if (existing && existing.version !== FORMAT_VERSION) throw new Error("Secret uses an unsupported encrypted format.");
-            const record = { id, version: FORMAT_VERSION, ...encrypted };
-            if (existing) {
-                if (Object.hasOwn(existing, "createdAt")) record.createdAt = existing.createdAt;
-            } else {
-                record.createdAt = new Date().toISOString();
-            }
-            record.description = description.provided ? encryptedDescription : existing?.description ?? encryptedDescription;
-            return record;
-        });
         this.#assertCurrent(epoch);
     }
 
-    async delete(id) {
-        checkId(id);
+    async delete(name) {
+        checkName(name);
         const { epoch } = await this.#session();
         this.#assertCurrent(epoch);
-        await this.#request(SECRET_STORE, "readwrite", store => store.delete(id));
+        await this.#deleteSecret(name);
+        this.#assertCurrent(epoch);
+    }
+
+    async rename(oldName, newName) {
+        checkName(oldName);
+        checkName(newName);
+        const { epoch } = await this.#session();
+        this.#assertCurrent(epoch);
+        await this.#renameSecret(oldName, newName, epoch);
         this.#assertCurrent(epoch);
     }
 
@@ -701,27 +766,195 @@ export default class Secrets {
         this.#assertCurrent(epoch);
     }
 
+    #validateSecretRecord(record) {
+        // Validate the UUID-backed record shape before using encrypted fields.
+        if (!record || record.version !== FORMAT_VERSION) throw new Error("Secret uses an unsupported encrypted format.");
+        if (typeof record.id !== "string" || !UUID_PATTERN.test(record.id) || typeof record.name !== "string" || !record.name.trim() ||
+            typeof record.createdAt !== "string" || typeof record.modifiedAt !== "string") {
+            throw new Error("Secret identity metadata is damaged.");
+        }
+        secretRevision(record);
+        return record;
+    }
+
     async #secretInfo(record, key, epoch) {
-        if (record.version !== FORMAT_VERSION) throw new Error("Secret uses an unsupported encrypted format.");
+        this.#validateSecretRecord(record);
         let description = "";
-        let plaintext;
+        let customLabel = "";
+        let descriptionPlaintext;
+        let labelPlaintext;
         if (record.description !== undefined) {
             try {
-                plaintext = await decrypt(key, record.description, `secret-description:${record.id}`);
+                descriptionPlaintext = await decrypt(key, record.description, `secret-description:${record.id}`);
                 this.#assertCurrent(epoch);
-                description = DECODER.decode(plaintext);
+                description = DECODER.decode(descriptionPlaintext);
             } catch (error) {
                 if (epoch !== this.#epoch) throw error;
                 throw new Error("Secret description cannot be decrypted or is damaged.", { cause: error });
             } finally {
-                plaintext?.fill(0);
+                descriptionPlaintext?.fill(0);
+            }
+        }
+        if (record.label !== undefined) {
+            try {
+                labelPlaintext = await decrypt(key, record.label, `secret-label:${record.id}`);
+                this.#assertCurrent(epoch);
+                customLabel = DECODER.decode(labelPlaintext);
+            } catch (error) {
+                if (epoch !== this.#epoch) throw error;
+                throw new Error("Secret label cannot be decrypted or is damaged.", { cause: error });
+            } finally {
+                labelPlaintext?.fill(0);
             }
         }
         return {
             id: record.id,
+            name: record.name,
+            label: customLabel || record.name,
             description,
-            createdAt: typeof record.createdAt === "string" ? record.createdAt : null
+            createdAt: record.createdAt,
+            modifiedAt: record.modifiedAt,
+            revision: secretRevision(record)
         };
+    }
+
+    #findSecret(name) {
+        // Resolve the exact case-sensitive name through the unique index.
+        return this.#request(SECRET_STORE, "readonly", store => store.index(SECRET_NAME_INDEX).get(name));
+    }
+
+    #writeSecret(name, expectedId, update) {
+        // Recheck name resolution inside the write transaction before committing encrypted data.
+        return new Promise((resolve, reject) => {
+            let transaction;
+            let failure;
+            let retry = false;
+            try {
+                transaction = this.#database.transaction(SECRET_STORE, "readwrite");
+                this.#writeTransactions.add(transaction);
+                const cleanup = () => this.#writeTransactions.delete(transaction);
+                transaction.oncomplete = () => { cleanup(); resolve(!retry); };
+                transaction.onabort = () => { cleanup(); reject(failure || transaction.error || new Error("IndexedDB transaction aborted.")); };
+                transaction.onerror = () => { cleanup(); reject(failure || transaction.error || new Error("IndexedDB transaction failed.")); };
+                const store = transaction.objectStore(SECRET_STORE);
+                const request = store.index(SECRET_NAME_INDEX).get(name);
+                request.onsuccess = () => {
+                    const current = request.result;
+                    if ((current?.id ?? null) !== expectedId) {
+                        retry = true;
+                        return;
+                    }
+                    try {
+                        const result = current ? store.put(update(current)) : store.add(update(undefined));
+                        result.onerror = () => {
+                            try { transaction.abort(); } catch { /* The transaction might already be inactive. */ }
+                        };
+                    } catch (error) {
+                        failure = error;
+                        try { transaction.abort(); } catch { /* The transaction might already be inactive. */ }
+                    }
+                };
+                request.onerror = () => {
+                    try { transaction.abort(); } catch { /* The transaction might already be inactive. */ }
+                };
+            } catch (error) {
+                if (transaction) this.#writeTransactions.delete(transaction);
+                try { transaction?.abort(); } catch { /* The transaction might already be inactive. */ }
+                reject(error);
+            }
+        });
+    }
+
+    #deleteSecret(name) {
+        // Resolve and delete by immutable primary key in one transaction.
+        return new Promise((resolve, reject) => {
+            let transaction;
+            try {
+                transaction = this.#database.transaction(SECRET_STORE, "readwrite");
+                this.#writeTransactions.add(transaction);
+                const cleanup = () => this.#writeTransactions.delete(transaction);
+                transaction.oncomplete = () => { cleanup(); resolve(); };
+                transaction.onabort = () => { cleanup(); reject(transaction.error || new Error("IndexedDB transaction aborted.")); };
+                transaction.onerror = () => { cleanup(); reject(transaction.error || new Error("IndexedDB transaction failed.")); };
+                const store = transaction.objectStore(SECRET_STORE);
+                const request = store.index(SECRET_NAME_INDEX).get(name);
+                request.onsuccess = () => {
+                    if (!request.result) return;
+                    const result = store.delete(request.result.id);
+                    result.onerror = () => {
+                        try { transaction.abort(); } catch { /* The transaction might already be inactive. */ }
+                    };
+                };
+                request.onerror = () => {
+                    try { transaction.abort(); } catch { /* The transaction might already be inactive. */ }
+                };
+            } catch (error) {
+                if (transaction) this.#writeTransactions.delete(transaction);
+                try { transaction?.abort(); } catch { /* The transaction might already be inactive. */ }
+                reject(error);
+            }
+        });
+    }
+
+    async #renameSecret(oldName, newName, epoch) {
+        // Treat an existing secret's current name as a true no-op.
+        if (oldName === newName) {
+            if (!await this.#findSecret(oldName)) throw new Error(`Secret '${oldName}' was not found.`);
+            return;
+        }
+        return new Promise((resolve, reject) => {
+            let transaction;
+            let failure;
+            try {
+                transaction = this.#database.transaction(SECRET_STORE, "readwrite");
+                this.#writeTransactions.add(transaction);
+                const cleanup = () => this.#writeTransactions.delete(transaction);
+                transaction.oncomplete = () => { cleanup(); resolve(); };
+                transaction.onabort = () => { cleanup(); reject(failure || transaction.error || new Error("IndexedDB transaction aborted.")); };
+                transaction.onerror = () => { cleanup(); reject(failure || transaction.error || new Error("IndexedDB transaction failed.")); };
+                const store = transaction.objectStore(SECRET_STORE);
+                const oldRequest = store.index(SECRET_NAME_INDEX).get(oldName);
+                oldRequest.onsuccess = () => {
+                    const current = oldRequest.result;
+                    if (!current) {
+                        failure = new Error(`Secret '${oldName}' was not found.`);
+                        try { transaction.abort(); } catch { /* The transaction might already be inactive. */ }
+                        return;
+                    }
+                    const newRequest = store.index(SECRET_NAME_INDEX).get(newName);
+                    newRequest.onsuccess = () => {
+                        if (newRequest.result && newRequest.result.id !== current.id) {
+                            failure = new Error(`A secret named '${newName}' already exists.`);
+                            try { transaction.abort(); } catch { /* The transaction might already be inactive. */ }
+                            return;
+                        }
+                        try {
+                            this.#assertCurrent(epoch);
+                            this.#validateSecretRecord(current);
+                            const revision = secretRevision(current);
+                            if (revision === Number.MAX_SAFE_INTEGER) throw new RangeError("Secret revision cannot exceed the maximum safe integer.");
+                            const result = store.put({ ...current, name:newName, modifiedAt:new Date().toISOString(), revision:revision + 1 });
+                            result.onerror = () => {
+                                try { transaction.abort(); } catch { /* The transaction might already be inactive. */ }
+                            };
+                        } catch (error) {
+                            failure = error;
+                            try { transaction.abort(); } catch { /* The transaction might already be inactive. */ }
+                        }
+                    };
+                    newRequest.onerror = () => {
+                        try { transaction.abort(); } catch { /* The transaction might already be inactive. */ }
+                    };
+                };
+                oldRequest.onerror = () => {
+                    try { transaction.abort(); } catch { /* The transaction might already be inactive. */ }
+                };
+            } catch (error) {
+                if (transaction) this.#writeTransactions.delete(transaction);
+                try { transaction?.abort(); } catch { /* The transaction might already be inactive. */ }
+                reject(error);
+            }
+        });
     }
 
     #updateRecord(name, id, update) {
@@ -1045,13 +1278,14 @@ export default class Secrets {
             const request = indexedDB.open(DB_NAME, DB_VERSION);
             request.onupgradeneeded = () => {
                 const database = request.result;
-                if (!database.objectStoreNames.contains(META_STORE)) database.createObjectStore(META_STORE, { keyPath: "id" });
-                if (!database.objectStoreNames.contains(PASSKEY_STORE)) database.createObjectStore(PASSKEY_STORE, { keyPath: "id" });
-                if (!database.objectStoreNames.contains(SECRET_STORE)) database.createObjectStore(SECRET_STORE, { keyPath: "id" });
-                if (!database.objectStoreNames.contains(SESSION_STORE)) database.createObjectStore(SESSION_STORE, { keyPath: "id" });
+                database.createObjectStore(META_STORE, { keyPath: "id" });
+                database.createObjectStore(PASSKEY_STORE, { keyPath: "id" });
+                const secrets = database.createObjectStore(SECRET_STORE, { keyPath: "id" });
+                secrets.createIndex(SECRET_NAME_INDEX, "name", { unique:true });
+                database.createObjectStore(SESSION_STORE, { keyPath: "id" });
             };
             request.onerror = () => reject(request.error || new Error("Secrets database could not be opened."));
-            request.onblocked = () => reject(new Error("Secrets database upgrade is blocked by another tab."));
+            request.onblocked = () => reject(new Error("Opening the Secrets database is blocked by another tab."));
             request.onsuccess = () => {
                 this.#database = request.result;
                 this.#database.onversionchange = () => {

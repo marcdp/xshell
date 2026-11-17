@@ -124,11 +124,12 @@ export default {
                 state.tabs = tabs;
                 styleSheet.replaceSync(`::slotted(x-tab:nth-child(${parseInt(state.selectedIndex) + 1})) {display:block;}`);
                 // hash
-                let tab = tabs[state.selectedIndex];
-                if (tab && tab.hash) {
-                    const page = getPage();
+                const tab = tabs[state.selectedIndex];
+                const page = getPage();
+                if (state.useHash && tab) {
                     if (page) {
-                        page.replaceHash(tab.hash);
+                        const currentHash = page.src.split("#")[1] || "";
+                        if (tab.hash !== currentHash) page.replaceHash(tab.hash);
                     }
                 }
             }

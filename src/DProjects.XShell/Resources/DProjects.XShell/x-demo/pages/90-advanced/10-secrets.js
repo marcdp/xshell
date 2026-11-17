@@ -73,6 +73,8 @@ const value = await secrets.get("x-demo:secrets-example");
 // These methods require an unlocked vault
 await secrets.set("x-demo:secrets-example", {
     message: "Hello from XShell"
+}, {
+    label: "XShell demo secret"
 });
 
 const entries = await secrets.list();
@@ -140,7 +142,7 @@ await secrets.delete("x-demo:secrets-example");</code></pre>
                 const entries = await secrets.list();
                 if (!alive) return;
 
-                state.exists = entries.some(item => item.id === SAMPLE_ID)
+                state.exists = entries.some(item => item.name === SAMPLE_ID)
                     ? "Yes"
                     : "No";
 
@@ -206,6 +208,7 @@ await secrets.delete("x-demo:secrets-example");</code></pre>
                     checkSample(existing);
 
                     await secrets.set(SAMPLE_ID, SAMPLE_VALUE, {
+                        label: "XShell demo secret",
                         description: "XShell Cookbook example"
                     });
 
