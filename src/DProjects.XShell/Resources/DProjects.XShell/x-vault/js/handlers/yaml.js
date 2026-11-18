@@ -4,6 +4,7 @@ import HandlerBase from "./base.js";
 
 export default class HandlerYaml extends HandlerBase {
     document(text) {
+        // Parse a YAML document and require a top-level mapping when present.
         const document = parseDocument(text, { keepSourceTokens: true, uniqueKeys: false, version: "1.1" });
         if (document.errors.length) throw new Error("Invalid xvault YAML document.");
         if (document.contents !== null && !isMap(document.contents)) throw new Error("XVault YAML requires a top-level mapping.");
@@ -11,6 +12,7 @@ export default class HandlerYaml extends HandlerBase {
     }
 
     parse(text) {
+        // Remove YAML metadata while retaining its source placement and neighbors.
         const root = this.document(text);
         const items = root?.items || [];
         const matches = items.flatMap((pair, index) => {
@@ -35,6 +37,7 @@ export default class HandlerYaml extends HandlerBase {
     }
 
     restore(text, parsed) {
+        // Restore YAML metadata without moving it into nested or directive content.
         const root = this.document(text);
         const items = root?.items || [];
         const slot = parsed.slot;

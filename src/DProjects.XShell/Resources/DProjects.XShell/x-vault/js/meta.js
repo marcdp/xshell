@@ -2,12 +2,14 @@ const encoder = new TextEncoder();
 const decoder = new TextDecoder("utf-8", { fatal: true });
 
 export function encodeBase64(bytes) {
+    // Encode bytes using the canonical padded base64url representation.
     let binary = "";
     for (const byte of bytes) binary += String.fromCharCode(byte);
     return btoa(binary).replaceAll("+", "-").replaceAll("/", "_");
 }
 
 export function decodeBase64(value) {
+    // Decode only canonical padded base64url input.
     if (typeof value !== "string" || !/^[A-Za-z0-9_-]*={0,2}$/.test(value) || value.length % 4 !== 0) {
         throw new Error("Invalid xvault base64url encoding.");
     }
@@ -17,6 +19,7 @@ export function decodeBase64(value) {
 }
 
 export function validateMetadata(data) {
+    // Validate and normalize version-specific vault metadata.
     if (!data || typeof data !== "object" || Array.isArray(data)) throw new Error("Invalid xvault metadata object.");
     const version = Object.hasOwn(data, "crypto_version") ? data.crypto_version : 1;
     if (version !== 1 && version !== 2) throw new Error("Unsupported xvault crypto version.");
@@ -29,6 +32,7 @@ export function validateMetadata(data) {
 }
 
 export function decodeMetadata(value) {
+    // Decode metadata while rejecting duplicate or malformed JSON fields.
     if (typeof value !== "string" || !value.startsWith("xvault:")) throw new Error("Invalid _xvault metadata value.");
     try {
         const json = decoder.decode(decodeBase64(value.slice(7)));
@@ -45,5 +49,6 @@ export function decodeMetadata(value) {
 }
 
 export function encodeMetadata(metadata) {
+    // Serialize validated metadata into the `_xvault` value format.
     return "xvault:" + encodeBase64(encoder.encode(JSON.stringify(validateMetadata(metadata))));
 }

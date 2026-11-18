@@ -4,6 +4,7 @@ const aad = new TextEncoder().encode("xvault:v2:dek");
 
 export default class CryptoV2 extends CryptoBase {
     static async open(metadata, password, initialize = false) {
+        // Open a V2 cipher by wrapping or unwrapping its random data-encryption key.
         const raw = await deriveKey(password, metadata.salt);
         let dek;
         try {

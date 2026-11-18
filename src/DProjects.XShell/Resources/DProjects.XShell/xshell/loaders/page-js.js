@@ -509,19 +509,20 @@ export async function createPageClassFromJsDefinition(src, context, definition) 
                 this._stateChanges = [];
                 this._renderPending = false;
                 renderEngine.render();
+                // notify the host after its first completed render
+                if (!this._firstRenderReported) {
+                    this._firstRenderReported = true;
+                    this._host.dispatchEvent(new CustomEvent("first-render", {
+                        detail: { page: this }
+                    }));
+                }
+                // post-render callbacks
                 while (this._postRenderPending.length > 0) {
                     const pending = this._postRenderPending.shift();
                     const handler = this._controller[pending.methodName];
                     if (typeof(handler) === "function") {
                         handler.apply(this._controller, pending.args);
                     }
-                }
-                // Notify the host after its first completed render
-                if (!this._firstRenderReported) {
-                    this._firstRenderReported = true;
-                    this._host.dispatchEvent(new CustomEvent("first-render", {
-                        detail: { page: this }
-                    }));
                 }
             });
         }

@@ -3,6 +3,7 @@ import HandlerYaml from "./yaml.js";
 
 export default class HandlerMarkdown extends HandlerBase {
     frontMatter(text) {
+        // Locate YAML front matter only when it begins the Markdown document.
         const match = /^---\r?\n([\s\S]*?)^---(?=\r?\n|$)/m.exec(text);
         if (!match || match.index !== 0) return null;
         const start = text.indexOf("\n") + 1;
@@ -10,6 +11,7 @@ export default class HandlerMarkdown extends HandlerBase {
     }
 
     parse(text) {
+        // Delegate front-matter metadata parsing to the YAML handler.
         const front = this.frontMatter(text);
         if (!front) return { text, metadata: null, slot: null };
         const parsed = new HandlerYaml().parse(front.text);
@@ -18,6 +20,7 @@ export default class HandlerMarkdown extends HandlerBase {
     }
 
     restore(text, parsed) {
+        // Restore metadata in existing front matter or create it when allowed.
         const handler = new HandlerYaml();
         const front = this.frontMatter(text);
         if (!front) {

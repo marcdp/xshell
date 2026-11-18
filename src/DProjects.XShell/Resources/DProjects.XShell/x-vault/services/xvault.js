@@ -11,6 +11,7 @@ import HandlerOvpn from "../js/handlers/ovpn.js";
 const handlers = { env: HandlerEnv, json: HandlerJson, jsonc: HandlerJsonc, yaml: HandlerYaml, markdown: HandlerMarkdown, ovpn: HandlerOvpn };
 
 function selectFormat(text, format) {
+    // Normalize explicit aliases or infer an unambiguous document format.
     if (format === "yml") format = "yaml";
     if (format === "md") format = "markdown";
     if (format !== undefined) {
@@ -31,10 +32,12 @@ function selectFormat(text, format) {
 }
 
 function checkText(text) {
+    // Require well-formed text before parsing or encrypting document content.
     if (typeof text !== "string" || !text.isWellFormed()) throw new Error("XVault text must be a valid Unicode string.");
 }
 
 function checkUninitialized(handler, text) {
+    // Reject ciphertext-like markers that lack vault metadata.
     for (const token of handler.tokens(text)) {
         try {
             if (decodeBase64(token.value).length < 28) continue;
@@ -44,6 +47,7 @@ function checkUninitialized(handler, text) {
 }
 
 async function reveal(handler, parsed, cipher) {
+    // Decrypt document markers while retaining their original structural context.
     const original = handler.describe(parsed.text);
     const values = [];
     for (const token of original.tokens) {
@@ -62,6 +66,7 @@ async function reveal(handler, parsed, cipher) {
 }
 
 function preserveCiphertext(handler, original, edited) {
+    // Reuse unchanged ciphertext only when the edited marker structure is safe.
     const preserved = new Map();
     const oldPlain = handler.describe(original.text);
     const oldOutside = handler.replace(original.text, oldPlain.tokens, oldPlain.tokens.map(() => ""));
@@ -103,6 +108,7 @@ export default class XVault {
 
     // methods
     async decrypt(text, password, options = {}) {
+        // Produce editable plaintext and the context required to encrypt it again.
         checkText(text);
         if (!options || typeof options !== "object" || Array.isArray(options)) throw new Error("Invalid xvault options.");
         const format = selectFormat(text, options.format);
@@ -119,6 +125,7 @@ export default class XVault {
     }
 
     async encrypt(text, password, context) {
+        // Encrypt edited markers and restore metadata from the supplied context.
         checkText(text);
         if (!context || typeof context !== "object" || Array.isArray(context) || !["new", "existing"].includes(context.kind)) {
             throw new Error("A valid xvault encryption context is required.");

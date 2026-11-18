@@ -33,7 +33,7 @@ export default class Runtime {
     }
     get startupDurationMs() {
         return this._timings.checkpoints.find(
-            item => item.phase === "xshell initialized"
+            item => item.phase === "first page rendered"
         )?.totalMs ?? null;
     }
     get uptimeMs() {

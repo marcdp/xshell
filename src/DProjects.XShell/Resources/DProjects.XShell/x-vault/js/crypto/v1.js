@@ -2,6 +2,7 @@ import CryptoBase, { deriveKey, importKey } from "./base.js";
 
 export default class CryptoV1 extends CryptoBase {
     static async open(metadata, password, initialize = false) {
+        // Open a V1 cipher and initialize or verify its password check value.
         const raw = await deriveKey(password, metadata.salt);
         try {
             const cipher = new CryptoV1(await importKey(raw));

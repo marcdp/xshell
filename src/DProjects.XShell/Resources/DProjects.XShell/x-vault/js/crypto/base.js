@@ -5,6 +5,7 @@ const encoder = new TextEncoder();
 const decoder = new TextDecoder("utf-8", { fatal: true });
 
 export async function deriveKey(password, salt) {
+    // Derive an AES key with the vault's Argon2id parameters.
     if (typeof password !== "string" || !password || !password.isWellFormed()) throw new Error("A valid nonempty password is required.");
     const bytes = encoder.encode(password);
     try {
@@ -17,10 +18,12 @@ export async function deriveKey(password, salt) {
 }
 
 export async function importKey(bytes) {
+    // Import raw key material for AES-GCM encryption and decryption.
     return crypto.subtle.importKey("raw", bytes, "AES-GCM", false, ["encrypt", "decrypt"]);
 }
 
 export async function encryptBytes(key, bytes, additionalData) {
+    // Encrypt bytes with a fresh nonce and return the packed ciphertext.
     const nonce = crypto.getRandomValues(new Uint8Array(12));
     const ciphertext = new Uint8Array(await crypto.subtle.encrypt({ name: "AES-GCM", iv: nonce, tagLength: 128, additionalData }, key, bytes));
     const blob = new Uint8Array(nonce.length + ciphertext.length);
@@ -30,6 +33,7 @@ export async function encryptBytes(key, bytes, additionalData) {
 }
 
 export async function decryptBytes(key, value, additionalData) {
+    // Authenticate and decrypt a packed nonce-and-ciphertext value.
     const blob = decodeBase64(value);
     if (blob.length < 28) throw new Error("Invalid xvault ciphertext length.");
     try {
@@ -45,10 +49,12 @@ export default class CryptoBase {
     #key;
 
     constructor(key) {
+        // Retain the imported AES-GCM key for this cipher instance.
         this.#key = key;
     }
 
     async encrypt(value) {
+        // Encode and encrypt a Unicode secret while clearing temporary bytes.
         if (!value.isWellFormed()) throw new Error("Invalid Unicode in secret.");
         const bytes = encoder.encode(value);
         try {
@@ -59,6 +65,7 @@ export default class CryptoBase {
     }
 
     async decrypt(value) {
+        // Decrypt and decode a secret while clearing temporary bytes.
         const bytes = await decryptBytes(this.#key, value);
         try {
             return decoder.decode(bytes);

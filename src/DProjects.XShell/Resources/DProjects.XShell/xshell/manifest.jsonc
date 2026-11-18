@@ -12,6 +12,7 @@
             "basePath": "app:/_assets",
             "url": "url:./"
         },
+        
         // resolver
         "resolver": {
             "component": {
@@ -115,10 +116,6 @@
                     "url": null
                 }
             }
-        },
-
-        // service worker defaults
-        "serviceWorker": {
         },
 
         // ui

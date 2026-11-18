@@ -4,6 +4,7 @@ import HandlerBase from "./base.js";
 
 export default class HandlerJson extends HandlerBase {
     entries(text) {
+        // Validate JSON5 input and retain top-level property source ranges.
         // Python accepts JSON5 for both JSON and JSONC; scan validated source to retain exact formatting
         let data;
         try { data = JSON5.parse(text); } catch { throw new Error("Invalid xvault JSON/JSONC document."); }
@@ -38,6 +39,7 @@ export default class HandlerJson extends HandlerBase {
     }
 
     parse(text) {
+        // Remove the metadata property while retaining its original placement.
         const document = this.entries(text);
         const matches = document.entries.flatMap((entry, index) => {
             if (entry.key !== "_xvault") return [];
@@ -57,6 +59,7 @@ export default class HandlerJson extends HandlerBase {
     }
 
     restore(text, parsed) {
+        // Restore metadata with its original spelling and neighboring position.
         const document = this.entries(text);
         const entries = document.entries;
         const slot = parsed.slot;

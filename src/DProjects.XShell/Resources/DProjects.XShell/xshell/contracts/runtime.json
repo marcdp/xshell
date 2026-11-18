@@ -4,7 +4,8 @@
   "properties": {
     "startTimeMs": { "type": "number", "readonly": true, "description": "Date when the Runtime instance was constructed."},
     "startupDurationMs": { "type": "number", "readonly": true, "description": "Performance.now() timestamp captured when the Runtime instance was constructed, in milliseconds relative to the browser's performance time origin."},
-    "uptimeMs": { "type": "number", "readonly": true, "description": "Elapsed milliseconds since the Runtime instance was constructed, calculated using performance.now()."}
+    "uptimeMs": { "type": "number", "readonly": true, "description": "Elapsed milliseconds since the Runtime instance was constructed, calculated using performance.now()."},
+    "timings": {"type": "array","readonly": true,"description": "Recorded bootstrap and runtime timing checkpoints."}
   },
   "events": {},
   "methods": {

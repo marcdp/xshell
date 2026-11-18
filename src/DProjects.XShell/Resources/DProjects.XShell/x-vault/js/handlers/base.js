@@ -4,6 +4,7 @@ export default class HandlerBase {
     pattern = /(?<!\$\{)enc:[^"\r\n]+/g;
 
     tokens(text) {
+        // Locate wrapped and format-specific encrypted markers without overlap.
         // protect wrapped occurrences before applying Python's format-specific unwrapped delimiters
         const tokens = [...text.matchAll(/\$\{enc:[^}\r\n]+\}+/g)].map(match => ({
             start: match.index, end: match.index + match[0].length, value: match[0].slice(6, -1), wrapped: true
@@ -20,6 +21,7 @@ export default class HandlerBase {
     }
 
     replace(text, tokens, values) {
+        // Replace marker ranges with corresponding values without reparsing text.
         let result = "";
         let end = 0;
         tokens.forEach((token, index) => {
@@ -30,10 +32,12 @@ export default class HandlerBase {
     }
 
     marker(token, value) {
+        // Render a marker using its original wrapped or unwrapped syntax.
         return token.wrapped ? "${enc:" + value + "}" : "enc:" + value;
     }
 
     describe(text) {
+        // Describe markers and their surrounding structure for safe edit matching.
         const tokens = this.tokens(text);
         const pieces = [];
         let end = 0;
@@ -54,6 +58,7 @@ export default class HandlerBase {
     }
 
     extract(text, matches) {
+        // Remove the single metadata entry and retain its placement for restoration.
         if (matches.length > 1) throw new Error("Duplicate _xvault metadata entries.");
         if (!matches.length) return { text, metadata: null, slot: null };
         const slot = matches[0];
@@ -62,6 +67,7 @@ export default class HandlerBase {
     }
 
     parseLines(text, pattern) {
+        // Parse line-oriented metadata and record neighboring line anchors.
         const matches = [...text.matchAll(pattern)].map(match => ({
             start: match.index, end: match.index + match[0].length, value: match[1].trim()
         }));
@@ -75,6 +81,7 @@ export default class HandlerBase {
     }
 
     restoreLine(text, parsed, prefix) {
+        // Restore metadata near its original line or add it at the document start.
         const newline = text.includes("\r\n") ? "\r\n" : "\n";
         if (!parsed?.slot) return prefix + encodeMetadata(parsed.metadata) + newline + text;
         const lines = text.match(/[^\n]*\n|[^\n]+$/g) || [];
