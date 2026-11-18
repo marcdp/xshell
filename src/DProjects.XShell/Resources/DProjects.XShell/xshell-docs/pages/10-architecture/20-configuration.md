@@ -155,19 +155,6 @@ Bootstrap recursively normalizes recognized string forms in each selected manife
 `url:` therefore normally creates an absolute physical URL, while `/`, `./`, and `../` create application-relative virtual Paths. Object property
 names are not normalized.
 
-## Registry schemas
-
-A module contributes a named registry under `xshell.services.registry.options` with a module-relative schema file path, for example
-`"schema": "/schemas/filecommand.schema.json"`. Bootstrap normalizes that path to the module's generation-qualified `assets.path` before merging
-configuration. Registry is a declaratively configured XShell service, and its implementation-owned static `optionsSchema` validates the complete
-merged options object when the service is resolved. Registry maps each effective asset path to an existing schema Resolver resource, loads it through
-Loader, and validates each contribution against that schema before module controllers start. Framework-owned schemas use generated inventory
-resolver entries. Missing or empty `contributions` are valid; an unknown schema path, schema-loading error, or invalid contribution stops initialization.
-
-Registry options participate in the ordinary recursive configuration merge: named registry objects merge and contribution arrays concatenate across
-modules. The service remains lazily constructed; after `Services.init()` registers configured implementations, startup explicitly calls
-`Services.initialize("registry")` and awaits its once-only asynchronous initialization before Modules initialization.
-
 ## Merge and precedence
 
 Objects merge recursively, arrays concatenate, and later scalar values replace earlier values. The merge order is:

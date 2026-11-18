@@ -64,7 +64,7 @@ class XShell {
         }, {
             appBasePath: config.app.basePath,
             xshellAssetsPath: config.xshell.assets.path,
-            componentLazy: config.xshell.ui.component.lazy
+            componentLazy: config.xshell.ui.components.lazy
         });
         // validate
         await this.validateConfig(config);
@@ -93,8 +93,6 @@ class XShell {
         this._services.register("services", this._services, { contractItem: this._contracts.getContractItemById("services")});
         this._services.register("runtime", this._runtime, { contractItem: this._contracts.getContractItemById("runtime")});
         await this._services.init();
-        // Initialize the declaratively registered Registry
-        await this._services.initialize("registry");
         // Construct and validate Areas before module controllers execute
         const areas = this._services.resolve("areas");
         // Resolve and initialize Modules and their controllers

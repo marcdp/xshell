@@ -90,11 +90,6 @@
                     "page": null
                 }
             },
-            "registry": {
-                "contract": "registry",
-                "implementation": "/services/registry.js",
-                "options": {}
-            },
             "secrets": {
                 "contract": "secrets",
                 "implementation": "/services/secrets.js",
@@ -120,20 +115,18 @@
 
         // ui
         "ui": {
-            "component": {
+            "components": {
                 "lazy": "",
                 "error": "",
                 "markdown": ""
             },
-            "layout": {
+            "layouts": {
                 "default": null,
                 "dialog": null,
                 "dock": null,
                 "main": null,
                 "stack": null,
                 "embed": null
-            },
-            "page": {
             }
         }       
 

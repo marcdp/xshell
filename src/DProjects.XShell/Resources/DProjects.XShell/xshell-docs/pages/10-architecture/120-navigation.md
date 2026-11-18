@@ -185,8 +185,8 @@ implementation-owned static `optionsSchema` validates `xshell.services.navigatio
 construction through `Services.initialize("navigation")`.
 
 XShell still coordinates Navigation's asynchronous `init()` explicitly through the once-only service initialization API. Startup loads configured
-service classes, initializes Registry, initializes Modules, composes Areas, and only then initializes Navigation. The `xshell.navigation` compatibility accessor delegates to the service
-registry and returns that configured singleton; it does not retain a second Navigation instance.
+service classes, initializes Modules, composes Areas, and only then initializes Navigation. The `xshell.navigation` compatibility accessor
+delegates to the service registry and returns that configured singleton; it does not retain a second Navigation instance.
 
 On a fresh load at the mode's empty/root URL, Navigation uses the default Area's `home`, derived from the first depth-first navigation item marked
 `default: true`, with a fallback to the first depth-first item having `path || href`. No visibility flag is tested.

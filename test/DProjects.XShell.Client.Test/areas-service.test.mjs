@@ -24,7 +24,6 @@ test("global configuration delegates Area option validation to the service imple
 test("XShell resolves Areas before Modules and composes it before Navigation", async () => {
     const source = await readFile(new URL("xshell.js", frameworkUrl), "utf8");
     const servicesIndex = source.indexOf("await this._services.init()");
-    const registryIndex = source.indexOf('await this._services.initialize("registry")');
     const resolveAreasIndex = source.indexOf('const areas = this._services.resolve("areas")');
     const resolveModulesIndex = source.indexOf('const modules = await this._services.initialize("modules")');
     const initAreasIndex = source.indexOf("areas.init({ modules })");
@@ -34,7 +33,7 @@ test("XShell resolves Areas before Modules and composes it before Navigation", a
     assert.doesNotMatch(source, /new Areas\s*\(/);
     assert.doesNotMatch(source, /register\("areas"/);
     assert.match(source, /get areas\(\) \{ return this\._services\.resolve\("areas"\); \}/);
-    assert.ok(servicesIndex < registryIndex && registryIndex < resolveAreasIndex && resolveAreasIndex < resolveModulesIndex &&
+    assert.ok(servicesIndex < resolveAreasIndex && resolveAreasIndex < resolveModulesIndex &&
         resolveModulesIndex < initAreasIndex && initAreasIndex < navigationIndex);
 });
 

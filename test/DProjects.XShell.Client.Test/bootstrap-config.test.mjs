@@ -494,9 +494,9 @@ test("configuration values normalize generically across resolver, service, UI, a
     assert.equal(xshell.services.bar.implementation, "/_assets/x/1.0.0.dev/services/bar.js");
     assert.equal(xshell.services.foo.contract, "/_assets/x/1.0.0.dev/literal-contract");
     assert.equal(xshell.services.dialog.options.confirm, "https://example.test/modules/app/dialog.js");
-    assert.equal(xshell.ui.component.lazy, "x-lazy");
-    assert.equal(xshell.ui.component.error, "/_assets/x/1.0.0.dev/components/error.js");
-    assert.equal(xshell.ui.component.unrelated, "/_assets/x/1.0.0.dev/literal");
+    assert.equal(xshell.ui.components.lazy, "x-lazy");
+    assert.equal(xshell.ui.components.error, "/_assets/x/1.0.0.dev/components/error.js");
+    assert.equal(xshell.ui.components.unrelated, "/_assets/x/1.0.0.dev/literal");
     assert.equal(xshell.ui.layout.main, "x-layout-main");
     assert.equal(xshell.ui.unrelated.label, "/_assets/x/1.0.0.dev/literal");
     assert.equal(xshell.services.areas.options.definitions.main.prefix, "/_assets/x/1.0.0.dev/public");
@@ -1287,24 +1287,6 @@ test("sibling contributions to a shared dependency follow declaration order", as
 
     assert.deepEqual(orderOf(graph), ["x", "a", "b", "app"]);
     assert.equal(effective.modules.x.params.mode, "b");
-});
-
-test("registry service options preserve named registries and concatenate module contributions", () => {
-    const schema = "/_assets/files/1.0.0.dev/schemas/file.schema.json";
-    const effective = plain(api.mergeConfigs([
-        { xshell: { services: { registry: { contract: "registry", implementation: "/services/registry.js", options: {
-            files: { schema, contributions: [{ id: "dependency" }] }
-        } } } } },
-        { xshell: { services: { registry: { options: {
-            files: { contributions: [{ id: "root" }] }
-        } } } } }
-    ]));
-
-    assert.deepEqual(effective.xshell.services.registry, {
-        contract: "registry",
-        implementation: "/services/registry.js",
-        options: { files: { schema, contributions: [{ id: "dependency" }, { id: "root" }] } }
-    });
 });
 
 test("root contributions to a shared dependency have final precedence", async () => {
