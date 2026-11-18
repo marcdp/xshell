@@ -6,24 +6,46 @@ export default class Runtime {
         additionalProperties: false
     };
 
+    // vars    
+    _timings = null;
+
     // ctor
-    constructor({ timing }) {
-        this._timing = timing;
+    constructor({ bus, timings }) {
+        // constructor
+        this._timings = timings;
+        // record first navigation end timing
+        const onFirstPageLoaded = () => {
+            this.record("xshell:navigation:end");
+            bus.removeEventListener("xshell:navigation:end", onFirstPageLoaded);
+        };
+        bus.addEventListener("xshell:navigation:end", onFirstPageLoaded);
+        // Record the first successful main Page render
+        const onFirstRender = () => {
+            this.record("first page rendered");
+            bus.removeEventListener("xshell:navigation:first-render", onFirstRender);
+        };
+        bus.addEventListener("xshell:navigation:first-render", onFirstRender);
     }
 
     // props
     get startTimeMs() {
-        return this._timing.startTimeMs;
+        return this._timings.startTimeMs;
     }
     get startupDurationMs() {
-        return this._timing.timings.find(
+        return this._timings.checkpoints.find(
             item => item.phase === "xshell initialized"
         )?.totalMs ?? null;
     }
     get uptimeMs() {
-        return performance.now() - this._timing.started;
+        return performance.now() - this._timings.started;
     }
     get timings() {
-        return this._timing.timings.map(item => ({ ...item }));
+        return this._timings.checkpoints.map(item => ({ ...item }));
     }
+
+    // methods
+    record(phase) {
+        this._timings.record(phase);
+    }
+
 }

@@ -3,6 +3,7 @@ import Contracts from "./services/contracts.js";
 import Loader from "./services/loader.js";
 import Page from "./page.js";
 import Resolver from "./services/resolver.js";
+import Runtime from "./services/runtime.js";
 import Services from "./services.js";
 import XPage from "./x-page.js";
 import JsonValidator from "./services/json-validator.js";
@@ -14,6 +15,7 @@ class XShell {
     //fields
     _config = null;
     _bus = null;
+    _runtime = null;
     _resolver = null;
     _loader = null;
     _contracts = null;
@@ -35,12 +37,14 @@ class XShell {
     get services() { return this._services; }
 
     //methods
-    async init(config, timing) {
+    async init(config, timings) {
         // config
         this._config = config;        
         // bus
         this._bus = new Bus({
         }, {});
+        // runtime
+        this._runtime = new Runtime({ bus: this._bus, timings });
         // resolved
         this._resolver = new Resolver( { 
             config: config 
@@ -87,7 +91,7 @@ class XShell {
         this._services.register("resolver", this._resolver, { contractItem: this._contracts.getContractItemById("resolver")});
         this._services.register("contracts", this._contracts, { contractItem: this._contracts.getContractItemById("contracts")});
         this._services.register("services", this._services, { contractItem: this._contracts.getContractItemById("services")});
-        this._services.register("timing", timing, {});
+        this._services.register("runtime", this._runtime, { contractItem: this._contracts.getContractItemById("runtime")});
         await this._services.init();
         // Initialize the declaratively registered Registry
         await this._services.initialize("registry");

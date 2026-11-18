@@ -7,5 +7,12 @@
     "uptimeMs": { "type": "number", "readonly": true, "description": "Elapsed milliseconds since the Runtime instance was constructed, calculated using performance.now()."}
   },
   "events": {},
-  "methods": {}
+  "methods": {
+    "record": { 
+      "description": "Records a new timing checkpoint for the specified phase.",
+      "parameters": [
+        { "name": "phase", "type": "string", "description": "The name of the phase to record." }
+      ]
+    }
+  }
 }

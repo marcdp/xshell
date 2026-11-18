@@ -516,6 +516,13 @@ export async function createPageClassFromJsDefinition(src, context, definition) 
                         handler.apply(this._controller, pending.args);
                     }
                 }
+                // Notify the host after its first completed render
+                if (!this._firstRenderReported) {
+                    this._firstRenderReported = true;
+                    this._host.dispatchEvent(new CustomEvent("first-render", {
+                        detail: { page: this }
+                    }));
+                }
             });
         }
     };

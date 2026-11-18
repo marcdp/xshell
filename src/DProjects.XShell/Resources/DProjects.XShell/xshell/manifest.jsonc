@@ -94,10 +94,6 @@
                 "implementation": "/services/registry.js",
                 "options": {}
             },
-            "runtime": {
-                "contract": "runtime",
-                "implementation": "/services/runtime.js"
-            },
             "secrets": {
                 "contract": "secrets",
                 "implementation": "/services/secrets.js",

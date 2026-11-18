@@ -482,6 +482,14 @@ export default class Navigation {
                         this._bus.emit("xshell:navigation:end", { src: event.target.src, id: event.target.page.id});
                     }
                 });
+                xpage.addEventListener("first-render", event => {
+                    // Forward the first render of the main Page
+                    if (this.getXPages()[0] !== event.target) return;
+                    this._bus.emit("xshell:navigation:first-render", {
+                        src: event.target.src,
+                        id: event.detail.page.id
+                    });
+                }, { once: true });
                 //add page to container
                 this._container.appendChild(xpage);
             } else if (itemBefore && !itemAfter) {
