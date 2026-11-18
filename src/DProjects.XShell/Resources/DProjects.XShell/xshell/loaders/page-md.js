@@ -5,7 +5,7 @@ export default class LoaderPageMd {
     async load(resourceUrl, context) {
         
         // resolve the renderer through the normal component loader
-        const componentMarkdown = context.services.config.xshell.ui.component.markdown;
+        const componentMarkdown = context.services.config.xshell.ui.components.markdown;
         await context.services.loader.load("component:" + componentMarkdown);
 
         // return class

@@ -9,8 +9,14 @@ export default {
     meta: {
         title: "Navigation"
     },
+    style: `
+        .route-test {margin-bottom:1.5em;}
+        .route-test x-toolbar {margin-bottom:.5em;}
+        .route-test x-datafield {width:40em; max-width:70vw;}
+        .route-value {min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+    `,
     template: `
-        <p>Shows the current Areas, menus, and page hierarchy used by XShell navigation.</p>
+        <p>Shows the Areas, menus, routes, and page hierarchy used by XShell navigation.</p>
         <x-tabs>
             <x-tab label="Areas">
                 <x-listview view="details">
@@ -57,6 +63,43 @@ export default {
                     </x-listview-body>
                 </x-listview>
             </x-tab>
+            <x-tab label="Routes">
+                <div class="route-test">
+                    <p>Test configured routes without opening a Page. Exact menu aliases take precedence when navigating.</p>
+                    <x-toolbar>
+                        <x-datafield type="text" x-model="state.test_route" placeholder="Public path, e.g. /cookbook/hello/Alex"></x-datafield>
+                        <x-button label="Resolve" command="resolveRoute"></x-button>
+                    </x-toolbar>
+                    <x-object x-if="state.test_result" x-prop:value="state.test_result" expanded="true"></x-object>
+                    <x-notice type="info" x-if="state.test_info">{{ state.test_info }}</x-notice>
+                    <x-notice type="error" x-if="state.test_error">{{ state.test_error }}</x-notice>
+                </div>
+                <x-listview view="details">
+                    <x-listview-head>
+                        <x-listview-column label="Area" width="minmax(0, 1fr)">
+                            <x-datafield type="search" x-model="state.query_area" placeholder="Area"></x-datafield>
+                        </x-listview-column>
+                        <x-listview-column label="Route path" width="minmax(0, 2fr)">
+                            <x-datafield type="search" x-model="state.query_path" placeholder="Route path"></x-datafield>
+                        </x-listview-column>
+                        <x-listview-column label="Destination" width="minmax(0, 3fr)">
+                            <x-datafield type="search" x-model="state.query_destination" placeholder="Destination"></x-datafield>
+                        </x-listview-column>
+                        <x-listview-column label="Module">
+                            <x-datafield type="search" x-model="state.query_module" placeholder="Module"></x-datafield>
+                        </x-listview-column>
+                        <x-listview-column label="Parameters"></x-listview-column>
+                    </x-listview-head>
+                    <x-listview-body>
+                        <x-listview-item x-for="route in state.routes" x-attr:label="route.areaId">
+                            <div class="route-value" x-attr:title="route.path">{{ route.path }}</div>
+                            <div class="route-value" x-attr:title="route.href">{{ route.href }}</div>
+                            <div class="route-value" x-attr:title="route.module">{{ route.module }}</div>
+                            <div class="route-value" x-attr:title="route.parameters">{{ route.parameters }}</div>
+                        </x-listview-item>
+                    </x-listview-body>
+                </x-listview>
+            </x-tab>
             <x-tab label="Pages">
                 <x-treeview>
                     <x-treeview-head>
@@ -87,9 +130,18 @@ export default {
     state:{
         areas: null,
         children: [],
-        menus: null
+        menus: null,
+        routes: [],
+        test_route: "",
+        test_result: null,
+        test_info: "",
+        test_error: "",
+        query_area: "",
+        query_path: "",
+        query_destination: "",
+        query_module: ""
     },
-    controller({ state, events, config, bus, loader, areas, modules}) {
+    controller({ state, events, bus, areas, navigation }) {
         return {
             load() {
                 // load
@@ -97,6 +149,10 @@ export default {
                 events.on(state, "change:moduleId", "refresh");
                 events.on(state, "change:description", "refresh");
                 events.on(state, "change:label", "refresh");
+                events.on(state, "change:query_area", "refresh");
+                events.on(state, "change:query_path", "refresh");
+                events.on(state, "change:query_destination", "refresh");
+                events.on(state, "change:query_module", "refresh");
                 events.on(bus, "xshell:page:load", "refresh");
                 events.on(bus, "xshell:loader:resource:loaded", (event)=>{
                     if (event.detail.resource.startsWith("component:")) {
@@ -150,6 +206,34 @@ export default {
                     }
                 }
                 state.menus = menus;
+
+                // list composed routes in Area and declaration order, with optional filters
+                const routes = [];
+                for (const area of state.areas) {
+                    if (!area.id.includes(state.query_area)) continue;
+                    for (const route of area.routes) {
+                        const path = area.prefix + route.path;
+                        if (!path.includes(state.query_path) || !route.href.includes(state.query_destination) ||
+                            !route.module.includes(state.query_module)) continue;
+                        // declarations have already been validated; show placeholders in declaration order
+                        const parameters = Array.from(route.path.matchAll(/\{([^}]+)\}/g), match => match[1]).join(", ");
+                        routes.push({ areaId: area.id, path, href: route.href, module: route.module, parameters });
+                    }
+                }
+                state.routes = routes;
+            },
+            resolveRoute() {
+                // display the match, no-match notice, or error from Navigation
+                state.test_result = null;
+                state.test_info = "";
+                state.test_error = "";
+                try {
+                    const result = navigation.resolveRoute(state.test_route);
+                    if (result) state.test_result = result;
+                    else state.test_info = "No configured route matched the path.";
+                } catch (error) {
+                    state.test_error = error.message;
+                }
             }
         };
     }

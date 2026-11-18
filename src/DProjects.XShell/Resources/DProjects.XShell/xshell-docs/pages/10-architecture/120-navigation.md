@@ -130,6 +130,29 @@ Module-qualified Page locators such as `page:x-demo:/pages/index.js` are logical
 them through Resolver to canonical Page-resource hrefs, then generates browser-facing paths or hash URLs using the same Area, menu, and route rules.
 Normal clicks retain the original reference and honor the requested opening mode; native link actions use the generated browser URL.
 
+### Inspecting configured routes
+
+`navigation.resolveRoute(path)` synchronously inspects the configured routes without loading a Page or changing browser history, the Page stack,
+or the current Area. Pass a logical public path beginning with a single `/`, including any Area prefix and optional query and fragment. Use paths
+such as `/cookbook/hello/Alex?lang=en#example`. Browser URL formatting with `App.BasePath` and the hash-mode prefix belongs to `buildUrlAbsolute()`.
+
+The longest matching Area prefix selects the Area. The first matching declaration in that Area supplies the result. The method returns `null` when
+no Area applies or no route in the selected Area matches. Invalid input and malformed percent encoding in a matched path parameter throw an error.
+The lookup considers configured routes only. During navigation, an exact menu alias still takes precedence.
+
+| Field | Meaning |
+| --- | --- |
+| `areaId`, `areaPrefix` | Selected Area ID and normalized prefix. The root prefix is the empty string. |
+| `moduleId` | ID of the module that contributed the route. |
+| `route` | Area-relative route pattern as declared, such as `/hello/{name}`. |
+| `target` | Configured canonical Page href before the Area prefix and incoming parameters are applied. |
+| `params` | Decoded path parameters. A literal route returns an empty object. |
+| `href` | Resolved logical Page href with the Area prefix applied once and the merged query and fragment. |
+
+The result uses the same href construction as forward navigation. Incoming query values override target query values, path parameters take
+precedence over both, and an incoming fragment takes precedence over the target fragment. The **Routes** tab in Navigation diagnostics uses
+this method and lists composed routes in declaration order.
+
 ## Ordinary Page anchors
 
 Inside `x-page`, ordinary internal anchors (including relative Page links and `.md` documents) call Navigation with the originating Page context.

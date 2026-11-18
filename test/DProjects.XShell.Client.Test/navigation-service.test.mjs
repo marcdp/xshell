@@ -34,9 +34,9 @@ test("XShell resolves the configured Navigation singleton after Areas compositio
     assert.ok(servicesIndex < areasResolveIndex && areasResolveIndex < resolveModulesIndex && resolveModulesIndex < areasIndex && areasIndex < navigationIndex);
 });
 
-test("Loader reads the Navigation mode from declarative service options", async () => {
-    const source = await readFile(new URL("loader.js", frameworkUrl), "utf8");
+test("HTML link processing reads the configured Navigation service mode", async () => {
+    const source = await readFile(new URL("utils/html.js", frameworkUrl), "utf8");
 
-    assert.match(source, /config\.xshell\.services\.navigation\.options\.mode/);
+    assert.match(source, /context\.services\.navigation\.mode/);
     assert.doesNotMatch(source, /config\.xshell\.navigation/);
 });

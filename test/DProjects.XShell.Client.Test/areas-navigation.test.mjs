@@ -3,7 +3,7 @@ import test from "node:test";
 
 import Areas from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/areas.js";
 import Navigation from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/navigation.js";
-import Resolver from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/resolver.js";
+import Resolver from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/resolver.js";
 
 test("Areas construction rejects an unknown configured module", () => {
     const config = { modules: {}, xshell: { assets: { basePath: "/_assets" } } };
@@ -247,11 +247,12 @@ test("Navigation.init preserves path-mode fragments on load and popstate without
     assert.equal(pushedUrls.length, 2);
 });
 
-function createSharedRouteContext({ definitions, defaultArea, mode = "path", basePath = "", baseUrl = "https://example.test/" }) {
+function createSharedRouteContext({ definitions, defaultArea, mode = "path", basePath = "", baseUrl = "https://example.test/",
+    routes = { "/repository/{repositoryId}/items": "/_assets/shared/pages/items.js" } }) {
     const config = { modules: { shared: {} }, xshell: { assets: { basePath: "/_assets" } } };
     const module = {
         id: "shared",
-        routes: { "/repository/{repositoryId}/items": "/_assets/shared/pages/items.js" },
+        routes,
         config: { menus: {} }
     };
     const areas = new Areas({ config, bus: { addEventListener() {}, emit() {} } }, { default: defaultArea, global: [], definitions });
@@ -519,10 +520,124 @@ test("Navigation matches only the resolved Area routes", () => {
 test("Navigation gives exact menu paths precedence over matching routes", () => {
     const navigation = createNavigation();
 
+    assert.equal(navigation.resolveRoute("/demo/navigation").href, "/demo/_assets/x-demo/pages/route-navigation.js");
     assert.equal(
         navigation._buildUrlFinal(navigation.parseUrl("/demo/navigation")),
         "/demo/_assets/x-demo/pages/03-navigation/index.js"
     );
+});
+
+test("Navigation.resolveRoute reports a literal match and keeps composed declaration order", () => {
+    const navigation = createNavigation({ areas: createRouteAreas() });
+
+    assert.deepEqual(navigation.resolveRoute("/demo/items"), {
+        areaId: "combined",
+        areaPrefix: "/demo",
+        moduleId: "first",
+        route: "/items",
+        target: "/_assets/first/pages/items.js",
+        params: {},
+        href: "/demo/_assets/first/pages/items.js"
+    });
+});
+
+test("Navigation.resolveRoute decodes path parameters and shares forward href construction in both modes", () => {
+    const path = "/demo/repository/a%2Fb%2520?repositoryId=ignored&mode=grid&sort=by+name#details";
+    const result = {
+        areaId: "demo",
+        areaPrefix: "/demo",
+        moduleId: "x-demo",
+        route: "/repository/{repositoryId}",
+        target: "/_assets/x-demo/pages/repository.js?mode=list",
+        params: { repositoryId: "a/b%20" },
+        href: "/demo/_assets/x-demo/pages/repository.js?mode=grid&repositoryId=a%2Fb%2520&sort=by%20name#details"
+    };
+    for (const mode of ["path", "hash"]) {
+        const navigation = createNavigation({ mode, basePath: "/app" });
+        assert.deepEqual(navigation.resolveRoute(path), result);
+        assert.equal(result.href, navigation._buildUrlFinal(navigation.parseUrl(path)));
+    }
+});
+
+test("Navigation.resolveRoute selects the longest Area prefix, including an empty root prefix", () => {
+    const { navigation } = createSharedRouteContext({
+        defaultArea: "root",
+        definitions: {
+            root: { prefix: "/", modules: ["shared"] },
+            shop: { prefix: "/shop", modules: ["shared"] },
+            detail: { prefix: "/shop/detail", modules: ["shared"] },
+            empty: { prefix: "/shop/empty", modules: [] }
+        }
+    });
+    const path = "/repository/12/items";
+
+    assert.deepEqual(navigation.resolveRoute(path), {
+        areaId: "root",
+        areaPrefix: "",
+        moduleId: "shared",
+        route: "/repository/{repositoryId}/items",
+        target: "/_assets/shared/pages/items.js",
+        params: { repositoryId: "12" },
+        href: "/_assets/shared/pages/items.js?repositoryId=12"
+    });
+    assert.equal(navigation.resolveRoute("/shop" + path).href, "/shop/_assets/shared/pages/items.js?repositoryId=12");
+    const detail = navigation.resolveRoute("/shop/detail" + path);
+    assert.equal(detail.areaId, "detail");
+    assert.equal(detail.areaPrefix, "/shop/detail");
+    assert.equal(detail.href, "/shop/detail/_assets/shared/pages/items.js?repositoryId=12");
+    assert.equal(navigation.resolveRoute("/shop/empty" + path), null);
+});
+
+test("Navigation.resolveRoute preserves an existing destination Area prefix and a target fragment", () => {
+    const { navigation } = createSharedRouteContext({
+        defaultArea: "shop",
+        definitions: { shop: { prefix: "/shop", modules: ["shared"] } },
+        routes: { "/": "/shop/_assets/shared/pages/index.js?mode=compact#summary" }
+    });
+
+    assert.equal(navigation.resolveRoute("/shop").href, "/shop/_assets/shared/pages/index.js?mode=compact#summary");
+    assert.equal(navigation.resolveRoute("/shop/?filter=new#top").href, "/shop/_assets/shared/pages/index.js?mode=compact&filter=new#top");
+});
+
+test("Navigation.resolveRoute distinguishes missing matches from invalid inputs", () => {
+    const navigation = createNavigation();
+
+    for (const path of ["/missing", "/demo/missing?query=1#fragment", "/main/repository/12", "/demo/repository"]) {
+        assert.equal(navigation.resolveRoute(path), null);
+    }
+    for (const path of [undefined, null, 42, "", "   "]) {
+        assert.throws(() => navigation.resolveRoute(path), /path must be a non-empty string/);
+    }
+    for (const path of ["relative/path", "?query=1", "#fragment", "#!/demo/something", "//example.test/path", "https://example.test/path"]) {
+        assert.throws(() => navigation.resolveRoute(path), /path must start with a single/);
+    }
+    assert.throws(() => navigation.resolveRoute("/demo/repository/%E0%A4%A"), /Invalid encoded route parameter/);
+});
+
+test("Navigation.resolveRoute leaves browser history, mounted Pages, and the Navigation stack untouched", (t) => {
+    const navigation = createNavigation();
+    const mounted = Object.freeze([Object.freeze({ src: "/sales/_assets/customer/pages/detail.js?customer=42" })]);
+    navigation._container = { querySelectorAll: () => mounted };
+    navigation._stack = [navigation.parseUrl("/sales/detail?customer=42")];
+    const before = structuredClone(navigation.stack);
+    const currentArea = navigation._areas.getCurrentArea();
+    const location = Object.freeze({ href: "https://example.test/sales/detail?customer=42" });
+    const writeHistory = () => assert.fail("Route inspection must not write history");
+    const history = { pushState: writeHistory, replaceState: writeHistory };
+    Object.assign(globalThis, { location, history });
+    t.after(() => {
+        delete globalThis.location;
+        delete globalThis.history;
+    });
+    t.mock.method(navigation._bus, "emit", () => assert.fail("Route inspection must not emit navigation events"));
+
+    assert.equal(navigation.resolveRoute("/demo/something").areaId, "demo");
+    assert.deepEqual(navigation.stack, before);
+    assert.equal(navigation.getXPage(), mounted[0]);
+    assert.equal(navigation.src, mounted[0].src);
+    assert.equal(navigation._areas.getCurrentArea(), currentArea);
+    assert.equal(globalThis.location, location);
+    assert.equal(globalThis.history, history);
 });
 
 test("Navigation route resolution preserves direct canonical and unmatched fallback behavior", () => {

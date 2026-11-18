@@ -100,16 +100,15 @@
     },
     "xshellUi": {
       "type": "object",
-      "required": ["layout","component"],
+      "required": ["layouts","components"],
       "properties": {
-        "layout": {"$ref": "#/$defs/xshellUiLayout", "description": "Default layouts available to pages."},
-        "component": {"$ref": "#/$defs/xshellUiComponent", "description": "Defaults applied to components."},
-        "page": {"$ref": "#/$defs/xshellUiPage", "description": "Defaults page resources available."}
+        "layouts": {"$ref": "#/$defs/xshellUiLayouts", "description": "Default layouts available to pages."},
+        "components": {"$ref": "#/$defs/xshellUiComponents", "description": "Defaults applied to components."}
       },
       "additionalProperties": false,
       "description": "Global defaults inherited by pages and components."
     },
-    "xshellUiLayout": {
+    "xshellUiLayouts": {
       "type": "object",
       "required": [],
       "properties": {
@@ -122,7 +121,7 @@
       "additionalProperties": {"type": ["string", "null"]},
       "description": "Default layouts available to pages."
     },
-    "xshellUiComponent": {
+    "xshellUiComponents": {
       "type": "object",
       "required": [],
       "properties": {
@@ -132,13 +131,6 @@
       },
       "additionalProperties": false,
       "description": "Default settings applied to components."
-    },
-    "xshellUiPage": {
-      "type": "object",
-      "properties": {
-      },
-      "additionalProperties": false,
-      "description": "Default page resources used for standard pages."
     },
     "resolver": {
       "type": "object",

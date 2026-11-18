@@ -32,14 +32,13 @@ export default {
             >
                 <div>{{ module.label }}</div>
                 <div>{{ module.version }}</div>
-                <div><x-anchor x-attr:href="module.assets.url" target="_blank" class="plain">{{ module.assets.path }}</x-anchor></div>
+                <div>
+                    {{ module.assets.path }}
+                    <x-anchor x-attr:href="module.assets.url" target="_blank" class="plain"><x-icon icon="x-open-in-new" ></x-icon></x-anchor>
+                </div>
                 <x-file-size x-prop:value="module.size" style="text-align:right"></x-file-size>
                 <div style="text-align:right">{{ module.files.all }}</div>
-                <!--<div style="text-align:right">{{ module.files.pages }}</div>
-                <div style="text-align:right">{{ module.files.components }}</div>
-                <div style="text-align:right">{{ module.files.services }}</div>
-                <div style="text-align:right">{{ module.files.contracts }}</div>
-                <div style="text-align:right">{{ module.files.others }}</div>-->
+                
                 <div style="text-align:right">{{ module.status }}</div>
                 <x-anchor style="text-align:right" x-attr:href="module.configUrl" target="_blank" class="plain"><x-icon icon="x-open-in-new" ></x-icon></x-anchor>
             </x-listview-item>

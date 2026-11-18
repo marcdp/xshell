@@ -107,20 +107,18 @@
 
         // ui
         "ui": {
-            "component": {
+            "components": {
                 "lazy": "x-lazy",
                 "error": "x-error",
                 "markdown": "x-markdown"
             },
-            "layout": {
+            "layouts": {
                 "default": "x-layout-default",
                 "dialog": "x-layout-dialog",
                 "dock": "x-layout-dock",
                 "main": "x-layout-main",
                 "stack": "x-layout-stack",
                 "embed": "x-layout-embed"
-            },
-            "page":{
             }
         }        
     }

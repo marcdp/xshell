@@ -85,11 +85,11 @@ export default {
         historyIndex: 0,
         root: false
     },
-    controller({ state, events, loader, navigation, getPage, host, dialog, tasks, resolver, registry }) {
-        const getFileCommands = (registry, entry) => {
-            const fileCommands = registry.get("filecommands");
+    controller({ state, events, loader, navigation, getPage, host, dialog, tasks, resolver, filesystems }) {
+        const getFileCommands = (entry) => {
+            const fileCommands = filesystems.commands;
             if (!fileCommands) return [];
-            return fileCommands.contributions.filter(command => {
+            return fileCommands.filter(command => {
                 if (command.type === "file" && entry.type === "file") {
                     return command.extensions.some(ext => entry.path.endsWith(ext));
                 }
@@ -141,7 +141,7 @@ export default {
                     }
                 }
                 for(const entry of entries) {
-                    const commands = getFileCommands(registry, entry)
+                    const commands = getFileCommands(entry)
                     for(const command of commands) {
                         if (command.actions?.includes("open")) {
                             this.customCommand(command.id, [entry]);
@@ -530,7 +530,7 @@ export default {
                 // handle context menu entry event
                 state.entry = event.detail.entry;
                 state.entries = event.detail.entries;
-                state.commands = getFileCommands(registry, state.entry);
+                state.commands = getFileCommands(state.entry);
                 const contextMenu = host.shadowRoot.querySelector("x-contextmenu");
                 contextMenu.open({x: event.detail.x, y: event.detail.y});
             }

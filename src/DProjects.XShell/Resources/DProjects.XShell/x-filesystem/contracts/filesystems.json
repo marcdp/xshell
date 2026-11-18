@@ -1,0 +1,23 @@
+
+{
+    "$schema": "../../xshell/schemas/contract.schema.json",
+    "label": "Filesystem Factory",
+    "description": "Creates or resolves Filesystem instances from provider URLs.",
+    "methods": {
+        "create": {
+            "description": "Returns a Filesystem instance for the specified URL.",
+            "parameters": [
+                {
+                    "name": "url",
+                    "type": "string",
+                    "required": true,
+                    "description": "Filesystem URL, such as mem:, opfs:, file:, or https://example.com/files."
+                }
+            ],
+            "returns": {
+                "type": "object",
+                "description": "Promise resolving to an instance implementing the Filesystem contract."
+            }
+        }
+    }
+}

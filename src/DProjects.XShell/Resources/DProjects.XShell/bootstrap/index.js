@@ -865,10 +865,6 @@ async function main() {
     } finally {
         // hide spinner in finally block to ensure it is hidden even if an error occurs
         hideSpinner();
-        console.group("bootstrap: performance timmings:");
-        console.table(timings);
-        console.log(`Total: ${(performance.now() - started).toFixed(2)} ms`);
-        console.groupEnd();
     }
 }
 

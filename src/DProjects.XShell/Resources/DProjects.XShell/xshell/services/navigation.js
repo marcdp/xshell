@@ -250,6 +250,26 @@ export default class Navigation {
         }
         return result;
     }
+    resolveRoute(path) {
+        // inspect configured routes from a logical application path without navigating
+        if (typeof path !== "string" || !path.trim()) throw new Error("resolveRoute: path must be a non-empty string");
+        if (!path.startsWith("/") || path.startsWith("//")) throw new Error("resolveRoute: path must start with a single '/'");
+        const item = this.parseUrl(path);
+        const match = this._findRouteMatch(this._splitHref(item.href).identity);
+        if (!match) return null;
+
+        // describe the first match and build the same logical Page href used during navigation
+        const { area, route, params } = match;
+        return {
+            areaId: area.id,
+            areaPrefix: area.prefix,
+            moduleId: route.module,
+            route: route.path,
+            target: route.href,
+            params,
+            href: this._buildRouteHref(match, item, area)
+        };
+    }
 
     async navigate({
             href,
@@ -545,12 +565,8 @@ export default class Navigation {
                 href: menuitem.href + suffix
             });
         }
-        const area = this._areas.getArea?.(this._areas.resolveAreaId?.(identity));
-        if (area) {
-            const routePath = this._removeAreaPrefix(identity, area);
-            const match = this._matchAreaRoutes(routePath, area);
-            if (match) return this._buildRouteHref(match, item, area);
-        }
+        const match = this._findRouteMatch(identity);
+        if (match) return this._buildRouteHref(match, item, match.area);
         return this.buildUrl({
             ...item,
             href: identity + suffix
@@ -600,6 +616,13 @@ export default class Navigation {
         if (!area) return href;
         const canonicalHref = this._applyAreaPrefix(identity, area);
         return canonicalHref + suffix;
+    }
+    _findRouteMatch(identity) {
+        // select the Area from the public path and match against Area-relative declarations
+        const area = this._areas.getArea?.(this._areas.resolveAreaId?.(identity));
+        if (!area) return null;
+        const match = this._matchAreaRoutes(this._removeAreaPrefix(identity, area), area);
+        return match ? { area, ...match } : null;
     }
     _compileRoute(path) {
         return compileRoute(path);

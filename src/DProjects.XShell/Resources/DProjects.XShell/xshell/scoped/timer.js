@@ -1,4 +1,3 @@
-
 // class
 export default class Timer {
 
@@ -10,38 +9,50 @@ export default class Timer {
     // ctor
     constructor(handler) {
         this._handler = handler;
-    }   
-    dispose(){
-        for (const { timeout, timeoutId, listener } of this._timeouts) {
+    }
+
+    dispose() {
+        // Clear pending timeouts
+        for (const { timeoutId } of this._timeouts) {
             clearTimeout(timeoutId);
         }
         this._timeouts = [];
-        for (const { timeout, timeoutId, listener } of this._intervals) {
-            clearInterval(timeoutId);
+
+        // Clear active intervals
+        for (const { intervalId } of this._intervals) {
+            clearInterval(intervalId);
         }
         this._intervals = [];
     }
 
     // methods
     setTimeout(listener, timeout) {
-        if (typeof(listener) == "string") {
+        // Resolve command listeners
+        if (typeof listener === "string") {
             const command = listener;
-            listener = () => {this._handler(command);}
+            listener = () => this._handler(command);
         }
-        this._timeouts.push({ timeout, timeoutId: setTimeout(()=>{
-            // remove the timeout from the list
+
+        // Schedule and track the timeout
+        const timeoutId = setTimeout(() => {
             this._timeouts = this._timeouts.filter(t => t.timeoutId !== timeoutId);
-            //execute
             listener();
-        }, timeout), listener });
-    }
-    setInterval(listener, timeout) {
-        if (typeof(listener) == "string") {
-            const command = listener;
-            listener = () => {this._handler(command);}
-        }
-        this._intervals.push({ timeout, timeoutId: setInterval(listener, timeout), listener });
+        }, timeout);
+
+        this._timeouts.push({ timeoutId });
+        return timeoutId;
     }
 
-    
+    setInterval(listener, timeout) {
+        // Resolve command listeners
+        if (typeof listener === "string") {
+            const command = listener;
+            listener = () => this._handler(command);
+        }
+
+        // Schedule and track the interval
+        const intervalId = setInterval(listener, timeout);
+        this._intervals.push({ intervalId });
+        return intervalId;
+    }
 }

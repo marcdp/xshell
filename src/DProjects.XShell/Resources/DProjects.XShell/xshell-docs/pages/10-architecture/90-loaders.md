@@ -168,7 +168,7 @@ Generated Page resolver rules use `cacheMode: "path"`: the Page implementation i
 navigation `src` and query.
 
 Markdown Page rules preserve the `.md` URL and select `page-md` with the same Page-class cache semantics. `page-md` loads the Component selected by
-`xshell.ui.component.markdown` through Resolver → Loader and returns a normal Page class. Mount creates that Component with the resolved normal URL in
+`xshell.ui.components.markdown` through Resolver → Loader and returns a normal Page class. Mount creates that Component with the resolved normal URL in
 `src`; the Component fetches the document and owns Markdown conversion. The adapter never fetches or parses Markdown itself. An unavailable
 configured Component fails through the normal Loader error path. See [Markdown Pages](70-pages.md#markdown-pages).
 

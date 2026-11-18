@@ -114,11 +114,11 @@ Markdown documents are also Page resources. Their browser-facing URLs keep the `
 page:/_assets/xshell-docs/<generation>/pages/10-architecture/100-services.md
     → Resolver (page-md, cached Page class by path)
     → page-md → normal Page → mount
-    → configured xshell.ui.component.markdown Component with src="/_assets/xshell-docs/<generation>/pages/10-architecture/100-services.md"
+    → configured xshell.ui.components.markdown Component with src="/_assets/xshell-docs/<generation>/pages/10-architecture/100-services.md"
     → fetch(src) → Markdown text → rendered DOM
 ```
 
-`page-md` is a Page adapter, not a Markdown renderer. It delegates rendering to `xshell.ui.component.markdown`, loading that Component through the
+`page-md` is a Page adapter, not a Markdown renderer. It delegates rendering to `xshell.ui.components.markdown`, loading that Component through the
 normal Loader and mounting it with the resolved document URL. The configured Markdown Component owns the rendering and security policy. Unmount
 detaches the component, and a later mount creates it again. Page load/unload and navigation metadata follow the normal lifecycle. Labels come
 from menu/breadcrumb/navigation metadata, not from parsing a Markdown heading.

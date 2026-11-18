@@ -34,6 +34,27 @@
     "replacePageHash": { "description": "Replaces a page URL fragment without reloading the page.", "parameters": [{ "name": "page", "type": "any", "required": true }, { "name": "hash", "type": "any", "required": true, "description": "Fragment as a string, or null to remove it.", "schema": { "type": ["string", "null"] } }], "returns": { "type": "any", "description": "Updated logical page URL, or null if unavailable." } },
     "buildUrlAbsolute": { "description": "Builds an app-base-relative browser URL in path or hash navigation mode, unless the target is an absolute URL.", "parameters": [{ "name": "params", "type": "object", "required": true, "description": "Navigation URL options, including href, params, nav, and optional page." }], "returns": { "type": "string" } },
     "buildUrl": { "description": "Builds a navigable logical URL, resolving relative href and serializing params and nav metadata.", "parameters": [{ "name": "options", "type": "object", "required": true, "schema": { "type": "object", "properties": { "href": { "type": "string" }, "params": { "type": "object" }, "nav": { "type": "object" }, "page": {} }, "required": ["href"] } }], "returns": { "type": "string" } },
+    "resolveRoute": {
+      "description": "Synchronously inspects the first configured route that matches a logical application path, without navigating. Menu aliases are outside this lookup and take precedence during navigation.",
+      "parameters": [{ "name": "path", "type": "string", "required": true, "description": "Logical application path beginning with a single '/', with any Area prefix and optional query and fragment." }],
+      "returns": {
+        "type": "any",
+        "description": "Route match and resolved logical Page href, or null if the selected Area has no matching route or no Area applies.",
+        "schema": {
+          "type": ["object", "null"],
+          "properties": {
+            "areaId": { "type": "string", "description": "Selected Area ID." },
+            "areaPrefix": { "type": "string", "description": "Selected Area prefix, empty for the root Area." },
+            "moduleId": { "type": "string", "description": "ID of the module that contributed the route." },
+            "route": { "type": "string", "description": "Declared Area-relative route pattern." },
+            "target": { "type": "string", "description": "Configured Page href before Area-prefix application and parameter merging." },
+            "params": { "type": "object", "additionalProperties": { "type": "string" }, "description": "Decoded path parameters." },
+            "href": { "type": "string", "description": "Resolved logical Page href with the Area prefix, merged query parameters, and applicable fragment." }
+          },
+          "required": ["areaId", "areaPrefix", "moduleId", "route", "target", "params", "href"]
+        }
+      }
+    },
     "navigate": { "description": "Navigates to a page, stack entry, dialog, or embedded outlet. Dialog mode awaits and returns the dialog result; other modes normally resolve without a value.", "parameters": [{ "name": "options", "type": "object", "required": true, "schema": { "type": "object", "properties": { "href": { "type": "string" }, "params": { "type": "object" }, "nav": { "type": "object" }, "page": {}, "outlet": {}, "open": { "type": "string", "enum": ["auto", "top", "stack", "dialog", "embed"], "default": "auto" }, "context": { "type": "object" }, "replace": { "type": "boolean", "default": false } }, "required": ["href"] } }], "returns": { "type": "any", "description": "Promise; dialog mode resolves to the dialog result." } }
   }
 }
