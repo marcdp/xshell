@@ -479,9 +479,10 @@ test("configuration values normalize generically across resolver, service, UI, a
         modules: { x: definition("x") },
         xshell: {
             resolver: { anyType: { anyRule: { src: "/resources/{name}.js", loader: "/literal-loader" } } },
-            services: { foo: { implementation: "/services/foo.js", contract: "/literal-contract" }, bar: { implementation: "./services/bar.js" } },
+            services: { foo: { implementation: "/services/foo.js", contract: "/literal-contract" }, bar: { implementation: "./services/bar.js" },
+                dialog: { options: { confirm: "url:./dialog.js" } } },
             ui: { component: { lazy: "x-lazy", error: "/components/error.js", unrelated: "/literal" }, layout: { main: "x-layout-main" },
-                dialog: { confirm: "url:./dialog.js" }, unrelated: { label: "/literal" } },
+                unrelated: { label: "/literal" } },
             areas: { definitions: { main: { prefix: "/public", icon: "/icons/main.svg", label: "/literal-label" } } }
         }
     };
@@ -492,11 +493,11 @@ test("configuration values normalize generically across resolver, service, UI, a
     assert.equal(xshell.services.foo.implementation, "/_assets/x/1.0.0.dev/services/foo.js");
     assert.equal(xshell.services.bar.implementation, "/_assets/x/1.0.0.dev/services/bar.js");
     assert.equal(xshell.services.foo.contract, "/_assets/x/1.0.0.dev/literal-contract");
+    assert.equal(xshell.services.dialog.options.confirm, "https://example.test/modules/app/dialog.js");
     assert.equal(xshell.ui.component.lazy, "x-lazy");
     assert.equal(xshell.ui.component.error, "/_assets/x/1.0.0.dev/components/error.js");
     assert.equal(xshell.ui.component.unrelated, "/_assets/x/1.0.0.dev/literal");
     assert.equal(xshell.ui.layout.main, "x-layout-main");
-    assert.equal(xshell.ui.dialog.confirm, "https://example.test/modules/app/dialog.js");
     assert.equal(xshell.ui.unrelated.label, "/_assets/x/1.0.0.dev/literal");
     assert.equal(xshell.areas.definitions.main.prefix, "/_assets/x/1.0.0.dev/public");
     assert.equal(xshell.areas.definitions.main.icon, "/_assets/x/1.0.0.dev/icons/main.svg");

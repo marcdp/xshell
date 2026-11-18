@@ -1,7 +1,6 @@
 import Areas from "./areas.js";
 import Bus from "./bus.js";
 import Contracts from "./contracts.js";
-import Dialog from "./dialog.js";
 import Loader from "./loader.js";
 import Navigation from "./navigation.js";
 import Modules from "./modules.js";
@@ -22,7 +21,6 @@ class XShell {
     _bus = null;
     _config = null;
     _contracts = null;
-    _dialog = null;
     _loader = null;
     _modules = null;
     _navigation = null;
@@ -39,7 +37,6 @@ class XShell {
     get bus() { return this._bus; }
     get config() { return this._config; }
     get contracts() { return this._contracts; }
-    get dialog() { return this._dialog; }
     get loader() { return this._loader; }
     get modules() { return this._modules; }
     get navigation() { return this._navigation; }
@@ -59,8 +56,13 @@ class XShell {
             bus: this._bus, 
             config: config, 
             resolver: this._resolver,
-            services: new Proxy({}, {
-                get: (target, prop) => this._services?.resolve(prop)
+            services: new Proxy(Object.create(null), {
+                get: (target, prop) => {
+                    // Resolve registered services on demand
+                    if (typeof prop !== "string") return undefined;
+                    if (!this._services) throw new Error(`Cannot resolve service '${prop}' before Services initialization`);
+                    return this._services.resolve(prop);
+                }
             })
         });
         await this.validateConfig(config);
@@ -71,14 +73,12 @@ class XShell {
         this._registry = new Registry( {config, loader: this._loader, resolver: this._resolver } );
         this._modules = new Modules( { bus: this._bus, config: config, loader: this._loader, resolver: this._resolver, document: document, services: this._services } );
         this._navigation = new Navigation( { areas: this._areas, bus: this._bus, config: config, container: document.body, resolver: this._resolver });
-        this._dialog = new Dialog( { config: config, navigation: this._navigation, i18n: null } );        
         // compose contracts list in memory from modules             
         await this._contracts.init();
         // services
         this._services.register("areas", this._areas, { contractItem: this._contracts.getContractItemById("areas")});
         this._services.register("bus", this._bus, { contractItem: this._contracts.getContractItemById("bus")});
         this._services.register("config", this._config, { contractItem: this._contracts.getContractItemById("config")});
-        this._services.register("dialog", this._dialog, { contractItem: this._contracts.getContractItemById("dialog")});
         this._services.register("loader", this._loader, { contractItem: this._contracts.getContractItemById("loader")});
         this._services.register("modules", this._modules, { contractItem: this._contracts.getContractItemById("modules")});
         this._services.register("navigation", this._navigation, { contractItem: this._contracts.getContractItemById("navigation")});

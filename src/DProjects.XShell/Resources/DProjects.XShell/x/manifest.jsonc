@@ -71,6 +71,14 @@
                     "strings": {}
                 }
             },
+            "dialog": {
+                "options": {
+                    "confirm": "/pages/dialog-confirm.js",
+                    "message": "/pages/dialog-message.js",
+                    "prompt": "/pages/dialog-prompt.js",
+                    "picker": "/pages/dialog-picker.js"
+                }
+            },
 
             "markdown": {
                 "contract": "markdown",
@@ -103,12 +111,6 @@
                 "lazy": "x-lazy",
                 "error": "x-error",
                 "markdown": "x-markdown"
-            },
-            "dialog": {
-                "confirm": "/pages/dialog-confirm.js",
-                "message": "/pages/dialog-message.js",
-                "prompt": "/pages/dialog-prompt.js",
-                "picker": "/pages/dialog-picker.js"
             },
             "layout": {
                 "default": "x-layout-default",

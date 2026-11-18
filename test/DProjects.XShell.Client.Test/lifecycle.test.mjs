@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import ComponentContractSchema from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/schemas/component.contract.schema.json" with { type: "json" };
 import { Validator } from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/vendor/json-schema/4.1.1/json-schema.js";
-import Dialog from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/dialog.js";
+import Dialog from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/dialog.js";
 import { contract as pickerContract } from "../../src/DProjects.XShell/Resources/DProjects.XShell/x/pages/dialog-picker.js";
 
 const animationFrames = [];
@@ -1060,9 +1060,9 @@ test("Component public-method diagnostic uses its canonical name", async () => {
 });
 
 test("dialog.language forwards value to a radios picker", async () => {
-    const dialog = new Dialog({ config: {}, navigation: {}, i18n: { config: { langs: [
+    const dialog = new Dialog({ navigation: {}, i18n: { config: { langs: [
         { id: "en", label: "English" }, { id: "es", label: "Spanish" }
-    ] } } });
+    ] } } }, {});
     let options;
     dialog.picker = async value => { options = value; return "es"; };
     assert.equal(await dialog.language({ value: "es", current: ["en"] }), "es");

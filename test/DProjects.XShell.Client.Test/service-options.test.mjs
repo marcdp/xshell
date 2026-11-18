@@ -3,6 +3,7 @@ import test from "node:test";
 
 import Services from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services.js";
 import Commands from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/commands.js";
+import Dialog from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/dialog.js";
 import JsonValidator from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/json-validator.js";
 import Preferences from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/preferences.js";
 import Secrets from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/secrets.js";
@@ -32,7 +33,7 @@ function createServices(implementation, options) {
                 return { id: "example", contract: { methods: {}, properties: {} } };
             }
         },
-        areas: { getModuleId() { return "test"; } },
+        resolver: { resolve() { return { definition: { moduleId: "test" } }; } },
         bus: { emit(type, detail) { emitted.push({ type, detail }); } }
     });
     return { emitted, services };
@@ -47,7 +48,7 @@ const timeoutSchema = {
 
 test("every repository-configured service implementation declares an optionsSchema object", () => {
     for (const implementation of [
-        Commands, JsonValidator, Preferences, Secrets, Tasks, Temp,
+        Commands, Dialog, JsonValidator, Preferences, Secrets, Tasks, Temp,
         Markdown, Theme, Toast,
         Principal, Session, SignIn,
         XVault
@@ -159,7 +160,7 @@ test("validated constructor injection preserves lazy dependency resolution", asy
         },
         loader: { async load(resource) { return implementations[resource]; } },
         contracts: { getContractItemById(id) { return { id, contract: { methods: {}, properties: {} } }; } },
-        areas: { getModuleId() { return "test"; } }
+        resolver: { resolve() { return { definition: { moduleId: "test" } }; } }
     });
 
     await services.init();

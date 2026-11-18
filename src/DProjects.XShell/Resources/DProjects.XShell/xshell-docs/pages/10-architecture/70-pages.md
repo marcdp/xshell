@@ -372,7 +372,7 @@ first, then `modules.<id>.defaults.page`; there is no XShell render-engine or st
 layouts in both navigation modes; see [Navigation](120-navigation.md).
 
 `xshell.ui.layout.dialog` is the layout used for a Page opened in dialog context. It is separate from the standard dialog pages:
-`xshell.ui.dialog.confirm`, `message`, `prompt`, and `picker` identify the Page resources used by dialog operations. Those Page-resource
+`xshell.services.dialog.options.confirm`, `message`, `prompt`, and `picker` identify the Page resources used by dialog operations. Those Page-resource
 defaults do not select the `dialog` layout.
 
 See [Navigation](120-navigation.md), [Configuration](20-configuration.md), and [Loaders](90-loaders.md).

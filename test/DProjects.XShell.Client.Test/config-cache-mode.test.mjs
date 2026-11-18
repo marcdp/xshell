@@ -19,7 +19,7 @@ function effectiveConfig() {
             resolver: {},
             services: { secrets: { contract: "secrets", implementation: "/services/secrets.js",
                 options: { rememberMinutes: 15, maxRememberMinutes: 60 } } },
-            ui: { layout: {}, component: {}, dialog: {} },
+            ui: { layout: {}, component: {} },
             i18n: { lang: "en", langs: [{ id: "en", label: "English", main: true }], datetime: { options: {}, formats: {} }, strings: {} },
             configUrl: "https://example.test/xshell/manifest.json",
             serviceWorker: { mappings: [] },

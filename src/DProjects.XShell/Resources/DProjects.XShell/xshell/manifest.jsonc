@@ -61,6 +61,16 @@
                 "contract": "commands",
                 "implementation": "/services/commands.js"
             },
+            "dialog": {
+                "contract": "dialog",
+                "implementation": "/services/dialog.js",
+                "options": {
+                    "confirm": null,
+                    "message": null,
+                    "prompt": null,
+                    "picker": null
+                }
+            },
             "i18n": {
                 "contract": "i18n",
                 "implementation": "/services/i18n.js"
@@ -113,12 +123,6 @@
                 "lazy": "",
                 "error": "",
                 "markdown": ""
-            },
-            "dialog": {
-                "confirm": null,
-                "message": null,
-                "prompt": null,
-                "picker": null
             },
             "layout": {
                 "default": null,

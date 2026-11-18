@@ -1,73 +1,87 @@
 
 export default class Dialog {
 
+    // options schema
+    static optionsSchema = {
+        type: "object",
+        properties: {
+            confirm: { type: ["string", "null"], description: "Page used for confirmation dialogs." },
+            message: { type: ["string", "null"], description: "Page used for message dialogs." },
+            prompt: { type: ["string", "null"], description: "Page used for prompt dialogs." },
+            picker: { type: ["string", "null"], description: "Page used for picker dialogs." }
+        },
+        additionalProperties: false,
+        description: "Default page resources used for standard dialogs."
+    };
+
     // vars
-    _config = null;
     _navigation = null;
     _i18n = null;
+    _options = null;
 
     // ctor
-    constructor( { config, navigation, i18n } ) {
-        this._config = config;
+    constructor({ navigation, i18n }, options = {}) {
+        // Initialize injected dependencies and service configuration
         this._navigation = navigation;
         this._i18n = i18n;
+        this._options = options;
     }
 
-    // methods    
+    // methods
     async confirm({ title, message, variant }) {
-        const href = this._config.xshell.ui.dialog.confirm;
-        return await this._navigation.navigate({ 
-            href, 
-            open:"dialog", 
+        const href = this._options.confirm;
+        return await this._navigation.navigate({
+            href,
+            open:"dialog",
             context: {
                 title,
                 message,
                 variant
-            } 
+            }
         });
     }
-    async message({ type, title, message }    ) {
-        const href = this._config.xshell.ui.dialog.message;
-        return await this._navigation.navigate({ 
-            href, 
+    async message({ type, title, message }) {
+        const href = this._options.message;
+        return await this._navigation.navigate({
+            href,
             open:"dialog",
             context: {
                 type,
                 title,
                 message
-            } 
+            }
         });
     }
     async prompt({ title, message, value, inputType, placeholder, required }) {
-        const href = this._config.xshell.ui.dialog.prompt; 
-        return await this._navigation.navigate({ 
-            href, 
+        const href = this._options.prompt;
+        return await this._navigation.navigate({
+            href,
             open:"dialog",
             context: {
                 title,
                 message,
-                value, 
-                inputType, 
-                placeholder, 
-                required  
-            } 
+                value,
+                inputType,
+                placeholder,
+                required
+            }
         });
     }
     async picker({ title, message, value, inputType, placeholder, domain, multiple, required }) {
-        const href = this._config.xshell.ui.dialog.picker;
-        return await this._navigation.navigate({ 
-            href, 
+        const href = this._options.picker;
+        return await this._navigation.navigate({
+            href,
             open:"dialog",
             context: {
                 title,
                 message,
                 domain,
-                value, 
-                inputType, 
-                placeholder, 
+                value,
+                inputType,
+                placeholder,
                 multiple,
-                required  
-            } 
+                required
+            }
         });
     }
     async language({ title = "Select language", message = "Language", value, required=true, current=[] } =  {}) {
@@ -83,17 +97,16 @@ export default class Dialog {
         return await this.picker({ title, message, value, inputType: "radios", domain, required});
     }
     async open({ href, params, title, breadcrumb, icon, context }) {
-        return await this._navigation.navigate({ 
-            href, 
+        return await this._navigation.navigate({
+            href,
             params,
             open:"dialog",
-            nav: { 
+            nav: {
                 title,
                 breadcrumb,
                 icon
-            }, 
+            },
             context
         });
     }
 }
-

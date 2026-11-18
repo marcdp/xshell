@@ -140,15 +140,14 @@
     },
     "xshellUi": {
       "type": "object",
-      "required": ["layout","component","dialog"],
+      "required": ["layout","component"],
       "properties": {
         "layout": {"$ref": "#/$defs/xshellUiLayout", "description": "Default layouts available to pages."},
         "component": {"$ref": "#/$defs/xshellUiComponent", "description": "Defaults applied to components."},
-        "dialog": {"$ref": "#/$defs/xshellUiDialog", "description": "Defaults dialogs available."},
         "page": {"$ref": "#/$defs/xshellUiPage", "description": "Defaults page resources available."}
       },
       "additionalProperties": false,
-      "description": "Default values inherited by pages, dialogs, and components."
+      "description": "Global defaults inherited by pages and components."
     },
     "xshellUiLayout": {
       "type": "object",
@@ -173,17 +172,6 @@
       },
       "additionalProperties": false,
       "description": "Default settings applied to components."
-    },
-    "xshellUiDialog": {
-      "type": "object",
-      "properties": {
-        "confirm": {"type": ["string", "null"], "description": "Page used for confirmation dialogs."},
-        "message": {"type": ["string", "null"], "description": "Page used for message dialogs."},
-        "prompt": {"type": ["string", "null"], "description": "Page used for prompt dialogs."},
-        "picker": {"type": ["string", "null"], "description": "Page used for picker dialogs."}
-      },
-      "additionalProperties": false,
-      "description": "Default page resources used for standard dialogs."
     },
     "xshellUiPage": {
       "type": "object",

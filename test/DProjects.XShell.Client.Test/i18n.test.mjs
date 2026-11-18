@@ -37,7 +37,7 @@ function configuration(i18n) {
             areas: { default: null, global: [], definitions: {} },
             navigation: { mode: "path" },
             resolver: {},
-            ui: { layout: {}, component: {}, dialog: {} },
+            ui: { layout: {}, component: {} },
             i18n,
             configUrl: "https://example.test/xshell/manifest.json",
             serviceWorker: { mappings: [] },

@@ -14,7 +14,7 @@ class XTemplate {
 	//ctor
 	constructor({ styleSheets = [], render, context = null }) {
 		this._compile({ styleSheets, render, context });
-		this._i18n = context?.i18n ?? null;
+		this._i18n = context?.services.i18n ?? null;
 	}
 
 	//props
@@ -923,8 +923,6 @@ export default function createRenderEngineFactoryX(template, context, templateRe
 	if (!templateRenderer.slots.every(slot => typeof(slot) === "string")) throw new Error("XTemplate templateRenderer contains invalid slot metadata.");
 	const slots = [...new Set(templateRenderer.slots)];
 	let xtemplate = null;
-	// i18n
-	const i18n = context.services.i18n;
 	// return
 	return {
 		dependencies: Object.freeze([...dependencies]),

@@ -4,18 +4,34 @@ The `dialog` service opens Pages through `navigation.navigate({ open: "dialog", 
 
 | Method | Parameters and selected resource |
 | --- | --- |
-| `confirm({ title, message, variant })` | `xshell.ui.dialog.confirm` |
-| `message({ type, title, message })` | `xshell.ui.dialog.message` |
-| `prompt({ title, message, value, inputType, placeholder, required })` | `xshell.ui.dialog.prompt` |
-| `picker({ title, message, value, inputType, placeholder, domain, multiple, required })` | `xshell.ui.dialog.picker` |
+| `confirm({ title, message, variant })` | `xshell.services.dialog.options.confirm` |
+| `message({ type, title, message })` | `xshell.services.dialog.options.message` |
+| `prompt({ title, message, value, inputType, placeholder, required })` | `xshell.services.dialog.options.prompt` |
+| `picker({ title, message, value, inputType, placeholder, domain, multiple, required })` | `xshell.services.dialog.options.picker` |
 | `language({ title, message, value, required, current } = {})` | Builds a language domain and invokes picker with radios. |
 | `open({ href, params, title, breadcrumb, icon, context })` | Opens the supplied Page with params, navigation metadata, and context. |
 
 The first four helpers pass fields as Page creation context. `language()` uses `i18n.config.langs`, excludes IDs in `current`, and defaults to
 required selection. It forwards `value` to the radios picker and returns the selection without switching language.
 
-`xshell.ui.dialog.*` selects standard **Page resources**. `xshell.ui.layout.dialog` selects the **presentation layout**.
-Changing the layout does not change the helper Page.
+`xshell.services.dialog.options` selects the standard **Page resources**. The Dialog implementation owns and validates these optional settings through
+its static `optionsSchema` when the service is first resolved. `xshell.ui.layout.dialog` selects the **presentation layout**. Changing the layout does
+not change the helper Page.
+
+```jsonc
+"xshell": {
+    "services": {
+        "dialog": {
+            "options": {
+                "confirm": "/pages/dialog-confirm.js",
+                "message": "/pages/dialog-message.js",
+                "prompt": "/pages/dialog-prompt.js",
+                "picker": "/pages/dialog-picker.js"
+            }
+        }
+    }
+}
+```
 
 ## Results
 

@@ -43,7 +43,7 @@ function configuration(module) {
             areas: { default: null, global: [], definitions: {} },
             navigation: { mode: "path" },
             resolver: {},
-            ui: { layout: {}, component: {}, dialog: {} },
+            ui: { layout: {}, component: {} },
             i18n: {
                 lang: "en",
                 langs: [{ id: "en", label: "English", main: true }],
