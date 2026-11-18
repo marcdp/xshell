@@ -53,9 +53,16 @@ class XShell {
         // init
         this._bus = new Bus();
         this._config = config;        
-        // init basic validateConfig
+        // init basic
         this._resolver = new Resolver( { config: config } );
-        this._loader = new Loader({ bus: this._bus, config: config, resolver: this._resolver });
+        this._loader = new Loader({ 
+            bus: this._bus, 
+            config: config, 
+            resolver: this._resolver,
+            services: new Proxy({}, {
+                get: (target, prop) => this._services?.resolve(prop)
+            })
+        });
         await this.validateConfig(config);
         // initialize rest of the services
         this._areas = new Areas( { bus: this._bus, config: config } );

@@ -9,10 +9,12 @@ class XTemplate {
 	_styleSheets = null;
 	_render = null;
 	_utils = null;
+	_i18n = null;
 
 	//ctor
 	constructor({ styleSheets = [], render, context = null }) {
 		this._compile({ styleSheets, render, context });
+		this._i18n = context?.i18n ?? null;
 	}
 
 	//props
@@ -46,7 +48,7 @@ class XTemplate {
 	}
 	//public methods
 	createInstance(handler, invalidate, element) {
-		return new XTemplateInstance(this, handler, invalidate, element);
+		return new XTemplateInstance(this, handler, invalidate, element, this._i18n);
 	}
 
 }
@@ -413,24 +415,26 @@ class XTemplateInstance {
 	_element = null;
 	_handler = null;
 	_invalidate = null;
+	_i18n = null;
 
 	//work fields
 	_renderCount = 0;
 	_vdom = null;
 
 	//ctor
-	constructor(xtemplate, handler, invalidate, element) {
+	constructor(xtemplate, handler, invalidate, element, i18n) {
 		this._xtemplate = xtemplate;
 		this._element = element;
 		if (xtemplate.styleSheets.length) this._element.adoptedStyleSheets = xtemplate.styleSheets;
 		this._handler = handler;
 		this._invalidate = invalidate;
+		this._i18n = i18n;
 	}
 
 	// methods
 	render(state) {
 		//render vdom
-		let vdom = this._xtemplate.render(state, this._handler, this._invalidate, this._xtemplate.utils, xshell.i18n, this._renderCount++);
+		let vdom = this._xtemplate.render(state, this._handler, this._invalidate, this._xtemplate.utils, this._i18n, this._renderCount++);
 		//render vdom to dom
 		if (this._vdom == null) {
 			let index = 0;
@@ -900,9 +904,8 @@ export class RenderEngineX {
         this._host.replaceChildren();
     }
 }
-export default function createRenderEngineFactoryX(template, context, templateRenderer, aaaa) {
+export default function createRenderEngineFactoryX(template, context, templateRenderer) {
 	// retain template only as the first parameter of the common render-engine interface
-	debugger
 	void template;
 	if (!templateRenderer || typeof(templateRenderer) !== "object" || typeof(templateRenderer.render) !== "function" ||
 		!Array.isArray(templateRenderer.dependencies) || !Array.isArray(templateRenderer.slots)) {
@@ -920,6 +923,8 @@ export default function createRenderEngineFactoryX(template, context, templateRe
 	if (!templateRenderer.slots.every(slot => typeof(slot) === "string")) throw new Error("XTemplate templateRenderer contains invalid slot metadata.");
 	const slots = [...new Set(templateRenderer.slots)];
 	let xtemplate = null;
+	// i18n
+	const i18n = context.services.i18n;
 	// return
 	return {
 		dependencies: Object.freeze([...dependencies]),

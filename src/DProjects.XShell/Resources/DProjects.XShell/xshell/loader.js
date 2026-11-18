@@ -27,18 +27,20 @@ export default class Loader {
     _appBasePath = null;
     _xshellAssetsPath = null;
     _navigationMode = null;
+    _services = null;
     
     _cache = {};
     _registry = [];
 
     //ctor
-    constructor( {bus, config, resolver} ) {
+    constructor( {bus, config, resolver, services} ) {
         this._bus = bus;
         this._resolver = resolver;
         this._appBasePath = config.app.basePath;
         this._xshellAssetsPath = config.xshell.assets.path;
         this._navigationMode = config.xshell.navigation.mode;
         this._componentLazy = config.xshell.ui.component.lazy;
+        this._services = services;
     }
 
     //props
@@ -124,7 +126,8 @@ export default class Loader {
                         resourceDefinition: definition,
                         appBasePath: this._appBasePath,
                         navigationMode: this._navigationMode,
-                        componentLazy: this._componentLazy
+                        componentLazy: this._componentLazy,
+                        services: this._services
                     };
                     const start = performance.now();
                     try {
