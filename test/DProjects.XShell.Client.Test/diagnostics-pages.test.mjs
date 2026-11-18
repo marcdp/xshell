@@ -4,9 +4,15 @@ import test from "node:test";
 import BusPage from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell-diagnostics/pages/bus.js";
 import ModulesPage from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell-diagnostics/pages/modules.js";
 import ServicesPage from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell-diagnostics/pages/services.js";
+import InspectorPage from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell-diagnostics/pages/details/service-inspector.js";
 import LoaderPage from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell-diagnostics/pages/loader.js";
 import ContractsPage from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell-diagnostics/pages/contracts.js";
 import NavigationPage from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell-diagnostics/pages/navigation.js";
+import ListView from "../../src/DProjects.XShell/Resources/DProjects.XShell/x/components/x-listview.js";
+import Page from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/page.js";
+import Navigation from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/navigation.js";
+import createStateEngine from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/state-engines/proxy.js";
+import NavigationContract from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/contracts/navigation.json" with { type: "json" };
 
 function createEvents(getController) {
     return {
@@ -68,6 +74,206 @@ test("Services diagnostics re-reads the public registry when a service is create
     bus.dispatchEvent(new Event("xshell:service:created"));
     assert.equal(reads, 2);
     assert.equal(state.items[0].status, "created");
+});
+
+test("Double-clicking a service opens and closes a stacked Inspector with the exact service ID", async t => {
+    const href = "page:xshell-diagnostics:/pages/details/service-inspector.js";
+    const inspectorPath = "/_assets/xshell-diagnostics/pages/details/service-inspector.js";
+    const page = { src: "/_assets/xshell-diagnostics/pages/services.js" };
+    const state = { ...ServicesPage.state, id: "navigation" };
+    const serviceId = "navigation /?#&+%=ñ";
+    const services = { has: id => id === serviceId };
+    // Provide the Page hosts used by Navigation's stack reconciliation.
+    const rootHost = { src: "/demo", getAttribute: () => null };
+    const pages = [rootHost];
+    const container = { querySelectorAll: () => pages, appendChild: host => pages.push(host) };
+    globalThis.document = {
+        createElement() {
+            return Object.assign(new EventTarget(), {
+                setAttribute(name, value) { this[name] = value; },
+                getAttribute(name) { return this[name] ?? null; },
+                async removePage() { pages.splice(pages.indexOf(this), 1); }
+            });
+        }
+    };
+    globalThis.history = { pushState() {} };
+    t.after(() => {
+        delete globalThis.document;
+        delete globalThis.history;
+    });
+
+    const navigation = new Navigation({
+        areas: { resolvePath: () => null },
+        resolver: { resolve: reference => reference === href ? { path: inspectorPath } : null },
+        config: { app: { basePath: "", baseUrl: "https://example.test/" }, xshell: {} }
+    }, { mode: "path" }, { container });
+    const root = navigation.parseUrl("/demo");
+    navigation._stack = [root];
+    const navigate = t.mock.method(navigation, "navigate");
+    const controller = ServicesPage.controller({ state, page, services, navigation });
+    const activate = value => controller.inspectService({ event: new CustomEvent("activate", { detail: { value } }) });
+
+    assert.match(ServicesPage.template, /x-on:activate="inspectService"/);
+    assert.match(ServicesPage.template, /x-prop:value="item.serviceId"/);
+    for (const invalid of [undefined, null, 42, "", " ", "missing"]) await activate(invalid);
+    assert.equal(navigate.mock.callCount(), 0);
+
+    // Use the list view's double-click handler to produce the row activation.
+    const row = Object.assign(new EventTarget(), { value: serviceId, closest() { return this; } });
+    row.addEventListener("activate", event => controller.inspectService({ event }));
+    await ListView.controller({}).dblClick({ event: { target: row } });
+    assert.equal(navigate.mock.callCount(), 1);
+    await navigate.mock.calls[0].result;
+    assert.deepEqual(navigate.mock.calls[0].arguments, [{ href, page, open: "stack", params: { service: serviceId } }]);
+    const inspector = pages[1];
+    assert.equal(inspector.layout, "stack");
+    assert.equal(inspector.src, inspectorPath + "?service=" + encodeURIComponent(serviceId));
+    assert.deepEqual(navigation.stack[1].params, { service: serviceId });
+    assert.equal(pages[0], rootHost);
+
+    inspector.dispatchEvent(new Event("close"));
+    await navigation._stackToDomTask;
+    assert.deepEqual(navigation.stack, [root]);
+    assert.deepEqual(pages, [rootHost]);
+    assert.equal(state.id, "navigation");
+});
+
+test("Services diagnostics file links retain native activation without activating the row", t => {
+    for (const binding of ["item.contractUrl", "item.url"]) {
+        const anchor = Array.from(ServicesPage.template.matchAll(/<x-anchor\b[^>]+>/g), match => match[0])
+            .find(markup => markup.includes(`x-attr:href="${binding}"`));
+        assert.match(anchor, /target="_blank"/);
+        assert.match(anchor, /x-on:dblclick="keepLinkActivation"/);
+        assert.match(anchor, /x-on:keydown.enter="keepLinkActivation"/);
+    }
+    const controller = ServicesPage.controller({});
+    for (const type of ["dblclick", "keydown"]) {
+        const event = new Event(type, { bubbles: true, cancelable: true });
+        const stop = t.mock.method(event, "stopPropagation");
+        controller.keepLinkActivation({ event });
+        assert.equal(stop.mock.callCount(), 1);
+        assert.equal(event.defaultPrevented, false);
+    }
+});
+
+function createInspector(t, query = "", { resolutionError, instance = { mode: "path" } } = {}) {
+    if (!globalThis.document) {
+        globalThis.document = { baseURI: "https://example.test/" };
+        t.after(() => { delete globalThis.document; });
+    }
+    const bus = new EventTarget();
+    const page = new Page({ src: "https://example.test/pages/details/service-inspector.js" + query, bus });
+    const state = createStateEngine(InspectorPage.state).create({ stateChange() {}, invalidate() {} });
+    const registry = [
+        { id: "navigation", contractId: "navigation", state: "registered" },
+        { id: "bare", state: "created" },
+        { id: "areas", contractId: "areas", state: "registered" },
+        { id: "other /?#&+%=ñ", state: "registered" }
+    ];
+    const resolved = [];
+    const services = {
+        getServiceInfo: id => registry.find(item => item.id === id),
+        resolve(id) {
+            resolved.push(id);
+            if (resolutionError) throw resolutionError;
+            if (!instance) return instance;
+            services.getServiceInfo(id).state = "created";
+            bus.dispatchEvent(new Event("xshell:service:created"));
+            return instance;
+        }
+    };
+    const contracts = { getContractById: id => id === "navigation" ? NavigationContract : { label: "Areas" } };
+    const resolver = { resolve: () => ({ path: "/_assets/x/pages/invoke.js" }) };
+    const controller = InspectorPage.controller({ state, services, contracts, resolver, bus, page });
+    controller.load();
+    return { state, controller, bus, resolved };
+}
+
+test("Inspector automatically resolves the service named in the URL and displays its contract", t => {
+    const { state, controller, resolved } = createInspector(t, "?service=navigation");
+
+    assert.equal(state.serviceId, "navigation");
+    assert.equal(state.status, "created");
+    assert.equal(state.contractId, "navigation");
+    assert.equal(state.error, "");
+    assert.deepEqual(state.properties.map(item => item.name), Object.keys(NavigationContract.properties));
+    assert.deepEqual(state.methods.map(item => item.name), Object.keys(NavigationContract.methods));
+    assert.deepEqual(state.serviceEvents.map(item => item.name), Object.keys(NavigationContract.events));
+    assert.doesNotMatch(InspectorPage.template, /type="select"|label="Resolve"/);
+    assert.match(InspectorPage.template, /<x-page x-if="method.opened"/);
+    assert.ok(state.methods.every(method => !method.opened));
+    assert.ok(state.properties.every(property => !property.read));
+    assert.equal(state.monitoring, false);
+    assert.equal(state.resolved, true);
+    assert.deepEqual(resolved, ["navigation"]);
+
+    controller.readProperty({ event: { currentTarget: { dataset: { name: "mode" } } } });
+    assert.equal(state.properties.find(property => property.name === "mode").value, "path");
+
+    const panel = { expanded: true, dataset: { name: "navigate" } };
+    controller.openMethod({ event: { currentTarget: panel } });
+    assert.equal(state.methods.find(item => item.name === "navigate").opened, true);
+    panel.expanded = false;
+    controller.openMethod({ event: { currentTarget: panel } });
+    assert.equal(state.methods.find(item => item.name === "navigate").opened, true);
+
+    assert.deepEqual(resolved, ["navigation"]);
+});
+
+test("Inspector requires a service query parameter and has no default target", t => {
+    for (const query of ["", "?type=service&id=navigation", "?service=", "?service=%20"]) {
+        const { state, resolved } = createInspector(t, query);
+        assert.equal(state.serviceId, "");
+        assert.equal(state.error, "Missing 'service' query parameter.");
+        assert.deepEqual(resolved, []);
+    }
+});
+
+test("Inspector reports unknown services without trying to resolve them", t => {
+    const { state, resolved } = createInspector(t, "?service=missing");
+    assert.equal(state.serviceId, "missing");
+    assert.equal(state.contractId, "");
+    assert.equal(state.error, "Service 'missing' not found.");
+    assert.deepEqual(resolved, []);
+});
+
+test("Inspector resolves services without contracts, including URL-encoded IDs", t => {
+    const id = "other /?#&+%=ñ";
+    const { state, resolved } = createInspector(t, "?service=" + encodeURIComponent(id));
+    assert.equal(state.serviceId, id);
+    assert.equal(state.resolved, true);
+    assert.equal(state.error, "This service has no registered contract.");
+    assert.equal(state.contractId, "");
+    assert.deepEqual(resolved, [id]);
+});
+
+test("Inspector reports resolution failures and preserves available contract metadata", t => {
+    for (const [options, error] of [
+        [{ resolutionError: new Error("Constructor failed.") }, "Constructor failed."],
+        [{ instance: null }, "Service has no live instance."]
+    ]) {
+        const { state, resolved } = createInspector(t, "?service=navigation", options);
+        assert.equal(state.error, error);
+        assert.equal(state.contractId, "navigation");
+        assert.equal(state.status, "registered");
+        assert.equal(state.resolved, false);
+        assert.deepEqual(resolved, ["navigation"]);
+    }
+});
+
+test("Inspector removes service-monitoring listeners on unmount and unload", t => {
+    const eventName = "xshell:navigation:start";
+    for (const command of ["unmount", "unload"]) {
+        const { state, controller, bus } = createInspector(t, "?service=navigation");
+        controller.startMonitoring();
+        bus.dispatchEvent(new CustomEvent(eventName, { detail: { src: "/example" } }));
+        assert.deepEqual(state.history.map(item => item.detail), [{ src: "/example" }]);
+        controller[command]();
+        const history = state.history;
+        assert.equal(state.monitoring, false);
+        bus.dispatchEvent(new Event(eventName));
+        assert.equal(state.history, history);
+    }
 });
 
 test("Contracts diagnostics reads projected contract metadata", () => {

@@ -80,8 +80,8 @@ export default class Services {
         if (instance != null && contractItem) this._validateImplementation(name, instance, contractItem);
         this._items[name] = {
             instance, contractItem, implementationItem,
-            state: instance == null ? "registered" : "created",
-            initializationState: "not-initialized",
+            state: instance == null ? "" : "created",
+            initializationState: "",
             initializationPromise: null
         };
     }

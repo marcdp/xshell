@@ -7,7 +7,8 @@ export default {
         events: {}
     },
     meta: {
-        title: "Inspector"
+        title: "Service Inspector",
+        description: "Interactive Service Inspector."
     },
     style: `
         .toolbar {
@@ -40,16 +41,7 @@ export default {
             <!-- Service -->
             <x-datafields label="Service">
                 <x-toolbar>
-                    <x-datafield type="select"
-                        x-prop:domain="state.serviceOptions"
-                        x-model="state.serviceId">
-                    </x-datafield>
-
-                    <x-button label="Resolve" icon="x-play"
-                        x-attr:disabled="!state.serviceId || state.resolved"
-                        x-on:click="resolveService">
-                    </x-button>
-
+                    <strong>{{ state.serviceId }}</strong>
                     <span class="muted">{{ state.status }}</span>
                 </x-toolbar>
 
@@ -100,10 +92,12 @@ export default {
                     <x-accordion-panel
                         x-for="method in state.methods" x-key="key"
                         class="card"
+                        x-attr:data-name="method.name"
                         x-attr:label="method.label"
-                        x-attr:description="method.description">
+                        x-attr:description="method.description"
+                        x-on:toggle="openMethod">
 
-                        <x-page x-attr:src="method.src" loading="lazy"></x-page>
+                        <x-page x-if="method.opened" x-attr:src="method.src" loading="lazy"></x-page>
 
                     </x-accordion-panel>
                 </x-accordion>
@@ -159,7 +153,6 @@ export default {
         </div>
     `,
     state: {
-        serviceOptions: [],
         serviceId: "",
         status: "",
         error: "",
@@ -173,7 +166,7 @@ export default {
         monitoring: false,
         history: []
     },
-    controller({ state, services, contracts, resolver, bus, events }) {
+    controller({ state, services, contracts, resolver, bus, page }) {
         let instance = null, contract = null, listeners = [], sequence = 0;
         const invokePath = resolver.resolve("page:x:/pages/invoke.js")?.path;
 
@@ -189,63 +182,46 @@ export default {
 
         return {
             load() {
-                events.on(state, "change:serviceId", "loadService");
-                events.on(bus, "xshell:service:created", "refreshRegistry");
-                this.refreshRegistry();
-            },
-
-            refreshRegistry() {
-                const items = services.registry
-                    .filter(item => item.contractId)
-                    .sort((a, b) => a.id.localeCompare(b.id));
-
-                state.serviceOptions = items.map(item => ({
-                    value: item.id,
-                    label: item.id
-                }));
-
-                if (!items.some(item => item.id === state.serviceId)) {
-                    state.serviceId = items[0]?.id || "";
-                    if (!state.serviceId) this.loadService();
-                } else {
-                    state.status = services.getServiceInfo(state.serviceId)?.state || "";
+                // Look up only the service named by the Page URL.
+                const { service } = page.query;
+                if (!service?.trim()) {
+                    state.error = "Missing 'service' query parameter.";
+                    return;
                 }
-            },
-
-            loadService() {
-                stopListeners();
-                instance = null;
-                contract = null;
-
-                state.error = "";
-                state.resolved = false;
-                state.contractId = "";
-                state.contractLabel = "";
-                state.description = "";
-                state.properties = [];
-                state.methods = [];
-                state.serviceEvents = [];
-                state.history = [];
-                state.status = "";
-
-                const info = services.getServiceInfo(state.serviceId);
-                if (!info) return;
-
-                state.status = info.state;
-
-                if (!info.contractId) {
-                    state.error = "This service has no registered contract.";
+                state.serviceId = service;
+                const info = services.getServiceInfo(service);
+                if (!info) {
+                    state.error = `Service '${service}' not found.`;
                     return;
                 }
 
-                contract = contracts.getContractById(info.contractId);
+                // Resolve the service and keep its contract available for inspection if resolution fails.
+                try {
+                    instance = services.resolve(service);
+                    if (!instance) throw new Error("Service has no live instance.");
+                    state.resolved = true;
+                } catch (error) {
+                    state.error = error?.message || String(error);
+                }
+                state.status = services.getServiceInfo(service)?.state ?? info.state;
+                this.loadContract(info.contractId);
+            },
+
+            loadContract(contractId) {
+                // Describe the declared API without reading properties or invoking methods.
+                if (!contractId) {
+                    state.error ||= "This service has no registered contract.";
+                    return;
+                }
+
+                contract = contracts.getContractById(contractId);
                 if (!contract) {
-                    state.error = `Contract '${info.contractId}' not found.`;
+                    state.error ||= `Contract '${contractId}' not found.`;
                     return;
                 }
 
-                state.contractId = info.contractId;
-                state.contractLabel = contract.label || info.contractId;
+                state.contractId = contractId;
+                state.contractLabel = contract.label || contractId;
                 state.description = contract.description || "";
 
                 state.properties = Object.entries(contract.properties || {}).map(([name, item]) => ({
@@ -262,6 +238,7 @@ export default {
                     name,
                     label: `${name}(${(method.parameters || []).map(p => p.name).join(", ")})`,
                     description: method.description || "",
+                    opened: false,
                     src: `${invokePath}?type=service&id=${encodeURIComponent(state.serviceId)}&method=${encodeURIComponent(name)}`
                 }));
 
@@ -274,18 +251,13 @@ export default {
                 }));
             },
 
-            resolveService() {
-                if (!state.serviceId || state.resolved) return;
-                try {
-                    instance = services.resolve(state.serviceId);
-                    if (!instance) throw new Error("Service has no live instance.");
-
-                    state.resolved = true;
-                    state.status = services.getServiceInfo(state.serviceId)?.state || "created";
-                    state.error = "";
-                } catch (error) {
-                    state.error = error.message || String(error);
-                    state.status = services.getServiceInfo(state.serviceId)?.state || "registered";
+            openMethod({ event }) {
+                // Load each invocation form when its panel is first expanded.
+                const panel = event.currentTarget;
+                if (!panel.expanded) return;
+                const method = state.methods.find(item => item.name === panel.dataset.name);
+                if (method && !method.opened) {
+                    state.methods = state.methods.map(item => item.name === method.name ? { ...item, opened: true } : item);
                 }
             },
 

@@ -63,6 +63,32 @@ export default {
                     </x-listview-body>
                 </x-listview>
             </x-tab>
+            
+            <x-tab label="Live pages">
+                <x-treeview>
+                    <x-treeview-head>
+                        <x-treeview-column label="Page"></x-treeview-column>
+                        <x-treeview-column label="Path"></x-treeview-column>
+                        <x-treeview-column label="Layout" width="8%"></x-treeview-column>
+                        <x-treeview-column label="Module" width="8%"></x-treeview-column>
+                        <x-treeview-column label="Loading" width="8%"></x-treeview-column>
+                        <x-treeview-column label="Time" width="5em"></x-treeview-column>
+                        <x-treeview-column label="Size" width="5em"></x-treeview-column>
+                        <x-treeview-column label="Status" width="5em"></x-treeview-column>
+                    </x-treeview-head>
+                    <x-treeview-body>
+                        <x-treeview-item x-recursive="item in state.children" x-attr:label="item.label" expanded x-class:error="item.status=='error'">
+                            <div slot="column" x-attr:title="item.src">{{item.src}}</div>
+                            <div slot="column">{{item.layout}}</div>
+                            <div slot="column">{{item.module}}</div>
+                            <div slot="column">{{item.loading}}</div>
+                            <div slot="column"><x-time-ms x-prop:value="item.time"></x-time-ms></div>
+                            <div slot="column"><x-file-size x-prop:value="item.size"></x-file-size></div>
+                            <div slot="column">{{item.status}}</div>
+                        </x-treeview-item>
+                    </x-treeview-body>
+                </x-treeview>   
+            </x-tab>
             <x-tab label="Routes">
                 <div class="route-test">
                     <p>Test configured routes without opening a Page. Exact menu aliases take precedence when navigating.</p>
@@ -99,31 +125,6 @@ export default {
                         </x-listview-item>
                     </x-listview-body>
                 </x-listview>
-            </x-tab>
-            <x-tab label="Pages">
-                <x-treeview>
-                    <x-treeview-head>
-                        <x-treeview-column label="Page"></x-treeview-column>
-                        <x-treeview-column label="Path"></x-treeview-column>
-                        <x-treeview-column label="Layout" width="8%"></x-treeview-column>
-                        <x-treeview-column label="Module" width="8%"></x-treeview-column>
-                        <x-treeview-column label="Loading" width="8%"></x-treeview-column>
-                        <x-treeview-column label="Time" width="5em"></x-treeview-column>
-                        <x-treeview-column label="Size" width="5em"></x-treeview-column>
-                        <x-treeview-column label="Status" width="5em"></x-treeview-column>
-                    </x-treeview-head>
-                    <x-treeview-body>
-                        <x-treeview-item x-recursive="item in state.children" x-attr:label="item.label" expanded x-class:error="item.status=='error'">
-                            <div slot="column" x-attr:title="item.src">{{item.src}}</div>
-                            <div slot="column">{{item.layout}}</div>
-                            <div slot="column">{{item.module}}</div>
-                            <div slot="column">{{item.loading}}</div>
-                            <div slot="column"><x-time-ms x-prop:value="item.time"></x-time-ms></div>
-                            <div slot="column"><x-file-size x-prop:value="item.size"></x-file-size></div>
-                            <div slot="column">{{item.status}}</div>
-                        </x-treeview-item>
-                    </x-treeview-body>
-                </x-treeview>   
             </x-tab>
         </x-tabs>
     `,    

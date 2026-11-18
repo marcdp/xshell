@@ -11,7 +11,7 @@ export default {
     },
     template: `
         <p>Shows registered services, their modules and contracts, resource metadata, and load status.</p>
-        <x-listview view="details">
+        <x-listview view="details" x-on:activate="inspectService">
             <x-listview-head>
                 <x-listview-column width="10em"><x-datafield type="search" x-model="state.id" placeholder="Service"></x-datafield></x-listview-column>
                 <x-listview-column width="10em"><x-datafield type="search" x-model="state.moduleId" placeholder="Module"></x-datafield></x-listview-column>
@@ -24,11 +24,12 @@ export default {
                 <x-listview-column label="File" width="3em" style="text-align:right"></x-listview-column>
             </x-listview-head>
             <x-listview-body>
-            <x-listview-item x-for="item in state.items" x-attr:label="item.serviceId" x-attr:icon="item.icon" target="_blank">
+            <x-listview-item x-for="item in state.items" x-attr:label="item.serviceId" x-attr:icon="item.icon" x-prop:value="item.serviceId">
                 <div>{{ item.moduleId }}</div>
                 <div>
                     {{ item.contractId }}
-                    <x-anchor x-if="item.contractUrl" x-attr:href="item.contractUrl" target="_blank" class="plain">
+                    <x-anchor x-if="item.contractUrl" x-attr:href="item.contractUrl" target="_blank" class="plain"
+                        >
                         <x-icon icon="x-open-in-new" ></x-icon>
                     </x-anchor>
                 </div>
@@ -49,7 +50,7 @@ export default {
         description: "",
         items: []
     },
-    controller({ state, events, services, bus, config}) {
+    controller({ state, events, services, bus, navigation, page }) {
         return {
             load() {
                // load
@@ -59,6 +60,17 @@ export default {
                events.on(state, "change:contractId", "refresh");
                events.on(state, "change:description", "refresh");
                events.on(bus, "xshell:service:created", "refresh");
+            },
+            inspectService({ event }) {
+                // Open the Inspector for the activated registry entry.
+                const serviceId = event.detail?.value;
+                if (typeof serviceId !== "string" || !serviceId.trim() || !services.has(serviceId)) return;
+                return navigation.navigate({
+                    href: "page:xshell-diagnostics:/pages/details/service-inspector.js",
+                    page,
+                    open: "stack",
+                    params: { service: serviceId }
+                });
             },
             async refresh() {
                 // refresh
