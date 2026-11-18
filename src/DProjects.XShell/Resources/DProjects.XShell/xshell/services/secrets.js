@@ -20,6 +20,7 @@ const DECODER = new TextDecoder("utf-8", { fatal: true });
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/u;
 
 function checkPassword(options) {
+    // Validate the master password input.
     const password = options?.password;
     if (typeof password !== "string" || !password.length) {
         throw new TypeError("A non-empty master password is required.");
@@ -28,17 +29,20 @@ function checkPassword(options) {
 }
 
 function checkId(id, kind = "Secret") {
+    // Validate a stored secret or passkey identifier.
     if (typeof id !== "string" || !id.trim()) {
         throw new TypeError(`${kind} id must be a non-empty string.`);
     }
 }
 
 function checkName(name) {
+    // Validate a user-facing secret name.
     if (typeof name !== "string" || !name.trim()) throw new TypeError("Secret name must be a non-empty string.");
     return name;
 }
 
 function checkLabel(label) {
+    // Validate a passkey label.
     if (typeof label !== "string" || !label.trim()) {
         throw new TypeError("A non-empty passkey label is required.");
     }
@@ -46,11 +50,13 @@ function checkLabel(label) {
 }
 
 function checkDescription(description) {
+    // Validate passkey description text.
     if (typeof description !== "string") throw new TypeError("Description must be a string.");
     return description;
 }
 
 function checkSecretLabel(label) {
+    // Validate optional secret label text.
     if (typeof label !== "string") throw new TypeError("Secret label must be a string.");
     return label;
 }
@@ -87,6 +93,7 @@ function newSecretId() {
 }
 
 function checkRememberMinutes(value, fallback, maximum) {
+    // Validate remembered-session duration limits.
     const minutes = value === undefined ? fallback : value;
     if (!Number.isSafeInteger(minutes) || minutes < 0) throw new TypeError("Remembered session duration must be a nonnegative integer.");
     if (minutes > maximum) throw new RangeError(`Remembered session duration cannot exceed ${maximum} minutes.`);
@@ -118,6 +125,7 @@ function effectiveOptions(options = {}) {
 }
 
 function interactiveAccess(options) {
+    // Validate the interactive access preference.
     if (options === undefined) return true;
     if (!options || typeof options !== "object" || Array.isArray(options)) {
         throw new TypeError("Secret access options must be an object.");
@@ -132,6 +140,7 @@ function interactiveAccess(options) {
 }
 
 function bytes(value, length) {
+    // Normalize binary input and enforce an optional length.
     let result;
     if (value instanceof ArrayBuffer) result = new Uint8Array(value);
     else if (ArrayBuffer.isView(value)) result = new Uint8Array(value.buffer, value.byteOffset, value.byteLength);
@@ -140,6 +149,7 @@ function bytes(value, length) {
 }
 
 function base64urlEncode(value) {
+    // Encode binary data using URL-safe Base64.
     const valueBytes = bytes(value);
     if (!valueBytes) throw new TypeError("A binary value is required.");
     let binary = "";
@@ -150,6 +160,7 @@ function base64urlEncode(value) {
 }
 
 function base64urlDecode(value) {
+    // Decode a URL-safe Base64 value.
     if (typeof value !== "string" || !/^[A-Za-z0-9_-]+$/u.test(value)) {
         throw new Error("Invalid passkey credential identifier.");
     }
@@ -159,6 +170,7 @@ function base64urlDecode(value) {
 }
 
 function sessionBytes(value, length) {
+    // Decode session metadata while converting malformed values to null.
     try {
         const result = base64urlDecode(value);
         return result.length === length ? result : null;
@@ -168,14 +180,17 @@ function sessionBytes(value, length) {
 }
 
 function aad(purpose) {
+    // Build authenticated encryption context for a purpose.
     return ENCODER.encode(`xshell-secrets:v2:${purpose}`);
 }
 
 function randomBytes(length) {
+    // Generate cryptographically secure random bytes.
     return crypto.getRandomValues(new Uint8Array(length));
 }
 
 async function derivePasswordKey(password, salt, iterations) {
+    // Derive the password key used to wrap the vault key.
     const passwordBytes = ENCODER.encode(password);
     try {
         const material = await crypto.subtle.importKey("raw", passwordBytes, "PBKDF2", false, ["deriveKey"]);
@@ -192,6 +207,7 @@ async function derivePasswordKey(password, salt, iterations) {
 }
 
 async function derivePasskeyKey(prfOutput, metadata, credentialId) {
+    // Derive the passkey key used to wrap the vault key.
     const output = bytes(prfOutput, 32);
     if (!output) throw new Error("The passkey did not return a usable WebAuthn PRF result.");
     try {
@@ -214,12 +230,14 @@ async function derivePasskeyKey(prfOutput, metadata, credentialId) {
 }
 
 async function importDek(rawDek) {
+    // Import the vault data-encryption key for AES-GCM use.
     const raw = bytes(rawDek, 32);
     if (!raw) throw new Error("The Secrets vault contains an invalid data encryption key.");
     return crypto.subtle.importKey("raw", raw, { name: "AES-GCM", length: 256 }, false, ["encrypt", "decrypt"]);
 }
 
 async function encrypt(key, plaintext, purpose) {
+    // Encrypt plaintext with purpose-bound authenticated encryption.
     const iv = randomBytes(12);
     const ciphertext = await crypto.subtle.encrypt(
         { name: "AES-GCM", iv, additionalData: aad(purpose), tagLength: 128 },
@@ -230,6 +248,7 @@ async function encrypt(key, plaintext, purpose) {
 }
 
 async function decrypt(key, record, purpose) {
+    // Decrypt and validate a purpose-bound encrypted record.
     const iv = bytes(record?.iv, 12);
     const ciphertext = bytes(record?.ciphertext);
     if (!iv || !ciphertext) throw new Error("Invalid encrypted record.");
@@ -241,10 +260,12 @@ async function decrypt(key, record, purpose) {
 }
 
 function sessionPurpose(record) {
+    // Build the authenticated context for a remembered session.
     return `session-wrapped-dek:${record.sessionId}:${record.vaultId}:${record.createdAt}:${record.expiresAt}`;
 }
 
 function validateSessionMetadata(record, metadata, maximum, now = Date.now()) {
+    // Validate remembered-session metadata and its lifetime.
     const createdAt = typeof record?.createdAt === "string" ? Date.parse(record.createdAt) : NaN;
     const expiresAt = typeof record?.expiresAt === "string" ? Date.parse(record.expiresAt) : NaN;
     if (!record || record.version !== SESSION_FORMAT_VERSION || !sessionBytes(record.sessionId, 16) ||
@@ -259,6 +280,7 @@ function validateSessionMetadata(record, metadata, maximum, now = Date.now()) {
 }
 
 function validateMetadata(metadata) {
+    // Validate the persisted vault metadata shape and cryptographic fields.
     if (!metadata || metadata.id !== VAULT_ID) throw new Error("Secrets vault is not initialized.");
     if (metadata.version !== FORMAT_VERSION) {
         const version = Number.isSafeInteger(metadata.version) ? metadata.version : "unknown";
@@ -280,6 +302,7 @@ function validateMetadata(metadata) {
 }
 
 function validatePasskey(record) {
+    // Validate a persisted passkey registration.
     if (!record || record.version !== FORMAT_VERSION || typeof record.id !== "string" || !record.id ||
         typeof record.label !== "string" || !record.label || typeof record.createdAt !== "string" ||
         (record.description !== undefined && typeof record.description !== "string") ||
@@ -290,12 +313,14 @@ function validatePasskey(record) {
 }
 
 function credentialId(credential) {
+    // Extract a stable URL-safe credential identifier.
     if (bytes(credential?.rawId)) return base64urlEncode(credential.rawId);
     if (typeof credential?.id === "string" && credential.id) return credential.id;
     throw new Error("WebAuthn returned a credential without an identifier.");
 }
 
 function passkeyError(error, operation) {
+    // Translate browser passkey errors into user-facing service errors.
     if (error?.name === "NotAllowedError") {
         const action = operation === "registration" ? "registration" : "authentication";
         return new Error(`Passkey ${action} was cancelled, timed out, or no eligible credential was available.`, { cause: error });
@@ -341,6 +366,7 @@ export default class Secrets {
     #unlockPromise = null;
 
     constructor({ bus, dialog, config } = {}, options) {
+        // Initialize services, options, and asynchronous vault recovery.
         this.#bus = bus;
         this.#dialog = dialog;
         this.#databaseName = indexedDBName("secrets", config?.app?.basePath ?? "");
@@ -360,11 +386,13 @@ export default class Secrets {
     get sessionExpiresAt() { return this.#sessionExpiresAt; }
     
     async ready() {
+        // Wait for database opening and stored-session recovery.
         await this.#ready;
         return this.#status;
     }
 
     async restoreSession() {
+        // Restore a remembered session when the vault is still locked.
         const startEpoch = this.#epoch;
         await this.#ready;
         if (this.#status === "unlocked") {
@@ -377,6 +405,7 @@ export default class Secrets {
     }
 
     async initialize(options) {
+        // Create the vault and wrap its initial data-encryption key.
         const password = checkPassword(options);
         const epoch = this.#epoch;
         await this.#ready;
@@ -430,6 +459,7 @@ export default class Secrets {
     }
 
     async unlock(options) {
+        // Unlock the vault with the configured master password.
         const password = checkPassword(options);
         const rememberMinutes = checkRememberMinutes(options?.rememberMinutes, this.#options.rememberMinutes, this.#options.maxRememberMinutes);
         const epoch = ++this.#epoch;
@@ -444,6 +474,7 @@ export default class Secrets {
     }
 
     async unlockWithPasskey(options = {}) {
+        // Unlock the vault through a registered WebAuthn passkey.
         const rememberMinutes = checkRememberMinutes(options?.rememberMinutes, this.#options.rememberMinutes, this.#options.maxRememberMinutes);
         const epoch = ++this.#epoch;
         await this.#ready;
@@ -508,6 +539,7 @@ export default class Secrets {
     }
 
     lock() {
+        // Invalidate active keys, sessions, and write transactions.
         this.#epoch++;
         this.#key = null;
         const sessionId = this.#sessionId || this.#readStoredSession()?.sessionId;
@@ -524,6 +556,7 @@ export default class Secrets {
     }
 
     async list() {
+        // List decrypted metadata for every stored secret.
         const { key, epoch } = await this.#session();
         const records = await this.#request(SECRET_STORE, "readonly", store => store.getAll());
         this.#assertCurrent(epoch);
@@ -532,6 +565,7 @@ export default class Secrets {
     }
 
     async get(name, options) {
+        // Retrieve and decrypt one named secret.
         checkName(name);
         await this.#ensureUnlocked(interactiveAccess(options));
         const { key, epoch } = await this.#session();
@@ -553,6 +587,7 @@ export default class Secrets {
     }
 
     async getInfo(name) {
+        // Retrieve decrypted metadata for one named secret.
         checkName(name);
         const { key, epoch } = await this.#session();
         const record = await this.#findSecret(name);
@@ -561,6 +596,7 @@ export default class Secrets {
     }
 
     async set(name, value, options) {
+        // Encrypt and atomically create or update one named secret.
         checkName(name);
         const metadata = secretMetadata(options);
         const { key, epoch } = await this.#session();
@@ -622,6 +658,7 @@ export default class Secrets {
     }
 
     async delete(name) {
+        // Delete one named secret from the vault.
         checkName(name);
         const { epoch } = await this.#session();
         this.#assertCurrent(epoch);
@@ -630,6 +667,7 @@ export default class Secrets {
     }
 
     async rename(oldName, newName) {
+        // Rename a secret while preserving its storage identity.
         checkName(oldName);
         checkName(newName);
         const { epoch } = await this.#session();
@@ -639,6 +677,7 @@ export default class Secrets {
     }
 
     async addPasskey(options) {
+        // Register a WebAuthn passkey that wraps the vault key.
         const label = checkLabel(options?.label);
         const description = options?.description === undefined ? "" : checkDescription(options.description);
         const password = checkPassword(options);
@@ -736,6 +775,7 @@ export default class Secrets {
     }
 
     async listPasskeys() {
+        // List non-sensitive metadata for registered passkeys.
         await this.#ready;
         if (!this.#metadata) return [];
         validateMetadata(this.#metadata);
@@ -746,6 +786,7 @@ export default class Secrets {
     }
 
     async updatePasskey(id, options) {
+        // Update the description of a registered passkey.
         checkId(id, "Passkey");
         if (!options || typeof options !== "object" || Array.isArray(options) || !Object.hasOwn(options, "description")) {
             throw new TypeError("Passkey metadata with a description is required.");
@@ -763,6 +804,7 @@ export default class Secrets {
     }
 
     async removePasskey(id) {
+        // Remove a registered passkey from the vault.
         checkId(id, "Passkey");
         const { epoch } = await this.#session();
         this.#assertCurrent(epoch);
@@ -782,6 +824,7 @@ export default class Secrets {
     }
 
     async #secretInfo(record, key, epoch) {
+        // Decrypt and project non-secret metadata for inspection.
         this.#validateSecretRecord(record);
         let description = "";
         let customLabel = "";
@@ -962,6 +1005,7 @@ export default class Secrets {
     }
 
     #updateRecord(name, id, update) {
+        // Update one IndexedDB record while tracking cancellation-sensitive writes.
         return new Promise((resolve, reject) => {
             let transaction;
             let failure;
@@ -997,6 +1041,7 @@ export default class Secrets {
     }
 
     async #activate(rawDek, metadata, rememberMinutes, epoch, operation) {
+        // Install the decrypted key and optionally persist a remembered session.
         let session = null;
         const dek = await importDek(rawDek);
         if (epoch !== this.#epoch) throw new Error(`Vault was locked during ${operation}.`);
@@ -1018,6 +1063,7 @@ export default class Secrets {
     }
 
     async #persistSession(rawDek, metadata, rememberMinutes, epoch) {
+        // Wrap and persist the data-encryption key for this browser session.
         if (!globalThis.sessionStorage) throw new Error("Remembered Secrets sessions require sessionStorage.");
         const sessionId = base64urlEncode(randomBytes(16));
         const now = Date.now();
@@ -1044,6 +1090,7 @@ export default class Secrets {
     }
 
     async #restore(epoch) {
+        // Restore and validate a previously persisted remembered session.
         const record = this.#readStoredSession();
         if (!record) return { restored: false, status: this.#status, sessionExpiresAt: null, reason: "not-found" };
         try {
@@ -1086,6 +1133,7 @@ export default class Secrets {
     }
 
     #readStoredSession() {
+        // Read and parse remembered-session metadata defensively.
         try {
             const value = globalThis.sessionStorage?.getItem(SESSION_STORAGE_KEY);
             return value ? JSON.parse(value) : null;
@@ -1096,6 +1144,7 @@ export default class Secrets {
     }
 
     #removeStoredMetadata(sessionId) {
+        // Remove session metadata only when it still belongs to this session.
         try {
             const current = this.#readStoredSession();
             if (!sessionId || current?.sessionId === sessionId) globalThis.sessionStorage?.removeItem(SESSION_STORAGE_KEY);
@@ -1103,6 +1152,7 @@ export default class Secrets {
     }
 
     #clearStoredSession() {
+        // Clear browser session metadata and its IndexedDB key asynchronously.
         const record = this.#readStoredSession();
         if (!record) return;
         this.#removeStoredMetadata(record.sessionId);
@@ -1110,6 +1160,7 @@ export default class Secrets {
     }
 
     async #revokeRememberedSession() {
+        // Revoke any remembered session before switching to memory-only access.
         const sessionId = this.#sessionId || this.#readStoredSession()?.sessionId;
         this.#removeStoredMetadata(sessionId);
         if (sessionId) {
@@ -1119,22 +1170,26 @@ export default class Secrets {
     }
 
     async #discardStoredSession(record) {
+        // Remove invalid or superseded remembered-session data.
         if (!record) return;
         this.#removeStoredMetadata(record.sessionId);
         if (record.sessionId) await this.#deleteSessionRecord(record.sessionId).catch(() => {});
     }
 
     async #deleteSessionRecord(sessionId) {
+        // Delete the IndexedDB key associated with a remembered session.
         if (!this.#database) return;
         await this.#request(SESSION_STORE, "readwrite", store => store.delete(sessionId), false);
     }
 
     #deleteSessionRecordWhenReady(sessionId) {
+        // Delete a session key immediately or after database startup completes.
         if (this.#database) void this.#deleteSessionRecord(sessionId).catch(() => {});
         else void this.#ready.then(() => this.#deleteSessionRecord(sessionId)).catch(() => {});
     }
 
     #scheduleExpiration() {
+        // Schedule automatic locking at the remembered-session expiry time.
         this.#clearExpirationTimer();
         if (!this.#sessionExpiresAt) return;
         const delay = Date.parse(this.#sessionExpiresAt) - Date.now();
@@ -1148,11 +1203,13 @@ export default class Secrets {
     }
 
     #clearExpirationTimer() {
+        // Cancel the active remembered-session expiry timer.
         if (this.#expirationTimer !== null) globalThis.clearTimeout(this.#expirationTimer);
         this.#expirationTimer = null;
     }
 
     async #unwrapWithPassword(password, metadata) {
+        // Unwrap the vault key with the persisted password-derived key.
         const { kdf, wrappedDek } = validateMetadata(metadata).password;
         const key = await derivePasswordKey(password, bytes(kdf.salt, 16), kdf.iterations);
         let rawDek;
@@ -1167,6 +1224,7 @@ export default class Secrets {
     }
 
     async #loadMetadata() {
+        // Load and validate the current vault metadata from IndexedDB.
         const metadata = await this.#request(META_STORE, "readonly", store => store.get(VAULT_ID));
         if (!metadata) {
             this.#metadata = null;
@@ -1179,6 +1237,7 @@ export default class Secrets {
     }
 
     async #ensureUnlocked(interactive) {
+        // Ensure the vault is unlocked, opening authentication when permitted.
         await this.#ready;
         if (this.#sessionExpiresAt && Date.parse(this.#sessionExpiresAt) <= Date.now()) this.lock();
         if (this.#status === "unlocked" && this.#key) return;
@@ -1203,6 +1262,7 @@ export default class Secrets {
     }
 
     async #openUnlockDialog() {
+        // Open the configured authentication Page and await its result.
         await this.#dialog.open({
             href: this.#options.pageUnlock,
             context: {}
@@ -1213,6 +1273,7 @@ export default class Secrets {
     }
 
     async #session() {
+        // Return the active key and epoch for a guarded operation.
         await this.#ready;
         if (this.#sessionExpiresAt && Date.parse(this.#sessionExpiresAt) <= Date.now()) this.lock();
         if (this.#status !== "unlocked" || !this.#key) throw new Error("Secrets vault is locked.");
@@ -1220,12 +1281,14 @@ export default class Secrets {
     }
 
     #assertCurrent(epoch, requireKey = true) {
+        // Reject work that was invalidated by locking or a newer operation.
         if (epoch !== this.#epoch || (requireKey && !this.#key)) {
             throw new Error("Secrets vault was locked during the operation.");
         }
     }
 
     #requirePasskeys(registration = false) {
+        // Verify secure-context and WebAuthn support before passkey use.
         if (globalThis.isSecureContext !== true || !globalThis.navigator?.credentials ||
             typeof navigator.credentials.get !== "function" ||
             (registration && typeof navigator.credentials.create !== "function")) {
@@ -1234,12 +1297,14 @@ export default class Secrets {
     }
 
     #setStatus(status, force = false) {
+        // Update status and publish the corresponding service event.
         if (this.#status === status && !force) return;
         this.#status = status;
         this.#bus?.emit("secrets:status-changed", { status, sessionExpiresAt: this.#sessionExpiresAt });
     }
 
     #request(name, mode, operation, trackWrite = true) {
+        // Execute one IndexedDB request with transaction cleanup and tracking.
         return new Promise((resolve, reject) => {
             let transaction;
             try {
@@ -1274,6 +1339,7 @@ export default class Secrets {
     }
 
     #open() {
+        // Open the vault database and create its stores on first use.
         return new Promise((resolve, reject) => {
             if (!globalThis.indexedDB || !globalThis.crypto?.subtle) {
                 reject(new Error("Secrets requires IndexedDB and Web Crypto."));

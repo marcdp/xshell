@@ -1,16 +1,36 @@
-import { deepFreeze } from "./utils/object.js";
-import JsonValidator from "./services/json-validator.js"
-import xshell from "./xshell.js";
+import { deepFreeze } from "../utils/object.js";
+import JsonValidator from "./json-validator.js"
 
 
 // class
 export default class Contracts {
 
+    // options schema
+    static optionsSchema = {
+        type: "object",
+        properties: {
+            xshellAssetsPath: { type: "string" },
+            xshellFiles: { type: "array", items: { type: "object" } }
+        },
+        additionalProperties: false
+    };
+    
+    
     //vars
     _config = null;
     _loader = null;
     _items = null;
+    _options = null;
     
+    
+    // ctor
+    constructor( { config, loader }, options ) {
+        this._config = config;
+        this._loader = loader;
+        this._options = options;
+    }   
+
+
     // props
     get registry() {
         // expose contract metadata without returning mutable contract documents
@@ -28,21 +48,15 @@ export default class Contracts {
         })));
     }
 
-    // ctor
-    constructor( { config, loader } ) {
-        this._config = config;
-        this._loader = loader;
-    }   
-
 
     // methods
     async init() {
         // process framework and module contracts
         let tasks = [];
-        const frameworkAssetsPath = this._config.xshell?.assets?.path;
+        const frameworkAssetsPath = this._options.xshellAssetsPath;
         if (frameworkAssetsPath) {
             const frameworkContractsPath = frameworkAssetsPath + "/contracts";
-            for (const file of this._config.xshell.files ?? []) {
+            for (const file of this._options.xshellFiles ?? []) {
                 if (file.path.startsWith(frameworkContractsPath + "/") && file.path.endsWith(".json")) {
                     const contractId = file.path.substring(frameworkContractsPath.length + 1, file.path.length - ".json".length);
                     const fileUrl = new URL(file.path.replace(/^\/+/, ""),this._config.app.baseUrl).href;
@@ -101,7 +115,7 @@ export default class Contracts {
     }
     async _validateServiceContract(src, definition) {
         // use loader to load schema
-        const contractServiceSchema = await xshell.loader.load("schema:service");
+        const contractServiceSchema = await this._loader.load("schema:service");
         // validate
         const definitionObject = Object.fromEntries(Object.entries(definition).map(([key, value]) => [key, typeof value === "function" ? {} : value]));
         const result = new JsonValidator().validate(definitionObject, contractServiceSchema);

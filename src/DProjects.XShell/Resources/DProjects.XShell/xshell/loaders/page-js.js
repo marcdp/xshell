@@ -1,6 +1,6 @@
 import Page from "../page.js"
-import Timer from "../timer.js"
-import Events from "../events.js"
+import Timer from "../scoped/timer.js"
+import Events from "../scoped/events.js"
 import xshell from "../xshell.js";
 import JsonValidator from "../services/json-validator.js"
 import { processStyle } from "../utils/style.js";

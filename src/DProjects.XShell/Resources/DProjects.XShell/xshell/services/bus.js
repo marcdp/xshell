@@ -2,13 +2,22 @@
 // class
 export default class Bus {
 
+    
+    // options schema
+    static optionsSchema = {
+        type: "object",
+        properties: {},
+        additionalProperties: false
+    }
+
 
     //vars
     _channel = new MessageChannel();
     _events = {};
 
+
     //ctor
-    constructor() {
+    constructor( {}, options) {
         this._channel.port1.onmessage = (e) => {
             this._processEvent(e.data);
         };

@@ -15,6 +15,7 @@ export default {
         title: "Diagnostics console"
     },
     style: `
+        x-page {height:100%; overflow:auto; padding:.1em;}
     `,
     template: `
         <x-toolbar slot="header-actions">
@@ -27,7 +28,7 @@ export default {
         </x-toolbar>
         <x-tabs x-attr:selected-index="state.selectedIndex" class="no-header">
             <x-tab x-for="menuitem in state.menuitems" x-attr:label="menuitem.label" >
-                <x-page x-attr:src="menuitem.href" loading="lazy" style="height:100%; overflow:auto;"></x-page>
+                <x-page x-attr:src="menuitem.href" loading="lazy"></x-page>
             </x-tab>
         </x-tabs>        
     `,    

@@ -21,27 +21,35 @@ const loaders = {
 // class
 export default class Loader {
 
-    //vars
+    // options schema
+    static optionsSchema = {
+        type: "object",
+        properties: {
+            appBasePath: { type: "string" },
+            xshellAssetsPath: { type: "string" },
+            componentLazy: { type: "string" }
+        },
+        additionalProperties: false
+    }
+
+    // vars
     _bus = null;
+    _options = null;
     _resolver = null;
-    _appBasePath = null;
-    _xshellAssetsPath = null;
-    _services = null;
+    _services = null;    
     
     _cache = {};
     _registry = [];
 
-    //ctor
-    constructor( {bus, config, resolver, services} ) {
+    // ctor
+    constructor( {bus, resolver, services}, options ) {
         this._bus = bus;
         this._resolver = resolver;
-        this._appBasePath = config.app.basePath;
-        this._xshellAssetsPath = config.xshell.assets.path;
-        this._componentLazy = config.xshell.ui.component.lazy;
         this._services = services;
+        this._options = options;
     }
 
-    //props
+    // props
     get registry() { 
         // project load metadata without exposing the loaded value or mutable records
         return Object.freeze(this._registry.map(item => Object.freeze({
@@ -55,7 +63,7 @@ export default class Loader {
         })));
     }
 
-    //methods
+    // methods
     async load(resources) {
         const resourcesOriginal = resources;
         const isString = typeof(resources) == "string";
@@ -88,9 +96,9 @@ export default class Loader {
                 if (loaderUrl.indexOf(":")!=-1) {
                     loaderUrl = definition.loader;
                 } else if (loaderUrl.indexOf("/")!=-1) {
-                    loaderUrl = this._appBasePath + definition.loader;
+                    loaderUrl = this._options.appBasePath + definition.loader;
                 } else {
-                    loaderUrl = this._appBasePath + this._xshellAssetsPath + "/loaders/" + definition.loader + ".js";
+                    loaderUrl = this._options.appBasePath + this._options.xshellAssetsPath + "/loaders/" + definition.loader + ".js";
                 }
                 let loaderToUse = new (await import(loaderUrl)).default();
                 loaders[definition.loader] = loaderToUse;
@@ -122,8 +130,8 @@ export default class Loader {
                         resourceName: name,
                         resourcePath: path,
                         resourceDefinition: definition,
-                        appBasePath: this._appBasePath,
-                        componentLazy: this._componentLazy,
+                        appBasePath: this._options.appBasePath,
+                        componentLazy: this._options.componentLazy,
                         services: this._services
                     };
                     const start = performance.now();
@@ -227,7 +235,7 @@ export default class Loader {
         return result;
     }    
 
-    // private
+    // private methods
     _removeQuery(resource) {
         // remove only the URL query while preserving the logical resource scheme and fragment
         const queryIndex = resource.indexOf("?");

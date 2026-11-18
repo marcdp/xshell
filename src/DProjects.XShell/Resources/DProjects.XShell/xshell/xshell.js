@@ -1,8 +1,8 @@
-import Bus from "./bus.js";
-import Contracts from "./contracts.js";
-import Loader from "./loader.js";
+import Bus from "./services/bus.js";
+import Contracts from "./services/contracts.js";
+import Loader from "./services/loader.js";
 import Page from "./page.js";
-import Resolver from "./resolver.js";
+import Resolver from "./services/resolver.js";
 import Services from "./services.js";
 import XPage from "./x-page.js";
 import JsonValidator from "./services/json-validator.js";
@@ -12,11 +12,11 @@ import { compileRoute } from "./utils/route.js";
 class XShell {
 
     //fields
-    _bus = null;
     _config = null;
-    _contracts = null;
-    _loader = null;
+    _bus = null;
     _resolver = null;
+    _loader = null;
+    _contracts = null;
     _services = null;
     
     //ctor
@@ -37,13 +37,12 @@ class XShell {
     //methods
     async init(config) {
         // init
-        this._bus = new Bus();
         this._config = config;        
-        // init basic
-        this._resolver = new Resolver( { config: config } );
+        // core services
+        this._bus = new Bus({}, {});
+        this._resolver = new Resolver( { config: config }, {});
         this._loader = new Loader({ 
             bus: this._bus, 
-            config: config, 
             resolver: this._resolver,
             services: new Proxy(Object.create(null), {
                 get: (target, prop) => {
@@ -53,10 +52,18 @@ class XShell {
                     return this._services.resolve(prop);
                 }
             })
+        }, {
+            appBasePath: config.app.basePath,
+            xshellAssetsPath: config.xshell.assets.path,
+            componentLazy: config.xshell.ui.component.lazy
         });
+        // validate config
         await this.validateConfig(config);
-        // initialize rest of the services
-        this._contracts = new Contracts( { config: config, loader: this._loader } );
+        // advanced services
+        this._contracts = new Contracts( { config: config, loader: this._loader }, { 
+            xshellAssetsPath: config.xshell.assets.path,
+            xshellFiles: config.xshell.files
+        });
         this._services = new Services( {config, loader: this._loader, contracts: this._contracts, resolver: this._resolver, bus: this._bus } );
         // compose contracts list in memory from modules             
         await this._contracts.init();

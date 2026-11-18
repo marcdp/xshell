@@ -52,7 +52,7 @@ export default {
                     </x-listview-head>
                     <x-listview-body>
                         <x-listview-item x-for="menu in state.menus" x-attr:label="menu.id" x-attr:href="menu.path" target="_blank">
-                            <x-object x-prop:value="menu.children" expanded></x-object>
+                            <x-object x-prop:value="menu.children"></x-object>
                         </x-listview-item>
                     </x-listview-body>
                 </x-listview>

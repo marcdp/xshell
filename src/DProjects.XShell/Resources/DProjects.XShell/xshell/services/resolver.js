@@ -3,14 +3,23 @@
 // class
 export default class Resolver {
 
+    // options schema
+    static optionsSchema = {
+        type: "object",
+        properties: {
+        },
+        additionalProperties: false
+    };
+
 
     //vars
     _definitions = [];
     _appBasePath = "";
     _appBaseUrl = "";
+    
 
     //ctor
-    constructor( { config }) {
+    constructor( { config }, options) {
         this._appBasePath = config.app.basePath;
         this._appBaseUrl = config.app.baseUrl;
         for(let type in config.xshell.resolver) {
