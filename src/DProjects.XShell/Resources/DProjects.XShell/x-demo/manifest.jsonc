@@ -36,17 +36,21 @@
         }
     },
     "xshell": {
-        "areas": {
-            "default": "cookbook",
-            "definitions": {
-                "cookbook": {
-                    "prefix": "cookbook",
-                    "label": "Cookbook",
-                    "description": "Focused examples of XShell features",
-                    "modules": [
-                        "x-demo",
-                        "x-identity"
-                    ]
+        "services": {
+            "areas": {
+                "options": {
+                    "default": "cookbook",
+                    "definitions": {
+                        "cookbook": {
+                            "prefix": "cookbook",
+                            "label": "Cookbook",
+                            "description": "Focused examples of XShell features",
+                            "modules": [
+                                "x-demo",
+                                "x-identity"
+                            ]
+                        }
+                    }
                 }
             }
         }

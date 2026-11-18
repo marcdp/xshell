@@ -26,10 +26,11 @@ These are three separate objects:
 During startup, XShell discovers and validates contracts, registers its core/runtime service instances, and calls `Services.init()`. That method
 validates every configured contract reference, eagerly loads each configured implementation class, registers the implementation metadata, and then
 finalizes the registry. Configured service instances are not constructed during initialization. The declarative `registry` service is then explicitly
-resolved and its asynchronous `init()` is awaited before Modules initialization; its merged `xshell.services.registry.options` are validated by the
-implementation's static `optionsSchema` immediately before this lazy singleton construction. After Modules initialize and Areas composes their
-contributions, XShell similarly resolves the declarative `navigation` service and explicitly awaits its `init()`. This coordination is specific to
-startup ordering and does not introduce a generic service lifecycle.
+resolved and its asynchronous `init()` is awaited. XShell next resolves the declarative `areas` service, validating its merged
+`xshell.services.areas.options`, before module controllers execute. After Modules initialize, XShell explicitly invokes `Areas.init()` to compose
+their contributions, then resolves the declarative `navigation` service and awaits its `init()`. Each service's static `optionsSchema` validates its
+options immediately before lazy singleton construction. This coordination is specific to startup ordering and does not introduce a generic service
+lifecycle.
 
 The `theme` service is the one explicit startup exception. The X module controller declares `theme` as a constructor dependency, so normal service
 injection resolves it while modules initialize. The service starts with `system` and restores a saved `system`, `light`, or `dark` mode asynchronously
@@ -237,7 +238,7 @@ Duplicate registrations, including collisions with core names, fail.
 After a configured service is first constructed and validated, XShell emits `xshell:service:created` on the Bus with `{ id }`. Failed attempts emit no
 created event. Consumers can re-read `services.registry` to inspect the current state.
 
-The directly registered core names are `areas`, `bus`, `config`, `loader`, `modules`, `resolver`, `contracts`, and `services`. `commands`, `dialog`,
+The directly registered core names are `bus`, `config`, `loader`, `modules`, `resolver`, `contracts`, and `services`. `areas`, `commands`, `dialog`,
 `i18n`, `jsonValidator`, `navigation`, `preferences`, `registry`, `runtime`, `secrets`, `tasks`, and `temp` are framework-owned configured services
 registered through `xshell.services`. There is no auth/identity registration. A Diagnostics getter is not a registered service contract.
 

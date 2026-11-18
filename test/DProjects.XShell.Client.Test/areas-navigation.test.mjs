@@ -1,19 +1,19 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import Areas from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/areas.js";
+import Areas from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/areas.js";
 import Navigation from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/navigation.js";
 import Resolver from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/resolver.js";
 
-test("Areas.init rejects an unknown configured module", () => {
-    const config = { xshell: { assets: { basePath: "/_assets" }, areas: { default: "admin", global: [], definitions: { admin: { modules: ["missing"] } } } } };
-    const areas = new Areas({ config, bus: { addEventListener() {} } });
+test("Areas construction rejects an unknown configured module", () => {
+    const config = { modules: {}, xshell: { assets: { basePath: "/_assets" } } };
+    const options = { default: "admin", global: [], definitions: { admin: { modules: ["missing"] } } };
 
-    assert.throws(() => areas.init({ modules: { getModuleById() { return null; } } }), /Area 'admin' references unknown module 'missing'/);
+    assert.throws(() => new Areas({ config, bus: { addEventListener() {} } }, options), /Area 'admin' references unknown module 'missing'/);
 });
 
 test("documentation inventory menus keep Markdown page and index destinations", () => {
-    const areas = new Areas({ config: { xshell: { assets: { basePath: "/_assets" }, areas: { definitions: {}, global: [] } } }, bus: { addEventListener() {} } });
+    const areas = new Areas({ config: { modules: {}, xshell: { assets: { basePath: "/_assets" } } }, bus: { addEventListener() {} } }, { default: null, definitions: {}, global: [] });
     const root = "/_assets/xshell-docs/pages";
     const files = ["index.md", "10-architecture/index.md", "10-architecture/100-services.md"].map(path => ({ path: `${root}/${path}` }));
     const menu = areas._createMenuFromModuleFiles(files, root, "Docs", [".js", ".html", ".md"], true);
@@ -23,8 +23,8 @@ test("documentation inventory menus keep Markdown page and index destinations", 
 });
 
 test("Areas identifies modules under a normalized multi-segment assets.basePath", () => {
-    const config = { xshell: { assets: { basePath: "/virtual/assets" }, areas: { definitions: {}, global: [] } } };
-    const areas = new Areas({ config, bus: { addEventListener() {} } });
+    const config = { modules: {}, xshell: { assets: { basePath: "/virtual/assets" } } };
+    const areas = new Areas({ config, bus: { addEventListener() {} } }, { default: null, definitions: {}, global: [] });
     assert.equal(areas.getModuleId("/demo/virtual/assets/x/pages/index.js"), "x");
     assert.equal(areas.getModuleId("/demo/virtual/assets/orders/1.4.0.a82c31f943e01abc/pages/index.js"), "orders");
     assert.equal(areas.getModuleId("/demo/_assets/x/pages/index.js"), null);
@@ -41,10 +41,7 @@ test("Areas preserve tooltip and embedded across effective menu projections", ()
     };
     const config = {
         modules: { menu: { menus: { shortcuts: [globalItem] } } },
-        xshell: {
-            assets: { basePath: "/_assets" },
-            areas: { default: "main", global: ["shortcuts"], definitions: { main: { prefix: "/main", modules: ["menu"] } } }
-        }
+        xshell: { assets: { basePath: "/_assets" } }
     };
     const module = {
         id: "menu",
@@ -63,7 +60,7 @@ test("Areas preserve tooltip and embedded across effective menu projections", ()
         }
     };
     const dynamicItems = [{ label: "Dynamic child", href: "/_assets/menu/pages/dynamic.js", tooltip: "Dynamic tooltip", embedded: true }];
-    const areas = new Areas({ config, bus });
+    const areas = new Areas({ config, bus }, { default: "main", global: ["shortcuts"], definitions: { main: { prefix: "/main", modules: ["menu"] } } });
     areas.registerSource("dynamic-children", { resolve() { return dynamicItems; } });
     areas.init({ modules: { getModuleById(id) { return id === module.id ? module : null; } } });
 
@@ -92,19 +89,15 @@ function createAreas() {
         addEventListener() {},
         emit() {}
     };
-    const config = {
-        xshell: {
-            assets: { basePath: "/_assets" },
-            areas: {
-                default: "sales",
-                global: [],
-                definitions: {
-                    sales: { prefix: "/sales", modules: ["customer"] },
-                    admin: { prefix: "/admin", modules: ["customer"] },
-                    main: { prefix: "/main", modules: ["shell"] },
-                    demo: { prefix: "/demo", modules: ["x-demo"] }
-                }
-            }
+    const config = { modules: { customer: {}, shell: {}, "x-demo": {} }, xshell: { assets: { basePath: "/_assets" } } };
+    const options = {
+        default: "sales",
+        global: [],
+        definitions: {
+            sales: { prefix: "/sales", modules: ["customer"] },
+            admin: { prefix: "/admin", modules: ["customer"] },
+            main: { prefix: "/main", modules: ["shell"] },
+            demo: { prefix: "/demo", modules: ["x-demo"] }
         }
     };
     const module = {
@@ -137,7 +130,7 @@ function createAreas() {
         config: { menus: { navigation: "demo-runtime-menu-source" } }
     };
     const shellModule = { id: "shell", config: { menus: {} } };
-    const areas = new Areas({ config, bus });
+    const areas = new Areas({ config, bus }, options);
     areas.registerSource("demo-runtime-menu-source", {
         resolve() {
             return [{
@@ -255,35 +248,23 @@ test("Navigation.init preserves path-mode fragments on load and popstate without
 });
 
 function createSharedRouteContext({ definitions, defaultArea, mode = "path", basePath = "", baseUrl = "https://example.test/" }) {
-    const config = {
-        xshell: {
-            assets: { basePath: "/_assets" },
-            areas: { default: defaultArea, global: [], definitions }
-        }
-    };
+    const config = { modules: { shared: {} }, xshell: { assets: { basePath: "/_assets" } } };
     const module = {
         id: "shared",
         routes: { "/repository/{repositoryId}/items": "/_assets/shared/pages/items.js" },
         config: { menus: {} }
     };
-    const areas = new Areas({ config, bus: { addEventListener() {}, emit() {} } });
+    const areas = new Areas({ config, bus: { addEventListener() {}, emit() {} } }, { default: defaultArea, global: [], definitions });
     areas.init({ modules: { getModuleById(id) { return id === module.id ? module : null; } } });
     return { areas, navigation: createNavigation({ areas, mode, basePath, baseUrl }), module };
 }
 
 function createNoRouteContext() {
-    const config = {
-        xshell: {
-            assets: { basePath: "/_assets" },
-            areas: {
-                default: "empty",
-                global: [],
-                definitions: { empty: { prefix: "/empty", modules: ["empty"] } }
-            }
-        }
-    };
+    const config = { modules: { empty: {} }, xshell: { assets: { basePath: "/_assets" } } };
     const module = { id: "empty", config: { menus: {} } };
-    const areas = new Areas({ config, bus: { addEventListener() {}, emit() {} } });
+    const areas = new Areas({ config, bus: { addEventListener() {}, emit() {} } }, {
+        default: "empty", global: [], definitions: { empty: { prefix: "/empty", modules: ["empty"] } }
+    });
     areas.init({ modules: { getModuleById(id) { return id === module.id ? module : null; } } });
     return { areas, navigation: createNavigation({ areas }) };
 }
@@ -382,18 +363,14 @@ function createRouteAreas() {
         addEventListener() {},
         emit() {}
     };
-    const config = {
-        xshell: {
-            assets: { basePath: "/_assets" },
-            areas: {
-                default: "combined",
-                global: [],
-                definitions: {
-                    combined: { prefix: "/demo", modules: ["first", "second"] },
-                    "first-only": { prefix: "/first", modules: ["first"] },
-                    "outsider-only": { prefix: "/outsider", modules: ["outsider"] }
-                }
-            }
+    const config = { modules: { first: {}, second: {}, outsider: {} }, xshell: { assets: { basePath: "/_assets" } } };
+    const options = {
+        default: "combined",
+        global: [],
+        definitions: {
+            combined: { prefix: "/demo", modules: ["first", "second"] },
+            "first-only": { prefix: "/first", modules: ["first"] },
+            "outsider-only": { prefix: "/outsider", modules: ["outsider"] }
         }
     };
     const modules = new Map([
@@ -407,7 +384,7 @@ function createRouteAreas() {
         }, config: { menus: {} } }],
         ["outsider", { id: "outsider", routes: { "/outsider": "/_assets/outsider/pages/index.js" }, config: { menus: {} } }]
     ]);
-    const areas = new Areas({ config, bus });
+    const areas = new Areas({ config, bus }, options);
     areas.init({ modules: { getModuleById(id) { return modules.get(id) || null; } } });
     return areas;
 }

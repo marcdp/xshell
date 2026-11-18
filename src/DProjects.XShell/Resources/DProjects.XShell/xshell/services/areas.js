@@ -1,8 +1,37 @@
 
-import { normalizeAreaPrefix } from "./utils/area.js";
+import { normalizeAreaPrefix } from "../utils/area.js";
 
 // class
 export default class Areas {
+
+    // options
+    static optionsSchema = {
+        type: "object",
+        required: ["default", "global", "definitions"],
+        properties: {
+            default: { type: ["string", "null"], minLength: 1, description: "Identifier of the default area." },
+            global: { type: "array", items: { type: "string" }, description: "Global menu names." },
+            definitions: {
+                type: "object",
+                additionalProperties: {
+                    type: "object",
+                    properties: {
+                        prefix: { type: "string", description: "Application navigation Path prefix assigned to the Area." },
+                        label: { type: "string", description: "Human-readable area label." },
+                        icon: { type: ["string", "null"], description: "Optional icon associated with the area." },
+                        modules: { type: "array", items: { type: "string" }, description: "Modules composed into the area, in composition order." },
+                        order: { type: "number", description: "Optional ordering value for the area." },
+                        description: { type: "string", description: "Human-readable area description." }
+                    },
+                    additionalProperties: false,
+                    description: "Configuration of a navigation area."
+                },
+                description: "Area definitions keyed by area identifier."
+            }
+        },
+        additionalProperties: false,
+        description: "Application areas and the default active area."
+    };
 
     // vars
     _config = null;
@@ -15,13 +44,31 @@ export default class Areas {
     _globalMenus = {};
 
     // ctor
-    constructor({ config, bus }) {
+    constructor({ config, bus }, options = {}) {
+        // initialize injected dependencies and Area configuration
         this._config = config;
         this._bus = bus;
         this._assetsBasePath = config.xshell.assets.basePath;
-        const areasConfig = config.xshell.areas || {};
-        const definitions = areasConfig.definitions || {};
-        const defaultAreaId = areasConfig.default;
+        const definitions = options.definitions || {};
+        const defaultAreaId = options.default;
+
+        // validate semantic Area configuration against the effective modules
+        if (defaultAreaId !== null && !Object.hasOwn(definitions, defaultAreaId)) throw new Error(`Default area '${defaultAreaId}' is not defined.`);
+        const prefixes = new Map();
+        for (const [areaId, area] of Object.entries(definitions)) {
+            const prefix = normalizeAreaPrefix(area.prefix);
+            if (prefixes.has(prefix)) throw new Error(`Areas '${prefixes.get(prefix)}' and '${areaId}' have duplicate normalized prefix '${prefix}'.`);
+            prefixes.set(prefix, areaId);
+            for (const moduleId of area.modules || []) {
+                if (!Object.hasOwn(config.modules, moduleId)) throw new Error(`Area '${areaId}' references unknown module '${moduleId}'.`);
+            }
+        }
+        for (const menuName of options.global || []) {
+            for (const [moduleId, module] of Object.entries(config.modules)) {
+                const menu = module.menus?.[menuName];
+                if (menu !== undefined && !Array.isArray(menu)) throw new Error(`Global menu '${menuName}' from module '${moduleId}' must be a static array.`);
+            }
+        }
 
         // create navigation contexts without accepting a configured home
         const areas = [];
@@ -51,7 +98,7 @@ export default class Areas {
 
         // create globalmenus
         this._globalMenus = {};
-        for (const globalMenuId of config.xshell.areas?.global) {
+        for (const globalMenuId of options.global || []) {
             const globalMenu = [];
             for(const module of Object.values(config.modules)) {
                 const menuDefinition = module.menus?.[globalMenuId];

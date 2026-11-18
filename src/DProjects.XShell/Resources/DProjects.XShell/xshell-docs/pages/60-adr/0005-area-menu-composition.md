@@ -11,7 +11,7 @@ The earlier Area-keyed menu shape coupled module definitions to one application'
 
 ## Decision
 
-The root application owns `xshell.areas.default` and `xshell.areas.definitions.<id>`. Each Area defines a navigation prefix and lists
+The root application owns `xshell.services.areas.options.default` and `xshell.services.areas.options.definitions.<id>`. Each Area defines a navigation prefix and lists
 participating canonical module ids. A module owns reusable contributions to arbitrary named menu slots under
 `modules.<module-id>.menus.<menu-name>`. A menu item may have an optional friendly `path` and a canonical XShell navigation target `href`. Areas
 assembles effective menus for each Area in the listed module order and applies the Area prefix to both local values. The first navigation item
@@ -25,7 +25,8 @@ references. Area membership does not create module dependencies or routes.
 
 ## Consequences and open work
 
-The runtime constructs canonical modules first, then Areas composes effective menus and homes before Navigation starts. Menu UI uses
+The runtime constructs the declarative Areas service before module controllers start, then constructs canonical modules and invokes `Areas.init()`
+to compose effective menus and homes before Navigation starts. Menu UI uses
 `path || href`; Navigation resolves a friendly path to canonical Area-aware href before passing it to `x-page`. `x-page` strips a matched Area
 prefix only for module resource lookup. Breadcrumb lookup uses the canonical href's Area before Navigation emits an Area change. Dynamic menu
 updates retain `xshell:menus:change`; Area changes use `xshell:area:change`.

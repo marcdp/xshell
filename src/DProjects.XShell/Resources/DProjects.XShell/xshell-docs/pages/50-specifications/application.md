@@ -33,11 +33,15 @@ The root uses an ordinary module manifest:
         }
     },
     "xshell": {
-        "areas": {
-            "default": "shop",
-            "global": [],
-            "definitions": {
-                "shop": { "prefix": "shop", "modules": ["shop"] }
+        "services": {
+            "areas": {
+                "options": {
+                    "default": "shop",
+                    "global": [],
+                    "definitions": {
+                        "shop": { "prefix": "shop", "modules": ["shop"] }
+                    }
+                }
             }
         }
     }

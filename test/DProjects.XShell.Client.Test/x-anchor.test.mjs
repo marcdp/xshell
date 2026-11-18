@@ -57,7 +57,7 @@ globalThis.window = {
 };
 
 const { createComponentClassFromJsDefinition } = await import("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/loaders/component-js.js");
-const { default: Areas } = await import("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/areas.js");
+const { default: Areas } = await import("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/areas.js");
 const { default: Navigation } = await import("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/navigation.js");
 const { default: Resolver } = await import("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/resolver.js");
 const { default: xshell } = await import("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/xshell.js");
@@ -108,22 +108,15 @@ function createPageResolver() {
 }
 
 function createRouteAreas() {
-    const config = {
-        xshell: {
-            assets: { basePath: "/_assets" },
-            areas: {
-                default: "demo",
-                global: [],
-                definitions: { demo: { prefix: "/demo", modules: ["x-demo"] } }
-            }
-        }
-    };
+    const config = { modules: { "x-demo": {} }, xshell: { assets: { basePath: "/_assets" } } };
     const module = {
         id: "x-demo",
         routes: { "/repository/{repositoryId}/items": "/_assets/x-demo/pages/items.js" },
         config: { menus: {} }
     };
-    const areas = new Areas({ config, bus: { addEventListener() {}, emit() {} } });
+    const areas = new Areas({ config, bus: { addEventListener() {}, emit() {} } }, {
+        default: "demo", global: [], definitions: { demo: { prefix: "/demo", modules: ["x-demo"] } }
+    });
     areas.init({ modules: { getModuleById(id) { return id === module.id ? module : null; } } });
     return areas;
 }

@@ -9,15 +9,19 @@ export default {
         <p>An Area is the active navigation context: it selects participating Modules, composes their menu contributions, and establishes a URL prefix. It does not create additional Module instances.</p>
 
         <h2>Area configuration</h2>
-        <p>Areas are configured under <code>xshell.areas</code>. The cookbook defines a default Area with a URL prefix and a list of participating Modules.</p>
+        <p>Areas are configured under <code>xshell.services.areas.options</code>. The cookbook defines a default Area with a URL prefix and a list of participating Modules.</p>
         <pre x-pre><code>"xshell": {
-    "areas": {
-        "default": "cookbook",
-        "definitions": {
-            "cookbook": {
-                "prefix": "cookbook",
-                "label": "Cookbook",
-                "modules": ["x-demo"]
+    "services": {
+        "areas": {
+            "options": {
+                "default": "cookbook",
+                "definitions": {
+                    "cookbook": {
+                        "prefix": "cookbook",
+                        "label": "Cookbook",
+                        "modules": ["x-demo"]
+                    }
+                }
             }
         }
     }

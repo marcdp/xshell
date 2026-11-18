@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import Services from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services.js";
+import Areas from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/areas.js";
 import Commands from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/commands.js";
 import Dialog from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/dialog.js";
 import JsonValidator from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/json-validator.js";
@@ -52,7 +53,7 @@ const timeoutSchema = {
 
 test("every repository-configured service implementation declares an optionsSchema object", () => {
     for (const implementation of [
-        Commands, Dialog, JsonValidator, Navigation, Preferences, Registry, Secrets, Tasks, Temp,
+        Areas, Commands, Dialog, JsonValidator, Navigation, Preferences, Registry, Secrets, Tasks, Temp,
         Markdown, Theme, Toast,
         Principal, Session, SignIn,
         XVault
@@ -205,6 +206,78 @@ test("Navigation validates service options before lazy singleton construction", 
         } finally {
             globalThis.document = originalDocument;
         }
+    }
+});
+
+test("Areas validates options and injects config and bus before lazy singleton construction", async () => {
+    const options = { default: "main", global: [], definitions: { main: { prefix: "/main", modules: ["test"] } } };
+    const { bus, config, services } = createServices(Areas, options, "areas");
+    bus.addEventListener = () => {};
+    config.xshell.assets = { basePath: "/_assets" };
+    services.register("bus", bus);
+    services.register("config", config);
+
+    await services.init();
+
+    assert.equal(services.getServiceInfo("areas").state, "registered");
+    const first = services.resolve("areas");
+    assert.strictEqual(services.resolve("areas"), first);
+    assert.strictEqual(first._bus, bus);
+    assert.strictEqual(first._config, config);
+    assert.equal(first.getDefaultArea().id, "main");
+});
+
+test("Areas rejects missing, invalid, and unknown service options without constructing", async () => {
+    for (const [options, expected] of [
+        [{ global: [], definitions: {} }, /required property "default"/],
+        [{ default: "", global: [], definitions: {} }, /#\/default/],
+        [{ default: null, global: [], definitions: {}, unknown: true }, /additional properties schema/],
+        [{ default: null, global: [], definitions: { main: { unknown: true } } }, /additional properties schema/]
+    ]) {
+        const { config, services } = createServices(Areas, options, "areas");
+        config.xshell.assets = { basePath: "/_assets" };
+        services.register("bus", { addEventListener() {} });
+        services.register("config", config);
+        await services.init();
+        assert.throws(() => services.resolve("areas"), expected);
+        assert.equal(services.getServiceInfo("areas").state, "registered");
+    }
+});
+
+test("Navigation receives the configured Areas singleton through service injection", async () => {
+    const definitions = {
+        areas: { contract: "areas", implementation: "/services/areas.js", options: { default: null, global: [], definitions: {} } },
+        navigation: { contract: "navigation", implementation: "/services/navigation.js", options: { mode: "path" } }
+    };
+    const implementations = {
+        "esm:/services/areas.js": Areas,
+        "esm:/services/navigation.js": Navigation
+    };
+    const config = {
+        app: { basePath: "", baseUrl: "https://example.test/" },
+        modules: { test: { files: [] } },
+        xshell: { assets: { basePath: "/_assets" }, services: definitions, files: [] }
+    };
+    const bus = { addEventListener() {}, emit() {} };
+    const resolver = { resolve() { return { definition: { moduleId: "test" } }; } };
+    const services = new Services({
+        config,
+        loader: { async load(resource) { return implementations[resource]; } },
+        contracts: { getContractItemById(id) { return { id, contract: { methods: {}, properties: {} } }; } },
+        resolver,
+        bus
+    });
+    services.register("bus", bus);
+    services.register("config", config);
+    services.register("resolver", resolver);
+    const originalDocument = globalThis.document;
+    globalThis.document = { body: { querySelectorAll() { return []; } } };
+    try {
+        await services.init();
+        const navigation = services.resolve("navigation");
+        assert.strictEqual(navigation._areas, services.resolve("areas"));
+    } finally {
+        globalThis.document = originalDocument;
     }
 });
 

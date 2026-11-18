@@ -3,15 +3,15 @@ import { readFileSync, existsSync, readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import test from 'node:test';
-import Areas from '../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/areas.js';
+import Areas from '../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/areas.js';
 
 const root = fileURLToPath(new URL('../../src/DProjects.XShell/Resources/DProjects.XShell/x-demo/', import.meta.url));
 const config = JSON.parse(readFileSync(path.join(root, 'manifest.jsonc'), 'utf8').replace(/^\/\/[^\n]*\n/, ''));
 
 test('x-demo is a separate root with resolvable module references', () => {
     assert.deepEqual(Object.keys(config.modules).filter(id => !config.modules[id].configUrl), ['x-demo']);
-    assert.equal(config.xshell.areas.default, 'cookbook');
-    assert.deepEqual(config.xshell.areas.definitions.cookbook.modules, ['x-demo']);
+    assert.equal(config.xshell.services.areas.options.default, 'cookbook');
+    assert.deepEqual(config.xshell.services.areas.options.definitions.cookbook.modules, ['x-demo', 'x-identity']);
     for (const [id, module] of Object.entries(config.modules)) {
         if (id === 'x-demo') continue;
         assert.match(module.configUrl, /^url:\.\.\//);
@@ -31,22 +31,20 @@ test('cookbook navigation derives ordered Pages from the file inventory', () => 
     const module = { id: 'x-demo', config: { menus: { navigation: '/_assets/x-demo/pages' } } };
     const areas = new Areas({
         config: {
-            xshell: { assets: { basePath: '/_assets' }, areas: { default: 'cookbook', global: [], definitions: {
-                cookbook: { prefix: '/cookbook', modules: ['x-demo'] }
-            } } },
+            xshell: { assets: { basePath: '/_assets' } },
             modules: { 'x-demo': { label: 'XShell Cookbook', files: files.map(file => ({ path: `/_assets/x-demo/${file.replace(/\.js$/, file.includes('html-page') ? '.html' : '.js')}` })) } }
         },
         bus: { addEventListener() {} }
-    });
+    }, { default: 'cookbook', global: [], definitions: { cookbook: { prefix: '/cookbook', modules: ['x-demo'] } } });
     areas.init({ modules: { getModuleById() { return module; } } });
     const menu = areas.getMenu('navigation');
     assert.equal(areas.getArea('cookbook').home, '/cookbook/');
     assert.deepEqual(menu[0].children.map(item => item.label),
         ['Components', 'Pages', 'Navigation', 'Dialogs', 'Filesystem', 'Stores', 'Modules', 'Templates', 'Ai', 'Advanced']);
     assert.deepEqual(menu[0].children[0].children.map(item => item.label),
-        ['Anchors', 'Buttons', 'Indicators', 'Forms', 'Data Display', 'Listviews', 'Treeviews', 'Layout', 'Editors', 'Composition', 'Contract', 'Lifecycle']);
+        ['Anchors', 'Buttons', 'Indicators', 'Forms', 'Data Display', 'Listviews', 'Treeviews', 'Layout', 'Editors', 'Composition', 'Contract', 'Lifecycle', 'Schema', 'Wizard']);
     assert.deepEqual(menu[0].children[2].children.map(item => item.label),
-        ['Basic', 'Areas', 'Stack', 'Embedded', 'Resolution']);
+        ['Basic', 'Areas', 'Stack', 'Embedded', 'Resolution', 'Url Rewriting']);
     const visited = new Set();
     const walk = items => {
         for (const item of items) {

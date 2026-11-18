@@ -1,4 +1,3 @@
-import Areas from "./areas.js";
 import Bus from "./bus.js";
 import Contracts from "./contracts.js";
 import Loader from "./loader.js";
@@ -8,14 +7,12 @@ import Resolver from "./resolver.js";
 import Services from "./services.js";
 import XPage from "./x-page.js";
 import JsonValidator from "./services/json-validator.js";
-import { normalizeAreaPrefix } from "./utils/area.js";
 import { compileRoute } from "./utils/route.js";
 
 // class
 class XShell {
 
     //fields
-    _areas = null;
     _bus = null;
     _config = null;
     _contracts = null;
@@ -29,7 +26,7 @@ class XShell {
     }
 
     //props
-    get areas() { return this._areas; }
+    get areas() { return this._services.resolve("areas"); }
     get bus() { return this._bus; }
     get config() { return this._config; }
     get contracts() { return this._contracts; }
@@ -61,14 +58,12 @@ class XShell {
         });
         await this.validateConfig(config);
         // initialize rest of the services
-        this._areas = new Areas( { bus: this._bus, config: config } );
         this._contracts = new Contracts( { config: config, loader: this._loader } );
         this._services = new Services( {config, loader: this._loader, contracts: this._contracts, resolver: this._resolver, bus: this._bus } );
         this._modules = new Modules( { bus: this._bus, config: config, loader: this._loader, resolver: this._resolver, document: document, services: this._services } );
         // compose contracts list in memory from modules             
         await this._contracts.init();
         // services
-        this._services.register("areas", this._areas, { contractItem: this._contracts.getContractItemById("areas")});
         this._services.register("bus", this._bus, { contractItem: this._contracts.getContractItemById("bus")});
         this._services.register("config", this._config, { contractItem: this._contracts.getContractItemById("config")});
         this._services.register("loader", this._loader, { contractItem: this._contracts.getContractItemById("loader")});
@@ -79,10 +74,12 @@ class XShell {
         await this._services.init();
         // Initialize the declaratively registered Registry
         await this._services.resolve("registry").init();
-        // modules
+        // Construct and validate Areas before module controllers execute
+        const areas = this._services.resolve("areas");
+        // Initialize Modules and their controllers
         await this._modules.init();  
-        // areas
-        this._areas.init({ modules: this._modules });
+        // Compose effective Areas after Modules initialization
+        areas.init({ modules: this._modules });
         // initialize the declaratively registered Navigation service
         await this._services.resolve("navigation").init();
         
@@ -98,19 +95,6 @@ class XShell {
             const message = detail?.error ?? "Schema validation failed.";
             throw new Error(`Invalid config at '${location}': ${message}`, { cause: result.errors });
         }
-        // validate static Area configuration
-        const definitions = config.xshell.areas.definitions;
-        const defaultAreaId = config.xshell.areas.default;
-        if (defaultAreaId !== null && !Object.hasOwn(definitions, defaultAreaId)) throw new Error(`Default area '${defaultAreaId}' is not defined.`);
-        const prefixes = new Map();
-        for (const [areaId, area] of Object.entries(definitions)) {
-            const prefix = normalizeAreaPrefix(area.prefix);
-            if (prefixes.has(prefix)) throw new Error(`Areas '${prefixes.get(prefix)}' and '${areaId}' have duplicate normalized prefix '${prefix}'.`);
-            prefixes.set(prefix, areaId);
-            for (const moduleId of area.modules || []) {
-                if (!Object.hasOwn(config.modules, moduleId)) throw new Error(`Area '${areaId}' references unknown module '${moduleId}'.`);
-            }
-        }
         // validate routes with the same compiler used by Navigation
         for (const [moduleId, module] of Object.entries(config.modules)) {
             for (const path of Object.keys(module.routes || {})) {
@@ -119,13 +103,6 @@ class XShell {
                 } catch (cause) {
                     throw new Error(`Module '${moduleId}' declares invalid route '${path}'.`, { cause });
                 }
-            }
-        }
-        // global menu composition accepts only static arrays
-        for (const menuName of config.xshell.areas.global) {
-            for (const [moduleId, module] of Object.entries(config.modules)) {
-                const menu = module.menus?.[menuName];
-                if (menu !== undefined && !Array.isArray(menu)) throw new Error(`Global menu '${menuName}' from module '${moduleId}' must be a static array.`);
             }
         }
     }

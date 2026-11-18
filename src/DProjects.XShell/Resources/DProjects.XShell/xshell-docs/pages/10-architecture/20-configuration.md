@@ -42,10 +42,14 @@ Module specifications are normally authored as `manifest.jsonc`. A representativ
         }
     },
     "xshell": {
-        "areas": {
-            "default": "shop",
-            "definitions": {
-                "shop": { "prefix": "shop", "modules": ["shop"] }
+        "services": {
+            "areas": {
+                "options": {
+                    "default": "shop",
+                    "definitions": {
+                        "shop": { "prefix": "shop", "modules": ["shop"] }
+                    }
+                }
             }
         }
     }

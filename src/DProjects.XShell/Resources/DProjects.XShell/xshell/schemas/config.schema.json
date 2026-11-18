@@ -50,7 +50,7 @@
     },    
     "xshell": {
       "type": "object",
-      "required": ["version", "assets", "areas", "resolver", "ui", "configUrl", "serviceWorker", "files"],
+      "required": ["version", "assets", "resolver", "ui", "configUrl", "serviceWorker", "files"],
       "properties": {
         "version": {"type": "string", "description": "XShell runtime version."},
         "configUrl": {"type": "string", "format": "uri", "description": "Fully qualified absolute URL of the normalized XShell configuration document."},
@@ -59,7 +59,6 @@
         "hash": {"type": "string", "minLength": 1, "description": "Generated immutable package-generation hash when published."},
         "builtAt": {"type": "string", "format": "date-time", "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$", "description": "Optional UTC time when the immutable XShell package was originally built by pack; excluded from canonical hashing."},
         "ui": {"$ref": "#/$defs/xshellUi", "description": "Global ui settings."},
-        "areas": {"$ref": "#/$defs/xshellAreas", "description": "Application area configuration."},
         "resolver": {"$ref": "#/$defs/resolver", "description": "Logical resource resolver configuration."},
         "services": {"$ref": "#/$defs/xshellServices", "description": "Services configuration."},
         "files": {"type": "array", "items": {"$ref": "#/$defs/file"}, "description": "Normalized virtual resource inventory for the XShell framework."}
@@ -98,34 +97,6 @@
         "exceptions": {"type": "array", "items": {"type": "string", "format": "uri"}, "description": "Configuration document URLs retained as mapping metadata."}
       },
       "additionalProperties": false
-    },
-    "xshellAreas": {
-      "type": "object",
-      "required": ["default", "global", "definitions"],
-      "properties": {
-        "default": {"type": ["string", "null"], "minLength": 1, "description": "Identifier of the default area."},
-        "global": { "type": "array", "items": {"type": "string"}, "description": "Global menu names."},
-        "definitions": {"type": "object", "additionalProperties": {"$ref": "#/$defs/xshellArea"}, "description": "Area definitions keyed by area identifier."}
-      },
-      "additionalProperties": false,
-      "description": "Application areas and the default active area."
-    },
-    "xshellArea": {
-      "type": "object",
-      "properties": {
-        "prefix": {"type": "string", "description": "Application navigation Path prefix assigned to the Area."},
-        "label": {"type": "string", "description": "Human-readable area label."},
-        "icon": {"type": ["string", "null"], "description": "Optional icon associated with the area."},
-        "modules": {
-          "type": "array",
-          "items": {"type": "string"},
-          "description": "Modules composed into the area, in composition order."
-        },
-        "order": {"type": "number", "description": "Optional ordering value for the area."},
-        "description": {"type": "string", "description": "Human-readable area description."}
-      },
-      "additionalProperties": false,
-      "description": "Configuration of a navigation area."
     },
     "xshellUi": {
       "type": "object",

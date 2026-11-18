@@ -426,7 +426,7 @@ test("configuration path expressions normalize regardless of their owning proper
             literal: "ordinary text",
             unrelated: { label: "/one", tooltip: "/two", arbitrary: "/three" }
         }, routes: { "/home": "/pages/index.js" } }) },
-        xshell: { areas: { definitions: { main: { prefix: "/public", label: "Main" } } } }
+        xshell: { services: { areas: { options: { definitions: { main: { prefix: "/public", label: "Main" } } } } } }
     };
     const graph = await discover(root);
     assert.deepEqual(plain(graph.rootNode.config.modules.app.params), {
@@ -439,8 +439,8 @@ test("configuration path expressions normalize regardless of their owning proper
             arbitrary: "/_assets/app/1.0.0.dev/three"
         }
     });
-    assert.equal(graph.rootNode.config.xshell.areas.definitions.main.prefix, "/_assets/app/1.0.0.dev/public");
-    assert.equal(graph.rootNode.config.xshell.areas.definitions.main.label, "Main");
+    assert.equal(graph.rootNode.config.xshell.services.areas.options.definitions.main.prefix, "/_assets/app/1.0.0.dev/public");
+    assert.equal(graph.rootNode.config.xshell.services.areas.options.definitions.main.label, "Main");
     assert.equal(graph.rootNode.config.modules.app.routes["/home"], "/_assets/app/1.0.0.dev/pages/index.js");
 });
 
@@ -479,11 +479,11 @@ test("configuration values normalize generically across resolver, service, UI, a
         modules: { x: definition("x") },
         xshell: {
             resolver: { anyType: { anyRule: { src: "/resources/{name}.js", loader: "/literal-loader" } } },
-            services: { foo: { implementation: "/services/foo.js", contract: "/literal-contract" }, bar: { implementation: "./services/bar.js" },
-                dialog: { options: { confirm: "url:./dialog.js" } } },
             ui: { component: { lazy: "x-lazy", error: "/components/error.js", unrelated: "/literal" }, layout: { main: "x-layout-main" },
                 unrelated: { label: "/literal" } },
-            areas: { definitions: { main: { prefix: "/public", icon: "/icons/main.svg", label: "/literal-label" } } }
+            services: { foo: { implementation: "/services/foo.js", contract: "/literal-contract" }, bar: { implementation: "./services/bar.js" },
+                dialog: { options: { confirm: "url:./dialog.js" } },
+                areas: { options: { definitions: { main: { prefix: "/public", icon: "/icons/main.svg", label: "/literal-label" } } } } }
         }
     };
     const xshell = plain((await discover(root)).rootNode.config.xshell);
@@ -499,9 +499,9 @@ test("configuration values normalize generically across resolver, service, UI, a
     assert.equal(xshell.ui.component.unrelated, "/_assets/x/1.0.0.dev/literal");
     assert.equal(xshell.ui.layout.main, "x-layout-main");
     assert.equal(xshell.ui.unrelated.label, "/_assets/x/1.0.0.dev/literal");
-    assert.equal(xshell.areas.definitions.main.prefix, "/_assets/x/1.0.0.dev/public");
-    assert.equal(xshell.areas.definitions.main.icon, "/_assets/x/1.0.0.dev/icons/main.svg");
-    assert.equal(xshell.areas.definitions.main.label, "/_assets/x/1.0.0.dev/literal-label");
+    assert.equal(xshell.services.areas.options.definitions.main.prefix, "/_assets/x/1.0.0.dev/public");
+    assert.equal(xshell.services.areas.options.definitions.main.icon, "/_assets/x/1.0.0.dev/icons/main.svg");
+    assert.equal(xshell.services.areas.options.definitions.main.label, "/_assets/x/1.0.0.dev/literal-label");
 });
 
 test("assets.url requires an explicit physical or application URL", async () => {

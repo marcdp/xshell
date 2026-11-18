@@ -48,7 +48,7 @@ index entries. It does not discover packages from `configUrl` entries inside the
 cycles are rejected during merge, and selecting incompatible generations for one module id is an error.
 
 The current `x-demo/manifest.jsonc` is representative: it defines `modules.x-demo`, declares `module:...` dependencies, and contributes application
-composition under `xshell.areas`.
+composition under `xshell.services.areas.options`.
 
 ## Resolution and effective definitions
 

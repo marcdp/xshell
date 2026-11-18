@@ -19,19 +19,24 @@ This composition fragment omits module metadata/defaults and other effective con
         }
     },
     "xshell": {
-        "areas": {
-            "default": "customers",
-            "global": [],
-            "definitions": {
-                "customers": { "prefix": "customers", "label": "Customers", "modules": ["reports"] },
-                "inventory": { "prefix": "inventory", "label": "Inventory", "modules": ["reports"] }
+        "services": {
+            "areas": {
+                "options": {
+                    "default": "customers",
+                    "global": [],
+                    "definitions": {
+                        "customers": { "prefix": "customers", "label": "Customers", "modules": ["reports"] },
+                        "inventory": { "prefix": "inventory", "label": "Inventory", "modules": ["reports"] }
+                    }
+                }
             }
         }
     }
 }
 ```
 
-Each `xshell.areas.definitions.<id>` entry may set `prefix`, `label`, `icon`, `modules`, `order`, and descriptive `description`. The `modules` array
+Each `xshell.services.areas.options.definitions.<id>` entry may set `prefix`, `label`, `icon`, `modules`, `order`, and descriptive `description`.
+The `modules` array
 sets participation
 and menu contribution order. The effective schema rejects a configured Area `home`; runtime derives it from menus. Root ownership is an architectural convention: bootstrap can merge
 `xshell` fragments from imported configurations. Arrays, including `area.modules`, concatenate during that merge.
@@ -70,7 +75,7 @@ the named menu contribution:
 Here `customer-pages` supplies only `Customers` children, while `report-tools` supplies the entire `tools` menu. Source names are runtime lookup
 identifiers, not URLs or resolver entries. They provide runtime data without mutating the readonly effective configuration.
 Named Area menu sources are registered during module startup, so configuration validation does not check whether they exist. Global menu slots
-listed in `xshell.areas.global` instead require static array contributions from modules; strings are invalid for those slots.
+listed in `xshell.services.areas.options.global` instead require static array contributions from modules; strings are invalid for those slots.
 
 The bundled `x-demo` and `xshell-docs` modules use `"navigation": "/pages"`. Areas derives a hierarchy from each module's normalized
 `moduleConfig.files` inventory. It recognizes `.js`, `.html`, and `.md` Pages; HTML destinations become `.js`, while Markdown retains `.md`.
@@ -141,7 +146,7 @@ See [Navigation](../10-architecture/120-navigation.md), [Configuration](../10-ar
 
 ## Global menus
 
-`xshell.areas.global` is the required array of menu names to compose globally from configured modules.
+`xshell.services.areas.options.global` is the required array of menu names to compose globally from configured modules.
 Current global composition expects array contributions; registered string sources are handled by Area composition, not this global path.
 Global items do not receive an Area prefix.
 

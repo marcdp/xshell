@@ -63,10 +63,17 @@ export function rewrite(el, attr, type, url, context) {
     if (type === "resource") return url.startsWith("#") ? url : resolveLocalUrl(url, source, type, false);
     if (type === "virtual_navigation") return resolveLocalUrl(url, source, type, true);
     if (type === "navigation") {
+        // Resolve the navigation URL
         const virtualUrl = resolveLocalUrl(url, source, type, true);
-        const navigationMode = context.services.navigation.mode;
         if (!source.moduleBase) return virtualUrl;
-        return navigationMode === "hash" ? HASH_PREFIX + virtualUrl : source.absoluteOutput ? new URL(virtualUrl.replace(/^\/+/, ""), source.appBase).href : source.appPath + virtualUrl;
+
+        // Resolve navigation mode only when needed
+        const navigationMode = context.services.navigation.mode;
+        return navigationMode === "hash"
+            ? HASH_PREFIX + virtualUrl
+            : source.absoluteOutput
+                ? new URL(virtualUrl.replace(/^\/+/, ""), source.appBase).href
+                : source.appPath + virtualUrl;
     }
     throw new Error("Unknown rewrite type: " + type);
 }

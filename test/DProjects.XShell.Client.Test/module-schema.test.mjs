@@ -3,10 +3,30 @@ import test from "node:test";
 
 import ConfigSchema from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/schemas/config.schema.json" with { type: "json" };
 import { Validator } from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/vendor/json-schema/4.1.1/json-schema.js";
-import Areas from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/areas.js";
-import validateConfig from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/validation/config.js";
+import Areas from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/areas.js";
+import { compileRoute } from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/utils/route.js";
 
 const validator = new Validator(ConfigSchema, "2020-12");
+const areasOptionsValidator = new Validator(Areas.optionsSchema, "2020-12");
+
+const areaOptions = config => config.xshell.services.areas.options;
+
+async function validateConfig(name, config) {
+    // validate service-owned Area options and their semantic relationship to effective modules
+    if (!areasOptionsValidator.validate(areaOptions(config)).valid) throw new Error("Invalid config");
+    new Areas({ config, bus: { addEventListener() {} } }, areaOptions(config));
+
+    // preserve route validation as an unrelated XShell responsibility
+    for (const [moduleId, module] of Object.entries(config.modules)) {
+        for (const path of Object.keys(module.routes || {})) {
+            try {
+                compileRoute(path);
+            } catch (cause) {
+                throw new Error(`Module '${moduleId}' declares invalid route '${path}'.`, { cause });
+            }
+        }
+    }
+}
 
 const moduleDefinition = routes => ({
     label: "Test module",
@@ -40,8 +60,10 @@ function configuration(module) {
             version: "1.0.0",
             environment: "test",
             assets: { basePath: "/_assets", path: "/_assets/xshell", url: "https://example.test/xshell/" },
-            areas: { default: null, global: [], definitions: {} },
-            services: { navigation: { contract: "navigation", implementation: "/services/navigation.js", options: { mode: "path" } } },
+            services: {
+                areas: { contract: "areas", implementation: "/services/areas.js", options: { default: null, global: [], definitions: {} } },
+                navigation: { contract: "navigation", implementation: "/services/navigation.js", options: { mode: "path" } }
+            },
             resolver: {},
             ui: { layout: {}, component: {} },
             i18n: {
@@ -116,55 +138,55 @@ test("effective schema enforces the lexical module ID grammar", () => {
 
 test("effective config rejects unknown Area modules and accepts canonical ids", async () => {
     const config = configuration(moduleDefinition());
-    config.xshell.areas.definitions.admin = { modules: ["missing"] };
+    areaOptions(config).definitions.admin = { modules: ["missing"] };
     await assert.rejects(validateConfig("test", config), /Area 'admin' references unknown module 'missing'/);
 
-    config.xshell.areas.definitions.admin.modules = ["test"];
+    areaOptions(config).definitions.admin.modules = ["test"];
     await assert.doesNotReject(validateConfig("test", config));
 });
 
 test("effective config requires a defined Area when a default is configured", async () => {
     const config = configuration(moduleDefinition());
-    config.xshell.areas.default = "missing";
+    areaOptions(config).default = "missing";
     await assert.rejects(validateConfig("test", config), /Default area 'missing' is not defined/);
 
-    config.xshell.areas.default = "";
+    areaOptions(config).default = "";
     await assert.rejects(validateConfig("test", config), /Invalid config/);
 
-    config.xshell.areas.default = null;
+    areaOptions(config).default = null;
     await assert.doesNotReject(validateConfig("test", config));
 
-    config.xshell.areas.definitions.main = { prefix: "/main" };
-    config.xshell.areas.default = "main";
+    areaOptions(config).definitions.main = { prefix: "/main" };
+    areaOptions(config).default = "main";
     await assert.doesNotReject(validateConfig("test", config));
 });
 
 test("effective config rejects duplicate normalized Area prefixes", async () => {
     const config = configuration(moduleDefinition());
-    config.xshell.areas.definitions.first = { prefix: "demo" };
+    areaOptions(config).definitions.first = { prefix: "demo" };
     for (const duplicate of ["demo", "/demo/", "///demo///"]) {
-        config.xshell.areas.definitions.second = { prefix: duplicate };
+        areaOptions(config).definitions.second = { prefix: duplicate };
         await assert.rejects(validateConfig("test", config), /Areas 'first' and 'second' have duplicate normalized prefix '\/demo'/);
     }
 
-    config.xshell.areas.definitions.first.prefix = "";
-    config.xshell.areas.definitions.second.prefix = "/";
+    areaOptions(config).definitions.first.prefix = "";
+    areaOptions(config).definitions.second.prefix = "/";
     await assert.rejects(validateConfig("test", config), /Areas 'first' and 'second' have duplicate normalized prefix ''/);
 
-    config.xshell.areas.definitions.second.prefix = "/other/";
+    areaOptions(config).definitions.second.prefix = "/other/";
     await assert.doesNotReject(validateConfig("test", config));
 });
 
 test("validated Area configuration constructs with normalized prefixes and an explicit default", async () => {
     const config = configuration(moduleDefinition());
-    config.xshell.areas.default = "second";
-    config.xshell.areas.definitions = {
+    areaOptions(config).default = "second";
+    areaOptions(config).definitions = {
         first: { prefix: "///demo///" },
         second: { prefix: "/other/" }
     };
 
     await validateConfig("test", config);
-    const areas = new Areas({ config, bus: { addEventListener() {} } });
+    const areas = new Areas({ config, bus: { addEventListener() {} } }, areaOptions(config));
     assert.equal(areas.getArea("first").prefix, "/demo");
     assert.equal(areas.getDefaultArea().id, "second");
 });
@@ -179,14 +201,14 @@ test("effective config validates route grammar before runtime construction", asy
 
 test("global menus require arrays while ordinary named menu sources remain valid", async () => {
     const config = configuration(moduleDefinition());
-    config.xshell.areas.global = ["shortcuts"];
+    areaOptions(config).global = ["shortcuts"];
     config.modules.test.menus = { shortcuts: "runtime-shortcuts", tools: "runtime-tools" };
     await assert.rejects(validateConfig("test", config), /Global menu 'shortcuts' from module 'test' must be a static array/);
 
     config.modules.test.menus.shortcuts = [{ label: "Shortcut", href: "/pages/shortcut.js" }];
     await assert.doesNotReject(validateConfig("test", config));
 
-    config.xshell.areas.global = [];
+    areaOptions(config).global = [];
     config.modules.test.menus.shortcuts = "runtime-shortcuts";
     await assert.doesNotReject(validateConfig("test", config));
 });

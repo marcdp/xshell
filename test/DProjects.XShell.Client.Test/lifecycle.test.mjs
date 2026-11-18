@@ -760,11 +760,12 @@ test("x-page unmounts then unloads a replaced page and only unmounts on disconne
     }
     xshell._debug = { log() {} };
     xshell._config = { xshell: { ui: { layout: { embed: "x-layout-test" } } } };
-    xshell._areas = {
+    const areas = {
         resolveAreaId() { return ""; },
         getArea() { return null; },
         getMenuitemBreadcrumb() { return []; }
     };
+    xshell._services = { resolve(name) { if (name === "areas") return areas; throw new Error(`Unexpected service: ${name}`); } };
     xshell._modules = { resolveModuleId() { return "test"; } };
     xshell._loader = {
         async load(resource) {
@@ -817,7 +818,8 @@ test("x-page discards an older load without disturbing the newer active Page", a
     }
     xshell._debug = { log() {} };
     xshell._config = { xshell: { ui: { layout: { embed: "x-layout-test" } } } };
-    xshell._areas = { resolveAreaId() { return ""; }, getArea() { return null; }, getMenuitemBreadcrumb() { return []; } };
+    const areas = { resolveAreaId() { return ""; }, getArea() { return null; }, getMenuitemBreadcrumb() { return []; } };
+    xshell._services = { resolve(name) { if (name === "areas") return areas; throw new Error(`Unexpected service: ${name}`); } };
     xshell._modules = { resolveModuleId() { return "test"; } };
     xshell._loader = { async load(resource) { return resource === "page:/pages/a.js" ? PageA : PageB; } };
     const xpage = new XPage();
@@ -960,7 +962,8 @@ test("navigation shrinks three stack Pages to one after asynchronous final unloa
 test("x-page loads URLs containing error through the normal Page loader", async () => {
     const loaded = [];
     xshell._config = { xshell: { ui: { layout: { embed: "x-layout-test" } } } };
-    xshell._areas = { resolveAreaId() { return ""; }, getArea() { return null; }, getMenuitemBreadcrumb() { return []; } };
+    const areas = { resolveAreaId() { return ""; }, getArea() { return null; }, getMenuitemBreadcrumb() { return []; } };
+    xshell._services = { resolve(name) { if (name === "areas") return areas; throw new Error(`Unexpected service: ${name}`); } };
     xshell._modules = { resolveModuleId() { return "test"; } };
     xshell._loader = { async load(resource) {
         if (resource.startsWith("page:")) {

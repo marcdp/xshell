@@ -31,14 +31,18 @@
 
     // xshell 
     "xshell": {
-        "areas": {
-            "definitions": {
-                "xshell-diagnostics": {
-                    "prefix": "xshell-diagnostics",
-                    "label": "XShell diagnostics",
-                    "description": "Diagnostics for XShell",
-                    "icon": "xshell-diagnostics",
-                    "modules": [ "xshell-diagnostics" ]
+        "services": {
+            "areas": {
+                "options": {
+                    "definitions": {
+                        "xshell-diagnostics": {
+                            "prefix": "xshell-diagnostics",
+                            "label": "XShell diagnostics",
+                            "description": "Diagnostics for XShell",
+                            "icon": "xshell-diagnostics",
+                            "modules": [ "xshell-diagnostics" ]
+                        }
+                    }
                 }
             }
         }

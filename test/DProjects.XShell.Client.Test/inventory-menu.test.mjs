@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import Areas from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/areas.js";
+import Areas from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/areas.js";
 
 for (const [rootIndex, runtimeIndex] of [["index.js", "index.js"], ["index.html", "index.js"], ["index.md", "index.md"]]) {
 test(`inventory menu normalizes root ${rootIndex} and nested Page destinations`, () => {
@@ -13,12 +13,12 @@ test(`inventory menu normalizes root ${rootIndex} and nested Page destinations`,
     ];
     const module = { id: "x-demo", config: { menus: { navigation: "/_assets/x-demo/pages" } } };
     const config = {
-        xshell: { assets: { basePath: "/_assets" }, areas: { default: "demo", global: [], definitions: {
-            demo: { prefix: "/demo", modules: ["x-demo"] }
-        } } },
+        xshell: { assets: { basePath: "/_assets" } },
         modules: { "x-demo": { label: "Demo", files: paths.map(path => ({ path })) } }
     };
-    const areas = new Areas({ config, bus: { addEventListener() {} } });
+    const areas = new Areas({ config, bus: { addEventListener() {} } }, {
+        default: "demo", global: [], definitions: { demo: { prefix: "/demo", modules: ["x-demo"] } }
+    });
     areas.init({ modules: { getModuleById() { return module; } } });
     const root = areas.getMenu("navigation")[0];
     assert.equal(root.href, `/demo/_assets/x-demo/pages/${runtimeIndex}`);

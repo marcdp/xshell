@@ -12,14 +12,6 @@
             "basePath": "app:/_assets",
             "url": "url:./"
         },
-        // areas
-        "areas": {
-            "default": "main",
-            "global": ["shortcuts"],
-            "definitions": {
-            }
-        },
-
         // resolver
         "resolver": {
             "component": {
@@ -48,6 +40,15 @@
 
         // services
         "services": {
+            "areas": {
+                "contract": "areas",
+                "implementation": "/services/areas.js",
+                "options": {
+                    "default": "main",
+                    "global": ["shortcuts"],
+                    "definitions": {}
+                }
+            },
             "commands": {
                 "contract": "commands",
                 "implementation": "/services/commands.js"
