@@ -1,5 +1,4 @@
 import { generateId } from "./utils/ids.js";
-import xshell from "./xshell.js";
 
 
 // class
@@ -16,6 +15,8 @@ export default class Page {
     _icon = null;
     _result = null;
     _controller = null;
+    _bus = null;
+    _navigation = null;
 
     _host = null;
     _refs = null;
@@ -23,9 +24,11 @@ export default class Page {
     _unloaded = false;
 
     //ctor
-    constructor({ src, context }) {
+    constructor({ src, context, bus, navigation }) {
         this._src = src;
         this._context = context;
+        this._bus = bus;
+        this._navigation = navigation;
         this._id = generateId("page");
     }
 
@@ -57,7 +60,7 @@ export default class Page {
         this._label = value; 
         if (this._breadcrumb && this._breadcrumb.length > 0) this._breadcrumb[this._breadcrumb.length - 1].label = value;
         if (this._loaded) {
-            xshell.bus.emit("xshell:page:change", { src: this._src, id: this._id, label: this._label, description: this._description, result: this._result });
+            this._bus.emit("xshell:page:change", { src: this._src, id: this._id, label: this._label, description: this._description, result: this._result });
         }
     }
 
@@ -66,7 +69,7 @@ export default class Page {
         this._description = value; 
         if (this._breadcrumb && this._breadcrumb.length > 0) this._breadcrumb[this._breadcrumb.length - 1].description = value;
         if (this._loaded) {
-            xshell.bus.emit("xshell:page:change", { src: this._src, id: this._id, label: this._label, description: this._description, result: this._result });
+            this._bus.emit("xshell:page:change", { src: this._src, id: this._id, label: this._label, description: this._description, result: this._result });
         }
     }
 
@@ -78,7 +81,7 @@ export default class Page {
         this._icon = value; 
         if (this._breadcrumb && this._breadcrumb.length > 0) this._breadcrumb[this._breadcrumb.length - 1].icon = value;
         if (this._loaded) {
-            xshell.bus.emit("xshell:page:change", { src: this._src, id: this._id, label: this._label, description: this._description, result: this._result });
+            this._bus.emit("xshell:page:change", { src: this._src, id: this._id, label: this._label, description: this._description, result: this._result });
         }
     }
 
@@ -90,7 +93,7 @@ export default class Page {
     set result(value) { 
         this._result = value; 
         if (this._loaded) {
-            xshell.bus.emit("xshell:page:change", { src: this._src, id: this._id, label: this._label, description: this._description, result: this._result });
+            this._bus.emit("xshell:page:change", { src: this._src, id: this._id, label: this._label, description: this._description, result: this._result });
         }
     }
 
@@ -119,7 +122,7 @@ export default class Page {
         };
         await this.onCommand("load", params);
         // bus event
-        xshell.bus.emit("xshell:page:load", { src: this._src, id: this._id });
+        this._bus.emit("xshell:page:load", { src: this._src, id: this._id });
     }
     async mount({ host, renderEngine }) {
         if (this._unloaded) return;
@@ -146,7 +149,7 @@ export default class Page {
         await this.onCommand("unload", {});
         this._host = null;
         this._refs = null;
-        xshell.bus.emit("xshell:page:unload", { src: this._src, id: this._id });
+        this._bus.emit("xshell:page:unload", { src: this._src, id: this._id });
     }
 
     // close methods
@@ -157,7 +160,7 @@ export default class Page {
 
      // url methods (replace this Page's query or fragment without navigating or reloading it)
     replaceQuery(query) {
-        const src = xshell.navigation?.replacePageQuery(this, query);
+        const src = this._navigation.replacePageQuery(this, query);
         if (src !== null && typeof(src) !== "undefined") {
             this._src = src;
             if (this._host && typeof(this._host.synchronizePageSrc) === "function") {
@@ -167,7 +170,7 @@ export default class Page {
         return src;
     }
     replaceHash(hash) {
-        const src = xshell.navigation?.replacePageHash(this, hash);
+        const src = this._navigation.replacePageHash(this, hash);
         if (src !== null && typeof(src) !== "undefined") {
             this._src = src;
             if (this._host && typeof(this._host.synchronizePageSrc) === "function") {

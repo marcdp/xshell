@@ -224,9 +224,9 @@ class XPage extends HTMLElement {
         let page = null;
         try {
             const pageClass = await xshell.loader.load("page:" + resourceSrc);
-            page = new pageClass( { src, context: this._context } );
+            page = new pageClass( { src, context: this._context, bus: xshell.bus, navigation: xshell.navigation } );    
         } catch(exception) {
-            page = new Page({ src });
+            page = new Page({ src, bus: xshell.bus, navigation: xshell.navigation });
             page.onCommand = (command, params) => {
                 if (command == "mount") {
                     exception.src = src;

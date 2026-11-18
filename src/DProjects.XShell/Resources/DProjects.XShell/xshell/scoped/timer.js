@@ -28,7 +28,12 @@ export default class Timer {
             const command = listener;
             listener = () => {this._handler(command);}
         }
-        this._timeouts.push({ timeout, timeoutId: setTimeout(listener, timeout), listener });
+        this._timeouts.push({ timeout, timeoutId: setTimeout(()=>{
+            // remove the timeout from the list
+            this._timeouts = this._timeouts.filter(t => t.timeoutId !== timeoutId);
+            //execute
+            listener();
+        }, timeout), listener });
     }
     setInterval(listener, timeout) {
         if (typeof(listener) == "string") {

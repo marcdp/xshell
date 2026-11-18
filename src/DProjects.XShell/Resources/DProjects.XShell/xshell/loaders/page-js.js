@@ -322,8 +322,8 @@ export async function createPageClassFromJsDefinition(src, context, definition) 
         _initializingQuery = true;
         _postRenderPending = [];
         // ctor
-        constructor({ src, context }) {
-            super({ src, context });
+        constructor({ src, context, bus, navigation }) {
+            super({ src, context, bus, navigation });
             const self = this;
             // meta
             this._label = definition.meta.title || "";
