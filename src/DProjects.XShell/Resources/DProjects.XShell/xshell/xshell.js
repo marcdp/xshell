@@ -5,7 +5,6 @@ import Loader from "./loader.js";
 import Navigation from "./navigation.js";
 import Modules from "./modules.js";
 import Page from "./page.js";
-import Registry from "./registry.js";
 import Resolver from "./resolver.js";
 import Services from "./services.js";
 import XPage from "./x-page.js";
@@ -24,7 +23,6 @@ class XShell {
     _loader = null;
     _modules = null;
     _navigation = null;
-    _registry = null;
     _resolver = null;
     _services = null;
     
@@ -42,7 +40,6 @@ class XShell {
     get navigation() { return this._navigation; }
     get resolver() { return this._resolver; }
     get services() { return this._services; }
-    get registry() { return this._registry; }
     get temp() { return this._services?.has("temp") ? this._services.resolve("temp") : null; }
 
     //methods
@@ -70,7 +67,6 @@ class XShell {
         this._areas = new Areas( { bus: this._bus, config: config } );
         this._contracts = new Contracts( { config: config, loader: this._loader } );
         this._services = new Services( {config, loader: this._loader, contracts: this._contracts, resolver: this._resolver, bus: this._bus } );
-        this._registry = new Registry( {config, loader: this._loader, resolver: this._resolver } );
         this._modules = new Modules( { bus: this._bus, config: config, loader: this._loader, resolver: this._resolver, document: document, services: this._services } );
         this._navigation = new Navigation( { areas: this._areas, bus: this._bus, config: config, container: document.body, resolver: this._resolver });
         // compose contracts list in memory from modules             
@@ -85,9 +81,9 @@ class XShell {
         this._services.register("resolver", this._resolver, { contractItem: this._contracts.getContractItemById("resolver")});
         this._services.register("contracts", this._contracts, { contractItem: this._contracts.getContractItemById("contracts")});
         this._services.register("services", this._services, { contractItem: this._contracts.getContractItemById("services")});
-        this._services.register("registry", this._registry, { contractItem: this._contracts.getContractItemById("registry")});
         await this._services.init();
-        await this._registry.init();
+        // Initialize the declaratively registered Registry
+        await this._services.resolve("registry").init();
         // modules
         await this._modules.init();  
         // areas

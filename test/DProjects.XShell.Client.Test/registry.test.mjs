@@ -2,9 +2,12 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
-import Registry from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/registry.js";
+import Registry from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/registry.js";
 import Resolver from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/resolver.js";
 import SchemaLoader from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/loaders/schema-json.js";
+import JsonValidator from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/json-validator.js";
+import Services from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services.js";
+import ConfigSchema from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/schemas/config.schema.json" with { type: "json" };
 
 const modulePath = "/_assets/files/1.0.0.dev";
 const otherPath = "/_assets/other/2.0.0.dev";
@@ -19,7 +22,7 @@ function createConfig(registry = {}) {
         },
         xshell: {
             assets: { path: frameworkPath },
-            registry,
+            services: { registry: { contract: "registry", implementation: "/services/registry.js", options: registry } },
             resolver: { schema: {
                 "files:/{path}": { src: `${modulePath}/{path}`, loader: "schema-json" },
                 "other:/{path}": { src: `${otherPath}/{path}`, loader: "schema-json" },
@@ -36,7 +39,7 @@ function createRegistry(config, schemas = {}) {
         if (!Object.hasOwn(schemas, resource)) throw new Error(`Missing resource ${resource}`);
         return schemas[resource];
     } };
-    return { registry: new Registry({ config, loader, resolver: new Resolver({ config }) }), requested };
+    return { registry: new Registry({ config, loader, resolver: new Resolver({ config }) }, config.xshell.services.registry.options), requested };
 }
 
 const fileSchema = {
@@ -58,6 +61,80 @@ test("empty registry leaves the public API available without loading schemas", a
     assert.equal(Object.isFrozen(registry.registry), true);
     assert.equal(registry.has("missing"), false);
     assert.equal(registry.get("missing"), undefined);
+});
+
+test("registry options schema preserves the former configuration constraints", () => {
+    const validator = new JsonValidator();
+    assert.equal(validator.validate({}, Registry.optionsSchema).valid, true);
+    assert.equal(validator.validate({ files: { schema: "/schemas/file.schema.json", contributions: [{}] } }, Registry.optionsSchema).valid, true);
+    for (const options of [
+        { "": { schema: "/schemas/file.schema.json" } },
+        { files: {} },
+        { files: { schema: "" } },
+        { files: { schema: "/schemas/file.schema.json", contributions: ["invalid"] } },
+        { files: { schema: "/schemas/file.schema.json", unknown: true } }
+    ]) assert.equal(validator.validate(options, Registry.optionsSchema).valid, false);
+});
+
+test("global configuration schema no longer owns Registry options", () => {
+    assert.equal(ConfigSchema.$defs.xshell.required.includes("registry"), false);
+    assert.equal(Object.hasOwn(ConfigSchema.$defs.xshell.properties, "registry"), false);
+    assert.equal(Object.hasOwn(ConfigSchema.$defs, "xshellRegistry"), false);
+    assert.equal(Object.hasOwn(ConfigSchema.$defs, "xshellRegistryItem"), false);
+});
+
+test("registry is lazily constructed through Services with injected dependencies and service options", async () => {
+    const options = { files: { schema: `${modulePath}/schemas/file.schema.json`, contributions: [] } };
+    const config = createConfig(options);
+    const requested = [];
+    const resolver = new Resolver({ config });
+    const loader = { async load(resource) {
+        requested.push(resource);
+        if (resource === "esm:/services/registry.js") return Registry;
+        if (resource === "schema:files:/schemas/file.schema.json") return fileSchema;
+        throw new Error(`Missing resource ${resource}`);
+    } };
+    const services = new Services({
+        config,
+        loader,
+        contracts: { getContractItemById() { return { id: "registry", contract: { properties: { registry: {} }, methods: { init: {}, has: {}, get: {} } } }; } },
+        resolver: { resolve(resource) {
+            if (resource === "esm:/services/registry.js") return { definition: { moduleId: "xshell" } };
+            return resolver.resolve(resource);
+        } }
+    });
+    services.register("config", config);
+    services.register("loader", loader);
+    services.register("resolver", resolver);
+
+    await services.init();
+    assert.equal(services.getServiceInfo("registry").state, "registered");
+    assert.deepEqual(requested, ["esm:/services/registry.js"]);
+
+    const registry = services.resolve("registry");
+    assert.strictEqual(registry.get("files"), options.files);
+    assert.strictEqual(services.resolve("registry"), registry);
+    assert.equal(services.getServiceInfo("registry").state, "created");
+
+    await registry.init();
+    assert.deepEqual(requested, ["esm:/services/registry.js", "schema:files:/schemas/file.schema.json"]);
+});
+
+test("invalid registry service options are rejected before construction", async () => {
+    const config = createConfig({ files: { contributions: [] } });
+    const services = new Services({
+        config,
+        loader: { async load() { return Registry; } },
+        contracts: { getContractItemById() { return { id: "registry", contract: { properties: {}, methods: {} } }; } },
+        resolver: { resolve() { return { definition: { moduleId: "xshell" } }; } }
+    });
+    services.register("config", config);
+    services.register("loader", {});
+    services.register("resolver", {});
+
+    await services.init();
+    assert.throws(() => services.resolve("registry"), /Invalid options for service 'registry'.*required property "schema"/);
+    assert.equal(services.getServiceInfo("registry").state, "registered");
 });
 
 test("registry without contributions still loads its schema and preserves its view", async () => {
@@ -167,5 +244,15 @@ test("schema loader bundles relative references for registry validation", async 
 
 test("registry initialization precedes module initialization", async () => {
     const source = await readFile(new URL("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/xshell.js", import.meta.url), "utf8");
-    assert.ok(source.indexOf("await this._registry.init()") < source.indexOf("await this._modules.init()"));
+    assert.doesNotMatch(source, /import Registry from/);
+    assert.doesNotMatch(source, /new Registry\s*\(/);
+    assert.doesNotMatch(source, /register\("registry"/);
+    assert.ok(source.indexOf('await this._services.resolve("registry").init()') < source.indexOf("await this._modules.init()"));
+    assert.match(source, /get registry\(\) \{ return this\._services\?\.has\("registry"\) \? this\._services\.resolve\("registry"\) : null; \}/);
+});
+
+test("framework manifest registers Registry declaratively without the old top-level configuration", async () => {
+    const source = await readFile(new URL("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/manifest.jsonc", import.meta.url), "utf8");
+    assert.match(source, /"registry"\s*:\s*\{\s*"contract"\s*:\s*"registry",\s*"implementation"\s*:\s*"\/services\/registry\.js",\s*"options"\s*:\s*\{\}/s);
+    assert.equal((source.match(/"registry"\s*:/g) ?? []).length, 1);
 });

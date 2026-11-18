@@ -25,10 +25,6 @@
             "mode": "path"
         },
 
-        // registry
-        "registry": {
-        },
-
         // resolver
         "resolver": {
             "component": {
@@ -85,6 +81,11 @@
                 "options": {
                     "page": null
                 }
+            },
+            "registry": {
+                "contract": "registry",
+                "implementation": "/services/registry.js",
+                "options": {}
             },
             "runtime": {
                 "contract": "runtime",

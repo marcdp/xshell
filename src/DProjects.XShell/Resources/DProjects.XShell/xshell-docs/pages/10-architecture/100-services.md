@@ -25,7 +25,9 @@ These are three separate objects:
 
 During startup, XShell discovers and validates contracts, registers its core/runtime service instances, and calls `Services.init()`. That method
 validates every configured contract reference, eagerly loads each configured implementation class, registers the implementation metadata, and then
-finalizes the registry. Configured service instances are not constructed during initialization.
+finalizes the registry. Configured service instances are not constructed during initialization. The declarative `registry` service is then explicitly
+resolved and its asynchronous `init()` is awaited before Modules initialization; its merged `xshell.services.registry.options` are validated by the
+implementation's static `optionsSchema` immediately before this lazy singleton construction.
 
 The `theme` service is the one explicit startup exception. The X module controller declares `theme` as a constructor dependency, so normal service
 injection resolves it while modules initialize. The service starts with `system` and restores a saved `system`, `light`, or `dark` mode asynchronously

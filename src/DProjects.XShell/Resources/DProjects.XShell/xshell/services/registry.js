@@ -1,6 +1,27 @@
-import JsonValidator from "./services/json-validator.js";
+import JsonValidator from "./json-validator.js";
 
 export default class Registry {
+
+    // options
+    static optionsSchema = {
+        type: "object",
+        propertyNames: {minLength: 1},
+        additionalProperties: {
+            type: "object",
+            required: ["schema"],
+            properties: {
+                schema: {type: "string", minLength: 1, description: "Effective module or framework asset path to the JSON Schema used to validate registry contributions."},
+                contributions: {
+                    type: "array",
+                    items: {type: "object"},
+                    description: "Additive collection of definitions contributed by modules. Each item must conform to the registry schema."
+                }
+            },
+            additionalProperties: false,
+            description: "Definition of an extensible registry."
+        },
+        description: "Named extensible registries containing contributions from multiple modules."
+    };
 
     // vars
     _items = null;
@@ -9,11 +30,12 @@ export default class Registry {
     _resolver = null;
 
     // ctor
-    constructor({ config, loader, resolver }) {
+    constructor({ config, loader, resolver }, options = {}) {
+        // Initialize Registry dependencies and configuration
         this._config = config;
-        this._items = config.xshell.registry;
         this._loader = loader;
         this._resolver = resolver;
+        this._items = options;
     }
 
     // props

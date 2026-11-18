@@ -1289,6 +1289,24 @@ test("sibling contributions to a shared dependency follow declaration order", as
     assert.equal(effective.modules.x.params.mode, "b");
 });
 
+test("registry service options preserve named registries and concatenate module contributions", () => {
+    const schema = "/_assets/files/1.0.0.dev/schemas/file.schema.json";
+    const effective = plain(api.mergeConfigs([
+        { xshell: { services: { registry: { contract: "registry", implementation: "/services/registry.js", options: {
+            files: { schema, contributions: [{ id: "dependency" }] }
+        } } } } },
+        { xshell: { services: { registry: { options: {
+            files: { contributions: [{ id: "root" }] }
+        } } } } }
+    ]));
+
+    assert.deepEqual(effective.xshell.services.registry, {
+        contract: "registry",
+        implementation: "/services/registry.js",
+        options: { files: { schema, contributions: [{ id: "dependency" }, { id: "root" }] } }
+    });
+});
+
 test("root contributions to a shared dependency have final precedence", async () => {
     const aUrl = "https://example.test/modules/a/manifest.jsonc";
     const xUrl = "https://example.test/modules/x/manifest.jsonc";

@@ -23,8 +23,7 @@ function effectiveConfig() {
             i18n: { lang: "en", langs: [{ id: "en", label: "English", main: true }], datetime: { options: {}, formats: {} }, strings: {} },
             configUrl: "https://example.test/xshell/manifest.json",
             serviceWorker: { mappings: [] },
-            files: [],
-            registry: {}
+            files: []
         }
     };
 }

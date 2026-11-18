@@ -153,11 +153,16 @@ names are not normalized.
 
 ## Registry schemas
 
-A module contributes a named registry under `xshell.registry` with a module-relative schema file path, for example
+A module contributes a named registry under `xshell.services.registry.options` with a module-relative schema file path, for example
 `"schema": "/schemas/filecommand.schema.json"`. Bootstrap normalizes that path to the module's generation-qualified `assets.path` before merging
-configuration. During `xshell.init()`, Registry maps the effective asset path to an existing schema Resolver resource, loads it through Loader, and
-validates each contribution against that schema before module controllers start. Framework-owned schemas use generated inventory resolver entries.
-Missing or empty `contributions` are valid; an unknown schema path, schema-loading error, or invalid contribution stops initialization.
+configuration. Registry is a declaratively configured XShell service, and its implementation-owned static `optionsSchema` validates the complete
+merged options object when the service is resolved. Registry maps each effective asset path to an existing schema Resolver resource, loads it through
+Loader, and validates each contribution against that schema before module controllers start. Framework-owned schemas use generated inventory
+resolver entries. Missing or empty `contributions` are valid; an unknown schema path, schema-loading error, or invalid contribution stops initialization.
+
+Registry options participate in the ordinary recursive configuration merge: named registry objects merge and contribution arrays concatenate across
+modules. The service remains lazily constructed through `Services.resolve("registry")`; startup explicitly resolves it after `Services.init()` and
+awaits its asynchronous `init()` before Modules initialization.
 
 ## Merge and precedence
 
