@@ -900,8 +900,9 @@ export class RenderEngineX {
         this._host.replaceChildren();
     }
 }
-export default function createRenderEngineFactoryX(template, context, templateRenderer) {
+export default function createRenderEngineFactoryX(template, context, templateRenderer, aaaa) {
 	// retain template only as the first parameter of the common render-engine interface
+	debugger
 	void template;
 	if (!templateRenderer || typeof(templateRenderer) !== "object" || typeof(templateRenderer.render) !== "function" ||
 		!Array.isArray(templateRenderer.dependencies) || !Array.isArray(templateRenderer.slots)) {

@@ -33,43 +33,45 @@
 
     // resolver
     "xshell": {
-
-        // i18n
-        "i18n": {
-            "lang": "en",
-            "langs": [
-                { "id": "en", "label": "English" },
-                { "id": "es", "label": "Spanish" },
-                { "id": "fr", "label": "French" },
-                { "id": "de", "label": "German" }
-            ],
-            "datetime": {
-                "options": {
-                    "year": "numeric",
-                    "month": "2-digit",
-                    "day": "2-digit",
-                    "hour": "2-digit",
-                    "minute": "2-digit",
-                    "second": "2-digit"
-                },
-                "formats": {
-                    "time": {
-                        "timeStyle": "short"
-                    },
-                    "date": {
-                        "dateStyle": "short"
-                    },
-                    "datetime": {
-                        "timeStyle": "short",
-                        "dateStyle": "short"
-                    }
-                }
-            },
-            "strings": {}
-        },
-
+        
         // services
         "services": {
+            // i18n
+            "i18n": {
+                "options": {
+                    "lang": "en",
+                    "langs": [
+                        { "id": "en", "label": "English" },
+                        { "id": "es", "label": "Spanish" },
+                        { "id": "fr", "label": "French" },
+                        { "id": "de", "label": "German" }
+                    ],
+                    "datetime": {
+                        "options": {
+                            "year": "numeric",
+                            "month": "2-digit",
+                            "day": "2-digit",
+                            "hour": "2-digit",
+                            "minute": "2-digit",
+                            "second": "2-digit"
+                        },
+                        "formats": {
+                            "time": {
+                                "timeStyle": "short"
+                            },
+                            "date": {
+                                "dateStyle": "short"
+                            },
+                            "datetime": {
+                                "timeStyle": "short",
+                                "dateStyle": "short"
+                            }
+                        }
+                    },
+                    "strings": {}
+                }
+            },
+
             "markdown": {
                 "contract": "markdown",
                 "implementation": "/services/markdown-default.js"

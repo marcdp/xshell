@@ -61,6 +61,10 @@
                 "contract": "commands",
                 "implementation": "/services/commands.js"
             },
+            "i18n": {
+                "contract": "i18n",
+                "implementation": "/services/i18n.js"
+            },
             "jsonValidator": {
                 "contract": "json-validator",
                 "implementation": "/services/json-validator.js"
@@ -71,6 +75,10 @@
                 "options": {
                     "page": null
                 }
+            },
+            "runtime": {
+                "contract": "runtime",
+                "implementation": "/services/runtime.js"
             },
             "secrets": {
                 "contract": "secrets",

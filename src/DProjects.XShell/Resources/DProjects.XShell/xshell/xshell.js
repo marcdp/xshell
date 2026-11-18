@@ -2,14 +2,12 @@ import Areas from "./areas.js";
 import Bus from "./bus.js";
 import Contracts from "./contracts.js";
 import Dialog from "./dialog.js";
-import I18n from "./i18n.js";
 import Loader from "./loader.js";
 import Navigation from "./navigation.js";
 import Modules from "./modules.js";
 import Page from "./page.js";
 import Registry from "./registry.js";
 import Resolver from "./resolver.js";
-import Runtime from "./runtime.js";
 import Services from "./services.js";
 import XPage from "./x-page.js";
 import JsonValidator from "./services/json-validator.js";
@@ -25,13 +23,11 @@ class XShell {
     _config = null;
     _contracts = null;
     _dialog = null;
-    _i18n = null;
     _loader = null;
     _modules = null;
     _navigation = null;
     _registry = null;
     _resolver = null;
-    _runtime = null;
     _services = null;
     
     //ctor
@@ -44,12 +40,10 @@ class XShell {
     get config() { return this._config; }
     get contracts() { return this._contracts; }
     get dialog() { return this._dialog; }
-    get i18n() { return this._i18n; }
     get loader() { return this._loader; }
     get modules() { return this._modules; }
     get navigation() { return this._navigation; }
     get resolver() { return this._resolver; }
-    get runtime() { return this._runtime; }
     get services() { return this._services; }
     get registry() { return this._registry; }
     get temp() { return this._services?.has("temp") ? this._services.resolve("temp") : null; }
@@ -65,15 +59,12 @@ class XShell {
         await this.validateConfig(config);
         // initialize rest of the services
         this._areas = new Areas( { bus: this._bus, config: config } );
-        this._i18n = new I18n();
         this._contracts = new Contracts( { config: config, loader: this._loader } );
-        await this._i18n.init(config.xshell.i18n);
-        this._services = new Services( {config, loader: this._loader, contracts: this._contracts, areas: this._areas, bus: this._bus } );
+        this._services = new Services( {config, loader: this._loader, contracts: this._contracts, resolver: this._resolver, bus: this._bus } );
         this._registry = new Registry( {config, loader: this._loader, resolver: this._resolver } );
         this._modules = new Modules( { bus: this._bus, config: config, loader: this._loader, resolver: this._resolver, document: document, services: this._services } );
         this._navigation = new Navigation( { areas: this._areas, bus: this._bus, config: config, container: document.body, resolver: this._resolver });
-        this._dialog = new Dialog( { config: config, navigation: this._navigation, i18n: this._i18n } );        
-        this._runtime = new Runtime();
+        this._dialog = new Dialog( { config: config, navigation: this._navigation, i18n: null } );        
         // compose contracts list in memory from modules             
         await this._contracts.init();
         // services
@@ -81,12 +72,10 @@ class XShell {
         this._services.register("bus", this._bus, { contractItem: this._contracts.getContractItemById("bus")});
         this._services.register("config", this._config, { contractItem: this._contracts.getContractItemById("config")});
         this._services.register("dialog", this._dialog, { contractItem: this._contracts.getContractItemById("dialog")});
-        this._services.register("i18n", this._i18n, { contractItem: this._contracts.getContractItemById("i18n")});
         this._services.register("loader", this._loader, { contractItem: this._contracts.getContractItemById("loader")});
         this._services.register("modules", this._modules, { contractItem: this._contracts.getContractItemById("modules")});
         this._services.register("navigation", this._navigation, { contractItem: this._contracts.getContractItemById("navigation")});
         this._services.register("resolver", this._resolver, { contractItem: this._contracts.getContractItemById("resolver")});
-        this._services.register("runtime", this._runtime, { contractItem: this._contracts.getContractItemById("runtime")});
         this._services.register("contracts", this._contracts, { contractItem: this._contracts.getContractItemById("contracts")});
         this._services.register("services", this._services, { contractItem: this._contracts.getContractItemById("services")});
         this._services.register("registry", this._registry, { contractItem: this._contracts.getContractItemById("registry")});

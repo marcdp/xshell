@@ -9,7 +9,7 @@ export default class Services {
     _loader = null;
     _contracts = null;
     _items = {};
-    _areas = null;
+    _resolver = null;
     _bus = null;
     _creationPath = [];
     _jsonValidator = new JsonValidator();
@@ -21,11 +21,11 @@ export default class Services {
     }
 
     // ctor
-    constructor( {config, loader, contracts, areas, bus} ) {
+    constructor( {config, loader, contracts, resolver, bus} ) {
         this._config = config;
         this._loader = loader;
         this._contracts = contracts;
-        this._areas = areas;    
+        this._resolver = resolver;    
         this._bus = bus;
     }
 
@@ -46,9 +46,15 @@ export default class Services {
             const service = this._config.xshell.services[serviceName];
             const serviceContractItem = serviceContractItems[serviceName];
             tasks.push((async () => {
-                const moduleId = this._areas.getModuleId(service.implementation);
+                // resolve the implementation's module ownership from its resource definition
+                const resource = "esm:" + service.implementation;
+                const resolved = this._resolver.resolve(resource);
+                if (!resolved) throw new Error(`Service '${serviceName}' implementation could not be resolved: ${resource}`);
+                const moduleId = resolved.definition.moduleId;
+                if (!moduleId) throw new Error(`Service '${serviceName}' implementation has no module ownership: ${resource}`);
+                // load the service implementation and measure the time taken
                 const start = performance.now();
-                const serviceImplementation = await this._loader.load("esm:" + service.implementation);
+                const serviceImplementation = await this._loader.load(resource);
                 const owner = moduleId === "xshell" ? this._config.xshell : this._config.modules[moduleId];
                 const implementationFile = owner?.files?.find(file => file.path === service.implementation);
                 this.register(serviceName, null, { 
