@@ -1,4 +1,3 @@
-import xshell from '../xshell.js';
 import {getTemplateCssSource, rewriteTemplateAttribute} from "../utils/html.js";
 import { rewriteStyleDeclarationValue } from "../utils/style.js";
 import { unloadComponents } from "../utils/components.js";

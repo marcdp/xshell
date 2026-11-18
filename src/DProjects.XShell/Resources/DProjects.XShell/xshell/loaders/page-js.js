@@ -308,6 +308,8 @@ export async function createPageClassFromJsDefinition(src, context, definition) 
     }
     // init 
     await renderEngineFactory.init();
+    // definition context
+    const definitionContext = context;
     // returns a class that extends base class Page
     const PageClass = class extends Page {
         // vars
@@ -400,7 +402,7 @@ export async function createPageClassFromJsDefinition(src, context, definition) 
                         return context.services.modules.getModuleById(moduleId).controller;
                     } else {
                         // resolve from services
-                        return context.services[prop];                    
+                        return definitionContext.services[prop];                    
                     }
                 }
             });            

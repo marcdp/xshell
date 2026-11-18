@@ -70,12 +70,17 @@ class XShell {
             xshellFiles: config.xshell.files
         });
         // services
-        this._services = new Services( {config, loader: this._loader, contracts: this._contracts, resolver: this._resolver, bus: this._bus } );
-
-        
+        this._services = new Services( {
+            config, 
+            loader: this._loader, 
+            contracts: this._contracts, 
+            resolver: this._resolver, 
+            bus: this._bus
+        } );
         // compose contracts list in memory from modules             
         await this._contracts.init();
         // services
+        this._services.register("document", window.document, {});
         this._services.register("bus", this._bus, { contractItem: this._contracts.getContractItemById("bus")});
         this._services.register("config", this._config, { contractItem: this._contracts.getContractItemById("config")});
         this._services.register("loader", this._loader, { contractItem: this._contracts.getContractItemById("loader")});

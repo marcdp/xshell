@@ -17,7 +17,7 @@ export default class Timer {
         }
         this._timeouts = [];
         for (const { timeout, timeoutId, listener } of this._intervals) {
-            clearTimeout(timeoutId);
+            clearInterval(timeoutId);
         }
         this._intervals = [];
     }

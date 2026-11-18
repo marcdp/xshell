@@ -18,7 +18,7 @@ export default class Modules {
     
     
     // ctor
-    constructor({ bus, config, loader, resolver, services }, options = {}) {
+    constructor({ bus, config, loader, resolver, services, document }, options = {}) {
         // initialize injected dependencies
         this._bus = bus;
         this._config = config;
