@@ -61,7 +61,7 @@ export default {
         renderingError: ""
     },
 
-    controller({events, state, dependencies, loader, host, getPage, postRender}) {
+    controller({events, state, dependencies, loader, host, getPage, postRender, services}) {
         let renderEngine = null;
         let revision = 0;
         let renderPending = false;
@@ -69,9 +69,10 @@ export default {
         const getContext = () => {
             const page = getPage();
 
-            if (page?.context) {
-                return page.context;
-            }
+            //if (page?.context) {
+            //    debugger;
+            //    return page.context;
+            //}
 
             // Fallback for an x-template used outside an x-page.
             return {
@@ -80,7 +81,8 @@ export default {
                 resourceDefinition: {},
                 appBasePath: "",
                 navigationMode: "path",
-                componentLazy: ""
+                componentLazy: "",
+                services: services
             };
         };
 
