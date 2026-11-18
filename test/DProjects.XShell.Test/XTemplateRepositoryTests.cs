@@ -43,6 +43,18 @@ namespace DProjects.XShell.Test {
             Assert.Contains("_inspection", transformed, StringComparison.Ordinal);
         }
 
+        [Theory]
+        [InlineData("x-home", "components/x-home.js")]
+        [InlineData("x-home", "pages/index.js")]
+        [InlineData("x-demo", "pages/03-navigation/07-home.js")]
+        public async Task HomeLauncherTemplatesCompile(string module, string relativePath) {
+            // Compile launcher templates through the development hosting pipeline.
+            var directory = Path.Combine(GetResourceDirectory(), module);
+            var result = await new ModuleFileCompiler().CompileAsync(Path.Combine(directory, "manifest.jsonc"),
+                Path.Combine(directory, relativePath), TestContext.Current.CancellationToken);
+            Assert.Contains("templateRenderer:", result.Content, StringComparison.Ordinal);
+        }
+
         [Fact]
         public void StaticModuleTemplatesCompileWhenTemplatePropertyUsesWhitespaceBeforeTheColon() {
             var compilerType = typeof(XTemplateCompiler).Assembly.GetType("DProjects.XShell.Services.XTemplate.XTemplateJavaScriptCompiler", throwOnError: true)!;

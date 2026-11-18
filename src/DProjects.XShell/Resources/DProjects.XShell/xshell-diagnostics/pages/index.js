@@ -41,7 +41,7 @@ export default {
             async load() {
                // load
                const area = areas.getArea("xshell-diagnostics");
-               const menuitems = area.menus.navigation[0].children;
+               const menuitems = area.menus.navigation[0].children.filter(item => item.href);
                state.menuitems = menuitems;
                state.selectedIndex = await preferences.get("xshell-diagnostics.selectedIndex", 0);
             },

@@ -12,8 +12,8 @@ export default class LoaderPageMd {
         return class extends Page {
 
             // ctor
-            constructor({src: navigationSrc, context}) {
-                super({src: navigationSrc, context});
+            constructor({src: navigationSrc, context, bus, navigation}) {
+                super({src: navigationSrc, context, bus, navigation});
                 this._controller = {};
             }
 

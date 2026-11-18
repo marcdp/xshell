@@ -11,6 +11,9 @@ export default {
         slots: {
             "": {
                 description: "Default slot for the layout content."
+            },
+            "header-actions": {
+                description: "Slot for header actions."
             }
         }
     },
@@ -29,6 +32,7 @@ export default {
         ::slotted(p:last-child) {
             margin-bottom:0;
         }        
+        .header-actions {float:right}
         x-loading {
             width:var(--x-loading-width);
             left:50%;
@@ -48,6 +52,9 @@ export default {
     template: `
         <x-loading x-if="state.status=='loading'"></x-loading>        
         <div x-attr:class="state.pageClasses">
+            <div class="header-actions">
+                <slot name="header-actions"></slot>
+            </div>
             <slot></slot>
         </div>
     `,

@@ -58,98 +58,100 @@ export default {
                 </div>
             </x-datafields>
 
-            <!-- Properties -->
-            <x-datafields x-if="state.contractId" label="Properties">
-                <p x-if="state.properties.length == 0">
-                    No properties declared.
-                </p>
+            <x-tabs x-if="state.contractId">
+                <!-- Properties -->
+                <x-tab label="Properties">
+                    <p x-if="state.properties.length == 0">
+                        No properties declared.
+                    </p>
 
-                <x-accordion x-else>
-                    <x-accordion-panel
-                        x-for="item in state.properties" x-key="name"
-                        class="card"
-                        x-attr:label="item.name"
-                        x-attr:description="item.description + ' (' + item.type + (item.readonly ? ', read-only' : '') + ')'">
+                    <x-accordion x-else>
+                        <x-accordion-panel
+                            x-for="item in state.properties" x-key="name"
+                            class="card"
+                            x-attr:label="item.name"
+                            x-attr:description="item.description + ' (' + item.type + (item.readonly ? ', read-only' : '') + ')'">
 
-                        <x-button label="Read" icon="x-refresh"
-                            x-attr:data-name="item.name"
-                            x-attr:disabled="!state.resolved"
-                            x-on:click="readProperty">
+                            <x-button label="Read" icon="x-refresh"
+                                x-attr:data-name="item.name"
+                                x-attr:disabled="!state.resolved"
+                                x-on:click="readProperty">
+                            </x-button>
+
+                            <x-object x-if="item.read" x-prop:value="item.value" expanded></x-object>
+                        </x-accordion-panel>
+                    </x-accordion>
+                </x-tab>
+
+                <!-- Methods -->
+                <x-tab label="Methods">
+                    <p x-if="state.methods.length == 0">
+                        No methods declared.
+                    </p>
+
+                    <x-accordion x-else>
+                        <x-accordion-panel
+                            x-for="method in state.methods" x-key="key"
+                            class="card"
+                            x-attr:data-name="method.name"
+                            x-attr:label="method.label"
+                            x-attr:description="method.description"
+                            x-on:toggle="openMethod">
+
+                            <x-page x-if="method.opened" x-attr:src="method.src" loading="lazy"></x-page>
+
+                        </x-accordion-panel>
+                    </x-accordion>
+                </x-tab>
+
+                <!-- Events -->
+                <x-tab label="Events">
+                    <p x-if="state.serviceEvents.length == 0">
+                        No events declared.
+                    </p>
+
+                    <x-accordion x-else>
+                        <x-accordion-panel
+                            x-for="item in state.serviceEvents" x-key="name"
+                            class="card"
+                            x-attr:label="item.name"
+                            x-attr:description="item.description">
+
+                            <div>Payload: {{ item.detail }}</div>
+                        </x-accordion-panel>
+                    </x-accordion>
+
+                    <div class="toolbar" x-if="state.serviceEvents.length > 0">
+                        <x-button x-if="!state.monitoring"
+                            label="Start monitoring" icon="x-play"
+                            x-on:click="startMonitoring">
                         </x-button>
 
-                        <x-object x-if="item.read" x-prop:value="item.value" expanded></x-object>
-                    </x-accordion-panel>
-                </x-accordion>
-            </x-datafields>
+                        <x-button x-if="state.monitoring"
+                            label="Stop monitoring" icon="x-stop"
+                            x-on:click="stopMonitoring">
+                        </x-button>
 
-            <!-- Methods -->
-            <x-datafields x-if="state.contractId" label="Methods">
-                <p x-if="state.methods.length == 0">
-                    No methods declared.
-                </p>
+                        <x-button label="Clear" icon="x-close"
+                            x-on:click="clearEvents">
+                        </x-button>
+                    </div>
 
-                <x-accordion x-else>
-                    <x-accordion-panel
-                        x-for="method in state.methods" x-key="key"
-                        class="card"
-                        x-attr:data-name="method.name"
-                        x-attr:label="method.label"
-                        x-attr:description="method.description"
-                        x-on:toggle="openMethod">
+                    <div class="history">
+                        <x-card x-for="item in state.history" x-key="id">
+                            <div class="row">
+                                <strong>{{ item.name }}</strong>
+                                <span class="muted">{{ item.time }}</span>
+                            </div>
+                            <x-object x-prop:value="item.detail" expanded></x-object>
+                        </x-card>
+                    </div>
 
-                        <x-page x-if="method.opened" x-attr:src="method.src" loading="lazy"></x-page>
-
-                    </x-accordion-panel>
-                </x-accordion>
-            </x-datafields>
-
-            <!-- Events -->
-            <x-datafields x-if="state.contractId" label="Events">
-                <p x-if="state.serviceEvents.length == 0">
-                    No events declared.
-                </p>
-
-                <x-accordion x-else>
-                    <x-accordion-panel
-                        x-for="item in state.serviceEvents" x-key="name"
-                        class="card"
-                        x-attr:label="item.name"
-                        x-attr:description="item.description">
-
-                        <div>Payload: {{ item.detail }}</div>
-                    </x-accordion-panel>
-                </x-accordion>
-
-                <div class="toolbar" x-if="state.serviceEvents.length > 0">
-                    <x-button x-if="!state.monitoring"
-                        label="Start monitoring" icon="x-play"
-                        x-on:click="startMonitoring">
-                    </x-button>
-
-                    <x-button x-if="state.monitoring"
-                        label="Stop monitoring" icon="x-stop"
-                        x-on:click="stopMonitoring">
-                    </x-button>
-
-                    <x-button label="Clear" icon="x-close"
-                        x-on:click="clearEvents">
-                    </x-button>
-                </div>
-
-                <div class="history">
-                    <x-card x-for="item in state.history" x-key="id">
-                        <div class="row">
-                            <strong>{{ item.name }}</strong>
-                            <span class="muted">{{ item.time }}</span>
-                        </div>
-                        <x-object x-prop:value="item.detail" expanded></x-object>
-                    </x-card>
-                </div>
-
-                <p class="muted" x-if="state.monitoring">
-                    Monitoring active. Events received from this moment onward will be recorded.
-                </p>
-            </x-datafields>
+                    <p class="muted" x-if="state.monitoring">
+                        Monitoring active. Events received from this moment onward will be recorded.
+                    </p>
+                </x-tab>
+            </x-tabs>
         </div>
     `,
     state: {

@@ -237,7 +237,7 @@ export default {
             </section>
 
             <x-button slot="footer" x-if="state.ready && state.phase == 'arguments'" label="Execute" command="submit" class="submit"></x-button>
-            <!--<x-button slot="footer" x-if="!state.running" label="Edit arguments" command="editArguments"></x-button>-->
+            <x-button slot="footer" x-if="state.ready && state.phase == 'execution' && !state.running" label="Back" icon="x-arrow-back" command="editArguments"></x-button>
             <x-button slot="footer" x-if="state.isDialog && !state.ready" label="Close" command="cancel"></x-button>
             <x-button slot="footer" x-if="state.running" label="Cancel" command="cancel" class="cancel"></x-button>
             <x-button slot="footer" x-if="state.isDialog && !state.running" label="Close" command="cancel" class="cancel"></x-button>

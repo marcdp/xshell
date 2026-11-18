@@ -25,6 +25,7 @@
             "dependencies": {
                 "x":                    "module:x:latest",
                 "x-filesystem":         "module:x-filesystem:latest",    
+                "x-home":               "module:x-home:latest",
                 "x-store":              "module:x-store:latest",
                 "x-vault":              "module:x-vault:latest",
                 "xshell":               "module:xshell:latest",
@@ -47,6 +48,13 @@
                             "modules": [
                                 "x-demo"
                             ]
+                        },
+                        "launcher": {
+                            "prefix": "launcher",
+                            "label": "Home Launcher",
+                            "description": "An Area that opens the reusable Home Page",
+                            "icon": "x:x-home",
+                            "modules": ["x-home"]
                         }
                     }
                 }

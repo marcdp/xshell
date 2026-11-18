@@ -1,8 +1,7 @@
-
- // page
+// page
 export default {
     contract: {
-        description: "Inspect and manage XShell runtime tasks.",
+        description: "List and monitor XShell runtime tasks.",
         events: {},
         properties: {},
         methods: {}
@@ -15,53 +14,21 @@ export default {
     style: `
         .summary {margin-bottom:1em;}
         .actions {margin-bottom:.75em;}
-        .details {margin-top:1.5em;}
-        .details x-datafields {margin-bottom:1em;}
         .description {overflow-wrap:anywhere;}
-        .output {max-height:25em;overflow:auto;}
-        .output-entry {padding:.35em 0;border-bottom:1px solid var(--x-color-border);}
-        .output-entry:last-child {border-bottom:0;}
-        .output-text {white-space:pre-wrap;overflow-wrap:anywhere;}
-        .output-error {color:var(--x-color-error);}
-        .output-warn {color:var(--x-color-warning);}
     `,
 
     template: `
-        <p>Shows registered XShell tasks, execution progress, errors, and output.</p>
+        <p>Double-click a task or press Enter on a selected row to view its details.</p>
 
-        <div class="summary">
-            <x-datafields>
-                <x-datafield label="Total" readonly>
-                    <span>{{ state.total }}</span>
-                </x-datafield>
-                <x-datafield label="Running" readonly>
-                    <span>{{ state.running }}</span>
-                </x-datafield>
-                <x-datafield label="Finished" readonly>
-                    <span>{{ state.finished }}</span>
-                </x-datafield>
-                <x-datafield label="Failed" readonly>
-                    <span>{{ state.failed }}</span>
-                </x-datafield>
-                <x-datafield label="Canceled" readonly>
-                    <span>{{ state.canceled }}</span>
-                </x-datafield>
-            </x-datafields>
-        </div>
-
-        <x-toolbar class="actions">
+        <x-toolbar slot="header-actions">
             <x-button label="Refresh" icon="x-refresh" command="refresh"></x-button>
             <x-button label="Clear completed" icon="x-clear" command="clear"
                 x-attr:disabled="!state.hasTerminal"></x-button>
-            <x-button label="Cancel selected" icon="x-close" command="cancelSelected"
-                x-attr:disabled="!state.canCancel"></x-button>
         </x-toolbar>
 
-        <x-notice type="error" x-if="state.error">
-            {{ state.error }}
-        </x-notice>
+        <x-notice type="error" x-if="state.error" x-prop:message="state.error"></x-notice>
 
-        <x-listview view="details" x-on:select="selectTask" x-on:activate="selectTask">
+        <x-listview view="details" x-on:activate="activateTask">
             <x-listview-head>
                 <x-listview-column width="16em">
                     <x-datafield type="search" x-model="state.query_title"
@@ -82,12 +49,11 @@ export default {
             </x-listview-head>
 
             <x-listview-body>
-                <x-listview-item x-for="item in state.items"
+                <x-listview-item x-for="item in state.items" x-key="id"
                     x-attr:label="item.title"
                     x-attr:description="item.description"
                     x-attr:path="item.id"
-                    x-attr:icon="item.icon"
-                    x-attr:selected="item.id == state.selectedId">
+                    x-attr:icon="item.icon">
 
                     <div class="description">{{ item.description }}</div>
                     <div>{{ item.status }}</div>
@@ -98,81 +64,6 @@ export default {
                 </x-listview-item>
             </x-listview-body>
         </x-listview>
-
-        <div class="details" x-if="state.selected">
-            <x-datafields label="Task details">
-                <x-datafield label="ID" readonly>
-                    <span>{{ state.selected.id }}</span>
-                </x-datafield>
-                <x-datafield label="Title" readonly>
-                    <span>{{ state.selected.title }}</span>
-                </x-datafield>
-                <x-datafield label="Description" readonly>
-                    <span>{{ state.selected.description }}</span>
-                </x-datafield>
-                <x-datafield label="Status" readonly>
-                    <span>{{ state.selected.status }}</span>
-                </x-datafield>
-                <x-datafield label="Progress" readonly>
-                    <span>{{ state.selected.progressLabel }}</span>
-                </x-datafield>
-                <x-datafield label="Background" readonly>
-                    <span>{{ state.selected.background }}</span>
-                </x-datafield>
-                <x-datafield label="Created" readonly>
-                    <x-datetime x-prop:value="state.selected.createdAt"></x-datetime>
-                </x-datafield>
-                <x-datafield label="Started" readonly>
-                    <x-datetime x-if="state.selected.startedAt"
-                        x-prop:value="state.selected.startedAt"></x-datetime>
-                </x-datafield>
-                <x-datafield label="Ended" readonly>
-                    <x-datetime x-if="state.selected.endedAt"
-                        x-prop:value="state.selected.endedAt"></x-datetime>
-                </x-datafield>
-                <x-datafield label="Duration" readonly>
-                    <x-time-ms x-prop:value="state.selected.duration"></x-time-ms>
-                </x-datafield>
-            </x-datafields>
-
-            <x-notice type="error" x-if="state.selected.error">
-                {{ state.selected.error.message }}
-            </x-notice>
-
-            <x-object x-if="state.selected.error"
-                x-prop:value="state.selected.error" expanded="true"></x-object>
-
-            <x-toolbar>
-                <x-button label="Refresh output" icon="x-refresh"
-                    command="refreshOutput"></x-button>
-                <x-button label="Cancel task" icon="x-close" command="cancelSelected"
-                    x-attr:disabled="!state.canCancel"></x-button>
-                <x-button label="Remove task" icon="x-clear" command="removeSelected"
-                    x-attr:disabled="!state.canRemove"></x-button>
-            </x-toolbar>
-
-            <x-datafields label="Execution output">
-                <p x-if="state.output.length == 0">No output recorded.</p>
-
-                <div class="output" x-else>
-                    <div class="output-entry" x-for="item in state.output">
-                        <div>
-                            <x-datetime x-prop:value="item.timestamp"></x-datetime>
-                            <strong>{{ item.level }}</strong>
-                        </div>
-                        <div class="output-text"
-                            x-class:output-error="item.level == 'error'"
-                            x-class:output-warn="item.level == 'warn'">
-                            {{ item.text }}
-                        </div>
-                    </div>
-                </div>
-
-                <x-button x-if="state.hasMoreOutput"
-                    label="Load more output" command="loadMoreOutput"
-                    x-attr:disabled="state.outputLoading"></x-button>
-            </x-datafields>
-        </div>
     `,
 
     state: {
@@ -186,23 +77,11 @@ export default {
         failed: 0,
         canceled: 0,
         hasTerminal: false,
-        selectedId: "",
-        selected: null,
-        canCancel: false,
-        canRemove: false,
-        output: [],
-        outputCursor: null,
-        outputLoading: false,
-        hasMoreOutput: false,
         error: ""
     },
 
-    controller({ state, events, bus, tasks, timer }) {
+    controller({ state, events, bus, tasks, timer, navigation, page }) {
         const TERMINAL = new Set(["finished", "error", "canceled"]);
-        const OUTPUT_PAGE_SIZE = 100;
-        const MAX_VISIBLE_OUTPUT = 500;
-        let outputRevision = 0;
-
         return {
             load() {
                 // Initialize task filters
@@ -213,10 +92,7 @@ export default {
                 // Subscribe to task lifecycle events
                 events.on(bus, "xshell:tasks:added", "refresh");
                 events.on(bus, "xshell:tasks:removed", "refresh");
-                events.on(bus, "xshell:tasks:updated", ({detail}) => {
-                    this.refresh();
-                    if (detail.id === state.selectedId) this.refreshOutput();
-                });
+                events.on(bus, "xshell:tasks:updated", "refresh");
 
                 // Refresh the duration of running tasks
                 timer.setInterval("refresh", 1000);
@@ -243,16 +119,12 @@ export default {
                     description: task.description || "",
                     status: task.status,
                     icon,
-                    progress: percentage,
                     progressLabel: percentage === null
                         ? (task.status === "running" ? "Indeterminate" : "—")
                         : `${percentage}%`,
                     background: task.background ? "Yes" : "No",
-                    createdAt: task.createdAt,
-                    startedAt: task.startedAt,
-                    endedAt: task.endedAt,
-                    duration: task.duration,
-                    error: task.error
+                    createdAt: task.createdAt.toISOString(),
+                    duration: task.duration
                 };
             },
 
@@ -278,146 +150,22 @@ export default {
                         (!status || task.status.toLowerCase().includes(status))
                     )
                     .map(task => this.project(task));
-
-                // Keep the selected task synchronized with its live handle
-                const selected = state.selectedId ? tasks.get(state.selectedId) : null;
-                state.selected = selected ? this.project(selected) : null;
-                state.canCancel = !!selected && !TERMINAL.has(selected.status);
-                state.canRemove = !!selected && TERMINAL.has(selected.status);
-
-                if (!selected && state.selectedId) {
-                    state.selectedId = "";
-                    state.output = [];
-                    state.outputCursor = null;
-                    state.hasMoreOutput = false;
-                    outputRevision++;
-                }
             },
 
-            async selectTask({event}) {
-                // Select the Task identified by the list item path
+            async activateTask({ event }) {
+                // Open the registered Task in a stacked Page.
                 const id = event.detail?.path;
                 if (!id || !tasks.get(id)) return;
 
-                if (state.selectedId !== id) {
-                    state.selectedId = id;
-                    state.output = [];
-                    state.outputCursor = null;
-                    state.hasMoreOutput = false;
-                }
-
-                this.refresh();
-                await this.refreshOutput();
-            },
-
-            async refreshOutput() {
-                // Reload the first page of output for the selected Task
-                const revision = ++outputRevision;
-                const id = state.selectedId;
-                const task = id ? tasks.get(id) : null;
-
-                state.output = [];
-                state.outputCursor = null;
-                state.hasMoreOutput = false;
-
-                if (!task) return;
-
-                state.outputLoading = true;
-
-                try {
-                    const result = await task.getOutput({
-                        limit: OUTPUT_PAGE_SIZE
-                    });
-
-                    if (revision !== outputRevision || state.selectedId !== id) return;
-
-                    state.output = result.entries;
-                    state.outputCursor = result.nextCursor;
-                    state.hasMoreOutput = result.entries.length === OUTPUT_PAGE_SIZE;
-                } catch (error) {
-                    if (revision === outputRevision) {
-                        state.error = error.message || String(error);
-                    }
-                } finally {
-                    if (revision === outputRevision) state.outputLoading = false;
-                }
-            },
-
-            async loadMoreOutput() {
-                // Read the next page without loading the complete Task history
-                if (state.outputLoading || !state.hasMoreOutput) return;
-
-                const id = state.selectedId;
-                const task = id ? tasks.get(id) : null;
-                if (!task) return;
-
-                const revision = outputRevision;
-                const cursor = state.outputCursor;
-                const remaining = MAX_VISIBLE_OUTPUT - state.output.length;
-
-                if (remaining <= 0) {
-                    state.hasMoreOutput = false;
-                    return;
-                }
-
-                state.outputLoading = true;
-
-                try {
-                    const result = await task.getOutput({
-                        cursor,
-                        limit: Math.min(OUTPUT_PAGE_SIZE, remaining)
-                    });
-
-                    if (revision !== outputRevision || state.selectedId !== id) return;
-
-                    state.output = [...state.output, ...result.entries];
-                    state.outputCursor = result.nextCursor;
-                    state.hasMoreOutput = result.entries.length === OUTPUT_PAGE_SIZE &&
-                        state.output.length < MAX_VISIBLE_OUTPUT;
-                } catch (error) {
-                    if (revision === outputRevision) {
-                        state.error = error.message || String(error);
-                    }
-                } finally {
-                    if (revision === outputRevision) state.outputLoading = false;
-                }
-            },
-
-            async cancelSelected() {
-                // Request cooperative cancellation of the selected Task
-                const task = tasks.get(state.selectedId);
-                if (!task || TERMINAL.has(task.status)) return;
-
                 state.error = "";
-
                 try {
-                    await task.cancel();
-                    this.refresh();
+                    await navigation.navigate({
+                        href: "page:xshell-diagnostics:/pages/detail/tasks-detail.js", page, open: "stack", params: { id }
+                    });
                 } catch (error) {
-                    state.error = error.message || String(error);
+                    state.error = error?.message || String(error);
                 }
             },
-
-            removeSelected() {
-                // Remove a completed Task from the registry
-                const task = tasks.get(state.selectedId);
-                if (!task || !TERMINAL.has(task.status)) return;
-
-                state.error = "";
-
-                try {
-                    tasks.remove(task.id);
-                    state.selectedId = "";
-                    state.output = [];
-                    state.outputCursor = null;
-                    state.hasMoreOutput = false;
-                    outputRevision++;
-                    this.refresh();
-                } catch (error) {
-                    state.error = error.message || String(error);
-                }
-            },
-
             clear() {
                 // Remove all terminal Tasks while preserving active Tasks
                 state.error = "";

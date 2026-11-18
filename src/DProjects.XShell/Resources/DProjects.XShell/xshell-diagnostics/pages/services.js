@@ -66,7 +66,7 @@ export default {
                 const serviceId = event.detail?.value;
                 if (typeof serviceId !== "string" || !serviceId.trim() || !services.has(serviceId)) return;
                 return navigation.navigate({
-                    href: "page:xshell-diagnostics:/pages/details/service-inspector.js",
+                    href: "page:xshell-diagnostics:/pages/detail/service-inspector.js",
                     page,
                     open: "stack",
                     params: { service: serviceId }

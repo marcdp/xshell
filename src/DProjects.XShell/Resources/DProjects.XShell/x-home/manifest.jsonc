@@ -1,0 +1,23 @@
+{
+    // Include this module in an Area to contribute its Home entry.
+    "modules": {
+        "x-home": {
+            "label": "Home",
+            "version": "0.9.0",
+            "copyright": "",
+            "icon": "x:x-home",
+            "defaults": {
+                "component": { "renderEngine": "x", "stateEngine": "proxy" },
+                "page": { "renderEngine": "x", "stateEngine": "proxy" }
+            },
+            "dependencies": {
+                "x": "module:x:latest"
+            },
+            "menus": {
+                "navigation": [
+                    { "label": "Home", "icon": "x:x-home", "path": "home", "href": "/pages/index.js" }
+                ]
+            }
+        }
+    }
+}
