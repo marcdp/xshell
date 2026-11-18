@@ -35,7 +35,7 @@ class XShell {
     get services() { return this._services; }
 
     //methods
-    async init(config) {
+    async init(config, timing) {
         // config
         this._config = config;        
         // bus
@@ -87,18 +87,18 @@ class XShell {
         this._services.register("resolver", this._resolver, { contractItem: this._contracts.getContractItemById("resolver")});
         this._services.register("contracts", this._contracts, { contractItem: this._contracts.getContractItemById("contracts")});
         this._services.register("services", this._services, { contractItem: this._contracts.getContractItemById("services")});
+        this._services.register("timing", timing, {});
         await this._services.init();
         // Initialize the declaratively registered Registry
-        await this._services.resolve("registry").init();
+        await this._services.initialize("registry");
         // Construct and validate Areas before module controllers execute
         const areas = this._services.resolve("areas");
         // Resolve and initialize Modules and their controllers
-        const modules = this._services.resolve("modules");
-        await modules.init();
+        const modules = await this._services.initialize("modules");
         // Compose effective Areas after Modules initialization
         areas.init({ modules });
         // initialize the declaratively registered Navigation service
-        await this._services.resolve("navigation").init();
+        await this._services.initialize("navigation");
         
     }   
     async validateConfig(config) {

@@ -25,13 +25,13 @@ These are three separate objects:
 
 During startup, XShell discovers and validates contracts, registers its core/runtime service instances, and calls `Services.init()`. That method
 validates every configured contract reference, eagerly loads each configured implementation class, registers the implementation metadata, and then
-finalizes the registry. Configured service instances are not constructed during initialization. The declarative `registry` service is then explicitly
-resolved and its asynchronous `init()` is awaited. XShell next resolves the declarative `areas` service, validating its merged
+finalizes the registry. Configured service instances are not constructed during registration. The declarative `registry` service is then explicitly
+resolved and initialized through `Services.initialize("registry")`. XShell next resolves the declarative `areas` service, validating its merged
 `xshell.services.areas.options`, before module controllers execute. It then resolves the declarative `modules` singleton and explicitly awaits its
-asynchronous `init()`. Application definitions remain under top-level `config.modules`; Modules has no implementation options. After Modules
+once-only initialization. Application definitions remain under top-level `config.modules`; Modules has no implementation options. After Modules
 initialize, XShell explicitly invokes `Areas.init()` with that singleton to compose module contributions, then resolves the declarative `navigation`
-service and awaits its `init()`. Each service's static `optionsSchema` validates its options immediately before lazy singleton construction. This
-coordination is specific to startup ordering and does not introduce a generic service lifecycle.
+service and awaits `Services.initialize("navigation")`. Each service's static `optionsSchema` validates its options immediately before lazy singleton
+construction. This coordination is specific to startup ordering and does not introduce automatic dependency initialization.
 
 The `theme` service is the one explicit startup exception. The X module controller declares `theme` as a constructor dependency, so normal service
 injection resolves it while modules initialize. The service starts with `system` and restores a saved `system`, `light`, or `dark` mode asynchronously
@@ -56,6 +56,24 @@ This fixed topology provides deterministic service resolution and prevents provi
 `Services.has(name)` reports whether a runtime or configured service name is registered. It only checks registry membership and never constructs a
 configured service. `Services.resolve(name)` returns an existing runtime instance or lazily constructs the configured implementation as a singleton.
 The implementation is validated against the contract's declared methods and properties when that singleton is first created.
+
+Registration, construction, and asynchronous initialization are separate operations:
+
+```js
+await services.init();                 // Register configured implementations and freeze the topology
+const service = services.resolve(id);  // Synchronously construct or retrieve the singleton
+await services.initialize(id);         // Explicitly initialize the singleton and await readiness
+```
+
+`Services.resolve()` remains synchronous and never invokes a service's `init()` method. `Services.initialize(name)` resolves through that same
+singleton path, requires a callable `init()`, and returns the service instance after initialization completes. Synchronous and asynchronous `init()`
+implementations are both supported. Initialization runs once per service: concurrent callers share one operation, and later calls return the already
+initialized singleton without invoking `init()` again. A thrown or rejected error is retained and propagated to every later caller without retry or
+singleton reconstruction. The constructed service remains available through `resolve()` for inspection. A service without `init()` fails with a
+descriptive error. Neither registration nor the mere presence of `init()` triggers initialization; XShell remains responsible for explicit ordering.
+
+Parameterized service setup remains separate. In particular, Areas continues to use `areas.init({ modules })`, and services such as I18n retain their
+existing parameterized semantics rather than using `Services.initialize(name)`.
 
 Each configured service may declare an optional `options` object. Every configured implementation class must declare a static `optionsSchema`
 JSON Schema object describing that private constructor configuration. XShell passes the existing lazy service-injection proxy as the first
@@ -99,7 +117,8 @@ invoking the constructor or emitting `xshell:service:created`; the service remai
 the schema or options. Options remain private construction data and are not included in `services.registry` or `services.getServiceInfo()` metadata.
 
 `Services` owns its mutable runtime service records internally. `services.registry` returns a read-only snapshot of the current service metadata:
-each entry has `id`, `state`, `contractId`, `contractUrl`, `description`, `icon`, `moduleId`, `implementationName`, `url`, `size`, and `time`.
+each entry has `id`, construction `state`, `initializationState`, `contractId`, `contractUrl`, `description`, `icon`, `moduleId`,
+`implementationName`, `url`, `size`, and `time`. Initialization state is `not-initialized`, `initializing`, `initialized`, or `failed`.
 Unavailable values are `null`. The returned array and entries are frozen, contain no live instances or implementation classes, and may become
 stale as services are resolved. `services.getServiceInfo(name)` returns the same projected metadata for one service, or `undefined` if absent.
 Live services are obtained only through `services.resolve(name)`. The registry topology remains immutable after `Services.init()`, while internal
@@ -120,6 +139,7 @@ startup
 runtime
     -> Services.has(name)       existence only
     -> Services.resolve(name)   options validation, lazy singleton construction, and contract validation
+    -> Services.initialize(name) explicit, asynchronous, once-only service initialization
     -> Services.registry        read-only snapshot of service metadata
 ```
 

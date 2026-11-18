@@ -88,11 +88,11 @@ repository sources, and environment describe the composed application's hosting 
 ## Runtime module instances
 
 Modules is a declaratively registered runtime service selected by `xshell.services.modules`; its default implementation is
-`xshell/services/modules.js`. `Services.init()` registers the implementation metadata, and `Services.resolve("modules")` constructs the singleton
-lazily through the standard service injection proxy. Application module definitions remain the separate top-level `config.modules` object; they
+`xshell/services/modules.js`. `Services.init()` registers the implementation metadata, and `Services.initialize("modules")` constructs the singleton
+lazily through the standard service injection proxy and awaits its once-only initialization. Application module definitions remain the separate top-level `config.modules` object; they
 are not Modules service options.
 
-Startup explicitly resolves Modules and awaits `Modules.init()`. That method iterates effective `config.modules` once and creates one runtime record
+Startup explicitly initializes Modules. Its `init()` method iterates effective `config.modules` once and creates one runtime record
 per id. Repeated dependency requirements therefore do not create multiple runtime module instances. Retrieve a module with
 `xshell.modules.getModuleById(id)`; the accessor delegates to the configured singleton, and `xshell.modules.registry` is a frozen inspection
 snapshot.

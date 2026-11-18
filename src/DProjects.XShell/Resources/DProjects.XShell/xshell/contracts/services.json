@@ -1,6 +1,6 @@
 {
   "label": "Services",
-  "description": "Registers framework and configured services, resolves instances lazily, validates their declared contract surface, and exposes service metadata.",
+  "description": "Registers framework and configured services, resolves instances lazily, explicitly initializes participating services once, validates their declared contract surface, and exposes service metadata.",
   "properties": {
     "registry": {
       "type": "array",
@@ -13,6 +13,7 @@
           "properties": {
             "id": {"type":"string"},
             "state": {"type":"string","enum":["registered","creating","created"]},
+            "initializationState": {"type":"string","enum":["not-initialized","initializing","initialized","failed"]},
             "contractId": {"type":["string","null"]},
             "contractUrl": {"type":["string","null"]},
             "description": {"type":["string","null"]},
@@ -23,7 +24,7 @@
             "size": {"type":["number","null"]},
             "time": {"type":["number","null"]}
           },
-          "required": ["id","state","contractId","contractUrl","description","icon","moduleId","implementationName","url","size","time"]
+          "required": ["id","state","initializationState","contractId","contractUrl","description","icon","moduleId","implementationName","url","size","time"]
         }
       }
     }
@@ -45,12 +46,17 @@
       "parameters": [{"name":"name","type":"string","required":true}],
       "returns": {"type":"any","description":"Service instance, or null if registered without an instance or implementation."}
     },
+    "initialize": {
+      "description": "Resolves a service and explicitly runs its init method once. Concurrent callers share the same asynchronous operation, and failures are retained without automatic retry.",
+      "parameters": [{"name":"name","type":"string","required":true}],
+      "returns": {"type":"any","description":"Promise resolving to the initialized singleton service instance."}
+    },
     "getServiceInfo": {
       "description": "Returns a frozen projection of a registered service's metadata without exposing its instance.",
       "parameters": [{"name":"id","type":"string","required":true}],
       "returns": {
         "type": "any",
-        "description": "Service metadata object with id, state, contractId, contractUrl, description, icon, moduleId, implementationName, url, size, and time; undefined if not found."
+        "description": "Service metadata object with id, construction state, initializationState, contractId, contractUrl, description, icon, moduleId, implementationName, url, size, and time; undefined if not found."
       }
     }
   }

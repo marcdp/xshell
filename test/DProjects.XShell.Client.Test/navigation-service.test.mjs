@@ -22,18 +22,17 @@ test("global configuration delegates Navigation option validation to the service
 test("XShell resolves the configured Navigation singleton after Areas composition", async () => {
     const source = await readFile(new URL("xshell.js", frameworkUrl), "utf8");
     const servicesIndex = source.indexOf("await this._services.init()");
-    const registryIndex = source.indexOf('await this._services.resolve("registry").init()');
-    const resolveModulesIndex = source.indexOf('const modules = this._services.resolve("modules")');
-    const modulesIndex = source.indexOf("await modules.init()");
+    const registryIndex = source.indexOf('await this._services.initialize("registry")');
+    const resolveModulesIndex = source.indexOf('const modules = await this._services.initialize("modules")');
     const areasResolveIndex = source.indexOf('const areas = this._services.resolve("areas")');
     const areasIndex = source.indexOf("areas.init({ modules })");
-    const navigationIndex = source.indexOf('await this._services.resolve("navigation").init()');
+    const navigationIndex = source.indexOf('await this._services.initialize("navigation")');
 
     assert.doesNotMatch(source, /import Navigation from/);
     assert.doesNotMatch(source, /new Navigation\s*\(/);
     assert.doesNotMatch(source, /register\("navigation"/);
     assert.match(source, /get navigation\(\) \{ return this\._services\.resolve\("navigation"\); \}/);
-    assert.ok(servicesIndex < registryIndex && registryIndex < areasResolveIndex && areasResolveIndex < resolveModulesIndex && resolveModulesIndex < modulesIndex && modulesIndex < areasIndex && areasIndex < navigationIndex);
+    assert.ok(servicesIndex < registryIndex && registryIndex < areasResolveIndex && areasResolveIndex < resolveModulesIndex && resolveModulesIndex < areasIndex && areasIndex < navigationIndex);
 });
 
 test("Loader reads the Navigation mode from declarative service options", async () => {

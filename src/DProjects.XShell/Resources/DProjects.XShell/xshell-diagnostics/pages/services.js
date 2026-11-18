@@ -20,6 +20,7 @@ export default {
                 <x-listview-column label="Size" width="5em" style="text-align:right"></x-listview-column>
                 <x-listview-column label="Time" width="5em" style="text-align:right"></x-listview-column>
                 <x-listview-column label="Status" width="5em" style="text-align:right"></x-listview-column>
+                <x-listview-column label="Initialization" width="8em" style="text-align:right"></x-listview-column>
                 <x-listview-column label="File" width="3em" style="text-align:right"></x-listview-column>
             </x-listview-head>
             <x-listview-body>
@@ -35,6 +36,7 @@ export default {
                 <x-file-size style="text-align:right" x-prop:value="item.size" ></x-file-size>
                 <div style="text-align:right"><x-time-ms x-prop:value="item.time"></x-time-ms></div>
                 <div style="text-align:right">{{ item.status }}</div>
+                <div style="text-align:right">{{ item.initializationStatus }}</div>
                 <x-anchor style="text-align:right" x-if="item.url" x-attr:href="item.url" target="_blank" class="plain"><x-icon icon="x-open-in-new" ></x-icon></x-anchor>
             </x-listview-item>
             </x-listview-body>
@@ -90,6 +92,7 @@ export default {
                             moduleId: moduleId,
                             url: item.url,
                             status: item.state,
+                            initializationStatus: item.initializationState,
                             size: item.size ?? 0,
                             time: item.time ?? 0,
                         });

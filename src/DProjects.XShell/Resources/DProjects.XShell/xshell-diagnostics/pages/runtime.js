@@ -24,12 +24,31 @@ export default {
             <x-datafield label="Uptime" readonly>
                 <x-countup x-prop:value="state.startTimeMs"></x-countup>
             </x-datafield>
+            <x-datatable>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Phase</th>
+                        <th>Duration</th>
+                        <th>Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr x-for="item in state.timings">
+                        <td>{{ item.phase }}</td>
+                        <td>{{ item.durationMs }} ms</td>
+                        <td>{{ item.totalMs }} ms</td>
+                    </tr>
+                </tbody>
+            </table>
+            </x-datatable>
         </x-datafields>
     `,
 
     state: {
         startTimeMs: null,
-        startupDurationMs: 0
+        startupDurationMs: 0,
+        timings: []
     },
 
     controller({ state, runtime, timer }) {
@@ -44,6 +63,7 @@ export default {
                 // Project the current Runtime values into reactive Page state.
                 state.startTimeMs = runtime.startTimeMs;
                 state.startupDurationMs = runtime.startupDurationMs;
+                state.timings = runtime.timings;
             }
         };
     }

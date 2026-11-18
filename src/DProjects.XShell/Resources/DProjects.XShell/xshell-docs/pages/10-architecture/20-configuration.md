@@ -165,8 +165,8 @@ Loader, and validates each contribution against that schema before module contro
 resolver entries. Missing or empty `contributions` are valid; an unknown schema path, schema-loading error, or invalid contribution stops initialization.
 
 Registry options participate in the ordinary recursive configuration merge: named registry objects merge and contribution arrays concatenate across
-modules. The service remains lazily constructed through `Services.resolve("registry")`; startup explicitly resolves it after `Services.init()` and
-awaits its asynchronous `init()` before Modules initialization.
+modules. The service remains lazily constructed; after `Services.init()` registers configured implementations, startup explicitly calls
+`Services.initialize("registry")` and awaits its once-only asynchronous initialization before Modules initialization.
 
 ## Merge and precedence
 

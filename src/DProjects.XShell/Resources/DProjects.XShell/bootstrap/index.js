@@ -3,6 +3,22 @@
 const meta = name => document.querySelector(`meta[name="${name}"]`)?.content;
 const repositoryUrls = [...document.querySelectorAll('meta[name="xshell:app.source"]')].map(element => element.content);
 
+// timings
+const started = performance.now();
+let previous = started;
+const timings = [];
+const timing = {
+    startTimeMs: performance.timeOrigin + started,
+    started,
+    timings
+}
+const checkpoint = phase => {
+    const now = performance.now();
+    timings.push({ phase, durationMs: +(now - previous).toFixed(2), totalMs: +(now - started).toFixed(2) });
+    previous = now;
+};
+checkpoint("start");
+
 
 // ui
 function showSpinner() {
@@ -101,17 +117,7 @@ function fillXShellOverrides(config) {
 
 // main
 async function main() {
-
-    // Performance tracking start
-    const started = performance.now();
-    let previous = started;
-    const timings = [];
-    const checkpoint = phase => {
-        const now = performance.now();
-        timings.push({ phase, durationMs: +(now - previous).toFixed(2), totalMs: +(now - started).toFixed(2) });
-        previous = now;
-    };
-
+    
     // action
     try {
 
@@ -848,7 +854,7 @@ async function main() {
 
         const xshell = xshellModule.default;
         console.log("bootstrap: xshell: init", config);
-        await xshell.init(deepFreeze(config));
+        await xshell.init(deepFreeze(config), timing);
         checkpoint("xshell initialized");
 
     } catch (error) {

@@ -78,7 +78,12 @@ export default class Services {
         if (Object.isFrozen(this._items)) throw new Error("Service registry is immutable after initialization.");
         if (Object.hasOwn(this._items, name)) throw new Error(`Service already exists: ${name}`);
         if (instance != null && contractItem) this._validateImplementation(name, instance, contractItem);
-        this._items[name] = { instance, contractItem, implementationItem, state: instance == null ? "registered" : "created" };
+        this._items[name] = {
+            instance, contractItem, implementationItem,
+            state: instance == null ? "registered" : "created",
+            initializationState: "not-initialized",
+            initializationPromise: null
+        };
     }
     has(name) {
         // check the registry without constructing a configured service
@@ -124,6 +129,29 @@ export default class Services {
         }
         return result.instance;
     }
+    initialize(name) {
+        // Resolve through the normal synchronous singleton construction path
+        const instance = this.resolve(name);
+        const result = this._items[name];
+
+        // Reuse the completed result or the single in-flight/failed operation
+        if (result.initializationState === "initialized") return Promise.resolve(instance);
+        if (result.initializationPromise) return result.initializationPromise;
+
+        // Establish the shared operation before invoking service code to prevent duplicate initialization
+        result.initializationState = "initializing";
+        result.initializationPromise = Promise.resolve().then(async () => {
+            if (typeof instance?.init !== "function") throw new Error(`Service '${name}' does not implement init().`);
+            await instance.init.call(instance);
+            result.initializationState = "initialized";
+            result.initializationPromise = null;
+            return instance;
+        }).catch(error => {
+            result.initializationState = "failed";
+            throw error;
+        });
+        return result.initializationPromise;
+    }
     getServiceInfo(id) {
         return Object.hasOwn(this._items, id) ? this._projectServiceInfo(id, this._items[id]) : undefined;
     }
@@ -139,6 +167,7 @@ export default class Services {
         return Object.freeze({
             id,
             state: item.state,
+            initializationState: item.initializationState,
             contractId: typeof contractId === "string" ? contractId : null,
             contractUrl: typeof contractUrl === "string" ? contractUrl : null,
             description: typeof description === "string" ? description : null,

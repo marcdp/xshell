@@ -54,13 +54,14 @@ test("Services diagnostics re-reads the public registry when a service is create
     const services = {
         get registry() {
             reads++;
-            return [{ id: "example", state: serviceState }];
+            return [{ id: "example", state: serviceState, initializationState: "not-initialized" }];
         }
     };
     let controller;
     controller = ServicesPage.controller({ state, bus, services, events: createEvents(() => controller) });
     controller.load();
     assert.equal(state.items[0].status, "registered");
+    assert.equal(state.items[0].initializationStatus, "not-initialized");
 
     serviceState = "created";
     bus.dispatchEvent(new Event("xshell:service:created"));

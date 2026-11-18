@@ -29,6 +29,7 @@ function createServices(options) {
     // Register the constructor dependencies supplied by the normal service injection proxy.
     services.register("bus", bus);
     services.register("config", config);
+    services.register("document", globalThis.document);
     services.register("loader", loader);
     services.register("resolver", resolver);
     services.register("services", services);
@@ -43,8 +44,8 @@ test("framework manifest registers Modules declaratively without service options
 });
 
 test("Services resolves Modules lazily as one injected singleton", async () => {
-    const dependencies = createServices();
     globalThis.document = { adoptedStyleSheets: [] };
+    const dependencies = createServices();
 
     await dependencies.services.init();
     assert.equal(dependencies.services.getServiceInfo("modules").state, "registered");
@@ -63,8 +64,8 @@ test("Services resolves Modules lazily as one injected singleton", async () => {
 
 test("Modules accepts omitted options and rejects unknown options before construction", async () => {
     assert.deepEqual(Modules.optionsSchema, { type: "object", additionalProperties: false });
-    const dependencies = createServices({ unknown: true });
     globalThis.document = { adoptedStyleSheets: [] };
+    const dependencies = createServices({ unknown: true });
 
     await dependencies.services.init();
     assert.throws(() => dependencies.services.resolve("modules"), /Invalid options for service 'modules'/);
@@ -76,6 +77,6 @@ test("XShell delegates its Modules accessor and explicit initialization to the c
 
     assert.doesNotMatch(source, /import Modules from|new Modules\s*\(|register\("modules"|_modules/);
     assert.match(source, /get modules\(\) \{ return this\._services\.resolve\("modules"\); \}/);
-    assert.match(source, /const modules = this\._services\.resolve\("modules"\);\s*await modules\.init\(\);/s);
+    assert.match(source, /const modules = await this\._services\.initialize\("modules"\);/);
     assert.match(source, /areas\.init\(\{ modules \}\);/);
 });

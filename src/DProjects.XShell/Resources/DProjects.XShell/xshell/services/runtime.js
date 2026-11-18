@@ -1,28 +1,29 @@
-
-// class
 export default class Runtime {
 
-    // options schema
+    // options schema for runtime service configuration
     static optionsSchema = {
         type: "object",
-        properties: {
-        },
         additionalProperties: false
     };
 
-    // vars
-    _startTimeMs  = null;
-    _startupDurationMs = null;
-
     // ctor
-    constructor( {} ) {
-        this._startupDurationMs = performance.now();
-        this._startTimeMs  = new Date().getTime();
-    }   
+    constructor({ timing }) {
+        this._timing = timing;
+    }
 
     // props
-    get startTimeMs() { return this._startTimeMs; }
-    get startupDurationMs() { return this._startupDurationMs; }
-    get uptimeMs() {  return performance.now() - this._startupDurationMs;}
-    
+    get startTimeMs() {
+        return this._timing.startTimeMs;
+    }
+    get startupDurationMs() {
+        return this._timing.timings.find(
+            item => item.phase === "xshell initialized"
+        )?.totalMs ?? null;
+    }
+    get uptimeMs() {
+        return performance.now() - this._timing.started;
+    }
+    get timings() {
+        return this._timing.timings.map(item => ({ ...item }));
+    }
 }

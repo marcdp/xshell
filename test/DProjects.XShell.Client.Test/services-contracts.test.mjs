@@ -585,6 +585,7 @@ test("service inspection returns independent read-only metadata snapshots", asyn
     assert.deepEqual(example, {
         id: "example",
         state: "registered",
+        initializationState: "not-initialized",
         contractId: "example",
         contractUrl: "/_assets/contracts/example.json",
         description: "example contract",
@@ -604,7 +605,7 @@ test("service inspection returns independent read-only metadata snapshots", asyn
     assert.notStrictEqual(services.getServiceInfo("example"), example);
     assert.equal(services.getServiceInfo("missing"), undefined);
     assert.deepEqual(snapshot.find(item => item.id === "runtime"), {
-        id: "runtime", state: "created", contractId: null, contractUrl: null, description: null, icon: null,
+        id: "runtime", state: "created", initializationState: "not-initialized", contractId: null, contractUrl: null, description: null, icon: null,
         moduleId: null, implementationName: null, url: null, size: null, time: null
     });
 
@@ -679,6 +680,7 @@ test("the framework Temp service loads lazily, validates its contract, and remai
     assert.deepEqual(services.getServiceInfo("temp"), {
         id: "temp",
         state: "created",
+        initializationState: "not-initialized",
         contractId: "temp",
         contractUrl: "/_assets/contracts/temp.json",
         description: TempContract.description,

@@ -270,17 +270,15 @@ test("theme contract validates and the configured service resolves as a singleto
 test("XShell initializes services before modules and navigation", () => {
     const source = readFileSync(new URL("xshell.js", xshellDirectory), "utf8");
     const servicesInit = source.indexOf("await this._services.init()");
-    const modulesResolve = source.indexOf('const modules = this._services.resolve("modules")');
-    const modulesInit = source.indexOf("await modules.init()");
+    const modulesResolve = source.indexOf('const modules = await this._services.initialize("modules")');
     const areasResolve = source.indexOf('const areas = this._services.resolve("areas")');
     const areasInit = source.indexOf("areas.init({ modules })");
-    const navigationInit = source.indexOf('await this._services.resolve("navigation").init()');
+    const navigationInit = source.indexOf('await this._services.initialize("navigation")');
 
     assert.ok(servicesInit >= 0);
     assert.ok(areasResolve > servicesInit);
     assert.ok(modulesResolve > areasResolve);
-    assert.ok(modulesInit > modulesResolve);
-    assert.ok(areasInit > modulesInit);
+    assert.ok(areasInit > modulesResolve);
     assert.ok(navigationInit > areasInit);
 });
 
