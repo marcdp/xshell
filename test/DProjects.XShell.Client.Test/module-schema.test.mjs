@@ -41,7 +41,7 @@ function configuration(module) {
             environment: "test",
             assets: { basePath: "/_assets", path: "/_assets/xshell", url: "https://example.test/xshell/" },
             areas: { default: null, global: [], definitions: {} },
-            navigation: { mode: "path" },
+            services: { navigation: { contract: "navigation", implementation: "/services/navigation.js", options: { mode: "path" } } },
             resolver: {},
             ui: { layout: {}, component: {} },
             i18n: {

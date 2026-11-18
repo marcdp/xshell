@@ -48,8 +48,7 @@ function createDocument(...elements) {
 const context = {
     appBasePath: "https://example.test/app",
     resourceDefinition: { modulePath: "/_assets/demo" },
-    resourcePath: "/_assets/demo/pages/page.html",
-    navigationMode: "hash"
+    resourcePath: "/_assets/demo/pages/page.html"
 };
 const resourceBase = "https://example.test/app/_assets/demo/pages/";
 

@@ -154,7 +154,7 @@ const { createComponentClassFromJsDefinition } = await import("../../src/DProjec
 const { RenderEngineHtml } = await import("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/render-engines/html.js");
 const { createPageClassFromJsDefinition } = await import("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/loaders/page-js.js");
 const { default: XPage } = await import("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/x-page.js");
-const { default: Navigation } = await import("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/navigation.js");
+const { default: Navigation } = await import("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/navigation.js");
 const { default: xshell } = await import("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/xshell.js");
 const { default: Page } = await import("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/page.js");
 const { default: LoaderPageMd } = await import("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/loaders/page-md.js");
@@ -290,12 +290,12 @@ test("x-page intercepts only application anchors and preserves native clicks", a
             await t.test(`${mode}: ${JSON.stringify(scenario)}`, () => {
                 // exercise the registered click listener with real Navigation URL parsing
                 const navigation = new Navigation({
-                    areas: {}, bus: {}, container: {},
-                    config: { app: { basePath: "", baseUrl: "https://example.test/" }, xshell: { assets: { basePath: "/_assets" }, navigation: { mode } } }
-                });
+                    areas: {}, bus: {},
+                    config: { app: { basePath: "", baseUrl: "https://example.test/" }, xshell: { assets: { basePath: "/_assets" } } }
+                }, { mode }, { container: {} });
                 const calls = [];
                 navigation.navigate = item => calls.push(item);
-                xshell._navigation = navigation;
+                xshell._services = { resolve() { return navigation; } };
                 const xpage = new XPage();
                 xpage._page = new Page({ src: "/pages/current.js", context: {} });
                 const anchor = document.createElement("a");
@@ -365,17 +365,16 @@ test("x-page native anchors and x-anchor targets reach the same JavaScript and M
             const navigation = new Navigation({
                 areas,
                 bus: {},
-                container: { querySelectorAll() { return []; } },
                 config: {
                     app: { basePath: "/prefix", baseUrl: "https://example.test/prefix/" },
-                    xshell: { assets: { basePath: "/_assets" }, navigation: { mode } }
+                    xshell: { assets: { basePath: "/_assets" } }
                 }
-            });
+            }, { mode }, { container: { querySelectorAll() { return []; } } });
             navigation._stackToBrowser = stack => {
                 browserUrls.push(navigation.buildUrlAbsolute(stack[0]));
                 return Promise.resolve();
             };
-            xshell._navigation = navigation;
+            xshell._services = { resolve() { return navigation; } };
             const xpage = new XPage();
             xpage._page = new Page({ src: scenario.pageSrc, context: {} });
             const anchor = document.createElement("a");
@@ -402,7 +401,7 @@ test("x-page native anchors and x-anchor targets reach the same JavaScript and M
 
 test("x-page finds native anchors through a composed Shadow DOM click path", () => {
     const calls = [];
-    xshell._navigation = { navigate(item) { calls.push(item); } };
+    xshell._services = { resolve() { return { navigate(item) { calls.push(item); } }; } };
     const xpage = new XPage();
     xpage._page = new Page({ src: "/demo/_assets/example/pages/current.js", context: {} });
     const anchor = document.createElement("a");
@@ -846,9 +845,8 @@ test("dialog close completes after one final Page unload and host removal", asyn
     const navigation = new Navigation({
         areas: {},
         bus: {},
-        config: { app: { basePath: "", baseUrl: "https://example.test/" }, xshell: { navigation: { mode: "path" } } },
-        container
-    });
+        config: { app: { basePath: "", baseUrl: "https://example.test/" }, xshell: {} }
+    }, { mode: "path" }, { container });
     navigation._buildUrlFinal = item => item.href;
     const resultPromise = navigation._showDialog({ href: "/pages/dialog.js", context: {} });
     const xpage = container.firstChild;
@@ -882,9 +880,8 @@ test("dialog close rejects its promise when final Page cleanup fails", async () 
     const navigation = new Navigation({
         areas: {},
         bus: {},
-        config: { app: { basePath: "", baseUrl: "https://example.test/" }, xshell: { navigation: { mode: "path" } } },
-        container
-    });
+        config: { app: { basePath: "", baseUrl: "https://example.test/" }, xshell: {} }
+    }, { mode: "path" }, { container });
     navigation._buildUrlFinal = item => item.href;
     const resultPromise = navigation._showDialog({ href: "/pages/dialog.js", context: {} });
     const xpage = container.firstChild;
@@ -905,9 +902,8 @@ test("navigation stack changes close dialogs through final Page cleanup", async 
     const navigation = new Navigation({
         areas: {},
         bus: {},
-        config: { app: { basePath: "", baseUrl: "https://example.test/" }, xshell: { navigation: { mode: "path" } } },
-        container
-    });
+        config: { app: { basePath: "", baseUrl: "https://example.test/" }, xshell: {} }
+    }, { mode: "path" }, { container });
     navigation._buildUrlFinal = item => item.href;
     navigation.getXPages = () => [];
     const resultPromise = navigation._showDialog({ href: "/pages/dialog.js", context: {} });
@@ -928,9 +924,8 @@ test("navigation shrinks three stack Pages to one after asynchronous final unloa
     container.querySelectorAll = () => container.childNodes;
     const navigation = new Navigation({
         areas: {}, bus: { emit() {} },
-        config: { app: { basePath: "", baseUrl: "https://example.test/" }, xshell: { navigation: { mode: "path" } } },
-        container
-    });
+        config: { app: { basePath: "", baseUrl: "https://example.test/" }, xshell: {} }
+    }, { mode: "path" }, { container });
     const counts = [0, 0, 0];
     const gates = [];
     for (let i = 0; i < 3; i++) {
@@ -986,9 +981,8 @@ test("x-page and dialog preserve falsy results", async () => {
     const container = new FakeNode();
     const navigation = new Navigation({
         areas: {}, bus: {},
-        config: { app: { basePath: "", baseUrl: "https://example.test/" }, xshell: { navigation: { mode: "path" } } },
-        container
-    });
+        config: { app: { basePath: "", baseUrl: "https://example.test/" }, xshell: {} }
+    }, { mode: "path" }, { container });
     navigation._buildUrlFinal = item => item.href;
     for (const value of [false, 0, "", null]) {
         const resultPromise = navigation._showDialog({ href: "/pages/dialog.js", context: {} });

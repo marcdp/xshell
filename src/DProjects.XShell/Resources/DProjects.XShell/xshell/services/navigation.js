@@ -1,12 +1,27 @@
-import {combineUrls} from "./utils/urls.js";
-import { base64UrlEncode, base64UrlDecode } from "./utils/base64.js";
-import { compileRoute } from "./utils/route.js";
+import {combineUrls} from "../utils/urls.js";
+import { base64UrlEncode, base64UrlDecode } from "../utils/base64.js";
+import { compileRoute } from "../utils/route.js";
 
 // consts
 export const HASH_PREFIX = "#!";
 
 // class
 export default class Navigation {
+
+    // options
+    static optionsSchema = {
+        type: "object",
+        required: ["mode"],
+        properties: {
+            mode: {
+                type: "string",
+                enum: ["hash", "path"],
+                description: "Navigation strategy used by the application."
+            }
+        },
+        additionalProperties: false,
+        description: "Navigation service configuration."
+    };
 
     // vars
     _areas = null;
@@ -24,15 +39,17 @@ export default class Navigation {
     _stackToDomTask = Promise.resolve();
     
     // ctor
-    constructor( { areas, bus, config, container, resolver} ) {
+    constructor( { areas, bus, config, resolver }, options = {}, { container = document.body } = {} ) {
+        // initialize injected dependencies
         this._areas = areas;
         this._bus = bus;
         this._config = config;
-        this._container = container;
         this._resolver = resolver;
-        this._mode = config.xshell.navigation.mode;
-        this._appBasePath = config.app.basePath;
-        if (this._appBasePath == "/") this._appBasePath = "";
+
+        // initialize navigation settings
+        this._mode = options.mode;
+        this._container = container;
+        this._appBasePath = config.app.basePath === "/" ? "" : config.app.basePath;
         this._assetsBasePath = config.xshell.assets?.basePath || "";
     }
 

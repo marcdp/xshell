@@ -167,11 +167,26 @@ After reverse route generation, path mode prepends `App.BasePath` directly. With
 `/repository/12/items`, the browser href is `/app/demo/repository/12/items`.
 
 ```jsonc
-{ "xshell": { "navigation": { "mode": "path" } } }
+{
+    "xshell": {
+        "services": {
+            "navigation": {
+                "contract": "navigation",
+                "implementation": "/services/navigation.js",
+                "options": { "mode": "path" }
+            }
+        }
+    }
+}
 ```
 
-The nested names match `manifest.jsonc`; its checked-in default is currently `path`. The runtime `Navigation` constructor reads
-`config.xshell.navigation.mode`.
+The nested names match `manifest.jsonc`; its checked-in default is currently `path`. Navigation is a declaratively configured service, and its
+implementation-owned static `optionsSchema` validates `xshell.services.navigation.options.mode` as either `hash` or `path` immediately before lazy
+construction through `Services.resolve("navigation")`.
+
+XShell still coordinates Navigation's asynchronous `init()` explicitly. Startup loads configured service classes, initializes Registry, initializes
+Modules, composes Areas, and only then resolves and initializes Navigation. The `xshell.navigation` compatibility accessor delegates to the service
+registry and returns that configured singleton; it does not retain a second Navigation instance.
 
 On a fresh load at the mode's empty/root URL, Navigation uses the default Area's `home`, derived from the first depth-first navigation item marked
 `default: true`, with a fallback to the first depth-first item having `path || href`. No visibility flag is tested.

@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import Resolver from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/resolver.js";
-import Navigation from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/navigation.js";
+import Navigation from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/navigation.js";
 import Areas from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/areas.js";
 
 test("resolver registry snapshots expose rule metadata without mutable definitions", () => {

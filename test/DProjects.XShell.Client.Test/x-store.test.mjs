@@ -98,7 +98,7 @@ test("store resources resolve through instance-js and cache each memory identity
     const config = {
         app: {basePath: "", baseUrl: new URL("../../", import.meta.url).href},
         xshell: {
-            assets: {path: "/_assets/xshell"}, navigation: {mode: "path"}, ui: {component: {lazy: null}},
+            assets: {path: "/_assets/xshell"}, services: {navigation: {options: {mode: "path"}}}, ui: {component: {lazy: null}},
             resolver: {store: {
                 "mem:": {src: providerUrl, loader: instanceLoaderUrl, cache: true},
                 "mem:{identity}": {src: providerUrl, loader: instanceLoaderUrl, cache: true}

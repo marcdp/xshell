@@ -304,7 +304,7 @@ test("module styles use the Loader once per inventoried stylesheet and are adopt
         app: { basePath: "", baseUrl: "https://example.test/" },
         xshell: {
             assets: { basePath: "/_assets" },
-            navigation: { mode: "path" },
+            services: { navigation: { options: { mode: "path" } } },
             ui: { component: { lazy: null } },
             resolver: { style: Object.fromEntries(["first", "second"].map(id => [
                 `/_assets/${id}/{path}.css`,

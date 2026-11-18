@@ -48,16 +48,16 @@ test("override values use JSON-first parsing with an explicit string fallback", 
 });
 
 test("multiple overrides are applied in metadata order", () => {
-    const config = { xshell: { navigation: { mode: "path" }, flags: {} } };
+    const config = { xshell: { services: { navigation: { options: { mode: "path" } } }, flags: {} } };
 
     apply(config, {
-        "xshell:navigation.mode": '"hash"',
+        "xshell:services.navigation.options.mode": '"hash"',
         "xshell:flags.enabled": "true",
         "xshell:flags.values": "[1,2]"
     });
 
     assert.deepEqual(plain(config.xshell), {
-        navigation: { mode: "hash" },
+        services: { navigation: { options: { mode: "hash" } } },
         flags: { enabled: true, values: [1, 2] }
     });
 });
@@ -71,34 +71,34 @@ test("an existing service gains options when an override traverses it", () => {
 });
 
 test("unknown services and arbitrary missing intermediate paths remain rejected", () => {
-    const config = { xshell: { services: { commands: { contract: "commands", implementation: "/commands.js" } }, navigation: {} } };
+    const config = { xshell: { services: { commands: { contract: "commands", implementation: "/commands.js" }, navigation: { options: {} } } } };
 
     assert.throws(() => apply(config, { "xshell:services.unknown.options.timeout": "30" }),
         /Unknown configuration path: services\.unknown\.options\.timeout/);
-    assert.throws(() => apply(config, { "xshell:navigation.missing.value": "30" }),
-        /Unknown configuration path: navigation\.missing\.value/);
+    assert.throws(() => apply(config, { "xshell:services.navigation.options.missing.value": "30" }),
+        /Unknown configuration path: services\.navigation\.options\.missing\.value/);
 });
 
 test("invalid paths, incompatible intermediates, and prototype-pollution segments are rejected", () => {
-    const config = { xshell: { navigation: { mode: "path" }, values: [] } };
+    const config = { xshell: { services: { navigation: { options: { mode: "path" } } }, values: [] } };
 
-    assert.throws(() => apply(config, { "xshell:navigation..mode": '"hash"' }), /Invalid configuration override/);
+    assert.throws(() => apply(config, { "xshell:services.navigation.options..mode": '"hash"' }), /Invalid configuration override/);
     assert.throws(() => apply(config, { "xshell:values.0.name": '"value"' }), /Invalid configuration path/);
     for (const segment of ["__proto__", "prototype", "constructor"]) {
-        assert.throws(() => apply(config, { [`xshell:navigation.${segment}.polluted`]: "true" }), /Invalid configuration override/);
+        assert.throws(() => apply(config, { [`xshell:services.navigation.options.${segment}.polluted`]: "true" }), /Invalid configuration override/);
     }
     assert.equal({}.polluted, undefined);
 });
 
 test("reserved app metadata is not applied as a config.xshell override", () => {
-    const config = { xshell: { navigation: { mode: "path" } } };
+    const config = { xshell: { services: { navigation: { options: { mode: "path" } } } } };
 
     apply(config, {
         "xshell:app.environment": "Development",
-        "xshell:navigation.mode": '"hash"'
+        "xshell:services.navigation.options.mode": '"hash"'
     });
 
-    assert.deepEqual(plain(config.xshell), { navigation: { mode: "hash" } });
+    assert.deepEqual(plain(config.xshell), { services: { navigation: { options: { mode: "hash" } } } });
 });
 
 test("bootstrap applies overrides before XShell initialization and configuration validation", () => {

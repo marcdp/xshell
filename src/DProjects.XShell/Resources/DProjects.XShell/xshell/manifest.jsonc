@@ -20,11 +20,6 @@
             }
         },
 
-        // navigation
-        "navigation": {
-            "mode": "path"
-        },
-
         // resolver
         "resolver": {
             "component": {
@@ -74,6 +69,13 @@
             "jsonValidator": {
                 "contract": "json-validator",
                 "implementation": "/services/json-validator.js"
+            },
+            "navigation": {
+                "contract": "navigation",
+                "implementation": "/services/navigation.js",
+                "options": {
+                    "mode": "path"
+                }
             },
             "preferences": {
                 "contract": "preferences",

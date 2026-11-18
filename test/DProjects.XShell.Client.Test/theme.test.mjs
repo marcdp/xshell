@@ -271,11 +271,13 @@ test("XShell initializes services before modules and navigation", () => {
     const source = readFileSync(new URL("xshell.js", xshellDirectory), "utf8");
     const servicesInit = source.indexOf("await this._services.init()");
     const modulesInit = source.indexOf("await this._modules.init()");
-    const navigationInit = source.indexOf("await this._navigation.init()");
+    const areasInit = source.indexOf("this._areas.init({ modules: this._modules })");
+    const navigationInit = source.indexOf('await this._services.resolve("navigation").init()');
 
     assert.ok(servicesInit >= 0);
     assert.ok(modulesInit > servicesInit);
-    assert.ok(navigationInit > modulesInit);
+    assert.ok(areasInit > modulesInit);
+    assert.ok(navigationInit > areasInit);
 });
 
 test("the x module registers and resolves theme through controller injection", () => {

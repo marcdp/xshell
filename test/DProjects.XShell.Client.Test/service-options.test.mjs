@@ -5,6 +5,7 @@ import Services from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshe
 import Commands from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/commands.js";
 import Dialog from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/dialog.js";
 import JsonValidator from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/json-validator.js";
+import Navigation from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/navigation.js";
 import Preferences from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/preferences.js";
 import Registry from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/registry.js";
 import Secrets from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/secrets.js";
@@ -18,26 +19,28 @@ import Session from "../../src/DProjects.XShell/Resources/DProjects.XShell/x-ide
 import SignIn from "../../src/DProjects.XShell/Resources/DProjects.XShell/x-identity/services/signin.js";
 import XVault from "../../src/DProjects.XShell/Resources/DProjects.XShell/x-vault/services/xvault.js";
 
-function createServices(implementation, options) {
+function createServices(implementation, options, name = "example") {
     const emitted = [];
-    const definition = { contract: "example", implementation: "/services/example.js" };
+    const bus = { emit(type, detail) { emitted.push({ type, detail }); } };
+    const definition = { contract: name, implementation: `/services/${name}.js` };
     if (options !== undefined) definition.options = options;
+    const config = {
+        app: { baseUrl: "https://example.test/" },
+        modules: { test: { files: [{ path: definition.implementation, size: 1 }] } },
+        xshell: { services: { [name]: definition }, files: [] }
+    };
     const services = new Services({
-        config: {
-            app: { baseUrl: "https://example.test/" },
-            modules: { test: { files: [{ path: definition.implementation, size: 1 }] } },
-            xshell: { services: { example: definition }, files: [] }
-        },
+        config,
         loader: { async load() { return implementation; } },
         contracts: {
             getContractItemById() {
-                return { id: "example", contract: { methods: {}, properties: {} } };
+                return { id: name, contract: { methods: {}, properties: {} } };
             }
         },
         resolver: { resolve() { return { definition: { moduleId: "test" } }; } },
-        bus: { emit(type, detail) { emitted.push({ type, detail }); } }
+        bus
     });
-    return { emitted, services };
+    return { bus, config, emitted, services };
 }
 
 const timeoutSchema = {
@@ -49,7 +52,7 @@ const timeoutSchema = {
 
 test("every repository-configured service implementation declares an optionsSchema object", () => {
     for (const implementation of [
-        Commands, Dialog, JsonValidator, Preferences, Registry, Secrets, Tasks, Temp,
+        Commands, Dialog, JsonValidator, Navigation, Preferences, Registry, Secrets, Tasks, Temp,
         Markdown, Theme, Toast,
         Principal, Session, SignIn,
         XVault
@@ -170,4 +173,50 @@ test("validated constructor injection preserves lazy dependency resolution", asy
     assert.equal(consumer.dependency.value(), 42);
     assert.strictEqual(services.resolve("consumer"), consumer);
     assert.equal(services.getServiceInfo("dependency").state, "created");
+});
+
+test("Navigation validates service options before lazy singleton construction", async () => {
+    for (const mode of ["hash", "path"]) {
+        const body = { querySelectorAll() { return []; } };
+        const originalDocument = globalThis.document;
+        globalThis.document = { body };
+        try {
+            const { bus, config, services } = createServices(Navigation, { mode }, "navigation");
+            const areas = { getDefaultArea() { return null; } };
+            const resolver = {};
+            config.app.basePath = "";
+            config.xshell.assets = { basePath: "/_assets" };
+            services.register("areas", areas);
+            services.register("bus", bus);
+            services.register("config", config);
+            services.register("resolver", resolver);
+
+            await services.init();
+
+            assert.equal(services.getServiceInfo("navigation").state, "registered");
+            const first = services.resolve("navigation");
+            assert.strictEqual(services.resolve("navigation"), first);
+            assert.strictEqual(first._areas, areas);
+            assert.strictEqual(first._bus, bus);
+            assert.strictEqual(first._config, config);
+            assert.strictEqual(first._resolver, resolver);
+            assert.strictEqual(first._container, body);
+            assert.equal(first.mode, mode);
+        } finally {
+            globalThis.document = originalDocument;
+        }
+    }
+});
+
+test("Navigation rejects missing, invalid, and unknown service options without constructing", async () => {
+    for (const [options, expected] of [
+        [{}, /required property "mode"/],
+        [{ mode: "query" }, /#\/mode.*does not match any/],
+        [{ mode: "path", unknown: true }, /additional properties schema/]
+    ]) {
+        const { services } = createServices(Navigation, options, "navigation");
+        await services.init();
+        assert.throws(() => services.resolve("navigation"), expected);
+        assert.equal(services.getServiceInfo("navigation").state, "registered");
+    }
 });

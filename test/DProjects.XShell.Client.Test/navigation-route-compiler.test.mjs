@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import Navigation from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/navigation.js";
+import Navigation from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/navigation.js";
 
 function createNavigation() {
     return new Navigation({
@@ -9,10 +9,9 @@ function createNavigation() {
         bus: {},
         config: {
             app: { basePath: "", baseUrl: "https://example.test/" },
-            xshell: { navigation: { mode: "path" } }
-        },
-        container: {}
-    });
+            xshell: {}
+        }
+    }, { mode: "path" }, { container: {} });
 }
 
 test("route compiler handles literal paths", () => {

@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import Areas from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/areas.js";
-import Navigation from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/navigation.js";
+import Navigation from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/navigation.js";
 import Resolver from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/resolver.js";
 
 test("Areas.init rejects an unknown configured module", () => {
@@ -159,11 +159,10 @@ function createNavigation({ areas = createAreas(), mode = "path", basePath = "",
         bus: { emit() {} },
         config: {
             app: { basePath, baseUrl },
-            xshell: { assets: { basePath: "/_assets" }, navigation: { mode } }
+            xshell: { assets: { basePath: "/_assets" } }
         },
-        container: { querySelectorAll() { return []; } },
         resolver
-    });
+    }, { mode }, { container: { querySelectorAll() { return []; } } });
 }
 
 function createPageResolver() {

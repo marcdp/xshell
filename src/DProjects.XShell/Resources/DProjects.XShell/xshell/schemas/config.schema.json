@@ -50,7 +50,7 @@
     },    
     "xshell": {
       "type": "object",
-      "required": ["version", "assets", "areas", "navigation", "resolver", "ui", "configUrl", "serviceWorker", "files"],
+      "required": ["version", "assets", "areas", "resolver", "ui", "configUrl", "serviceWorker", "files"],
       "properties": {
         "version": {"type": "string", "description": "XShell runtime version."},
         "configUrl": {"type": "string", "format": "uri", "description": "Fully qualified absolute URL of the normalized XShell configuration document."},
@@ -60,7 +60,6 @@
         "builtAt": {"type": "string", "format": "date-time", "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$", "description": "Optional UTC time when the immutable XShell package was originally built by pack; excluded from canonical hashing."},
         "ui": {"$ref": "#/$defs/xshellUi", "description": "Global ui settings."},
         "areas": {"$ref": "#/$defs/xshellAreas", "description": "Application area configuration."},
-        "navigation": {"$ref": "#/$defs/xshellNavigation", "description": "Navigation configuration."},
         "resolver": {"$ref": "#/$defs/resolver", "description": "Logical resource resolver configuration."},
         "services": {"$ref": "#/$defs/xshellServices", "description": "Services configuration."},
         "files": {"type": "array", "items": {"$ref": "#/$defs/file"}, "description": "Normalized virtual resource inventory for the XShell framework."}
@@ -127,15 +126,6 @@
       },
       "additionalProperties": false,
       "description": "Configuration of a navigation area."
-    },
-    "xshellNavigation": {
-      "type": "object",
-      "required": ["mode"],
-      "properties": {
-        "mode": {"type": "string", "enum": ["hash", "path"], "description": "Navigation strategy used by the application."}
-      },
-      "additionalProperties": false,
-      "description": "Application navigation mode and related options."
     },
     "xshellUi": {
       "type": "object",

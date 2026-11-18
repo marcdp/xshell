@@ -22,7 +22,7 @@ namespace DProjects.XShell.Test {
         public async Task UseXShell_AcceptsOrdinaryOverridesAtTheHostBoundary() {
             var builder = WebApplication.CreateBuilder(new WebApplicationOptions { EnvironmentName = "Development" });
             await using var app = builder.Build();
-            var config = CreateValidConfiguration(new Dictionary<string, string> { ["navigation.mode"] = "\"hash\"" });
+            var config = CreateValidConfiguration(new Dictionary<string, string> { ["services.navigation.options.mode"] = "\"hash\"" });
 
             var exception = Record.Exception(() => app.UseXShell(config));
 

@@ -68,19 +68,11 @@ export default {
 
         const getContext = () => {
             const page = getPage();
-
-            //if (page?.context) {
-            //    debugger;
-            //    return page.context;
-            //}
-
-            // Fallback for an x-template used outside an x-page.
             return {
                 resourceName: null,
                 resourcePath: document.baseURI,
                 resourceDefinition: {},
                 appBasePath: "",
-                navigationMode: "path",
                 componentLazy: "",
                 services: services
             };

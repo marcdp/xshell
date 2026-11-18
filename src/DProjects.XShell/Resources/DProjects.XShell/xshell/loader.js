@@ -26,7 +26,6 @@ export default class Loader {
     _resolver = null;
     _appBasePath = null;
     _xshellAssetsPath = null;
-    _navigationMode = null;
     _services = null;
     
     _cache = {};
@@ -38,7 +37,6 @@ export default class Loader {
         this._resolver = resolver;
         this._appBasePath = config.app.basePath;
         this._xshellAssetsPath = config.xshell.assets.path;
-        this._navigationMode = config.xshell.navigation.mode;
         this._componentLazy = config.xshell.ui.component.lazy;
         this._services = services;
     }
@@ -125,7 +123,6 @@ export default class Loader {
                         resourcePath: path,
                         resourceDefinition: definition,
                         appBasePath: this._appBasePath,
-                        navigationMode: this._navigationMode,
                         componentLazy: this._componentLazy,
                         services: this._services
                     };

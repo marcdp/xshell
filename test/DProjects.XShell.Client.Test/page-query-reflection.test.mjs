@@ -51,7 +51,7 @@ globalThis.location = { replace() {}, hash: "" };
 
 const { createComponentClassFromJsDefinition } = await import("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/loaders/component-js.js");
 const { createPageClassFromJsDefinition } = await import("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/loaders/page-js.js");
-const { default: Navigation } = await import("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/navigation.js");
+const { default: Navigation } = await import("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/navigation.js");
 const { default: Page } = await import("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/page.js");
 const { default: xshell } = await import("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/xshell.js");
 
@@ -130,10 +130,9 @@ function createNavigation(mode, xpages) {
         bus: { emit() {} },
         config: {
             app: { basePath: "", baseUrl: "https://example.test/" },
-            xshell: { navigation: { mode } }
-        },
-        container
-    });
+            xshell: {}
+        }
+    }, { mode }, { container });
     return { navigation, replaceCalls, pushCalls, locationReplacements };
 }
 
@@ -170,7 +169,7 @@ test("reflected Page state patches only its own query and removes contract defau
     const host = createXPage("/page.js?page-index=2&enabled=false&ratio=1.5&external=x");
     const { navigation, replaceCalls, pushCalls } = createNavigation("path", [host]);
     navigation._stack = [navigation.parseUrl(host.src)];
-    xshell._navigation = navigation;
+    xshell._services = { resolve() { return navigation; } };
     const PageClass = await createPageClass({
         pageIndex: { type: "integer", default: 0, state: true, query: true, reflect: true },
         enabled: { type: "boolean", default: false, state: true, query: true, reflect: true },
@@ -213,7 +212,7 @@ test("reflected Page JSON values serialize, remove defaults, and preserve JSON n
     const host = createXPage("/page.js?external=x#details");
     const { navigation, replaceCalls } = createNavigation("path", [host]);
     navigation._stack = [navigation.parseUrl(host.src)];
-    xshell._navigation = navigation;
+    xshell._services = { resolve() { return navigation; } };
     const PageClass = await createPageClass({
         args: { type: "object", default: {}, state: true, query: true, queryParser: "json", reflect: true },
         value: { type: "any", default: false, state: true, query: true, queryParser: "json", reflect: true }
@@ -238,7 +237,7 @@ test("Page JSON reflection rejects JavaScript values that JSON would serialize l
     const host = createXPage("/page.js");
     const { navigation } = createNavigation("path", [host]);
     navigation._stack = [navigation.parseUrl(host.src)];
-    xshell._navigation = navigation;
+    xshell._services = { resolve() { return navigation; } };
     const PageClass = await createPageClass({
         value: { type: "any", default: null, state: true, query: true, queryParser: "json", reflect: true }
     });
@@ -257,7 +256,7 @@ test("Page JSON reflection uses existing hash-mode navigation serialization", as
     const host = createXPage("/page.js");
     const { navigation, locationReplacements } = createNavigation("hash", [host]);
     navigation._stack = [navigation.parseUrl(host.src)];
-    xshell._navigation = navigation;
+    xshell._services = { resolve() { return navigation; } };
     const PageClass = await createPageClass({
         args: { type: "object", default: {}, state: true, query: true, queryParser: "json", reflect: true }
     });
@@ -284,7 +283,7 @@ test("stacked Page query reflection preserves other stack items and navigation m
     ];
     const page = new Page({ src: xpages[1].src, context: {} });
     page._host = xpages[1];
-    xshell._navigation = navigation;
+    xshell._services = { resolve() { return navigation; } };
 
     page.replaceQuery({ tab: "details" });
 
@@ -306,7 +305,7 @@ test("hash-mode Page query reflection uses replacement serialization", () => {
     navigation._stack = [navigation.parseUrl(host.src)];
     const page = new Page({ src: host.src, context: {} });
     page._host = host;
-    xshell._navigation = navigation;
+    xshell._services = { resolve() { return navigation; } };
 
     page.replaceQuery({ enabled: true });
 
@@ -322,7 +321,7 @@ test("dialog and embedded Pages patch local src without changing the navigation 
     navigation._stack = [navigation.parseUrl(stackHost.src)];
     const page = new Page({ src: dialogHost.src, context: {} });
     page._host = dialogHost;
-    xshell._navigation = navigation;
+    xshell._services = { resolve() { return navigation; } };
 
     page.replaceQuery({ tab: "details" });
 
@@ -347,7 +346,7 @@ test("root Page hash replacement preserves query and synchronizes its source wit
     const originalItem = originalStack[0];
     const page = new Page({ src: host.src, context: {} });
     page._host = host;
-    xshell._navigation = navigation;
+    xshell._services = { resolve() { return navigation; } };
 
     assert.equal(page.replaceHash("details"), "/page.js?tab=summary#details");
     await navigation._stackToDomTask;
@@ -369,7 +368,7 @@ test("Page hashes accept a leading marker and empty values remove the fragment",
     navigation._stack = [navigation.parseUrl(host.src)];
     const page = new Page({ src: host.src, context: {} });
     page._host = host;
-    xshell._navigation = navigation;
+    xshell._services = { resolve() { return navigation; } };
 
     assert.equal(page.replaceHash("#details"), "/page.js?tab=summary#details");
     assert.equal(page.replaceHash(""), "/page.js?tab=summary");
@@ -402,7 +401,7 @@ test("stacked Page hash replacement changes only its item", async () => {
     const [root, oldTarget, order] = navigation._stack;
     const page = new Page({ src: xpages[1].src, context: {} });
     page._host = xpages[1];
-    xshell._navigation = navigation;
+    xshell._services = { resolve() { return navigation; } };
 
     const src = page.replaceHash("details");
     await navigation._stackToDomTask;
@@ -430,7 +429,7 @@ test("hash-mode Page fragment replacement preserves the XShell navigation prefix
     navigation._stack = [navigation.parseUrl(host.src)];
     const page = new Page({ src: host.src, context: {} });
     page._host = host;
-    xshell._navigation = navigation;
+    xshell._services = { resolve() { return navigation; } };
 
     page.replaceHash("details");
     await navigation._stackToDomTask;
@@ -447,7 +446,7 @@ test("dialog and embedded Page hashes change only their local sources", () => {
     const { navigation, replaceCalls, pushCalls, locationReplacements } = createNavigation("path", [stackHost]);
     navigation._stack = [navigation.parseUrl(stackHost.src)];
     const stack = navigation._stack;
-    xshell._navigation = navigation;
+    xshell._services = { resolve() { return navigation; } };
 
     for (const layout of ["dialog", "embed"]) {
         const host = createXPage("/dialog.js?tab=summary#old", layout);
@@ -473,7 +472,7 @@ test("Page hash replacement rejects values other than strings and null", () => {
     navigation._stack = [navigation.parseUrl(host.src)];
     const page = new Page({ src: host.src, context: {} });
     page._host = host;
-    xshell._navigation = navigation;
+    xshell._services = { resolve() { return navigation; } };
 
     for (const value of [{}, [], 123, undefined]) {
         assert.throws(() => page.replaceHash(value), { name: "TypeError", message: "Navigation.replacePageHash: hash must be a string or null." });

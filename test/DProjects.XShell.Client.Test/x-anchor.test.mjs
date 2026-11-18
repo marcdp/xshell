@@ -58,7 +58,7 @@ globalThis.window = {
 
 const { createComponentClassFromJsDefinition } = await import("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/loaders/component-js.js");
 const { default: Areas } = await import("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/areas.js");
-const { default: Navigation } = await import("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/navigation.js");
+const { default: Navigation } = await import("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/navigation.js");
 const { default: Resolver } = await import("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/resolver.js");
 const { default: xshell } = await import("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/xshell.js");
 const { default: anchorDefinition } = await import("../../src/DProjects.XShell/Resources/DProjects.XShell/x/components/x-anchor.js");
@@ -94,11 +94,10 @@ function createNavigation({ areas = null, mode = "path", basePath = "", baseUrl 
         bus: {},
         config: {
             app: { basePath, baseUrl },
-            xshell: { navigation: { mode } }
+            xshell: {}
         },
-        container: {},
         resolver
-    });
+    }, { mode }, { container: {} });
 }
 
 function createPageResolver() {

@@ -18,7 +18,7 @@ app.UseXShell(new Extensions.Configuration {
         BasePath = "/prefix/temp"
     },
     Overrides = new Dictionary<string, string> {
-        ["navigation.mode"] = "hash"
+        ["services.navigation.options.mode"] = "hash"
     }
 });
 app.Run();
@@ -92,7 +92,7 @@ endpoint handles them or the remaining path starts with a configured `Server.Unh
 The `server` command accepts repeatable `--override path=value` arguments:
 
 ```text
-DProjects.XShell server --override navigation.mode=hash --override services.temp.options.url=/uploads
+DProjects.XShell server --override services.navigation.options.mode=hash --override services.temp.options.url=/uploads
 ```
 
 Programmatic hosts set the equivalent `Extensions.Configuration.Overrides` dictionary, as shown above. Do not include the `xshell.` prefix in a

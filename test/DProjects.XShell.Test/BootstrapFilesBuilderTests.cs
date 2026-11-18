@@ -57,12 +57,12 @@ namespace DProjects.XShell.Test {
         public void Build_EmitsMultipleOverridesWithHtmlEncodedPathsAndValues() {
             var index = BuildIndex(new Extensions.Configuration {
                 Overrides = new Dictionary<string, string> {
-                    ["navigation.mode"] = "\"hash\"",
+                    ["services.navigation.options.mode"] = "\"hash\"",
                     ["services.commands.options.label\""] = "España & <commands> \"quoted\""
                 }
             });
 
-            Assert.Equal(["\"hash\""], GetOverrideValues(index, "navigation.mode"));
+            Assert.Equal(["\"hash\""], GetOverrideValues(index, "services.navigation.options.mode"));
             Assert.Equal(["España & <commands> \"quoted\""], GetOverrideValues(index, "services.commands.options.label\""));
             Assert.Contains("&amp;", index);
             Assert.Contains("&lt;commands&gt;", index);
@@ -73,12 +73,12 @@ namespace DProjects.XShell.Test {
         public void Build_PreservesReservedBootstrapMetadataAlongsideLegitimateOverrides() {
             var index = BuildIndex(new Extensions.Configuration {
                 App = new Extensions.AppConfig { Module = "module:app:1.0.0", BasePath = "/app" },
-                Overrides = new Dictionary<string, string> { ["navigation.mode"] = "\"hash\"" }
+                Overrides = new Dictionary<string, string> { ["services.navigation.options.mode"] = "\"hash\"" }
             });
 
             Assert.Contains("name=\"xshell:app.module\" content=\"module:app:1.0.0\"", index);
             Assert.Contains("name=\"xshell:app.basePath\" content=\"/app\"", index);
-            Assert.Equal(["\"hash\""], GetOverrideValues(index, "navigation.mode"));
+            Assert.Equal(["\"hash\""], GetOverrideValues(index, "services.navigation.options.mode"));
         }
         [Fact]
         public async Task GeneratedIndex_ResolvesExactXShellVersion() {
