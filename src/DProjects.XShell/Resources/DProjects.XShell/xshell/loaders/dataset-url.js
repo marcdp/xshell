@@ -1,5 +1,4 @@
 import JsonValidator from "../services/json-validator.js"
-import xshell from "../xshell.js"
 
 export default class LoaderDatasetUrl {
 
@@ -13,7 +12,7 @@ export default class LoaderDatasetUrl {
         }
         const dataset = await response.json();
         // validate the fetched dataset
-        const datasetSchema = await xshell.loader.load("schema:dataset");
+        const datasetSchema = await context.services.loader.load("schema:dataset");
         const result = new JsonValidator().validate(dataset, datasetSchema);
         if (!result.valid) {
             console.error(`Invalid dataset: ${url}`, result.errors);

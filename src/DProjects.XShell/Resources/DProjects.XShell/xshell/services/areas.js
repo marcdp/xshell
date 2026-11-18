@@ -26,7 +26,8 @@ export default class Areas {
                     description: "Configuration of a navigation area."
                 },
                 description: "Area definitions keyed by area identifier."
-            }
+            },
+            assetsPath: { type: "string", description: "Base path for area assets." }
         },
         additionalProperties: false,
         description: "Application areas and the default active area."
@@ -34,6 +35,7 @@ export default class Areas {
 
     // vars
     _config = null;
+    _options = null;
     _bus = null;
     _areas = [];
     _assetsBasePath = null;
@@ -44,6 +46,7 @@ export default class Areas {
 
     // ctor
     constructor({ config, bus }, options = {}) {
+        this._options = options;    
         // initialize injected dependencies and Area configuration
         this._config = config;
         this._bus = bus;

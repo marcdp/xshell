@@ -14,6 +14,7 @@ export default class Events {
         for (const { element, event, listener } of this._eventListeners) {
             element.removeEventListener(event, listener);
         }
+        this._eventListeners = [];
     }
 
     //methods

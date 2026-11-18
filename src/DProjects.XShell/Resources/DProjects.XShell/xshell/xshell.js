@@ -36,11 +36,16 @@ class XShell {
 
     //methods
     async init(config) {
-        // init
+        // config
         this._config = config;        
-        // core services
-        this._bus = new Bus({}, {});
-        this._resolver = new Resolver( { config: config }, {});
+        // bus
+        this._bus = new Bus({
+        }, {});
+        // resolved
+        this._resolver = new Resolver( { 
+            config: config 
+        }, {});
+        // loader
         this._loader = new Loader({ 
             bus: this._bus, 
             resolver: this._resolver,
@@ -57,14 +62,17 @@ class XShell {
             xshellAssetsPath: config.xshell.assets.path,
             componentLazy: config.xshell.ui.component.lazy
         });
-        // validate config
+        // validate
         await this.validateConfig(config);
-        // advanced services
+        // contracts
         this._contracts = new Contracts( { config: config, loader: this._loader }, { 
             xshellAssetsPath: config.xshell.assets.path,
             xshellFiles: config.xshell.files
         });
+        // services
         this._services = new Services( {config, loader: this._loader, contracts: this._contracts, resolver: this._resolver, bus: this._bus } );
+
+        
         // compose contracts list in memory from modules             
         await this._contracts.init();
         // services

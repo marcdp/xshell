@@ -1,9 +1,7 @@
 import {combineUrls} from "../utils/urls.js";
 import { base64UrlEncode, base64UrlDecode } from "../utils/base64.js";
 import { compileRoute } from "../utils/route.js";
-
-// consts
-export const HASH_PREFIX = "#!";
+import { HASH_PREFIX } from "../utils/urls.js";
 
 // class
 export default class Navigation {

@@ -1,7 +1,6 @@
 import Page from "../page.js"
 import Timer from "../scoped/timer.js"
 import Events from "../scoped/events.js"
-import xshell from "../xshell.js";
 import JsonValidator from "../services/json-validator.js"
 import { processStyle } from "../utils/style.js";
 import { deepFreeze } from "../utils/object.js";
@@ -160,9 +159,9 @@ function parseQueryPropertyValue(propertyName, property, value) {
             throw new Error(`Page property '${propertyName}' declares query:true with unsupported type '${property.type}'.`);
     }
 }
-async function validatePage(src, definition) {
+async function validatePage(src, definition, context) {
     // validate
-    const componentSchema = await xshell.loader.load("schema:page");
+    const componentSchema = await context.services.loader.load("schema:page");
     const definitionObject = Object.fromEntries(Object.entries(definition).map(([key, value]) => [key, typeof value === "function" ? {} : value]));
     const result = new JsonValidator().validate(definitionObject, componentSchema);
     if (!result.valid) {
@@ -257,7 +256,7 @@ function getPageQueryParams(src) {
 export async function createPageClassFromJsDefinition(src, context, definition) {
     // defaults
     const moduleId = context.resourceDefinition.moduleId;
-    const moduleConfig = xshell.config.modules[moduleId];
+    const moduleConfig = context.services.config.modules[moduleId];
     if (!definition.contract) definition.contract = {};
     if (!definition.contract.properties) definition.contract.properties = {};
     if (!definition.contract.events) definition.contract.events = {};
@@ -275,7 +274,7 @@ export async function createPageClassFromJsDefinition(src, context, definition) 
     definition = deepFreeze(definition);
     // validate
     validateQueryProperties(definition, definition.meta?.name || src);
-    await validatePage(src, definition);
+    await validatePage(src, definition, context);
     // process definition CSS before Page scoping and instance construction
     const style = definition.style ? await processStyle({ src, context, css: definition.style }) : "";
     // state skeleton
@@ -291,21 +290,21 @@ export async function createPageClassFromJsDefinition(src, context, definition) 
         }
     }
     // state engine
-    const stateEngineFactoryCreator = await xshell.loader.load("state-engine:" + definition.meta.stateEngine);
+    const stateEngineFactoryCreator = await context.services.loader.load("state-engine:" + definition.meta.stateEngine);
     const stateEngineFactory = new stateEngineFactoryCreator(stateSkeleton, context);
     // render engine
-    const renderEngineFactoryCreator = await xshell.loader.load("render-engine:" + definition.meta.renderEngine);
+    const renderEngineFactoryCreator = await context.services.loader.load("render-engine:" + definition.meta.renderEngine);
     const renderEngineFactory = new renderEngineFactoryCreator(definition.template, context, definition.templateRenderer);
     // validate compiled template slots through the render-engine factory contract
     validateSlots(renderEngineFactory.slots, definition.meta?.name || "unknown");
     // load render engine dependencies
     if (renderEngineFactory.dependencies.length) {
-        await xshell.loader.load(renderEngineFactory.dependencies);
+        await context.services.loader.load(renderEngineFactory.dependencies);
     }    
     // load page dependencies
     let dependencies = {};
     if (definition.dependencies && Object.keys(definition.dependencies).length) {
-        dependencies = await xshell.loader.load(definition.dependencies);
+        dependencies = await context.services.loader.load(definition.dependencies);
     }
     // init 
     await renderEngineFactory.init();
@@ -395,13 +394,13 @@ export async function createPageClassFromJsDefinition(src, context, definition) 
                         };
                     } else if (prop == "moduleInstance") {
                         // get module instance
-                        return xshell.modules.getModuleById(moduleId);
+                        return context.services.modules.getModuleById(moduleId);
                     } else if (prop == "moduleController") {
                         // get module controller
-                        return xshell.modules.getModuleById(moduleId).controller;
+                        return context.services.modules.getModuleById(moduleId).controller;
                     } else {
                         // resolve from services
-                        return xshell.services.resolve(prop);                    
+                        return context.services[prop];                    
                     }
                 }
             });            

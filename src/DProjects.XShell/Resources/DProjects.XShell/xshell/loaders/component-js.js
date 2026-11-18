@@ -1,6 +1,5 @@
 import Timer from "../scoped/timer.js"
 import Events from "../scoped/events.js"
-import xshell from "../xshell.js";
 import JsonValidator from "../services/json-validator.js"
 import { processStyle } from "../utils/style.js";
 import { deepFreeze } from "../utils/object.js";
@@ -129,10 +128,10 @@ function validateSlots(slots, definition, componentId) {
         }
     }
 }
-async function validateComponent(src, definition) {
+async function validateComponent(src, definition, context) {
     // validate
     const definitionObject = Object.fromEntries(Object.entries(definition).map(([key, value]) => [key, typeof value === "function" ? {} : value]));
-    const componentSchema = await xshell.loader.load("schema:component");
+    const componentSchema = await context.services.loader.load("schema:component");
     const result = new JsonValidator().validate(definitionObject, componentSchema);
     if (!result.valid) {
         console.error(`Invalid component: ${src}`, result.errors);
@@ -149,15 +148,15 @@ export async function createComponentClassFromJsDefinition(src, context, definit
     if (!definition.contract.slots) definition.contract.slots = {};
     if (!definition.contract.methods) definition.contract.methods = {};
     if (!definition.meta) definition.meta = {};
-    if (!definition.meta.renderEngine) definition.meta.renderEngine = xshell.config.modules[context.resourceDefinition.moduleId].defaults.component.renderEngine;
-    if (!definition.meta.stateEngine) definition.meta.stateEngine = xshell.config.modules[context.resourceDefinition.moduleId].defaults.component.stateEngine;
+    if (!definition.meta.renderEngine) definition.meta.renderEngine = context.services.config.modules[context.resourceDefinition.moduleId].defaults.component.renderEngine;
+    if (!definition.meta.stateEngine) definition.meta.stateEngine = context.services.config.modules[context.resourceDefinition.moduleId].defaults.component.stateEngine;
     if (!definition.dependencies) definition.dependencies = {};
     if (!definition.state) definition.state = {};
     if (!definition.style) definition.style = "";
     if (!definition.template) definition.template = "";
     if (!definition.controller) definition.controller = () => ({});
     // validateComponent 
-    await validateComponent(src, definition);
+    await validateComponent(src, definition, context);
     // freeze and seal the implementation and contract to prevent further modifications
     definition = deepFreeze(definition);
     // process definition CSS once before creating Component instances
@@ -208,21 +207,21 @@ export async function createComponentClassFromJsDefinition(src, context, definit
             changeDetection[propName] = property.changeDetection;
         }
     }
-    const stateEngineFactoryCreator = await xshell.loader.load("state-engine:" + definition.meta.stateEngine);
+    const stateEngineFactoryCreator = await context.services.loader.load("state-engine:" + definition.meta.stateEngine);
     const stateEngineFactory = new stateEngineFactoryCreator(stateSkeleton, context, { changeDetection });
     // render engine
-    const renderEngineFactoryCreator = await xshell.loader.load("render-engine:" + definition.meta.renderEngine);
+    const renderEngineFactoryCreator = await context.services.loader.load("render-engine:" + definition.meta.renderEngine);
     const renderEngineFactory = new renderEngineFactoryCreator(definition.template, context, definition.templateRenderer);
     // validate compiled template slots through the render-engine factory contract
     validateSlots(renderEngineFactory.slots, definition, definition.meta.id || "unknown");
     // load render engine dependencies
     if (renderEngineFactory.dependencies.length) {
-        await xshell.loader.load(renderEngineFactory.dependencies);
+        await context.services.loader.load(renderEngineFactory.dependencies);
     }    
     // load component dependencies
     let dependencies = {};
     if (definition.dependencies && Object.keys(definition.dependencies).length) {
-        dependencies = await xshell.loader.load(definition.dependencies);
+        dependencies = await context.services.loader.load(definition.dependencies);
     }
     // init 
     await renderEngineFactory.init();
@@ -302,10 +301,10 @@ export async function createComponentClassFromJsDefinition(src, context, definit
                         return events;
                     } else if (prop == "moduleConfig") {
                         // module configuration
-                        return xshell.config.modules[context.resourceDefinition.moduleId];
+                        return context.services.config.modules[context.resourceDefinition.moduleId];
                     } else if (prop == "module") {
                         // module 
-                        return xshell.modules.getModuleById(context.resourceDefinition.moduleId);
+                        return context.services.modules.getModuleById(context.resourceDefinition.moduleId);
                     } else if (prop == "host") {
                         // get current web component
                         return self;
@@ -325,7 +324,7 @@ export async function createComponentClassFromJsDefinition(src, context, definit
                         };
                     } else {
                         // resolve from services
-                        return xshell.services.resolve(prop);
+                        return context.services[prop];
                     }                    
                 }
             });

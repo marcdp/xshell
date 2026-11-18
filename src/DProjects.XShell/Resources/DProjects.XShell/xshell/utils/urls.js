@@ -1,4 +1,7 @@
 
+// consts
+export const HASH_PREFIX = "#!";
+
 // class
 export function absolutizeUrl(url) {
     if (url.startsWith("/")) url = window.location.origin + url;
