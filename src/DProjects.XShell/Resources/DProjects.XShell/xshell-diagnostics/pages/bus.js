@@ -13,7 +13,7 @@ export default {
         <p>Shows recent XShell bus events and their timestamps and detail payloads.</p>
         <x-listview ref="listview" view="details" auto-scroll="true">
             <x-listview-head>
-                <x-listview-column>
+                <x-listview-column width="20%">
                     <x-datafield type="search" x-model="state.query_type" placeholder="Type"></x-datafield>
                 </x-listview-column>
                 <x-listview-column>

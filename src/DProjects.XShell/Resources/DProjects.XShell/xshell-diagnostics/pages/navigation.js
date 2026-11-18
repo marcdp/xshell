@@ -11,74 +11,78 @@ export default {
     },
     template: `
         <p>Shows the current Areas, menus, and page hierarchy used by XShell navigation.</p>
-        <h2>Areas</h2>
-        <x-listview view="details">
-            <x-listview-head>
-                <x-listview-column label="Area" width="10em"></x-listview-column>
-                <x-listview-column label="Prefix"></x-listview-column>
-                <x-listview-column label="Label"></x-listview-column>
-                <x-listview-column label="Default"></x-listview-column>
-                <x-listview-column label="Home"></x-listview-column>
-                <x-listview-column label="Modules"></x-listview-column>
-            </x-listview-head>
-            <x-listview-body>
-            <x-listview-item x-for="area in state.areas"
-                x-attr:href="area.home" 
-                x-attr:label="area.id"
-                x-attr:icon="area.icon || 'x-area'"
-                target="_blank"
-            >
-                <div>{{ area.prefix }}</div>
-                <div>{{ area.label }}</div>
-                <div><input type="checkbox" x-model="area.default" disabled></div>
-                <div>{{ area.home }}</div>
-                <div>{{ area.modules | json_stringify }}</div>
+        <x-tabs>
+            <x-tab label="Areas">
+                <x-listview view="details">
+                    <x-listview-head>
+                        <x-listview-column label="Area" width="10em"></x-listview-column>
+                        <x-listview-column label="Prefix"></x-listview-column>
+                        <x-listview-column label="Label"></x-listview-column>
+                        <x-listview-column label="Default"></x-listview-column>
+                        <x-listview-column label="Home"></x-listview-column>
+                        <x-listview-column label="Modules"></x-listview-column>
+                    </x-listview-head>
+                    <x-listview-body>
+                    <x-listview-item x-for="area in state.areas"
+                        
+                        x-attr:label="area.id"
+                        x-attr:icon="area.icon || 'x-area'"
+                        target="_blank"
+                    >
+                        <div>{{ area.prefix }}</div>
+                        <div>{{ area.label }}</div>
+                        <div><input type="checkbox" x-model="area.default" disabled></div>
+                        <div>                           
+                            <x-anchor class="plain" x-attr:href="area.home" target="_blank">
+                                <x-icon icon="x-open-in-new"></x-icon>
+                                {{ area.home }}
+                            </x-anchor>
+                        </div>
+                        <div>{{ area.modules | json_stringify }}</div>
 
-            </x-listview-item>
-            </x-listview-body>
-        </x-listview>
-
-        
-        <h2>Menus</h2>
-        <x-listview view="details">
-            <x-listview-head>
-                <x-listview-column label="Menu" width="12em"></x-listview-column>
-                <x-listview-column label="Menuitems"></x-listview-column>
-            </x-listview-head>
-            <x-listview-body>
-                <x-listview-item x-for="menu in state.menus" x-attr:label="menu.id" x-attr:href="menu.path" target="_blank">
-                    <x-object x-prop:value="menu.children"></x-object>
-                </x-listview-item>
-            </x-listview-body>
-        </x-listview>
-
-
-        <h2>Page hierarchy</h2>       
-        <x-treeview>
-            <x-treeview-head>
-                <x-treeview-column label="Page"></x-treeview-column>
-                <x-treeview-column label="Path"></x-treeview-column>
-                <x-treeview-column label="Layout" width="8%"></x-treeview-column>
-                <x-treeview-column label="Module" width="8%"></x-treeview-column>
-                <x-treeview-column label="Loading" width="8%"></x-treeview-column>
-                <x-treeview-column label="Time" width="5em"></x-treeview-column>
-                <x-treeview-column label="Size" width="5em"></x-treeview-column>
-                <x-treeview-column label="Status" width="5em"></x-treeview-column>
-            </x-treeview-head>
-            <x-treeview-body>
-                <x-treeview-item x-recursive="item in state.children" x-attr:label="item.label" expanded x-class:error="item.status=='error'">
-                    <div slot="column" x-attr:title="item.src">{{item.src}}</div>
-                    <div slot="column">{{item.layout}}</div>
-                    <div slot="column">{{item.module}}</div>
-                    <div slot="column">{{item.loading}}</div>
-                    <div slot="column"><x-time-ms x-prop:value="item.time"></x-time-ms></div>
-                    <div slot="column"><x-file-size x-prop:value="item.size"></x-file-size></div>
-                    <div slot="column">{{item.status}}</div>
-                </x-treeview-item>
-            </x-treeview-body>
-        </x-treeview>   
-
-        
+                    </x-listview-item>
+                    </x-listview-body>
+                </x-listview>
+            </x-tab>
+            <x-tab label="Menus">
+                <x-listview view="details">
+                    <x-listview-head>
+                        <x-listview-column label="Menu" width="12em"></x-listview-column>
+                        <x-listview-column label="Menuitems"></x-listview-column>
+                    </x-listview-head>
+                    <x-listview-body>
+                        <x-listview-item x-for="menu in state.menus" x-attr:label="menu.id" x-attr:href="menu.path" target="_blank">
+                            <x-object x-prop:value="menu.children" expanded></x-object>
+                        </x-listview-item>
+                    </x-listview-body>
+                </x-listview>
+            </x-tab>
+            <x-tab label="Pages">
+                <x-treeview>
+                    <x-treeview-head>
+                        <x-treeview-column label="Page"></x-treeview-column>
+                        <x-treeview-column label="Path"></x-treeview-column>
+                        <x-treeview-column label="Layout" width="8%"></x-treeview-column>
+                        <x-treeview-column label="Module" width="8%"></x-treeview-column>
+                        <x-treeview-column label="Loading" width="8%"></x-treeview-column>
+                        <x-treeview-column label="Time" width="5em"></x-treeview-column>
+                        <x-treeview-column label="Size" width="5em"></x-treeview-column>
+                        <x-treeview-column label="Status" width="5em"></x-treeview-column>
+                    </x-treeview-head>
+                    <x-treeview-body>
+                        <x-treeview-item x-recursive="item in state.children" x-attr:label="item.label" expanded x-class:error="item.status=='error'">
+                            <div slot="column" x-attr:title="item.src">{{item.src}}</div>
+                            <div slot="column">{{item.layout}}</div>
+                            <div slot="column">{{item.module}}</div>
+                            <div slot="column">{{item.loading}}</div>
+                            <div slot="column"><x-time-ms x-prop:value="item.time"></x-time-ms></div>
+                            <div slot="column"><x-file-size x-prop:value="item.size"></x-file-size></div>
+                            <div slot="column">{{item.status}}</div>
+                        </x-treeview-item>
+                    </x-treeview-body>
+                </x-treeview>   
+            </x-tab>
+        </x-tabs>
     `,    
     state:{
         areas: null,

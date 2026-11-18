@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import Modules from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/modules.js";
+import Modules from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/modules.js";
 import Services from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services.js";
 import Loader from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/loader.js";
 import Resolver from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/resolver.js";
@@ -23,13 +23,13 @@ function moduleDefinition(id, overrides = {}) {
     };
 }
 
-function createModules(config, { loader = {}, services = {} } = {}) {
+function createModules(config, { loader = {}, services = {}, document = { adoptedStyleSheets: [] } } = {}) {
+    globalThis.document = document;
     return new Modules({
         bus: {},
         config,
         loader,
         resolver: {},
-        document: { adoptedStyleSheets: [] },
         services
     });
 }
@@ -58,6 +58,36 @@ test("module without service requirements initializes and starts normally", asyn
 
     assert.equal(starts, 1);
     assert.deepEqual(loads, ["esm:/_assets/orders/module.js"]);
+});
+
+test("module controllers receive singleton services and module-specific metadata", async () => {
+    const identity = { id: "identity" };
+    let injected;
+    class ModuleController {
+
+        constructor(services) {
+            injected = {
+                identity: services.identity,
+                modules: services.modules,
+                moduleAssetsPath: services.moduleAssetsPath,
+                moduleConfig: services.moduleConfig
+            };
+        }
+    }
+    const config = freeze({
+        xshell: { assets: { basePath: "/_assets" } },
+        modules: { orders: moduleDefinition("orders", { params: { mode: "test" }, files: [{ path: "/_assets/orders/module.js" }] }) }
+    });
+    let modules;
+    const services = { resolve(name) { return name === "identity" ? identity : name === "modules" ? modules : null; } };
+    modules = createModules(config, { loader: { async load() { return ModuleController; } }, services });
+
+    await modules.init();
+
+    assert.strictEqual(injected.identity, identity);
+    assert.strictEqual(injected.modules, modules);
+    assert.equal(injected.moduleAssetsPath, "/_assets/orders");
+    assert.deepEqual(injected.moduleConfig, { id: "orders", ...config.modules.orders });
 });
 
 test("module controllers start in dependency order and stop in reverse dependency order", async () => {
@@ -206,7 +236,7 @@ test("module requirements accept configured lazy services without constructing t
                 return { id: "identity", contract: { label: "Identity", methods: {}, properties: {} } };
             }
         },
-        areas: { getModuleId() { return "orders"; } }
+        resolver: { resolve() { return { definition: { moduleId: "orders" } }; } }
     });
     await services.init();
     const modules = createModules(config, { loader, services });
@@ -320,7 +350,8 @@ test("module styles use the Loader once per inventoried stylesheet and are adopt
     const resolver = new Resolver({ config });
     const loader = new Loader({ bus: { emit(name, payload) { events.push({ name, payload }); } }, config, resolver });
     const document = { adoptedStyleSheets: [] };
-    const modules = new Modules({ bus: {}, config, loader, resolver, document, services: {} });
+    globalThis.document = document;
+    const modules = new Modules({ bus: {}, config, loader, resolver, services: {} });
 
     await modules.init();
 

@@ -72,8 +72,7 @@ class RenderEngineFactory {
 }
 xshell._config = { modules: { test: { defaults: { component: { stateEngine: "test", renderEngine: "test" } } } } };
 xshell._loader = { async load(resource) { return resource.startsWith("state-engine:") ? StateEngineFactory : RenderEngineFactory; } };
-xshell._services = { resolve() { return null; } };
-xshell._modules = { getModuleById() { return {}; } };
+xshell._services = { resolve(name) { return name === "modules" ? { getModuleById() { return {}; } } : null; } };
 
 const context = { resourceDefinition: { moduleId: "test" } };
 const contract = (methods = {}, slots = {}) => ({ description: "Controller test.", properties: {}, events: {}, slots, methods });

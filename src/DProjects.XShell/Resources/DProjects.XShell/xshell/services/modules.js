@@ -1,6 +1,12 @@
 // class
 export default class Modules {
 
+    // options
+    static optionsSchema = {
+        type: "object",
+        additionalProperties: false
+    };
+
     // vars
     _bus = null;
     _config = null;
@@ -12,7 +18,8 @@ export default class Modules {
     
     
     // ctor
-    constructor( { bus, config, loader, resolver, document, services } ) {
+    constructor({ bus, config, loader, resolver, services }, options = {}) {
+        // initialize injected dependencies
         this._bus = bus;
         this._config = config;
         this._loader = loader;

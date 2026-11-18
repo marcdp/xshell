@@ -71,6 +71,10 @@
                 "contract": "json-validator",
                 "implementation": "/services/json-validator.js"
             },
+            "modules": {
+                "contract": "modules",
+                "implementation": "/services/modules.js"
+            },
             "navigation": {
                 "contract": "navigation",
                 "implementation": "/services/navigation.js",

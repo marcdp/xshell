@@ -1,7 +1,6 @@
 import Bus from "./bus.js";
 import Contracts from "./contracts.js";
 import Loader from "./loader.js";
-import Modules from "./modules.js";
 import Page from "./page.js";
 import Resolver from "./resolver.js";
 import Services from "./services.js";
@@ -17,7 +16,6 @@ class XShell {
     _config = null;
     _contracts = null;
     _loader = null;
-    _modules = null;
     _resolver = null;
     _services = null;
     
@@ -31,7 +29,7 @@ class XShell {
     get config() { return this._config; }
     get contracts() { return this._contracts; }
     get loader() { return this._loader; }
-    get modules() { return this._modules; }
+    get modules() { return this._services.resolve("modules"); }
     get navigation() { return this._services.resolve("navigation"); }
     get resolver() { return this._resolver; }
     get services() { return this._services; }
@@ -60,14 +58,12 @@ class XShell {
         // initialize rest of the services
         this._contracts = new Contracts( { config: config, loader: this._loader } );
         this._services = new Services( {config, loader: this._loader, contracts: this._contracts, resolver: this._resolver, bus: this._bus } );
-        this._modules = new Modules( { bus: this._bus, config: config, loader: this._loader, resolver: this._resolver, document: document, services: this._services } );
         // compose contracts list in memory from modules             
         await this._contracts.init();
         // services
         this._services.register("bus", this._bus, { contractItem: this._contracts.getContractItemById("bus")});
         this._services.register("config", this._config, { contractItem: this._contracts.getContractItemById("config")});
         this._services.register("loader", this._loader, { contractItem: this._contracts.getContractItemById("loader")});
-        this._services.register("modules", this._modules, { contractItem: this._contracts.getContractItemById("modules")});
         this._services.register("resolver", this._resolver, { contractItem: this._contracts.getContractItemById("resolver")});
         this._services.register("contracts", this._contracts, { contractItem: this._contracts.getContractItemById("contracts")});
         this._services.register("services", this._services, { contractItem: this._contracts.getContractItemById("services")});
@@ -76,10 +72,11 @@ class XShell {
         await this._services.resolve("registry").init();
         // Construct and validate Areas before module controllers execute
         const areas = this._services.resolve("areas");
-        // Initialize Modules and their controllers
-        await this._modules.init();  
+        // Resolve and initialize Modules and their controllers
+        const modules = this._services.resolve("modules");
+        await modules.init();
         // Compose effective Areas after Modules initialization
-        areas.init({ modules: this._modules });
+        areas.init({ modules });
         // initialize the declaratively registered Navigation service
         await this._services.resolve("navigation").init();
         

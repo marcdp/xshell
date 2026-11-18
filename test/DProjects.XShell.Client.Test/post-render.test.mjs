@@ -76,8 +76,11 @@ function configureRuntime(commandsService) {
             return resource.startsWith("state-engine:") ? StateEngineFactory : RenderEngineFactory;
         }
     };
-    xshell._services = { resolve(name) { return name === "commands" ? commandsService : null; } };
-    xshell._modules = { getModuleById() { return { controller: {} }; } };
+    xshell._services = { resolve(name) {
+        if (name === "commands") return commandsService;
+        if (name === "modules") return { getModuleById() { return { controller: {} }; } };
+        return null;
+    } };
     xshell._bus = { emit() {} };
 }
 

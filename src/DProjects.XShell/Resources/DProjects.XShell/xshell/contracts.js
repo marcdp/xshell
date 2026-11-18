@@ -2,42 +2,6 @@ import { deepFreeze } from "./utils/object.js";
 import JsonValidator from "./services/json-validator.js"
 import xshell from "./xshell.js";
 
-// utils
-async function validateServiceContract(src, definition) {
-    // use loader to load schema
-    const contractServiceSchema = await xshell.loader.load("schema:service");
-    // validate
-    const definitionObject = Object.fromEntries(Object.entries(definition).map(([key, value]) => [key, typeof value === "function" ? {} : value]));
-    const result = new JsonValidator().validate(definitionObject, contractServiceSchema);
-    if (!result.valid) {
-        console.error(`Invalid contract: ${src}`, result.errors);
-        throw new Error(`Invalid contract: ${src}`, { cause: result.errors });
-    }
-    // resolve contract-local named type references after structural validation
-    const references = [];
-    for (const [name, descriptor] of Object.entries(definitionObject.properties || {})) {
-        references.push([descriptor, `properties.${name}.ref`]);
-    }
-    for (const [methodName, method] of Object.entries(definitionObject.methods || {})) {
-        for (const [index, parameter] of (method.parameters || []).entries()) {
-            references.push([parameter, `methods.${methodName}.parameters[${index}].ref`]);
-        }
-        if (method.returns) references.push([method.returns, `methods.${methodName}.returns.ref`]);
-    }
-    for (const [eventName, event] of Object.entries(definitionObject.events || {})) {
-        for (const [name, descriptor] of Object.entries(event.detail || {})) {
-            references.push([descriptor, `events.${eventName}.detail.${name}.ref`]);
-        }
-    }
-    for (const [descriptor, location] of references) {
-        if (descriptor.ref !== undefined && !Object.hasOwn(definitionObject.types || {}, descriptor.ref)) {
-            const error = new Error(`Undefined type reference '${descriptor.ref}' at '${location}'.`);
-            console.error(`Invalid contract: ${src}`, error.message);
-            throw new Error(`Invalid contract: ${src}: ${error.message}`, { cause: error });
-        }
-    }
-}
-
 
 // class
 export default class Contracts {
@@ -122,7 +86,7 @@ export default class Contracts {
     async _processContractFile(id, url, file, moduleId, size) {
         const start = performance.now();
         const contract = await this._loader.load("contract:" + id);
-        await validateServiceContract(url, contract);
+        await this._validateServiceContract(url, contract);
         deepFreeze(contract);
         return {
             id: id,
@@ -134,6 +98,40 @@ export default class Contracts {
             status: "loaded",
             time: performance.now() - start
         };
+    }
+    async _validateServiceContract(src, definition) {
+        // use loader to load schema
+        const contractServiceSchema = await xshell.loader.load("schema:service");
+        // validate
+        const definitionObject = Object.fromEntries(Object.entries(definition).map(([key, value]) => [key, typeof value === "function" ? {} : value]));
+        const result = new JsonValidator().validate(definitionObject, contractServiceSchema);
+        if (!result.valid) {
+            console.error(`Invalid contract: ${src}`, result.errors);
+            throw new Error(`Invalid contract: ${src}`, { cause: result.errors });
+        }
+        // resolve contract-local named type references after structural validation
+        const references = [];
+        for (const [name, descriptor] of Object.entries(definitionObject.properties || {})) {
+            references.push([descriptor, `properties.${name}.ref`]);
+        }
+        for (const [methodName, method] of Object.entries(definitionObject.methods || {})) {
+            for (const [index, parameter] of (method.parameters || []).entries()) {
+                references.push([parameter, `methods.${methodName}.parameters[${index}].ref`]);
+            }
+            if (method.returns) references.push([method.returns, `methods.${methodName}.returns.ref`]);
+        }
+        for (const [eventName, event] of Object.entries(definitionObject.events || {})) {
+            for (const [name, descriptor] of Object.entries(event.detail || {})) {
+                references.push([descriptor, `events.${eventName}.detail.${name}.ref`]);
+            }
+        }
+        for (const [descriptor, location] of references) {
+            if (descriptor.ref !== undefined && !Object.hasOwn(definitionObject.types || {}, descriptor.ref)) {
+                const error = new Error(`Undefined type reference '${descriptor.ref}' at '${location}'.`);
+                console.error(`Invalid contract: ${src}`, error.message);
+                throw new Error(`Invalid contract: ${src}: ${error.message}`, { cause: error });
+            }
+        }
     }
     
 }

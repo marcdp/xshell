@@ -26,15 +26,16 @@ test("XShell resolves Areas before Modules and composes it before Navigation", a
     const servicesIndex = source.indexOf("await this._services.init()");
     const registryIndex = source.indexOf('await this._services.resolve("registry").init()');
     const resolveAreasIndex = source.indexOf('const areas = this._services.resolve("areas")');
-    const modulesIndex = source.indexOf("await this._modules.init()");
-    const initAreasIndex = source.indexOf("areas.init({ modules: this._modules })");
+    const resolveModulesIndex = source.indexOf('const modules = this._services.resolve("modules")');
+    const modulesIndex = source.indexOf("await modules.init()");
+    const initAreasIndex = source.indexOf("areas.init({ modules })");
     const navigationIndex = source.indexOf('await this._services.resolve("navigation").init()');
 
     assert.doesNotMatch(source, /import Areas from/);
     assert.doesNotMatch(source, /new Areas\s*\(/);
     assert.doesNotMatch(source, /register\("areas"/);
     assert.match(source, /get areas\(\) \{ return this\._services\.resolve\("areas"\); \}/);
-    assert.ok(servicesIndex < registryIndex && registryIndex < resolveAreasIndex && resolveAreasIndex < modulesIndex &&
+    assert.ok(servicesIndex < registryIndex && registryIndex < resolveAreasIndex && resolveAreasIndex < resolveModulesIndex && resolveModulesIndex < modulesIndex &&
         modulesIndex < initAreasIndex && initAreasIndex < navigationIndex);
 });
 

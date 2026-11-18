@@ -247,7 +247,7 @@ test("registry initialization precedes module initialization", async () => {
     assert.doesNotMatch(source, /import Registry from/);
     assert.doesNotMatch(source, /new Registry\s*\(/);
     assert.doesNotMatch(source, /register\("registry"/);
-    assert.ok(source.indexOf('await this._services.resolve("registry").init()') < source.indexOf("await this._modules.init()"));
+    assert.ok(source.indexOf('await this._services.resolve("registry").init()') < source.indexOf('const modules = this._services.resolve("modules")'));
     assert.match(source, /get registry\(\) \{ return this\._services\?\.has\("registry"\) \? this\._services\.resolve\("registry"\) : null; \}/);
 });
 

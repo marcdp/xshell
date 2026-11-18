@@ -478,7 +478,7 @@ function configureDefinitionLoaders() {
             return resource.startsWith("state-engine:") ? StateEngineFactory : RenderEngineFactory;
         }
     };
-    xshell._modules = { getModuleById() { return { controller: {} }; } };
+    xshell._services = { resolve(name) { return name === "modules" ? { getModuleById() { return { controller: {} }; } } : null; } };
     xshell._bus = { emit() {} };
 }
 
@@ -765,8 +765,11 @@ test("x-page unmounts then unloads a replaced page and only unmounts on disconne
         getArea() { return null; },
         getMenuitemBreadcrumb() { return []; }
     };
-    xshell._services = { resolve(name) { if (name === "areas") return areas; throw new Error(`Unexpected service: ${name}`); } };
-    xshell._modules = { resolveModuleId() { return "test"; } };
+    xshell._services = { resolve(name) {
+        if (name === "areas") return areas;
+        if (name === "modules") return { resolveModuleId() { return "test"; } };
+        throw new Error(`Unexpected service: ${name}`);
+    } };
     xshell._loader = {
         async load(resource) {
             return resource.startsWith("page:") ? NewPage : class {};
@@ -819,8 +822,11 @@ test("x-page discards an older load without disturbing the newer active Page", a
     xshell._debug = { log() {} };
     xshell._config = { xshell: { ui: { layout: { embed: "x-layout-test" } } } };
     const areas = { resolveAreaId() { return ""; }, getArea() { return null; }, getMenuitemBreadcrumb() { return []; } };
-    xshell._services = { resolve(name) { if (name === "areas") return areas; throw new Error(`Unexpected service: ${name}`); } };
-    xshell._modules = { resolveModuleId() { return "test"; } };
+    xshell._services = { resolve(name) {
+        if (name === "areas") return areas;
+        if (name === "modules") return { resolveModuleId() { return "test"; } };
+        throw new Error(`Unexpected service: ${name}`);
+    } };
     xshell._loader = { async load(resource) { return resource === "page:/pages/a.js" ? PageA : PageB; } };
     const xpage = new XPage();
     xpage._src = "/pages/a.js";
@@ -963,8 +969,11 @@ test("x-page loads URLs containing error through the normal Page loader", async 
     const loaded = [];
     xshell._config = { xshell: { ui: { layout: { embed: "x-layout-test" } } } };
     const areas = { resolveAreaId() { return ""; }, getArea() { return null; }, getMenuitemBreadcrumb() { return []; } };
-    xshell._services = { resolve(name) { if (name === "areas") return areas; throw new Error(`Unexpected service: ${name}`); } };
-    xshell._modules = { resolveModuleId() { return "test"; } };
+    xshell._services = { resolve(name) {
+        if (name === "areas") return areas;
+        if (name === "modules") return { resolveModuleId() { return "test"; } };
+        throw new Error(`Unexpected service: ${name}`);
+    } };
     xshell._loader = { async load(resource) {
         if (resource.startsWith("page:")) {
             loaded.push(resource);

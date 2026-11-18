@@ -1,5 +1,4 @@
 
-import { normalizeAreaPrefix } from "../utils/area.js";
 
 // class
 export default class Areas {
@@ -56,7 +55,7 @@ export default class Areas {
         if (defaultAreaId !== null && !Object.hasOwn(definitions, defaultAreaId)) throw new Error(`Default area '${defaultAreaId}' is not defined.`);
         const prefixes = new Map();
         for (const [areaId, area] of Object.entries(definitions)) {
-            const prefix = normalizeAreaPrefix(area.prefix);
+            const prefix = this._normalizeAreaPrefix(area.prefix);
             if (prefixes.has(prefix)) throw new Error(`Areas '${prefixes.get(prefix)}' and '${areaId}' have duplicate normalized prefix '${prefix}'.`);
             prefixes.set(prefix, areaId);
             for (const moduleId of area.modules || []) {
@@ -79,7 +78,7 @@ export default class Areas {
                 id: areaId,
                 label: areaConfig.label || areaId,
                 icon: areaConfig.icon || null,
-                prefix: normalizeAreaPrefix(areaConfig.prefix),
+                prefix: this._normalizeAreaPrefix(areaConfig.prefix),
                 modules: Object.freeze([...(areaConfig.modules || [])]),
                 order: areaConfig.order || 0,
                 default: areaId === defaultAreaId,
@@ -395,6 +394,10 @@ export default class Areas {
             if (found) return found;
         }
         return null;
+    }
+    _normalizeAreaPrefix(prefix) {
+        if (!prefix || prefix === "/") return "";
+        return "/" + prefix.replace(/^\/+|\/+$/g, "");
     }
     _createMenuFromModuleFiles(files, root, rootItemLabel, extensions, createPaths) {
         const getExtension = (path) => extensions.find(extension => path.endsWith(extension));

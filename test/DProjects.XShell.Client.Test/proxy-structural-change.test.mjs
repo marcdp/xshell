@@ -139,8 +139,7 @@ test("x-json receives change:value after a modified same-reference value is reas
             return resource.startsWith("state-engine:") ? StateEngineFactory : RenderEngineFactory;
         }
     };
-    xshell._services = { resolve() { return null; } };
-    xshell._modules = { getModuleById() { return {}; } };
+    xshell._services = { resolve(name) { return name === "modules" ? { getModuleById() { return {}; } } : null; } };
 
     const Component = await createComponentClassFromJsDefinition("https://example.test/x-json.js", {
         resourceDefinition: { moduleId: "test" }

@@ -84,12 +84,13 @@ test("Page injects its owning Module instance and controller from loader context
     configureDefinitionLoaders();
     const moduleController = { id: "test-controller" };
     const moduleInstance = { id: "test", controller: moduleController };
-    xshell._modules = {
+    const modules = {
         getModuleById(id) {
             assert.equal(id, "test");
             return moduleInstance;
         }
     };
+    xshell._services = { resolve(name) { return name === "modules" ? modules : null; } };
     let injected;
     const PageClass = await createPageClassFromJsDefinition("/page.js", createContext(),
         createDefinition(({ moduleInstance, moduleController }) => {

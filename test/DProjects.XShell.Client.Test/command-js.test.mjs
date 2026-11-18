@@ -32,8 +32,7 @@ test("command-js injects invocation task, context and ordinary XShell services t
     const originals = {
         loader: xshell._loader,
         services: xshell._services,
-        config: xshell._config,
-        modules: xshell._modules
+        config: xshell._config
     };
     const ordinary = {
         loader: { name: "loader" },
@@ -54,9 +53,8 @@ test("command-js injects invocation task, context and ordinary XShell services t
                 properties: { contract: { type: "object" }, controller: { type: "object" } }
             };
         } };
-        xshell._services = { resolve: id => ordinary[id] };
+        xshell._services = { resolve: id => id === "modules" ? { getModuleById: moduleId => moduleId === "sample" ? module : null } : ordinary[id] };
         xshell._config = { modules: { sample: moduleConfig } };
-        xshell._modules = { getModuleById: id => id === "sample" ? module : null };
 
         const Command = await new LoaderCommandJs().load(src, { resourceDefinition: { moduleId: "sample" } });
         const instance = new Command(invocationContext);
@@ -74,7 +72,6 @@ test("command-js injects invocation task, context and ordinary XShell services t
         xshell._loader = originals.loader;
         xshell._services = originals.services;
         xshell._config = originals.config;
-        xshell._modules = originals.modules;
         delete globalThis[marker];
     }
 });
