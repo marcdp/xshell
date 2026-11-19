@@ -21,7 +21,7 @@
             "menus": {
                 "shortcuts": [
                     {"id": "root", "label": "", "icon": "x-more-vert", "class": "menu", "children": [
-                        {"label": "Preferences", "href": "/pages/preferences.js", "open":"stack"},
+                        {"label": "Preferences", "href": "/pages/workspace.js?menu-name=preferences", "open":"stack"},
                         {"label": "-", "order": 100},
                         {"label": "About", "href": "/pages/about.js"}
                     ]}
