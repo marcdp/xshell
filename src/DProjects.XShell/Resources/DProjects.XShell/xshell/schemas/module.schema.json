@@ -87,6 +87,7 @@
     "menuDefinition": {
       "type": "object",
       "properties": {
+        "scope": {"type": "string", "enum": ["global", "area"], "description": "Menu composition scope. Defaults to 'area' when omitted."},
         "label": {"type": "string", "description": "Human-readable menu title."},
         "description": {"type": "string", "description": "Description of the menu."},
         "icon": {"type": ["string", "null"], "description": "Optional icon associated with the menu."},

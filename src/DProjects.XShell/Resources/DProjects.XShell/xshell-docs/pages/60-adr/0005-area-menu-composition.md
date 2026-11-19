@@ -13,9 +13,11 @@ The earlier Area-keyed menu shape coupled module definitions to one application'
 
 The root application owns `xshell.services.areas.options.default` and `xshell.services.areas.options.definitions.<id>`. Each Area defines a navigation prefix and lists
 participating canonical module ids. A module owns reusable contributions to arbitrary named menu slots under
-`modules.<module-id>.menus.<menu-name>`. Each definition can contribute display metadata, root `items`, or a `source`. A menu item may have an
-optional friendly `path` and a canonical XShell navigation target `href`. Areas
-assembles effective menus for each Area in the listed module order and applies the Area prefix to both local values. The first navigation item
+`modules.<module-id>.menus.<menu-name>`. Each definition can declare `scope` and contribute display metadata, root `items`, or an Area `source`.
+Areas discovers global menus before module startup and composes them once from all selected modules in configuration order. An explicit
+scope applies across contributions with the same name. Menus default to Area scope when all contributions omit it. Conflicting explicit
+declarations fail. A menu item may have an optional friendly `path` and a canonical XShell navigation target `href`. Areas
+assembles Area-scoped menus in the listed module order and applies the Area prefix to both local values. The first navigation item
 marked `default: true` in depth-first traversal supplies the initial home candidate through `path || href`.
 If that search returns no target, the first depth-first target is used; no visibility flag is checked. Home is computed at initialization. A module
 may participate in multiple Areas while

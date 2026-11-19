@@ -46,10 +46,6 @@
                 "implementation": "/services/areas.js",
                 "options": {
                     "default": "main",
-                    "global": [
-                        "shortcuts",
-                        "preferences"
-                    ],
                     "definitions": {}
                 }
             },

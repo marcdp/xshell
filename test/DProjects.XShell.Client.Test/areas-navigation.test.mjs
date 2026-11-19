@@ -10,13 +10,13 @@ import moduleSchema from "../../src/DProjects.XShell/Resources/DProjects.XShell/
 
 test("Areas construction rejects an unknown configured module", () => {
     const config = { modules: {}, xshell: { assets: { basePath: "/_assets" } } };
-    const options = { default: "admin", global: [], definitions: { admin: { modules: ["missing"] } } };
+    const options = { default: "admin", definitions: { admin: { modules: ["missing"] } } };
 
     assert.throws(() => new Areas({ config, bus: { addEventListener() {} } }, options), /Area 'admin' references unknown module 'missing'/);
 });
 
 test("documentation inventory menus keep Markdown page and index destinations", () => {
-    const areas = new Areas({ config: { modules: {}, xshell: { assets: { basePath: "/_assets" } } }, bus: { addEventListener() {} } }, { default: null, definitions: {}, global: [] });
+    const areas = new Areas({ config: { modules: {}, xshell: { assets: { basePath: "/_assets" } } }, bus: { addEventListener() {} } }, { default: null, definitions: {} });
     const root = "/_assets/xshell-docs/pages";
     const files = ["index.md", "10-architecture/index.md", "10-architecture/100-services.md"].map(path => ({ path: `${root}/${path}` }));
     const menu = areas._createMenuFromModuleFiles(files, root, "Docs", [".js", ".html", ".md"], true);
@@ -27,7 +27,7 @@ test("documentation inventory menus keep Markdown page and index destinations", 
 
 test("Areas identifies modules under a normalized multi-segment assets.basePath", () => {
     const config = { modules: {}, xshell: { assets: { basePath: "/virtual/assets" } } };
-    const areas = new Areas({ config, bus: { addEventListener() {} } }, { default: null, definitions: {}, global: [] });
+    const areas = new Areas({ config, bus: { addEventListener() {} } }, { default: null, definitions: {} });
     assert.equal(areas.getModuleId("/demo/virtual/assets/x/pages/index.js"), "x");
     assert.equal(areas.getModuleId("/demo/virtual/assets/orders/1.4.0.a82c31f943e01abc/pages/index.js"), "orders");
     assert.equal(areas.getModuleId("/demo/_assets/x/pages/index.js"), null);
@@ -43,7 +43,7 @@ test("Areas preserve tooltip and embedded across effective menu projections", ()
         children: [{ label: "Global child", href: "/_assets/menu/pages/global-child.js", tooltip: "Global child tooltip", embedded: true }]
     };
     const config = {
-        modules: { menu: { menus: { shortcuts: { items: [globalItem] } } } },
+        modules: { menu: { menus: { shortcuts: { scope: "global", items: [globalItem] } } } },
         xshell: { assets: { basePath: "/_assets" } }
     };
     const module = {
@@ -63,7 +63,7 @@ test("Areas preserve tooltip and embedded across effective menu projections", ()
         }
     };
     const dynamicItems = [{ label: "Dynamic child", href: "/_assets/menu/pages/dynamic.js", tooltip: "Dynamic tooltip", embedded: true }];
-    const areas = new Areas({ config, bus }, { default: "main", global: ["shortcuts"], definitions: { main: { prefix: "/main", modules: ["menu"] } } });
+    const areas = new Areas({ config, bus }, { default: "main", definitions: { main: { prefix: "/main", modules: ["menu"] } } });
     areas.registerSource("dynamic-children", { resolve() { return dynamicItems; } });
     areas.init({ modules: { getModuleById(id) { return id === module.id ? module : null; } } });
 
@@ -87,42 +87,49 @@ test("Areas preserve tooltip and embedded across effective menu projections", ()
     assert.deepEqual(breadcrumb.map(item => item.embedded), [true, true]);
 });
 
-function createMenuContext(modules, { global = [], moduleOrder = Object.keys(modules) } = {}) {
+function createMenuContext(modules, { moduleOrder = Object.keys(modules), definitions = { main: { prefix: "/main/", modules: moduleOrder } } } = {}) {
     const bus = new EventTarget();
     bus.emit = (name, detail) => bus.dispatchEvent(new CustomEvent(name, { detail }));
     const config = { modules, xshell: { assets: { basePath: "/_assets" } } };
-    const areas = new Areas({ config, bus }, { global, default: "main", definitions: { main: { prefix: "/main/", modules: moduleOrder } } });
+    const areas = new Areas({ config, bus }, { default: "main", definitions });
     const init = () => areas.init({ modules: { getModuleById: id => ({ id, config: modules[id] }) } });
     return { areas, bus, init };
 }
 
 test("named menus expose merged metadata and distinguish empty definitions from unknown names", () => {
-    // Compose the same contributions in configuration order globally and Area order locally.
+    // Compose named definitions in configuration order globally and Area module order locally.
     const base = Object.freeze({ label: "Preferences", description: "Application preferences", icon: "x-settings",
         items: Object.freeze([{ label: "Appearance", path: "appearance", href: "/_assets/base/appearance.js" }]) });
     const addon = Object.freeze({ description: "Manage your settings", icon: null });
     const before = structuredClone([base, addon]);
     const { areas, init } = createMenuContext({
-        base: { menus: { preferences: base, empty: {}, about: { label: "" } } },
-        addon: { menus: { preferences: addon } }
-    }, { global: ["preferences", "empty", "about", "uncontributed"], moduleOrder: ["addon", "base"] });
+        base: { menus: { preferences: { ...base, scope: "global" }, settings: base, empty: {}, about: { scope: "global", label: "" } } },
+        addon: { menus: { preferences: addon, settings: { ...addon, scope: "area" } } }
+    }, { definitions: {
+        main: { prefix: "/main", modules: ["addon", "base"] },
+        other: { prefix: "/other", modules: ["addon"] }
+    } });
     init();
 
     const globalMenu = areas.getGlobalMenu("preferences");
-    const areaMenu = areas.getMenu("preferences", "main");
+    const areaMenu = areas.getMenu("settings", "main");
     const [item] = globalMenu.items;
-    assert.deepEqual(globalMenu, { name: "preferences", label: "Preferences", description: "Manage your settings", icon: null, items: [item] });
+    assert.deepEqual(globalMenu, { name: "preferences", scope: "global", label: "Preferences", description: "Manage your settings", icon: null, items: [item] });
     const { outlet, ...commonItem } = item;
-    assert.deepEqual(areaMenu, { name: "preferences", label: "Preferences", description: "Application preferences", icon: "x-settings",
+    assert.deepEqual(areaMenu, { name: "settings", scope: "area", label: "Preferences", description: "Application preferences", icon: "x-settings",
         items: [{ ...commonItem, path: "/main/appearance", href: "/main/_assets/base/appearance.js", area: "main" }] });
     assert.equal(areaMenu.items[0].module, "base");
-    assert.equal(areas.getArea("main").menus.preferences, areaMenu);
-    assert.deepEqual(areas.getMenus("main"), [areaMenu, areas.getMenu("empty"), areas.getMenu("about")]);
+    assert.equal(areas.getArea("main").menus.settings, areaMenu);
+    assert.deepEqual(areas.getMenus("main"), [areaMenu, areas.getMenu("empty")]);
+    const otherMenu = areas.getMenu("settings", "other");
+    assert.deepEqual(otherMenu, { name: "settings", scope: "area", label: "settings", description: "Manage your settings", icon: null, items: [] });
+    assert.deepEqual(areas.getMenus("other"), [otherMenu]);
     assert.deepEqual(areas.getMenus("unknown"), []);
-    assert.equal(areas.getMenu("preferences", "unknown"), null);
-    for (const menu of [areas.getMenu("empty"), areas.getGlobalMenu("empty")]) {
-        assert.deepEqual(menu, { name: "empty", label: "empty", description: "", icon: null, items: [] });
-    }
+    assert.equal(areas.getMenu("preferences"), null);
+    assert.equal(areas.getMenu("preferences", "other"), null);
+    assert.equal(areas.getMenu("settings", "unknown"), null);
+    assert.equal(areas.getGlobalMenu("settings"), null);
+    assert.deepEqual(areas.getMenu("empty"), { name: "empty", scope: "area", label: "empty", description: "", icon: null, items: [] });
     assert.equal(areas.getGlobalMenu("about").label, "");
     for (const name of ["unknown", "uncontributed", "constructor"]) {
         assert.equal(areas.getMenu(name), null);
@@ -133,6 +140,31 @@ test("named menus expose merged metadata and distinguish empty definitions from 
         assert.ok(Object.isFrozen(menu) && Object.isFrozen(menu.items) && Object.isFrozen(menu.items[0]));
     }
     assert.deepEqual([base, addon], before);
+});
+
+test("scope resolution includes all selected modules and rejects conflicting explicit declarations", () => {
+    const modules = {
+        extension: { menus: { shortcuts: { items: [{ label: "Extension" }] } } },
+        base: { menus: { shortcuts: { scope: "global", items: [{ label: "Base", path: "/global", href: "/_assets/base/pages/global.js" }] } } },
+        extra: { menus: { shortcuts: { scope: "global", items: [{ label: "Extra" }] } } }
+    };
+    const { areas, init } = createMenuContext(modules, { moduleOrder: ["extension"] });
+    const menu = areas.getGlobalMenu("shortcuts");
+    assert.deepEqual(menu.items.map(item => item.label), ["Extension", "Base", "Extra"]);
+    init();
+    assert.equal(areas.getGlobalMenu("shortcuts"), menu);
+    assert.equal(areas.getMenu("shortcuts"), null);
+    assert.equal(areas.resolvePath("/global"), null);
+    assert.equal(areas.resolveHref("/_assets/base/pages/global.js", "main"), null);
+    assert.equal(areas.getMenuitemBreadcrumb("/_assets/base/pages/global.js", "main"), null);
+    assert.equal(Object.hasOwn(modules.extension.menus.shortcuts, "scope"), false);
+
+    // Even modules outside every Area participate in scope validation.
+    assert.throws(() => new Areas({
+        config: { modules: { ...modules, conflict: { menus: { shortcuts: { scope: "area" } } } }, xshell: { assets: { basePath: "/_assets" } } },
+        bus: { addEventListener() {} }
+    }, { default: null, definitions: {} }),
+    /Menu 'shortcuts' has conflicting scope declarations: 'global' from module 'base' and 'area' from module 'conflict'/);
 });
 
 test("global menus merge raw sibling definitions in configuration order and keep the first positions", () => {
@@ -150,8 +182,10 @@ test("global menus merge raw sibling definitions in configuration order and keep
         { id: "", label: "Empty two" },
         { id: "new", label: "Newest", href: "/_assets/addon/new.js" }
     ];
-    const { areas } = createMenuContext({ base: { menus: { shortcuts: { items: base } } }, addon: { menus: { shortcuts: { items: override } } } },
-        { global: ["shortcuts"], moduleOrder: ["addon", "base"] });
+    const { areas } = createMenuContext({
+        base: { menus: { shortcuts: { scope: "global", items: base } } },
+        addon: { menus: { shortcuts: { items: override } } }
+    });
     const { items } = areas.getGlobalMenu("shortcuts");
     assert.deepEqual(items.map(item => item.label), ["Preferences", "One", "Empty one", "Actions", "Newest", "Two", "Empty two"]);
     assert.deepEqual(items.map(item => item.order), [0, 1, 2, 3, 4, 5, 6]);
@@ -169,17 +203,20 @@ test("global menus merge raw sibling definitions in configuration order and keep
 });
 
 test("leading items from later contributions append to the opening block in global and Area menus", () => {
-    const base = { menus: { shortcuts: { items: [{ id: "root", label: "", children: [
+    const base = { items: [{ id: "root", label: "", children: [
         { label: "Preferences" }, { label: "-", order: 100 }, { id: "about", label: "About" }
-    ] }] } } };
-    const addon = { menus: { shortcuts: { items: [{ id: "root", children: [
+    ] }] };
+    const addon = { items: [{ id: "root", children: [
         { id: "about", icon: "x-info" }, { label: "Diagnostics console" }, { label: "Another shortcut" },
         { label: "More", order: 100.5 }, { label: "Support" }
-    ] }] } } };
-    const { areas, init } = createMenuContext({ base, addon }, { global: ["shortcuts"] });
+    ] }] };
+    const { areas, init } = createMenuContext({
+        base: { menus: { shortcuts: { ...base, scope: "global" }, local: base } },
+        addon: { menus: { shortcuts: addon, local: addon } }
+    });
     init();
 
-    for (const { items: [root] } of [areas.getGlobalMenu("shortcuts"), areas.getMenu("shortcuts")]) {
+    for (const { items: [root] } of [areas.getGlobalMenu("shortcuts"), areas.getMenu("local")]) {
         assert.deepEqual(root.children.map(item => [item.label, item.order]), [
             ["Preferences", 0], ["Diagnostics console", 1], ["Another shortcut", 2], ["-", 100], ["About", 101], ["More", 100.5], ["Support", 101.5]
         ]);
@@ -205,12 +242,14 @@ test("global and Area menus sort sibling blocks after merging order overrides", 
         { label: "Negative", order: -10 }, { label: "Follows negative" }
     ];
     const originals = structuredClone([base, addon]);
-    const { areas, init } = createMenuContext({ base: { menus: { preferences: { items: base } } }, addon: { menus: { preferences: { items: addon } } } },
-        { global: ["preferences"] });
+    const { areas, init } = createMenuContext({
+        base: { menus: { preferences: { scope: "global", items: base }, navigation: { items: base } } },
+        addon: { menus: { preferences: { items: addon }, navigation: { items: addon } } }
+    });
     init();
 
     // Check inference after overrides, independent child sequences, and ties across contributions.
-    for (const { items } of [areas.getGlobalMenu("preferences"), areas.getMenu("preferences")]) {
+    for (const { items } of [areas.getGlobalMenu("preferences"), areas.getMenu("navigation")]) {
         assert.deepEqual(items.map(item => item.label), [
             "Negative", "Follows negative", "Alpha zero", "Follows zero", "Settings", "Zulu unordered", "Alpha fractional", "Last top-level item"
         ]);
@@ -223,6 +262,7 @@ test("global and Area menus sort sibling blocks after merging order overrides", 
     }
     assert.deepEqual([base, addon], originals);
     assert.equal(areas.resolvePath("/main/theme").href, "/main" + href);
+    assert.equal(areas.getDefaultArea().home, "/main/theme");
     assert.deepEqual(areas.getMenuitemBreadcrumb("/main" + href).map(item => item.label), ["Settings", "Theme"]);
 });
 
@@ -425,18 +465,19 @@ test("menu schema permits identified partial contributions and composition requi
         assert.equal(validator.validate({ ...group, children: [{ label: "Invalid order", order }] }, schema).valid, false);
     }
 
-    const builtin = { menus: { shortcuts: { items: [{ id: "root", label: "", icon: "x-more-vert", children: [{ label: "Preferences" }] }] } } };
-    const addon = { menus: { shortcuts: { items: [group] } } };
-    const { areas, init } = createMenuContext({ builtin, addon }, { global: ["shortcuts"], moduleOrder: ["addon"] });
+    const builtin = { menus: { shortcuts: { scope: "global", items: [{ id: "root", label: "", icon: "x-more-vert", children: [{ label: "Preferences" }] }] } } };
+    const addon = { menus: { shortcuts: { items: [group] }, local: { items: [group] } } };
+    const { areas, init } = createMenuContext({ builtin, addon }, { moduleOrder: ["addon"] });
     init();
     const [global] = areas.getGlobalMenu("shortcuts").items;
     assert.equal(global.icon, "x-more-vert");
     assert.deepEqual(global.children.map(item => item.label), ["Preferences", "Diagnostics"]);
-    assert.equal(areas.getMenu("shortcuts").items[0].label, "");
+    assert.equal(areas.getMenu("local").items[0].label, "");
 
     const invalid = { menus: { shortcuts: { items: [partial] } } };
-    assert.throws(() => createMenuContext({ invalid }, { global: ["shortcuts"] }), /Global menu item 'settings'.*requires a string label/);
     assert.throws(() => createMenuContext({ invalid }).init(), /Area 'main' item 'settings'.*requires a string label/);
+    invalid.menus.shortcuts.scope = "global";
+    assert.throws(() => createMenuContext({ invalid }), /Global menu item 'settings'.*requires a string label/);
 });
 
 function createAreas() {
@@ -447,7 +488,6 @@ function createAreas() {
     const config = { modules: { customer: {}, shell: {}, "x-demo": {} }, xshell: { assets: { basePath: "/_assets" } } };
     const options = {
         default: "sales",
-        global: [],
         definitions: {
             sales: { prefix: "/sales", modules: ["customer"] },
             admin: { prefix: "/admin", modules: ["customer"] },
@@ -857,7 +897,7 @@ function createSharedRouteContext({ definitions, defaultArea, mode = "path", bas
         routes,
         config: { menus: {} }
     };
-    const areas = new Areas({ config, bus: { addEventListener() {}, emit() {} } }, { default: defaultArea, global: [], definitions });
+    const areas = new Areas({ config, bus: { addEventListener() {}, emit() {} } }, { default: defaultArea, definitions });
     areas.init({ modules: { getModuleById(id) { return id === module.id ? module : null; } } });
     return { areas, navigation: createNavigation({ areas, mode, basePath, baseUrl, assetsBasePath }), module };
 }
@@ -887,7 +927,7 @@ function createNoRouteContext() {
     const config = { modules: { empty: {} }, xshell: { assets: { basePath: "/_assets" } } };
     const module = { id: "empty", config: { menus: {} } };
     const areas = new Areas({ config, bus: { addEventListener() {}, emit() {} } }, {
-        default: "empty", global: [], definitions: { empty: { prefix: "/empty", modules: ["empty"] } }
+        default: "empty", definitions: { empty: { prefix: "/empty", modules: ["empty"] } }
     });
     areas.init({ modules: { getModuleById(id) { return id === module.id ? module : null; } } });
     return { areas, navigation: createNavigation({ areas }) };
@@ -990,7 +1030,6 @@ function createRouteAreas() {
     const config = { modules: { first: {}, second: {}, outsider: {} }, xshell: { assets: { basePath: "/_assets" } } };
     const options = {
         default: "combined",
-        global: [],
         definitions: {
             combined: { prefix: "/demo", modules: ["first", "second"] },
             "first-only": { prefix: "/first", modules: ["first"] },

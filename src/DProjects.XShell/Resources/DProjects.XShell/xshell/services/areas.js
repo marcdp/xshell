@@ -6,10 +6,9 @@ export default class Areas {
     // options
     static optionsSchema = {
         type: "object",
-        required: ["default", "global", "definitions"],
+        required: ["default", "definitions"],
         properties: {
             default: { type: ["string", "null"], minLength: 1, description: "Identifier of the default area." },
-            global: { type: "array", items: { type: "string" }, description: "Global menu names." },
             definitions: {
                 type: "object",
                 additionalProperties: {
@@ -92,16 +91,36 @@ export default class Areas {
         this._areas = Object.freeze(areas);
         this._currentAreaId = this.getDefaultArea()?.id || null;
 
-        // Compose global definitions in configuration order before projecting defaults.
-        for (const name of options.global || []) {
+        // Group contributions in configuration order and resolve explicit scopes before composing any menu.
+        const menus = new Map();
+        for (const [moduleId, module] of Object.entries(config.modules)) {
+            for (const [name, contribution] of Object.entries(module.menus || {})) {
+                if (!menus.has(name)) menus.set(name, { contributions: [] });
+                const menu = menus.get(name);
+                const { scope } = contribution;
+                if (scope !== undefined) {
+                    if (menu.scope !== undefined && menu.scope !== scope) {
+                        throw new Error(`Menu '${name}' has conflicting scope declarations: ` +
+                            `'${menu.scope}' from module '${menu.moduleId}' and '${scope}' from module '${moduleId}'.`);
+                    }
+                    menu.scope ??= scope;
+                    menu.moduleId ??= moduleId;
+                }
+                menu.contributions.push({ moduleId, contribution });
+            }
+        }
+
+        // Compose each global menu once from all selected modules.
+        for (const [name, { scope, contributions }] of menus) {
+            if (scope !== "global") continue;
             let definition;
-            for (const [moduleId, module] of Object.entries(config.modules)) {
-                if (!module.menus || !Object.hasOwn(module.menus, name)) continue;
-                const contribution = module.menus[name];
-                if (contribution.source !== undefined) throw new Error(`Global menu '${name}' from module '${moduleId}' must use static contributions.`);
+            for (const { moduleId, contribution } of contributions) {
+                if (contribution.source !== undefined) {
+                    throw new Error(`Global menu '${name}' from module '${moduleId}' must use static contributions. Source '${contribution.source}' is unsupported.`);
+                }
                 definition = this._mergeMenuDefinition(definition, contribution, moduleId);
             }
-            if (definition) this._globalMenus[name] = this._createMenuDefinition(name, definition);
+            this._globalMenus[name] = this._createMenuDefinition(name, definition);
         }
 
         // navigation determines the current area from its URL
@@ -142,7 +161,8 @@ export default class Areas {
                     throw new Error(`Area '${area.id}' references unknown module '${moduleId}'.`);
                 }
                 for (const [name, contribution] of Object.entries(module.config.menus || {})) {
-                    // Resolve each module's source after its explicit items.
+                    // Compose Area menus and resolve each module's source after its explicit items.
+                    if (Object.hasOwn(this._globalMenus, name)) continue;
                     const definition = this._mergeMenuDefinition(definitions.get(name), contribution, module.id);
                     if (contribution.source !== undefined) {
                         const items = this._resolveMenuSource(contribution.source, name, module.id, area);
@@ -307,7 +327,7 @@ export default class Areas {
         // Apply defaults only after composition and project the effective item hierarchy.
         const { label = name, description = "", icon = null, items } = definition;
         return Object.freeze({
-            name, label, description, icon,
+            name, scope: area ? "area" : "global", label, description, icon,
             items: Object.freeze(this._sortMenuitems(items).map(entry => this._cloneMenuitem(entry, area)))
         });
     }
@@ -383,6 +403,12 @@ export default class Areas {
         return item;
     }
     _cloneMenuitem({ item: menuitem, order }, area = null, sourceTargets = this._sourceTargets) {
+        // Global menus are composed before runtime sources are registered.
+        if (!area && menuitem.childrenSource !== undefined) {
+            throw new Error(`Global menu item '${menuitem.id ?? menuitem.label}' from module '${menuitem.childrenSourceModule}' ` +
+                `must use static children. Children source '${menuitem.childrenSource}' is unsupported.`);
+        }
+
         // An identified, targetless group can contribute children even in a menu where no label is supplied.
         const moduleId = menuitem.module;
         let label = menuitem.label;

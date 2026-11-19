@@ -17,7 +17,7 @@ test(`inventory menu normalizes root ${rootIndex} and nested Page destinations`,
         modules: { "x-demo": { label: "Demo", files: paths.map(path => ({ path })) } }
     };
     const areas = new Areas({ config, bus: { addEventListener() {} } }, {
-        default: "demo", global: [], definitions: { demo: { prefix: "/demo", modules: ["x-demo"] } }
+        default: "demo", definitions: { demo: { prefix: "/demo", modules: ["x-demo"] } }
     });
     areas.init({ modules: { getModuleById() { return module; } } });
     const menu = areas.getMenu("navigation");

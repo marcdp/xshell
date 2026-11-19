@@ -62,7 +62,7 @@ function configuration(module) {
             version: "1.0.0",
             assets: { basePath: "/_assets", path: "/_assets/xshell", url: "https://example.test/xshell/" },
             services: {
-                areas: { contract: "areas", implementation: "/services/areas.js", options: { default: null, global: [], definitions: {} } },
+                areas: { contract: "areas", implementation: "/services/areas.js", options: { default: null, definitions: {} } },
                 navigation: { contract: "navigation", implementation: "/services/navigation.js", options: { mode: "path" } }
             },
             resolver: {},
@@ -196,18 +196,21 @@ test("effective config validates route grammar before runtime construction", asy
 
 test("global menus accept metadata and static items while Area menus can declare a source", async () => {
     const config = configuration(moduleDefinition());
-    areaOptions(config).global = ["shortcuts"];
     config.modules.test.menus = { shortcuts: { source: "runtime-shortcuts" }, tools: { source: "runtime-tools" } };
-    await assert.rejects(validateConfig("test", config), /Global menu 'shortcuts' from module 'test' must use static contributions/);
+    config.modules.base = { ...moduleDefinition(), menus: { shortcuts: { scope: "global" } } };
+    await assert.rejects(validateConfig("test", config), /Global menu 'shortcuts' from module 'test' must use static contributions.*'runtime-shortcuts'/);
     config.modules.test.menus.shortcuts.source = "/_assets/test/pages";
-    await assert.rejects(validateConfig("test", config), /Global menu 'shortcuts' from module 'test' must use static contributions/);
+    await assert.rejects(validateConfig("test", config), /Global menu 'shortcuts' from module 'test' must use static contributions.*'\/_assets\/test\/pages'/);
 
     config.modules.test.menus.shortcuts = { label: "Shortcuts" };
     await assert.doesNotReject(validateConfig("test", config));
     config.modules.test.menus.shortcuts.items = [{ label: "Shortcut", href: "/pages/shortcut.js" }];
     await assert.doesNotReject(validateConfig("test", config));
 
-    areaOptions(config).global = [];
+    config.modules.test.menus.shortcuts.items[0].children = [{ label: "Nested", childrenSource: "runtime-children" }];
+    await assert.rejects(validateConfig("test", config), /Global menu item 'Nested' from module 'test' must use static children.*'runtime-children'/);
+
+    config.modules.base.menus.shortcuts.scope = "area";
     config.modules.test.menus.shortcuts.source = "runtime-shortcuts";
     await assert.doesNotReject(validateConfig("test", config));
 });
@@ -217,13 +220,17 @@ test("module schema validates named menu definitions and rejects obsolete format
     module.menus = {
         navigation: { label: "Navigation", description: "Find a Page.", icon: null,
             source: "/pages", items: [{ id: "reports", label: "Reports", children: [{ label: "Detail" }] }] },
-        tools: { icon: "x-tools" },
+        tools: { scope: "area", icon: "x-tools" },
+        shortcuts: { scope: "global", items: [] },
         empty: {}
     };
     assertValid(module);
+    assert.equal(Object.hasOwn(module.menus.navigation, "scope"), false);
+    assert.equal(Object.hasOwn(ModuleSchema.$defs.menuDefinition.properties.scope, "default"), false);
 
     for (const definition of [[], "/pages", { items: "/pages" }, { children: [] }, { id: "empty" }, { name: "empty" },
-        { description: null }, { icon: true }, { label: 1 }, { source: "" }]) {
+        { description: null }, { icon: true }, { label: 1 }, { source: "" }, { scope: "local" }, { scope: "Global" },
+        { scope: true }, { scope: null }, { global: true }, { scope: "global", global: true }]) {
         module.menus.empty = definition;
         assert.equal(validator.validate(configuration(module)).valid, false, JSON.stringify(definition));
     }

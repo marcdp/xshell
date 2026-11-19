@@ -45,7 +45,7 @@ test('cookbook navigation derives ordered Pages from the file inventory', () => 
             modules: { 'x-demo': { label: 'XShell Cookbook', files: files.map(file => ({ path: `/_assets/x-demo/${file.replace(/\.js$/, file.includes('html-page') ? '.html' : '.js')}` })) } }
         },
         bus: { addEventListener() {} }
-    }, { default: 'cookbook', global: [], definitions: { cookbook: { prefix: '/cookbook', modules: ['x-demo'] } } });
+    }, { default: 'cookbook', definitions: { cookbook: { prefix: '/cookbook', modules: ['x-demo'] } } });
     areas.init({ modules: { getModuleById() { return module; } } });
     const { name, items: menu } = areas.getMenu('navigation');
     assert.equal(name, 'navigation');

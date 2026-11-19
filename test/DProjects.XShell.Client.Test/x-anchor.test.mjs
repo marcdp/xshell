@@ -114,7 +114,7 @@ function createRouteAreas() {
         config: { menus: {} }
     };
     const areas = new Areas({ config, bus: { addEventListener() {}, emit() {} } }, {
-        default: "demo", global: [], definitions: { demo: { prefix: "/demo", modules: ["x-demo"] } }
+        default: "demo", definitions: { demo: { prefix: "/demo", modules: ["x-demo"] } }
     });
     areas.init({ modules: { getModuleById(id) { return id === module.id ? module : null; } } });
     return areas;

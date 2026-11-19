@@ -60,6 +60,9 @@ A module manifest may contribute its local module definition and other effective
 definition's `dependencies` into that version's repository index entry. Browser discovery follows the version-index dependencies; it does not scan
 downloaded manifests for `configUrl` references.
 
+Declare application-wide menus with `scope: "global"` in a module's `menus` definition. Areas discovers those menus from the selected module
+definitions. The Area service options above configure the navigation contexts and their participating modules.
+
 The selected module manifest is the `manifest.json` URL recorded by its chosen version-index entry. Development middleware can generate that strict
 JSON response from either an authored `manifest.json` or `manifest.jsonc` file.
 

@@ -14,7 +14,7 @@ function effectiveConfig() {
         xshell: {
             version: "1.0.0",
             assets: { basePath: "/_assets", path: "/_assets/xshell", url: "https://example.test/xshell/" },
-            areas: { default: null, global: [], definitions: {} },
+            areas: { default: null, definitions: {} },
             resolver: {},
             services: {
                 navigation: { contract: "navigation", implementation: "/services/navigation.js", options: { mode: "path" } },

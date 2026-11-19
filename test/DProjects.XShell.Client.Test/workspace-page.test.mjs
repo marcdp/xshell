@@ -6,12 +6,12 @@ import WorkspacePage from "../../src/DProjects.XShell/Resources/DProjects.XShell
 import Areas from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/areas.js";
 
 const href = "/_assets/reports/pages/overview.js";
-const reports = { label: "Reports", description: "Review the latest results.", icon: "x-chart",
+const reports = { scope: "global", label: "Reports", description: "Review the latest results.", icon: "x-chart",
     items: [{ label: "Group", children: [{ label: "Overview", href }] }, { label: "Other", href: "/pages/other.js" }] };
 
 function createPage(menuName, src = null) {
-    const config = { modules: { reports: { menus: { reports, empty: {} } } }, xshell: { assets: { basePath: "/_assets" } } };
-    const areas = new Areas({ config, bus: new EventTarget() }, { default: null, global: ["reports", "empty"], definitions: {} });
+    const config = { modules: { reports: { menus: { reports, empty: { scope: "global" } } } }, xshell: { assets: { basePath: "/_assets" } } };
+    const areas = new Areas({ config, bus: new EventTarget() }, { default: null, definitions: {} });
     const state = { ...structuredClone(WorkspacePage.state), menuName, src };
     const page = {};
     const controller = WorkspacePage.controller({ state, areas, page });
@@ -54,16 +54,28 @@ test("Workspace handles unknown and empty menus", () => {
     assert.deepEqual(empty.page, { label: "empty", description: "", icon: null });
 });
 
-test("the x module configures Preferences as a global Workspace menu", () => {
-    const manifest = new URL("../../src/DProjects.XShell/Resources/DProjects.XShell/x/manifest.jsonc", import.meta.url);
-    const config = JSON.parse(readFileSync(manifest, "utf8").replace(/^\s*\/\/[^\r\n]*/gm, ""));
-    config.xshell.assets = { basePath: "/_assets" };
-    const areas = new Areas({ config, bus: new EventTarget() }, { default: null, global: ["preferences", "shortcuts"], definitions: {} });
+test("bundled manifests compose Preferences and Diagnostics shortcuts as global menus", () => {
+    const resources = new URL("../../src/DProjects.XShell/Resources/DProjects.XShell/", import.meta.url);
+    const readManifest = id => JSON.parse(readFileSync(new URL(`${id}/manifest.jsonc`, resources), "utf8").replace(/^\s*\/\/[^\r\n]*/gm, ""));
+    const framework = readManifest("xshell");
+    const x = readManifest("x");
+    const diagnostics = readManifest("xshell-diagnostics");
+    const config = { modules: { ...x.modules, ...diagnostics.modules }, xshell: { assets: { basePath: "/_assets" } } };
+    const options = { ...framework.xshell.services.areas.options, ...diagnostics.xshell.services.areas.options };
+    options.definitions.main = { modules: ["x", "xshell-diagnostics"] };
+    config.modules["xshell-diagnostics"].files = [{ path: "/pages/index.js" }];
+    const areas = new Areas({ config, bus: new EventTarget() }, options);
+    areas.init({ modules: { getModuleById: id => ({ id, config: config.modules[id] }) } });
+
     const menu = areas.getGlobalMenu("preferences");
-    assert.deepEqual([menu.name, menu.label, menu.description, menu.icon],
-        ["preferences", "Preferences", "Manage application preferences.", "x-settings"]);
+    assert.deepEqual([menu.name, menu.scope, menu.label, menu.description, menu.icon],
+        ["preferences", "global", "Preferences", "Manage application preferences.", "x-settings"]);
     assert.equal(menu.items[0].href, "/pages/preferences-appearance.js");
     const workspaceSrc = "/pages/workspace.js?menu-name=preferences";
-    assert.equal(config.xshell.services.preferences.options.page, workspaceSrc);
-    assert.equal(areas.getGlobalMenu("shortcuts").items[0].children.find(item => item.label === "Preferences").href, workspaceSrc);
+    assert.equal(x.xshell.services.preferences.options.page, workspaceSrc);
+    const shortcuts = areas.getGlobalMenu("shortcuts").items[0].children;
+    assert.equal(shortcuts.find(item => item.label === "Preferences").href, workspaceSrc);
+    assert.equal(shortcuts.find(item => item.label === "Diagnostics console").module, "xshell-diagnostics");
+    assert.equal(areas.getMenu("shortcuts", "main"), null);
+    assert.equal(areas.getMenu("navigation", "main").scope, "area");
 });

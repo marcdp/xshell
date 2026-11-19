@@ -5,6 +5,7 @@ import test from "node:test";
 import ConfigSchema from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/schemas/config.schema.json" with { type: "json" };
 import ContractSchema from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/schemas/contract.schema.json" with { type: "json" };
 import AreasContract from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/contracts/areas.json" with { type: "json" };
+import Services from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services.js";
 import Areas from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/areas.js";
 import JsonValidator from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/json-validator.js";
 
@@ -16,7 +17,7 @@ test("framework manifest registers Areas declaratively with service options", as
     const manifest = JSON.parse(source.replace(/^\s*\/\/[^\r\n]*/gm, ""));
     assert.deepEqual(manifest.xshell.services.areas, {
         contract: "areas", implementation: "/services/areas.js",
-        options: { default: "main", global: ["shortcuts", "preferences"], definitions: {} }
+        options: { default: "main", definitions: {} }
     });
     assert.equal((source.match(/"areas"\s*:/g) ?? []).length, 1);
 });
@@ -29,7 +30,8 @@ test("Areas declares the effective menu shape in its public contract", () => {
     assert.equal(methods.getMenu.returns.ref, "menuDefinition");
     assert.equal(methods.getGlobalMenu.returns.ref, "menuDefinition");
     assert.equal(methods.getMenus.returns.type, "array");
-    assert.deepEqual(types.menuDefinition.schema.required, ["name", "label", "description", "icon", "items"]);
+    assert.deepEqual(types.menuDefinition.schema.required, ["name", "scope", "label", "description", "icon", "items"]);
+    assert.deepEqual(types.menuDefinition.schema.properties.scope.enum, ["global", "area"]);
 });
 
 test("global configuration delegates Area option validation to the service implementation", () => {
@@ -37,6 +39,28 @@ test("global configuration delegates Area option validation to the service imple
     assert.equal(Object.hasOwn(ConfigSchema.$defs.xshell.properties, "areas"), false);
     assert.equal(Object.hasOwn(ConfigSchema.$defs, "xshellAreas"), false);
     assert.equal(Object.hasOwn(ConfigSchema.$defs, "xshellArea"), false);
+});
+
+test("Services rejects the removed global menu option", async () => {
+    const implementation = "/services/areas.js";
+    const config = {
+        app: { baseUrl: "https://example.test/" },
+        modules: {},
+        xshell: {
+            assets: { basePath: "/_assets" },
+            files: [{ path: implementation, size: 1 }],
+            services: { areas: { contract: "areas", implementation, options: { default: null, definitions: {}, global: ["shortcuts"] } } }
+        }
+    };
+    const bus = new EventTarget();
+    const services = new Services({
+        config, bus,
+        loader: { async load() { return Areas; } },
+        contracts: { getContractItemById() { return { id: "areas", contract: AreasContract }; } },
+        resolver: { resolve() { return { definition: { moduleId: "xshell" } }; } }
+    });
+    await services.init();
+    assert.throws(() => services.resolve("areas"), /Invalid options for service 'areas'.*Property "global".*additional properties schema/);
 });
 
 test("XShell resolves Areas before Modules and composes it before Navigation", async () => {
@@ -58,20 +82,17 @@ test("XShell resolves Areas before Modules and composes it before Navigation", a
 test("Areas performs semantic option validation during construction", () => {
     const bus = { addEventListener() {} };
     const config = {
-        modules: { test: { menus: { shortcuts: { source: "runtime-source" } } } },
+        modules: { test: {} },
         xshell: { assets: { basePath: "/_assets" } }
     };
 
     assert.throws(() => new Areas({ config, bus }, {
-        default: "missing", global: [], definitions: { main: { prefix: "/main", modules: ["test"] } }
+        default: "missing", definitions: { main: { prefix: "/main", modules: ["test"] } }
     }), /Default area 'missing' is not defined/);
     assert.throws(() => new Areas({ config, bus }, {
-        default: null, global: [], definitions: { first: { prefix: "demo" }, second: { prefix: "/demo/" } }
+        default: null, definitions: { first: { prefix: "demo" }, second: { prefix: "/demo/" } }
     }), /Areas 'first' and 'second' have duplicate normalized prefix '\/demo'/);
     assert.throws(() => new Areas({ config, bus }, {
-        default: null, global: [], definitions: { main: { modules: ["missing"] } }
+        default: null, definitions: { main: { modules: ["missing"] } }
     }), /Area 'main' references unknown module 'missing'/);
-    assert.throws(() => new Areas({ config, bus }, {
-        default: null, global: ["shortcuts"], definitions: {}
-    }), /Global menu 'shortcuts' from module 'test' must use static contributions/);
 });

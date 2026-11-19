@@ -136,15 +136,20 @@ a lazy service. `requires` is distinct from repository module `dependencies`, Co
 
 | Field | Type | Meaning |
 | --- | --- | --- |
+| `scope` | `"global"` or `"area"` | Composition scope shared by all contributions with this menu name. Defaults to `"area"` if every contribution omits it. |
 | `label` | string | Menu title |
 | `description` | string | Menu description |
 | `icon` | string or null | Menu icon |
 | `items` | array of menu items | Static root entries. Nested entries use `children` on the parent item. |
 | `source` | nonempty string | Module-relative inventory path such as `"/pages"` or a registered runtime source name. Available for Area menus. |
 
-Areas composes participating modules in order. Later supplied metadata overrides earlier values, and omitted metadata keeps its earlier value.
-Root items from each contribution merge recursively by item ID, with explicit items processed before resolved source items. See
-[Areas](../30-subsystems/10-areas.md#menus-and-home) for ordering, normalization, and effective menu APIs.
+Areas discovers global menus from the selected module definitions and composes them in configuration module order. Each Area composes its own
+Area-scoped menus in participation order. A module can extend a menu without declaring its scope again. Explicit scopes for the same name must
+agree, or Areas rejects the configuration.
+
+Later supplied metadata overrides earlier values, and omitted metadata keeps its earlier value. Root items from each contribution merge
+recursively by item ID, with explicit items processed before resolved source items. See [Areas](../30-subsystems/10-areas.md#menus-and-home) for
+ordering, normalization, and effective menu APIs.
 
 `routes` maps Area-relative friendly Path patterns to module-relative Page targets:
 

@@ -209,7 +209,7 @@ test("Navigation validates service options before lazy singleton construction", 
 });
 
 test("Areas validates options and injects config and bus before lazy singleton construction", async () => {
-    const options = { default: "main", global: [], definitions: { main: { prefix: "/main", modules: ["test"] } } };
+    const options = { default: "main", definitions: { main: { prefix: "/main", modules: ["test"] } } };
     const { bus, config, services } = createServices(Areas, options, "areas");
     bus.addEventListener = () => {};
     config.xshell.assets = { basePath: "/_assets" };
@@ -228,10 +228,10 @@ test("Areas validates options and injects config and bus before lazy singleton c
 
 test("Areas rejects missing, invalid, and unknown service options without constructing", async () => {
     for (const [options, expected] of [
-        [{ global: [], definitions: {} }, /required property "default"/],
-        [{ default: "", global: [], definitions: {} }, /#\/default/],
-        [{ default: null, global: [], definitions: {}, unknown: true }, /additional properties schema/],
-        [{ default: null, global: [], definitions: { main: { unknown: true } } }, /additional properties schema/]
+        [{ definitions: {} }, /required property "default"/],
+        [{ default: "", definitions: {} }, /#\/default/],
+        [{ default: null, definitions: {}, unknown: true }, /additional properties schema/],
+        [{ default: null, definitions: { main: { unknown: true } } }, /additional properties schema/]
     ]) {
         const { config, services } = createServices(Areas, options, "areas");
         config.xshell.assets = { basePath: "/_assets" };
@@ -245,7 +245,7 @@ test("Areas rejects missing, invalid, and unknown service options without constr
 
 test("Navigation receives the configured Areas singleton through service injection", async () => {
     const definitions = {
-        areas: { contract: "areas", implementation: "/services/areas.js", options: { default: null, global: [], definitions: {} } },
+        areas: { contract: "areas", implementation: "/services/areas.js", options: { default: null, definitions: {} } },
         navigation: { contract: "navigation", implementation: "/services/navigation.js", options: { mode: "path" } }
     };
     const implementations = {

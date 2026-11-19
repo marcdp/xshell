@@ -20,6 +20,7 @@
             },
             "menus": {
                 "shortcuts": {
+                    "scope": "global",
                     "label": "Shortcuts",
                     "items": [
                         {"id": "root", "label": "", "icon": "x-more-vert", "class": "menu", "children": [
@@ -30,6 +31,7 @@
                     ]
                 },
                 "preferences": {
+                    "scope": "global",
                     "label": "Preferences",
                     "description": "Manage application preferences.",
                     "icon": "x-settings",

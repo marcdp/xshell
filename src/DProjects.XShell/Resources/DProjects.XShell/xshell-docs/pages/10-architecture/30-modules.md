@@ -106,9 +106,9 @@ that initialized singleton, and initializes Navigation afterward.
 ## Menus, routes, Areas, and services
 
 Module menu and route declarations are reusable contributions. Each named [menu definition](../50-specifications/module.md#menus-and-routes)
-can supply display metadata, root items, or an Area menu source. Areas select and compose participating module ids; Area membership is not a module
-dependency and does not create another module instance. Routes map Area-relative friendly paths to normalized canonical Page Paths. Menus are
-navigation data, not module references.
+can supply a composition scope, display metadata, root items, or an Area menu source. Areas composes global menus once across all selected modules
+and composes Area-scoped menus from each Area's participating modules. Area membership leaves the dependency graph and runtime module count
+unchanged. Routes map Area-relative friendly paths to normalized canonical Page Paths.
 
 Modules are composition units and do not define public contracts. A module may provide multiple Services, each with its own contract describing
 public properties, methods, and published Bus events. Components and Pages have their own public contracts. Optional `requires` names services and

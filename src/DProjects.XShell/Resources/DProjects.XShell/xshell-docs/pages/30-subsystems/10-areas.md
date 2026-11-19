@@ -17,7 +17,8 @@ This composition fragment omits module metadata/defaults and other effective con
                     "label": "Reports",
                     "items": [{ "label": "Reports", "path": "reports", "href": "/pages/report.js", "default": true }]
                 },
-                "tools": { "items": [{ "label": "Export", "href": "/pages/export.js" }] }
+                "tools": { "items": [{ "label": "Export", "href": "/pages/export.js" }] },
+                "shortcuts": { "scope": "global", "items": [{ "label": "About", "href": "/pages/about.js" }] }
             }
         }
     },
@@ -26,7 +27,6 @@ This composition fragment omits module metadata/defaults and other effective con
             "areas": {
                 "options": {
                     "default": "customers",
-                    "global": [],
                     "definitions": {
                         "customers": { "prefix": "customers", "label": "Customers", "modules": ["reports"] },
                         "inventory": { "prefix": "inventory", "label": "Inventory", "modules": ["reports"] }
@@ -51,9 +51,15 @@ prefix throws. With no configured default, the first sorted Area is used. The in
 
 ## Menus and home
 
-Each entry in a module's `menus` dictionary is a definition keyed by its menu name. A contribution can supply any combination of `label`,
-`description`, `icon`, static root `items`, and a `source`. Areas visits modules in `area.modules` order. Later supplied metadata overrides earlier
-values, including `icon: null`. Omitted fields preserve earlier values, and metadata-only contributions retain earlier items.
+Each entry in a module's `menus` dictionary is a definition keyed by its menu name. A contribution can supply `scope`, `label`, `description`,
+`icon`, static root `items`, and a `source` for Area menus.
+
+Areas resolves scope by menu name across all selected modules. An explicit `"global"` or `"area"` applies to every contribution with that name,
+including contributions that omit the field. If every contribution omits `scope`, the effective scope is `"area"`. Conflicting explicit values
+raise a configuration error identifying the menu and the modules that declared them.
+
+Each Area composes Area-scoped menus from its participating modules in `area.modules` order. Later supplied metadata overrides earlier values,
+including `icon: null`. Omitted fields preserve earlier values, and metadata-only contributions retain earlier items.
 
 For each module, Areas merges its explicit `items` and then the items from its `source`. A source beginning with `/` is a module-relative inventory
 path. Other source strings identify registered sources whose `resolve()` method returns menu items. All contributing modules' sources participate
@@ -107,11 +113,11 @@ returns a target. A targetless default ends that search at its current sibling l
 Home is computed during `Areas.init()` and is not recomputed by later children refreshes.
 On a fresh load at the selected mode's empty/root URL, Navigation requires the default Area to have a home.
 
-`areas.getMenu("navigation")` selects the current Area and `areas.getMenu("navigation", "inventory")` selects one explicitly.
-`areas.getMenus(areaId)` returns an array of effective definitions for that Area, defaulting to the current Area. An unknown Area yields an empty array.
-`areas.getGlobalMenu(name)` returns a global definition.
-Each definition has `name`, `label`, `description`, `icon`, and `items`. After merging, missing metadata defaults to the menu name for `label`, an
-empty string for `description`, and `null` for `icon`. Menu lookups return `null` for an unknown name. Authored empty menus have `items: []`.
+`areas.getMenu("navigation")` looks up an Area menu in the current Area. `areas.getMenu("navigation", "inventory")` selects an Area explicitly.
+`areas.getMenus(areaId)` returns only that Area's menu definitions, defaulting to the current Area. An unknown Area yields an empty array.
+`areas.getGlobalMenu(name)` looks up a global menu.
+Each definition has `name`, `scope`, `label`, `description`, `icon`, and `items`. After merging, missing metadata defaults to the menu name for
+`label`, an empty string for `description`, and `null` for `icon`. Menu lookups return `null` for an unknown name. Authored empty menus have `items: []`.
 Definitions and their root arrays are frozen. Dynamic item children can still refresh through their registered source.
 Pass a definition's `items` array to renderers such as `x-menu`, for example `areas.getMenu("navigation")?.items || []`.
 
@@ -167,10 +173,13 @@ See [Navigation](../10-architecture/120-navigation.md), [Configuration](../10-ar
 
 ## Global menus
 
-`xshell.services.areas.options.global` is the required array of menu names to compose globally from configured modules.
-Global menus merge metadata and static items in configuration module order. They use the same recursive item merge and ordering rules as Area
-menus. Global contributions support metadata and static `items`; root `source` is reserved for Area composition. Global targets keep their
-normalized module hrefs without an Area prefix.
+Areas automatically discovers global menu names from module definitions with `scope: "global"`. The former
+`xshell.services.areas.options.global` setting has been removed. Areas composes each global menu once from all selected modules that contribute to it,
+in configuration module order. The result is available through `getGlobalMenu()` and is excluded from Area menu collections and Area navigation lookup.
+
+Global menus use the same metadata, recursive item merge, and ordering rules as Area menus. Global contributions support static `items` and
+metadata. Root `source` and nested `childrenSource` are reserved for Area menus. Global targets keep their normalized module hrefs without an Area
+prefix.
 
 The `x` module's generic Workspace Page accepts a global menu name through the `menu-name` query parameter.
 It uses the definition's label, description, and icon for Page metadata and renders `items` in the sidebar. Its `src` query parameter selects the
