@@ -4,14 +4,15 @@
   "properties": {
     "mode": { "type": "string", "readonly": true, "description": "Configured browser navigation mode.", "enum": ["hash", "path"] },
     "src": { "type": "any", "readonly": true, "description": "Source URL of the current top-level x-page, or null if none exists." },
-    "stack": { "type": "array", "readonly": true, "description": "Snapshot of navigation stack entries containing href, params, and nav metadata.", "schema": { 
+    "stack": { "type": "array", "readonly": true, "description": "Snapshot of navigation stack entries containing href, params, nav metadata, and optional presentation classes.", "schema": {
       "type": "array", 
       "items": { 
         "type": "object", 
         "properties": { 
           "href": {"type": "string"}, 
           "params": {"type": "object"}, 
-          "nav": {"type": "object"} 
+          "nav": {"type": "object"},
+          "classes": {"type": "array", "items": {"type": "string"}}
         }, 
         "required": ["href", "params", "nav"] 
         } 
@@ -55,6 +56,6 @@
         }
       }
     },
-    "navigate": { "description": "Navigates to a page, stack entry, dialog, or embedded outlet. Dialog mode awaits and returns the dialog result; other modes normally resolve without a value.", "parameters": [{ "name": "options", "type": "object", "required": true, "schema": { "type": "object", "properties": { "href": { "type": "string" }, "params": { "type": "object" }, "nav": { "type": "object" }, "page": {}, "outlet": {}, "open": { "type": "string", "enum": ["auto", "top", "stack", "dialog", "embed"], "default": "auto" }, "context": { "type": "object" }, "replace": { "type": "boolean", "default": false } }, "required": ["href"] } }], "returns": { "type": "any", "description": "Promise; dialog mode resolves to the dialog result." } }
+    "navigate": { "description": "Navigates to a page, stack entry, dialog, or embedded outlet. Dialog mode awaits and returns the dialog result; other modes normally resolve without a value.", "parameters": [{ "name": "options", "type": "object", "required": true, "schema": { "type": "object", "properties": { "href": { "type": "string" }, "params": { "type": "object" }, "nav": { "type": "object" }, "page": {}, "outlet": {}, "open": { "type": "string", "enum": ["auto", "top", "stack", "dialog", "embed"], "default": "auto" }, "context": { "type": "object" }, "classes": { "type": "array", "items": { "type": "string" }, "description": "Caller-supplied presentation classes for a stacked Page." }, "replace": { "type": "boolean", "default": false } }, "required": ["href"] } }], "returns": { "type": "any", "description": "Promise; dialog mode resolves to the dialog result." } }
   }
 }

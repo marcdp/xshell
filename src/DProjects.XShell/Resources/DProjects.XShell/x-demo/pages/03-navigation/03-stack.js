@@ -29,6 +29,18 @@ export default {
     };
 }</code></pre>
 
+        <h2>Stack sizes</h2>
+        <p>A Page can set its preferred size in <code>meta.classes</code>. The opener can override it by passing a size in <code>classes</code>.</p>
+        <p>
+            <x-button label="size-compact" command="openSized" data-size="size-compact"></x-button>
+            <x-button label="size-narrow" command="openSized" data-size="size-narrow"></x-button>
+            <x-button label="size-medium" command="openSized" data-size="size-medium"></x-button>
+            <x-button label="size-wide" command="openSized" data-size="size-wide"></x-button>
+            <x-button label="size-full" command="openSized" data-size="size-full"></x-button>
+        </p>
+        <p><x-anchor href="../02-pages/04-state.js" open="stack" x-prop:classes="state.compactClasses">Open a compact stack with an anchor</x-anchor></p>
+        <pre x-pre><code>&lt;x-anchor href="../02-pages/04-state.js" open="stack" x-prop:classes="state.compactClasses"&gt;Open compact stack&lt;/x-anchor&gt;</code></pre>
+
         <h2>Stack versus normal navigation</h2>
         <p>Normal navigation changes the current destination. Stack navigation opens a child destination while retaining its parent context.</p>
         <p><x-anchor href="../02-pages/01-basic.js">Open Basic Page normally</x-anchor></p>
@@ -41,13 +53,20 @@ export default {
 
         <h2>Choosing a navigation mode</h2>
         <p>Use normal navigation when moving to another destination. Use stack navigation when opening a related Page while preserving the parent context.</p>
-        <p>For other presentation modes, see <x-anchor href="04-embedded.js">Embedded Pages</x-anchor> and <x-anchor href="01-basic.js">Navigation Actions</x-anchor>.</p>
     `,
+
+    state: {
+        compactClasses: ["size-compact"]
+    },
 
     controller({navigation, page}) {
         return {
             openState() {navigation.navigate({href:"../02-pages/04-state.js", page, open:"stack"});},
-            openParameters() {navigation.navigate({href:"../02-pages/03-parameters.js?name=Grace&count=7", page, open:"stack"});}
+            openParameters() {navigation.navigate({href:"../02-pages/03-parameters.js?name=Grace&count=7", page, open:"stack"});},
+            openSized(data) {
+                // Open the same Page at the size selected by the button.
+                navigation.navigate({href:"../02-pages/04-state.js", page, open:"stack", classes:[data.size]});
+            }
         };
     }
 };

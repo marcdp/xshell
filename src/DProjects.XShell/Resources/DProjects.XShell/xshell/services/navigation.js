@@ -3,6 +3,12 @@ import { base64UrlEncode, base64UrlDecode } from "../utils/base64.js";
 import { compileRoute } from "../utils/route.js";
 import { HASH_PREFIX } from "../utils/urls.js";
 
+function withStackClasses(item, classes) {
+    // Snapshot caller classes and keep entries without classes in the existing format.
+    const names = Array.isArray(classes) ? classes.filter(name => typeof name === "string" && name.length) : [];
+    return names.length ? { ...item, classes: names } : item;
+}
+
 // class
 export default class Navigation {
 
@@ -63,7 +69,8 @@ export default class Navigation {
         return this._stack.map(p => Object.freeze({
             href: p.href,
             params: p.params,
-            nav: p.nav
+            nav: p.nav,
+            ...(p.classes ? { classes: Object.freeze([...p.classes]) } : {})
         }))
     }
     
@@ -283,6 +290,7 @@ export default class Navigation {
             outlet,         // target outlet for embed mode (outlet name or element)
             open = "auto",  // auto | top | stack | dialog | embed 
             context = {},   // additional context to be passed to the page (e.g. dialog parameters)
+            classes,        // caller presentation classes for a stacked Page
             replace = false
         }) {
         // Preserve explicit asset targets for embeds while retaining ordinary relative resolution.
@@ -305,7 +313,7 @@ export default class Navigation {
             } else if (indexPage != -1) {
                 // stackpage
                 let stack = [...this._stack];
-                stack[indexPage] = this.parseUrl(hrefAbsolute);
+                stack[indexPage] = withStackClasses(this.parseUrl(hrefAbsolute), classes);
                 await this._stackToBrowser(stack, { replace });
             } else {
                 // dialog or embed 
@@ -318,7 +326,7 @@ export default class Navigation {
 
         } else if (open == "stack") {
             // stack
-            await this._stackToBrowser([...this._stack, this.parseUrl(hrefAbsolute)], { replace });
+            await this._stackToBrowser([...this._stack, withStackClasses(this.parseUrl(hrefAbsolute), classes)], { replace });
             
         } else if (open == "dialog") {
             // dialog
@@ -355,7 +363,7 @@ export default class Navigation {
                 params: root.params,
                 nav: (stack.length == 1 ? root.nav : null)
             })
-            // for stack with multiples pages, creates a single nav variable encoded in base64 with the nav data of the root page and a stack array with the href, params and nav of the rest of pages
+            // Store the root navigation metadata and the child entries, including their presentation classes.
             if (stack.length > 1) {
                 let aux = {};
                 aux.title = root.nav.title;
@@ -367,7 +375,7 @@ export default class Navigation {
                     if (value !== null) return value;
                     return undefined;
                 });
-                url += (url.includes("?") ? "&" : "?") + "nav=" + base64UrlEncode(navJson);
+                url = this._appendQueryParameter(url, "nav", base64UrlEncode(navJson));
             }
         }
         this._stack = stack;
@@ -397,41 +405,12 @@ export default class Navigation {
                 url = url.substring(HASH_PREFIX.length);
             }
         } 
-        // parse root page normally
-        const rootParsed = this.parseUrl(url);
-        const stack = [];
-        // root page without nav.stack
-        const { nav, ...rootWithoutNavStack } = rootParsed;
-        const rootItem = {
-            href: rootParsed.href,
-            params: rootParsed.params,
-            nav: {
-                title: rootParsed.nav.title,
-                description: rootParsed.nav.description,
-                icon: rootParsed.nav.icon,
-                breadcrumb: rootParsed.nav.breadcrumb
-            }
-        };
-        stack.push(rootItem);
-        // if nav.stack exists, decode it
-        const navEncoded = new URLSearchParams(url.split("?")[1] || "").get("nav");
-        if (navEncoded) {
-            try {
-                // restore base64
-                const base64 = base64UrlDecode(navEncoded);
-                const nav = JSON.parse(base64); // array of url strings
-                if (nav.title) stack[0].nav.title = nav.title;
-                if (nav.description) stack[0].nav.description = nav.description;
-                if (nav.icon) stack[0].nav.icon = nav.icon;
-                if (nav.breadcrumb) stack[0].nav.breadcrumb = nav.breadcrumb;
-                if (nav.stack && Array.isArray(nav.stack)) {
-                    // if nav.stack exists, decode it and add it to the stack
-                    stack.push(...nav.stack);
-                }
-                
-            } catch (e) {
-                console.warn("Invalid nav value", e);
-            }
+        // Restore child entries from the same fragment-aware parse as the root Page.
+        const { href, params, nav } = this.parseUrl(url);
+        const { title, description, icon, breadcrumb, stack: children } = nav ?? {};
+        const stack = [{ href, params, nav: { title, description, icon, breadcrumb } }];
+        if (Array.isArray(children)) {
+            for (const { classes, ...item } of children) stack.push(withStackClasses(item, classes));
         }
         return stack;
     }
@@ -478,6 +457,7 @@ export default class Navigation {
                     this._bus.emit("xshell:navigation:start", { src: xpage.src });
                 } else {
                     xpage.setAttribute("layout", "stack");
+                    xpage.stackClasses = itemAfter.classes;
                     xpage.addEventListener("close", async (event) => {
                         //page close
                         let xpages = this.getXPages();
@@ -517,13 +497,16 @@ export default class Navigation {
                 //remove page
                 // use the original host for this position and await its final cleanup
                 await xpages[i].removePage();
-            } else if (itemBefore.href != itemAfter.href) {
+            } else {
+                // Apply presentation updates even when the existing Page can stay mounted.
+                const xpage = xpages[i];
+                if (i > 0) xpage.stackClasses = itemAfter.classes;
+                if (itemBefore.href === itemAfter.href) continue;
+
                 //change page
                 const hrefFinal = itemAfter ? this._buildUrlFinal(itemAfter) : null;
                 const itemFinal = hrefFinal ? this.parseUrl(hrefFinal) : null;
                 if (itemBefore.href != itemFinal.href) {
-                    let xpages = this.getXPages();
-                    let xpage = xpages[i];
                     xpage.src = hrefFinal;
                     //emit event navigation-start
                     if (i == 0) {

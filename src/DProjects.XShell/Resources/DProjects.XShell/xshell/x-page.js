@@ -24,6 +24,7 @@ class XPage extends HTMLElement {
     _layout = "";
     _status = "";
     _context = {};
+    _stackClasses;
 
     _loadRevision  = 0;
     _loadCommit = Promise.resolve();
@@ -107,6 +108,15 @@ class XPage extends HTMLElement {
 
     get layout() { return this._layout;}
     set layout(value) { this._layout = value;}
+
+    set stackClasses(value) {
+        // Forward presentation changes to the current Stack layout without loading the Page.
+        if (value === this._stackClasses) return;
+        this._stackClasses = value;
+        if (this._layout === "stack" && this.shadowRoot.firstChild) {
+            this.shadowRoot.firstChild.stackClasses = value ?? [];
+        }
+    }
 
     get module() { return this._module; }
     set module(value) { this._module = value; }
@@ -209,6 +219,8 @@ class XPage extends HTMLElement {
             if (layoutElement) layoutElement.remove();
             layoutElement = document.createElement(layout);
             layoutElement.innerHTML = "<slot></slot><slot name=\"header-actions\" slot=\"header-actions\"></slot>";
+            // Seed the Stack layout before it mounts and renders its opening animation.
+            if (layoutName === "stack" && this._stackClasses) layoutElement.stackClasses = this._stackClasses;
             this.shadowRoot.appendChild(layoutElement);
             layoutElement.setAttribute("status", "loading");
         }        

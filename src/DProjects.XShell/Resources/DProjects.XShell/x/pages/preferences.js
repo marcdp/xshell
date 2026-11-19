@@ -11,7 +11,7 @@ export default {
         title:"Preferences", 
         description: "Manage browser-local preferences.",
         icon:"x-settings",
-        classes: ["size-narrow"]
+        classes: ["size-medium"]
     },
 
     style: `

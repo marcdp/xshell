@@ -1,6 +1,5 @@
 import { getDeepActiveElement } from "../utils/dom.js";
-
-const dialogSizes = new Set(["size-compact", "size-narrow", "size-medium", "size-wide", "size-full"]);
+import { mergeLayoutClasses } from "../utils/layout-classes.js";
 
 // layout
 export default {
@@ -141,15 +140,8 @@ export default {
                 const page = getPage();
                 if (!page) return;
 
-                // Prefer the first caller size, then the first Page size. Keep other classes in declaration order.
-                const pageClasses = page.meta?.classes?.join(" ").split(/[ \t\n\f\r]+/) ?? [];
-                const callerClasses = Array.isArray(page.context?.classes) ? page.context.classes.join(" ").split(/[ \t\n\f\r]+/) : [];
-                const size = callerClasses.find(name => dialogSizes.has(name)) ?? pageClasses.find(name => dialogSizes.has(name));
-                const classes = new Set(size ? [size] : []);
-                for (const name of [...pageClasses, ...callerClasses]) {
-                    if (name && name !== "opened" && !dialogSizes.has(name)) classes.add(name);
-                }
-                state.pageClasses = [...classes].join(" ");
+                // Keep the native dialog's open-state class under layout control.
+                state.pageClasses = mergeLayoutClasses(page.meta?.classes, page.context?.classes, "opened");
                 state.label = page.label;
 
                 // Schedule a render even when the Page has no classes.

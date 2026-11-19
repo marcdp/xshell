@@ -523,6 +523,117 @@ test("Navigation opens resolved Page resources in stack and dialog modes", async
     assert.equal(dialog.href, "/demo/_assets/x-demo/pages/about.js");
 });
 
+for (const mode of ["hash", "path"]) {
+    test(`Navigation restores independent stack classes through ${mode} history and reload`, async t => {
+        // Exercise the history listeners and DOM reconciliation against a browser-shaped location.
+        const previousGlobals = { document: globalThis.document, window: globalThis.window, location: globalThis.location, history: globalThis.history };
+        t.after(() => {
+            for (const [name, value] of Object.entries(previousGlobals)) {
+                if (value === undefined) delete globalThis[name];
+                else globalThis[name] = value;
+            }
+        });
+        const urls = [new URL(mode === "hash" ? "/app/#!/demo/repository/12#root" : "/app/demo/repository/12#root", "https://example.test")];
+        let position = 0;
+        const setUrl = (href, replace = false) => {
+            if (!replace) {
+                urls.splice(position + 1);
+                position++;
+            }
+            urls[position] = new URL(href, urls[position] ?? urls[position - 1]);
+        };
+        const location = {
+            get pathname() { return urls[position].pathname; },
+            get search() { return urls[position].search; },
+            get hash() { return urls[position].hash; },
+            set hash(value) { setUrl(value); },
+            replace(value) { setUrl(value, true); }
+        };
+        const listeners = {};
+        let mounted = [];
+        const createElement = () => {
+            const attributes = {};
+            const events = {};
+            return {
+                setAttribute(name, value) { attributes[name] = value; if (name === "src") this.src = value; },
+                getAttribute(name) { return attributes[name]; },
+                addEventListener(name, listener) { events[name] = listener; },
+                close() { return events.close({ target: this }); },
+                async removePage() { mounted.splice(mounted.indexOf(this), 1); }
+            };
+        };
+        Object.assign(globalThis, {
+            location,
+            history: { pushState: (_, title, href) => setUrl(href), replaceState: (_, title, href) => setUrl(href, true) },
+            window: { addEventListener: (name, listener) => { listeners[name] = listener; } },
+            document: { location, createElement }
+        });
+        const startNavigation = async () => {
+            const navigation = createNavigation({ mode, basePath: "/app", resolver: createPageResolver() });
+            navigation._container = { querySelectorAll: () => mounted, appendChild: page => mounted.push(page) };
+            await navigation.init();
+            return navigation;
+        };
+        const go = async delta => {
+            position += delta;
+            await listeners[mode === "hash" ? "hashchange" : "popstate"]();
+        };
+        const navigation = await startNavigation();
+        const href = "page:x-demo:/pages/items.js#section";
+        const origin = { src: mounted[0].src, host: mounted[0] };
+        await navigation.navigate({ href, page: origin, open: "stack" });
+        assert.equal(Object.hasOwn(navigation.stack[1], "classes"), false);
+
+        const sizes = ["size-compact", "size-narrow", "size-medium", "size-wide", "size-full"];
+        for (const size of sizes) {
+            const classes = [size];
+            await navigation.navigate({ href, page: origin, open: "stack", classes, params: { sort: "name" }, nav: { title: "Items" } });
+            classes.push("late-mutation");
+            assert.deepEqual(navigation.stack.at(-1).classes, [size]);
+            assert.deepEqual(mounted.at(-1).stackClasses, [size]);
+            assert.equal(new URL(mounted.at(-1).src, urls[position]).searchParams.has("classes"), false);
+        }
+        const top = mounted.at(-1);
+        const current = { src: top.src, host: top };
+        const positionBeforeReplacement = position;
+        // Replace only the classes of the same target and keep its host and source.
+        const previous = navigation.stack.at(-1);
+        await navigation.navigate({ ...previous, page: current, classes: ["size-compact", "caller-style"] });
+        assert.equal(mounted.at(-1), top);
+        assert.equal(top.src, current.src);
+        assert.deepEqual(top.stackClasses, ["size-compact", "caller-style"]);
+        await go(-1);
+        assert.equal(mounted.at(-1), top);
+        assert.deepEqual(top.stackClasses, ["size-full"]);
+        await go(1);
+        assert.deepEqual(top.stackClasses, ["size-compact", "caller-style"]);
+        assert.equal(position, positionBeforeReplacement + 1);
+
+        mounted = [];
+        const restored = await startNavigation();
+        assert.equal(restored.stack[0].href, "/demo/repository/12#root");
+        assert.equal(Object.hasOwn(restored.stack[1], "classes"), false);
+        assert.deepEqual(restored.stack.slice(2).map(item => item.classes[0]), [...sizes.slice(0, -1), "size-compact"]);
+        assert.deepEqual(restored.stack.at(-1).params, { sort: "name" });
+        assert.deepEqual(restored.stack.at(-1).nav, { title: "Items" });
+        assert.equal(restored.stack.at(-1).href.endsWith("#section"), true);
+        assert.deepEqual(mounted.at(-1).stackClasses, ["size-compact", "caller-style"]);
+
+        await mounted.at(-1).close();
+        assert.deepEqual(mounted.at(-1).stackClasses, ["size-wide"]);
+        assert.deepEqual(restored.stack.at(-1).classes, ["size-wide"]);
+        const entryToReplace = { host: mounted.at(-1), src: mounted.at(-1).src };
+        const beforeReplacing = position;
+        await restored.navigate({ href: "page:x-demo:/pages/new.js", page: entryToReplace, replace: true });
+        assert.equal(position, beforeReplacing);
+        assert.equal(mounted.at(-1).stackClasses, undefined);
+        assert.deepEqual(mounted.at(-2).stackClasses, ["size-medium"]);
+        await restored.navigate({ href: origin.src, page: origin, open: "top", classes: ["size-full"] });
+        assert.equal(restored.stack.length, 1);
+        assert.equal(Object.hasOwn(restored.stack[0], "classes"), false);
+    });
+}
+
 test("Navigation embeds explicit asset and Page references while retaining relative, menu and route destinations", async () => {
     const asset = "/_assets/x/0.9.0.dev/pages/about.js";
     const { page, outlet } = createEmbedPage("/main/_assets/shell/0.9.0.dev/pages/origin.js");
@@ -578,10 +689,15 @@ test("Navigation keeps canonical asset destinations Area-aware in top, stack, au
     assert.equal(page.host.src, expected);
 });
 
-test("Embedded x-page loads the same canonical resource with or without an Area prefix", async t => {
+test("x-page resolves embed resources and supplies stack classes before connecting the layout", async t => {
     // Supply the DOM operations used by x-page and forward src changes through its attribute callback.
     globalThis.HTMLElement = class extends EventTarget {
-        attachShadow() { this.shadowRoot = { appendChild(node) { this.firstChild = node; } }; }
+        attachShadow() {
+            this.shadowRoot = { appendChild(node) {
+                this.initialStackClasses = node.stackClasses;
+                this.firstChild = node;
+            } };
+        }
         setAttribute(name, value) { if (name === "src") this.attributeChangedCallback(name, null, value); }
     };
     globalThis.CSSStyleSheet = class { replaceSync() {} };
@@ -599,7 +715,7 @@ test("Embedded x-page loads the same canonical resource with or without an Area 
     const config = {
         app: { basePath: "/app", baseUrl: "https://example.test/app/" },
         xshell: {
-            ui: { layouts: { embed: "test-layout" } },
+            ui: { layouts: { embed: "test-layout", stack: "test-layout" } },
             resolver: {
                 layout: { "test-layout": { src: "/layout.js", loader } },
                 page: { [asset]: { src: asset, loader } }
@@ -628,6 +744,19 @@ test("Embedded x-page loads the same canonical resource with or without an Area 
             resource: `page:${asset}?view=all#summary`, path: asset, url: `https://example.test/app${asset}`, status: "loaded"
         });
     }
+
+    const stacked = new XPage();
+    stacked.layout = "stack";
+    stacked.src = `/sales${asset}`;
+    stacked.stackClasses = ["size-narrow"];
+    await stacked.load();
+    assert.deepEqual(stacked.shadowRoot.initialStackClasses, ["size-narrow"]);
+
+    const loadedPage = stacked.page;
+    stacked.stackClasses = ["size-wide"];
+    assert.deepEqual(stacked.shadowRoot.firstChild.stackClasses, ["size-wide"]);
+    assert.equal(stacked.page, loadedPage);
+    assert.equal(stacked.src, `/sales${asset}`);
 });
 
 test("Navigation.init preserves path-mode fragments on load and popstate without changing root home selection", async (t) => {

@@ -10,9 +10,7 @@ export default {
     style: `
         :host {display:block; }
     `,
-    template: `
-        {{ state.description }}
-    `,
+    template: `{{ state.description }}`,
     state: {
         description: ""
     },

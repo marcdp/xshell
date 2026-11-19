@@ -280,3 +280,22 @@ for the native `<a href>`, so copying the link or opening a new tab uses an Area
 
 `x-page` derives the embedded Page's Area from its destination. An unprefixed destination does not inherit the originating Area, so its menu
 breadcrumb may be absent. Use an Area-qualified Page href to select an Area. Explicitly passed navigation breadcrumbs still apply.
+
+### Stacked Page classes and sizes
+
+Pass an optional array of CSS class names to `navigate({ href, page, open: "stack", classes: ["size-compact"] })`. The same option applies when
+`auto` replaces an existing stacked Page. A Page can declare defaults in `meta.classes`. The first caller size takes precedence over the first
+Page size. The Stack layout also keeps custom classes from both arrays and removes duplicates.
+
+The desktop sizes are `size-compact` (25vw) and `size-narrow` (40vw), both within width limits, plus `size-medium` (60vw), `size-wide` (75vw),
+and `size-full` (100vw). An explicit size takes precedence over the width set by stack depth. Without a size, the first panel is 75vw and the
+existing depth rules apply. On mobile every panel is full-width.
+
+Caller classes belong to each child entry in the encoded Navigation stack. Back, Forward, and reload restore them in both hash and path modes.
+The Page's query parameters stay separate from stack presentation.
+
+For declarative navigation, bind the anchor's `classes` property to an array such as `state.stackClasses = ["size-compact"]`.
+
+```html
+<x-anchor href="details.js" open="stack" x-prop:classes="state.stackClasses">Open details</x-anchor>
+```

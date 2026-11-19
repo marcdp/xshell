@@ -59,8 +59,7 @@ globalThis.window = {
 const { createComponentClassFromJsDefinition } = await import("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/loaders/component-js.js");
 const { default: Areas } = await import("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/areas.js");
 const { default: Navigation } = await import("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/navigation.js");
-const { default: Resolver } = await import("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/resolver.js");
-const { default: xshell } = await import("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/xshell.js");
+const { default: Resolver } = await import("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/resolver.js");
 const { default: anchorDefinition } = await import("../../src/DProjects.XShell/Resources/DProjects.XShell/x/components/x-anchor.js");
 const contract = anchorDefinition.contract;
 
@@ -122,34 +121,22 @@ function createRouteAreas() {
 }
 
 let AnchorClass = null;
+const services = {
+    config: { modules: { test: { defaults: { component: { stateEngine: "test", renderEngine: "test" } } } } },
+    loader: {
+        async load(resource) {
+            if (resource === "schema:component") return {};
+            return resource.startsWith("state-engine:") ? StateEngineFactory : RenderEngineFactory;
+        }
+    }
+};
 
 async function createAnchor(attributes = {}, navigation = createNavigation()) {
     const navigateCalls = [];
     navigation.navigate = params => navigateCalls.push(params);
 
-    xshell._config = {
-        modules: {
-            test: {
-                defaults: {
-                    component: { stateEngine: "test", renderEngine: "test" }
-                }
-            }
-        }
-    };
-
-    xshell._loader = {
-        async load(resource) {
-            if (resource === "schema:component") return {};
-            return resource.startsWith("state-engine:") ? StateEngineFactory : RenderEngineFactory;
-        }
-    };
-
-    xshell._services = {
-        resolve(name) {
-            if (name === "navigation") return navigation;
-            throw new Error(`Unexpected service: ${String(name)}`);
-        }
-    };
+    // Supply the current Navigation instance through the component's load context.
+    services.navigation = navigation;
 
     if (!AnchorClass) {
         const definition = {
@@ -161,10 +148,10 @@ async function createAnchor(attributes = {}, navigation = createNavigation()) {
             "x-anchor.js",
             {
                 appBasePath: "",
-                resourceDefinition: { moduleId: "test" }
+                resourceDefinition: { moduleId: "test" },
+                services
             },
-            definition,
-            contract
+            definition
         );
     }
 
@@ -212,6 +199,7 @@ test("x-anchor maps query attributes into its generated href and click navigatio
     assert.equal(navigateCalls[0].href, "/customers");
     assert.equal(navigateCalls[0].params, anchor.query);
     assert.deepEqual(navigateCalls[0].params, { name: "lucas", count: "123" });
+    assert.equal(Object.hasOwn(navigateCalls[0], "classes"), false);
     assert.equal(event.defaultPrevented, true);
 });
 
@@ -308,6 +296,8 @@ test("x-anchor renders a resolved Page URL and delegates normal clicks with navi
         anchor.href = "page:x-demo:/pages/items.js";
         anchor.query = { repositoryId: "12", sort: "name" };
         anchor.open = "stack";
+        // Set the public property as x-prop:classes does.
+        anchor.classes = ["size-compact", "custom-style"];
         anchor.replace = true;
         anchor.outlet = "content";
         anchor.title = "Items";
@@ -322,6 +312,8 @@ test("x-anchor renders a resolved Page URL and delegates normal clicks with navi
         assert.equal(navigateCalls[0].href, "page:x-demo:/pages/items.js");
         assert.deepEqual(navigateCalls[0].params, { repositoryId: "12", sort: "name" });
         assert.equal(navigateCalls[0].open, "stack");
+        assert.deepEqual(navigateCalls[0].classes, ["size-compact", "custom-style"]);
+        assert.doesNotMatch(anchor._state.hrefReal, /size-compact|classes/);
         assert.equal(navigateCalls[0].replace, true);
         assert.equal(navigateCalls[0].outlet, "content");
         assert.equal(navigateCalls[0].nav.title, "Items");
@@ -329,6 +321,7 @@ test("x-anchor renders a resolved Page URL and delegates normal clicks with navi
         anchor.open = "dialog";
         anchor.onCommand("click", { event: { ...event, defaultPrevented: false } });
         assert.equal(navigateCalls[1].open, "dialog");
+        assert.equal(Object.hasOwn(navigateCalls[1], "classes"), false);
         for (const variant of [{ button: 1 }, { button: 0, ctrlKey: true }]) {
             const nativeEvent = { ...event, ...variant, defaultPrevented: false };
             anchor.onCommand("click", { event: nativeEvent });

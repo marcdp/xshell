@@ -1,4 +1,5 @@
 import { getDeepActiveElement } from "../utils/dom.js";
+import { mergeLayoutClasses } from "../utils/layout-classes.js";
 
 // layout
 export default {
@@ -8,6 +9,7 @@ export default {
         properties: {
             expanded: { type: "boolean", default: false, attribute: true, state: true, description: "" },
             status: { type: "string", default: "", attribute: true, state: true, description: "" },
+            stackClasses: { type: "array", default: [], state: true, description: "Caller-supplied classes for the stacked Page." },
         },
         methods: {},
         slots: {
@@ -55,6 +57,7 @@ export default {
             scrollbar-width: var(--x-scrollbar-width);
             scrollbar-gutter: var(--x-scrollbar-gutter);
             width:var(--x-layout-stack-width);
+            max-width:100vw;
             height: unset;
             margin-right:0;
             outline:var(--x-layout-stack-border);
@@ -76,7 +79,7 @@ export default {
         div.panel .header {
             padding: var(--x-layout-stack-page-padding-vertical) var(--x-layout-stack-page-padding-horizontal) var(--x-layout-stack-page-padding-vertical) var(--x-layout-stack-page-padding-horizontal);
             display:flex; 
-            align-items:baseline; 
+            align-items:center;
         }
         div.panel .header > x-button:first-child {margin-right:1em; margin-left:-1em;}
         div.panel .header div.title {margin-right:1.5em;}
@@ -90,20 +93,20 @@ export default {
         
         @media (min-width: 769px) {
             :host {
-                --x-fill-top: 4.4em;
+                --x-fill-top: 4.5em;
                 --x-fill-height: calc(100vh - var(--x-fill-top));
             }
-            div.panel .header div.title {transform:translateY(-.4em); height:3em; display:flex; flex-direction:column; justify-content:center;}
+            div.panel .header div.title {display:flex; flex-direction:column; justify-content:center; min-height:3em;}
             div.panel .header div.title h2 {flex:0;}
             div.panel .body.fill {display:flex; flex-direction: column; width:100%; position:absolute; top:var(--x-fill-top); height:var(--x-fill-height); box-sizing:border-box; padding:0;}
             div.panel:has(.body.fill) {scrollbar-width: none; scrollbar-gutter: none; overflow:hidden;}           
 
-            /* size */
-            div.panel:has(> .body.size-compact) {width:25vw;}
-            div.panel:has(> .body.size-narrow) {width:40vw;}
-            div.panel:has(> .body.size-medium) {width:60vw;}
-            div.panel:has(> .body.size-wide) {width:75vw;}
-            div.panel:has(> .body.size-full) {width:100vw;}
+            /* Explicit sizes override the width inherited from the Page's stack position. */
+            div.panel:has(> .body.size-compact) {--x-layout-stack-width:clamp(22rem, 25vw, 34rem);}
+            div.panel:has(> .body.size-narrow) {--x-layout-stack-width:clamp(28rem, 40vw, 46rem);}
+            div.panel:has(> .body.size-medium) {--x-layout-stack-width:60vw;}
+            div.panel:has(> .body.size-wide) {--x-layout-stack-width:75vw;}
+            div.panel:has(> .body.size-full) {--x-layout-stack-width:100vw; border-radius:0; border:none;}
             
         }
         @media (max-width: 768px) {
@@ -150,7 +153,7 @@ export default {
     state: {
         pageClasses: null
     },
-    controller({ state, events, bus,runtime, host, postRender, getPage }) {
+    controller({ state, events, runtime, host, postRender, getPage }) {
         let resolveClose = null;
         let previousFocus = null;
         return {
@@ -158,22 +161,31 @@ export default {
                 //load
                 if (runtime.uptimeMs < 500) {
                     state.expanded = true;
-
                 } else {
                     setTimeout(() => {
                         state.expanded = true;
                         postRender("focus");
                     }, 50);
                 }
-                events.on(bus, "xshell:page:load", (event)=>{
-                    if (event.detail.id == getPage()?.id) {
-                        this.onPageLoaded({event});
-                    }
-                });
             },
             mount() {
-                // mount
+                // Seed caller classes on mount and add Page defaults after the Page host commits its load.
                 previousFocus = getDeepActiveElement();
+                const pageHost = host.getRootNode().host;
+                if (pageHost) events.on(pageHost, "load", "refreshClasses");
+                this.refreshClasses();
+            },
+            unmount() {
+                // Release the Page host listener for this mount.
+                events.dispose();
+            },
+            stateChange({ changes }) {
+                // History can update presentation while the same Page stays mounted.
+                if (changes.some(change => change.prop === "stackClasses")) this.refreshClasses();
+            },
+            refreshClasses() {
+                // Merge the loaded Page defaults with the current stack entry.
+                state.pageClasses = mergeLayoutClasses(getPage()?.meta?.classes, state.stackClasses, "body");
             },
             focus() {
                 // focus the body element within the shadow DOM, if not already focused
@@ -205,13 +217,6 @@ export default {
 
             },  
 
-            // events
-            onPageLoaded({ event }) {
-                const page = getPage();
-                if (page) {
-                    state.pageClasses = page.meta?.classes?.join(" ") || "";
-                }
-            },
             onKeydown({ event }) {
                 // keydown handler for the panel
                 if (event.key === "Escape" && !(event.defaultPrevented || event.isComposing) && state.expanded) {

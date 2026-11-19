@@ -1,9 +1,11 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 import ConfigSchema from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/schemas/config.schema.json" with { type: "json" };
 import DialogContract from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/contracts/dialog.json" with { type: "json" };
 import dialogLayout from "../../src/DProjects.XShell/Resources/DProjects.XShell/x/layouts/x-layout-dialog.js";
+import stackLayout from "../../src/DProjects.XShell/Resources/DProjects.XShell/x/layouts/x-layout-stack.js";
 import Dialog from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/dialog.js";
 import Events from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/scoped/events.js";
 import Services from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services.js";
@@ -241,6 +243,64 @@ test("dialog styles define responsive semantic widths and omit numeric width sel
     assert.match(dialogLayout.style, /dialog\s*\{\s*max-width:90vw;\s*min-width:25vw;/);
     assert.match(dialogLayout.style, /@media \(max-width: 768px\)\s*\{\s*dialog\s*\{\s*min-width:50vw;/);
     assert.doesNotMatch(dialogLayout.style, /dialog\.width\d+/);
+});
+
+test("the Stack layout applies caller classes before expanding and merges Page defaults after load", t => {
+    const originalDocument = globalThis.document;
+    const pageHost = new EventTarget();
+    const caller = Object.freeze(["size-compact", "size-full", "caller-style", "caller-style", "fill"]);
+    const defaults = Object.freeze(["size-medium", "size-narrow", "page-style", "fill"]);
+    const state = { ...stackLayout.state, stackClasses: caller, expanded: false };
+    let page;
+
+    globalThis.document = { activeElement: null };
+    t.after(() => { if (originalDocument === undefined) delete globalThis.document; else globalThis.document = originalDocument; });
+    t.mock.timers.enable({ apis: ["setTimeout"] });
+    const controller = stackLayout.controller({
+        state, host: { getRootNode: () => ({ host: pageHost }) }, getPage: () => page,
+        runtime: { uptimeMs: 1000 }, postRender() {}, events: new Events(method => controller[method]())
+    });
+    // Model the first connection while the destination Page is still loading.
+    controller.load();
+    controller.mount();
+    assert.equal(state.expanded, false);
+    assert.equal(state.pageClasses, "size-compact caller-style fill");
+    t.mock.timers.tick(50);
+    assert.equal(state.expanded, true);
+    assert.equal(state.pageClasses, "size-compact caller-style fill");
+
+    page = { meta: { classes: defaults } };
+    pageHost.dispatchEvent(new Event("load"));
+    assert.equal(state.pageClasses, "size-compact page-style fill caller-style");
+    state.stackClasses = ["custom-style"];
+    controller.stateChange({ changes: [{ prop: "stackClasses" }] });
+    assert.equal(state.pageClasses, "size-medium page-style fill custom-style");
+    page = {};
+    pageHost.dispatchEvent(new Event("load"));
+    assert.equal(state.pageClasses, "custom-style");
+    state.stackClasses = [];
+    controller.stateChange({ changes: [{ prop: "stackClasses" }] });
+    assert.equal(state.pageClasses, "");
+    controller.unmount();
+});
+
+test("Stack sizes override inherited depth widths on desktop while mobile uses the full viewport", async () => {
+    const globalStyle = await readFile(new URL("../../src/DProjects.XShell/Resources/DProjects.XShell/x/styles/index.css", import.meta.url), "utf8");
+    const [base, desktop, mobile] = stackLayout.style.split(/@media \([^)]+\)/);
+    const widths = Object.fromEntries([...desktop.matchAll(/div\.panel:has\(> \.body\.(size-[\w-]+)\)\s*\{--x-layout-stack-width:([^;]+);\}/g)]
+        .map(([, name, width]) => [name, width]));
+    assert.deepEqual(widths, {
+        "size-compact": "clamp(22rem, 25vw, 34rem)", "size-narrow": "clamp(28rem, 40vw, 46rem)",
+        "size-medium": "60vw", "size-wide": "75vw", "size-full": "100vw"
+    });
+    assert.match(base, /width:var\(--x-layout-stack-width\)/);
+    assert.match(base, /max-width:100vw/);
+    assert.match(stackLayout.style, /@media \(min-width: 769px\)/);
+    assert.match(stackLayout.style, /@media \(max-width: 768px\)/);
+    assert.match(mobile, /:host\s*\{\s*--x-layout-stack-width:100vw/);
+    assert.doesNotMatch(mobile, /\.size-/);
+    assert.deepEqual([...globalStyle.matchAll(/--x-layout-stack-width:\s*(\d+vw)/g)].map(([, width]) => width),
+        ["75vw", "73vw", "71vw", "69vw", "67vw"]);
 });
 
 test("Dialog invalid configured options fail on first resolution", async () => {
