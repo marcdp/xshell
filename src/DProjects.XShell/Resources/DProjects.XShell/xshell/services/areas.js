@@ -1,3 +1,5 @@
+const previousMenuitemIndex = Symbol("previousMenuitemIndex");
+
 // class
 export default class Areas {
 
@@ -103,7 +105,7 @@ export default class Areas {
                 const menuDefinition = module.menus?.[globalMenuId];
                 if (menuDefinition) globalMenu = this._mergeMenuitems(globalMenu, menuDefinition, moduleId);
             }
-            this._globalMenus[globalMenuId] = Object.freeze(this._sortMenuitems(globalMenu).map(item => this._cloneMenuitem(item)));
+            this._globalMenus[globalMenuId] = Object.freeze(this._sortMenuitems(globalMenu).map(entry => this._cloneMenuitem(entry)));
         }
 
         // navigation determines the current area from its URL
@@ -176,7 +178,7 @@ export default class Areas {
             }
             // Project each merged menu once, including its effective source registrations.
             const menus = Object.fromEntries([...definitions].map(([name, items]) => [
-                name, Object.freeze(this._sortMenuitems(items).map(item => this._cloneMenuitem(item, area)))
+                name, Object.freeze(this._sortMenuitems(items).map(entry => this._cloneMenuitem(entry, area)))
             ]));
             area.menus = Object.freeze(menus);
             area.routes = Object.freeze(routes);
@@ -287,14 +289,15 @@ export default class Areas {
                 const definition = JSON.stringify(items);
                 if (definition === target.definition) continue;
 
-                // Reuse unchanged static children even when sorting moves them to a different position.
-                const previous = new Map(target.items.map((item, index) => [item, target.children[index]]));
+                // Keep a static item's descendants registered when only its inferred order changes.
+                const previous = new Map(target.items.map(({ item }, index) => [item, target.children[index]]));
                 const targets = new Map();
-                const children = items.map(item => {
-                    if (!previous.has(item)) return this._cloneMenuitem(item, target.area, targets);
+                const children = items.map(entry => {
+                    const { item, order } = entry;
                     const child = previous.get(item);
+                    if (!child) return this._cloneMenuitem(entry, target.area, targets);
                     previous.delete(item);
-                    return child;
+                    return child.order === order ? child : Object.freeze({ ...child, order });
                 });
                 changed ||= JSON.stringify(target.children) !== JSON.stringify(children);
                 this._removeSourceTargets(previous.values());
@@ -317,8 +320,20 @@ export default class Areas {
 
     // methods (private)
     _sortMenuitems(items) {
-        // Stable sort keeps the composition order for equal values.
-        return items.sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+        // Group unanchored contributions into the opening block and keep anchored runs together.
+        const opening = { order: 0, entries: [] };
+        const blocks = [opening];
+        const itemBlocks = [];
+        for (const item of items) {
+            let block = itemBlocks[item[previousMenuitemIndex]] ?? opening;
+            if (typeof item.order === "number") {
+                block = { order: item.order, entries: [] };
+                blocks.push(block);
+            }
+            itemBlocks.push(block);
+            block.entries.push({ item, order: block.order + block.entries.length });
+        }
+        return blocks.sort((a, b) => a.order - b.order).flatMap(block => block.entries);
     }
     _mergeMenuitems(target, source, moduleId) {
         // The target has already been merged. Match only the first position in this array.
@@ -329,11 +344,17 @@ export default class Areas {
             const id = getId(item);
             if (id !== null) indexes.set(id, index);
         }
+        // Link new items within a contribution. Updates to an existing ID only restart the link when they set an order.
+        let previousIndex;
         for (const item of source) {
             const id = getId(item);
             const index = indexes.get(id) ?? result.length;
+            const isNew = index === result.length;
             if (id !== null) indexes.set(id, index);
-            result[index] = this._mergeMenuitemValue(result[index], item, moduleId);
+            const merged = this._mergeMenuitemValue(result[index], item, moduleId);
+            if (moduleId !== undefined && isNew && previousIndex !== undefined) merged[previousMenuitemIndex] = previousIndex;
+            result[index] = merged;
+            if (isNew || typeof item?.order === "number") previousIndex = index;
         }
         return result;
     }
@@ -353,7 +374,7 @@ export default class Areas {
         }
         return item;
     }
-    _cloneMenuitem(menuitem, area = null, sourceTargets = this._sourceTargets) {
+    _cloneMenuitem({ item: menuitem, order }, area = null, sourceTargets = this._sourceTargets) {
         // An identified, targetless group can contribute children even in a menu where no label is supplied.
         const moduleId = menuitem.module;
         let label = menuitem.label;
@@ -368,7 +389,7 @@ export default class Areas {
         const result = {
             ...(menuitem.id !== undefined ? { id: menuitem.id } : {}),
             label,
-            order: menuitem.order ?? 0,
+            order,
             href: area ? this._buildAreaHref(menuitem.href, area) : menuitem.href,
             path: area ? this._buildAreaHref(menuitem.path, area) : menuitem.path,
             command: menuitem.command ?? null,
@@ -391,15 +412,12 @@ export default class Areas {
             }
             const target = { name, moduleId: sourceModule, area, staticItems, children: result.children };
             const items = this._resolveSourceChildren(target);
-            result.children.push(...items.map(item => this._cloneMenuitem(item, area, sourceTargets)));
+            result.children.push(...items.map(entry => this._cloneMenuitem(entry, area, sourceTargets)));
             target.items = items;
             target.definition = JSON.stringify(items);
             sourceTargets.set(result.children, target);
         } else {
-            // Keep the static definitions in declaration order for ties on later source refreshes.
-            const children = this._sortMenuitems([...staticItems]);
-            for (let i = 0; i < children.length; i++) children[i] = this._cloneMenuitem(children[i], area, sourceTargets);
-            result.children = Object.freeze(children);
+            result.children = Object.freeze(this._sortMenuitems(staticItems).map(entry => this._cloneMenuitem(entry, area, sourceTargets)));
         }
         return Object.freeze(result);
     }

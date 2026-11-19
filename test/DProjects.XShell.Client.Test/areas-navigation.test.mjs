@@ -115,6 +115,7 @@ test("global menus merge raw sibling definitions in configuration order and keep
         { global: ["shortcuts"], moduleOrder: ["addon", "base"] });
     const items = areas.getGlobalMenu("shortcuts");
     assert.deepEqual(items.map(item => item.label), ["Preferences", "One", "Empty one", "Actions", "Newest", "Two", "Empty two"]);
+    assert.deepEqual(items.map(item => item.order), [0, 1, 2, 3, 4, 5, 6]);
     const [settings, , , actions, newest] = items;
     assert.equal(settings.id, "settings");
     assert.equal(settings.icon, "x-settings");
@@ -128,12 +129,31 @@ test("global menus merge raw sibling definitions in configuration order and keep
     assert.deepEqual(override[0], { id: "settings", label: "Preferences" });
 });
 
-test("global and Area menus sort each sibling array stably after merging order overrides", () => {
+test("leading items from later contributions append to the opening block in global and Area menus", () => {
+    const base = { menus: { shortcuts: [{ id: "root", label: "", children: [
+        { label: "Preferences" }, { label: "-", order: 100 }, { id: "about", label: "About" }
+    ] }] } };
+    const addon = { menus: { shortcuts: [{ id: "root", children: [
+        { id: "about", icon: "x-info" }, { label: "Diagnostics console" }, { label: "Another shortcut" },
+        { label: "More", order: 100.5 }, { label: "Support" }
+    ] }] } };
+    const { areas, init } = createMenuContext({ base, addon }, { global: ["shortcuts"] });
+    init();
+
+    for (const [root] of [areas.getGlobalMenu("shortcuts"), areas.getMenu("shortcuts")]) {
+        assert.deepEqual(root.children.map(item => [item.label, item.order]), [
+            ["Preferences", 0], ["Diagnostics console", 1], ["Another shortcut", 2], ["-", 100], ["About", 101], ["More", 100.5], ["Support", 101.5]
+        ]);
+        assert.equal(root.children[4].icon, "x-info");
+    }
+});
+
+test("global and Area menus sort sibling blocks after merging order overrides", () => {
     const href = "/_assets/base/pages/theme.js";
     const base = Object.freeze([
         { id: "settings", label: "Settings", order: 100, children: Object.freeze([
             { id: "theme", label: "Theme", order: 3, path: "theme", href, children: Object.freeze([
-                { label: "Last", order: 7 }, { label: "First", order: -1 }
+                { label: "Last", order: 7 }, { label: "First", order: -1 }, { label: "Second" }
             ]) },
             { id: "language", label: "Language", order: -2 },
             { label: "Default child order" }
@@ -142,22 +162,25 @@ test("global and Area menus sort each sibling array stably after merging order o
     ]);
     const addon = [
         { id: "settings", order: 0.5, children: [{ id: "theme", order: 0 }, { id: "language", icon: "language" }] },
-        { label: "Alpha zero", order: 0 }, { label: "Alpha fractional", order: 0.5 }, { label: "Negative", order: -10 }
+        { label: "Alpha zero", order: 0 }, { label: "Follows zero" }, { label: "Alpha fractional", order: 1.5 },
+        { label: "Negative", order: -10 }, { label: "Follows negative" }
     ];
     const originals = structuredClone([base, addon]);
     const { areas, init } = createMenuContext({ base: { menus: { preferences: base } }, addon: { menus: { preferences: addon } } },
         { global: ["preferences"] });
     init();
 
-    // Check sibling ordering, ties across contributions, and the normalized values.
+    // Check inference after overrides, independent child sequences, and ties across contributions.
     for (const items of [areas.getGlobalMenu("preferences"), areas.getMenu("preferences")]) {
-        assert.deepEqual(items.map(item => item.label), ["Negative", "Zulu unordered", "Alpha zero", "Settings", "Alpha fractional", "Last top-level item"]);
-        assert.deepEqual(items.map(item => item.order), [-10, 0, 0, 0.5, 0.5, 20]);
-        const { children } = items[3];
-        assert.deepEqual(children.map(item => item.label), ["Language", "Theme", "Default child order"]);
-        assert.deepEqual(children.map(item => item.order), [-2, 0, 0]);
-        assert.deepEqual(children[1].children.map(item => item.label), ["First", "Last"]);
-        assert.ok(Object.isFrozen(items) && Object.isFrozen(items[3]) && Object.isFrozen(children));
+        assert.deepEqual(items.map(item => item.label), [
+            "Negative", "Follows negative", "Alpha zero", "Follows zero", "Settings", "Zulu unordered", "Alpha fractional", "Last top-level item"
+        ]);
+        assert.deepEqual(items.map(item => item.order), [-10, -9, 0, 1, 0.5, 1.5, 1.5, 20]);
+        const { children } = items[4];
+        assert.deepEqual(children.map(item => item.label), ["Language", "Default child order", "Theme"]);
+        assert.deepEqual(children.map(item => item.order), [-2, -1, 0]);
+        assert.deepEqual(children[2].children.map(item => [item.label, item.order]), [["First", -1], ["Second", 0], ["Last", 7]]);
+        assert.ok(Object.isFrozen(items) && Object.isFrozen(items[4]) && Object.isFrozen(children));
     }
     assert.deepEqual([base, addon], originals);
     assert.equal(areas.resolvePath("/main/theme").href, "/main" + href);
@@ -167,16 +190,17 @@ test("global and Area menus sort each sibling array stably after merging order o
 test("Area menu ordering includes inventory and named source contributions", () => {
     const root = "/_assets/docs/pages";
     const { areas, init } = createMenuContext({
-        links: { menus: { navigation: [{ label: "Last", order: 2 }] } },
+        links: { menus: { navigation: [{ label: "Link", order: 2 }], tools: [{ label: "Tool" }, { label: "Another tool" }] } },
         docs: { label: "Docs", menus: { navigation: root }, files: ["20-alpha.md", "zulu.md", "01-beta.md"].map(path => ({ path: `${root}/${path}` })) },
         runtime: { menus: { navigation: "runtime-links" } }
     });
-    areas.registerSource("runtime-links", { resolve: () => [{ label: "Middle", order: 1 }, { label: "First", order: -1 }] });
+    areas.registerSource("runtime-links", { resolve: () => [{ label: "Middle", order: 1 }, { label: "First", order: -1 }, { label: "Second" }] });
     init();
 
     const items = areas.getMenu("navigation");
-    assert.deepEqual(items.map(item => item.label), ["First", "Docs", "Middle", "Last"]);
-    assert.deepEqual(items[1].children.map(item => item.label), ["Beta", "Alpha", "Zulu"]);
+    assert.deepEqual(items.map(item => [item.label, item.order]), [["First", -1], ["Second", 0], ["Docs", 0], ["Middle", 1], ["Link", 2]]);
+    assert.deepEqual(items[2].children.map(item => [item.label, item.order]), [["Beta", 0], ["Alpha", 1], ["Zulu", 2]]);
+    assert.deepEqual(areas.getMenu("tools").map(item => item.order), [0, 1]);
 });
 
 test("menu definitions merge objects and other arrays recursively before projection", () => {
@@ -252,8 +276,9 @@ test("refresh merges live children into the static baseline and updates nested s
     });
     let dynamic = [
         { id: "theme", label: "Live theme", order: -2, href: "/_assets/addon/live-theme.js" },
-        { id: "live", label: "Live", order: -1 },
-        { id: "live", icon: "live-icon", childrenSource: "nested" }
+        { id: "live", label: "Live", order: -3 },
+        { id: "live", icon: "live-icon", childrenSource: "nested" },
+        { label: "Follows live" }
     ];
     let nested = [{ label: "First nested" }];
     let persistent = [{ label: "Persistent" }];
@@ -274,10 +299,10 @@ test("refresh merges live children into the static baseline and updates nested s
     assert.equal(settings.module, "base");
     assert.equal(settings.icon, "x-settings");
     assert.ok(Object.isFrozen(settings) && !Object.isFrozen(children) && Object.isFrozen(children[0]));
-    assert.deepEqual(children.map(item => item.label), ["Live theme", "Live", "Static"]);
-    const [liveTheme, live, staticItem] = children;
+    assert.deepEqual(children.map(item => [item.label, item.order]), [["Live", -3], ["Follows live", -2], ["Live theme", -2], ["Static", -1]]);
+    const [live, , liveTheme, staticItem] = children;
     assert.equal(liveTheme.module, "addon");
-    assert.deepEqual(liveTheme.children.map(item => item.label), ["Overview", "Details"]);
+    assert.deepEqual(liveTheme.children.map(item => [item.label, item.order]), [["Details", 2], ["Overview", 3]]);
     assert.equal(areas.resolveHref("/_assets/addon/live-theme.js"), liveTheme);
     assert.equal(live.children[0].module, "addon");
     assert.equal(live.icon, "live-icon");
@@ -291,12 +316,12 @@ test("refresh merges live children into the static baseline and updates nested s
     bus.emit("settings:refresh");
     assert.equal(changes, 1);
     assert.equal(settings.children, children);
-    assert.deepEqual(children.map(item => item.label), ["Static", "Theme"]);
-    assert.equal(children[0], staticItem);
-    assert.equal(children[1].module, "base");
-    assert.equal(children[1].order, 0.5);
+    assert.deepEqual(children.map(item => [item.label, item.order]), [["Theme", 0.5], ["Static", 1.5]]);
+    assert.equal(children[1].children, staticItem.children);
+    assert.equal(staticItem.order, -1);
+    assert.equal(children[0].module, "base");
     assert.equal(areas.resolveHref("/_assets/addon/live-theme.js"), null);
-    assert.equal(areas.resolveHref("/_assets/base/theme.js"), children[1]);
+    assert.equal(areas.resolveHref("/_assets/base/theme.js"), children[0]);
     assert.equal(liveTheme.label, "Live theme");
     assert.equal(liveTheme.module, "addon");
     assert.equal(liveTheme.order, -2);
@@ -306,17 +331,30 @@ test("refresh merges live children into the static baseline and updates nested s
     assert.equal(changes, 1);
 
     // Restore an override and make a nested tie use the original static declaration order.
-    dynamic = [{ id: "theme", order: -1, children: [{ id: "details", order: 0 }] }];
+    dynamic = [{ id: "theme", order: -1, children: [{ id: "details", order: 0 }, { label: "Advanced", order: 1 }] }];
     bus.emit("settings:refresh");
     assert.equal(changes, 2);
-    assert.deepEqual(children.map(item => item.label), ["Theme", "Static"]);
-    assert.deepEqual(children[0].children.map(item => item.label), ["Details", "Overview"]);
-    assert.equal(children[1], staticItem);
-    persistent = [{ label: "Later", order: 1 }, { label: "Earlier", order: -1 }];
+    assert.deepEqual(children.map(item => [item.label, item.order]), [["Theme", -1], ["Static", 0]]);
+    assert.deepEqual(children[0].children.map(item => [item.label, item.order]), [["Details", 0], ["Overview", 1], ["Advanced", 1]]);
+    assert.equal(children[1].children, staticItem.children);
+    persistent = [{ label: "Later", order: 1 }, { label: "Earlier", order: -1 }, { label: "Inferred" }];
     assert.equal(persistentSource.refresh(), true);
-    assert.deepEqual(staticItem.children.map(item => item.label), ["Earlier", "Later"]);
+    assert.deepEqual(children[1].children.map(item => [item.label, item.order]), [["Earlier", -1], ["Inferred", 0], ["Later", 1]]);
     bus.emit("settings:refresh");
     assert.equal(changes, 2);
+
+    // An order change emits an event even when the sorted positions stay the same.
+    dynamic = [{ ...dynamic[0], order: -0.5 }];
+    bus.emit("settings:refresh");
+    assert.equal(changes, 3);
+    assert.deepEqual(children.map(item => [item.label, item.order]), [["Theme", -0.5], ["Static", 0.5]]);
+    assert.equal(children[1].children, staticItem.children);
+
+    dynamic = [{ label: "Opening shortcut" }];
+    bus.emit("settings:refresh");
+    assert.equal(changes, 4);
+    assert.deepEqual(children.map(item => [item.label, item.order]), [["Opening shortcut", 0], ["Theme", 0.5], ["Static", 1.5]]);
+    assert.equal(children[2].children, staticItem.children);
 });
 
 test("menu schema permits identified partial contributions and composition requires effective labels", () => {

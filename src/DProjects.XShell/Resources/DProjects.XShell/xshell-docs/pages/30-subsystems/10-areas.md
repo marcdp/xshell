@@ -62,8 +62,11 @@ and omitted properties retain earlier values. Child arrays follow the same rules
 An identified contribution may omit `label` when another contribution supplies it. An identified group with children and no target or command
 can use an empty label by default. An item with an `href` keeps the module ownership of that target until a contribution overrides it.
 
-Menu items may specify a numeric `order` in both Area and global menus. After merging by ID, Areas sorts each menu and each nested `children`
-array independently, with lower values first. Missing values count as `0`, and equal values keep their relative order from the merged array.
+Each Area menu, global menu, and nested `children` array has a shared opening block at `0`. A later contribution's leading items without
+`order` append to that block in composition order. An explicit numeric `order` starts a block for that item and the siblings that follow it in
+the same contribution, up to the next explicit `order`. After merging by ID, Areas sorts whole blocks by their starting values. The opening
+block precedes explicit blocks at `0`, and other ties retain composition order. Effective item orders increment within each block, so blocks
+stay together even when those values overlap. Inferred values only appear on effective menu items.
 
 Menu items may also declare `tooltip` and `embedded`. `tooltip` supplies the navigation anchor's tooltip text. When rendered by `x-menu`, an
 `embedded` menu item causes `x-menuitem` to host its target Page inline instead of rendering a navigation anchor. This presentation behavior belongs
