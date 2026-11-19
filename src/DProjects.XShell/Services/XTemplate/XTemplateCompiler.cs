@@ -128,12 +128,15 @@ namespace DProjects.XShell.Services.XTemplate {
             var expressionScope = scope;
             var structuralDirective = GetStructuralDirective(element);
             var scopedLoop = structuralDirective.Kind is StructuralDirectiveKind.For or StructuralDirectiveKind.Recursive ? structuralDirective.Attribute : null;
+            string? key = null;
             if (scopedLoop != null) {
                 var loop = ParseLoop(scopedLoop.Value, scopedLoop.Name, scopedLoop.Name == "x-recursive", element);
                 expressionScope = scopedLoop.Name == "x-recursive"
                     ? scope.With(loop.Item, loop.Index, loop.AbsoluteIndex, loop.Indent)
                     : scope.With(loop.Item, loop.Index);
                 childScope = expressionScope;
+                var keyAttribute = element.Attributes.FirstOrDefault(attribute => attribute.Name == "x-key");
+                if (keyAttribute != null) key = CompileKey(loop.Item, keyAttribute);
             }
             var dynamicTagAttribute = element.Attributes.FirstOrDefault(attribute => attribute.Name == "x-is");
             if (dynamicTagAttribute != null && VoidElements.Contains(element.Name)) throw TemplateError($"Directive 'x-is' is not supported on void element <{element.Name}>.", element);
@@ -172,19 +175,17 @@ namespace DProjects.XShell.Services.XTemplate {
                     break;
                 case StructuralDirectiveKind.For:
                     var forLoop = ParseLoop(structuralDirective.Attribute!.Value, structuralDirective.Attribute.Name, false, element);
-                    var forKeyName = element.GetAttribute("x-key");
-                    var forType = string.IsNullOrWhiteSpace(forKeyName) ? "position" : "key";
+                    var forType = key == null ? "position" : "key";
                     var forCollection = CompileExpression(forLoop.Collection, structuralDirective.Attribute.Name, element.SourceOffset, scope);
                     javascript.Add($"{indent}utils.createVDOM(\"#comment\", null, null, null, null, {{index: {index}, forType:'{forType}'}}, 'x-for-start'),");
                     line.Clear().Append(indent).Append($"...(utils.expr.collection({forCollection}).map(({forLoop.Item}, {forLoop.Index}) => utils.createVDOM({elementTag}");
                     postLine.Add(")),");
-                    if (!string.IsNullOrWhiteSpace(forKeyName)) options.Add($"\"key\":utils.expr.member({forLoop.Item}, {ToJavaScriptString(ValidateKeyName(forKeyName, element))})");
+                    if (key != null) options.Add($"\"key\":{key}");
                     post.Add($"{indent}utils.createVDOM(\"#comment\", null, null, null, null, {{index: {index}, forType:'{forType}'}}, 'x-for-end'),");
                     break;
                 case StructuralDirectiveKind.Recursive:
                     var recursiveLoop = ParseLoop(structuralDirective.Attribute!.Value, structuralDirective.Attribute.Name, true, element);
-                    var recursiveKeyName = element.GetAttribute("x-key");
-                    var recursiveForType = string.IsNullOrWhiteSpace(recursiveKeyName) ? "position" : "key";
+                    var recursiveForType = key == null ? "position" : "key";
                     var recursiveCollection = CompileExpression(recursiveLoop.Collection, structuralDirective.Attribute.Name, element.SourceOffset, scope);
                     javascript.Add($"{indent}...(func = (_items, {recursiveLoop.AbsoluteIndex}, {recursiveLoop.Indent}, wrapper) => {{ let _itemsArray = utils.expr.collection(_items); let _result = [");
                     indent += "    ";
@@ -192,7 +193,7 @@ namespace DProjects.XShell.Services.XTemplate {
                     javascript.Add($"{indent}utils.createVDOM(\"#comment\", null, null, null, null, {{index: {index - 1}, forType:'{recursiveForType}'}}, 'x-for-start'),");
                     line.Clear().Append(indent).Append($"...(_itemsArray.map(({recursiveLoop.Item}, {recursiveLoop.Index}) => {{ let _result = utils.createVDOM({elementTag}");
                     postLine.Add($"; {recursiveLoop.AbsoluteIndex}++; return _result;}})),");
-                    if (!string.IsNullOrWhiteSpace(recursiveKeyName)) options.Add($"\"key\":utils.expr.member({recursiveLoop.Item}, {ToJavaScriptString(ValidateKeyName(recursiveKeyName, element))})");
+                    if (key != null) options.Add($"\"key\":{key}");
                     post.Add($"{indent}utils.createVDOM(\"#comment\", null, null, null, null, {{index: {index - 1}, forType:'{recursiveForType}'}}, 'x-for-end'),");
                     var wrapper = element.GetAttribute("x-recursive-wrapper") ?? "";
                     post.Add($"\n    {indent[..^4]}]; if (wrapper) _result = [utils.createVDOM(wrapper, null, null, null, null, {{index:1}}, _result)]; return _result;}})({recursiveCollection}, 0, 0),");
@@ -208,7 +209,7 @@ namespace DProjects.XShell.Services.XTemplate {
             foreach (var attribute in element.Attributes) {
                 var name = attribute.Name;
                 var value = attribute.Value;
-                if (IsPrimaryStructuralDirective(name)) {
+                if (IsPrimaryStructuralDirective(name) || name == "x-key") {
                     continue;
                 } else if (name == "style") {
                     styles.Add(CompileStyles(attribute));
@@ -256,9 +257,6 @@ namespace DProjects.XShell.Services.XTemplate {
                     var eventName = name[(name.IndexOf(':') + 1)..];
                     if (string.IsNullOrWhiteSpace(eventName)) throw TemplateError("An event binding requires an event name.", element);
                     events.Add($"{ToJavaScriptString(eventName)}: (event) => handler({ToJavaScriptString(value)}, event)");
-                } else if (name == "x-key") {
-                    if (!element.HasAttribute("x-for") && !element.HasAttribute("x-recursive")) throw TemplateError("Directive 'x-key' requires 'x-for' or 'x-recursive'.", element);
-                    if (string.IsNullOrWhiteSpace(value)) throw TemplateError("Directive 'x-key' requires a property name.", element);
                 } else if (name == "x-recursive-wrapper") {
                     if (!element.HasAttribute("x-recursive")) throw TemplateError("Directive 'x-recursive-wrapper' requires 'x-recursive'.", element);
                 } else if (name == "x-show") {
@@ -453,9 +451,12 @@ namespace DProjects.XShell.Services.XTemplate {
             try { return XTemplateExpressions.Parse(source); }
             catch (XTemplateExpressionException exception) { throw new InvalidOperationException($"Invalid XTemplate expression '{source}' for directive '{directive}' at template offset {offset}: {exception.Message}", exception); }
         }
-        private static string ValidateKeyName(string? keyName, ElementNode element) {
-            if (!IsXTemplateIdentifier(keyName)) throw TemplateError("Directive 'x-key' requires an XTemplate member name.", element);
-            return keyName!;
+        private static string CompileKey(string item, TemplateAttribute attribute) {
+            // Validate once and emit ordered lookups that stop at the first usable value.
+            var fields = XTemplateParser.ParseKeyFields(attribute.Value)
+                ?? throw new InvalidOperationException($"Directive 'x-key' requires a comma-separated list of XTemplate member names at template offset {attribute.Offset}.");
+            var lookups = fields.Select(field => $"$key = utils.expr.member({item}, {ToJavaScriptString(field)}); if ($key !== void 0 && $key !== null && $key !== \"\") return $key;");
+            return $"(() => {{ let $key; {string.Join(' ', lookups)} return void 0; }})()";
         }
         private static InvalidOperationException TemplateError(string message, ElementNode element) => new($"{message} Near <{element.Name}> at template offset {element.Offset}.");
         private static bool IsStaticAttribute(string name) => !name.StartsWith("x-", StringComparison.Ordinal);

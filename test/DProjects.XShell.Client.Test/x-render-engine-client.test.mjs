@@ -37,8 +37,19 @@ class FixtureTemplate {
 }
 
 class MatchElement {
+    childNodes = [];
+
     constructor(tag) { this.tag = tag; this.attrs = {}; }
     setAttribute(name, value) { this.attrs[name] = value; }
+    replaceChildren() { this.childNodes = []; }
+    appendChild(child) {
+        if (child.tag === "#fragment") this.childNodes.push(...child.childNodes);
+        else this.childNodes.push(child);
+    }
+    moveBefore(child, before) {
+        this.childNodes.splice(this.childNodes.indexOf(child), 1);
+        this.childNodes.splice(this.childNodes.indexOf(before), 0, child);
+    }
     matches(selector) {
         if (selector === this.tag) return true;
         return selector === "input[type=image]" && this.tag === "input" && this.attrs.type === "image";
@@ -51,6 +62,9 @@ globalThis.customElements = { get() {}, define() {} };
 globalThis.window = { customElements: globalThis.customElements, location: { origin: "https://example.test" } };
 globalThis.document = {
     createElement(tag) { return tag.toLowerCase() === "template" ? new FixtureTemplate() : new MatchElement(tag.toLowerCase()); },
+    createDocumentFragment() { return new MatchElement("#fragment"); },
+    createComment(value) { return new FixtureNode(8, value); },
+    createTextNode(value) { return text(value); },
     implementation: { createHTMLDocument: () => ({ createElement: tag => new MatchElement(tag.toLowerCase()) }) }
 };
 
@@ -355,6 +369,98 @@ test("x-client supports nested positional loops, recursion, x-once, and opaque x
     const second = renderer.render(state, () => {}, () => {}, renderUtils, null, 1);
     assert.equal(second.at(-2).options.once, true);
     assert.equal(second.at(-2).children.length, 0);
+});
+
+function keyedLoopSource(directive, key) {
+    // Register the fixture DOM for a loop with the given key declaration.
+    const collection = "item in state.items";
+    const label = "{{ item.label }}";
+    const source = `<li ${directive}="${collection}" x-key="${key}">${label}</li>`;
+    fixtures.set(source, () => [element("li", { [directive]: collection, "x-key": key }, [text(label)])]);
+    return source;
+}
+
+test("x-client validates x-key lists and requires a loop on the same element", () => {
+    for (const directive of ["x-for", "x-recursive"]) {
+        for (const key of ["id", "  id  ", "id,href", " id , href , _path2 "]) {
+            assert.doesNotThrow(() => createClientTemplateRenderer(keyedLoopSource(directive, key)));
+        }
+        for (const key of ["", " ", "id,", ",href", "id,,href", "id, ,href", "item.id", "id || href", "id,getKey()", "id,[href]", "id,2path"]) {
+            assert.throws(() => createClientTemplateRenderer(keyedLoopSource(directive, key)), /XTemplate member names/, JSON.stringify(key));
+        }
+    }
+
+    const source = '<li x-key="id,href"></li>';
+    fixtures.set(source, () => [element("li", { "x-key": "id,href" }, [])]);
+    assert.throws(() => createClientTemplateRenderer(source), /'x-key' requires 'x-for' or 'x-recursive'/);
+});
+
+test("x-client resolves the first non-empty x-key field for both loop types", () => {
+    const items = [
+        { id: "first", get href() { assert.fail("Key lookup must stop at the first usable field"); } },
+        { href: "/missing-id" }, { id: "", href: "/empty-id" }, { id: null, href: "/null-id" },
+        { id: undefined, href: "/undefined-id" }, { id: "", href: null, path: "/third" },
+        { id: 0, href: "/unused" }, { id: false, href: "/unused" }, { id: " ", href: "/unused" },
+        { label: "missing" }, { id: null, href: "", path: undefined }
+    ];
+    const expected = ["first", "/missing-id", "/empty-id", "/null-id", "/undefined-id", "/third", 0, false, " ", undefined, undefined];
+    for (const directive of ["x-for", "x-recursive"]) {
+        const renderer = createClientTemplateRenderer(keyedLoopSource(directive, " id , href, path "));
+        const [start, ...nodes] = renderer.render({ items }, null, null, renderUtils);
+        const end = nodes.pop();
+        assert.deepEqual([start.options.forType, end.options.forType], ["key", "key"], directive);
+        assert.deepEqual(nodes.map(node => node.options.key), expected, directive);
+        assert.ok(nodes.every(node => Object.hasOwn(node.options, "key")), directive);
+        const [emptyStart, emptyItem, emptyEnd] = renderer.render({ items: [{ label: "missing" }] }, null, null, renderUtils);
+        assert.deepEqual([emptyStart.options.forType, emptyItem.options.key, emptyEnd.options.forType], ["key", undefined, "key"], directive);
+
+        const single = createClientTemplateRenderer(keyedLoopSource(directive, "id"));
+        const vdom = single.render({ items: [{ id: "single" }, { id: 0 }, { id: false }, { id: "" }, { id: null }, {}] }, null, null, renderUtils);
+        assert.deepEqual(vdom.slice(1, -1).map(node => node.options.key), ["single", 0, false, undefined, undefined, undefined], directive);
+    }
+});
+
+test("x-client resolves recursive x-key fields independently for nested items", () => {
+    const renderer = createClientTemplateRenderer(keyedLoopSource("x-recursive", "id,href,path"));
+    const items = [{ id: "root", children: [{ href: "/child", children: [{ path: "/grandchild" }] }, { label: "no key value" }] }];
+    const root = renderer.render({ items }, null, null, renderUtils)[1];
+    const [, start, child, missing, end] = root.children;
+    assert.equal(root.options.key, "root");
+    assert.equal(child.options.key, "/child");
+    assert.equal(child.children[2].options.key, "/grandchild");
+    assert.deepEqual([start.options.forType, missing.options.key, end.options.forType], ["key", undefined, "key"]);
+});
+
+test("x-client reconciliation preserves instances when fallback keys and an undefined key move", () => {
+    const factory = createRenderEngineFactoryXClient(keyedLoopSource("x-for", "id,href,path"), { services: {} });
+    const host = new MatchElement("#shadow-root");
+    const state = { items: [{ id: "first" }, { label: "missing" }, { href: "/last" }] };
+    factory.init();
+    const engine = factory.create({ host, state });
+    engine.mount();
+    engine.render();
+    const [, first, missing, last] = host.childNodes;
+
+    // Different candidate fields can supply the same key on a later render.
+    state.items = [{ path: "/last" }, { id: "first" }, { label: "still missing" }];
+    engine.render();
+    assert.equal(host.childNodes[1], last);
+    assert.equal(host.childNodes[2], first);
+    assert.equal(host.childNodes[3], missing);
+});
+
+test("x-client reconciliation still warns about duplicate keys, including undefined keys", t => {
+    const warn = t.mock.method(console, "warn", () => {});
+    const factory = createRenderEngineFactoryXClient(keyedLoopSource("x-for", "id,href"), { services: {} });
+    const host = new MatchElement("#shadow-root");
+    const state = { items: [{ id: "same" }, { href: "same" }, {}, { id: "", href: null }] };
+    factory.init();
+    const engine = factory.create({ host, state });
+    engine.mount();
+    engine.render();
+    engine.render();
+    assert.equal(warn.mock.callCount(), 1);
+    assert.match(warn.mock.calls[0].arguments[0], /Duplicated keys detected in x-for loop: same,$/);
 });
 
 test("x-client implementation has no runtime JavaScript compilation escape hatch", async () => {

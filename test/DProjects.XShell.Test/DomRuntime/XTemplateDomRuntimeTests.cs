@@ -72,6 +72,72 @@ public sealed class XTemplateDomRuntimeTests {
     }
 
     [Fact]
+    public void CompiledLoopsResolveKeyFieldsInOrderAndKeepUndefinedKeys() {
+        var compiler = new XTemplateCompiler();
+        var flat = compiler.Compile("<li x-for=\"(item,index) in state.items\" x-key=\" id , href , path , command \">{{ item.label }}</li>");
+        var recursive = compiler.Compile("<li x-recursive=\"(item,index,indexAbsolute) in state.items\" x-key=\"id,href,path,command\" x-recursive-wrapper=\"ul\">{{ index }}:{{ indexAbsolute }}:{{ item.label }}</li>");
+        var single = compiler.Compile("<li x-for=\"undefined in state.items\" x-key=\"id\">Single</li>");
+        var runtimePath = Path.Combine(AppContext.BaseDirectory, "Resources", "DProjects.XShell", "xshell", "render-engines", "x.js");
+        var modulePath = Path.Combine(Path.GetTempPath(), $"xtemplate-key-fields-{Guid.NewGuid():N}.mjs");
+        try {
+            // Run the compiled functions against the browser runtime's VDOM and member-access utilities.
+            File.WriteAllText(modulePath, $$$"""
+                import assert from "node:assert/strict";
+                globalThis.HTMLElement = class {};
+                globalThis.CSSStyleSheet = class { replaceSync() {} };
+                globalThis.customElements = { get() {}, define() {} };
+                globalThis.window = { customElements: globalThis.customElements };
+                const { XTemplateRuntimeUtils } = await import({{{JsonSerializer.Serialize(new Uri(runtimePath).AbsoluteUri)}}});
+                const flat = {{{flat}}};
+                const recursive = {{{recursive}}};
+                const single = {{{single}}};
+                const render = (renderer, items) => renderer({items}, null, null, XTemplateRuntimeUtils, null, 0);
+                const keys = ([start, ...rest]) => {
+                    const end = rest.pop();
+                    assert.equal(start.children, "x-for-start");
+                    assert.equal(end.children, "x-for-end");
+                    assert.deepEqual([start.options.forType, end.options.forType], ["key", "key"]);
+                    return rest.map(node => {
+                        assert.ok(Object.hasOwn(node.options, "key"));
+                        return node.options.key;
+                    });
+                };
+
+                // Assert exact values and prove lookup short-circuits without reading a field twice.
+                let idReads = 0;
+                const items = [
+                    { get id() { idReads++; return "first"; }, get href() { assert.fail("Read a lower-priority field"); } },
+                    { href: "/missing-id" }, { id: "", href: "/empty-id" }, { id: undefined, href: "/undefined-id" },
+                    { id: null, href: "", path: "/third" }, { command: "open" },
+                    { id: 0, href: "/unused" }, { id: false, href: "/unused" }, { id: " ", href: "/unused" },
+                    { label: "absent" }, { id: null, href: "", path: undefined }
+                ];
+                const expected = ["first", "/missing-id", "/empty-id", "/undefined-id", "/third", "open", 0, false, " ", undefined, undefined];
+                for (const renderer of [flat, recursive]) {
+                    assert.deepEqual(keys(render(renderer, items)), expected);
+                    assert.deepEqual(keys(render(renderer, [{}])), [undefined]);
+                }
+                assert.equal(idReads, 2);
+                assert.deepEqual(keys(render(single, [{ id: "one" }, { id: 0 }, { id: false }, { id: "" }, { id: null }, {}])),
+                    ["one", 0, false, undefined, undefined, undefined]);
+
+                // Descendants use their own fields and keep their list region inside the wrapper.
+                const root = render(recursive, [{ id: "root", children: [{ href: "/child", label: "child" }, { label: "no key" }] }])[1];
+                assert.equal(root.options.key, "root");
+                const wrapper = root.children.find(node => node.tag === "ul");
+                assert.deepEqual(keys(wrapper.children), ["/child", undefined]);
+                assert.equal(wrapper.children[1].children.filter(node => node.tag === "#text").map(node => node.children).join(""), "0:1:child");
+                """);
+            using var process = NodeTestRuntime.Start(modulePath);
+            var error = process.StandardError.ReadToEnd();
+            process.WaitForExit();
+            Assert.True(process.ExitCode == 0, $"JavaScript key-field runtime failed:{Environment.NewLine}{error}");
+        } finally {
+            if (File.Exists(modulePath)) File.Delete(modulePath);
+        }
+    }
+
+    [Fact]
     public void DomRuntimePreservesConditionalVNodePositionsAcrossTransitions() {
         using var result = JsonDocument.Parse(ExecuteConditionalRuntime());
         var root = result.RootElement;

@@ -386,6 +386,50 @@ namespace DProjects.XShell.Test {
         }
 
         [Theory]
+        [InlineData("id")]
+        [InlineData("id,href")]
+        [InlineData(" \t id , href, _path2 \uFEFF")]
+        public void CompilesKeyFieldsOnBothLoopTypes(string fields) {
+            var compiler = new XTemplateCompiler();
+            foreach (var directive in new[] { "x-for", "x-recursive" }) {
+                var javascript = compiler.Compile($"<li {directive}=\"item in state.items\" x-key=\"{fields}\">{{{{ item.label }}}}</li>");
+
+                Assert.Contains("forType:'key'", javascript, StringComparison.Ordinal);
+            }
+        }
+
+        [Theory]
+        [InlineData(null)]
+        [InlineData("")]
+        [InlineData("id,")]
+        [InlineData(",href")]
+        [InlineData("id,,href")]
+        [InlineData("id, ,href")]
+        [InlineData("item.id")]
+        [InlineData("id || href")]
+        [InlineData("id,getKey()")]
+        [InlineData("id,[href]")]
+        [InlineData("id,\u0085href")]
+        public void RejectsInvalidKeyFieldsAtTheDirectiveOffset(string? fields) {
+            var compiler = new XTemplateCompiler();
+            var key = fields == null ? "x-key" : $"x-key=\"{fields}\"";
+            foreach (var directive in new[] { "x-for", "x-recursive" }) {
+                var template = $"<li {directive}=\"item in state.items\" {key}></li>";
+                var exception = Assert.Throws<InvalidOperationException>(() => compiler.Compile(template));
+
+                Assert.Contains("XTemplate member names", exception.Message, StringComparison.Ordinal);
+                Assert.Contains($"template offset {template.IndexOf("x-key", StringComparison.Ordinal)}.", exception.Message, StringComparison.Ordinal);
+            }
+        }
+
+        [Fact]
+        public void RejectsKeyFieldsWithoutALoop() {
+            var exception = Assert.Throws<InvalidOperationException>(() => new XTemplateCompiler().Compile("<li x-if=\"true\" x-key=\"id,href\"></li>"));
+
+            Assert.Contains("'x-key' requires 'x-for' or 'x-recursive'", exception.Message, StringComparison.Ordinal);
+        }
+
+        [Theory]
         [InlineData("<div x-elseif=\"state.a\"></div>", "x-elseif")]
         [InlineData("<div x-else></div>", "x-else")]
         [InlineData("<div x-if=\"state.a\"></div><span></span><div x-elseif=\"state.b\"></div>", "x-elseif")]

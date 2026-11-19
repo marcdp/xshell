@@ -435,6 +435,50 @@ namespace DProjects.XShell.Test {
             Assert.Equal("<button>1</button><button>2</button>", html);
         }
 
+        [Theory]
+        [InlineData("id")]
+        [InlineData("id,href")]
+        [InlineData(" \t id , href, _path2 \uFEFF")]
+        public void RendersFlatAndRecursiveKeyedLoopsWithoutKeyAttributes(string fields) {
+            var state = new { items = new[] { new { label = "Root", children = new[] { new { label = "Child" } } } } };
+
+            var flat = Render($"<li x-for=\"item in state.items\" x-key=\"{fields}\">{{{{ item.label }}}}</li>", state);
+            var recursive = Render($"<li x-recursive=\"item in state.items\" x-key=\"{fields}\" x-recursive-wrapper=\"ul\">{{{{ item.label }}}}</li>", state);
+
+            Assert.Equal("<li>Root</li>", flat);
+            Assert.Equal("<li>Root<ul><li>Child</li></ul></li>", recursive);
+        }
+
+        [Theory]
+        [InlineData(null)]
+        [InlineData("")]
+        [InlineData("id,")]
+        [InlineData(",href")]
+        [InlineData("id,,href")]
+        [InlineData("id, ,href")]
+        [InlineData("item.id")]
+        [InlineData("id || href")]
+        [InlineData("id,getKey()")]
+        [InlineData("id,[href]")]
+        [InlineData("id,\u0085href")]
+        public void RejectsMalformedKeyListsAtTheDirectiveOffset(string? fields) {
+            var key = fields == null ? "x-key" : $"x-key=\"{fields}\"";
+            foreach (var directive in new[] { "x-for", "x-recursive" }) {
+                var template = $"<li {directive}=\"item in state.items\" {key}></li>";
+                var exception = Assert.Throws<XTemplateException>(() => Render(template));
+
+                Assert.Contains("XTemplate member names", exception.Message, StringComparison.Ordinal);
+                Assert.Equal(template.IndexOf("x-key", StringComparison.Ordinal), exception.Offset);
+            }
+        }
+
+        [Fact]
+        public void RejectsKeyFieldsWithoutALoop() {
+            var exception = Assert.Throws<XTemplateException>(() => Render("<li x-if=\"true\" x-key=\"id,href\"></li>"));
+
+            Assert.Contains("'x-key' requires x-for or x-recursive", exception.Message, StringComparison.Ordinal);
+        }
+
         [Fact]
         public void AcceptsAndSuppressesWholeObjectPropertyBinding() {
             var html = Render("<x-grid x-prop=\"state.props\"></x-grid>", new { props = new { title = "Grid", count = 2 } });

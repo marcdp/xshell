@@ -997,8 +997,7 @@ Transformer pipelines are valid in every value-expression row above. For example
 
 The `x-model` row remains different: its expression must be an assignable location, so a transformer pipeline cannot be used as its write target.
 
-`x-on:event` does not consume an expression; its value is a command name/string. `x-key` is a property name under the current XTemplate contract, not
-an arbitrary expression. Implementations MUST preserve these distinctions.
+`x-on:event` takes a command name/string. `x-key` takes member names as defined in section 34. Expression syntax is invalid in both directives.
 
 ### 7.15 Historical compatibility
 
@@ -1933,45 +1932,23 @@ and reconciles list children by position.
 
 ## 34. `x-key`
 
-Syntax:
+`x-key` accepts a single XTemplate member name or a comma-separated list of member names. Whitespace around names and commas
+is allowed. Each field MUST be a valid member name. Empty entries, property paths, function calls, computed names, and other expressions are invalid.
 
 ```html
-<element x-for="item in expression" x-key="propertyName">
-```
-
-Example:
-
-```html
-<li x-for="item in state.items" x-key="id">
+<li x-for="item in state.items" x-key="id,href,path">
     {{ item.label }}
 </li>
 ```
 
-In the current language, `x-key` is a **property name**, not an arbitrary expression.
+The browser renderer reads fields from the current item in the declared order and uses the first non-empty value as the key. Missing members,
+`undefined`, `null`, and empty strings are skipped. `0` and `false` are valid keys. The selected value is passed directly to the VDOM.
 
-The effective key is:
+If every field is empty, the VDOM key is `undefined` and the region remains keyed. XTemplate generates no fallback identity.
+Authors MUST supply stable keys that distinguish sibling items for reliable reconciliation. Multiple `undefined` keys count as duplicates in the same
+region. The runtime warns when it detects duplicate keys during reconciliation.
 
-```js
-item[propertyName]
-```
-
-The current compiler emits property access equivalent to:
-
-```js
-item.id
-```
-
-for:
-
-```html
-x-key="id"
-```
-
-Implementations SHOULD require a valid property-name form unless the language is explicitly extended.
-
-Duplicate keys are invalid for reliable keyed reconciliation.
-
-The current runtime warns when duplicate keys are detected.
+Both browser render modes (`x` and `x-client`) use these key rules. The server HTML renderer validates the same syntax and omits `x-key` from the HTML.
 
 For retained keys, reconciliation preserves the existing DOM element, its bindings, event handlers, and component instance while updating its
 position and rendered data. When the browser supports `ParentNode.moveBefore()`, keyed reordering uses a state-preserving DOM move. Older browsers
@@ -2143,9 +2120,7 @@ The wrapper value is a tag name in the current implementation.
 
 ## 40. `x-key` with recursion
 
-`x-key` may be used with `x-recursive`.
-
-Its semantics are equivalent to keyed `x-for` identity for each recursive list region.
+`x-key` uses the same rules as keyed `x-for` for each recursive list region. The browser renderer resolves the key from each recursive item's own fields.
 
 ---
 
@@ -2815,7 +2790,8 @@ else-directive    = "x-else" ;
 show-directive    = "x-show", "=", quoted-expression ;
 
 for-directive     = "x-for", "=", quoted-for-expression ;
-key-directive     = "x-key", "=", quoted-property-name ;
+key-directive     = "x-key", "=", quoted-key-fields ;
+key-fields        = [ whitespace ], identifier, { [ whitespace ], ",", [ whitespace ], identifier }, [ whitespace ] ;
 
 recursive-directive
                   = "x-recursive", "=", quoted-recursive-expression ;
@@ -3015,7 +2991,7 @@ A compiler SHOULD reject or diagnose:
 - unknown `x:*` pseudo-elements;
 - invalid `x-for` syntax;
 - invalid `x-recursive` syntax;
-- invalid `x-key` placement;
+- invalid `x-key` placement or member names;
 - invalid conditional-chain placement;
 - non-assignable `x-model` targets;
 - non-empty `x-text` / `x-html` elements;
@@ -3995,7 +3971,7 @@ A correct implementation should preserve these semantics even if it uses a compl
 | `x-else` | Fallback branch | none |
 | `x-show` | CSS display visibility | expression |
 | `x-for` | Repetition | loop expression |
-| `x-key` | Item identity | property name |
+| `x-key` | Item identity | member name or comma-separated member names |
 | `x-recursive` | Recursive repetition | recursive loop expression |
 | `x-recursive-wrapper` | Child-level wrapper | tag name |
 | `x-model` | Two-way model | assignable expression |

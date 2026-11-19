@@ -13,6 +13,7 @@ namespace DProjects.XShell.Services.XTemplate {
 
         // consts
         private static readonly HashSet<string> VoidElements = new(StringComparer.OrdinalIgnoreCase) { "area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "param", "source", "track", "wbr" };
+        private const string KeyFieldWhitespace = "\t\n\v\f\r \u00A0\u1680\u2000\u2001\u2002\u2003\u2004\u2005\u2006\u2007\u2008\u2009\u200A\u2028\u2029\u202F\u205F\u3000\uFEFF";
 
         // vars
         private readonly string _source;
@@ -195,7 +196,7 @@ namespace DProjects.XShell.Services.XTemplate {
                     if (string.IsNullOrWhiteSpace(name) || name.Any(char.IsWhiteSpace)) throw Error("x-class requires a class name", attribute.Offset);
                     attributes.Add(new XTemplateClassAttribute(name, ParseExpression(attribute, "x-class"), attribute.Offset));
                 } else if (string.Equals(directive, "x-show", StringComparison.OrdinalIgnoreCase)) attributes.Add(new XTemplateShowAttribute(ParseExpression(attribute, "x-show"), attribute.Offset));
-                else if (string.Equals(directive, "x-key", StringComparison.OrdinalIgnoreCase)) { if (!attribute.HasValue || !IsIdentifier(attribute.Value)) throw Error("x-key requires a property-name value", attribute.Offset); }
+                else if (string.Equals(directive, "x-key", StringComparison.OrdinalIgnoreCase)) { if (!attribute.HasValue || ParseKeyFields(attribute.Value) == null) throw Error("Directive 'x-key' requires a comma-separated list of XTemplate member names", attribute.Offset); }
                 else if (directive.StartsWith("x-on:", StringComparison.OrdinalIgnoreCase)) ValidateEvent(attribute);
                 else if (string.Equals(directive, "x-prop", StringComparison.OrdinalIgnoreCase)) ParseExpression(attribute, "x-prop");
                 else if (directive.StartsWith("x-prop:[", StringComparison.OrdinalIgnoreCase) && directive.EndsWith(']')) { var source = directive[8..^1]; if (string.IsNullOrWhiteSpace(source)) throw Error("Dynamic property name expression is empty", attribute.Offset); ParseExpressionSource(source, attribute.Offset); ParseExpression(attribute, "x-prop"); }
@@ -217,6 +218,11 @@ namespace DProjects.XShell.Services.XTemplate {
             if (elementName != null && element.Name is "script" or "style") throw Error($"Directive 'x-is' is not supported on prohibited element <{element.Name}>", element.Offset);
             if (model != null && element.Name == "select" && element.Attributes.Any(attribute => string.Equals(attribute.Name, "multiple", StringComparison.OrdinalIgnoreCase))) throw Error("x-model on select[multiple] is not supported", element.Offset);
             return new(element.Name, attributes, children, element.Offset, condition, elseIf, isElse, loop, recursive, text, html, model, childrenExpression, elementName);
+        }
+        internal static string[]? ParseKeyFields(string value) {
+            // Use the same whitespace as JavaScript trim() when validating decoded key fields.
+            var fields = value.Split(',').Select(field => field.AsSpan().Trim(KeyFieldWhitespace).ToString()).ToArray();
+            return fields.All(IsIdentifier) ? fields : null;
         }
         private XTemplateForDefinition ParseFor(RawAttribute attribute) {
             if (!attribute.HasValue) throw Error("x-for requires a value", attribute.Offset);

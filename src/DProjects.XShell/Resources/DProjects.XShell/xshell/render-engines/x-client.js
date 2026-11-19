@@ -538,7 +538,7 @@ function parseDomNode(node, allowedIdentifiers) {
         const directive = attribute.name;
         const value = attribute.value;
         if (PRIMARY_STRUCTURAL_DIRECTIVES.has(directive)) continue;
-        if (directive === "x-key") { key = value; continue; }
+        if (directive === "x-key") { key = value.split(",").map(field => field.trim()); continue; }
         if (directive === "x-recursive-wrapper") { recursiveWrapper = value; continue; }
         if (directive === "x-pre") { if (value) throw templateError("Directive 'x-pre' cannot have a value.", element); pre = true; continue; }
         if (directive === "x-is") {
@@ -617,7 +617,7 @@ function parseDomNode(node, allowedIdentifiers) {
 
     if (key != null) {
         if (structural?.kind !== "for" && structural?.kind !== "recursive") throw templateError("Directive 'x-key' requires 'x-for' or 'x-recursive'.", element);
-        if (!IDENTIFIER.test(key)) throw templateError("Directive 'x-key' requires an XTemplate member name.", element);
+        if (key.some(field => !IDENTIFIER.test(field))) throw templateError("Directive 'x-key' requires a comma-separated list of XTemplate member names.", element);
     }
     if (recursiveWrapper != null) {
         if (structural?.kind !== "recursive") throw templateError("Directive 'x-recursive-wrapper' requires x-recursive.", element);
@@ -773,6 +773,15 @@ function renderBasicElement(node, index, scope, environment, extraOptions = null
         Object.keys(styles).length ? styles : null, Object.keys(events).length ? events : null, options, children);
 }
 
+function resolveKey(item, fields, expr) {
+    // Preserve field priority and let the keyed reconciler receive undefined for an empty key.
+    for (const field of fields) {
+        const value = expr.member(item, field);
+        if (value !== undefined && value !== null && value !== "") return value;
+    }
+    return undefined;
+}
+
 function renderRecursive(node, index, scope, environment) {
     const { utils, i18n } = environment;
     const loop = node.structural.loop;
@@ -786,7 +795,7 @@ function renderRecursive(node, index, scope, environment) {
             const recursiveChildren = node.children.length
                 ? recurse(utils.expr.member(item, "children"), absoluteIndex + 1, indent + 1, node.recursiveWrapper)
                 : null;
-            const options = node.key ? { key: utils.expr.member(item, node.key) } : null;
+            const options = node.key ? { key: resolveKey(item, node.key, utils.expr) } : null;
             result.push(renderBasicElement(node, index, local, environment, options, recursiveChildren));
             absoluteIndex++;
         }
@@ -821,7 +830,7 @@ function renderElement(node, index, scope, environment, chain) {
         for (let itemIndex = 0; itemIndex < collection.length; itemIndex++) {
             const item = collection[itemIndex];
             const local = childScope(scope, { [loop.item]: item, [loop.index]: itemIndex });
-            const options = node.key ? { key: utils.expr.member(item, node.key) } : null;
+            const options = node.key ? { key: resolveKey(item, node.key, utils.expr) } : null;
             result.push(renderBasicElement(node, index, local, environment, options));
         }
         result.push(utils.createVDOM("#comment", null, null, null, null, { index, forType }, "x-for-end"));

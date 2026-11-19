@@ -21,7 +21,8 @@
                 "navigation": "/pages",
                 "shortcuts": [
                     {"id": "root", "children": [
-                        {"label":"Diagnostics console", "icon": "xshell-diagnostics", "href": "/pages/index.js", "open": "dock" }
+                        {"label": "-", "order": 99},
+                        {"label": "Diagnostics console", "href": "/pages/index.js", "open": "dock" }
                     ]}
                 ]
             },

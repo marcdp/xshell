@@ -140,6 +140,18 @@ definition's normal `dependencies` map (or load it through another existing load
 
 Use `x-if`, `x-elseif`, and `x-else` for conditional structural rendering. Use `x-for` to repeat an element and `x-key` to supply item identity.
 
+Both `x-for` and `x-recursive` accept comma-separated member names in `x-key`. Whitespace around names and commas is allowed.
+
+```html
+<li x-for="item in state.items" x-key="id,href,path">
+    {{ item.label }}
+</li>
+```
+
+The browser renderer checks the current item's fields from left to right. It uses the first non-empty value, skipping missing, `undefined`, `null`, and
+empty-string values. `0` and `false` are valid keys. If all fields are empty, the key is `undefined` and the list stays keyed. The renderer generates
+no fallback identity, so supply keys that distinguish siblings. Server HTML output omits `x-key`.
+
 ```html
 <li x-recursive="item in state.menu" x-key="href" x-recursive-wrapper="ul">
     <span x-text="item.label"></span>

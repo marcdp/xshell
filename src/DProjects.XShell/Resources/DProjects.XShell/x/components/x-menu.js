@@ -18,7 +18,7 @@ export default {
     template: `
         <nav x-if="state.menu" x-attr:class="state.horizontal ? 'horizontal' : ''">
             <x-menuitem x-recursive="menuitem in state.menu" 
-                x-key="href" 
+                x-key="href,order" 
                 x-attr:embedded="menuitem.embedded" 
                 x-attr:label="menuitem.label" 
                 x-attr:href="menuitem.path || menuitem.href" 
