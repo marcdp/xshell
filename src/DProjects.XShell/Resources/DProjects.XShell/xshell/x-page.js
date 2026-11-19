@@ -39,7 +39,9 @@ class XPage extends HTMLElement {
     constructor() {
         super();
         this.attachShadow({ mode: "open" });
-        this.shadowRoot.adoptedStyleSheets = [stylesheet];
+        // adopt module-wide Shadow DOM defaults before the native x-page stylesheet
+        const sharedStyleSheets = xshell.services ? xshell.modules.shadowStyleSheets ?? [] : [];
+        this.shadowRoot.adoptedStyleSheets = [...sharedStyleSheets, stylesheet];
         this.addEventListener("queryClose", () => {
             // query close
             this.queryClose();

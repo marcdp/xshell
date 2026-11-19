@@ -1,11 +1,16 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import ComponentSchema from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/schemas/component.schema.json" with { type: "json" };
+import ContractSchema from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/schemas/contract.schema.json" with { type: "json" };
+import PageSchema from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/schemas/page.schema.json" with { type: "json" };
 
 class FakeElement {
     attachShadow() {
         this.shadowRoot = { adoptedStyleSheets: [] };
         return this.shadowRoot;
     }
+
+    addEventListener() {}
 }
 
 class TestStyleSheet {
@@ -29,6 +34,16 @@ globalThis.requestAnimationFrame = () => 0;
 const { createComponentClassFromJsDefinition } = await import("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/loaders/component-js.js");
 const { createPageClassFromJsDefinition } = await import("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/loaders/page-js.js");
 const { default: xshell } = await import("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/xshell.js");
+const { default: XPage } = await import("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/x-page.js");
+
+let sharedShadowStyleSheets = [];
+
+function bundleSchema(schema) {
+    const bundled = structuredClone(schema);
+    bundled.$defs ??= {};
+    bundled.$defs[ContractSchema.$id] = structuredClone(ContractSchema);
+    return bundled;
+}
 
 class StateEngineFactory {
     constructor(state) {
@@ -52,6 +67,7 @@ class RenderEngineFactory {
 }
 
 function configureDefinitionLoaders() {
+    sharedShadowStyleSheets = [];
     xshell._config = {
         modules: {
             test: {
@@ -64,6 +80,8 @@ function configureDefinitionLoaders() {
     };
     xshell._loader = {
         async load(resource) {
+            if (resource === "schema:component") return bundleSchema(ComponentSchema);
+            if (resource === "schema:page") return bundleSchema(PageSchema);
             return resource.startsWith("state-engine:") ? StateEngineFactory : RenderEngineFactory;
         }
     };
@@ -71,7 +89,14 @@ function configureDefinitionLoaders() {
 }
 
 function createContext() {
-    return { resourceDefinition: { moduleId: "test", modulePath: "/_assets/test" } };
+    return {
+        resourceDefinition: { moduleId: "test", modulePath: "/_assets/test" },
+        services: {
+            config: xshell._config,
+            loader: xshell._loader,
+            modules: { shadowStyleSheets: sharedShadowStyleSheets }
+        }
+    };
 }
 
 function setStylesheets(files, requests) {
@@ -99,6 +124,45 @@ test("Component definitions accept CSS strings and reject style arrays", async (
         () => createComponentClassFromJsDefinition("array-style.js", createContext(), { meta: { id: "array-style" }, style: [".a {}", ".b {}"] }, {}),
         /Invalid component/
     );
+});
+
+test("Components adopt shared module sheets before their definition sheet and reuse object identity", async () => {
+    configureDefinitionLoaders();
+    const firstShared = new TestStyleSheet();
+    const secondShared = new TestStyleSheet();
+    sharedShadowStyleSheets = [firstShared, secondShared];
+    const Component = await createComponentClassFromJsDefinition("shared-style.js", createContext(), {
+        meta: { id: "shared-style" }, style: "h1 { color: blue; }"
+    });
+
+    const first = new Component();
+    const second = new Component();
+    assert.deepEqual(first.shadowRoot.adoptedStyleSheets, [firstShared, secondShared, first.shadowRoot.adoptedStyleSheets[2]]);
+    assert.strictEqual(first.shadowRoot.adoptedStyleSheets[0], second.shadowRoot.adoptedStyleSheets[0]);
+    assert.strictEqual(first.shadowRoot.adoptedStyleSheets[1], second.shadowRoot.adoptedStyleSheets[1]);
+    assert.strictEqual(first.shadowRoot.adoptedStyleSheets[2], second.shadowRoot.adoptedStyleSheets[2]);
+    assert.equal(first.shadowRoot.adoptedStyleSheets[2].text, "h1 { color: blue; }");
+
+    const Nested = await createComponentClassFromJsDefinition("nested-style.js", createContext(), { meta: { id: "nested-style" } });
+    const nested = new Nested();
+    assert.deepEqual(nested.shadowRoot.adoptedStyleSheets, [firstShared, secondShared]);
+});
+
+test("native x-page adopts shared module sheets before its local stylesheet without reconnect duplication", () => {
+    const firstShared = new TestStyleSheet();
+    const secondShared = new TestStyleSheet();
+    xshell._services = { resolve(name) {
+        assert.equal(name, "modules");
+        return { shadowStyleSheets: [firstShared, secondShared] };
+    } };
+
+    const page = new XPage();
+    assert.deepEqual(page.shadowRoot.adoptedStyleSheets.slice(0, 2), [firstShared, secondShared]);
+    assert.equal(page.shadowRoot.adoptedStyleSheets.length, 3);
+    const adopted = [...page.shadowRoot.adoptedStyleSheets];
+    page.disconnectedCallback();
+    assert.deepEqual(page.shadowRoot.adoptedStyleSheets, adopted);
+    xshell._services = null;
 });
 
 test("Page CSS strings create scoped stylesheets", async () => {
@@ -201,7 +265,7 @@ test("custom Component and Page styles work without modulePath", async () => {
     document.adoptedStyleSheets = [];
     const requests = [];
     setStylesheets(new Map([["https://example.test/custom/theme.css", ".theme{background:url(./theme.png)}"]]), requests);
-    const customContext = { resourceDefinition: { moduleId: "test" } };
+    const customContext = { ...createContext(), resourceDefinition: { moduleId: "test" } };
 
     const Component = await createComponentClassFromJsDefinition("https://example.test/custom/card.js", customContext, {
         meta: { id: "custom-card" }, style: '.card{background:url("./card.png")} .root{background:url(/root.png)}'

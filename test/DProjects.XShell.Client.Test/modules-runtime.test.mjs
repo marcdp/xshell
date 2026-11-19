@@ -3,8 +3,8 @@ import test from "node:test";
 
 import Modules from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/modules.js";
 import Services from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services.js";
-import Loader from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/loader.js";
-import Resolver from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/resolver.js";
+import Loader from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/loader.js";
+import Resolver from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/resolver.js";
 
 function freeze(value) {
     if (value && typeof value === "object" && !Object.isFrozen(value)) {
@@ -88,6 +88,40 @@ test("module controllers receive singleton services and module-specific metadata
     assert.strictEqual(injected.modules, modules);
     assert.equal(injected.moduleAssetsPath, "/_assets/orders");
     assert.deepEqual(injected.moduleConfig, { id: "orders", ...config.modules.orders });
+});
+
+test("shared Shadow DOM sheets are published before module controller construction", async () => {
+    const sheet = { id: "shared" };
+    const loads = [];
+    let injectedSheets;
+    let modules;
+    class ModuleController {
+
+        constructor(services) {
+            injectedSheets = services.modules.shadowStyleSheets;
+        }
+    }
+    const config = freeze({
+        xshell: { assets: { basePath: "/_assets" } },
+        modules: { orders: moduleDefinition("orders", { files: [
+            { path: "/_assets/orders/styles/shadow.css" },
+            { path: "/_assets/orders/module.js" }
+        ] }) }
+    });
+    const services = { resolve(name) { return name === "modules" ? modules : null; } };
+    modules = createModules(config, {
+        loader: { async load(resource) {
+            loads.push(resource);
+            return resource.startsWith("style:") ? sheet : ModuleController;
+        } },
+        services
+    });
+
+    await modules.init();
+
+    assert.deepEqual(loads, ["style:/_assets/orders/styles/shadow.css", "esm:/_assets/orders/module.js"]);
+    assert.strictEqual(injectedSheets, modules.shadowStyleSheets);
+    assert.deepEqual(injectedSheets, [sheet]);
 });
 
 test("module controllers start in dependency order and stop in reverse dependency order", async () => {
@@ -317,8 +351,9 @@ test("runtime module without routes exposes a frozen empty object", async () => 
     assert.equal(Object.isFrozen(routes), true);
 });
 
-test("module styles use the Loader once per inventoried stylesheet and are adopted after startup", async () => {
-    const paths = ["/_assets/first/styles/index.css", "/_assets/second/styles/index.css"];
+test("module document and shared Shadow DOM styles load once and retain module order", async () => {
+    const indexPaths = ["/_assets/first/styles/index.css", "/_assets/second/styles/index.css"];
+    const shadowPaths = ["/_assets/second/styles/shadow.css", "/_assets/shadow-only/styles/shadow.css"];
     const requests = [];
     const events = [];
     globalThis.window = { location: { origin: "https://example.test" }, customElements: { get() {} } };
@@ -327,7 +362,10 @@ test("module styles use the Loader once per inventoried stylesheet and are adopt
     };
     globalThis.fetch = async url => {
         requests.push(url);
-        return { ok: true, async text() { return url.includes("/first/") ? "first{color:red}" : "second{color:blue}"; } };
+        return { ok: true, async text() {
+            if (url.includes("/second/styles/shadow.css")) await new Promise(resolve => setTimeout(resolve, 1));
+            return `${url.split("/").at(-3)}-${url.split("/").at(-1)}{background:url(../images/background.png)}`;
+        } };
     };
     const styleLoaderUrl = new URL("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/loaders/style-css.js", import.meta.url).href;
     const config = freeze({
@@ -336,22 +374,25 @@ test("module styles use the Loader once per inventoried stylesheet and are adopt
             assets: { basePath: "/_assets" },
             services: { navigation: { options: { mode: "path" } } },
             ui: { component: { lazy: null } },
-            resolver: { style: Object.fromEntries(["first", "second"].map(id => [
+            resolver: { style: Object.fromEntries(["first", "second", "shadow-only"].map(id => [
                 `/_assets/${id}/{path}.css`,
                 { src: `/_assets/${id}/{path}.css`, loader: styleLoaderUrl, cache: true, moduleId: id, modulePath: `/_assets/${id}` }
             ])) }
         },
         modules: {
-            first: moduleDefinition("first", { files: [{ path: paths[0] }, { path: paths[0] }] }),
-            second: moduleDefinition("second", { files: [{ path: paths[1] }] }),
+            first: moduleDefinition("first", { files: [{ path: indexPaths[0] }, { path: indexPaths[0] }] }),
+            second: moduleDefinition("second", { files: [{ path: indexPaths[1] }, { path: shadowPaths[0] }] }),
+            "shadow-only": moduleDefinition("shadow-only", { files: [{ path: shadowPaths[1] }] }),
             missing: moduleDefinition("missing")
         }
     });
     const resolver = new Resolver({ config });
-    const loader = new Loader({ bus: { emit(name, payload) { events.push({ name, payload }); } }, config, resolver });
+    const loader = new Loader({ bus: { emit(name, payload) { events.push({ name, payload }); } }, resolver, services: {} }, {
+        appBasePath: "", xshellAssetsPath: "/_assets", componentLazy: null
+    });
     const document = { adoptedStyleSheets: [] };
     globalThis.document = document;
-    const modules = new Modules({ bus: {}, config, loader, resolver, services: {} });
+    const modules = new Modules({ bus: {}, config, loader, resolver, services: {}, document });
 
     await modules.init();
 
@@ -361,15 +402,22 @@ test("module styles use the Loader once per inventoried stylesheet and are adopt
     assert.equal(second.length, 1);
     assert.deepEqual(modules.getModuleById("missing").styles, []);
     assert.notStrictEqual(first[0], second[0]);
-    assert.equal(first[0].css, "first{color:red}");
-    assert.equal(second[0].css, "second{color:blue}");
+    assert.match(first[0].css, /^first-index\.css/);
+    assert.match(second[0].css, /^second-index\.css/);
     assert.deepEqual(document.adoptedStyleSheets, [first[0], second[0]]);
-    assert.deepEqual(requests, paths.map(path => `https://example.test${path}`));
-    assert.deepEqual(loader.registry.map(item => [item.resource, item.moduleId, item.status]), [
-        [`style:${paths[0]}`, "first", "loaded"],
-        [`style:${paths[1]}`, "second", "loaded"]
+    assert.deepEqual(modules.shadowStyleSheets.map(sheet => sheet.css), [
+        "second-shadow.css{background:url(https://example.test/_assets/second/images/background.png)}",
+        "shadow-only-shadow.css{background:url(https://example.test/_assets/shadow-only/images/background.png)}"
     ]);
-    assert.equal(events.filter(event => event.name === "xshell:loader:resource:loaded").length, 2);
-    assert.strictEqual(await loader.load(`style:${paths[0]}`), first[0]);
-    assert.deepEqual(requests, paths.map(path => `https://example.test${path}`));
+    assert.equal(Object.isFrozen(modules.shadowStyleSheets), true);
+    assert.deepEqual(requests.toSorted(), [...indexPaths, ...shadowPaths].map(path => `https://example.test${path}`).toSorted());
+    assert.deepEqual(loader.registry.map(item => [item.resource, item.moduleId, item.status]), [
+        [`style:${indexPaths[0]}`, "first", "loaded"],
+        [`style:${indexPaths[1]}`, "second", "loaded"],
+        [`style:${shadowPaths[0]}`, "second", "loaded"],
+        [`style:${shadowPaths[1]}`, "shadow-only", "loaded"]
+    ]);
+    assert.equal(events.filter(event => event.name === "xshell:loader:resource:loaded").length, 4);
+    assert.strictEqual(await loader.load(`style:${indexPaths[0]}`), first[0]);
+    assert.deepEqual(requests.toSorted(), [...indexPaths, ...shadowPaths].map(path => `https://example.test${path}`).toSorted());
 });

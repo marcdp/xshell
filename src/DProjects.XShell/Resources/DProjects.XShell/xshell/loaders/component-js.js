@@ -168,6 +168,8 @@ export async function createComponentClassFromJsDefinition(src, context, definit
         stylesheet.replaceSync(style);
         stylesheets.push(stylesheet);
     }
+    // capture the initialized module collection once and reuse the same sheets for every instance
+    const sharedStyleSheets = context.services.modules.shadowStyleSheets ?? [];
     // state skeleton
     const stateSkeleton = createStateSkeleton(src, definition);
     // non-state-backed property defaults
@@ -259,7 +261,7 @@ export async function createComponentClassFromJsDefinition(src, context, definit
             const self = this;
             //shadowRoot
             this.attachShadow(definition.meta.shadowRootOptions || {mode: "open"});
-            this.shadowRoot.adoptedStyleSheets.push(...stylesheets);
+            this.shadowRoot.adoptedStyleSheets = [...sharedStyleSheets, ...stylesheets];
             // state
             this._state = stateEngineFactory.create({
                 stateChange(prop, oldValue, newValue) {

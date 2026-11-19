@@ -97,11 +97,16 @@ per id. Repeated dependency requirements therefore do not create multiple runtim
 `xshell.modules.getModuleById(id)`; the accessor delegates to the configured singleton, and `xshell.modules.registry` is a frozen inspection
 snapshot.
 
-Before controllers start, Modules verifies optional `requires` service names against the finalized service registry. It loads a conventional
-module-wide `/styles/index.css` and `/module.js` controller only when those paths occur in the generated inventory. Controllers start sequentially
-in dependency order and stop in reverse order. A controller receives `moduleAssetsPath`, `moduleConfig`, and named services; its optional `start()`
-and `stop()` methods are lifecycle hooks. XShell resolves Areas before module controllers start, awaits Modules initialization, composes Areas from
-that initialized singleton, and initializes Navigation afterward.
+Before controllers start, Modules verifies optional `requires` service names against the finalized service registry. It independently discovers
+conventional module-wide `/styles/index.css`, `/styles/shadow.css`, and `/module.js` resources only when those paths occur in the generated
+inventory. Both stylesheet categories load through Resolver → Loader and finish before controllers start. Document sheets remain on each runtime
+module's `styles` collection and are adopted in module order. Shared Shadow DOM sheets are published as the frozen
+`xshell.modules.shadowStyleSheets` collection in the same order, then reused by XShell-managed Component and native `x-page` Shadow Roots before
+their local sheets.
+
+Controllers start sequentially in dependency order and stop in reverse order. A controller receives `moduleAssetsPath`, `moduleConfig`, and named
+services; its optional `start()` and `stop()` methods are lifecycle hooks. XShell resolves Areas before module controllers start, awaits Modules
+initialization, composes Areas from that initialized singleton, and initializes Navigation afterward.
 
 ## Menus, routes, Areas, and services
 

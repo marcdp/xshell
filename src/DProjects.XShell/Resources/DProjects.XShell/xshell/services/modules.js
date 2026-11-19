@@ -13,6 +13,7 @@ export default class Modules {
     _loader = null;
     _resolver = null;
     _modules = null;
+    _shadowStyleSheets = null;
     _document = null;
     _services = null;
     
@@ -27,6 +28,7 @@ export default class Modules {
         this._document = document;
         this._services = services;
         this._modules = [];
+        this._shadowStyleSheets = Object.freeze([]);
     }
 
     // props
@@ -47,6 +49,10 @@ export default class Modules {
             files: Object.freeze(module.config.files.map(file => Object.freeze({ path: file.path, size: file.size })))
         })));
     }
+    get shadowStyleSheets() {
+        // expose the shared sheets in deterministic module order without allowing collection changes
+        return this._shadowStyleSheets;
+    }
 
     // method
     async init() {
@@ -61,6 +67,7 @@ export default class Modules {
 
         // create modules
         let tasks = [];
+        const shadowStyleTasks = [];
         for(var moduleId of Object.keys(this._config.modules)) {
             const moduleConfig = this._config.modules[moduleId];
             // instance
@@ -84,32 +91,44 @@ export default class Modules {
                     module.styles.push(styleSheet);
                 })());
             }
-            // controller
-            const moduleControllerJs = moduleConfig.assets.path + "/module.js";
-            for (const file of moduleConfig.files) {
-                if (file.path == moduleControllerJs) {
-                    const moduleClass = await this._loader.load("esm:" + moduleControllerJs);
-                    const servicesProvider = new Proxy({}, {
-                        get: (obj, prop) => {
-                            if (prop == "moduleAssetsPath") {
-                                // module assets path
-                                 return moduleConfig.assets.path;
-                            } else if (prop == "moduleConfig") {
-                                // module config
-                                return { id: moduleId, ...moduleConfig };
-                            } else {
-                                // resolve from services
-                                return this._services.resolve(prop);
-                            }                    
-                        }
-                    });
-                    module.controller = new moduleClass(servicesProvider);
-                }
+            // shared Shadow DOM styles
+            const moduleShadowCss = moduleConfig.assets.path + "/styles/shadow.css";
+            if (moduleConfig.files.some(file => file.path == moduleShadowCss)) {
+                const task = this._loader.load("style:" + moduleShadowCss);
+                shadowStyleTasks.push(task);
+                tasks.push(task);
             }
             // add module instance
             this._modules.push(module);
         }
         await Promise.all(tasks);
+
+        // publish shared sheets before module controllers can instantiate Components or Pages
+        this._shadowStyleSheets = Object.freeze(await Promise.all(shadowStyleTasks));
+
+        // load module controllers after both stylesheet categories are ready
+        for (const module of this._modules) {
+            const moduleId = module.id;
+            const moduleConfig = module.config;
+            const moduleControllerJs = moduleConfig.assets.path + "/module.js";
+            if (!moduleConfig.files.some(file => file.path == moduleControllerJs)) continue;
+            const moduleClass = await this._loader.load("esm:" + moduleControllerJs);
+            const servicesProvider = new Proxy({}, {
+                get: (obj, prop) => {
+                    if (prop == "moduleAssetsPath") {
+                        // module assets path
+                        return moduleConfig.assets.path;
+                    } else if (prop == "moduleConfig") {
+                        // module config
+                        return { id: moduleId, ...moduleConfig };
+                    } else {
+                        // resolve from services
+                        return this._services.resolve(prop);
+                    }
+                }
+            });
+            module.controller = new moduleClass(servicesProvider);
+        }
 
         // dispatch module-load to all instances
         await this.start();

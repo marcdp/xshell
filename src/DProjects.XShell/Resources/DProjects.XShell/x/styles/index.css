@@ -160,6 +160,7 @@ html:has(body > x-page > x-fill) {
 :not(:defined) {
     visibility: hidden;
 }
+/* Document and light-DOM counterparts of the shared Shadow DOM element defaults. */
 h1 {font-size:var(--x-font-size-title); font-weight:600;}
 h2 {font-size:var(--x-font-size-subtitle); font-weight:600;}
 h3 {font-size:var(--x-font-size-subsubtitle); font-weight:normal;}
