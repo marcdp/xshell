@@ -9,6 +9,7 @@ export default {
 
     meta: {
         title:"Preferences", 
+        description: "Manage browser-local preferences.",
         icon:"x-settings"
     },
 

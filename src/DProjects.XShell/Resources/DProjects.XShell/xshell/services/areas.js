@@ -1,5 +1,3 @@
-
-
 // class
 export default class Areas {
 
@@ -40,9 +38,9 @@ export default class Areas {
     _areas = [];
     _assetsBasePath = null;
     _currentAreaId = null;
-    _sources = {};
-    _sourceTargets = {};
-    _globalMenus = {};
+    _sources = Object.create(null);
+    _sourceTargets = new Map();
+    _globalMenus = Object.create(null);
 
     // ctor
     constructor({ config, bus }, options = {}) {
@@ -98,19 +96,14 @@ export default class Areas {
         this._areas = Object.freeze(areas);
         this._currentAreaId = this.getDefaultArea()?.id || null;
 
-        // create globalmenus
-        this._globalMenus = {};
+        // Compose global definitions in configuration order before projecting defaults.
         for (const globalMenuId of options.global || []) {
-            const globalMenu = [];
-            for(const module of Object.values(config.modules)) {
+            let globalMenu = [];
+            for (const [moduleId, module] of Object.entries(config.modules)) {
                 const menuDefinition = module.menus?.[globalMenuId];
-                if (menuDefinition) {
-                    globalMenu.push(...menuDefinition.map(menuitem =>
-                        this._cloneMenuitemGlobal(menuitem, module)
-                    ));
-                }
+                if (menuDefinition) globalMenu = this._mergeMenuitems(globalMenu, menuDefinition, moduleId);
             }
-            this._globalMenus[globalMenuId] = globalMenu;
+            this._globalMenus[globalMenuId] = Object.freeze(this._sortMenuitems(globalMenu).map(item => this._cloneMenuitem(item)));
         }
 
         // navigation determines the current area from its URL
@@ -143,7 +136,7 @@ export default class Areas {
         };
         // process each area
         for (const area of this._areas) {
-            const menus = {};
+            const definitions = new Map();
             const routes = [];
             for (const moduleId of area.modules) {
                 const module = modules.getModuleById(moduleId);
@@ -175,14 +168,16 @@ export default class Areas {
                     if (!Array.isArray(menuItems)) {
                         throw new Error(`Menu source '${menuDefinition}' for Area '${area.id}', module '${module.id}', menu '${menuName}' must resolve to an array.`);
                     }
-                    menus[menuName] ??= [];
-                    menus[menuName].push(...menuItems.map(menuitem => this._cloneMenuitem(menuitem, module, area)));
+                    definitions.set(menuName, this._mergeMenuitems(definitions.get(menuName) || [], menuItems, module.id));
                 }
                 for (const [path, href] of Object.entries(module.routes || {})) {
                     routes.push(Object.freeze({ path, href, module: module.id }));
                 }
             }
-            for (const items of Object.values(menus)) Object.freeze(items);
+            // Project each merged menu once, including its effective source registrations.
+            const menus = Object.fromEntries([...definitions].map(([name, items]) => [
+                name, Object.freeze(this._sortMenuitems(items).map(item => this._cloneMenuitem(item, area)))
+            ]));
             area.menus = Object.freeze(menus);
             area.routes = Object.freeze(routes);
             area.home = findDefaultHref(menus.navigation) || findFirstVisibleHref(menus.navigation);
@@ -283,17 +278,30 @@ export default class Areas {
             throw new Error(`Menu source '${name}' must provide a resolve() function.`);
         }        
         this._sources[name] = source;
-        this._sourceTargets[name] = [];
         // refresh every effective copy backed by this source
         source.refresh = () => {
             let changed = false;
-            for (const target of [...this._sourceTargets[name]]) {
-                const menuitems = source.resolve?.() || [];
-                const children = menuitems.map(child => this._cloneMenuitem(child, target.module, target.area));
-                if (JSON.stringify(target.children.slice(target.staticCount)) !== JSON.stringify(children)) {
-                    target.children.splice(target.staticCount, target.children.length - target.staticCount, ...children);
-                    changed = true;
-                }
+            for (const target of [...this._sourceTargets.values()]) {
+                if (target.name !== name || !this._sourceTargets.has(target.children)) continue;
+                const items = this._resolveSourceChildren(target);
+                const definition = JSON.stringify(items);
+                if (definition === target.definition) continue;
+
+                // Reuse unchanged static children even when sorting moves them to a different position.
+                const previous = new Map(target.items.map((item, index) => [item, target.children[index]]));
+                const targets = new Map();
+                const children = items.map(item => {
+                    if (!previous.has(item)) return this._cloneMenuitem(item, target.area, targets);
+                    const child = previous.get(item);
+                    previous.delete(item);
+                    return child;
+                });
+                changed ||= JSON.stringify(target.children) !== JSON.stringify(children);
+                this._removeSourceTargets(previous.values());
+                target.children.splice(0, target.children.length, ...children);
+                for (const [collection, nested] of targets) this._sourceTargets.set(collection, nested);
+                target.items = items;
+                target.definition = definition;
             }
             return changed;
         };
@@ -308,62 +316,105 @@ export default class Areas {
     }
 
     // methods (private)
-    _cloneMenuitemGlobal(menuitem, module) {
-        const result = {
-            label: menuitem.label,
-            href: menuitem.href,
-            path: menuitem.path,
-            command: menuitem.command || null,
-            icon: menuitem.icon || null,
-            embedded: menuitem.embedded ?? false,
-            open: menuitem.open || null,
-            outlet: menuitem.outlet || null,
-            class: menuitem.class || "",
-            tooltip: menuitem.tooltip ?? null,
-            module: module.id,
-            default: menuitem.default || false,
-            children: []
-        };
-        if (menuitem.children) {
-            result.children.push(
-                ...menuitem.children.map(child =>
-                    this._cloneMenuitemGlobal(child, module)
-                )
-            );
-        }
-        Object.freeze(result.children);
-        return Object.freeze(result);
-        //return result;
+    _sortMenuitems(items) {
+        // Stable sort keeps the composition order for equal values.
+        return items.sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
     }
-    _cloneMenuitem(menuitem, module, area) {
+    _mergeMenuitems(target, source, moduleId) {
+        // The target has already been merged. Match only the first position in this array.
+        const result = [...target];
+        const indexes = new Map();
+        const getId = item => typeof item?.id === "string" && item.id ? item.id : null;
+        for (const [index, item] of result.entries()) {
+            const id = getId(item);
+            if (id !== null) indexes.set(id, index);
+        }
+        for (const item of source) {
+            const id = getId(item);
+            const index = indexes.get(id) ?? result.length;
+            if (id !== null) indexes.set(id, index);
+            result[index] = this._mergeMenuitemValue(result[index], item, moduleId);
+        }
+        return result;
+    }
+    _mergeMenuitemValue(previous, value, moduleId) {
+        // Merge raw properties so projection defaults cannot overwrite an omitted field.
+        if (Array.isArray(value)) return this._mergeMenuitems(Array.isArray(previous) ? previous : [], value, moduleId);
+        if (value === null || typeof value !== "object") return value;
+        const base = previous && typeof previous === "object" && !Array.isArray(previous) ? previous : {};
+        const properties = Object.fromEntries(Object.entries(value).map(([key, entry]) => [
+            key, this._mergeMenuitemValue(Object.hasOwn(base, key) ? base[key] : undefined, entry, key === "children" ? moduleId : undefined)
+        ]));
+        const item = { ...base, ...properties };
+        if (moduleId !== undefined) {
+            // The contributor of the winning href owns the target. The children source has its own owner.
+            item.module = !base.href || Object.hasOwn(value, "href") ? moduleId : base.module;
+            item.childrenSourceModule = Object.hasOwn(value, "childrenSource") ? moduleId : base.childrenSourceModule;
+        }
+        return item;
+    }
+    _cloneMenuitem(menuitem, area = null, sourceTargets = this._sourceTargets) {
+        // An identified, targetless group can contribute children even in a menu where no label is supplied.
+        const moduleId = menuitem.module;
+        let label = menuitem.label;
+        if (label === undefined && typeof menuitem.id === "string" && menuitem.id &&
+            menuitem.children?.length && !menuitem.path && !menuitem.href && !menuitem.command) label = "";
+        if (typeof label !== "string") {
+            const context = area ? `Area '${area.id}'` : "Global menu";
+            throw new Error(`${context} item '${menuitem.id ?? ""}' from module '${moduleId}' requires a string label.`);
+        }
+
+        // Normalize the effective item and attach only its winning children source.
         const result = {
-            label: menuitem.label,
-            href: this._buildAreaHref(menuitem.href, area),
-            command: menuitem.command || null,
-            path: this._buildAreaHref(menuitem.path, area),
-            icon: menuitem.icon || null,
+            ...(menuitem.id !== undefined ? { id: menuitem.id } : {}),
+            label,
+            order: menuitem.order ?? 0,
+            href: area ? this._buildAreaHref(menuitem.href, area) : menuitem.href,
+            path: area ? this._buildAreaHref(menuitem.path, area) : menuitem.path,
+            command: menuitem.command ?? null,
+            icon: menuitem.icon ?? null,
             embedded: menuitem.embedded ?? false,
-            module: module.id,
+            open: menuitem.open ?? null,
             tooltip: menuitem.tooltip ?? null,
-            default: menuitem.default || false,
-            class: menuitem.class || "",
-            area: area.id,
+            default: menuitem.default ?? false,
+            class: menuitem.class ?? "",
+            module: moduleId,
+            ...(area ? { area: area.id } : { outlet: menuitem.outlet || null }),
             children: []
         };
-        // clone static and dynamic children for this area
-        if (menuitem.children) result.children.push(...menuitem.children.map(child => this._cloneMenuitem(child, module, area)));
-        if (menuitem.childrenSource) {
-            const source = this._sources[menuitem.childrenSource];
-            if (!source) {
-                throw new Error(`Module '${module.id}' menu item '${menuitem.label}' references unregistered children source '${menuitem.childrenSource}'.`);
-            } else {
-                this._sourceTargets[menuitem.childrenSource].push({ children: result.children, staticCount: result.children.length, module, area });
-                result.children.push(...(source.resolve?.() || []).map(child => this._cloneMenuitem(child, module, area)));
+        const staticItems = menuitem.children || [];
+        if (area && menuitem.childrenSource) {
+            const name = menuitem.childrenSource;
+            const sourceModule = menuitem.childrenSourceModule;
+            if (!Object.hasOwn(this._sources, name)) {
+                throw new Error(`Module '${sourceModule}' menu item '${label}' references unregistered children source '${name}'.`);
             }
+            const target = { name, moduleId: sourceModule, area, staticItems, children: result.children };
+            const items = this._resolveSourceChildren(target);
+            result.children.push(...items.map(item => this._cloneMenuitem(item, area, sourceTargets)));
+            target.items = items;
+            target.definition = JSON.stringify(items);
+            sourceTargets.set(result.children, target);
         } else {
-            Object.freeze(result.children);
+            // Keep the static definitions in declaration order for ties on later source refreshes.
+            const children = this._sortMenuitems([...staticItems]);
+            for (let i = 0; i < children.length; i++) children[i] = this._cloneMenuitem(children[i], area, sourceTargets);
+            result.children = Object.freeze(children);
         }
         return Object.freeze(result);
+    }
+    _resolveSourceChildren({ name, moduleId, staticItems }) {
+        // Reapply the current source results to the unchanged static definitions on every refresh.
+        const items = this._sources[name].resolve() || [];
+        if (!Array.isArray(items)) throw new Error(`Children source '${name}' from module '${moduleId}' must resolve to an array.`);
+        return this._sortMenuitems(this._mergeMenuitems(staticItems, items, moduleId));
+    }
+    _removeSourceTargets(items) {
+        // Forget descendants of replaced children so later refreshes only visit live collections.
+        for (const item of items) {
+            this._sourceTargets.delete(item.children);
+            this._removeSourceTargets(item.children);
+        }
     }
     _buildAreaHref(href, area) {
         if (!href) return null;

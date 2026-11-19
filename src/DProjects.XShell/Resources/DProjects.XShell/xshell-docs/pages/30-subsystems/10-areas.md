@@ -50,11 +50,20 @@ prefix throws. With no configured default, the first sorted Area is used. The in
 
 Areas composes each named menu slot by visiting participating modules in `area.modules` order. A module contribution can be a static array, a
 module-relative inventory path beginning with `/` (for example `"/pages"`), or a source name registered through
-`Areas.registerSource(name, source)`. For a named source, Areas calls `source.resolve()` during composition and clones the returned array as the
-complete contribution. Each effective item has its
-module id, Area id, label, icon, children, path, and href. `path` is optional and is the friendly/public navigation alias; `href` is the canonical
-XShell navigation target. Effective menu structures are separate for each Area; participation creates no additional module instances. Area module ids
-are checked against the complete effective module set during startup; an unknown id fails validation. Runtime menu sources must be registered during module startup before Area composition. Areas.init() fails startup when a named menu source or childrenSource references an unregistered source.
+`Areas.registerSource(name, source)`. For a named source, Areas calls `source.resolve()` during composition and uses the returned array as the
+module's contribution. Each effective item has its module id, Area id, label, icon, children, path, and href. `path` is the optional friendly
+navigation alias. `href` is the canonical XShell navigation target. Effective menus are separate for each Area. Areas validates module ids during
+startup against the complete effective module set. Module controllers must register sources before `Areas.init()`, which fails if a named menu
+source or `childrenSource` references an unregistered source.
+
+Menu items can declare an optional `id`. Areas recursively merges items with the same non-empty string ID within each named menu or parent's
+`children` array. The first occurrence sets the item's position in the merged array. Later explicitly supplied properties override earlier values,
+and omitted properties retain earlier values. Child arrays follow the same rules. Items with different, missing, or empty IDs append in contribution order.
+An identified contribution may omit `label` when another contribution supplies it. An identified group with children and no target or command
+can use an empty label by default. An item with an `href` keeps the module ownership of that target until a contribution overrides it.
+
+Menu items may specify a numeric `order` in both Area and global menus. After merging by ID, Areas sorts each menu and each nested `children`
+array independently, with lower values first. Missing values count as `0`, and equal values keep their relative order from the merged array.
 
 Menu items may also declare `tooltip` and `embedded`. `tooltip` supplies the navigation anchor's tooltip text. When rendered by `x-menu`, an
 `embedded` menu item causes `x-menuitem` to host its target Page inline instead of rendering a navigation anchor. This presentation behavior belongs
@@ -103,7 +112,8 @@ entries retain both the canonical `href` and optional friendly `path`, so breadc
 performing translation itself.
 `Areas.registerSource(name, source)` registers a source before Areas composition. A source exposes `resolve()`, which returns menu items, and may
 declare `dependsOn`, an array of Bus event names. For `childrenSource` targets, an event refreshes their effective children and emits
-`xshell:menus:change` when content changed. Complete-menu sources named by a string are resolved only during `Areas.init()`; the current runtime
+`xshell:menus:change` when content changed. Each refresh merges the latest source items into the static children. When a source override
+disappears, the static item is restored. Complete-menu sources named by a string are resolved only during `Areas.init()`; the current runtime
 does not attach them as refresh targets, so they are not live-reactive after composition.
 
 ## Routes
@@ -147,7 +157,8 @@ See [Navigation](../10-architecture/120-navigation.md), [Configuration](../10-ar
 ## Global menus
 
 `xshell.services.areas.options.global` is the required array of menu names to compose globally from configured modules.
-Current global composition expects array contributions; registered string sources are handled by Area composition, not this global path.
+Global menus merge static arrays by ID in configuration module order, using the same rules as Area menus.
+Registered string sources are handled by Area composition.
 Global items do not receive an Area prefix.
 
 See [Bus](20-bus.md) for source refresh events.

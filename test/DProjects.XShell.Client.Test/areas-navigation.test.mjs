@@ -2,9 +2,11 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import Areas from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/areas.js";
+import JsonValidator from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/json-validator.js";
 import Loader from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/loader.js";
 import Navigation from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/navigation.js";
 import Resolver from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/resolver.js";
+import moduleSchema from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/schemas/module.schema.json" with { type: "json" };
 
 test("Areas construction rejects an unknown configured module", () => {
     const config = { modules: {}, xshell: { assets: { basePath: "/_assets" } } };
@@ -83,6 +85,271 @@ test("Areas preserve tooltip and embedded across effective menu projections", ()
 
     const breadcrumb = areas.getMenuitemBreadcrumb("/main/_assets/menu/pages/detail.js", "main");
     assert.deepEqual(breadcrumb.map(item => item.embedded), [true, true]);
+});
+
+function createMenuContext(modules, { global = [], moduleOrder = Object.keys(modules) } = {}) {
+    const bus = new EventTarget();
+    bus.emit = (name, detail) => bus.dispatchEvent(new CustomEvent(name, { detail }));
+    const config = { modules, xshell: { assets: { basePath: "/_assets" } } };
+    const areas = new Areas({ config, bus }, { global, default: "main", definitions: { main: { prefix: "/main/", modules: moduleOrder } } });
+    const init = () => areas.init({ modules: { getModuleById: id => ({ id, config: modules[id] }) } });
+    return { areas, bus, init };
+}
+
+test("global menus merge raw sibling definitions in configuration order and keep the first positions", () => {
+    const base = Object.freeze([
+        Object.freeze({ id: "settings", label: "Settings", icon: "x-settings", href: "/_assets/base/settings.js" }),
+        { label: "One" },
+        { id: "", label: "Empty one" },
+        { id: "actions", label: "Actions", tooltip: "Old", embedded: true, default: true, open: "dock", class: "old", command: "old" }
+    ]);
+    const override = [
+        { id: "settings", label: "Preferences" },
+        { id: "actions", tooltip: null, embedded: false, default: false, open: null, class: "", command: "" },
+        { id: "new", label: "New" },
+        { label: "Two" },
+        { id: "", label: "Empty two" },
+        { id: "new", label: "Newest", href: "/_assets/addon/new.js" }
+    ];
+    const { areas } = createMenuContext({ base: { menus: { shortcuts: base } }, addon: { menus: { shortcuts: override } } },
+        { global: ["shortcuts"], moduleOrder: ["addon", "base"] });
+    const items = areas.getGlobalMenu("shortcuts");
+    assert.deepEqual(items.map(item => item.label), ["Preferences", "One", "Empty one", "Actions", "Newest", "Two", "Empty two"]);
+    const [settings, , , actions, newest] = items;
+    assert.equal(settings.id, "settings");
+    assert.equal(settings.icon, "x-settings");
+    assert.equal(settings.href, "/_assets/base/settings.js");
+    assert.equal(settings.module, "base");
+    assert.equal(Object.hasOwn(settings, "area"), false);
+    assert.equal(newest.module, "addon");
+    assert.deepEqual([actions.tooltip, actions.embedded, actions.default, actions.open, actions.class, actions.command], [null, false, false, null, "", ""]);
+    assert.ok(Object.isFrozen(items) && Object.isFrozen(settings) && Object.isFrozen(settings.children));
+    assert.equal(base[0].label, "Settings");
+    assert.deepEqual(override[0], { id: "settings", label: "Preferences" });
+});
+
+test("global and Area menus sort each sibling array stably after merging order overrides", () => {
+    const href = "/_assets/base/pages/theme.js";
+    const base = Object.freeze([
+        { id: "settings", label: "Settings", order: 100, children: Object.freeze([
+            { id: "theme", label: "Theme", order: 3, path: "theme", href, children: Object.freeze([
+                { label: "Last", order: 7 }, { label: "First", order: -1 }
+            ]) },
+            { id: "language", label: "Language", order: -2 },
+            { label: "Default child order" }
+        ]) },
+        { label: "Zulu unordered" }, { label: "Last top-level item", order: 20 }
+    ]);
+    const addon = [
+        { id: "settings", order: 0.5, children: [{ id: "theme", order: 0 }, { id: "language", icon: "language" }] },
+        { label: "Alpha zero", order: 0 }, { label: "Alpha fractional", order: 0.5 }, { label: "Negative", order: -10 }
+    ];
+    const originals = structuredClone([base, addon]);
+    const { areas, init } = createMenuContext({ base: { menus: { preferences: base } }, addon: { menus: { preferences: addon } } },
+        { global: ["preferences"] });
+    init();
+
+    // Check sibling ordering, ties across contributions, and the normalized values.
+    for (const items of [areas.getGlobalMenu("preferences"), areas.getMenu("preferences")]) {
+        assert.deepEqual(items.map(item => item.label), ["Negative", "Zulu unordered", "Alpha zero", "Settings", "Alpha fractional", "Last top-level item"]);
+        assert.deepEqual(items.map(item => item.order), [-10, 0, 0, 0.5, 0.5, 20]);
+        const { children } = items[3];
+        assert.deepEqual(children.map(item => item.label), ["Language", "Theme", "Default child order"]);
+        assert.deepEqual(children.map(item => item.order), [-2, 0, 0]);
+        assert.deepEqual(children[1].children.map(item => item.label), ["First", "Last"]);
+        assert.ok(Object.isFrozen(items) && Object.isFrozen(items[3]) && Object.isFrozen(children));
+    }
+    assert.deepEqual([base, addon], originals);
+    assert.equal(areas.resolvePath("/main/theme").href, "/main" + href);
+    assert.deepEqual(areas.getMenuitemBreadcrumb("/main" + href).map(item => item.label), ["Settings", "Theme"]);
+});
+
+test("Area menu ordering includes inventory and named source contributions", () => {
+    const root = "/_assets/docs/pages";
+    const { areas, init } = createMenuContext({
+        links: { menus: { navigation: [{ label: "Last", order: 2 }] } },
+        docs: { label: "Docs", menus: { navigation: root }, files: ["20-alpha.md", "zulu.md", "01-beta.md"].map(path => ({ path: `${root}/${path}` })) },
+        runtime: { menus: { navigation: "runtime-links" } }
+    });
+    areas.registerSource("runtime-links", { resolve: () => [{ label: "Middle", order: 1 }, { label: "First", order: -1 }] });
+    init();
+
+    const items = areas.getMenu("navigation");
+    assert.deepEqual(items.map(item => item.label), ["First", "Docs", "Middle", "Last"]);
+    assert.deepEqual(items[1].children.map(item => item.label), ["Beta", "Alpha", "Zulu"]);
+});
+
+test("menu definitions merge objects and other arrays recursively before projection", () => {
+    const { areas } = createMenuContext({});
+    const items = areas._mergeMenuitems([], [
+        { id: "item", options: { count: 1, enabled: true, tags: ["first"], entries: [{ id: "entry", label: "First", value: 10 }] } },
+        { id: "item", options: { count: 2, tags: ["second"], entries: ["unnamed", { id: "entry", label: "Last" }] } }
+    ]);
+    assert.deepEqual(items, [{ id: "item", options: {
+        count: 2, enabled: true, tags: ["first", "second"], entries: [{ id: "entry", label: "Last", value: 10 }, "unnamed"]
+    } }]);
+});
+
+test("Area menus merge descendants within each parent and resolve the winning canonical target", () => {
+    const oldHref = "/_assets/base/pages/theme.js";
+    const newHref = "/_assets/addon/pages/theme.js";
+    const menus = {
+        base: { navigation: [
+            { id: "settings", label: "Settings", icon: "x-settings", children: [
+                { id: "appearance", label: "Appearance", path: "appearance", href: oldHref, default: true,
+                    children: [{ id: "contrast", label: "Contrast", icon: "contrast" }] },
+                { id: "language", label: "Language", href: "/_assets/base/pages/language.js" }
+            ] },
+            { id: "other", label: "Other", children: [{ id: "appearance", label: "Other appearance" }] }
+        ], shortcuts: [{ id: "settings", label: "Settings shortcut" }] },
+        addon: { navigation: [
+            { id: "settings", label: "Application settings", children: [
+                { id: "appearance", label: "Theme", path: "theme", href: newHref, open: "dock", children: [{ id: "contrast", label: "High contrast" }] },
+                { id: "advanced", label: "Advanced" }
+            ] },
+            { id: "settings", tooltip: "Application settings" }
+        ] }
+    };
+    const originals = structuredClone(menus);
+    Object.freeze(menus.base.navigation[0].children[0].children[0]);
+    Object.freeze(menus.base.navigation[0].children);
+    const { areas, init } = createMenuContext({ addon: { menus: menus.addon }, base: { menus: menus.base } }, { moduleOrder: ["base", "addon"] });
+    init();
+    const [settings, other] = areas.getMenu("navigation");
+    assert.deepEqual([settings.label, settings.icon, settings.tooltip], ["Application settings", "x-settings", "Application settings"]);
+    assert.deepEqual(settings.children.map(item => item.label), ["Theme", "Language", "Advanced"]);
+    const [theme, language] = settings.children;
+    assert.equal(theme.children[0].label, "High contrast");
+    assert.equal(theme.children[0].icon, "contrast");
+    assert.equal(other.children[0].label, "Other appearance");
+    assert.equal(areas.getMenu("shortcuts")[0].label, "Settings shortcut");
+    assert.equal(theme.open, "dock");
+    assert.equal(theme.module, "addon");
+    assert.equal(language.module, "base");
+    assert.equal(theme.area, "main");
+    assert.equal(areas.getArea("main").home, "/main/theme");
+    assert.equal(areas.resolvePath("/main/appearance"), null);
+    assert.equal(areas.resolvePath("/main/theme"), theme);
+    assert.equal(areas.resolveHref(oldHref), null);
+    assert.equal(areas.resolveHref(newHref + "?view=compact#top"), theme);
+    assert.deepEqual(areas.getMenuitemBreadcrumb("/main" + newHref).map(item => item.label), ["Application settings", "Theme"]);
+    const navigation = createNavigation({ areas });
+    assert.equal(navigation.buildUrlAbsolute({ href: newHref }), "/main/theme");
+    assert.equal(navigation._buildUrlFinal(navigation.parseUrl("/main/theme")), "/main" + newHref);
+    assert.deepEqual(menus, originals);
+});
+
+test("refresh merges live children into the static baseline and updates nested source registrations", () => {
+    const { areas, bus, init } = createMenuContext({
+        base: { menus: { navigation: [{ id: "settings", label: "Settings", href: "/_assets/base/settings.js", childrenSource: "obsolete",
+            children: [
+                { id: "theme", label: "Theme", order: 0.5, href: "/_assets/base/theme.js",
+                    children: [{ id: "details", label: "Details", order: 2 }, { label: "Overview" }] },
+                { label: "Static", childrenSource: "persistent" }
+            ] }] } },
+        addon: { menus: { navigation: [{ id: "settings", childrenSource: "settings-children" }] } },
+        extra: { menus: { navigation: "named-menu" } }
+    });
+    let dynamic = [
+        { id: "theme", label: "Live theme", order: -2, href: "/_assets/addon/live-theme.js" },
+        { id: "live", label: "Live", order: -1 },
+        { id: "live", icon: "live-icon", childrenSource: "nested" }
+    ];
+    let nested = [{ label: "First nested" }];
+    let persistent = [{ label: "Persistent" }];
+    const source = { dependsOn: ["settings:refresh"], resolve: () => dynamic };
+    const nestedSource = { resolve: () => nested };
+    const persistentSource = { resolve: () => persistent };
+    const namedSource = { resolve: () => [{ id: "settings", icon: "x-settings" }] };
+    areas.registerSource("settings-children", source);
+    areas.registerSource("nested", nestedSource);
+    areas.registerSource("persistent", persistentSource);
+    areas.registerSource("named-menu", namedSource);
+    let changes = 0;
+    bus.addEventListener("xshell:menus:change", () => changes++);
+    init();
+
+    const [settings] = areas.getMenu("navigation");
+    const children = settings.children;
+    assert.equal(settings.module, "base");
+    assert.equal(settings.icon, "x-settings");
+    assert.ok(Object.isFrozen(settings) && !Object.isFrozen(children) && Object.isFrozen(children[0]));
+    assert.deepEqual(children.map(item => item.label), ["Live theme", "Live", "Static"]);
+    const [liveTheme, live, staticItem] = children;
+    assert.equal(liveTheme.module, "addon");
+    assert.deepEqual(liveTheme.children.map(item => item.label), ["Overview", "Details"]);
+    assert.equal(areas.resolveHref("/_assets/addon/live-theme.js"), liveTheme);
+    assert.equal(live.children[0].module, "addon");
+    assert.equal(live.icon, "live-icon");
+    assert.equal(source.refresh(), false);
+    nested = [{ label: "Second nested" }];
+    assert.equal(nestedSource.refresh(), true);
+    assert.equal(live.children[0].label, "Second nested");
+    assert.equal(namedSource.refresh(), false);
+
+    dynamic = [];
+    bus.emit("settings:refresh");
+    assert.equal(changes, 1);
+    assert.equal(settings.children, children);
+    assert.deepEqual(children.map(item => item.label), ["Static", "Theme"]);
+    assert.equal(children[0], staticItem);
+    assert.equal(children[1].module, "base");
+    assert.equal(children[1].order, 0.5);
+    assert.equal(areas.resolveHref("/_assets/addon/live-theme.js"), null);
+    assert.equal(areas.resolveHref("/_assets/base/theme.js"), children[1]);
+    assert.equal(liveTheme.label, "Live theme");
+    assert.equal(liveTheme.module, "addon");
+    assert.equal(liveTheme.order, -2);
+    nested = [{ label: "Detached" }];
+    assert.equal(nestedSource.refresh(), false);
+    bus.emit("settings:refresh");
+    assert.equal(changes, 1);
+
+    // Restore an override and make a nested tie use the original static declaration order.
+    dynamic = [{ id: "theme", order: -1, children: [{ id: "details", order: 0 }] }];
+    bus.emit("settings:refresh");
+    assert.equal(changes, 2);
+    assert.deepEqual(children.map(item => item.label), ["Theme", "Static"]);
+    assert.deepEqual(children[0].children.map(item => item.label), ["Details", "Overview"]);
+    assert.equal(children[1], staticItem);
+    persistent = [{ label: "Later", order: 1 }, { label: "Earlier", order: -1 }];
+    assert.equal(persistentSource.refresh(), true);
+    assert.deepEqual(staticItem.children.map(item => item.label), ["Earlier", "Later"]);
+    bus.emit("settings:refresh");
+    assert.equal(changes, 2);
+});
+
+test("menu schema permits identified partial contributions and composition requires effective labels", () => {
+    const validator = new JsonValidator();
+    const schema = { $ref: "#/$defs/menuItem", $defs: { menuItem: moduleSchema.$defs.menuItem } };
+    const group = { id: "root", children: [{ label: "Diagnostics", open: "dock" }] };
+    const partial = { id: "settings", icon: "new-icon", open: null };
+    assert.equal(validator.validate(partial, schema).valid, true);
+    assert.equal(validator.validate(group, schema).valid, true);
+    assert.equal(validator.validate({ icon: "new-icon" }, schema).valid, false);
+    assert.equal(validator.validate({ ...partial, id: "" }, schema).valid, false);
+    assert.equal(validator.validate({ ...partial, label: null }, schema).valid, false);
+    assert.equal(validator.validate({ ...partial, description: "Unsupported" }, schema).valid, false);
+    for (const order of [10, 0, -5, 0.5]) {
+        assert.equal(validator.validate({ ...partial, order }, schema).valid, true);
+    }
+    for (const order of ["10", true, null]) {
+        assert.equal(validator.validate({ ...partial, order }, schema).valid, false);
+        assert.equal(validator.validate({ ...group, children: [{ label: "Invalid order", order }] }, schema).valid, false);
+    }
+
+    const builtin = { menus: { shortcuts: [{ id: "root", label: "", icon: "x-more-vert", children: [{ label: "Preferences" }] }] } };
+    const addon = { menus: { shortcuts: [group] } };
+    const { areas, init } = createMenuContext({ builtin, addon }, { global: ["shortcuts"], moduleOrder: ["addon"] });
+    init();
+    const [global] = areas.getGlobalMenu("shortcuts");
+    assert.equal(global.icon, "x-more-vert");
+    assert.deepEqual(global.children.map(item => item.label), ["Preferences", "Diagnostics"]);
+    assert.equal(areas.getMenu("shortcuts")[0].label, "");
+
+    const invalid = { menus: { shortcuts: [partial] } };
+    assert.throws(() => createMenuContext({ invalid }, { global: ["shortcuts"] }), /Global menu item 'settings'.*requires a string label/);
+    assert.throws(() => createMenuContext({ invalid }).init(), /Area 'main' item 'settings'.*requires a string label/);
 });
 
 function createAreas() {
