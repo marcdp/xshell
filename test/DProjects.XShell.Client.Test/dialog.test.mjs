@@ -200,8 +200,8 @@ test("the dialog layout resolves classes on Page load and renders them before sh
     render();
     assert.equal(nativeDialog.open, false);
 
-    const metaClasses = Object.freeze(["size-medium", "size-narrow", "fill", "page-style", "opened"]);
-    const callerClasses = Object.freeze(["size-compact", "size-wide", "fill", "caller-style", "caller-style"]);
+    const metaClasses = Object.freeze(["size-medium", "size-narrow", "layout-fill", "page-style", "opened"]);
+    const callerClasses = Object.freeze(["size-compact", "size-wide", "layout-fill", "caller-style", "caller-style"]);
     page = { label: "Test Page", meta: { classes: metaClasses }, context: { classes: callerClasses } };
     pageHost.dispatchEvent(new Event("load"));
     assert.equal(nativeDialog.open, false);
@@ -248,8 +248,8 @@ test("dialog styles define responsive semantic widths and omit numeric width sel
 test("the Stack layout applies caller classes before expanding and merges Page defaults after load", t => {
     const originalDocument = globalThis.document;
     const pageHost = new EventTarget();
-    const caller = Object.freeze(["size-compact", "size-full", "caller-style", "caller-style", "fill"]);
-    const defaults = Object.freeze(["size-medium", "size-narrow", "page-style", "fill"]);
+    const caller = Object.freeze(["size-compact", "size-full", "caller-style", "caller-style", "layout-fill"]);
+    const defaults = Object.freeze(["size-medium", "size-narrow", "page-style", "layout-fill"]);
     const state = { ...stackLayout.state, stackClasses: caller, expanded: false };
     let page;
 
@@ -264,17 +264,17 @@ test("the Stack layout applies caller classes before expanding and merges Page d
     controller.load();
     controller.mount();
     assert.equal(state.expanded, false);
-    assert.equal(state.pageClasses, "size-compact caller-style fill");
+    assert.equal(state.pageClasses, "size-compact caller-style layout-fill");
     t.mock.timers.tick(50);
     assert.equal(state.expanded, true);
-    assert.equal(state.pageClasses, "size-compact caller-style fill");
+    assert.equal(state.pageClasses, "size-compact caller-style layout-fill");
 
     page = { meta: { classes: defaults } };
     pageHost.dispatchEvent(new Event("load"));
-    assert.equal(state.pageClasses, "size-compact page-style fill caller-style");
+    assert.equal(state.pageClasses, "size-compact page-style layout-fill caller-style");
     state.stackClasses = ["custom-style"];
     controller.stateChange({ changes: [{ prop: "stackClasses" }] });
-    assert.equal(state.pageClasses, "size-medium page-style fill custom-style");
+    assert.equal(state.pageClasses, "size-medium page-style layout-fill custom-style");
     page = {};
     pageHost.dispatchEvent(new Event("load"));
     assert.equal(state.pageClasses, "custom-style");

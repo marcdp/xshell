@@ -2,7 +2,8 @@
 export default {
     meta: {
         title: "Persistent File Explorer",
-        description: "Explore origin-private browser storage with the filesystem Component."
+        description: "Explore origin-private browser storage with the filesystem Component.",
+        classes: ["size-full"]
     },
 
     template: `

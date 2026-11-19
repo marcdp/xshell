@@ -172,7 +172,8 @@ export default {
 
     meta: {
         title: "Invoke",
-        description: "Lorem ipsum dolor sit amet."
+        description: "Lorem ipsum dolor sit amet.",
+        classes: ["size-narrow"]
     },
 
     style: `

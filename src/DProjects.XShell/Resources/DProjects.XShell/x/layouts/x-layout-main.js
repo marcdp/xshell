@@ -197,26 +197,37 @@ export default {
                 margin-right:auto;
             }
 
-            .body.fill > main {
-                max-width:unset;
-                position:absolute;
-                top: var(--x-fill-top);
-                left:var(--x-layout-main-drawer-width); 
-                right:0;
-                bottom:0;
-                padding:0;
-                display:flex;
-                transition: left var(--x-transition-duration);
-                flex-direction: column;
-                --x-layout-main-page-max-width: unset;
-                --x-layout-main-page-max-width
+            /* layout-fill */
+            @media (min-width: 769px) {
+                .body.layout-fill > main {
+                    max-width:unset;
+                    position:absolute;
+                    top: var(--x-fill-top);
+                    left:var(--x-layout-main-drawer-width); 
+                    right:0;
+                    bottom:0;
+                    padding:0;
+                    display:flex;
+                    transition: left var(--x-transition-duration);
+                    flex-direction: column;
+                    --x-layout-main-page-max-width: unset;
+                    --x-layout-main-page-max-width
+                }
+                .body.layout-fill.toggled > main {left:0;}
+                .body.layout-fill main > div {
+                    max-width: unset;
+                    margin-left:unset;
+                    margin-right:unset;
+                    flex:1;
+                }
             }
-            .body.fill.toggled > main {left:0;}
-            .body.fill main > div {
-                max-width: unset;
-                margin-left:unset;
-                margin-right:unset;
-                flex:1;
+
+            @media (min-width: 769px) {
+                .body.size-compact {--x-layout-main-page-max-width:28rem;}
+                .body.size-narrow {--x-layout-main-page-max-width:42rem;}
+                .body.size-medium {--x-layout-main-page-max-width:58rem;}
+                .body.size-wide {--x-layout-main-page-max-width:75em;}
+                .body.size-full {--x-layout-main-page-max-width:100%; }
             }
 
         }

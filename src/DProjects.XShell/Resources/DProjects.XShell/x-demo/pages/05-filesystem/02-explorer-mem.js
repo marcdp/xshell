@@ -2,7 +2,8 @@
 export default {
     meta: {
         title: "Memory File Explorer",
-        description: "Explore a memory filesystem populated with sample directories and files."
+        description: "Explore a memory filesystem populated with sample directories and files.",
+        classes: ["size-full"]
     },
 
     template: `

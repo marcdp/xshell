@@ -85,7 +85,7 @@ export default {
         div.panel .header div.title {margin-right:1.5em;}
         div.panel .header div.title h2 {margin:0; font-size: var(--x-font-size-subtitle); }
         div.panel .header div.title h2 ~ x-page-description {font-size:var(--x-font-size-x-small);display:block;}
-        div.panel .header .header-actions {display:flex; flex:1; gap:0.5em; justify-content:start;}
+        div.panel .header .header-actions {display:flex; flex:1; justify-content:start; padding-right:.25em;}
         div.panel .header x-button {}
 
         div.panel .body {padding:0em var(--x-layout-stack-page-padding-horizontal);}    
@@ -93,13 +93,13 @@ export default {
         
         @media (min-width: 769px) {
             :host {
-                --x-fill-top: 4.5em;
+                --x-fill-top: 5em;
                 --x-fill-height: calc(100vh - var(--x-fill-top));
             }
             div.panel .header div.title {display:flex; flex-direction:column; justify-content:center; min-height:3em;}
             div.panel .header div.title h2 {flex:0;}
-            div.panel .body.fill {display:flex; flex-direction: column; width:100%; position:absolute; top:var(--x-fill-top); height:var(--x-fill-height); box-sizing:border-box; padding:0;}
-            div.panel:has(.body.fill) {scrollbar-width: none; scrollbar-gutter: none; overflow:hidden;}           
+            div.panel .body.layout-fill {display:flex; flex-direction: column; width:100%; position:absolute; top:var(--x-fill-top); height:var(--x-fill-height); box-sizing:border-box; padding:0;}
+            div.panel:has(.body.layout-fill) {scrollbar-width: none; scrollbar-gutter: none; overflow:hidden;}           
 
             /* Explicit sizes override the width inherited from the Page's stack position. */
             div.panel:has(> .body.size-compact) {--x-layout-stack-width:clamp(22rem, 25vw, 34rem);}
@@ -121,8 +121,8 @@ export default {
             }
             
             div.panel .body {padding-top:1.4em;}    
-            div.panel .body.fill {display:flex; flex-direction: column; width:100%; position:absolute; top:var(--x-fill-top); height:var(--x-fill-height); box-sizing:border-box;padding:0;}
-            div.panel:has(.body.fill) {scrollbar-width: none; scrollbar-gutter: none; overflow:hidden;}
+            div.panel .body.layout-fill {display:flex; flex-direction: column; width:100%; position:absolute; top:var(--x-fill-top); height:var(--x-fill-height); box-sizing:border-box;padding:0;}
+            div.panel:has(.body.layout-fill) {scrollbar-width: none; scrollbar-gutter: none; overflow:hidden;}
         }
 
         
@@ -142,8 +142,6 @@ export default {
                     <slot name="header-actions"></slot>
                 </div>
                 <x-page-info></x-page-info>
-                
-            
             </div>            
             <div x-attr:class="'body' + (state.pageClasses ? ' ' + state.pageClasses : '')" tabIndex="1">
                 <slot></slot>

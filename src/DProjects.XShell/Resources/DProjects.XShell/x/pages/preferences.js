@@ -11,15 +11,15 @@ export default {
         title:"Preferences", 
         description: "Manage browser-local preferences.",
         icon:"x-settings",
-        classes: ["size-medium"]
+        classes: ["size-medium", "layout-fill"]
     },
 
     style: `
-        :scope {}
-        :scope > div {display:flex; flex-direction: row; width:100%;}
-        :scope > div .menu-container {min-width:15em;}
-        :scope > div x-splitter {margin: 0 .5em;}
-        :scope > div .page-container {display:block; min-width:50%; max-width:80%;}
+        :scope {height:100%;}
+        :scope > div {display:flex; flex-direction: row; flex:1;}
+        :scope > div .menu-container {min-width:auto; width:18em; background:var(--x-layout-main-drawer-background); padding:1em}
+        :scope > div x-splitter {opacity:0;}
+        :scope > div .page-container {display:block; padding-left:1.5em; flex:1;}
         :scope > div .page-container h1 {margin-top:0;}        
     `,
 
@@ -44,7 +44,7 @@ export default {
             <x-splitter></x-splitter>
 
             <div class="page-container">
-                <h1>{{state.title}}</h1>
+                <h4>{{state.title}}</h4>
                 <x-page outlet="content" x-attr:src="state.src" x-on:load="refresh" x-once></x-page>
             </div>
         </div>

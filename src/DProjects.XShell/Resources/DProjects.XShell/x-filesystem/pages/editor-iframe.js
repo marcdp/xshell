@@ -13,7 +13,7 @@ export default {
 
     meta: {
         title:"Edit file",
-        classes: ["fill"]
+        classes: ["layout-fill"]
     },
 
     style: `

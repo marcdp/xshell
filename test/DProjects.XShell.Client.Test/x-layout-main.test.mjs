@@ -51,19 +51,19 @@ test("dock resize persists only the measured final size", async () => {
         assert.deepEqual(ui.writes, []);
         ui.controller.onDockResize({event:{type:"resize", detail:{size:900}}});
         await settle();
-        assert.deepEqual(ui.writes, [["xshell.dockSize.bottom", "245"]]);
+        assert.deepEqual(ui.writes, [["x-layout-main.dockSize.bottom", "245"]]);
         ui.state.dockPosition = "right";
         ui.controller.onDockResize({event:{type:"resize"}});
         await settle();
-        assert.deepEqual(ui.writes.at(-1), ["xshell.dockSize.right", "365"]);
+        assert.deepEqual(ui.writes.at(-1), ["x-layout-main.dockSize.right", "365"]);
     } finally { ui.restore(); }
 });
 
 test("dock sizes restore independently and clamp to the viewport", async () => {
     const ui = setup();
     try {
-        ui.values.set("xshell.dockSize.bottom", "600");
-        ui.values.set("xshell.dockSize.right", "300");
+        ui.values.set("x-layout-main.dockSize.bottom", "600");
+        ui.values.set("x-layout-main.dockSize.right", "300");
         await ui.controller.restoreDockSize();
         assert.equal(ui.style.flex, "0 0 600px");
         ui.viewport.height = 500;
@@ -82,8 +82,8 @@ test("invalid or failed dock size reads restore the CSS default", async () => {
     try {
         for (const value of [undefined, "invalid", "0", "-20", "Infinity"]) {
             ui.style.flex = "0 0 200px";
-            if (value === undefined) ui.values.delete("xshell.dockSize.bottom");
-            else ui.values.set("xshell.dockSize.bottom", value);
+            if (value === undefined) ui.values.delete("x-layout-main.dockSize.bottom");
+            else ui.values.set("x-layout-main.dockSize.bottom", value);
             await ui.controller.restoreDockSize();
             assert.equal(ui.style.flex, "");
         }
@@ -97,9 +97,9 @@ test("invalid or failed dock size reads restore the CSS default", async () => {
 test("load restores saved layout values without persisting defaults", async () => {
     const ui = setup();
     try {
-        ui.values.set("xshell.toggled", "true");
-        ui.values.set("xshell.dockSrc", "/saved.js");
-        ui.values.set("xshell.dockPosition", "right");
+        ui.values.set("x-layout-main.toggled", "true");
+        ui.values.set("x-layout-main.dockSrc", "/saved.js");
+        ui.values.set("x-layout-main.dockPosition", "right");
         await ui.controller.load();
         assert.equal(ui.state.toggled, true);
         assert.equal(ui.state.dockSrc, "/saved.js");
@@ -119,8 +119,8 @@ test("rapid menu and dock updates leave the latest values", async () => {
         ui.state.dockPosition = "right";
         await settle();
         assert.equal(ui.values.get("xshell.toggled"), "false");
-        assert.equal(ui.values.get("xshell.dockSrc"), "/second.js");
-        assert.equal(ui.values.get("xshell.dockPosition"), "right");
+        assert.equal(ui.values.get("x-layout-main.dockSrc"), "/second.js");
+        assert.equal(ui.values.get("x-layout-main.dockPosition"), "right");
     } finally { ui.restore(); }
 });
 
@@ -132,15 +132,15 @@ test("changes made during a delayed load take precedence over saved values", asy
         const loading = ui.controller.load();
         ui.controller.onToggleMenu();
         ui.state.dockSrc = "/new.js";
-        pending.get("xshell.toggled")("false");
-        pending.get("xshell.dockSrc")("/old.js");
-        pending.get("xshell.dockPosition")("right");
+        pending.get("x-layout-main.toggled")("false");
+        pending.get("x-layout-main.dockSrc")("/old.js");
+        pending.get("x-layout-main.dockPosition")("right");
         await loading;
         await settle();
         assert.equal(ui.state.toggled, true);
         assert.equal(ui.state.dockSrc, "/new.js");
         assert.equal(ui.state.dockPosition, "right");
-        assert.equal(ui.values.get("xshell.dockSrc"), "/new.js");
+        assert.equal(ui.values.get("x-layout-main.dockSrc"), "/new.js");
     } finally { ui.restore(); }
 });
 
@@ -156,7 +156,7 @@ test("a delayed dock size read cannot overwrite a newer resize", async () => {
         await restoring;
         assert.equal(ui.style.flex, "");
         await settle();
-        assert.equal(ui.values.get("xshell.dockSize.bottom"), "245");
+        assert.equal(ui.values.get("x-layout-main.dockSize.bottom"), "245");
     } finally { ui.restore(); }
 });
 
@@ -164,12 +164,12 @@ test("closing a dock deletes its source and storage failures do not interrupt ch
     const ui = setup();
     try {
         await ui.controller.load();
-        ui.values.set("xshell.dockSrc", "/dock.js");
+        ui.values.set("x-layout-main.dockSrc", "/dock.js");
         ui.preferences.delete = async () => { throw new Error("delete failed"); };
         ui.state.dockSrc = null;
         ui.controller.onToggleMenu();
         await settle();
         assert.equal(ui.values.get("xshell.toggled"), "true");
-        assert.equal(ui.values.get("xshell.dockSrc"), "/dock.js");
+        assert.equal(ui.values.get("x-layout-main.dockSrc"), "/dock.js");
     } finally { ui.restore(); }
 });

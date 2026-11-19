@@ -11,7 +11,7 @@ export default {
 
     meta: {
         title: "Image viewer",
-        classes: ["fill"]
+        classes: ["layout-fill"]
     },
 
     style: `

@@ -13,7 +13,7 @@ export default {
 
     meta: {
         title:"Edit file",
-        classes: ["fill"]
+        classes: ["layout-fill"]
     },
 
     style: `
@@ -26,9 +26,7 @@ export default {
     template: `
         <x-toolbar slot="header-actions" x-if="!state.error">
             <x-button label="Save" icon="x-save" command="save" class="light"></x-button>
-            <span>
-                
-            </span>
+            <span></span>
             <span style="flex:1"></span>            
             <x-button tooltip="Preview" icon="x-preview" command="preview" class="round light"></x-button>
             <x-button tooltip="Print" icon="x-print" command="print" class="round light"></x-button>

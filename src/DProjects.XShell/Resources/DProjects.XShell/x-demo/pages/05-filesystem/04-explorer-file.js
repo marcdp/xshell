@@ -2,7 +2,8 @@
 export default {
     meta: {
         title: "Local File Explorer",
-        description: "Explore files and directories on the local computer."
+        description: "Explore files and directories on the local computer.",
+        classes: ["size-full"]
     },
 
     template: `

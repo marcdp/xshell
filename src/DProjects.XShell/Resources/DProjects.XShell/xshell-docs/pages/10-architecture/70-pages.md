@@ -84,7 +84,7 @@ when it is omitted, no Page classes are declared.
 export default {
     meta: {
         title: "Page Classes",
-        classes: ["fill"]
+        classes: ["layout-fill"]
     },
 
     template: `

@@ -10,7 +10,8 @@ export default {
         methods: {}
     },
     meta: {
-        title: "Explorer Page"
+        title: "Explorer Page",
+        classes: ["size-full"]
     },
     style: `
     `,

@@ -3,18 +3,19 @@ export default {
     meta: {
         title: "Page Classes",
         description: "Demonstrates applying CSS classes to the page layout container.",
-        classes: ["fill"]
+        classes: ["size-full"]
     },
-
+    style: `
+        
+    `,
     template: `
-
         <p>
             Pages can declare CSS classes through
             <code>meta.classes</code>.
         </p>
 
         <pre x-pre><code>meta: {
-    classes: ["fill"]
+    classes: ["size-full"]
 }</code></pre>
 
         <p>
@@ -24,7 +25,7 @@ export default {
         </p>
 
         <p>
-            This Page uses the <code>fill</code> class.
+            This Page uses the <code>size-full</code> class.
         </p>
 
     `

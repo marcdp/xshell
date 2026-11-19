@@ -63,10 +63,12 @@ export default {
         .header x-page-info {margin-left:.5em; margin-right:.5em;}
         .header x-button {_transform:translateY(-0.2em);}
 
-        /* fill */
-        dialog.fill {width:100%; height:100%; }
-        dialog.fill > .container {width:100%; height:100%; display:flex; flex-direction:column;}
-        dialog.fill > .container .body {display:flex; flex-direction:column; flex:1;}
+        /* layout-fill */
+        @media (min-width: 769px) {
+            dialog.layout-fill {width:100%; height:100%; }
+            dialog.layout-fill > .container {width:100%; height:100%; display:flex; flex-direction:column;}
+            dialog.layout-fill > .container .body {display:flex; flex-direction:column; flex:1;}
+        }
 
         /* size */
         @media (min-width: 769px) {
