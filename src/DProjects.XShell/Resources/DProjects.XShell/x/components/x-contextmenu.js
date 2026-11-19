@@ -46,9 +46,21 @@ export default {
         :host div:focus {
             outline: none;
         }
+
+        :host(.inline) {position:unset; width:100%; margin:0;}
+        :host(.inline) div {
+            padding:0;
+            padding-top:.125em;
+            border:none;
+            position:unset;
+            background:none;
+            width:unset;
+            box-shadow:none;
+            transform:none;
+        }
     `,
     template: `
-        <div x-if="state.visible || state.submenu" tabindex="0" x-style:left="state.x" x-style:top="state.y" x-on:keydown="keydown" x-on:command="command">
+        <div x-if="state.visible || state.submenu" tabindex="0" x-style:left="state.x" x-style:top="state.y" x-on:keydown="keydown" x-on:command="command" part="container">
             <slot></slot>
         </div>
     `,
@@ -71,24 +83,29 @@ export default {
         return {
             open({x, y}) {
                 // open
-                if (typeof x === "number" && typeof y === "number") {
-                    // Keep the menu within the viewport
-                    const rect = host.getBoundingClientRect();
-                    const margin = 8;
-                    const left = Math.max(margin,Math.min(x, window.innerWidth - rect.width - margin));
-                    const top = Math.max(margin, Math.min(y, window.innerHeight - rect.height - margin));
-                    state.x = left + "px";
-                    state.y = top + "px";
+                if (!host.classList.contains("inline")) {
+                    if (typeof x === "number" && typeof y === "number") {
+                        // Keep the menu within the viewport
+                        const rect = host.getBoundingClientRect();
+                        const margin = 8;
+                        const left = Math.max(margin,Math.min(x, window.innerWidth - rect.width - margin));
+                        const top = Math.max(margin, Math.min(y, window.innerHeight - rect.height - margin));
+                        state.x = left + "px";
+                        state.y = top + "px";
+                    }
+                    // add event listeners to handle outside click and escape key
+                    document.addEventListener("pointerdown", outsideClick, true);
+                    document.addEventListener("scroll", scroll, true);
                 }
+                // set visible
                 state.visible = true;
-                // add event listeners to handle outside click and escape key
-                document.addEventListener("pointerdown", outsideClick, true);
-                document.addEventListener("scroll", scroll, true);
                 // focus the menu after opening
                 postRender("focus");
             },
             command({ event }) {
-                this.close();
+                if (!host.classList.contains("inline")) {
+                    this.close();
+                }
             },
             focus() {
                 // focus
@@ -144,8 +161,10 @@ export default {
                 } else if (event.key === "Escape") {
                     // close
                     event.preventDefault();
-                    this.close();
-                }
+                    if (!host.classList.contains("inline")) {
+                        this.close();
+                    }
+                }                
             },
             close() {
                 // close

@@ -26,6 +26,19 @@
                         {"label": "Settings", "href": "/pages/settings.js", "embedded":true},
                         {"label": "About", "href": "/pages/about.js"}
                     ] }
+                ],
+                "preferences": [
+                    {"label": "Appearance", "href": "/pages/preferences-appearance.js"},
+                    {"label": "Internationalization", "href": "/pages/preferences-i18n.js"},
+                    {"label": "Language", "class": "inline", "children": [
+                        {"label": "Home", "href": "app:/"},
+                        {"label": "Preferences", "href": "/pages/preferences.js"},
+                        {"label": "Settings", "href": "/pages/settings.js"},
+                        {"label": "About", "href": "/pages/about.js", "class": "inline", "children": [
+                            {"label": "Settings", "href": "/pages/settings.js"}
+                        ]}
+                    ]},
+                    {"label": "About", "href": "/pages/about.js"}
                 ]
             }
         }

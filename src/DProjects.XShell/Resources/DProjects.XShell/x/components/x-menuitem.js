@@ -15,6 +15,8 @@ export default {
             disabled:    {type:"boolean", default:false, attribute:true, state:true, description:""},
             embedded:    {type:"boolean", default:false, attribute:true, state:true, description:"Hosts the target Page inline instead of rendering a navigation anchor."},
             tooltip:     {type:"string", default:"", attribute:true, state:true, description:"Optional tooltip text shown on the navigation anchor."},
+            open:        {type: "string",default: "",attribute: true,state: true,enum: ["auto", "stack", "top", "dialog", "dock", "embed"]},
+            outlet:      {type: "string",default: "",attribute: true,state: true}
         },
         methods: {
             focus: {description: "Focuses the menu item."},
@@ -27,39 +29,50 @@ export default {
         }
     },
     style: `
-        :host {display:flex; position:relative; box-sizing:border-box; flex-direction:column; margin-bottom:.15em;}
+        :host {display:flex; position:relative; box-sizing:border-box; flex-direction:column; margin-bottom:.15em;
+            --x-menuitem-indent: calc(var(--x-menu-indent, -1) + 1);
+        }
         
         /* default */
-        :host x-anchor {display:flex; flex:1; flex-direction:row; align-items:center; cursor:pointer; border-radius:var(--x-menuitem-border-radius); user-select: none; }
+        :host x-anchor {display:flex; flex:1; flex-direction:row; align-items:center; cursor:pointer; border-radius:var(--x-menuitem-border-radius); user-select: none;  
+            
+        }
         :host x-anchor:hover {background:var(--x-color-background-x-gray); z-index:1;}
         :host x-anchor x-icon {color:var(--x-color-text)!important; text-align:center;}
-        :host x-anchor span.label {color:var(--x-color-text)!important; flex:1;  display:block; padding-top:.4em; padding-bottom:.4em; white-space:nowrap; padding-right:1.5em;}
+        :host x-anchor span.label {color:var(--x-color-text)!important; flex:1;  display:block; padding-top:.4em; padding-bottom:.4em; white-space:nowrap; padding-right:1.5em; padding-left: calc(var(--x-menuitem-indent) * 1em)!important;}
         :host x-anchor span.suffix {color:var(--x-color-text-gray)!important; padding-left:1em;}
         :host x-anchor x-icon.has-childs {width:unset; margin-left:.25em;}
         :host x-anchor x-icon:first-child {}
         :host x-anchor x-icon:first-child:last-child {align-self:flex-end;}
         :host x-anchor x-icon + .label {padding-left:.35em;}
-        :host x-anchor.selected {font-weight: 600;}
+        :host x-anchor.selected {font-weight: 600; background:var(--x-color-background-x-gray);}
         :host .menuitem[disabled] {pointer-events:none; cursor:default; --x-color-text:var(--x-color-text-disabled);}
-        
-        :host(.selected) .menuitem {background:var(--x-color-background-x-gray);}
+
         :host HR {border:none; background:var(--x-menuitem-separator-color); height:.1px; margin-top:.15em; margin-bottom:.15em; display:block; box-sizing: border-box; width:100%;}
        
         /* dropdown */
-        x-contextmenu {width: var(--x-contextmenu-width);position:absolute; left:100%;box-sizing:border-box;            margin-left:0em;margin-top:-.2em;}
+        x-contextmenu {width: var(--x-contextmenu-width);position:absolute; left:100%;box-sizing:border-box; margin-left:0em;margin-top:-.2em;}
         x-contextmenu.down {top:calc(100% + .2em); left:-.1em;}
         x-contextmenu.left {left:100%!important; margin-left:.1em; transform:translateX(-100%);}
 
         /* inline */
         :host(.inline) x-anchor .has-childs {transform:rotate(90deg); transition: transform var(--x-transition-duration);}
         :host(.inline) x-anchor[expanded] .has-childs {transform:rotate(-90deg)}
-        :host(.inline) x-contextmenu {position:unset;border:none;background:none;padding:0;width:unset;box-shadow:none;padding-left:2.5em;}
+        :host(.inline) > x-contextmenu {
+            --x-menu-indent: var(--x-menuitem-indent);
+            position:unset; 
+            width:100%; 
+            margin:0; 
+            margin-bottom: -.15em;
+        }
+        
     `,
     state: {
         command:"",
         href:"",
         embedded: false,
         expanded: false,
+        childsInline: false,
         childsDown: false,
         childsLeft: false,
     },
@@ -70,16 +83,17 @@ export default {
         </div>
         <x-button x-elseif="state.command" class="menuitem" x-attr:command="state.command" x-attr:label="state.label" x-attr:icon="state.icon" x-attr:disabled="state.disabled" >
         </x-button>
-        <x-anchor x-else class="menuitem anchor" x-class:down="state.childsDown" x-attr:href="state.href" x-attr:disabled="state.disabled" x-attr:expanded="state.expanded" x-class:selected="state.selected" x-attr:tooltip="state.tooltip" x-attr:open="state.open">
+        <x-anchor x-else class="menuitem anchor" x-class:down="state.childsDown" x-attr:href="state.href" x-attr:disabled="state.disabled" x-attr:expanded="state.expanded" x-class:selected="state.selected" x-attr:tooltip="state.tooltip" x-attr:open="state.open" x-attr:outlet="state.outlet">
             <x-icon x-if="state.checked" icon="x-check"></x-icon>
             <x-icon x-if="!state.checked && state.icon" class="icon" x-attr:icon="state.icon"></x-icon>
             <span   x-if="state.label" class="label">{{ state.label + ' ' + state.command}}</span>
             <span   x-if="state.suffix" class="suffix">{{ state.suffix }}</span>
             <x-icon x-if="state.hasChilds" class="has-childs" x-attr:icon="(state.childsDown ? 'x-keyboard-arrow-down' : 'x-keyboard-arrow-right')"></x-icon>
         </x-anchor>
-        <x-contextmenu submenu x-class:down="state.childsDown" x-class:left="state.childsLeft" x-if="state.hasChilds" x-show="state.expanded">
+        <x-contextmenu x-if="state.hasChilds" x-show="state.expanded" submenu x-class:down="state.childsDown" x-class:left="state.childsLeft" x-class:inline="state.childsInline">
             <slot x-on:slotchange="refresh"></slot>
         </x-contextmenu>
+        
     `,
     controller({ state, host }) {
         return {
@@ -113,9 +127,9 @@ export default {
                     if (host.classList.contains("inline") || horizontal) {
                         state.expanded = !state.expanded;
                         this.refresh();
-                        event?.preventDefault();
-                        event?.stopPropagation();
                     }
+                    event?.preventDefault();
+                    event?.stopPropagation();
                 });
                 this.refresh();
             },
@@ -132,6 +146,8 @@ export default {
                 state.hasChilds = (host.firstElementChild != null);
                 if (state.hasChilds) {
                     let rect = host.getBoundingClientRect();
+                    // childsInline
+                    state.childsInline = host.classList.contains("inline");
                     // childsDown
                     const horizontal = host.parentNode?.parentNode?.host?.classList.contains("horizontal");
                     if (horizontal) {

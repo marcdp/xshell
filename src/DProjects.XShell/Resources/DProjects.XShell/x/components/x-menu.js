@@ -13,7 +13,6 @@ export default {
         :host(.horizontal) {display:flex; align-items:center; }
         :host(.horizontal) nav {display:flex; align-items:center;}
         :host(.horizontal) nav > x-menuitem {margin-right: 1em;}
-
         :host(x-menu) x-menuitem[label="-"] {}
     `,
     template: `
@@ -28,6 +27,8 @@ export default {
                 x-attr:selected="menuitem.selected" 
                 x-attr:class="menuitem.class"
                 x-attr:tooltip="menuitem.tooltip" 
+                x-attr:open="menuitem.open"
+                x-attr:outlet="menuitem.outlet"
                 >                
             </x-menuitem>
         </nav>        
