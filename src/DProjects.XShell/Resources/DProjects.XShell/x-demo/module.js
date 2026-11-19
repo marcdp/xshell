@@ -4,7 +4,7 @@ export default class {
     constructor({ moduleConfig }) {
         this.id = moduleConfig.id;
         this.label = moduleConfig.label;
-        this.menuSource = moduleConfig.menus.navigation;
+        this.menuSource = moduleConfig.menus.navigation.source;
         this.pageCount = 0;
         this.files = moduleConfig.files || [];
         this.assetsPath = moduleConfig.assets?.path || "";

@@ -1,7 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import DiagnosticsPage from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell-diagnostics/pages/index.js";
 import TasksPage from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell-diagnostics/pages/tasks.js";
 import TaskDetailPage from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell-diagnostics/pages/tasks-detail.js";
 import ListView from "../../src/DProjects.XShell/Resources/DProjects.XShell/x/components/x-listview.js";
@@ -116,16 +115,6 @@ test("Tasks activates the selected row in the stack and retains its live filtere
     assert.equal(list._state.items[0].status, "finished");
     await list.onCommand("clear");
     assert.equal(list._state.total, 0);
-});
-
-test("Diagnostics displays the Tasks tab and opens task details through the stack", async () => {
-    const state = structuredClone(DiagnosticsPage.state);
-    const tasksItem = { href: listPath };
-    const areas = {
-        getArea: () => ({ menus: { navigation: [{ children: [tasksItem, { href: detailPath }] }] } })
-    };
-    await DiagnosticsPage.controller({ state, areas, preferences: { get: async () => 0 } }).load();
-    assert.deepEqual(state.menuitems, [tasksItem]);
 });
 
 test("Task details reports missing and unknown query IDs", async t => {

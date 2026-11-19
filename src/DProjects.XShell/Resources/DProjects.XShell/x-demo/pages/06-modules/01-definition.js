@@ -38,7 +38,7 @@ export default {
                 }
             },
             "menus": {
-                "navigation": "/pages"
+                "navigation": { "source": "/pages" }
             },
             "routes": {
                 "/hello/{name}": "/pages/02-pages/03-parameters.js"

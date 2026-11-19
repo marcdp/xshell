@@ -1,10 +1,11 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
+import DiagnosticsPage from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell-diagnostics/pages/index.js";
 import BusPage from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell-diagnostics/pages/bus.js";
 import ModulesPage from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell-diagnostics/pages/modules.js";
 import ServicesPage from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell-diagnostics/pages/services.js";
-import InspectorPage from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell-diagnostics/pages/details/service-inspector.js";
+import InspectorPage from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell-diagnostics/pages/detail/service-inspector.js";
 import LoaderPage from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell-diagnostics/pages/loader.js";
 import ContractsPage from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell-diagnostics/pages/contracts.js";
 import NavigationPage from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell-diagnostics/pages/navigation.js";
@@ -21,6 +22,16 @@ function createEvents(getController) {
         }
     };
 }
+
+test("Diagnostics console derives its tabs from the effective navigation menu items", async () => {
+    const state = structuredClone(DiagnosticsPage.state);
+    const tasks = { label: "Tasks", href: "/_assets/xshell-diagnostics/pages/tasks.js" };
+    const area = { menus: { navigation: { name: "navigation", label: "Navigation", description: "", icon: null,
+        items: [{ children: [tasks, { label: "Detail" }] }] } } };
+    const areas = { getArea: () => area };
+    await DiagnosticsPage.controller({ state, areas, preferences: { get: async () => 0 } }).load();
+    assert.deepEqual(state.menuitems, [tasks]);
+});
 
 test("Modules diagnostics filters on the canonical configured assets path", () => {
     const state = { id: "", version: "", label: "", assetPath: "/_assets/orders", configUrl: "", modules: [] };
@@ -77,8 +88,8 @@ test("Services diagnostics re-reads the public registry when a service is create
 });
 
 test("Double-clicking a service opens and closes a stacked Inspector with the exact service ID", async t => {
-    const href = "page:xshell-diagnostics:/pages/details/service-inspector.js";
-    const inspectorPath = "/_assets/xshell-diagnostics/pages/details/service-inspector.js";
+    const href = "page:xshell-diagnostics:/pages/detail/service-inspector.js";
+    const inspectorPath = "/_assets/xshell-diagnostics/pages/detail/service-inspector.js";
     const page = { src: "/_assets/xshell-diagnostics/pages/services.js" };
     const state = { ...ServicesPage.state, id: "navigation" };
     const serviceId = "navigation /?#&+%=ñ";
@@ -162,7 +173,7 @@ function createInspector(t, query = "", { resolutionError, instance = { mode: "p
         t.after(() => { delete globalThis.document; });
     }
     const bus = new EventTarget();
-    const page = new Page({ src: "https://example.test/pages/details/service-inspector.js" + query, bus });
+    const page = new Page({ src: "https://example.test/pages/detail/service-inspector.js" + query, bus });
     const state = createStateEngine(InspectorPage.state).create({ stateChange() {}, invalidate() {} });
     const registry = [
         { id: "navigation", contractId: "navigation", state: "registered" },
@@ -306,7 +317,7 @@ test("Loader diagnostics re-reads snapshots after events and preserves clear", (
 
 test("Navigation diagnostics includes the Routes tab and uses route inspection for all tester outcomes", () => {
     const template = NavigationPage.template;
-    assert.deepEqual(Array.from(template.matchAll(/<x-tab label="([^"]+)"/g), match => match[1]), ["Areas", "Menus", "Routes", "Pages"]);
+    assert.deepEqual(Array.from(template.matchAll(/<x-tab label="([^"]+)"/g), match => match[1]), ["Areas", "Menus", "Live pages", "Routes"]);
     const routesTab = template.match(/<x-tab label="Routes">([\s\S]*?)<\/x-tab>/)[1];
     assert.match(routesTab, /x-model="state.test_route"/);
     assert.match(routesTab, /<x-button label="Resolve" command="resolveRoute"/);
@@ -345,10 +356,12 @@ test("Navigation diagnostics includes the Routes tab and uses route inspection f
     assert.deepEqual(paths, ["/shop/products/123?sort=name#details", "/shop/missing", "invalid"]);
 });
 
-test("Navigation diagnostics lists composed routes in order and refreshes its search filters", (t) => {
+test("Navigation diagnostics lists menu definitions and composed routes and refreshes its search filters", (t) => {
     const state = Object.assign(new EventTarget(), structuredClone(NavigationPage.state));
+    const menu = { name: "navigation", label: "Shop", description: "Find products.", icon: "x-shop",
+        items: [{ label: "Catalog", children: [{ label: "Featured", href: "/pages/featured.js" }] }] };
     const definitions = [
-        { id: "shop", prefix: "/shop", menus: {}, routes: [
+        { id: "shop", prefix: "/shop", menus: { navigation: menu }, routes: [
             { path: "/products/{id}/{variant}", href: "/pages/detail.js", module: "products" },
             { path: "/products/featured", href: "/pages/featured.js", module: "marketing" },
             { path: "/", href: "/pages/shop.js", module: "products" }
@@ -367,6 +380,7 @@ test("Navigation diagnostics lists composed routes in order and refreshes its se
     });
     controller.load();
 
+    assert.deepEqual(state.menus, [{ ...menu, id: "shop/navigation" }]);
     assert.deepEqual(state.routes, [
         { areaId: "shop", path: "/shop/products/{id}/{variant}", href: "/pages/detail.js", module: "products", parameters: "id, variant" },
         { areaId: "shop", path: "/shop/products/featured", href: "/pages/featured.js", module: "marketing", parameters: "" },

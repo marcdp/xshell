@@ -444,36 +444,6 @@ test("configuration path expressions normalize regardless of their owning proper
     assert.equal(graph.rootNode.config.modules.app.routes["/home"], "/_assets/app/1.0.0.dev/pages/index.js");
 });
 
-test("menu configuration follows generic value-driven path semantics", async () => {
-    const root = { modules: { x: definition("x", { menus: {
-        navigation: "/pages/navigation",
-        tools: "/pages/tools",
-        arbitraryMenu123: "/pages/custom",
-        registered: "customer-pages",
-        reports: [{
-            label: "Reports", path: "/reports", href: "/pages/report.js", tooltip: "/literal-tooltip",
-            children: [{ label: "Detail", path: "/reports/detail", href: "./pages/detail.js", class: "/literal-class" }]
-        }]
-    }, params: { metadata: { path: "/metadata" }, sample: { href: "/sample", url: "ordinary-url" } } }) } };
-    const graph = await discover(root);
-    const module = plain(graph.rootNode.config.modules.x);
-
-    assert.equal(module.menus.navigation, "/_assets/x/1.0.0.dev/pages/navigation");
-    assert.equal(module.menus.tools, "/_assets/x/1.0.0.dev/pages/tools");
-    assert.equal(module.menus.arbitraryMenu123, "/_assets/x/1.0.0.dev/pages/custom");
-    assert.equal(module.menus.registered, "customer-pages");
-    assert.equal(module.menus.reports[0].path, "/_assets/x/1.0.0.dev/reports");
-    assert.equal(module.menus.reports[0].href, "/_assets/x/1.0.0.dev/pages/report.js");
-    assert.equal(module.menus.reports[0].tooltip, "/_assets/x/1.0.0.dev/literal-tooltip");
-    assert.equal(module.menus.reports[0].children[0].path, "/_assets/x/1.0.0.dev/reports/detail");
-    assert.equal(module.menus.reports[0].children[0].href, "/_assets/x/1.0.0.dev/pages/detail.js");
-    assert.equal(module.menus.reports[0].children[0].class, "/_assets/x/1.0.0.dev/literal-class");
-    assert.deepEqual(module.params, {
-        metadata: { path: "/_assets/x/1.0.0.dev/metadata" },
-        sample: { href: "/_assets/x/1.0.0.dev/sample", url: "ordinary-url" }
-    });
-});
-
 test("configuration values normalize generically across resolver, service, UI, and Area structures", async () => {
     const root = {
         modules: { x: definition("x") },

@@ -105,7 +105,8 @@ that initialized singleton, and initializes Navigation afterward.
 
 ## Menus, routes, Areas, and services
 
-Module menu and route declarations are reusable contributions. Areas select and compose participating module ids; Area membership is not a module
+Module menu and route declarations are reusable contributions. Each named [menu definition](../50-specifications/module.md#menus-and-routes)
+can supply display metadata, root items, or an Area menu source. Areas select and compose participating module ids; Area membership is not a module
 dependency and does not create another module instance. Routes map Area-relative friendly paths to normalized canonical Page Paths. Menus are
 navigation data, not module references.
 

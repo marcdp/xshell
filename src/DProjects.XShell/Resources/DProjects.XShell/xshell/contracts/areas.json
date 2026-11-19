@@ -1,6 +1,24 @@
 {
   "label": "Areas",
   "description": "Manages application navigation areas, their menus and routes, and global menu definitions.",
+  "types": {
+    "menuDefinition": {
+      "type": "any",
+      "description": "A read-only effective menu definition, or null when the requested menu is unknown.",
+      "schema": {
+        "type": ["object", "null"],
+        "properties": {
+          "name": { "type": "string" },
+          "label": { "type": "string" },
+          "description": { "type": "string" },
+          "icon": { "type": ["string", "null"] },
+          "items": { "type": "array", "description": "Ordered, normalized root menu items. Nested items are in children." }
+        },
+        "required": ["name", "label", "description", "icon", "items"],
+        "additionalProperties": false
+      }
+    }
+  },
   "properties": {},
   "events": {
     "xshell:area:change": {
@@ -23,10 +41,17 @@
     "resolvePath": { "description": "Finds a menu item by its public path across all areas, or returns null.", "parameters": [{ "name": "path", "type": "string", "required": true }], "returns": { "type": "any" } },
     "resolveHref": { "description": "Finds the menu item for an href in the specified area or an area inferred from the target/current context.", "parameters": [{ "name": "href", "type": "string", "required": true }, { "name": "areaId", "type": "any", "required": false, "default": null, "description": "Optional area ID; null uses context-based resolution." }], "returns": { "type": "any" } },
     "getModuleId": { "description": "Extracts the module ID from a URL containing the configured module-assets base path, or returns null.", "parameters": [{ "name": "href", "type": "string", "required": true }], "returns": { "type": "any" } },
-    "getMenus": { "description": "Returns all effective menu arrays for an area, or an empty array.", "parameters": [{ "name": "areaId", "type": "any", "required": false, "default": null }], "returns": { "type": "array" } },
-    "getMenu": { "description": "Returns the named effective menu for an area, or an empty array.", "parameters": [{ "name": "name", "type": "string", "required": true }, { "name": "areaId", "type": "any", "required": false, "default": null }], "returns": { "type": "array" } },
+    "getMenus": {
+      "description": "Returns all effective menu definitions for an area, or an empty array.",
+      "parameters": [{ "name": "areaId", "type": "any", "required": false, "default": null }],
+      "returns": {
+        "type": "array",
+        "schema": { "type": "array", "items": { "type": "object", "description": "Read-only menuDefinition object with name, label, description, icon and items." } }
+      }
+    },
+    "getMenu": { "description": "Returns the named effective menu definition for an area, or null.", "parameters": [{ "name": "name", "type": "string", "required": true }, { "name": "areaId", "type": "any", "required": false, "default": null }], "returns": { "ref": "menuDefinition" } },
     "getMenuitemBreadcrumb": { "description": "Returns the ordered menu-item breadcrumb for an href in an area, or null.", "parameters": [{ "name": "href", "type": "string", "required": true }, { "name": "areaId", "type": "any", "required": false, "default": null }], "returns": { "type": "any" } },
     "registerSource": { "description": "Registers a dynamic menu source with resolve() and optional dependsOn events; installs a refresh() method on the source.", "parameters": [{ "name": "name", "type": "string", "required": true }, { "name": "source", "type": "object", "required": true, "schema": { "type": "object", "properties": { "resolve": {}, "dependsOn": { "type": "array", "items": { "type": "string" } } }, "required": ["resolve"] } }] },
-    "getGlobalMenu": { "description": "Returns the named global menu or null.", "parameters": [{ "name": "name", "type": "string", "required": true }], "returns": { "type": "any" } }
+    "getGlobalMenu": { "description": "Returns the named effective global menu definition, or null.", "parameters": [{ "name": "name", "type": "string", "required": true }], "returns": { "ref": "menuDefinition" } }
   }
 }

@@ -4,14 +4,24 @@ import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import test from 'node:test';
 import Areas from '../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/areas.js';
+import JsonValidator from '../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/json-validator.js';
+import componentSchema from '../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/schemas/component.schema.json' with { type: 'json' };
+import contractSchema from '../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/schemas/contract.schema.json' with { type: 'json' };
 
 const root = fileURLToPath(new URL('../../src/DProjects.XShell/Resources/DProjects.XShell/x-demo/', import.meta.url));
 const config = JSON.parse(readFileSync(path.join(root, 'manifest.jsonc'), 'utf8').replace(/^\/\/[^\n]*\n/, ''));
 
+function assertValidComponent(implementation) {
+    // Validate the complete definition with its inline contract.
+    const definition = { ...implementation, controller: {} };
+    const result = new JsonValidator().validate(definition, componentSchema, { './contract.schema.json': contractSchema });
+    assert.equal(result.valid, true, JSON.stringify(result.errors));
+}
+
 test('x-demo is a separate root with resolvable module references', () => {
     assert.deepEqual(Object.keys(config.modules).filter(id => !config.modules[id].configUrl), ['x-demo']);
     assert.equal(config.xshell.services.areas.options.default, 'cookbook');
-    assert.deepEqual(config.xshell.services.areas.options.definitions.cookbook.modules, ['x-demo', 'x-identity']);
+    assert.deepEqual(config.xshell.services.areas.options.definitions.cookbook.modules, ['x-demo']);
     for (const [id, module] of Object.entries(config.modules)) {
         if (id === 'x-demo') continue;
         assert.match(module.configUrl, /^url:\.\.\//);
@@ -26,9 +36,9 @@ const pageFiles = directory => readdirSync(directory, { withFileTypes: true }).f
 });
 
 test('cookbook navigation derives ordered Pages from the file inventory', () => {
-    assert.equal(config.modules['x-demo'].menus.navigation, '/pages');
+    assert.deepEqual(config.modules['x-demo'].menus.navigation, { source: '/pages' });
     const files = pageFiles(path.join(root, 'pages'));
-    const module = { id: 'x-demo', config: { menus: { navigation: '/_assets/x-demo/pages' } } };
+    const module = { id: 'x-demo', config: { menus: { navigation: { source: '/_assets/x-demo/pages' } } } };
     const areas = new Areas({
         config: {
             xshell: { assets: { basePath: '/_assets' } },
@@ -37,7 +47,8 @@ test('cookbook navigation derives ordered Pages from the file inventory', () => 
         bus: { addEventListener() {} }
     }, { default: 'cookbook', global: [], definitions: { cookbook: { prefix: '/cookbook', modules: ['x-demo'] } } });
     areas.init({ modules: { getModuleById() { return module; } } });
-    const menu = areas.getMenu('navigation');
+    const { name, items: menu } = areas.getMenu('navigation');
+    assert.equal(name, 'navigation');
     assert.equal(areas.getArea('cookbook').home, '/cookbook/');
     assert.deepEqual(menu[0].children.map(item => item.label),
         ['Components', 'Pages', 'Navigation', 'Dialogs', 'Filesystem', 'Stores', 'Modules', 'Templates', 'Ai', 'Advanced']);
@@ -79,14 +90,10 @@ test('cookbook Page links resolve after renaming', () => {
 });
 
 test('the counter keeps its public contract separate from private state', async () => {
-    const { contract, default: implementation } = await import(new URL(
+    const { default: implementation } = await import(new URL(
         '../../src/DProjects.XShell/Resources/DProjects.XShell/x-demo/components/x-demo-counter.js', import.meta.url));
-    const { default: validateContract } = await import(new URL(
-        '../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/validation/component.contract.js', import.meta.url));
-    const { default: validateComponent } = await import(new URL(
-        '../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/validation/component.js', import.meta.url));
-    await validateContract('x-demo-counter', contract);
-    await validateComponent('x-demo-counter', implementation);
+    assertValidComponent(implementation);
+    const { contract } = implementation;
     assert.deepEqual(Object.keys(contract.properties), ['label']);
     assert.deepEqual(Object.keys(contract.methods), ['reset']);
     assert.deepEqual(Object.keys(contract.slots), ['hint']);
@@ -107,7 +114,7 @@ test('the cookbook module controller summarizes its effective Page inventory', a
     const { default: ModuleController } = await import(new URL(
         '../../src/DProjects.XShell/Resources/DProjects.XShell/x-demo/module.js', import.meta.url));
     const controller = new ModuleController({ moduleConfig: {
-        id: 'x-demo', label: 'XShell Cookbook', menus: { navigation: '/_assets/x-demo/pages' },
+        id: 'x-demo', label: 'XShell Cookbook', menus: { navigation: { source: '/_assets/x-demo/pages' } },
         assets: { path: '/_assets/x-demo' }, files: [
             { path: '/_assets/x-demo/pages/index.js' },
             { path: '/_assets/x-demo/pages/01-components/01-buttons.js' },
@@ -176,14 +183,9 @@ test('resolver example inspects without loading and reports a concrete dataset',
 });
 
 test('component lifecycle probe reports supported hooks in order', async () => {
-    const { contract, default: implementation } = await import(new URL(
+    const { default: implementation } = await import(new URL(
         '../../src/DProjects.XShell/Resources/DProjects.XShell/x-demo/components/x-demo-lifecycle.js', import.meta.url));
-    const { default: validateContract } = await import(new URL(
-        '../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/validation/component.contract.js', import.meta.url));
-    const { default: validateComponent } = await import(new URL(
-        '../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/validation/component.js', import.meta.url));
-    await validateContract('x-demo-lifecycle', contract);
-    await validateComponent('x-demo-lifecycle', implementation);
+    assertValidComponent(implementation);
     const stages = [];
     const controller = implementation.controller({ bus: {
         emit(name, detail) { assert.equal(name, 'x-demo:component-lifecycle'); stages.push(detail.stage); }

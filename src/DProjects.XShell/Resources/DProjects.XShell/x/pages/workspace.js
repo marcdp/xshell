@@ -45,7 +45,7 @@ export default {
             <x-splitter></x-splitter>
 
             <div class="page-container">
-                <h4>{{state.title}}</h4>
+                <h4 x-if="state.showTitle">{{state.title}}</h4>
                 <x-page outlet="content" x-attr:src="state.src" x-on:load="refresh" x-once></x-page>
             </div>
         </div>
@@ -53,7 +53,7 @@ export default {
     `,
 
     state: {
-        menu: null,
+        menu: [],
         title: null,
         src: null
     },
@@ -62,30 +62,29 @@ export default {
 
         return {
             load() {
-                // load
-                state.menu = areas.getGlobalMenu(state.menuName);
-                //page.label = state.menu.label
-                //page.description = state.menu.description
-                // load first menu item
+                // Use the named menu for the outer Page metadata and sidebar items.
+                const menu = areas.getGlobalMenu(state.menuName);
+                state.menu = menu?.items || [];
+                if (!menu) return;
+                page.label = menu.label;
+                page.description = menu.description;
+                page.icon = menu.icon;
+
+                // Keep a query-supplied source or open the first item with a Page target.
                 if (!state.src) {
-                    const findFirstMenuItem = (menu) => {
-                        for (const item of menu) {
-                            if (item.href) return item;
-                            if (item.children) {
-                                const found = findFirstMenuItem(item.children);
-                                if (found) return found;
-                            }
-                        }
-                        return null;
-                    };
-                    const firstMenuItem = findFirstMenuItem(state.menu);
-                    if (firstMenuItem) {
-                        state.src = firstMenuItem.href || firstMenuItem.path;
-                    }
+                    state.src = this.findFirstHref(state.menu);
                 }
             },
+            findFirstHref(items) {
+                // Walk each branch before moving to the next sibling.
+                for (const item of items) {
+                    const href = item.href || this.findFirstHref(item.children || []);
+                    if (href) return href;
+                }
+                return null;
+            },
             refresh( {event } ) {
-                // set src
+                // Reflect the embedded Page source and update its heading.
                 state.src = event.detail.page.src;
                 state.title = event.detail.page.label;
             }

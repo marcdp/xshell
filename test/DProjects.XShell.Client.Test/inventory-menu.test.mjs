@@ -11,7 +11,7 @@ test(`inventory menu normalizes root ${rootIndex} and nested Page destinations`,
         "/_assets/x-demo/pages/01-guides/01-start.js",
         "/_assets/x-demo/pages/01-guides/02-readme.md"
     ];
-    const module = { id: "x-demo", config: { menus: { navigation: "/_assets/x-demo/pages" } } };
+    const module = { id: "x-demo", config: { menus: { navigation: { label: "Browse", source: "/_assets/x-demo/pages" } } } };
     const config = {
         xshell: { assets: { basePath: "/_assets" } },
         modules: { "x-demo": { label: "Demo", files: paths.map(path => ({ path })) } }
@@ -20,7 +20,13 @@ test(`inventory menu normalizes root ${rootIndex} and nested Page destinations`,
         default: "demo", global: [], definitions: { demo: { prefix: "/demo", modules: ["x-demo"] } }
     });
     areas.init({ modules: { getModuleById() { return module; } } });
-    const root = areas.getMenu("navigation")[0];
+    const menu = areas.getMenu("navigation");
+    const [root] = menu.items;
+    assert.equal(menu.label, "Browse");
+    assert.equal(root.label, "Demo");
+    assert.equal(areas.getArea("demo").home, "/demo/");
+    assert.equal(root.module, "x-demo");
+    assert.equal(root.path, "/demo/");
     assert.equal(root.href, `/demo/_assets/x-demo/pages/${runtimeIndex}`);
     assert.equal(root.children[0].href, "/demo/_assets/x-demo/pages/01-guides/index.js");
     assert.equal(root.children[0].children[0].href, "/demo/_assets/x-demo/pages/01-guides/01-start.js");

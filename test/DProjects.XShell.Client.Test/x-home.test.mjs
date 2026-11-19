@@ -3,7 +3,6 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 import home from "../../src/DProjects.XShell/Resources/DProjects.XShell/x-home/components/x-home.js";
 import page from "../../src/DProjects.XShell/Resources/DProjects.XShell/x-home/pages/index.js";
-import demo from "../../src/DProjects.XShell/Resources/DProjects.XShell/x-demo/pages/03-navigation/07-home.js";
 import componentSchema from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/schemas/component.schema.json" with { type: "json" };
 import pageSchema from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/schemas/page.schema.json" with { type: "json" };
 import contractSchema from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/schemas/contract.schema.json" with { type: "json" };
@@ -19,7 +18,7 @@ const homeAssets = "/_assets/x-home/0.9.0.hash";
 const readManifest = module => JSON.parse(readFileSync(new URL(`../../src/DProjects.XShell/Resources/DProjects.XShell/${module}/manifest.jsonc`, import.meta.url), "utf8")
     .replace(/^\s*\/\/[^\r\n]*/gm, ""));
 const manifest = readManifest("x-home").modules["x-home"];
-const homeMenu = manifest.menus.navigation.map(item => ({...item, href: homeAssets + item.href}));
+const homeMenu = manifest.menus.navigation.items.map(item => ({...item, href: homeAssets + item.href}));
 
 function setup({ saved, delayedRead } = {}) {
     // Exercise composition, route selection and scoped event dispatch with in-memory Preferences.
@@ -44,7 +43,7 @@ function setup({ saved, delayedRead } = {}) {
         ],
         "x-home": homeMenu
     };
-    areas.init({modules: {getModuleById: id => ({id, config: {menus: {navigation: menus[id]}}})}});
+    areas.init({modules: {getModuleById: id => ({id, config: {menus: {navigation: {items: menus[id]}}}})}});
     const navigation = new Navigation({areas, bus, config, resolver: {
         resolve: resource => resource === "page:x-home:/pages/index.js" ? {path: homeAssets + "/pages/index.js"} : null
     }}, {mode: "hash"}, {container: {}});
@@ -82,9 +81,9 @@ function setup({ saved, delayedRead } = {}) {
 
 const toggle = (controller, favorite) => controller.toggleFavorite({event: {currentTarget: {dataset: {favorite}}}});
 
-test("Home module, Component, Page and cookbook demo use the existing schemas and composition", () => {
+test("Home module, Component, Page and cookbook composition use the existing schemas", () => {
     const effective = {...manifest, assets: {path: homeAssets, url: "https://example.test/x-home/"}, files: [],
-        configUrl: "https://example.test/x-home/manifest.json", menus: {navigation: homeMenu}};
+        configUrl: "https://example.test/x-home/manifest.json", menus: {navigation: {items: homeMenu}}};
     const check = (value, schema) => {
         const definition = Object.fromEntries(Object.entries(value).map(([name, item]) => [name, typeof item === "function" ? {} : item]));
         const result = new JsonValidator().validate(definition, schema, {"./contract.schema.json": contractSchema});
@@ -93,7 +92,6 @@ test("Home module, Component, Page and cookbook demo use the existing schemas an
     check(effective, moduleSchema);
     check(home, componentSchema);
     check(page, pageSchema);
-    check(demo, pageSchema);
     assert.equal(manifest.dependencies.x, "module:x:latest");
     assert.equal(page.meta.title, "Home");
     assert.equal(page.contract.properties.areaId.query, true);

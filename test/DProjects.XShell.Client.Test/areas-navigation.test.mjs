@@ -43,7 +43,7 @@ test("Areas preserve tooltip and embedded across effective menu projections", ()
         children: [{ label: "Global child", href: "/_assets/menu/pages/global-child.js", tooltip: "Global child tooltip", embedded: true }]
     };
     const config = {
-        modules: { menu: { menus: { shortcuts: [globalItem] } } },
+        modules: { menu: { menus: { shortcuts: { items: [globalItem] } } } },
         xshell: { assets: { basePath: "/_assets" } }
     };
     const module = {
@@ -51,14 +51,14 @@ test("Areas preserve tooltip and embedded across effective menu projections", ()
         routes: {},
         config: {
             menus: {
-                navigation: [{
+                navigation: { items: [{
                     label: "Reports",
                     href: "/_assets/menu/pages/reports.js",
                     tooltip: "Reports tooltip",
                     embedded: true,
                     children: [{ label: "Detail", href: "/_assets/menu/pages/detail.js", tooltip: "Detail tooltip", embedded: true }]
-                }],
-                dynamic: [{ label: "Dynamic parent", childrenSource: "dynamic-children" }]
+                }] },
+                dynamic: { items: [{ label: "Dynamic parent", childrenSource: "dynamic-children" }] }
             }
         }
     };
@@ -67,17 +67,17 @@ test("Areas preserve tooltip and embedded across effective menu projections", ()
     areas.registerSource("dynamic-children", { resolve() { return dynamicItems; } });
     areas.init({ modules: { getModuleById(id) { return id === module.id ? module : null; } } });
 
-    const report = areas.getMenu("navigation", "main")[0];
+    const report = areas.getMenu("navigation", "main").items[0];
     assert.equal(report.tooltip, "Reports tooltip");
     assert.equal(report.embedded, true);
     assert.equal(report.children[0].tooltip, "Detail tooltip");
     assert.equal(report.children[0].embedded, true);
 
-    const dynamic = areas.getMenu("dynamic", "main")[0].children[0];
+    const dynamic = areas.getMenu("dynamic", "main").items[0].children[0];
     assert.equal(dynamic.tooltip, "Dynamic tooltip");
     assert.equal(dynamic.embedded, true);
 
-    const global = areas.getGlobalMenu("shortcuts")[0];
+    const global = areas.getGlobalMenu("shortcuts").items[0];
     assert.equal(global.tooltip, "Global tooltip");
     assert.equal(global.embedded, true);
     assert.equal(global.children[0].tooltip, "Global child tooltip");
@@ -96,6 +96,45 @@ function createMenuContext(modules, { global = [], moduleOrder = Object.keys(mod
     return { areas, bus, init };
 }
 
+test("named menus expose merged metadata and distinguish empty definitions from unknown names", () => {
+    // Compose the same contributions in configuration order globally and Area order locally.
+    const base = Object.freeze({ label: "Preferences", description: "Application preferences", icon: "x-settings",
+        items: Object.freeze([{ label: "Appearance", path: "appearance", href: "/_assets/base/appearance.js" }]) });
+    const addon = Object.freeze({ description: "Manage your settings", icon: null });
+    const before = structuredClone([base, addon]);
+    const { areas, init } = createMenuContext({
+        base: { menus: { preferences: base, empty: {}, about: { label: "" } } },
+        addon: { menus: { preferences: addon } }
+    }, { global: ["preferences", "empty", "about", "uncontributed"], moduleOrder: ["addon", "base"] });
+    init();
+
+    const globalMenu = areas.getGlobalMenu("preferences");
+    const areaMenu = areas.getMenu("preferences", "main");
+    const [item] = globalMenu.items;
+    assert.deepEqual(globalMenu, { name: "preferences", label: "Preferences", description: "Manage your settings", icon: null, items: [item] });
+    const { outlet, ...commonItem } = item;
+    assert.deepEqual(areaMenu, { name: "preferences", label: "Preferences", description: "Application preferences", icon: "x-settings",
+        items: [{ ...commonItem, path: "/main/appearance", href: "/main/_assets/base/appearance.js", area: "main" }] });
+    assert.equal(areaMenu.items[0].module, "base");
+    assert.equal(areas.getArea("main").menus.preferences, areaMenu);
+    assert.deepEqual(areas.getMenus("main"), [areaMenu, areas.getMenu("empty"), areas.getMenu("about")]);
+    assert.deepEqual(areas.getMenus("unknown"), []);
+    assert.equal(areas.getMenu("preferences", "unknown"), null);
+    for (const menu of [areas.getMenu("empty"), areas.getGlobalMenu("empty")]) {
+        assert.deepEqual(menu, { name: "empty", label: "empty", description: "", icon: null, items: [] });
+    }
+    assert.equal(areas.getGlobalMenu("about").label, "");
+    for (const name of ["unknown", "uncontributed", "constructor"]) {
+        assert.equal(areas.getMenu(name), null);
+        assert.equal(areas.getGlobalMenu(name), null);
+    }
+    // The exposed menus and static items are frozen without changing their input definitions.
+    for (const menu of [globalMenu, areaMenu]) {
+        assert.ok(Object.isFrozen(menu) && Object.isFrozen(menu.items) && Object.isFrozen(menu.items[0]));
+    }
+    assert.deepEqual([base, addon], before);
+});
+
 test("global menus merge raw sibling definitions in configuration order and keep the first positions", () => {
     const base = Object.freeze([
         Object.freeze({ id: "settings", label: "Settings", icon: "x-settings", href: "/_assets/base/settings.js" }),
@@ -111,9 +150,9 @@ test("global menus merge raw sibling definitions in configuration order and keep
         { id: "", label: "Empty two" },
         { id: "new", label: "Newest", href: "/_assets/addon/new.js" }
     ];
-    const { areas } = createMenuContext({ base: { menus: { shortcuts: base } }, addon: { menus: { shortcuts: override } } },
+    const { areas } = createMenuContext({ base: { menus: { shortcuts: { items: base } } }, addon: { menus: { shortcuts: { items: override } } } },
         { global: ["shortcuts"], moduleOrder: ["addon", "base"] });
-    const items = areas.getGlobalMenu("shortcuts");
+    const { items } = areas.getGlobalMenu("shortcuts");
     assert.deepEqual(items.map(item => item.label), ["Preferences", "One", "Empty one", "Actions", "Newest", "Two", "Empty two"]);
     assert.deepEqual(items.map(item => item.order), [0, 1, 2, 3, 4, 5, 6]);
     const [settings, , , actions, newest] = items;
@@ -130,17 +169,17 @@ test("global menus merge raw sibling definitions in configuration order and keep
 });
 
 test("leading items from later contributions append to the opening block in global and Area menus", () => {
-    const base = { menus: { shortcuts: [{ id: "root", label: "", children: [
+    const base = { menus: { shortcuts: { items: [{ id: "root", label: "", children: [
         { label: "Preferences" }, { label: "-", order: 100 }, { id: "about", label: "About" }
-    ] }] } };
-    const addon = { menus: { shortcuts: [{ id: "root", children: [
+    ] }] } } };
+    const addon = { menus: { shortcuts: { items: [{ id: "root", children: [
         { id: "about", icon: "x-info" }, { label: "Diagnostics console" }, { label: "Another shortcut" },
         { label: "More", order: 100.5 }, { label: "Support" }
-    ] }] } };
+    ] }] } } };
     const { areas, init } = createMenuContext({ base, addon }, { global: ["shortcuts"] });
     init();
 
-    for (const [root] of [areas.getGlobalMenu("shortcuts"), areas.getMenu("shortcuts")]) {
+    for (const { items: [root] } of [areas.getGlobalMenu("shortcuts"), areas.getMenu("shortcuts")]) {
         assert.deepEqual(root.children.map(item => [item.label, item.order]), [
             ["Preferences", 0], ["Diagnostics console", 1], ["Another shortcut", 2], ["-", 100], ["About", 101], ["More", 100.5], ["Support", 101.5]
         ]);
@@ -166,12 +205,12 @@ test("global and Area menus sort sibling blocks after merging order overrides", 
         { label: "Negative", order: -10 }, { label: "Follows negative" }
     ];
     const originals = structuredClone([base, addon]);
-    const { areas, init } = createMenuContext({ base: { menus: { preferences: base } }, addon: { menus: { preferences: addon } } },
+    const { areas, init } = createMenuContext({ base: { menus: { preferences: { items: base } } }, addon: { menus: { preferences: { items: addon } } } },
         { global: ["preferences"] });
     init();
 
     // Check inference after overrides, independent child sequences, and ties across contributions.
-    for (const items of [areas.getGlobalMenu("preferences"), areas.getMenu("preferences")]) {
+    for (const { items } of [areas.getGlobalMenu("preferences"), areas.getMenu("preferences")]) {
         assert.deepEqual(items.map(item => item.label), [
             "Negative", "Follows negative", "Alpha zero", "Follows zero", "Settings", "Zulu unordered", "Alpha fractional", "Last top-level item"
         ]);
@@ -190,17 +229,27 @@ test("global and Area menus sort sibling blocks after merging order overrides", 
 test("Area menu ordering includes inventory and named source contributions", () => {
     const root = "/_assets/docs/pages";
     const { areas, init } = createMenuContext({
-        links: { menus: { navigation: [{ label: "Link", order: 2 }], tools: [{ label: "Tool" }, { label: "Another tool" }] } },
-        docs: { label: "Docs", menus: { navigation: root }, files: ["20-alpha.md", "zulu.md", "01-beta.md"].map(path => ({ path: `${root}/${path}` })) },
-        runtime: { menus: { navigation: "runtime-links" } }
+        links: { menus: { navigation: { items: [{ label: "Link", order: 2 }] }, tools: { items: [{ label: "Tool" }, { label: "Another tool" }] } } },
+        docs: { label: "Docs", menus: { navigation: { source: root } }, files: ["20-alpha.md", "zulu.md", "01-beta.md"].map(path => ({ path: `${root}/${path}` })) },
+        runtime: { menus: { navigation: { items: [{ id: "runtime", label: "Static runtime label" }], source: "runtime-links" } } },
+        tail: { menus: { navigation: { source: "more-links" } } }
     });
-    areas.registerSource("runtime-links", { resolve: () => [{ label: "Middle", order: 1 }, { label: "First", order: -1 }, { label: "Second" }] });
+    areas.registerSource("runtime-links", { resolve: () => [
+        { id: "runtime", label: "Runtime", href: "/_assets/runtime/pages/index.js" },
+        { label: "Middle", order: 1 }, { label: "First", order: -1 }, { label: "Second" }
+    ] });
+    areas.registerSource("more-links", { resolve: () => [{ id: "runtime", icon: "x-link" }, { label: "Tail" }] });
     init();
 
-    const items = areas.getMenu("navigation");
-    assert.deepEqual(items.map(item => [item.label, item.order]), [["First", -1], ["Second", 0], ["Docs", 0], ["Middle", 1], ["Link", 2]]);
+    const menu = areas.getMenu("navigation");
+    const { items } = menu;
+    assert.equal(Object.hasOwn(menu, "source"), false);
+    assert.deepEqual(items.map(item => [item.label, item.order]), [
+        ["First", -1], ["Second", 0], ["Docs", 0], ["Runtime", 1], ["Tail", 2], ["Middle", 1], ["Link", 2]
+    ]);
+    assert.deepEqual([items[3].module, items[3].icon, items[3].href], ["runtime", "x-link", "/main/_assets/runtime/pages/index.js"]);
     assert.deepEqual(items[2].children.map(item => [item.label, item.order]), [["Beta", 0], ["Alpha", 1], ["Zulu", 2]]);
-    assert.deepEqual(areas.getMenu("tools").map(item => item.order), [0, 1]);
+    assert.deepEqual(areas.getMenu("tools").items.map(item => item.order), [0, 1]);
 });
 
 test("menu definitions merge objects and other arrays recursively before projection", () => {
@@ -218,35 +267,35 @@ test("Area menus merge descendants within each parent and resolve the winning ca
     const oldHref = "/_assets/base/pages/theme.js";
     const newHref = "/_assets/addon/pages/theme.js";
     const menus = {
-        base: { navigation: [
+        base: { navigation: { items: [
             { id: "settings", label: "Settings", icon: "x-settings", children: [
                 { id: "appearance", label: "Appearance", path: "appearance", href: oldHref, default: true,
                     children: [{ id: "contrast", label: "Contrast", icon: "contrast" }] },
                 { id: "language", label: "Language", href: "/_assets/base/pages/language.js" }
             ] },
             { id: "other", label: "Other", children: [{ id: "appearance", label: "Other appearance" }] }
-        ], shortcuts: [{ id: "settings", label: "Settings shortcut" }] },
-        addon: { navigation: [
+        ] }, shortcuts: { items: [{ id: "settings", label: "Settings shortcut" }] } },
+        addon: { navigation: { items: [
             { id: "settings", label: "Application settings", children: [
                 { id: "appearance", label: "Theme", path: "theme", href: newHref, open: "dock", children: [{ id: "contrast", label: "High contrast" }] },
                 { id: "advanced", label: "Advanced" }
             ] },
             { id: "settings", tooltip: "Application settings" }
-        ] }
+        ] } }
     };
     const originals = structuredClone(menus);
-    Object.freeze(menus.base.navigation[0].children[0].children[0]);
-    Object.freeze(menus.base.navigation[0].children);
+    Object.freeze(menus.base.navigation.items[0].children[0].children[0]);
+    Object.freeze(menus.base.navigation.items[0].children);
     const { areas, init } = createMenuContext({ addon: { menus: menus.addon }, base: { menus: menus.base } }, { moduleOrder: ["base", "addon"] });
     init();
-    const [settings, other] = areas.getMenu("navigation");
+    const [settings, other] = areas.getMenu("navigation").items;
     assert.deepEqual([settings.label, settings.icon, settings.tooltip], ["Application settings", "x-settings", "Application settings"]);
     assert.deepEqual(settings.children.map(item => item.label), ["Theme", "Language", "Advanced"]);
     const [theme, language] = settings.children;
     assert.equal(theme.children[0].label, "High contrast");
     assert.equal(theme.children[0].icon, "contrast");
     assert.equal(other.children[0].label, "Other appearance");
-    assert.equal(areas.getMenu("shortcuts")[0].label, "Settings shortcut");
+    assert.equal(areas.getMenu("shortcuts").items[0].label, "Settings shortcut");
     assert.equal(theme.open, "dock");
     assert.equal(theme.module, "addon");
     assert.equal(language.module, "base");
@@ -265,14 +314,14 @@ test("Area menus merge descendants within each parent and resolve the winning ca
 
 test("refresh merges live children into the static baseline and updates nested source registrations", () => {
     const { areas, bus, init } = createMenuContext({
-        base: { menus: { navigation: [{ id: "settings", label: "Settings", href: "/_assets/base/settings.js", childrenSource: "obsolete",
+        base: { menus: { navigation: { items: [{ id: "settings", label: "Settings", href: "/_assets/base/settings.js", childrenSource: "obsolete",
             children: [
                 { id: "theme", label: "Theme", order: 0.5, href: "/_assets/base/theme.js",
                     children: [{ id: "details", label: "Details", order: 2 }, { label: "Overview" }] },
                 { label: "Static", childrenSource: "persistent" }
-            ] }] } },
-        addon: { menus: { navigation: [{ id: "settings", childrenSource: "settings-children" }] } },
-        extra: { menus: { navigation: "named-menu" } }
+            ] }] } } },
+        addon: { menus: { navigation: { items: [{ id: "settings", childrenSource: "settings-children" }] } } },
+        extra: { menus: { navigation: { source: "named-menu" } } }
     });
     let dynamic = [
         { id: "theme", label: "Live theme", order: -2, href: "/_assets/addon/live-theme.js" },
@@ -294,7 +343,7 @@ test("refresh merges live children into the static baseline and updates nested s
     bus.addEventListener("xshell:menus:change", () => changes++);
     init();
 
-    const [settings] = areas.getMenu("navigation");
+    const [settings] = areas.getMenu("navigation").items;
     const children = settings.children;
     assert.equal(settings.module, "base");
     assert.equal(settings.icon, "x-settings");
@@ -376,16 +425,16 @@ test("menu schema permits identified partial contributions and composition requi
         assert.equal(validator.validate({ ...group, children: [{ label: "Invalid order", order }] }, schema).valid, false);
     }
 
-    const builtin = { menus: { shortcuts: [{ id: "root", label: "", icon: "x-more-vert", children: [{ label: "Preferences" }] }] } };
-    const addon = { menus: { shortcuts: [group] } };
+    const builtin = { menus: { shortcuts: { items: [{ id: "root", label: "", icon: "x-more-vert", children: [{ label: "Preferences" }] }] } } };
+    const addon = { menus: { shortcuts: { items: [group] } } };
     const { areas, init } = createMenuContext({ builtin, addon }, { global: ["shortcuts"], moduleOrder: ["addon"] });
     init();
-    const [global] = areas.getGlobalMenu("shortcuts");
+    const [global] = areas.getGlobalMenu("shortcuts").items;
     assert.equal(global.icon, "x-more-vert");
     assert.deepEqual(global.children.map(item => item.label), ["Preferences", "Diagnostics"]);
-    assert.equal(areas.getMenu("shortcuts")[0].label, "");
+    assert.equal(areas.getMenu("shortcuts").items[0].label, "");
 
-    const invalid = { menus: { shortcuts: [partial] } };
+    const invalid = { menus: { shortcuts: { items: [partial] } } };
     assert.throws(() => createMenuContext({ invalid }, { global: ["shortcuts"] }), /Global menu item 'settings'.*requires a string label/);
     assert.throws(() => createMenuContext({ invalid }).init(), /Area 'main' item 'settings'.*requires a string label/);
 });
@@ -414,12 +463,12 @@ function createAreas() {
         },
         config: {
             menus: {
-                navigation: [{
+                navigation: { items: [{
                     label: "Customers",
                     children: [{ label: "Detail", path: "/detail", href: "/_assets/customer/pages/detail.js" }]
-                }],
-                tools: [{ label: "Tool detail", path: "/tool-detail", href: "/_assets/customer/pages/tool-detail.js" }],
-                canonical: [{ label: "Canonical only", href: "/_assets/customer/pages/canonical.js" }]
+                }] },
+                tools: { items: [{ label: "Tool detail", path: "/tool-detail", href: "/_assets/customer/pages/tool-detail.js" }] },
+                canonical: { items: [{ label: "Canonical only", href: "/_assets/customer/pages/canonical.js" }] }
             }
         }
     };
@@ -433,7 +482,7 @@ function createAreas() {
             "/navigation": "/_assets/x-demo/pages/route-navigation.js",
             "/navigation-route": "/_assets/x-demo/pages/03-navigation/index.js"
         },
-        config: { menus: { navigation: "demo-runtime-menu-source" } }
+        config: { menus: { navigation: { source: "demo-runtime-menu-source" } } }
     };
     const shellModule = { id: "shell", config: { menus: {} } };
     const areas = new Areas({ config, bus }, options);

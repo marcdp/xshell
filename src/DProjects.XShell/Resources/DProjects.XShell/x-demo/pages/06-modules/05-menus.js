@@ -14,7 +14,7 @@ export default {
     "modules": {
         "x-demo": {
             "menus": {
-                "navigation": "/pages"
+                "navigation": { "source": "/pages" }
             }
         }
     }
@@ -75,10 +75,10 @@ export default {
             load() {
                 const definition = config.modules["x-demo"];
                 const area = areas.getCurrentArea();
-                const root = areas.getMenu("navigation", area.id)[0];
+                const root = areas.getMenu("navigation", area.id)?.items[0];
                 const categories = root?.children || [];
 
-                state.source = definition.menus.navigation;
+                state.source = definition.menus.navigation.source;
                 state.areaId = area.id;
                 state.areaModules = area.modules.join(", ");
                 state.routeTarget =

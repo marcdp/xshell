@@ -9,7 +9,7 @@ import { pathToFileURL } from "node:url";
 import splitter from "../../src/DProjects.XShell/Resources/DProjects.XShell/x/components/x-splitter.js";
 import filesystem from "../../src/DProjects.XShell/Resources/DProjects.XShell/x-filesystem/components/x-filesystem.js";
 import store from "../../src/DProjects.XShell/Resources/DProjects.XShell/x-store/pages/store.js";
-import preferences from "../../src/DProjects.XShell/Resources/DProjects.XShell/x/pages/preferences.js";
+import workspace from "../../src/DProjects.XShell/Resources/DProjects.XShell/x/pages/workspace.js";
 import layout from "../../src/DProjects.XShell/Resources/DProjects.XShell/x/layouts/x-layout-main.js";
 
 // Run the real consumer CSS and splitter controller in a local document with no application services.
@@ -90,24 +90,24 @@ async function verifyLayout(splitter, layout, styles) {
         if (ui.next.style.flexBasis) throw new Error(`${name}: the growing pane's basis was overridden`);
     }
 
-    const preferencesMarkup = '<div><div class="menu-container"></div><x-splitter></x-splitter><div class="page-container"></div></div>';
-    const currentPreferences = mount("Preferences", preferencesMarkup, styles.preferences, 1800);
-    const menuSize = currentPreferences.size(currentPreferences.pane) + 100;
-    const occupied = currentPreferences.size(currentPreferences.parent) - currentPreferences.size(currentPreferences.host);
-    currentPreferences.drag(100);
-    currentPreferences.check(menuSize, occupied - menuSize);
+    const workspaceMarkup = '<div><div class="menu-container"></div><x-splitter></x-splitter><div class="page-container"></div></div>';
+    const currentWorkspace = mount("Workspace", workspaceMarkup, styles.workspace, 1800);
+    const menuSize = currentWorkspace.size(currentWorkspace.pane) + 100;
+    const occupied = currentWorkspace.size(currentWorkspace.parent) - currentWorkspace.size(currentWorkspace.host);
+    currentWorkspace.drag(100);
+    currentWorkspace.check(menuSize, occupied - menuSize);
 
-    const preferences = mount("Preferences with percentage limits", preferencesMarkup,
-        styles.preferences + ":scope > div .page-container {min-width:50%; max-width:80%}", 1800);
-    const preferencesTotal = preferences.size(preferences.parent) - preferences.size(preferences.host);
-    const pageStyle = getComputedStyle(preferences.next);
+    const limitedWorkspace = mount("Workspace with percentage limits", workspaceMarkup,
+        styles.workspace + ":scope > div .page-container {min-width:50%; max-width:80%}", 1800);
+    const workspaceTotal = limitedWorkspace.size(limitedWorkspace.parent) - limitedWorkspace.size(limitedWorkspace.host);
+    const pageStyle = getComputedStyle(limitedWorkspace.next);
     const pageInset = pageStyle.boxSizing === "border-box" ? 0 : ["paddingLeft", "paddingRight", "borderLeftWidth", "borderRightWidth"]
         .reduce((sum, name) => sum + parseFloat(pageStyle[name]), 0);
     const pageMin = 900 + pageInset, pageMax = 1440 + pageInset;
-    preferences.drag(2000);
-    preferences.check(preferencesTotal - pageMin, pageMin);
-    preferences.drag(-2000);
-    preferences.check(preferencesTotal - pageMax, pageMax);
+    limitedWorkspace.drag(2000);
+    limitedWorkspace.check(workspaceTotal - pageMin, pageMin);
+    limitedWorkspace.drag(-2000);
+    limitedWorkspace.check(workspaceTotal - pageMax, pageMax);
 
     for (const [position, arrow] of [["right", "ArrowLeft"], ["bottom", "ArrowUp"]]) {
         const ui = mount(`${position} dock`, `<div class="dock-container ${position}"><div class="docked-main"></div>
@@ -208,7 +208,7 @@ test("splitter resizes consumer panes under CSP in a Chromium browser", { skip: 
     const temp = mkdtempSync(join(tmpdir(), "xshell-splitter-"));
     try {
         const file = join(temp, "splitter.html");
-        const styles = { filesystem: filesystem.style, store: store.style, preferences: preferences.style, layout: layout.style };
+        const styles = { filesystem: filesystem.style, store: store.style, workspace: workspace.style, layout: layout.style };
         writeFileSync(file, `<!doctype html><meta charset="utf-8">
             <meta http-equiv="Content-Security-Policy" content="style-src 'self'; style-src-attr 'none'">
             <body data-result="pending"><script>

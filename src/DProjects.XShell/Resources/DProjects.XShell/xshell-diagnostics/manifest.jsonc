@@ -18,13 +18,15 @@
                 }
             },
             "menus": {
-                "navigation": "/pages",
-                "shortcuts": [
-                    {"id": "root", "children": [
-                        {"label": "-", "order": 99},
-                        {"label": "Diagnostics console", "href": "/pages/index.js", "open": "dock" }
-                    ]}
-                ]
+                "navigation": { "source": "/pages" },
+                "shortcuts": {
+                    "items": [
+                        {"id": "root", "children": [
+                            {"label": "-", "order": 99},
+                            {"label": "Diagnostics console", "href": "/pages/index.js", "open": "dock" }
+                        ]}
+                    ]
+                }
             },
             "dependencies": {
                 "x": "module:x:latest"

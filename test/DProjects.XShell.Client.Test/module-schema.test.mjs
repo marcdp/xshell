@@ -2,11 +2,13 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import ConfigSchema from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/schemas/config.schema.json" with { type: "json" };
+import ModuleSchema from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/schemas/module.schema.json" with { type: "json" };
 import { Validator } from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/vendor/json-schema/4.1.1/json-schema.js";
 import Areas from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/areas.js";
 import { compileRoute } from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/utils/route.js";
 
 const validator = new Validator(ConfigSchema, "2020-12");
+validator.addSchema(ModuleSchema, ModuleSchema.$id);
 const areasOptionsValidator = new Validator(Areas.optionsSchema, "2020-12");
 
 const areaOptions = config => config.xshell.services.areas.options;
@@ -58,20 +60,13 @@ function configuration(module) {
         modules: { test: module },
         xshell: {
             version: "1.0.0",
-            environment: "test",
             assets: { basePath: "/_assets", path: "/_assets/xshell", url: "https://example.test/xshell/" },
             services: {
                 areas: { contract: "areas", implementation: "/services/areas.js", options: { default: null, global: [], definitions: {} } },
                 navigation: { contract: "navigation", implementation: "/services/navigation.js", options: { mode: "path" } }
             },
             resolver: {},
-            ui: { layout: {}, component: {} },
-            i18n: {
-                lang: "en",
-                langs: [{ id: "en", label: "English", main: true }],
-                datetime: { options: {}, formats: {} },
-                strings: {}
-            },
+            ui: { layouts: {}, components: {} },
             configUrl: "https://example.test/xshell/manifest.json",
             serviceWorker: { mappings: [
                 { src: "https://example.test/_assets/xshell", dst: "https://example.test/xshell/", version: "1.0.0", name: "xshell",
@@ -199,26 +194,47 @@ test("effective config validates route grammar before runtime construction", asy
     await assert.doesNotReject(validateConfig("test", config));
 });
 
-test("global menus require arrays while ordinary named menu sources remain valid", async () => {
+test("global menus accept metadata and static items while Area menus can declare a source", async () => {
     const config = configuration(moduleDefinition());
     areaOptions(config).global = ["shortcuts"];
-    config.modules.test.menus = { shortcuts: "runtime-shortcuts", tools: "runtime-tools" };
-    await assert.rejects(validateConfig("test", config), /Global menu 'shortcuts' from module 'test' must be a static array/);
+    config.modules.test.menus = { shortcuts: { source: "runtime-shortcuts" }, tools: { source: "runtime-tools" } };
+    await assert.rejects(validateConfig("test", config), /Global menu 'shortcuts' from module 'test' must use static contributions/);
+    config.modules.test.menus.shortcuts.source = "/_assets/test/pages";
+    await assert.rejects(validateConfig("test", config), /Global menu 'shortcuts' from module 'test' must use static contributions/);
 
-    config.modules.test.menus.shortcuts = [{ label: "Shortcut", href: "/pages/shortcut.js" }];
+    config.modules.test.menus.shortcuts = { label: "Shortcuts" };
+    await assert.doesNotReject(validateConfig("test", config));
+    config.modules.test.menus.shortcuts.items = [{ label: "Shortcut", href: "/pages/shortcut.js" }];
     await assert.doesNotReject(validateConfig("test", config));
 
     areaOptions(config).global = [];
-    config.modules.test.menus.shortcuts = "runtime-shortcuts";
+    config.modules.test.menus.shortcuts.source = "runtime-shortcuts";
     await assert.doesNotReject(validateConfig("test", config));
+});
+
+test("module schema validates named menu definitions and rejects obsolete formats", () => {
+    const module = moduleDefinition();
+    module.menus = {
+        navigation: { label: "Navigation", description: "Find a Page.", icon: null,
+            source: "/pages", items: [{ id: "reports", label: "Reports", children: [{ label: "Detail" }] }] },
+        tools: { icon: "x-tools" },
+        empty: {}
+    };
+    assertValid(module);
+
+    for (const definition of [[], "/pages", { items: "/pages" }, { children: [] }, { id: "empty" }, { name: "empty" },
+        { description: null }, { icon: true }, { label: 1 }, { source: "" }]) {
+        module.menus.empty = definition;
+        assert.equal(validator.validate(configuration(module)).valid, false, JSON.stringify(definition));
+    }
 });
 
 test("menu schema accepts embedded and rejects the pre-V0 embeded spelling", () => {
     const module = moduleDefinition();
-    module.menus = { navigation: [{ label: "Inline report", href: "/pages/report.js", embedded: true }] };
+    module.menus = { navigation: { items: [{ label: "Inline report", href: "/pages/report.js", embedded: true }] } };
     assertValid(module);
 
-    module.menus.navigation[0] = { label: "Inline report", href: "/pages/report.js", embeded: true };
+    module.menus.navigation.items[0] = { label: "Inline report", href: "/pages/report.js", embeded: true };
     assert.equal(validator.validate(configuration(module)).valid, false);
 });
 

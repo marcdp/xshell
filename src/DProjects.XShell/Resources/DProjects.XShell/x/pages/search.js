@@ -81,14 +81,14 @@ export default {
                     // search current area
                     const currentArea = areas.getCurrentArea();
                     const menu = areas.getMenu("navigation", currentArea.id);
-                    for(let menuitem of menu) {
+                    for(let menuitem of menu?.items || []) {
                         searchRecursive(menuitem, currentArea.id);
                     }
                     // search other areas
                     for(const area of areas.getAreas()) {
                         if (area.id === currentArea.id) continue;
                         const menu = areas.getMenu("navigation", area.id);
-                        for(let menuitem of menu) {
+                        for(let menuitem of menu?.items || []) {
                             searchRecursive(menuitem, area.id);
                         }
                     }

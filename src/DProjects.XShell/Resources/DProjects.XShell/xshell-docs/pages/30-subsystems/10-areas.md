@@ -13,8 +13,11 @@ This composition fragment omits module metadata/defaults and other effective con
     "modules": {
         "reports": {
             "menus": {
-                "navigation": [{ "label": "Reports", "path": "reports", "href": "/pages/report.js", "default": true }],
-                "tools": [{ "label": "Export", "href": "/pages/export.js" }]
+                "navigation": {
+                    "label": "Reports",
+                    "items": [{ "label": "Reports", "path": "reports", "href": "/pages/report.js", "default": true }]
+                },
+                "tools": { "items": [{ "label": "Export", "href": "/pages/export.js" }] }
             }
         }
     },
@@ -48,13 +51,14 @@ prefix throws. With no configured default, the first sorted Area is used. The in
 
 ## Menus and home
 
-Areas composes each named menu slot by visiting participating modules in `area.modules` order. A module contribution can be a static array, a
-module-relative inventory path beginning with `/` (for example `"/pages"`), or a source name registered through
-`Areas.registerSource(name, source)`. For a named source, Areas calls `source.resolve()` during composition and uses the returned array as the
-module's contribution. Each effective item has its module id, Area id, label, icon, children, path, and href. `path` is the optional friendly
-navigation alias. `href` is the canonical XShell navigation target. Effective menus are separate for each Area. Areas validates module ids during
-startup against the complete effective module set. Module controllers must register sources before `Areas.init()`, which fails if a named menu
-source or `childrenSource` references an unregistered source.
+Each entry in a module's `menus` dictionary is a definition keyed by its menu name. A contribution can supply any combination of `label`,
+`description`, `icon`, static root `items`, and a `source`. Areas visits modules in `area.modules` order. Later supplied metadata overrides earlier
+values, including `icon: null`. Omitted fields preserve earlier values, and metadata-only contributions retain earlier items.
+
+For each module, Areas merges its explicit `items` and then the items from its `source`. A source beginning with `/` is a module-relative inventory
+path. Other source strings identify registered sources whose `resolve()` method returns menu items. All contributing modules' sources participate
+in order. Module controllers register runtime sources before `Areas.init()`, which fails if a menu source or `childrenSource` is unregistered.
+Each effective Area item carries its module id, Area id, label, icon, children, optional friendly `path`, and canonical `href`.
 
 Menu items can declare an optional `id`. Areas recursively merges items with the same non-empty string ID within each named menu or parent's
 `children` array. The first occurrence sets the item's position in the merged array. Later explicitly supplied properties override earlier values,
@@ -72,24 +76,22 @@ Menu items may also declare `tooltip` and `embedded`. `tooltip` supplies the nav
 `embedded` menu item causes `x-menuitem` to host its target Page inline instead of rendering a navigation anchor. This presentation behavior belongs
 specifically to `x-menu` / `x-menuitem`; it is distinct from Navigation's dialog or embedded Page lifecycle and from `xshell.ui.layout.embed`.
 
-`childrenSource` is a separate pattern. It belongs on a static menu item and adds dynamically resolved children to that item; it does not replace
-the named menu contribution:
+`childrenSource` belongs on a menu item and adds dynamically resolved children to that item. A definition's `source` contributes root items:
 
 ```jsonc
 {
-    "navigation": [
-        { "label": "Customers", "href": "/pages/customers.js", "childrenSource": "customer-pages" }
-    ],
-    "tools": "report-tools"
+    "navigation": {
+        "items": [{ "label": "Customers", "href": "/pages/customers.js", "childrenSource": "customer-pages" }]
+    },
+    "tools": { "source": "report-tools" }
 }
 ```
 
 Here `customer-pages` supplies only `Customers` children, while `report-tools` supplies the entire `tools` menu. Source names are runtime lookup
 identifiers, not URLs or resolver entries. They provide runtime data without mutating the readonly effective configuration.
-Named Area menu sources are registered during module startup, so configuration validation does not check whether they exist. Global menu slots
-listed in `xshell.services.areas.options.global` instead require static array contributions from modules; strings are invalid for those slots.
+Named Area menu sources are registered during module startup, so configuration validation does not check whether they exist.
 
-The bundled `x-demo` and `xshell-docs` modules use `"navigation": "/pages"`. Areas derives a hierarchy from each module's normalized
+The bundled `x-demo` and `xshell-docs` modules use `"navigation": { "source": "/pages" }`. Areas derives a hierarchy from each module's normalized
 `moduleConfig.files` inventory. It recognizes `.js`, `.html`, and `.md` Pages; HTML destinations become `.js`, while Markdown retains `.md`.
 An `index` Page is the directory destination. Numeric filename and directory prefixes such as `03-navigation` set order and are removed from
 labels and friendly path segments. The module label names the root menu item. This is a menu-generation convention over the generated physical
@@ -105,7 +107,14 @@ returns a target. A targetless default ends that search at its current sibling l
 Home is computed during `Areas.init()` and is not recomputed by later children refreshes.
 On a fresh load at the selected mode's empty/root URL, Navigation requires the default Area to have a home.
 
-`xshell.areas.getMenu("navigation")` selects the current Area; `getMenu("navigation", "inventory")` selects one explicitly.
+`areas.getMenu("navigation")` selects the current Area and `areas.getMenu("navigation", "inventory")` selects one explicitly.
+`areas.getMenus(areaId)` returns an array of effective definitions for that Area, defaulting to the current Area. An unknown Area yields an empty array.
+`areas.getGlobalMenu(name)` returns a global definition.
+Each definition has `name`, `label`, `description`, `icon`, and `items`. After merging, missing metadata defaults to the menu name for `label`, an
+empty string for `description`, and `null` for `icon`. Menu lookups return `null` for an unknown name. Authored empty menus have `items: []`.
+Definitions and their root arrays are frozen. Dynamic item children can still refresh through their registered source.
+Pass a definition's `items` array to renderers such as `x-menu`, for example `areas.getMenu("navigation")?.items || []`.
+
 `resolveHref(href, areaId = null)` searches all effective menus recursively in only the selected Area when `areaId` is supplied. Without an explicit
 Area, it derives the module id from the canonical `/_assets/<module-id>/...` href and searches only Areas that compose that module. Static and
 dynamic effective menus participate equally. Query parameters and fragments are ignored when comparing canonical href identity. The matching
@@ -116,8 +125,7 @@ performing translation itself.
 `Areas.registerSource(name, source)` registers a source before Areas composition. A source exposes `resolve()`, which returns menu items, and may
 declare `dependsOn`, an array of Bus event names. For `childrenSource` targets, an event refreshes their effective children and emits
 `xshell:menus:change` when content changed. Each refresh merges the latest source items into the static children. When a source override
-disappears, the static item is restored. Complete-menu sources named by a string are resolved only during `Areas.init()`; the current runtime
-does not attach them as refresh targets, so they are not live-reactive after composition.
+disappears, the static item is restored. The definition's root `source` resolves once during `Areas.init()`.
 
 ## Routes
 
@@ -160,9 +168,14 @@ See [Navigation](../10-architecture/120-navigation.md), [Configuration](../10-ar
 ## Global menus
 
 `xshell.services.areas.options.global` is the required array of menu names to compose globally from configured modules.
-Global menus merge static arrays by ID in configuration module order, using the same rules as Area menus.
-Registered string sources are handled by Area composition.
-Global items do not receive an Area prefix.
+Global menus merge metadata and static items in configuration module order. They use the same recursive item merge and ordering rules as Area
+menus. Global contributions support metadata and static `items`; root `source` is reserved for Area composition. Global targets keep their
+normalized module hrefs without an Area prefix.
+
+The `x` module's generic Workspace Page accepts a global menu name through the `menu-name` query parameter.
+It uses the definition's label, description, and icon for Page metadata and renders `items` in the sidebar. Its `src` query parameter selects the
+embedded Page and reflects its current target. Without `src`, Workspace selects the first item with an href. The `show-title` query parameter
+controls the embedded Page heading.
 
 See [Bus](20-bus.md) for source refresh events.
 

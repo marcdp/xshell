@@ -43,7 +43,7 @@ area.prefix
 area.modules</code></pre>
 
         <h2>Composed navigation menu</h2>
-        <p>The <code>areas.getMenu()</code> method returns the composed menu for an Area. Each item contains navigation information and may contain child items.</p>
+        <p>The <code>areas.getMenu()</code> method returns the composed menu definition for an Area. Its <code>items</code> array contains navigation entries, each of which may contain child items.</p>
         <x-datafields label="Navigation items" columns="1">
             <x-datafield x-for="item in state.items" x-attr:label="item.label">
                 <p>Path: <code>{{ item.path }}</code></p>
@@ -51,7 +51,7 @@ area.modules</code></pre>
             </x-datafield>
         </x-datafields>
         <pre x-pre><code>const menu = areas.getMenu("navigation", area.id);
-const items = menu[0]?.children || [];</code></pre>
+const items = menu?.items[0]?.children || [];</code></pre>
 
         <h2>Menu paths and Page resources</h2>
         <p>A menu item distinguishes the friendly navigation path from the canonical resource href used to load a Page.</p>
@@ -97,7 +97,7 @@ item.href</code></pre>
                 state.label = area?.label || "";
                 state.prefix = area?.prefix || "/";
                 state.modules = area?.modules?.join(", ") || "";
-                state.items = (menu[0]?.children || []).map(item => ({
+                state.items = (menu?.items[0]?.children || []).map(item => ({
                     label: item.label,
                     path: item.path,
                     children: item.children?.length || 0

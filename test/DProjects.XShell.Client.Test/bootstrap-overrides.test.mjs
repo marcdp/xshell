@@ -73,6 +73,43 @@ test("manifest arrays merge by ID in bootstrap precedence order", () => {
     assert.deepEqual(modules, original);
 });
 
+test("menu configuration follows generic value-driven path semantics", () => {
+    const definition = { menus: {
+        navigation: { source: "/pages/navigation" },
+        tools: { source: "/pages/tools" },
+        arbitraryMenu123: { source: "/pages/custom" },
+        registered: { source: "customer-pages" },
+        reports: { label: "Reports", icon: "/icons/reports.svg", items: [{
+            label: "Reports", path: "/reports", href: "/pages/report.js", tooltip: "/literal-tooltip",
+            children: [{ label: "Detail", path: "/reports/detail", href: "./pages/detail.js", class: "/literal-class" }]
+        }] }
+    }, params: { metadata: { path: "/metadata" }, sample: { href: "/sample", url: "ordinary-url" } } };
+    // Exercise the path normalization functions scoped to the active bootstrap.
+    const normalize = bootstrapSource.match(/^        function normalizeUrl\([\s\S]*?^        \}\r?\n        function normalizeManifest\([\s\S]*?^        \}/m)[0];
+    const module = plain(vm.runInNewContext(`${normalize}\nnormalizeManifest(definition, owner)`, {
+        URL, definition, appBaseUrl: "https://example.test/app/",
+        owner: { assetsPath: "/_assets/x/1.0.0.dev", manifestUrl: "https://example.test/modules/x/manifest.json" }
+    }));
+
+    assert.equal(module.menus.navigation.source, "/_assets/x/1.0.0.dev/pages/navigation");
+    assert.equal(module.menus.tools.source, "/_assets/x/1.0.0.dev/pages/tools");
+    assert.equal(module.menus.arbitraryMenu123.source, "/_assets/x/1.0.0.dev/pages/custom");
+    assert.equal(module.menus.registered.source, "customer-pages");
+    assert.equal(module.menus.reports.label, "Reports");
+    assert.equal(module.menus.reports.icon, "/_assets/x/1.0.0.dev/icons/reports.svg");
+    const [report] = module.menus.reports.items;
+    assert.equal(report.path, "/_assets/x/1.0.0.dev/reports");
+    assert.equal(report.href, "/_assets/x/1.0.0.dev/pages/report.js");
+    assert.equal(report.tooltip, "/_assets/x/1.0.0.dev/literal-tooltip");
+    assert.equal(report.children[0].path, "/_assets/x/1.0.0.dev/reports/detail");
+    assert.equal(report.children[0].href, "/_assets/x/1.0.0.dev/pages/detail.js");
+    assert.equal(report.children[0].class, "/_assets/x/1.0.0.dev/literal-class");
+    assert.deepEqual(module.params, {
+        metadata: { path: "/_assets/x/1.0.0.dev/metadata" },
+        sample: { href: "/_assets/x/1.0.0.dev/sample", url: "ordinary-url" }
+    });
+});
+
 function apply(config, entries) {
     metadata.splice(0, metadata.length, ...Object.entries(entries).map(([name, content]) => ({ name, content })));
     return api.fillXShellOverrides(config);

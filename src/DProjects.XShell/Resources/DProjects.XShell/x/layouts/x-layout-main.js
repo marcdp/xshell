@@ -532,15 +532,15 @@ export default {
                         //get module
                         moduleId = page.host?.getAttribute("module");
                         //show menu main and tools
-                        state.menuNavigation = areas.getMenu("navigation");
-                        state.menuTools = areas.getMenu("tools");
-                        state.menuShortcuts = areas.getGlobalMenu("shortcuts");
+                        state.menuNavigation = areas.getMenu("navigation")?.items || [];
+                        state.menuTools = areas.getMenu("tools")?.items || [];
+                        state.menuShortcuts = areas.getGlobalMenu("shortcuts")?.items || [];
                     } else {
                         // not found breadcrumb in page
                         // show menu main and tools
-                        state.menuNavigation = areas.getMenu("navigation");
-                        state.menuTools = areas.getMenu("tools");
-                        state.menuShortcuts = areas.getGlobalMenu("shortcuts");
+                        state.menuNavigation = areas.getMenu("navigation")?.items || [];
+                        state.menuTools = areas.getMenu("tools")?.items || [];
+                        state.menuShortcuts = areas.getGlobalMenu("shortcuts")?.items || [];
                         //breadcrumb
                         if (state.menuNavigation) {
                             let menuitems = findObjectsPath(state.menuNavigation, 'href', page.href);

@@ -81,14 +81,20 @@
     },    
     "menus": {
       "type": "object",
-      "additionalProperties": {
-        "oneOf": [
-          { "type": "array", "items": {"$ref": "#/$defs/menuItem"}},
-          { "type": "string", "minLength": 1, "description": "A module-relative inventory path beginning with /, or a registered runtime menu source name."}
-        ],
-        "description": "Static items, a module-relative inventory path, or a registered runtime source name."
-      },
+      "additionalProperties": {"$ref": "#/$defs/menuDefinition"},
       "description": "Named menu contributions provided by a module."
+    },
+    "menuDefinition": {
+      "type": "object",
+      "properties": {
+        "label": {"type": "string", "description": "Human-readable menu title."},
+        "description": {"type": "string", "description": "Description of the menu."},
+        "icon": {"type": ["string", "null"], "description": "Optional icon associated with the menu."},
+        "items": {"type": "array", "items": {"$ref": "#/$defs/menuItem"}, "description": "Static root menu items."},
+        "source": {"type": "string", "minLength": 1, "description": "A module-relative inventory path beginning with /, or a registered runtime menu source name."}
+      },
+      "additionalProperties": false,
+      "description": "A contribution of menu metadata, root items, and optionally a source."
     },
     "menuItem": {
       "type": "object",

@@ -2,7 +2,22 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import menuDefinition from "../../src/DProjects.XShell/Resources/DProjects.XShell/x/components/x-menu.js";
-import menuItemDefinition, { contract as menuItemContract } from "../../src/DProjects.XShell/Resources/DProjects.XShell/x/components/x-menuitem.js";
+import menuItemDefinition from "../../src/DProjects.XShell/Resources/DProjects.XShell/x/components/x-menuitem.js";
+import pageMenuDefinition from "../../src/DProjects.XShell/Resources/DProjects.XShell/x/components/x-page-menu.js";
+
+const menuItemContract = menuItemDefinition.contract;
+
+test("x-page-menu reads the effective navigation items and handles a missing menu", () => {
+    const state = {};
+    const items = [{ label: "Home", href: "/pages/index.js" }];
+    let menu = { name: "navigation", label: "Navigation", description: "", icon: null, items };
+    const controller = pageMenuDefinition.controller({ state, areas: { getMenu: () => menu } });
+    controller.refresh();
+    assert.equal(state.menu, items);
+    menu = null;
+    controller.refresh();
+    assert.deepEqual(state.menu, []);
+});
 
 test("x-menu passes canonical tooltip and embedded properties to x-menuitem", () => {
     assert.match(menuDefinition.template, /x-attr:tooltip="menuitem\.tooltip"/);

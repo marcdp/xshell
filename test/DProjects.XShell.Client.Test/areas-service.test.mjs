@@ -3,15 +3,33 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 import ConfigSchema from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/schemas/config.schema.json" with { type: "json" };
+import ContractSchema from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/schemas/contract.schema.json" with { type: "json" };
+import AreasContract from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/contracts/areas.json" with { type: "json" };
 import Areas from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/areas.js";
+import JsonValidator from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/json-validator.js";
 
 const frameworkUrl = new URL("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/", import.meta.url);
 
 test("framework manifest registers Areas declaratively with service options", async () => {
     const source = await readFile(new URL("manifest.jsonc", frameworkUrl), "utf8");
 
-    assert.match(source, /"areas"\s*:\s*\{\s*"contract"\s*:\s*"areas",\s*"implementation"\s*:\s*"\/services\/areas\.js",\s*"options"\s*:\s*\{\s*"default"\s*:\s*"main",\s*"global"\s*:\s*\["shortcuts"\],\s*"definitions"\s*:\s*\{\}/s);
+    const manifest = JSON.parse(source.replace(/^\s*\/\/[^\r\n]*/gm, ""));
+    assert.deepEqual(manifest.xshell.services.areas, {
+        contract: "areas", implementation: "/services/areas.js",
+        options: { default: "main", global: ["shortcuts", "preferences"], definitions: {} }
+    });
     assert.equal((source.match(/"areas"\s*:/g) ?? []).length, 1);
+});
+
+test("Areas declares the effective menu shape in its public contract", () => {
+    const validator = new JsonValidator();
+    const result = validator.validate(AreasContract, ContractSchema);
+    assert.equal(result.valid, true, JSON.stringify(result.errors));
+    const { methods, types } = AreasContract;
+    assert.equal(methods.getMenu.returns.ref, "menuDefinition");
+    assert.equal(methods.getGlobalMenu.returns.ref, "menuDefinition");
+    assert.equal(methods.getMenus.returns.type, "array");
+    assert.deepEqual(types.menuDefinition.schema.required, ["name", "label", "description", "icon", "items"]);
 });
 
 test("global configuration delegates Area option validation to the service implementation", () => {
@@ -40,7 +58,7 @@ test("XShell resolves Areas before Modules and composes it before Navigation", a
 test("Areas performs semantic option validation during construction", () => {
     const bus = { addEventListener() {} };
     const config = {
-        modules: { test: { menus: { shortcuts: "runtime-source" } } },
+        modules: { test: { menus: { shortcuts: { source: "runtime-source" } } } },
         xshell: { assets: { basePath: "/_assets" } }
     };
 
@@ -55,5 +73,5 @@ test("Areas performs semantic option validation during construction", () => {
     }), /Area 'main' references unknown module 'missing'/);
     assert.throws(() => new Areas({ config, bus }, {
         default: null, global: ["shortcuts"], definitions: {}
-    }), /Global menu 'shortcuts' from module 'test' must be a static array/);
+    }), /Global menu 'shortcuts' from module 'test' must use static contributions/);
 });

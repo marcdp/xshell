@@ -54,11 +54,15 @@ export default {
                 <x-listview view="details">
                     <x-listview-head>
                         <x-listview-column label="Menu" width="15em"></x-listview-column>
-                        <x-listview-column label="Menuitems"></x-listview-column>
+                        <x-listview-column label="Label"></x-listview-column>
+                        <x-listview-column label="Description"></x-listview-column>
+                        <x-listview-column label="Items"></x-listview-column>
                     </x-listview-head>
                     <x-listview-body>
-                        <x-listview-item x-for="menu in state.menus" x-attr:label="menu.id" x-attr:href="menu.path" target="_blank">
-                            <x-object x-prop:value="menu.children"></x-object>
+                        <x-listview-item x-for="menu in state.menus" x-attr:label="menu.id" x-attr:icon="menu.icon">
+                            <div>{{ menu.label }}</div>
+                            <div>{{ menu.description }}</div>
+                            <x-object x-prop:value="menu.items"></x-object>
                         </x-listview-item>
                     </x-listview-body>
                 </x-listview>
@@ -155,6 +159,7 @@ export default {
                 events.on(state, "change:query_destination", "refresh");
                 events.on(state, "change:query_module", "refresh");
                 events.on(bus, "xshell:page:load", "refresh");
+                events.on(bus, "xshell:menus:change", "refresh");
                 events.on(bus, "xshell:loader:resource:loaded", (event)=>{
                     if (event.detail.resource.startsWith("component:")) {
                         this.refresh();
@@ -195,15 +200,11 @@ export default {
                 let root = {children:[]}
                 traverse(document.body, root)
                 state.children = root.children;
-                //set menus
+                // Show each menu's metadata and effective items alongside its Area and name.
                 const menus = [];
                 for (const area of state.areas) {
-                    for( const [menuId, menuItems] of Object.entries(area.menus)) {
-                        const menu = {
-                            id: area.id + "/" + menuId,
-                            children: menuItems,
-                        }
-                        menus.push(menu);
+                    for (const menu of Object.values(area.menus)) {
+                        menus.push({ ...menu, id: area.id + "/" + menu.name });
                     }
                 }
                 state.menus = menus;

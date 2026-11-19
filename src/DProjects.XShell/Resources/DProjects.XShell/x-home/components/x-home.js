@@ -110,7 +110,7 @@ export default {
                 linksByArea = new Map();
                 favoriteLinks = new Map();
                 state.areaTiles = areas.getAreas().map(area => {
-                    const links = this.collectLinks(areas.getMenu("navigation", area.id), area);
+                    const links = this.collectLinks(areas.getMenu("navigation", area.id)?.items || [], area);
                     linksByArea.set(area.id, links);
                     for (const link of links.values()) {
                         if (link.favoriteId && !favoriteLinks.has(link.favoriteId)) favoriteLinks.set(link.favoriteId, link);

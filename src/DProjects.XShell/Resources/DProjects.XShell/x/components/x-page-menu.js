@@ -81,7 +81,7 @@ export default {
 
             refresh() {
                 //refresh
-                state.menu = areas.getMenu("navigation");                
+                state.menu = areas.getMenu("navigation")?.items || [];
             }
         }
     }

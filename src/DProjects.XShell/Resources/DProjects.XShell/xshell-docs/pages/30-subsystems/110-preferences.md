@@ -2,7 +2,8 @@
 
 Preferences is the Core browser-local key/value service for non-secret application settings. Its implementation is
 `xshell/services/preferences.js`, its contract is `xshell/contracts/preferences.json`, and XShell registers it as `xshell.services.preferences`.
-The `x` module provides `page:x:/pages/preferences.js` for inspecting and managing records.
+The `x` module opens the global Preferences menu through `page:x:/pages/workspace.js?menu-name=preferences`. This Workspace hosts
+settings Pages such as Appearance and Internationalization.
 The X theme service and main layout use Preferences for the selected theme, menu state, dock source and position, and dock sizes. Their existing
 `xshell.theme`, `xshell.toggled`, `xshell.dockSrc`, `xshell.dockPosition`, and `xshell.dockSize.*` keys are stored as strings. These settings are
 restored asynchronously; changes made while a read is pending take precedence over the saved value.
@@ -82,8 +83,7 @@ as arrays, plain objects, `Map`, `Set`, `Date`, `ArrayBuffer`, typed arrays, `Bl
 including functions and DOM elements, reject the write and leave an existing record unchanged.
 
 Filesystem handles remain subject to browser support and permission rules. Preferences stores and restores a handle; it does not request,
-persist, or manage access permission. The management Page edits strings and values with safe JSON round-trips. Other native values are summarized
-and remain read-only while label and description changes preserve the original value.
+persist, or manage access permission.
 
 ## Scope and durability
 

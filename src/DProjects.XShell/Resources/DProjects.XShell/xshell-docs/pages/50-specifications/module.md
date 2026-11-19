@@ -36,7 +36,7 @@ Do not duplicate identity in `name`, `id`, or `moduleId`; the `modules` property
                 "x": "module:x:latest"
             },
             "menus": {
-                "navigation": "/pages"
+                "navigation": { "label": "Orders", "source": "/pages" }
             },
             "routes": {
                 "/orders/{orderId}": "/pages/order.js"
@@ -132,8 +132,19 @@ a lazy service. `requires` is distinct from repository module `dependencies`, Co
 
 ## Menus and routes
 
-`menus` maps names to static arrays, module-relative inventory paths such as `"/pages"`, or registered runtime source names. Areas compose menu
-contributions from selected modules; menus are navigation data and do not create dependencies.
+`menus` maps names to menu definitions. The dictionary key is the menu name. Each module can supply any of these fields:
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `label` | string | Menu title |
+| `description` | string | Menu description |
+| `icon` | string or null | Menu icon |
+| `items` | array of menu items | Static root entries. Nested entries use `children` on the parent item. |
+| `source` | nonempty string | Module-relative inventory path such as `"/pages"` or a registered runtime source name. Available for Area menus. |
+
+Areas composes participating modules in order. Later supplied metadata overrides earlier values, and omitted metadata keeps its earlier value.
+Root items from each contribution merge recursively by item ID, with explicit items processed before resolved source items. See
+[Areas](../30-subsystems/10-areas.md#menus-and-home) for ordering, normalization, and effective menu APIs.
 
 `routes` maps Area-relative friendly Path patterns to module-relative Page targets:
 

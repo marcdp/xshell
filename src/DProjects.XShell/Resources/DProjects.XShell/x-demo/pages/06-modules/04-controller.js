@@ -58,7 +58,7 @@ Module shutdown
     constructor({moduleConfig}) {
         this.id = moduleConfig.id;
         this.label = moduleConfig.label;
-        this.menuSource = moduleConfig.menus.navigation;
+        this.menuSource = moduleConfig.menus.navigation.source;
         this.files = moduleConfig.files || [];
         this.assetsPath = moduleConfig.assets?.path || "";
         this.pageCount = 0;
