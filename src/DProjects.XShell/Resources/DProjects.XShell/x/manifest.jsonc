@@ -20,12 +20,11 @@
             },
             "menus": {
                 "shortcuts": [
-                    {"label": "", "icon": "x-more-vert", "class": "menu", "children": [
-                        {"label": "Home", "icon": "x-folder", "href": "app:/"},
-                        {"label": "Preferences", "href": "/pages/preferences.js"},
-                        {"label": "Settings", "href": "/pages/settings.js", "embedded":true},
+                    {"id": "a", "label": "", "icon": "x-more-vert", "class": "menu", "children": [
+                        {"label": "Preferences", "href": "/pages/preferences.js", "open":"stack"},
+                        {"label": "-"},
                         {"label": "About", "href": "/pages/about.js"}
-                    ] }
+                    ]}
                 ],
                 "preferences": [
                     {"label": "Appearance", "href": "/pages/preferences-appearance.js"},

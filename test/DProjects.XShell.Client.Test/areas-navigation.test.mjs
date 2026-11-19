@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import Areas from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/areas.js";
+import Loader from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/loader.js";
 import Navigation from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/navigation.js";
 import Resolver from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/resolver.js";
 
@@ -146,13 +147,14 @@ function createAreas() {
     return areas;
 }
 
-function createNavigation({ areas = createAreas(), mode = "path", basePath = "", baseUrl = "https://example.test/", resolver = null } = {}) {
+function createNavigation({ areas = createAreas(), mode = "path", basePath = "", baseUrl = "https://example.test/",
+    resolver = null, assetsBasePath = "/_assets" } = {}) {
     return new Navigation({
         areas,
         bus: { emit() {} },
         config: {
             app: { basePath, baseUrl },
-            xshell: { assets: { basePath: "/_assets" } }
+            xshell: { assets: { basePath: assetsBasePath } }
         },
         resolver
     }, { mode }, { container: { querySelectorAll() { return []; } } });
@@ -166,6 +168,16 @@ function createPageResolver() {
             "x:/{path}": { src: "/_assets/x/{path}", loader: "page-js" }
         } } }
     }});
+}
+
+function createEmbedPage(src) {
+    // Capture src assignments to the named outlet.
+    const outlet = { setAttribute(name, value) { this[name] = value; } };
+    const host = {
+        setAttribute(name, value) { this[name] = value; },
+        querySelector(selector) { return selector === 'x-page[outlet="content"]' ? outlet : null; }
+    };
+    return { page: { src, host }, outlet };
 }
 
 test("Navigation resolves Page resources through Resolver into public URLs in path and hash modes", () => {
@@ -204,6 +216,113 @@ test("Navigation opens resolved Page resources in stack and dialog modes", async
     assert.equal(stack[0].href, "/demo/_assets/x-demo/pages/items.js");
     await navigation.navigate({ href: "page:x-demo:/pages/about.js", page, open: "dialog" });
     assert.equal(dialog.href, "/demo/_assets/x-demo/pages/about.js");
+});
+
+test("Navigation embeds explicit asset and Page references while retaining relative, menu and route destinations", async () => {
+    const asset = "/_assets/x/0.9.0.dev/pages/about.js";
+    const { page, outlet } = createEmbedPage("/main/_assets/shell/0.9.0.dev/pages/origin.js");
+    const { page: unprefixedPage, outlet: unprefixedOutlet } = createEmbedPage("/_assets/x-demo/pages/03-navigation/origin.js");
+    for (const mode of ["path", "hash"]) {
+        for (const basePath of ["/", "/app"]) {
+            const navigation = createNavigation({ mode, basePath, resolver: createPageResolver() });
+            const appPrefix = basePath === "/" ? "" : basePath;
+            const browserPrefix = appPrefix + (mode === "hash" ? "/#!" : "");
+            const suffix = "?filter=all%20items#summary";
+            const cases = [
+                [asset, asset],
+                [`/main${asset}`, `/main${asset}`],
+                [`#!${asset}#summary`, `${asset}#summary`],
+                [`${appPrefix}${asset}${suffix}`, `${asset}?filter=all%20items&sort=name#summary`, { sort: "name" }],
+                [`${appPrefix}/main${asset}${suffix}`, `/main${asset}${suffix}`],
+                ["page:x-demo:/pages/about.js?filter=all#summary", "/_assets/x-demo/pages/about.js?filter=all#summary"],
+                ["relative.js?filter=all#summary", "/main/_assets/shell/0.9.0.dev/pages/relative.js?filter=all#summary"],
+                ["/demo/navigation", "/demo/_assets/x-demo/pages/03-navigation/index.js"],
+                ["/demo/repository/12?sort=name#summary", "/demo/_assets/x-demo/pages/repository.js?mode=list&repositoryId=12&sort=name#summary"]
+            ];
+            for (const [href, expected, params] of cases) {
+                outlet.src = null;
+                await navigation.navigate({ href, params, page, open: "embed", outlet: "content" });
+                assert.equal(outlet.src, expected, `${mode} ${basePath} ${href}`);
+            }
+
+            // Relative destinations continue to find an Area through the menu of an unprefixed originating Page.
+            await navigation.navigate({ href: "index.js", page: unprefixedPage, open: "embed", outlet: "content" });
+            assert.equal(unprefixedOutlet.src, "/demo/_assets/x-demo/pages/03-navigation/index.js");
+            assert.deepEqual(navigation.stack, []);
+            assert.equal(navigation.buildUrlAbsolute({ href: asset, page, open: "embed" }), `${browserPrefix}/main${asset}`);
+            assert.equal(navigation.buildUrlAbsolute({ href: "page:x-demo:/pages/about.js", page, open: "embed" }), `${browserPrefix}/demo/something`);
+        }
+    }
+});
+
+test("Navigation keeps canonical asset destinations Area-aware in top, stack, auto and dialog modes", async () => {
+    const navigation = createNavigation();
+    const href = "/_assets/x/0.9.0.dev/pages/about.js?view=all#summary";
+    const { page } = createEmbedPage("/main/_assets/shell/0.9.0.dev/pages/origin.js");
+    const expected = "/main" + href;
+    navigation._stack = [navigation.parseUrl(page.src)];
+    navigation._stackToBrowser = async stack => { navigation._stack = stack; };
+    navigation._showDialog = async ({ href }) => href;
+
+    await navigation.navigate({ href, page, open: "stack" });
+    assert.deepEqual(navigation.stack, [navigation.parseUrl(page.src), navigation.parseUrl(expected)]);
+    await navigation.navigate({ href, page, open: "top" });
+    assert.deepEqual(navigation.stack, [navigation.parseUrl(expected)]);
+    assert.equal(await navigation.navigate({ href, page, open: "dialog" }), expected);
+    await navigation.navigate({ href, page });
+    assert.equal(page.host.src, expected);
+});
+
+test("Embedded x-page loads the same canonical resource with or without an Area prefix", async t => {
+    // Supply the DOM operations used by x-page and forward src changes through its attribute callback.
+    globalThis.HTMLElement = class extends EventTarget {
+        attachShadow() { this.shadowRoot = { appendChild(node) { this.firstChild = node; } }; }
+        setAttribute(name, value) { if (name === "src") this.attributeChangedCallback(name, null, value); }
+    };
+    globalThis.CSSStyleSheet = class { replaceSync() {} };
+    globalThis.customElements = { define() {} };
+    globalThis.document = { createElement(localName) { return { localName, setAttribute() {}, removeAttribute() {} }; } };
+    t.after(() => {
+        for (const key of ["HTMLElement", "CSSStyleSheet", "customElements", "document"]) delete globalThis[key];
+    });
+    const { default: XPage } = await import("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/x-page.js");
+    const { default: xshell } = await import("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/xshell.js");
+
+    // Resolve real resource URLs and replace only the concrete layout and Page implementations.
+    const asset = "/_assets/customer/pages/detail.js";
+    const loader = `data:text/javascript,${encodeURIComponent("export default class { async load() { return class { async load() {} async mount() {} }; } }")}`;
+    const config = {
+        app: { basePath: "/app", baseUrl: "https://example.test/app/" },
+        xshell: {
+            ui: { layouts: { embed: "test-layout" } },
+            resolver: {
+                layout: { "test-layout": { src: "/layout.js", loader } },
+                page: { [asset]: { src: asset, loader } }
+            }
+        }
+    };
+    const bus = { emit() {} };
+    const areas = createAreas();
+    const resolver = new Resolver({ config });
+    const navigation = createNavigation({ areas, resolver, basePath: config.app.basePath });
+    const resourceLoader = new Loader({ bus, resolver }, {});
+    const services = { areas, navigation, modules: { resolveModuleId: href => areas.getModuleId(href) } };
+    Object.assign(xshell, { _config: config, _bus: bus, _loader: resourceLoader, _services: { resolve: name => services[name] } });
+
+    for (const [prefix, breadcrumbPath] of [["", null], ["/sales", "/sales/detail"]]) {
+        const outlet = new XPage();
+        const page = { src: "/sales/_assets/customer/pages/origin.js", host: { querySelector() { return outlet; } } };
+        const href = `${prefix}${asset}?view=all#summary`;
+        await navigation.navigate({ href, page, open: "embed", outlet: "content" });
+        assert.equal(outlet.src, href);
+        await outlet.load();
+        assert.equal(outlet.status, "loaded");
+        assert.equal(outlet.breadcrumb?.at(-1)?.path ?? null, breadcrumbPath);
+        const { resource, path, url, status } = resourceLoader.registry.at(-1);
+        assert.deepEqual({ resource, path, url, status }, {
+            resource: `page:${asset}?view=all#summary`, path: asset, url: `https://example.test/app${asset}`, status: "loaded"
+        });
+    }
 });
 
 test("Navigation.init preserves path-mode fragments on load and popstate without changing root home selection", async (t) => {
@@ -247,9 +366,9 @@ test("Navigation.init preserves path-mode fragments on load and popstate without
     assert.equal(pushedUrls.length, 2);
 });
 
-function createSharedRouteContext({ definitions, defaultArea, mode = "path", basePath = "", baseUrl = "https://example.test/",
+function createSharedRouteContext({ definitions, defaultArea, mode = "path", basePath = "", baseUrl = "https://example.test/", assetsBasePath = "/_assets",
     routes = { "/repository/{repositoryId}/items": "/_assets/shared/pages/items.js" } }) {
-    const config = { modules: { shared: {} }, xshell: { assets: { basePath: "/_assets" } } };
+    const config = { modules: { shared: {} }, xshell: { assets: { basePath: assetsBasePath } } };
     const module = {
         id: "shared",
         routes,
@@ -257,8 +376,29 @@ function createSharedRouteContext({ definitions, defaultArea, mode = "path", bas
     };
     const areas = new Areas({ config, bus: { addEventListener() {}, emit() {} } }, { default: defaultArea, global: [], definitions });
     areas.init({ modules: { getModuleById(id) { return id === module.id ? module : null; } } });
-    return { areas, navigation: createNavigation({ areas, mode, basePath, baseUrl }), module };
+    return { areas, navigation: createNavigation({ areas, mode, basePath, baseUrl, assetsBasePath }), module };
 }
+
+test("Navigation embeds explicit asset paths even when a route matches the configured asset namespace", async () => {
+    const { navigation } = createSharedRouteContext({
+        defaultArea: "main",
+        definitions: { main: { prefix: "/main", modules: ["shared"] }, root: { prefix: "/", modules: ["shared"] } },
+        assetsBasePath: "/resources/assets",
+        routes: { "/resources/{section}/{module}/{folder}/{file}": "/resources/assets/shared/pages/fallback.js" }
+    });
+    const href = "/resources/assets/shared/pages/about.js";
+    const { page, outlet } = createEmbedPage("/main/resources/assets/shared/pages/origin.js");
+
+    for (const prefix of ["", "/main"]) {
+        const target = prefix + href;
+        assert.equal(navigation.resolveRoute(target).target, "/resources/assets/shared/pages/fallback.js");
+        await navigation.navigate({ href: target, page, open: "embed", outlet: "content" });
+        assert.equal(outlet.src, target);
+    }
+
+    await navigation.navigate({ href: href.replace("/assets/", "/assets-other/"), page, open: "embed", outlet: "content" });
+    assert.equal(outlet.src, "/main/resources/assets/shared/pages/fallback.js?section=assets-other&module=shared&folder=pages&file=about.js");
+});
 
 function createNoRouteContext() {
     const config = { modules: { empty: {} }, xshell: { assets: { basePath: "/_assets" } } };

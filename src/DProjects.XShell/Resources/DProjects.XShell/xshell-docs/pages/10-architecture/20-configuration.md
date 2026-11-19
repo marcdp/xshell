@@ -157,7 +157,10 @@ names are not normalized.
 
 ## Merge and precedence
 
-Objects merge recursively, arrays concatenate, and later scalar values replace earlier values. The merge order is:
+Objects merge recursively, and later scalar values replace earlier values. At each array path, elements append in merge order. When objects in the
+same array share a non-empty string `id`, the last object replaces the entire earlier object at the position where that `id` first appeared.
+
+The merge order is:
 
 ```text
 selected XShell framework

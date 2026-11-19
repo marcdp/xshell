@@ -12,6 +12,7 @@ const source = bootstrapSource.replace(
 );
 const context = vm.createContext({
     URL,
+    performance,
     document: {
         querySelector() { return null; },
         querySelectorAll(selector) {
@@ -24,6 +25,53 @@ const context = vm.createContext({
 new vm.Script(source, { filename: bootstrapPath.pathname }).runInContext(context);
 const api = context.__bootstrapOverrides;
 const plain = value => JSON.parse(JSON.stringify(value));
+
+test("manifest arrays merge by ID in bootstrap precedence order", () => {
+    // Supply normalized manifests in a different order from their merge precedence.
+    const framework = {
+        name: "xshell", manifest: {
+            xshell: { resolver: { esm: { xshell: { src: "/xshell.js" } } } },
+            menu: {
+                items: [{ id: "open", obsolete: true }, "separator", { id: "save" }, { label: "Help" }, { id: "" }, { id: 1 }],
+                other: [{ id: "open", label: "Other" }]
+            }
+        }
+    };
+    const dependency = {
+        name: "dep", manifest: {
+            modules: { dep: {} },
+            menu: { items: [{ id: "save", label: "Dependency" }, { id: "open", label: "Dependency", obsolete: true }] }
+        }
+    };
+    const app = {
+        name: "app", dependencies: { dep: "1.0.0" }, manifest: {
+            modules: { app: {} },
+            menu: {
+                items: ["separator", { id: "rename", label: "First" }, { id: "open", label: "Root" }, { label: "Help" },
+                    { id: "rename", label: "Last" }, { id: "" }, { id: 1 }],
+                rootOnly: [{ id: "new", label: "First" }, null, { id: "new", label: "Last" }]
+            }
+        }
+    };
+    const modules = [app, dependency, framework];
+    const original = structuredClone(modules);
+
+    // Exercise the active bootstrap's scoped merge and verify the source manifests remain independent.
+    const mergeSource = bootstrapSource.match(/^        function mergeManifests\(\) \{[\s\S]*?^        \}/m)[0];
+    const config = vm.runInNewContext(`${mergeSource}\nmergeManifests()`, {
+        app, resolvedModules: new Map(modules.map(module => [module.name, module])), structuredClone
+    });
+    assert.deepEqual(plain(config.menu), {
+        items: [{ id: "open", label: "Root" }, "separator", { id: "save", label: "Dependency" }, { label: "Help" }, { id: "" }, { id: 1 },
+            "separator", { id: "rename", label: "Last" }, { label: "Help" }, { id: "" }, { id: 1 }],
+        other: [{ id: "open", label: "Other" }],
+        rootOnly: [{ id: "new", label: "Last" }, null]
+    });
+    config.menu.items[0].label = "Changed";
+    config.menu.other[0].label = "Changed";
+    config.menu.items.pop();
+    assert.deepEqual(modules, original);
+});
 
 function apply(config, entries) {
     metadata.splice(0, metadata.length, ...Object.entries(entries).map(([name, content]) => ({ name, content })));
@@ -103,7 +151,7 @@ test("reserved app metadata is not applied as a config.xshell override", () => {
 
 test("bootstrap applies overrides before XShell initialization and configuration validation", () => {
     const applyIndex = bootstrapSource.indexOf("config = fillXShellOverrides(config)");
-    const initIndex = bootstrapSource.indexOf("await xshell.init(deepFreeze(config))");
+    const initIndex = bootstrapSource.indexOf("await xshell.init(deepFreeze(config), timings)");
 
     assert.notEqual(applyIndex, -1);
     assert.notEqual(initIndex, -1);

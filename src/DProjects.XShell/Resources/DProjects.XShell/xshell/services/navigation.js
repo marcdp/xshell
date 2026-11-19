@@ -285,9 +285,10 @@ export default class Navigation {
             context = {},   // additional context to be passed to the page (e.g. dialog parameters)
             replace = false
         }) {
-        //navigate
-        if (!open) open = "auto";  
-        const hrefResolved = this._resolveCanonicalHref(href, page);
+        // Preserve explicit asset targets for embeds while retaining ordinary relative resolution.
+        if (!open) open = "auto";
+        const preserveAssetPath = open === "embed" && (href.startsWith("/") || href.startsWith(HASH_PREFIX + "/") || href.startsWith("page:"));
+        const hrefResolved = this._resolveCanonicalHref(href, page, { preserveAssetPath });
         const hrefAbsolute = this.buildUrl({ href: hrefResolved, params, nav, page });
         // open
         if (open == "auto") {
@@ -330,7 +331,7 @@ export default class Navigation {
                 const xpage = page.host;
                 const outletElement = xpage.querySelector(`x-page[outlet="${outlet}"]`);
                 if (outletElement) {
-                    const hrefFinal = this._buildUrlFinal(this.parseUrl(hrefAbsolute));
+                    const hrefFinal = this._buildUrlFinal(this.parseUrl(hrefAbsolute), { preserveAssetPath });
                     outletElement.setAttribute("src", hrefFinal);
                 }
             }
@@ -556,8 +557,14 @@ export default class Navigation {
             this._container.appendChild(xpage);
         });
     }
-    _buildUrlFinal(item) {
+    _buildUrlFinal(item, { preserveAssetPath = false } = {}) {
         const { identity, suffix } = this._splitHref(item.href);
+
+        // Keep explicit embedded resources out of friendly menu and route matching.
+        if (preserveAssetPath) {
+            const area = this._areas.getArea?.(this._areas.resolveAreaId?.(identity));
+            if (this._isAssetPath(identity) || this._isAssetPath(this._removeAreaPrefix(identity, area))) return this.buildUrl(item);
+        }
         const menuitem = this._areas.resolvePath(identity);
         if (menuitem) {
             return this.buildUrl({
@@ -594,7 +601,7 @@ export default class Navigation {
         }
         return { href: canonicalHref, params };
     }
-    _resolveCanonicalHref(href, page) {
+    _resolveCanonicalHref(href, page, { preserveAssetPath = false } = {}) {
         // resolve relative targets and apply the originating navigation context
         if (href.startsWith("page:")) {
             const { identity, suffix } = this._splitHref(href);
@@ -609,6 +616,9 @@ export default class Navigation {
         const { identity, suffix } = this._splitHref(href);
         const targetArea = this._areas.getArea?.(this._areas.resolveAreaId?.(identity));
         if (targetArea?.prefix) return identity + suffix;
+
+        // Preserve an explicit canonical asset path before looking up the originating Area or menu.
+        if (preserveAssetPath && this._isAssetPath(identity)) return identity + suffix;
         const pageAreaId = page?.src ? this._areas.resolveAreaId?.(page.src) : null;
         const menuitem = this._areas.resolveHref?.(identity, pageAreaId) || this._areas.resolveHref?.(identity);
         if (menuitem) return menuitem.href + suffix;
@@ -747,10 +757,13 @@ export default class Navigation {
         const { identity, suffix } = this._splitHref(href);
         if (identity !== this._appBasePath && !identity.startsWith(this._appBasePath + "/")) return href;
         const applicationIdentity = identity.substring(this._appBasePath.length) || "/";
-        const isAssetPath = path => path === this._assetsBasePath || path.startsWith(this._assetsBasePath + "/");
-        if (isAssetPath(applicationIdentity)) return applicationIdentity + suffix;
+        if (this._isAssetPath(applicationIdentity)) return applicationIdentity + suffix;
         const area = this._areas.getArea?.(this._areas.resolveAreaId?.(applicationIdentity));
-        return isAssetPath(this._removeAreaPrefix(applicationIdentity, area)) ? applicationIdentity + suffix : href;
+        return this._isAssetPath(this._removeAreaPrefix(applicationIdentity, area)) ? applicationIdentity + suffix : href;
+    }
+    _isAssetPath(path) {
+        // Require a namespace boundary so similarly named friendly paths still resolve normally.
+        return Boolean(this._assetsBasePath) && (path === this._assetsBasePath || path.startsWith(this._assetsBasePath + "/"));
     }
     _splitHref(href) {
         const queryIndex = href.indexOf("?");

@@ -94,6 +94,7 @@
       "type": "object",
       "required": ["label"],
       "properties": {
+        "id": {"type": "string", "description": "Unique identifier for the menu item."},
         "label": {"type": "string", "description": "Human-readable menu item label."},
         "href": {"type": ["string", "null"], "description": "Canonical XShell navigation target associated with the menu item."},
         "path": {"type": "string", "description": "Optional public navigation path used as a friendly alias for href."},

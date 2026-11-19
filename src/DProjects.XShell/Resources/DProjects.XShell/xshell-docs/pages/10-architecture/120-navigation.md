@@ -2,9 +2,10 @@
 
 One Navigation subsystem maps browser location to Pages. Hash and path modes are both implemented on the same Page and stack model.
 
-An Area is a navigation context within a mode. Its `xshell.services.areas.options.definitions.<id>.prefix` identifies that context, while a module's
-`/_assets/<module-id>/...` Path identifies a Page resource. Navigation mode, Area, and resource ownership are separate. The hash-mode
-`#!` marks the browser fragment; it is not an Area prefix.
+An Area is a navigation context within a mode. Its `xshell.services.areas.options.definitions.<id>.prefix` identifies that context. A canonical
+resource path such as `/_assets/x/0.9.0.dev/pages/about.js` identifies the module resource. An Area-qualified Page href such as
+`/main/_assets/x/0.9.0.dev/pages/about.js` addresses the same Page in `/main`. A friendly navigation path such as `/main/about` can address that
+Page through a menu alias or route. The hash-mode `#!` marks the browser fragment.
 
 ```text
 Module.routes
@@ -119,8 +120,7 @@ Areas derives the module id from the structural `/_assets/<module-id>/...` prefi
 module, and returns the
 matching item, including items materialized from dynamic menu sources. The originating Page's Area is tried first when applicable; otherwise the
 target module's participating Areas determine the public path. Query parameters and fragments remain attached to the public path. When no matching
-item or friendly `path` exists, the Area-aware canonical href remains the browser-facing fallback. The logical target retained by `x-anchor` stays
-canonical, so normal clicks and native browser link actions share the same destination identity without making the component aware of Areas or menus.
+item or friendly `path` exists, the Area-aware canonical href remains the browser-facing fallback.
 
 `x-page` receives that canonical Area-aware href, identifies its Area, and removes only the Area prefix before asking the loader/resolver for the
 module resource. The loader/resolver therefore sees `/_assets/x-demo/<generation>/pages/01-components/index.js`; it does not know about menu `path` values or
@@ -272,3 +272,11 @@ Page). `replace: true` controls browser-history replacement for stack operations
 The default `auto` requires the originating `page`: it updates that Page's stack position, or its local host if it is a dialog/embed.
 Supply `open: "top"` when navigating without an originating Page.
 Current embed handling accepts an outlet name string and looks for `x-page[outlet="name"]` under `page.host`; passing an element is not implemented.
+
+With `open: "embed"`, an explicit canonical resource path becomes the outlet's `x-page.src` without an added Area prefix. This also applies to
+`page:` references after Resolver returns their canonical asset path. Query parameters, fragments, and any explicit Area prefix are preserved.
+Relative links, friendly paths, and other opening modes use the usual Area-aware resolution. `x-anchor` still uses `Navigation.buildUrlAbsolute()`
+for the native `<a href>`, so copying the link or opening a new tab uses an Area-aware browser URL in either mode.
+
+`x-page` derives the embedded Page's Area from its destination. An unprefixed destination does not inherit the originating Area, so its menu
+breadcrumb may be absent. Use an Area-qualified Page href to select an Area. Explicitly passed navigation breadcrumbs still apply.

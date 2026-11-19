@@ -354,9 +354,31 @@ async function main() {
             };
             visit(app);
             const isObject = value => value !== null && typeof value === "object" && !Array.isArray(value);
+            const mergeArray = (target, source) => {
+                // Index existing contributions at their first occurrence.
+                const result = [...target];
+                const indexes = new Map();
+                const getId = item => isObject(item) && typeof item.id === "string" && item.id ? item.id : null;
+                for (let i = 0; i < result.length; i++) {
+                    const id = getId(result[i]);
+                    if (id !== null) indexes.set(id, i);
+                }
+
+                // Replace matching contributions in place and append new ones in order.
+                for (const item of source) {
+                    const id = getId(item);
+                    if (id !== null && indexes.has(id)) {
+                        result[indexes.get(id)] = structuredClone(item);
+                    } else {
+                        if (id !== null) indexes.set(id, result.length);
+                        result.push(structuredClone(item));
+                    }
+                }
+                return result;
+            };
             const merge = (target, source) => {
                 for (const [key, value] of Object.entries(source)) {
-                    if (Array.isArray(value)) target[key] = Array.isArray(target[key]) ? [...target[key], ...value] : [...value];
+                    if (Array.isArray(value)) target[key] = mergeArray(Array.isArray(target[key]) ? target[key] : [], value);
                     else if (isObject(value)) target[key] = merge(isObject(target[key]) ? target[key] : {}, value);
                     else target[key] = value;
                 }

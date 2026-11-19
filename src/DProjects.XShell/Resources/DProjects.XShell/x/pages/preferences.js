@@ -3,7 +3,7 @@ export default {
     contract: {
         description: "Manage browser-local preferences.",
         properties: {
-            
+            src: { type: "string", default: null, state: true, query: true, reflect:true },
         }
     },
 
@@ -23,8 +23,6 @@ export default {
     `,
 
     template: `
-        src: {{ state.src}}
-        
         <div>
             <div class="menu-container">
                 <x-menuitem x-recursive="menuitem in state.menu" 
@@ -46,7 +44,7 @@ export default {
 
             <div class="page-container">
                 <h1>{{state.title}}</h1>
-                <x-page outlet="content" x-on:load="refresh"></x-page>
+                <x-page outlet="content" x-attr:src="state.src" x-on:load="refresh" x-once></x-page>
             </div>
         </div>
 
@@ -64,6 +62,23 @@ export default {
             load() {
                 // load
                 state.menu = areas.getGlobalMenu("preferences");
+                // load first menu item
+                if (!state.src) {
+                    const findFirstMenuItem = (menu) => {
+                        for (const item of menu) {
+                            if (item.href) return item;
+                            if (item.children) {
+                                const found = findFirstMenuItem(item.children);
+                                if (found) return found;
+                            }
+                        }
+                        return null;
+                    };
+                    const firstMenuItem = findFirstMenuItem(state.menu);
+                    if (firstMenuItem) {
+                        state.src = firstMenuItem.href || firstMenuItem.path;
+                    }
+                }
             },
             refresh( {event } ) {
                 // set src
