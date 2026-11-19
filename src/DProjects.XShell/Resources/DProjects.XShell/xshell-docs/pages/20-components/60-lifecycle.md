@@ -27,11 +27,14 @@ Definition styles are processed once while the Component or Page class is create
 recursive `@import` URLs use each imported stylesheet as their base. Page CSS is scoped after imports are expanded. Each Page mount creates its own
 scoped stylesheet and removes it on unmount.
 Before a Component's processed definition sheet, its Shadow Root adopts the constructable sheets contributed by every module
-`styles/shadow.css`, in effective module order. Those shared objects are loaded once and reused across Component instances and nested Component
-Shadow Roots. The native `x-page` Shadow Root uses the same ordered shared collection before its own local layout sheet; definition-based Page
-styles retain their existing scoped mount/unmount ownership instead of becoming Shadow Root sheets. Document custom properties inherit through
-hosts, but ordinary document selectors cannot style internal shadow content. Shared rules likewise do not enter third-party Web Components;
-cross-boundary styling remains limited to supported custom properties, `::part`, and direct `::slotted` content.
+`styles/shared.css`, in effective module order. Those shared objects are loaded once and reused across Component instances and nested Component
+Shadow Roots. The main document adopts those same objects before module `styles/index.css` sheets. Shared sheets provide visual defaults rather
+than browser normalization; the document reset stays in `index.css`, does not cross shadow boundaries, and Components own any normalization their
+internal implementation requires. The native `x-page` Shadow Root uses the same ordered shared collection before its own local layout sheet;
+definition-based Page styles retain their existing scoped mount/unmount ownership instead of becoming Shadow Root sheets. Document custom
+properties and other inherited values continue through hosts, but ordinary document selectors cannot style internal shadow content. Shared rules
+likewise do not enter third-party Web Components; cross-boundary styling remains limited to supported custom properties, `::part`, and direct
+`::slotted` content.
 Runtime CSS and template resource references use relative or module-root paths, or standard URI schemes. `app:` and `url:` are
 configuration/bootstrap-only and are rejected in runtime CSS and templates. Custom resources without a module path resolve relative and
 origin-root URLs against their declaring URL.

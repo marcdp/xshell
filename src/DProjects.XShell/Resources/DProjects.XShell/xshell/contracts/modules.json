@@ -28,7 +28,7 @@
     "shadowStyleSheets": {
       "type": "array",
       "readonly": true,
-      "description": "Frozen constructable stylesheets contributed by module styles/shadow.css files, in deterministic module order.",
+      "description": "Frozen constructable stylesheets contributed by module styles/shared.css files, in deterministic module order.",
       "schema": {
         "type": "array"
       }

@@ -131,6 +131,7 @@ test("Components adopt shared module sheets before their definition sheet and re
     const firstShared = new TestStyleSheet();
     const secondShared = new TestStyleSheet();
     sharedShadowStyleSheets = [firstShared, secondShared];
+    document.adoptedStyleSheets = [firstShared, secondShared];
     const Component = await createComponentClassFromJsDefinition("shared-style.js", createContext(), {
         meta: { id: "shared-style" }, style: "h1 { color: blue; }"
     });
@@ -140,6 +141,8 @@ test("Components adopt shared module sheets before their definition sheet and re
     assert.deepEqual(first.shadowRoot.adoptedStyleSheets, [firstShared, secondShared, first.shadowRoot.adoptedStyleSheets[2]]);
     assert.strictEqual(first.shadowRoot.adoptedStyleSheets[0], second.shadowRoot.adoptedStyleSheets[0]);
     assert.strictEqual(first.shadowRoot.adoptedStyleSheets[1], second.shadowRoot.adoptedStyleSheets[1]);
+    assert.strictEqual(first.shadowRoot.adoptedStyleSheets[0], document.adoptedStyleSheets[0]);
+    assert.strictEqual(first.shadowRoot.adoptedStyleSheets[1], document.adoptedStyleSheets[1]);
     assert.strictEqual(first.shadowRoot.adoptedStyleSheets[2], second.shadowRoot.adoptedStyleSheets[2]);
     assert.equal(first.shadowRoot.adoptedStyleSheets[2].text, "h1 { color: blue; }");
 

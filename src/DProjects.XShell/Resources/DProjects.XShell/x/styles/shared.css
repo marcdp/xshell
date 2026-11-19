@@ -1,0 +1,16 @@
+/* Shared typography and element styles. */
+h1 {font-size:var(--x-font-size-title); font-weight:600;}
+h2 {font-size:var(--x-font-size-subtitle); font-weight:600;}
+h3 {font-size:var(--x-font-size-subsubtitle); font-weight:normal;}
+h4 {font-size:var(--x-font-size); font-weight:700;}
+h5 {font-size:var(--x-font-size); font-weight:600;}
+h6 {font-size:var(--x-font-size); font-weight:normal;}
+
+p {color:var(--x-color-gray);}
+table th {text-align:left;}
+details > summary {font-size:var(--x-font-size-subtitle); font-weight:600; cursor:pointer;}
+details[open]::details-content {margin-top:1em;}
+
+fieldset {border:var(--x-card-border); border-radius:var(--x-card-border-radius); padding:var(--x-card-padding);}
+fieldset legend {font-weight:600; padding-left:.5em; padding-right:.5em;}
+b {font-weight:600;}

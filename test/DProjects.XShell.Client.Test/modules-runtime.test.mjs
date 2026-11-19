@@ -30,7 +30,8 @@ function createModules(config, { loader = {}, services = {}, document = { adopte
         config,
         loader,
         resolver: {},
-        services
+        services,
+        document
     });
 }
 
@@ -90,7 +91,7 @@ test("module controllers receive singleton services and module-specific metadata
     assert.deepEqual(injected.moduleConfig, { id: "orders", ...config.modules.orders });
 });
 
-test("shared Shadow DOM sheets are published before module controller construction", async () => {
+test("shared sheets are published before module controller construction", async () => {
     const sheet = { id: "shared" };
     const loads = [];
     let injectedSheets;
@@ -104,7 +105,7 @@ test("shared Shadow DOM sheets are published before module controller constructi
     const config = freeze({
         xshell: { assets: { basePath: "/_assets" } },
         modules: { orders: moduleDefinition("orders", { files: [
-            { path: "/_assets/orders/styles/shadow.css" },
+            { path: "/_assets/orders/styles/shared.css" },
             { path: "/_assets/orders/module.js" }
         ] }) }
     });
@@ -119,7 +120,7 @@ test("shared Shadow DOM sheets are published before module controller constructi
 
     await modules.init();
 
-    assert.deepEqual(loads, ["style:/_assets/orders/styles/shadow.css", "esm:/_assets/orders/module.js"]);
+    assert.deepEqual(loads, ["style:/_assets/orders/styles/shared.css", "esm:/_assets/orders/module.js"]);
     assert.strictEqual(injectedSheets, modules.shadowStyleSheets);
     assert.deepEqual(injectedSheets, [sheet]);
 });
@@ -352,8 +353,8 @@ test("runtime module without routes exposes a frozen empty object", async () => 
 });
 
 test("module document and shared Shadow DOM styles load once and retain module order", async () => {
-    const indexPaths = ["/_assets/first/styles/index.css", "/_assets/second/styles/index.css"];
-    const shadowPaths = ["/_assets/second/styles/shadow.css", "/_assets/shadow-only/styles/shadow.css"];
+    const indexPaths = ["/_assets/index-only/styles/index.css", "/_assets/first/styles/index.css", "/_assets/second/styles/index.css"];
+    const sharedPaths = ["/_assets/first/styles/shared.css", "/_assets/second/styles/shared.css", "/_assets/shared-only/styles/shared.css"];
     const requests = [];
     const events = [];
     globalThis.window = { location: { origin: "https://example.test" }, customElements: { get() {} } };
@@ -363,7 +364,7 @@ test("module document and shared Shadow DOM styles load once and retain module o
     globalThis.fetch = async url => {
         requests.push(url);
         return { ok: true, async text() {
-            if (url.includes("/second/styles/shadow.css")) await new Promise(resolve => setTimeout(resolve, 1));
+            if (url.includes("/first/styles/shared.css")) await new Promise(resolve => setTimeout(resolve, 1));
             return `${url.split("/").at(-3)}-${url.split("/").at(-1)}{background:url(../images/background.png)}`;
         } };
     };
@@ -374,15 +375,16 @@ test("module document and shared Shadow DOM styles load once and retain module o
             assets: { basePath: "/_assets" },
             services: { navigation: { options: { mode: "path" } } },
             ui: { component: { lazy: null } },
-            resolver: { style: Object.fromEntries(["first", "second", "shadow-only"].map(id => [
+            resolver: { style: Object.fromEntries(["index-only", "first", "second", "shared-only"].map(id => [
                 `/_assets/${id}/{path}.css`,
                 { src: `/_assets/${id}/{path}.css`, loader: styleLoaderUrl, cache: true, moduleId: id, modulePath: `/_assets/${id}` }
             ])) }
         },
         modules: {
-            first: moduleDefinition("first", { files: [{ path: indexPaths[0] }, { path: indexPaths[0] }] }),
-            second: moduleDefinition("second", { files: [{ path: indexPaths[1] }, { path: shadowPaths[0] }] }),
-            "shadow-only": moduleDefinition("shadow-only", { files: [{ path: shadowPaths[1] }] }),
+            "index-only": moduleDefinition("index-only", { files: [{ path: indexPaths[0] }, { path: indexPaths[0] }] }),
+            first: moduleDefinition("first", { files: [{ path: indexPaths[1] }, { path: sharedPaths[0] }] }),
+            second: moduleDefinition("second", { files: [{ path: indexPaths[2] }, { path: sharedPaths[1] }] }),
+            "shared-only": moduleDefinition("shared-only", { files: [{ path: sharedPaths[2] }] }),
             missing: moduleDefinition("missing")
         }
     });
@@ -390,34 +392,43 @@ test("module document and shared Shadow DOM styles load once and retain module o
     const loader = new Loader({ bus: { emit(name, payload) { events.push({ name, payload }); } }, resolver, services: {} }, {
         appBasePath: "", xshellAssetsPath: "/_assets", componentLazy: null
     });
-    const document = { adoptedStyleSheets: [] };
+    const existingStyleSheet = { id: "existing" };
+    const document = { adoptedStyleSheets: [existingStyleSheet, existingStyleSheet] };
     globalThis.document = document;
     const modules = new Modules({ bus: {}, config, loader, resolver, services: {}, document });
 
     await modules.init();
 
+    const indexOnly = modules.getModuleById("index-only").styles;
     const first = modules.getModuleById("first").styles;
     const second = modules.getModuleById("second").styles;
+    assert.equal(indexOnly.length, 1);
     assert.equal(first.length, 1);
     assert.equal(second.length, 1);
     assert.deepEqual(modules.getModuleById("missing").styles, []);
     assert.notStrictEqual(first[0], second[0]);
+    assert.match(indexOnly[0].css, /^index-only-index\.css/);
     assert.match(first[0].css, /^first-index\.css/);
     assert.match(second[0].css, /^second-index\.css/);
-    assert.deepEqual(document.adoptedStyleSheets, [first[0], second[0]]);
     assert.deepEqual(modules.shadowStyleSheets.map(sheet => sheet.css), [
-        "second-shadow.css{background:url(https://example.test/_assets/second/images/background.png)}",
-        "shadow-only-shadow.css{background:url(https://example.test/_assets/shadow-only/images/background.png)}"
+        "first-shared.css{background:url(https://example.test/_assets/first/images/background.png)}",
+        "second-shared.css{background:url(https://example.test/_assets/second/images/background.png)}",
+        "shared-only-shared.css{background:url(https://example.test/_assets/shared-only/images/background.png)}"
     ]);
+    assert.deepEqual(document.adoptedStyleSheets, [existingStyleSheet, ...modules.shadowStyleSheets, indexOnly[0], first[0], second[0]]);
+    assert.equal(new Set(document.adoptedStyleSheets).size, document.adoptedStyleSheets.length);
+    assert.strictEqual(document.adoptedStyleSheets[1], modules.shadowStyleSheets[0]);
     assert.equal(Object.isFrozen(modules.shadowStyleSheets), true);
-    assert.deepEqual(requests.toSorted(), [...indexPaths, ...shadowPaths].map(path => `https://example.test${path}`).toSorted());
+    assert.deepEqual(requests.toSorted(), [...indexPaths, ...sharedPaths].map(path => `https://example.test${path}`).toSorted());
     assert.deepEqual(loader.registry.map(item => [item.resource, item.moduleId, item.status]), [
-        [`style:${indexPaths[0]}`, "first", "loaded"],
-        [`style:${indexPaths[1]}`, "second", "loaded"],
-        [`style:${shadowPaths[0]}`, "second", "loaded"],
-        [`style:${shadowPaths[1]}`, "shadow-only", "loaded"]
+        [`style:${indexPaths[0]}`, "index-only", "loaded"],
+        [`style:${indexPaths[1]}`, "first", "loaded"],
+        [`style:${sharedPaths[0]}`, "first", "loaded"],
+        [`style:${indexPaths[2]}`, "second", "loaded"],
+        [`style:${sharedPaths[1]}`, "second", "loaded"],
+        [`style:${sharedPaths[2]}`, "shared-only", "loaded"]
     ]);
-    assert.equal(events.filter(event => event.name === "xshell:loader:resource:loaded").length, 4);
-    assert.strictEqual(await loader.load(`style:${indexPaths[0]}`), first[0]);
-    assert.deepEqual(requests.toSorted(), [...indexPaths, ...shadowPaths].map(path => `https://example.test${path}`).toSorted());
+    assert.equal(events.filter(event => event.name === "xshell:loader:resource:loaded").length, 6);
+    assert.strictEqual(await loader.load(`style:${indexPaths[0]}`), indexOnly[0]);
+    assert.deepEqual(requests.toSorted(), [...indexPaths, ...sharedPaths].map(path => `https://example.test${path}`).toSorted());
 });

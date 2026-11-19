@@ -116,21 +116,23 @@ This means `configUrl`, `assets.url`, and `assets.path` describe different addre
 Development middleware generates package-relative `files` entries in the served descriptor; bootstrap converts their effective copies to virtual
 generation paths. Authors should not maintain `files` manually.
 
-The optional module-wide `/styles/index.css`, `/styles/shadow.css`, and `/module.js` controller are loaded only when their normalized paths occur in
+The optional module-wide `/styles/index.css`, `/styles/shared.css`, and `/module.js` controller are loaded only when their normalized paths occur in
 the inventory. Authors do not declare either stylesheet in the manifest. Both stylesheets use the normal Resolver → Loader path, including CSS
 `@import` expansion and resource-URL rewriting:
 
-- `styles/index.css` is adopted by the document. It supplies document selectors, inherited custom properties and design tokens, themes, and
-  application layout rules.
-- `styles/shadow.css` is adopted by every XShell-managed Component Shadow Root and by the native `x-page` Shadow Root. It supplies resets and
-  element defaults intended to be shared across module boundaries. XShell does not inject it into arbitrary third-party Web Components.
+- `styles/index.css` is adopted only by the document. It owns browser normalization, document-specific selectors, custom properties and design
+  tokens, themes, and application layout rules.
+- `styles/shared.css` is adopted by the document, every XShell-managed Component Shadow Root, and the native `x-page` Shadow Root. It supplies
+  shared visual defaults such as typography and element presentation, but no browser reset. XShell does not inject it into arbitrary third-party
+  Web Components.
 
-Each file is optional and discovered independently, so a module may provide either, both, or neither. Shared Shadow DOM sheets follow effective
-module composition order and precede a Component's definition `style`; later module sheets and then Component-specific rules therefore participate
-in the normal cascade. The same constructable stylesheet objects are reused by every managed Shadow Root. CSS custom properties set on the
-document continue to inherit through Component hosts, while ordinary document selectors do not cross a shadow boundary. Styling exposed shadow
-content still follows platform rules: use a component's supported `::part`, `::slotted`, or custom-property API, and note that `::slotted` reaches
-only directly assigned nodes.
+Each file is optional and discovered independently, so a module may provide either, both, or neither. Previously adopted document sheets remain
+first, followed by all `shared.css` sheets in effective module order and then all `index.css` sheets in that order. Managed Shadow Roots adopt the
+same shared sheet objects before Component or native `x-page` local sheets. Later document-specific and Component-specific rules therefore
+participate in the normal cascade without refetching or reparsing shared CSS. CSS custom properties set on the document continue to inherit through
+Component hosts, while document CSS rules and the document reset do not cross a shadow boundary. Components own any normalization required by
+their internal implementation. Styling exposed shadow content still follows platform rules: use a component's supported `::part`, `::slotted`,
+or custom-property API, and note that `::slotted` reaches only directly assigned nodes.
 
 The controller must default-export a class; optional `start()` and `stop()` methods are lifecycle hooks.
 
@@ -187,8 +189,9 @@ own public contracts. Module controller `start()` and `stop()` methods remain in
 ## Runtime instance
 
 Modules creates one runtime instance for every effective `config.modules` id. It exposes effective params, routes, document `styles`, and the
-optional controller. The Modules service exposes the frozen ordered `shadowStyleSheets` collection separately. Controllers start in dependency
-order and stop in reverse order. This runtime object is separate from both the authored and resolved definition.
+optional controller. The Modules service exposes the frozen ordered `shadowStyleSheets` collection separately; that API name is retained while
+the conventional resource is `styles/shared.css`. Controllers start in dependency order and stop in reverse order. This runtime object is
+separate from both the authored and resolved definition.
 
 See [Root Module and Application Metadata](application.md), [Modules](../10-architecture/30-modules.md),
 [Configuration](../10-architecture/20-configuration.md), and [Packaging](../10-architecture/50-packaging.md).

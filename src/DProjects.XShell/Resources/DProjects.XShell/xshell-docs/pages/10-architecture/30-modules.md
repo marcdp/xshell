@@ -98,11 +98,14 @@ per id. Repeated dependency requirements therefore do not create multiple runtim
 snapshot.
 
 Before controllers start, Modules verifies optional `requires` service names against the finalized service registry. It independently discovers
-conventional module-wide `/styles/index.css`, `/styles/shadow.css`, and `/module.js` resources only when those paths occur in the generated
-inventory. Both stylesheet categories load through Resolver → Loader and finish before controllers start. Document sheets remain on each runtime
-module's `styles` collection and are adopted in module order. Shared Shadow DOM sheets are published as the frozen
-`xshell.modules.shadowStyleSheets` collection in the same order, then reused by XShell-managed Component and native `x-page` Shadow Roots before
-their local sheets.
+conventional module-wide `/styles/index.css`, `/styles/shared.css`, and `/module.js` resources only when those paths occur in the generated
+inventory. Both stylesheet categories load through Resolver → Loader and finish before controllers start. Document-only sheets remain on each
+runtime module's `styles` collection. Shared sheets are published as the frozen `xshell.modules.shadowStyleSheets` collection. After controller
+startup, Modules preserves previously adopted document sheets, then adopts shared sheets in module order followed by document-only sheets in
+module order. The exact shared objects are reused by XShell-managed Component and native `x-page` Shadow Roots before their local sheets. The
+existing `shadowStyleSheets` API name remains, while `shared.css` reflects that the resource applies to both the document and managed Shadow Roots.
+Document normalization remains exclusively in `index.css`; shared sheets contain visual defaults, and each Component owns any normalization its
+internal implementation requires.
 
 Controllers start sequentially in dependency order and stop in reverse order. A controller receives `moduleAssetsPath`, `moduleConfig`, and named
 services; its optional `start()` and `stop()` methods are lifecycle hooks. XShell resolves Areas before module controllers start, awaits Modules

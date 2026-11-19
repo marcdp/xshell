@@ -67,7 +67,7 @@ export default class Modules {
 
         // create modules
         let tasks = [];
-        const shadowStyleTasks = [];
+        const sharedStyleTasks = [];
         for(var moduleId of Object.keys(this._config.modules)) {
             const moduleConfig = this._config.modules[moduleId];
             // instance
@@ -91,11 +91,11 @@ export default class Modules {
                     module.styles.push(styleSheet);
                 })());
             }
-            // shared Shadow DOM styles
-            const moduleShadowCss = moduleConfig.assets.path + "/styles/shadow.css";
-            if (moduleConfig.files.some(file => file.path == moduleShadowCss)) {
-                const task = this._loader.load("style:" + moduleShadowCss);
-                shadowStyleTasks.push(task);
+            // shared document and Shadow DOM styles
+            const moduleSharedCss = moduleConfig.assets.path + "/styles/shared.css";
+            if (moduleConfig.files.some(file => file.path == moduleSharedCss)) {
+                const task = this._loader.load("style:" + moduleSharedCss);
+                sharedStyleTasks.push(task);
                 tasks.push(task);
             }
             // add module instance
@@ -104,7 +104,7 @@ export default class Modules {
         await Promise.all(tasks);
 
         // publish shared sheets before module controllers can instantiate Components or Pages
-        this._shadowStyleSheets = Object.freeze(await Promise.all(shadowStyleTasks));
+        this._shadowStyleSheets = Object.freeze(await Promise.all(sharedStyleTasks));
 
         // load module controllers after both stylesheet categories are ready
         for (const module of this._modules) {
@@ -138,12 +138,13 @@ export default class Modules {
             Object.freeze(module);
         }
 
-        // add styles to document header
-        for (let module of this._modules) {
-            for (let styleSheet of module.styles) {
-                this._document.adoptedStyleSheets.push(styleSheet);
-            }
-        }
+        // adopt shared sheets before document-only sheets while preserving prior adoption and object identity
+        const documentStyleSheets = this._modules.flatMap(module => module.styles);
+        this._document.adoptedStyleSheets = [
+            ...this._document.adoptedStyleSheets,
+            ...this._shadowStyleSheets,
+            ...documentStyleSheets
+        ].filter((styleSheet, index, styleSheets) => styleSheets.indexOf(styleSheet) === index);
     }
 
     // start/stop
