@@ -14,6 +14,11 @@
             "properties": {
               "title": {"type":"string"},
               "message": {"type":"string"},
+              "classes": {
+                "type": "array",
+                "items": { "type": "string", "minLength": 1 },
+                "description": "CSS classes applied to the dialog presentation."
+              },
               "variant": {
                 "type": "string",
                 "enum": ["yesno","yesnocancel","okcancel","ok"],
@@ -38,6 +43,11 @@
           "schema": {
             "type": "object",
             "properties": {
+              "classes": {
+                "type": "array",
+                "items": { "type": "string", "minLength": 1 },
+                "description": "CSS classes applied to the dialog presentation."
+              },
               "type": {
                 "type": "string",
                 "enum": ["info","warning","error","success"],
@@ -64,6 +74,11 @@
           "schema": {
             "type": "object",
             "properties": {
+              "classes": {
+                "type": "array",
+                "items": { "type": "string", "minLength": 1 },
+                "description": "CSS classes applied to the dialog presentation."
+              },
               "title": {"type":"string","description":"Specifies the title of the prompt dialog."},
               "message": {"type":"string","description":"Specifies the message of the prompt dialog."},
               "value": {"type":"any","description":"Specifies the default value of the prompt input."},
@@ -92,6 +107,11 @@
           "schema": {
             "type": "object",
             "properties": {
+              "classes": {
+                "type": "array",
+                "items": { "type": "string", "minLength": 1 },
+                "description": "CSS classes applied to the dialog presentation."
+              },
               "title": {"type":"string","description":"Specifies the title of the picker dialog."},
               "message": {"type":"string","description":"Specifies the message of the picker dialog."},
               "value": {"description":"Specifies the default value of the picker input."},
@@ -118,6 +138,11 @@
           "schema": {
             "type": "object",
             "properties": {
+              "classes": {
+                "type": "array",
+                "items": { "type": "string", "minLength": 1 },
+                "description": "CSS classes applied to the dialog presentation."
+              },
               "title": {"type":"string","default":"Select language","description":"Specifies the title of the language picker dialog."},
               "message": {"type":"string","default":"Language","description":"Specifies the message of the language picker dialog."},
               "value": {"description":"Specifies the currently selected value in the language picker dialog."},
@@ -140,7 +165,14 @@
           "name": "options", "type": "object", "required": true, "description": "Single destructured options object. Fields correspond to the JavaScript method signature.",
           "schema": {
             "type": "object",
-            "properties": {"href":{"type":"string"},"params":{},"title":{"type":"string"},"breadcrumb":{},"icon":{"type":"string"},"context":{}},
+            "properties": {
+              "href":{"type":"string"},"params":{},"title":{"type":"string"},"breadcrumb":{},"icon":{"type":"string"},"context":{},
+              "classes": {
+                "type": "array",
+                "items": { "type": "string", "minLength": 1 },
+                "description": "CSS classes applied to the dialog presentation."
+              }
+            },
             "additionalProperties": true
           }
         }

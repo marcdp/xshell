@@ -246,7 +246,6 @@ export default {
             async downloadFiles(paths) {
                 let filename = "archive.zip"; 
                 if (paths.length === 1) {
-                    debugger
                     // single file download
                     const entry = await state.filesystem.getEntry(paths[0]);
                     if (entry.type == "file") {

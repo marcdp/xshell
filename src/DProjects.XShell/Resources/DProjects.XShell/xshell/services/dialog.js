@@ -28,7 +28,7 @@ export default class Dialog {
     }
 
     // methods
-    async confirm({ title, message, variant }) {
+    async confirm({ title, message, variant, classes }) {
         const href = this._options.confirm;
         return await this._navigation.navigate({
             href,
@@ -36,11 +36,12 @@ export default class Dialog {
             context: {
                 title,
                 message,
-                variant
+                variant,
+                ...(classes === undefined ? {} : { classes })
             }
         });
     }
-    async message({ type, title, message }) {
+    async message({ type, title, message, classes }) {
         const href = this._options.message;
         return await this._navigation.navigate({
             href,
@@ -48,11 +49,12 @@ export default class Dialog {
             context: {
                 type,
                 title,
-                message
+                message,
+                ...(classes === undefined ? {} : { classes })
             }
         });
     }
-    async prompt({ title, message, value, inputType, placeholder, required }) {
+    async prompt({ title, message, value, inputType, placeholder, required, classes }) {
         const href = this._options.prompt;
         return await this._navigation.navigate({
             href,
@@ -63,11 +65,12 @@ export default class Dialog {
                 value,
                 inputType,
                 placeholder,
-                required
+                required,
+                ...(classes === undefined ? {} : { classes })
             }
         });
     }
-    async picker({ title, message, value, inputType, placeholder, domain, multiple, required }) {
+    async picker({ title, message, value, inputType, placeholder, domain, multiple, required, classes }) {
         const href = this._options.picker;
         return await this._navigation.navigate({
             href,
@@ -80,11 +83,12 @@ export default class Dialog {
                 inputType,
                 placeholder,
                 multiple,
-                required
+                required,
+                ...(classes === undefined ? {} : { classes })
             }
         });
     }
-    async language({ title = "Select language", message = "Language", value, required=true, current=[] } =  {}) {
+    async language({ title = "Select language", message = "Language", value, required=true, current=[], classes } =  {}) {
         let domain = [];
         for (let item of this._i18n.config.langs) {
             if (current.indexOf(item.id) != -1) continue;
@@ -94,9 +98,10 @@ export default class Dialog {
                 //disabled: (disabled.indexOf(item.id) != -1),
             });
         }
-        return await this.picker({ title, message, value, inputType: "radios", domain, required});
+        return await this.picker({ title, message, value, inputType: "radios", domain, required, ...(classes === undefined ? {} : { classes }) });
     }
-    async open({ href, params, title, breadcrumb, icon, context }) {
+    async open({ href, params, title, breadcrumb, icon, context, classes }) {
+        // Add presentation classes without modifying the caller's Page context.
         return await this._navigation.navigate({
             href,
             params,
@@ -106,7 +111,7 @@ export default class Dialog {
                 breadcrumb,
                 icon
             },
-            context
+            context: classes === undefined ? context : { ...context, classes }
         });
     }
 }

@@ -8,7 +8,8 @@ export default {
     },
     meta: {
         title: "Custom Dialog",
-        description: "A custom dialog Page that receives context and returns a result."
+        description: "A custom dialog Page that receives context and returns a result.",
+        classes: ["size-medium"]
     },
 
     template: `

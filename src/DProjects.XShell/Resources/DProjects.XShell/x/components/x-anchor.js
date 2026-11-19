@@ -59,7 +59,7 @@ export default {
         :host(.light) a:active {background:var(--x-button-background-active-light); border-color:var(--x-color-background-xx-gray); }
     `,
     template: `
-        <a part="a" x-attr:href="state.hrefReal" x-attr:disabled="state.disabled" x-attr:target="state.target" x-attr:rel="state.rel" x-attr:title="state.tooltip" x-on:click="click" tabindex="1"><slot></slot></a>
+        <a part="a" x-attr:href="state.hrefReal" x-attr:disabled="state.disabled" x-attr:target="state.target" x-attr:rel="state.rel" x-attr:title="state.tooltip" x-on:click="click" x-on:keydown="keydown" tabindex="1"><slot></slot></a>
     `,
     state: {
         hrefReal: null
@@ -118,6 +118,14 @@ export default {
                     }
                 });
                 event.preventDefault();
+            },
+
+            async keydown(args) {
+                let event = args.event;
+                if (event.key == "Enter" && !event.altKey) {
+                    const a = host.shadowRoot.querySelector("a");
+                    a.click();
+                }
             }
         }
     }

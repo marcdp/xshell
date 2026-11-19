@@ -353,8 +353,12 @@ export default {
                     }
                     event.preventDefault();
                 } else if (event.key == "Enter" && !event.altKey) {
-                    debugger;
-                    firstSelected.dispatchEvent(new CustomEvent("activate", {bubbles: true, detail: this.getEventDetail(firstSelected, selecteds)}));
+                    const href = firstSelected.href;
+                    if (href) {
+                        firstSelected.activate();
+                    } else {
+                        firstSelected.dispatchEvent(new CustomEvent("activate", {bubbles: true, detail: this.getEventDetail(firstSelected, selecteds)}));
+                    }
                     event.preventDefault();
                 }
                 // reselect

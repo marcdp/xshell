@@ -13,7 +13,7 @@ export default {
         <x-datafields>
 
             <div x-if="state.results.length > 0">
-                <x-listview x-if="state.results.length > 0" view="tiles" title="Search results">
+                <x-listview x-if="state.results.length > 0" view="tiles" title="Search results" x-on:activate="activate">
                     <x-listview-head></x-listview-head>
                     <x-listview-body>
                         <x-listview-item
@@ -94,7 +94,16 @@ export default {
                     }
                 }
                 state.results = results;
+            },
+
+            activate({event}) {
+                debugger;
+                const item = event.detail.item;
+                if (item && item.href) {
+                    window.location.href = item.href;
+                }
             }
+
         };
     }
 }

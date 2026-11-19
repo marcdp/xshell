@@ -10,7 +10,8 @@ export default {
     meta: {
         title:"Preferences", 
         description: "Manage browser-local preferences.",
-        icon:"x-settings"
+        icon:"x-settings",
+        classes: ["size-narrow"]
     },
 
     style: `
@@ -19,15 +20,14 @@ export default {
         :scope > div .menu-container {min-width:15em;}
         :scope > div x-splitter {margin: 0 .5em;}
         :scope > div .page-container {display:block; min-width:50%; max-width:80%;}
-        :scope > div .page-container h1 {margin-top:0;}
-        
+        :scope > div .page-container h1 {margin-top:0;}        
     `,
 
     template: `
         <div>
             <div class="menu-container">
                 <x-menuitem x-recursive="menuitem in state.menu" 
-                    x-key="href" 
+                    x-key="id,href,path,command,order" 
                     x-attr:label="menuitem.label" 
                     x-attr:href="menuitem.path || menuitem.href" 
                     x-attr:command="menuitem.command"

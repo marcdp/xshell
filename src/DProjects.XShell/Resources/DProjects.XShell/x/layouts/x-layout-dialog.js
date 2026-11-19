@@ -1,5 +1,7 @@
 import { getDeepActiveElement } from "../utils/dom.js";
 
+const dialogSizes = new Set(["size-compact", "size-narrow", "size-medium", "size-wide", "size-full"]);
+
 // layout
 export default {
     contract: {
@@ -67,16 +69,14 @@ export default {
         dialog.fill > .container {width:100%; height:100%; display:flex; flex-direction:column;}
         dialog.fill > .container .body {display:flex; flex-direction:column; flex:1;}
 
-        /* width */
-        dialog.width20 {width: 20em; min-width:20em;}
-        dialog.width30 {width: 30em;}
-        dialog.width40 {width: 40em;}
-        dialog.width50 {width: 50em;}
-        dialog.width60 {width: 60em;}
-        dialog.width70 {width: 70em;}
-        dialog.width80 {width: 80em;}
-        dialog.width90 {width: 90em;}
-        dialog.width100 {width: 100em;}
+        /* size */
+        @media (min-width: 769px) {
+            dialog.size-compact {width:24rem; min-width:0;}
+            dialog.size-narrow {width:34rem; min-width:0;}
+            dialog.size-medium {width:48rem; min-width:0;}
+            dialog.size-wide {width:64rem; min-width:0;}
+            dialog.size-full {width:calc(100vw - 2rem); min-width:0; max-width:none;}
+        }
 
         /* responsive */
         @media (max-width: 768px) {
@@ -119,36 +119,42 @@ export default {
     state: {
         pageClasses: ""
     },
-    controller({ state, events, bus, getPage, host, postRender }) {
+    controller({ state, events, getPage, host, postRender }) {
         let previousFocus = null;
         return {
-            load() {
-                //load
-                events.on(bus, "xshell:page:load", "refresh");
-                // bind page load event to update page classes
-                events.on(bus, "xshell:page:load", (event)=>{
-                    if (event.detail.id == getPage()?.id) {
-                        this.onPageLoaded({event});
-                    }
-                });
-                // enqueue open
-                postRender("open");
+            mount() {
+                // The Page host emits load after committing the Page and its context.
+                previousFocus = getDeepActiveElement();
+                const pageHost = host.getRootNode().host;
+                if (pageHost) events.on(pageHost, "load", "refresh");
                 this.refresh();
             },
-            mount() {
-                previousFocus = getDeepActiveElement();
-            },
             open() {
+                // Show the modal only after its effective classes have rendered.
                 const dialog = host.shadowRoot.querySelector("dialog");
-                if (dialog) {
+                if (dialog && !dialog.open) {
                     dialog.showModal();
                     state.opened = true;
                 }
             },
             refresh() {
-                //refresh
                 const page = getPage();
-                if (page) state.label = page.label;
+                if (!page) return;
+
+                // Prefer the first caller size, then the first Page size. Keep other classes in declaration order.
+                const pageClasses = page.meta?.classes?.join(" ").split(/[ \t\n\f\r]+/) ?? [];
+                const callerClasses = Array.isArray(page.context?.classes) ? page.context.classes.join(" ").split(/[ \t\n\f\r]+/) : [];
+                const size = callerClasses.find(name => dialogSizes.has(name)) ?? pageClasses.find(name => dialogSizes.has(name));
+                const classes = new Set(size ? [size] : []);
+                for (const name of [...pageClasses, ...callerClasses]) {
+                    if (name && name !== "opened" && !dialogSizes.has(name)) classes.add(name);
+                }
+                state.pageClasses = [...classes].join(" ");
+                state.label = page.label;
+
+                // Schedule a render even when the Page has no classes.
+                postRender("open");
+                host.invalidate();
             },
 
             queryClose(args) {
@@ -157,22 +163,16 @@ export default {
                 host.dispatchEvent(new CustomEvent("queryClose", { composed: true }));
             },
             unmount() {
+                // Release the Page host listener for this mount.
+                events.dispose();
+
                 // try restore previous focus
                 if (previousFocus?.isConnected) {
                     setTimeout(() => {
                         previousFocus.focus({ preventScroll: true });
                     }, 0);
                 }                
-            },
-
-            // events
-            onPageLoaded({ event }) {
-                const page = getPage();
-                if (page) {
-                    state.pageClasses = page.meta?.classes?.join(" ") || "";
-                }
-            },
-
+            }
         }
     }
 };

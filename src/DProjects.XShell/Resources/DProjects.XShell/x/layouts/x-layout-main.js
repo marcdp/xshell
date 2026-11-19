@@ -218,6 +218,7 @@ export default {
                 margin-right:unset;
                 flex:1;
             }
+
         }
 
         /* responsive */
@@ -304,8 +305,8 @@ export default {
 
                     <div class="shortcuts">
 
-                        <x-dropdown class="tasks popover left" _collapse-on-click>
-                            <x-button class="round light" icon="x-tasks" tooltip="Background tasks" x-attr:badge="state.runningTasks > 0 ? state.runningTasks : ''"></x-button>
+                        <x-dropdown class="tasks popover left" collapse-on-click x-if="state.tasksButtonVisible">
+                            <x-button class="round light" icon="x-tasks" tooltip="Background tasks" x-attr:badge="state.tasksRunning > 0 ? state.tasksRunning : ''"></x-button>
                             <x-page slot="dropdown" src="/pages/tasks.js" loading="lazy"></x-page>
                         </x-dropdown>
 
@@ -316,7 +317,7 @@ export default {
                                     <label>{{ menuitem.label }}</label>
                                 </x-anchor>
                             </div>
-                            <x-dropdown x-else x-attr:class="'popover left' + (menuitem.class ? ' ' + menuitem.class : '')"  collapse-on-click>
+                            <x-dropdown x-else x-attr:class="'popover left' + (menuitem.class ? ' ' + menuitem.class : '')" >
                                 <x-button x-attr:label="menuitem.label" x-attr:icon="menuitem.icon" x-attr:title="menuitem.tooltip" class="round light"></x-button>
                                 <x-menu slot="dropdown" x-prop:menu="menuitem.children"></x-menu>            
                             </x-dropdown>
@@ -386,9 +387,10 @@ export default {
         menuNavigation:  null,
         menuTools:       null,
         pageClasses:     "",
-        runningTasks:    0,
         dockPosition:    "bottom",
-        dockSrc:         ""
+        dockSrc:         "",
+        tasksRunning:    0,
+        tasksButtonVisible: false
     },
     controller({ state, events, areas, bus, getPage, host, tasks, postRender, preferences }) {
         let pendingWrite = Promise.resolve();
@@ -496,11 +498,12 @@ export default {
             
             refreshTasks() {
                 // refresh the count of pending and running background tasks
-                const runningTasksBefore = state.runningTasks;
-                state.runningTasks = tasks.list().filter(task =>
-                    task.background && (task.status === "pending" || task.status === "running")
+                const tasksRunningBefore = state.tasksRunning;
+                const allTasks = tasks.list();
+                state.tasksButtonVisible = allTasks.filter(task => task.background).length > 0;
+                state.tasksRunning = allTasks.filter(task => task.background && (task.status === "pending" || task.status === "running")
                 ).length;
-                if (runningTasksBefore == 0 && state.runningTasks > 0) {
+                if (tasksRunningBefore == 0 && state.tasksRunning > 0) {
                     const dropdown = host.shadowRoot.querySelector("x-dropdown.tasks");
                     dropdown.expand();
                 }

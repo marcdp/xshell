@@ -33,7 +33,7 @@ export default {
             height:100%;            
         }
         x-loading {width:var(--x-loading-width);left:50%;transform:translateX(-50%);z-index:10;}
-        .title {border-bottom:var(--x-layout-main-border); ccolor:var(--x-color-gray); padding-left:.65em; padding-right:.65em; min-height:3.15em;}
+        .title {border-bottom:var(--x-layout-main-border); padding-left:.65em; padding-right:.65em; min-height:3.15em;}
         .title x-page-title {padding-left:0em; font-weight:600; padding-right:1em; padding-top:.5em; padding-bottom:.5em; }
         .body { 
             flex:1;

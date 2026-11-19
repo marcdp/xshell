@@ -97,6 +97,14 @@ export default {
             div.panel .header div.title h2 {flex:0;}
             div.panel .body.fill {display:flex; flex-direction: column; width:100%; position:absolute; top:var(--x-fill-top); height:var(--x-fill-height); box-sizing:border-box; padding:0;}
             div.panel:has(.body.fill) {scrollbar-width: none; scrollbar-gutter: none; overflow:hidden;}           
+
+            /* size */
+            div.panel:has(> .body.size-compact) {width:25vw;}
+            div.panel:has(> .body.size-narrow) {width:40vw;}
+            div.panel:has(> .body.size-medium) {width:60vw;}
+            div.panel:has(> .body.size-wide) {width:75vw;}
+            div.panel:has(> .body.size-full) {width:100vw;}
+            
         }
         @media (max-width: 768px) {
             :host {
@@ -113,6 +121,8 @@ export default {
             div.panel .body.fill {display:flex; flex-direction: column; width:100%; position:absolute; top:var(--x-fill-top); height:var(--x-fill-height); box-sizing:border-box;padding:0;}
             div.panel:has(.body.fill) {scrollbar-width: none; scrollbar-gutter: none; overflow:hidden;}
         }
+
+        
     `,
     template: `
         <div class="backdrop" x-class:expanded="state.expanded" x-on:click="queryClose"></div>

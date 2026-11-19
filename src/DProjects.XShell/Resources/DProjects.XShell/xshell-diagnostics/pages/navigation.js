@@ -21,7 +21,7 @@ export default {
             <x-tab label="Areas">
                 <x-listview view="details">
                     <x-listview-head>
-                        <x-listview-column label="Area" width="10em"></x-listview-column>
+                        <x-listview-column label="Area" width="15em"></x-listview-column>
                         <x-listview-column label="Prefix"></x-listview-column>
                         <x-listview-column label="Label"></x-listview-column>
                         <x-listview-column label="Default"></x-listview-column>
@@ -53,7 +53,7 @@ export default {
             <x-tab label="Menus">
                 <x-listview view="details">
                     <x-listview-head>
-                        <x-listview-column label="Menu" width="12em"></x-listview-column>
+                        <x-listview-column label="Menu" width="15em"></x-listview-column>
                         <x-listview-column label="Menuitems"></x-listview-column>
                     </x-listview-head>
                     <x-listview-body>

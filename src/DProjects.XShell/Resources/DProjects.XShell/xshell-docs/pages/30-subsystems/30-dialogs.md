@@ -4,12 +4,12 @@ The `dialog` service opens Pages through `navigation.navigate({ open: "dialog", 
 
 | Method | Parameters and selected resource |
 | --- | --- |
-| `confirm({ title, message, variant })` | `xshell.services.dialog.options.confirm` |
-| `message({ type, title, message })` | `xshell.services.dialog.options.message` |
-| `prompt({ title, message, value, inputType, placeholder, required })` | `xshell.services.dialog.options.prompt` |
-| `picker({ title, message, value, inputType, placeholder, domain, multiple, required })` | `xshell.services.dialog.options.picker` |
-| `language({ title, message, value, required, current } = {})` | Builds a language domain and invokes picker with radios. |
-| `open({ href, params, title, breadcrumb, icon, context })` | Opens the supplied Page with params, navigation metadata, and context. |
+| `confirm({ title, message, variant, classes })` | `xshell.services.dialog.options.confirm` |
+| `message({ type, title, message, classes })` | `xshell.services.dialog.options.message` |
+| `prompt({ title, message, value, inputType, placeholder, required, classes })` | `xshell.services.dialog.options.prompt` |
+| `picker({ title, message, value, inputType, placeholder, domain, multiple, required, classes })` | `xshell.services.dialog.options.picker` |
+| `language({ title, message, value, required, current, classes } = {})` | Builds a language domain and invokes picker with radios. |
+| `open({ href, params, title, breadcrumb, icon, context, classes })` | Opens the supplied Page with params, navigation metadata, and context. |
 
 The first four helpers pass fields as Page creation context. `language()` uses `i18n.config.langs`, excludes IDs in `current`, and defaults to
 required selection. It forwards `value` to the radios picker and returns the selection without switching language.
@@ -32,6 +32,33 @@ not change the helper Page.
     }
 }
 ```
+
+## Dialog classes and sizes
+
+Every Dialog method accepts an optional `classes` array of CSS class names. Dialog passes these through Navigation as Page context. The bundled dialog
+layout combines them with the Page's `meta.classes`, removes duplicates, and applies the resulting classes to the native dialog before showing it.
+
+```js
+const result = await dialog.prompt({
+    title: "Rename item",
+    message: "Enter a new name.",
+    value: "Untitled",
+    classes: ["size-compact"]
+});
+```
+
+| Class | Preferred width |
+| --- | --- |
+| `size-compact` | `24rem` |
+| `size-narrow` | `34rem` |
+| `size-medium` | `48rem` |
+| `size-wide` | `64rem` |
+| `size-full` | Viewport width with a `1rem` gutter on each side |
+
+A Page can set a preferred size with `meta: { classes: ["size-medium"] }`. An opener can override it with `classes: ["size-compact"]`.
+The layout uses the first supported size in the caller's list, or the first supported size in the Page's list if the caller supplies none.
+Other classes from both lists still apply. When both lists omit a semantic size, the layout uses content-based sizing with a viewport-relative minimum.
+On smaller screens, the ordinary width cap is 90% of the viewport. The full size uses the viewport width minus its gutters.
 
 ## Results
 
