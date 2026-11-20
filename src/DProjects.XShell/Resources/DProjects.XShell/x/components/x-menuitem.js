@@ -61,7 +61,7 @@ export default {
         :host x-anchor x-icon:first-child {}
         :host x-anchor x-icon:first-child:last-child {align-self:flex-end;}
         :host x-anchor x-icon + .label {padding-left:.35em;}
-        :host x-anchor.selected {font-weight: 600; background:var(--x-color-background-x-gray);}
+        :host x-anchor.selected {font-weight: 500; background:var(--x-color-background-x-gray);}
         :host .menuitem[disabled] {pointer-events:none; cursor:default; --x-color-text:var(--x-color-text-disabled);}
 
         :host HR {border:none; background:var(--x-menuitem-separator-color); height:.1px; margin-top:.15em; margin-bottom:.15em; display:block; box-sizing: border-box; width:100%;}

@@ -1,26 +1,43 @@
 
 export default {
-    contract: { description: "Read-only reference for an XShell public contract." },
-    meta: {
-        title: "Contract detail"
+    contract: {
+        description: "Read-only reference for an XShell public contract.",
+        properties: {
+            kind: {type:"string", default:"", state:true, query:true, description:"Contract kind: component, page, service, command, or contract."},
+            id: {type:"string", default:"", state:true, query:true, description:"Identifier of the resource or registered contract."}
+        }
     },
-    style: ``,
+    meta: {
+        title: "Contract detail",
+        classes: ["size-medium", "_layout-fill"]
+    },
+    style: `
+        h3 {margin-bottom:0}
+        x-tabs {
+            flex:1; 
+            height:100%;
+            
+        }
+    `,
     template: `
         <x-notice x-if="state.error" type="error" role="alert" x-prop:message="state.error"></x-notice>
-        <div class="contract-reference" x-if="state.detail">
-            <x-card>
-                <h2 slot="header"><x-icon x-attr:icon="state.detail.icon" aria-hidden="true"></x-icon> Overview</h2>
-                <dl>
-                    <div><dt>Resource</dt><dd><code x-text="state.detail.id"></code></dd></div>
-                    <div><dt>Kind</dt><dd x-text="state.detail.kindLabel"></dd></div>
-                    <div x-if="state.detail.moduleId"><dt>Module</dt><dd x-text="state.detail.moduleId"></dd></div>
-                    <div x-if="state.detail.contractId"><dt>Contract</dt><dd x-text="state.detail.contractId"></dd></div>
-                </dl>
-                <p x-if="state.detail.description" x-text="state.detail.description"></p>
-            </x-card>
-            <p x-if="state.detail.empty">No public contract members or examples are documented for this resource.</p>
 
-            <section x-for="section in state.detail.sections">
+        <x-tabs class="sidebar" x-if="state.detail">
+            <x-tab label="Overview">
+                <x-card>
+                    <h2 slot="header"><x-icon x-attr:icon="state.detail.icon" aria-hidden="true"></x-icon> Overview</h2>
+                    <dl>
+                        <div><dt>Resource</dt><dd><code x-text="state.detail.id"></code></dd></div>
+                        <div><dt>Kind</dt><dd x-text="state.detail.kindLabel"></dd></div>
+                        <div x-if="state.detail.moduleId"><dt>Module</dt><dd x-text="state.detail.moduleId"></dd></div>
+                        <div x-if="state.detail.contractId"><dt>Contract</dt><dd x-text="state.detail.contractId"></dd></div>
+                    </dl>
+                    <p x-if="state.detail.description" x-text="state.detail.description"></p>
+                    <p x-if="state.detail.empty">No public contract members or examples are documented for this resource.</p>
+                </x-card>
+            </x-tab>
+
+            <x-tab x-for="section in state.detail.sections" x-key="title" x-attr:label="section.title">
                 <h2 x-text="section.title"></h2>
                 <x-card x-for="entry in section.entries">
                     <h3 slot="header"><code x-text="entry.name"></code></h3>
@@ -55,9 +72,9 @@ export default {
                         </ul>
                     </div>
                 </x-card>
-            </section>
+            </x-tab>
 
-            <section x-if="state.detail.examples.length">
+            <x-tab x-if="state.detail.examples.length" label="Examples">
                 <h2>Examples</h2>
                 <x-card x-for="example in state.detail.examples">
                     <h3 slot="header" x-text="example.title"></h3>
@@ -74,10 +91,13 @@ export default {
                         <x-object x-prop:value="example.state" expanded></x-object>
                     </x-details>
                 </x-card>
-            </section>
-        </div>
+            </x-tab>
+        </x-tabs>
     `,
-    state: { detail: null, error: "" },
+    state: { 
+        detail: null, 
+        error: "" 
+    },
     controller({ state, page, loader, resolver, services, contracts, config }) {
         let revision = 0;
         const kinds = {
@@ -90,9 +110,9 @@ export default {
 
         return {
             async load() {
-                // Await resolution so the host layout shows its loading indicator.
+                // load
                 const request = ++revision;
-                const { kind, id } = page.query;
+                const { kind, id } = state;
                 state.detail = null;
                 state.error = "";
                 try {
@@ -107,6 +127,7 @@ export default {
                     }
                     state.detail = this.describeContract(kind, id, resource);
                     page.label = state.detail.label;
+                    page.description = state.detail.description;
                 } catch (error) {
                     if (request === revision) state.error = error?.message || String(error);
                 }
@@ -213,12 +234,12 @@ export default {
                 const badges = [];
                 if (required) badges.push(descriptor.required ? "Required" : "Optional");
                 if (Object.hasOwn(descriptor, "readonly")) badges.push(descriptor.readonly ? "Read-only" : "Writable");
-                if (descriptor.format) badges.push(`Format · ${descriptor.format}`);
+                if (descriptor.format) badges.push(`Format: ${descriptor.format}`);
                 const flags = propertyKind === "component"
                     ? ["attribute", "attributeParser", "reflect", "state", "changeDetection"]
                     : propertyKind === "page" ? ["query", "queryParser", "reflect", "state", "context"] : [];
                 for (const flag of flags) {
-                    if (Object.hasOwn(descriptor, flag)) badges.push(`${flag} · ${descriptor[flag]}`);
+                    if (Object.hasOwn(descriptor, flag)) badges.push(`${flag}: ${descriptor[flag]}`);
                 }
                 return {
                     ...descriptor, name, type, schema, badges,

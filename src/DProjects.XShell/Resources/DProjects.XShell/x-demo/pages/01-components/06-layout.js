@@ -41,6 +41,10 @@ export default {
 
         <h2>Tabs</h2>
         <p>Use <code>x-tabs</code> and <code>x-tab</code> to organize related content into selectable panels.</p>
+        <p><code>&lt;x-tabs&gt;</code> places headers above the panels. <code>&lt;x-tabs class="sidebar"&gt;</code> places them beside the panel
+            and moves them above it in narrow containers.</p>
+        <p>Both presentations use direct <code>x-tab</code> children and share <code>selected-index</code>, <code>selected-hash</code>, and
+            <code>use-hash</code>. Switching panels shows local content within the current Page without opening or embedding another Page.</p>
         <x-tabs>
             <x-tab label="Overview">
                 <p>This is the overview panel.</p>

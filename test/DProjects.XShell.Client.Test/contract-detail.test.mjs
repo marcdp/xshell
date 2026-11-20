@@ -126,8 +126,8 @@ for (const [kind, id, contract, reference] of [
         assert.equal(Resource.constructions.mock.callCount(), 0);
         if (kind === "page") {
             const src = section(state.detail, "Properties").find(property => property.name === "src");
-            assert.ok(src.badges.includes("query · true"));
-            assert.ok(src.badges.includes("reflect · true"));
+            assert.ok(src.badges.includes("query: true"));
+            assert.ok(src.badges.includes("reflect: true"));
         }
     });
 }
@@ -219,7 +219,7 @@ test("The reference preserves descriptor metadata, declaration order, and copyab
         [[true, "null"], [true, '""'], [true, "false"], [true, "0"], [true, "[]"], [true, "{}"]]);
     assert.equal(unset.hasDefault, false);
     assert.equal(mode.enumText, '"", "brief"');
-    assert.deepEqual(mode.badges, ["Optional", "Writable", "attribute · true", "reflect · false", "state · true"]);
+    assert.deepEqual(mode.badges, ["Optional", "Writable", "attribute: true", "reflect: false", "state: true"]);
     assert.equal(list.hasSchema, true);
     assert.equal(list.schema, false);
 

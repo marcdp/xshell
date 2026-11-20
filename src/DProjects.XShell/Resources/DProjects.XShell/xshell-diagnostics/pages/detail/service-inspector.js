@@ -258,7 +258,10 @@ export default {
                 // Open the reference even when the live service could not be constructed.
                 if (!state.contractId) return;
                 return navigation.navigate({
-                    href: "page:xshell-diagnostics:/pages/detail/contract-detail.js", page, open: "stack", classes: ["size-wide"],
+                    href: "page:xshell-diagnostics:/pages/detail/contract-detail.js", 
+                    page, 
+                    open: "stack", 
+                    classes: ["size-wide"],
                     params: { kind: "service", id: state.serviceId }
                 });
             },

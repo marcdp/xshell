@@ -45,32 +45,30 @@ export default {
                         <x-tab label="Activity" hash="activity"><p>Recent changes</p></x-tab>
                     </x-tabs>
                 `
+            },
+            {
+                name: "sidebar",
+                description: "Display tabs with vertical navigation beside the selected content.",
+                template: `
+                    <x-tabs class="sidebar">
+                        <x-tab label="Overview"><p>Resource overview.</p></x-tab>
+                        <x-tab label="Properties"><p>Resource properties.</p></x-tab>
+                        <x-tab label="Examples"><p>Usage examples.</p></x-tab>
+                    </x-tabs>
+                `
             }
         ]
     },
     style: `
         :host {display:block; }
         
-        nav {
-            margin-bottom:1.5em; 
-            border-bottom:var(--x-accordion-border); 
-            display:flex;
-            overflow-x:auto;
-            flex-wrap:wrap;
-        }
-        
+        nav {margin-bottom:1.5em; border-bottom:var(--x-accordion-border); display:flex;overflow-x:auto;flex-wrap:wrap;}        
         nav a {padding-left:1em; padding-right:1em; cursor:pointer; position:relative; line-height:2.5em; display:block; flex:unset; font-size:var(--x-font-size-tab); font-weight:600; white-space:nowrap; }
-        
         nav a:after {content:""; border-radius:.1em; position:absolute; width:calc(100% - .25em); bottom:0; left:0; }
-
         nav a:hover {color:var(--x-color-primary);}
         nav a.selected {font-weight:600; color:var(--x-color-primary);}
         nav a.selected:after {font-weight:600; border:.125em var(--x-color-primary) solid;}
-
         :host(.no-header) nav {display:none;}
-
-        ::slotted(x-tab) {display:none;}
-
         @media only screen and (max-width: 768px) {
             nav a {
                 font-size:var(--x-font-size-text);
@@ -78,6 +76,41 @@ export default {
                 padding-right:.75em;
             }
         }
+
+        /* x-tab */
+        ::slotted(x-tab) {display:none;}
+
+        /* sidebar */
+        :host(.sidebar) {
+            display:flex; 
+            flex-direction: row;            
+        }
+        :host(.sidebar) nav {
+            box-sizing:border-box; 
+            flex:0 0 100%; 
+            min-width:0;
+            padding:1em;
+            flex-direction:column; 
+            flex-basis:18em; 
+            flex-direction:column; 
+            flex-wrap:nowrap; 
+            margin:0 1.25em 0 0; 
+            border:0; 
+            background: var(--x-layout-main-drawer-background);;
+        }
+        :host(.sidebar) nav a {
+        min-width:0; 
+            white-space:normal; 
+            overflow-wrap:anywhere; 
+            font-size:unset; font-weight:normal; border:none; border-radius: var(--x-menuitem-border-radius);
+            padding-left:.75em; 
+            line-height:2.1em; height:2.1em;
+            margin-bottom:.1em;
+        }
+        :host(.sidebar) nav a:hover {color:unset; background: var(--x-color-background-x-gray);}
+        :host(.sidebar) nav a.selected {border:none; font-weight: 500; background: var(--x-color-background-x-gray); color:unset;}
+        :host(.sidebar) nav a.selected:after {border:none;}
+        :host(.sidebar) slot {display:block; flex:1 1 100%; min-width:0; overflow-wrap:anywhere; overflow-x:auto; flex-basis:0; height:100%; scrollbar-width: var(--x-scrollbar-width); scrollbar-gutter: var(--x-scrollbar-gutter);}
 
     `,
     state: {
@@ -120,6 +153,7 @@ export default {
                 });
             },
             mount() {
+                //mount
                 host.shadowRoot.adoptedStyleSheets = [...host.shadowRoot.adoptedStyleSheets, styleSheet];
                 if (state.useHash) {
                     const page = getPage();

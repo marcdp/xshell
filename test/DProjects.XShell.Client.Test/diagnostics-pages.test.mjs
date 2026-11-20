@@ -174,6 +174,9 @@ const contractDetailHref = "page:xshell-diagnostics:/pages/detail/contract-detai
 
 test("Contract Detail composes cards, chips, and semantic field lists", () => {
     const { template, style } = ContractDetailPage;
+    assert.match(template, /<x-tabs class="sidebar" x-if="state\.detail">\s*<x-tab label="Overview">/);
+    assert.match(template, /<x-tab x-for="section in state\.detail\.sections" x-key="title" x-attr:label="section\.title">/);
+    assert.match(template, /<x-tab x-if="state\.detail\.examples\.length" label="Examples">/);
     assert.match(template, /<x-card>\s*<h2 slot="header">.*<\/x-icon> Overview<\/h2>\s*<dl>/);
     assert.match(template, /<x-card x-for="entry in section\.entries">\s*<h3 slot="header"><code x-text="entry\.name">/);
     assert.match(template, /<h2 x-text="section\.title">/);

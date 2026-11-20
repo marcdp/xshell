@@ -34,6 +34,9 @@ x-markdown pre code {display:block;font-size:inherit;color:inherit;white-space:p
 x-markdown table {width:100%; border-collapse:collapse; margin:1em 0; }
 x-markdown table th, x-markdown table td {border:1px solid var(--x-color-gray); padding:.5em; text-align:left;}
 
+x-chip {margin-right:0.25em;}
+
 .x-toast-container {position: fixed; top: 1em; right: 1em; width: min(30em, calc(100vw - 2em)); z-index: 1000; pointer-events: none;}
 .x-toast-container > x-notice { pointer-events: auto;}
 .x-toast-container.x-toast-container-page {position: absolute; z-index:0;}
+

@@ -43,10 +43,11 @@ export default {
 
     style: `
         :scope {height:100%;}
-        :scope > div {display:flex; flex-direction: row; flex:1;}
+        :scope > div {display:flex; flex-direction: row; flex:1; height:100%;}
         :scope > div .menu-container {min-width:16; width:18em; background:var(--x-layout-main-drawer-background); padding:1em}
-        :scope > div .page-container {display:block; padding-left:1.5em; flex:1;}
-        :scope > div .page-container h1 {margin-top:0;}        
+        :scope > div .page-container {display:block; padding-left:1.5em; flex:1; overflow-y:auto; scrollbar-width: var(--x-scrollbar-width); scrollbar-gutter: var(--x-scrollbar-gutter); }
+        :scope > div .page-container h4 {margin-top:0; }        
+        :scope > div .page-container x-page {}
     `,
 
     template: `

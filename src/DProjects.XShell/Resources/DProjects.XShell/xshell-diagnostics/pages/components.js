@@ -66,7 +66,9 @@ export default {
                 const id = event.detail?.value;
                 if (typeof id !== "string" || !id.trim()) return;
                 return navigation.navigate({
-                    href: "page:xshell-diagnostics:/pages/detail/contract-detail.js", page, open: "stack", classes: ["size-wide"],
+                    href: "page:xshell-diagnostics:/pages/detail/contract-detail.js", 
+                    page, 
+                    open: "stack",
                     params: { kind: "component", id }
                 });
             },

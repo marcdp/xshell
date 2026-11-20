@@ -25,6 +25,7 @@ operational APIs such as `services.resolve(...)` and `loader.load(...)` remain s
 In the Diagnostics console, activate a row in **Components**, **Pages**, or **Contracts** to open **Contract Detail** in the Stack.
 In **Services**, activate a row to open the interactive **Service Inspector**, then choose **View Contract** to read the same reference.
 The Inspector can read live properties, invoke methods, and monitor events. Contract Detail reads Service registrations without constructing a Service.
+Contract Detail opens on **Overview** and shows tabs for the contract sections and examples that are present.
 
 Open the reference directly with a Page href such as `page:xshell-diagnostics:/pages/detail/contract-detail.js?kind=command&id=demo.operation`.
 Use [Navigation](120-navigation.md) to open it in the Stack. Navigation serializes the `kind` and `id` query parameters,
