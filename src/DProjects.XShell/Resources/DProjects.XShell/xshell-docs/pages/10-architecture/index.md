@@ -20,6 +20,41 @@ routes separately from canonical Page/resource hrefs.
 Subsystems that own collections expose read-only `registry` snapshots for observation. Reading a registry does not create, resolve, or load an item;
 operational APIs such as `services.resolve(...)` and `loader.load(...)` remain separate.
 
+### Diagnostics contract reference
+
+In the Diagnostics console, activate a row in **Components**, **Pages**, or **Contracts** to open **Contract Detail** in the Stack.
+In **Services**, activate a row to open the interactive **Service Inspector**, then choose **View Contract** to read the same reference.
+The Inspector can read live properties, invoke methods, and monitor events. Contract Detail reads Service registrations without constructing a Service.
+
+Open the reference directly with a Page href such as `page:xshell-diagnostics:/pages/detail/contract-detail.js?kind=command&id=demo.operation`.
+Use [Navigation](120-navigation.md) to open it in the Stack. Navigation serializes the `kind` and `id` query parameters,
+which the Page reads on initial navigation and reload.
+
+```javascript
+await navigation.navigate({
+    href: "page:xshell-diagnostics:/pages/detail/contract-detail.js",
+    page,
+    open: "stack",
+    classes: ["size-wide"],
+    params: { kind: "component", id: "x-button" }
+});
+```
+
+| `kind` | Example `id` |
+| --- | --- |
+| `component` | `x-button` |
+| `page` | `/_assets/x/pages/workspace.js` |
+| `service` | `areas` |
+| `command` | `demo.operation` |
+| `contract` | `navigation` |
+
+Page IDs can use the effective asset path from **Pages**, the module-qualified alias `x:/pages/workspace.js`, or the version-independent
+asset form shown above.
+
+The reference lists the declared properties, methods, events, slots, and named types when available. It presents a Command's `execute`
+signature with its parameters and return metadata. Examples show copyable template and code blocks and expandable initial state.
+Example JavaScript and template bindings are never executed, and template source is displayed as text.
+
 ## Documents
 
 - [Bootstrap](10-bootstrap.md) — Repository resolution, startup, validation, and initialization order.

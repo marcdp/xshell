@@ -7,7 +7,10 @@ import ModulesPage from "../../src/DProjects.XShell/Resources/DProjects.XShell/x
 import ServicesPage from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell-diagnostics/pages/services.js";
 import InspectorPage from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell-diagnostics/pages/detail/service-inspector.js";
 import LoaderPage from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell-diagnostics/pages/loader.js";
+import ComponentsPage from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell-diagnostics/pages/components.js";
+import PagesPage from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell-diagnostics/pages/pages.js";
 import ContractsPage from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell-diagnostics/pages/contracts.js";
+import ContractDetailPage from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell-diagnostics/pages/detail/contract-detail.js";
 import NavigationPage from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell-diagnostics/pages/navigation.js";
 import ListView from "../../src/DProjects.XShell/Resources/DProjects.XShell/x/components/x-listview.js";
 import Page from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/page.js";
@@ -167,7 +170,89 @@ test("Services diagnostics file links retain native activation without activatin
     }
 });
 
-function createInspector(t, query = "", { resolutionError, instance = { mode: "path" } } = {}) {
+const contractDetailHref = "page:xshell-diagnostics:/pages/detail/contract-detail.js";
+
+for (const [listing, kind, item, id] of [
+    [ComponentsPage, "component", "component", "x-button"],
+    [PagesPage, "page", "page", "/_assets/x/0.9.0.dev/pages/workspace.js"],
+    [ContractsPage, "contract", "contractItem", "navigation"]
+]) {
+    test(`The ${kind} listing activates the row contract by keyboard and double-click while preserving its file link`, async t => {
+        const page = { src: "/_assets/xshell-diagnostics/pages/" + kind + "s.js" };
+        const navigation = { navigate: t.mock.fn() };
+        const controller = listing.controller({ page, navigation });
+        const row = Object.assign(new EventTarget(), { value: id, selected: true, closest() { return this; } });
+        const host = { querySelectorAll: () => [row] };
+        const listView = ListView.controller({ host });
+        row.addEventListener("activate", event => controller.inspectContract({ event }));
+        assert.match(listing.template, /x-on:activate="inspectContract"/);
+        assert.ok(listing.template.includes(`x-prop:value="${item}.id"`));
+
+        await listView.dblClick({ event: { target: row } });
+        await listView.keydown({ event: Object.assign(new Event("keydown", { cancelable: true }), { key: "Enter" }) });
+        const expected = [{ href: contractDetailHref, page, open: "stack", classes: ["size-wide"], params: { kind, id } }];
+        assert.deepEqual(navigation.navigate.mock.calls.map(call => call.arguments), [expected, expected]);
+
+        const anchor = Array.from(listing.template.matchAll(/<x-anchor\b[^>]+>/g), match => match[0])
+            .find(markup => markup.includes(`x-attr:href="${item}.url"`));
+        assert.match(anchor, /target="_blank"/);
+        assert.match(anchor, /x-on:dblclick="keepLinkActivation"/);
+        assert.match(anchor, /x-on:keydown.enter="keepLinkActivation"/);
+        for (const type of ["dblclick", "keydown"]) {
+            const event = new Event(type, { bubbles: true, cancelable: true });
+            const stop = t.mock.method(event, "stopPropagation");
+            controller.keepLinkActivation({ event });
+            assert.equal(stop.mock.callCount(), 1);
+            assert.equal(event.defaultPrevented, false);
+        }
+    });
+}
+
+test("Navigation reconstructs a stacked contract reference and exact query ID from its saved URL", async t => {
+    const id = "shared /?#&+%=ñ";
+    const contractPath = "/_assets/xshell-diagnostics/pages/detail/contract-detail.js";
+    const rootHost = { src: "/demo", getAttribute: () => null };
+    const hosts = [rootHost];
+    const container = { querySelectorAll: () => hosts, appendChild: host => hosts.push(host) };
+    globalThis.document = {
+        baseURI: "https://example.test/",
+        createElement: () => Object.assign(new EventTarget(), {
+            setAttribute(name, value) { this[name] = value; },
+            getAttribute(name) { return this[name] ?? null; }
+        })
+    };
+    const pushState = t.mock.fn();
+    globalThis.history = { pushState };
+    t.after(() => {
+        delete globalThis.document;
+        delete globalThis.history;
+    });
+    const navigation = new Navigation({
+        areas: { resolvePath: () => null },
+        resolver: { resolve: resource => resource === contractDetailHref ? { path: contractPath } : null },
+        config: { app: { basePath: "", baseUrl: document.baseURI }, xshell: {} }
+    }, { mode: "path" }, { container });
+    navigation._stack = [navigation.parseUrl("/demo")];
+    await ContractsPage.controller({ navigation, page: rootHost }).inspectContract({ event: { detail: { value: id } } });
+    assert.equal(hosts[1].layout, "stack");
+    assert.deepEqual(hosts[1].stackClasses, ["size-wide"]);
+
+    // Discard the live stack and reconstruct its child Page from the browser URL.
+    const reloaded = navigation._browserUrlToStack(pushState.mock.calls[0].arguments[2]);
+    assert.deepEqual(reloaded[1].classes, ["size-wide"]);
+    const page = new Page({ src: navigation._buildUrlFinal(reloaded[1]), bus: { emit() {} } });
+    const state = structuredClone(ContractDetailPage.state);
+    const contracts = {
+        getContractById: t.mock.fn(() => ({ label: "Shared API" })),
+        getContractItemById: () => ({ moduleId: "example" })
+    };
+    await ContractDetailPage.controller({ state, page, contracts }).load();
+    assert.deepEqual(page.query, { kind: "contract", id });
+    assert.deepEqual(contracts.getContractById.mock.calls[0].arguments, [id]);
+    assert.equal(page.label, "Shared API");
+});
+
+function createInspector(t, query = "", { resolutionError, instance = { mode: "path" }, navigation } = {}) {
     if (!globalThis.document) {
         globalThis.document = { baseURI: "https://example.test/" };
         t.after(() => { delete globalThis.document; });
@@ -195,9 +280,9 @@ function createInspector(t, query = "", { resolutionError, instance = { mode: "p
     };
     const contracts = { getContractById: id => id === "navigation" ? NavigationContract : { label: "Areas" } };
     const resolver = { resolve: () => ({ path: "/_assets/x/pages/invoke.js" }) };
-    const controller = InspectorPage.controller({ state, services, contracts, resolver, bus, page });
+    const controller = InspectorPage.controller({ state, services, contracts, resolver, bus, page, navigation });
     controller.load();
-    return { state, controller, bus, resolved };
+    return { state, controller, bus, resolved, page };
 }
 
 test("Inspector automatically resolves the service named in the URL and displays its contract", t => {
@@ -270,6 +355,23 @@ test("Inspector reports resolution failures and preserves available contract met
         assert.equal(state.resolved, false);
         assert.deepEqual(resolved, ["navigation"]);
     }
+});
+
+test("View Contract opens the inspected Service's read-only reference even when construction fails", async t => {
+    const navigation = { navigate: t.mock.fn() };
+    const options = { navigation, resolutionError: new Error("Constructor failed.") };
+    const { state, controller, page, resolved } = createInspector(t, "?service=areas", options);
+    assert.match(InspectorPage.template, /x-if="state.contractId" label="View Contract"[^>]+x-on:click="viewContract"/);
+    assert.equal(state.resolved, false);
+    await controller.viewContract();
+    assert.deepEqual(navigation.navigate.mock.calls[0].arguments, [{
+        href: contractDetailHref, page, open: "stack", classes: ["size-wide"], params: { kind: "service", id: "areas" }
+    }]);
+    assert.deepEqual(resolved, ["areas"]);
+
+    const bare = createInspector(t, "?service=bare", { navigation });
+    await bare.controller.viewContract();
+    assert.equal(navigation.navigate.mock.callCount(), 1);
 });
 
 test("Inspector removes service-monitoring listeners on unmount and unload", t => {

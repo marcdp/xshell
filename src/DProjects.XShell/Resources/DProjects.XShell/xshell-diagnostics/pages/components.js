@@ -11,7 +11,7 @@ export default {
     },
     template: `
         <p>Shows discovered components, their owning modules, load status, size, and load time.</p>
-        <x-listview view="details">
+        <x-listview view="details" x-on:activate="inspectContract">
             <x-listview-head>
                 <x-listview-column width="12em"><x-datafield type="search" x-model="state.id" placeholder="Component"></x-datafield></x-listview-column>
                 <x-listview-column width="12em"><x-datafield type="search" x-model="state.moduleId" placeholder="Module"></x-datafield></x-listview-column>
@@ -23,7 +23,7 @@ export default {
             </x-listview-head>
             <x-listview-body>
             <x-listview-item x-for="component in state.components"
-                x-attr:value="component.id"
+                x-prop:value="component.id"
                 x-attr:label="component.id"
                 x-attr:icon="component.icon"
                 target="_blank"
@@ -33,7 +33,8 @@ export default {
                 <x-file-size style="text-align:right" x-prop:value="component.size"></x-file-size>
                 <div style="text-align:right"><x-time-ms x-prop:value="component.time"></x-time-ms></div>
                 <div style="text-align:right">{{ component.status }}</div> 
-                <x-anchor style="text-align:right" x-attr:href="component.url" target="_blank" class="plain"><x-icon icon="x-open-in-new" ></x-icon></x-anchor>
+                <x-anchor style="text-align:right" x-attr:href="component.url" target="_blank" class="plain" tooltip="Open source file"
+                    x-on:dblclick="keepLinkActivation" x-on:keydown.enter="keepLinkActivation"><x-icon icon="x-open-in-new"></x-icon></x-anchor>
             </x-listview-item>
             </x-listview-body>
         </x-listview>
@@ -45,7 +46,7 @@ export default {
         description: "",
         components: null
     },
-    controller({ state, events, config, bus, loader}) {
+    controller({ state, events, config, bus, loader, navigation, page }) {
         return {
             load() {
                // load
@@ -59,6 +60,18 @@ export default {
                         this.refresh();
                     }
                 });
+            },
+            inspectContract({ event }) {
+                // Open the public contract for the activated row.
+                const id = event.detail?.value;
+                if (typeof id !== "string" || !id.trim()) return;
+                return navigation.navigate({
+                    href: "page:xshell-diagnostics:/pages/detail/contract-detail.js", page, open: "stack", classes: ["size-wide"],
+                    params: { kind: "component", id }
+                });
+            },
+            keepLinkActivation({ event }) {
+                event.stopPropagation();
             },
             async refresh() {
                 // refresh

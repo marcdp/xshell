@@ -29,7 +29,7 @@ export default {
                 <div>
                     {{ item.contractId }}
                     <x-anchor x-if="item.contractUrl" x-attr:href="item.contractUrl" target="_blank" class="plain"
-                        >
+                        x-on:dblclick="keepLinkActivation" x-on:keydown.enter="keepLinkActivation">
                         <x-icon icon="x-open-in-new" ></x-icon>
                     </x-anchor>
                 </div>
@@ -38,7 +38,8 @@ export default {
                 <div style="text-align:right"><x-time-ms x-prop:value="item.time"></x-time-ms></div>
                 <div style="text-align:right">{{ item.status }}</div>
                 <div style="text-align:right">{{ item.initializationStatus }}</div>
-                <x-anchor style="text-align:right" x-if="item.url" x-attr:href="item.url" target="_blank" class="plain"><x-icon icon="x-open-in-new" ></x-icon></x-anchor>
+                <x-anchor style="text-align:right" x-if="item.url" x-attr:href="item.url" target="_blank" class="plain"
+                    x-on:dblclick="keepLinkActivation" x-on:keydown.enter="keepLinkActivation"><x-icon icon="x-open-in-new"></x-icon></x-anchor>
             </x-listview-item>
             </x-listview-body>
         </x-listview>
@@ -71,6 +72,9 @@ export default {
                     open: "stack",
                     params: { service: serviceId }
                 });
+            },
+            keepLinkActivation({ event }) {
+                event.stopPropagation();
             },
             async refresh() {
                 // refresh

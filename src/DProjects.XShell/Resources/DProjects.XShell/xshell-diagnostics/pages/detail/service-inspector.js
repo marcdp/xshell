@@ -43,6 +43,7 @@ export default {
                 <x-toolbar>
                     <strong>{{ state.serviceId }}</strong>
                     <span class="muted">{{ state.status }}</span>
+                    <x-button x-if="state.contractId" label="View Contract" icon="x-contract" x-on:click="viewContract"></x-button>
                 </x-toolbar>
 
                 <x-notice x-if="state.error" type="error"
@@ -168,7 +169,7 @@ export default {
         monitoring: false,
         history: []
     },
-    controller({ state, services, contracts, resolver, bus, page }) {
+    controller({ state, services, contracts, resolver, bus, page, navigation }) {
         let instance = null, contract = null, listeners = [], sequence = 0;
         const invokePath = resolver.resolve("page:x:/pages/invoke.js")?.path;
 
@@ -251,6 +252,15 @@ export default {
                         .map(([key, value]) => `${key}: ${descriptorType(value)}`)
                         .join(", ") || "none"
                 }));
+            },
+
+            viewContract() {
+                // Open the reference even when the live service could not be constructed.
+                if (!state.contractId) return;
+                return navigation.navigate({
+                    href: "page:xshell-diagnostics:/pages/detail/contract-detail.js", page, open: "stack", classes: ["size-wide"],
+                    params: { kind: "service", id: state.serviceId }
+                });
             },
 
             openMethod({ event }) {
