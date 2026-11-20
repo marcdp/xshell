@@ -9,6 +9,7 @@ const structureFiles = [
     "x-demo/pages/01-components/05-listviews.js",
     "xshell-diagnostics/pages/bus.js",
     "xshell-diagnostics/pages/components.js",
+    "xshell-diagnostics/pages/commands.js",
     "xshell-diagnostics/pages/contracts.js",
     "xshell-diagnostics/pages/icons.js",
     "xshell-diagnostics/pages/loader.js",
@@ -53,6 +54,7 @@ test("details listviews preserve expected column counts and interactive headers"
     const expectedColumns = new Map([
         ["xshell-diagnostics/pages/bus.js", [4]],
         ["xshell-diagnostics/pages/components.js", [8]],
+        ["xshell-diagnostics/pages/commands.js", [7]],
         ["xshell-diagnostics/pages/contracts.js", [8]],
         ["xshell-diagnostics/pages/icons.js", [6]],
         ["xshell-diagnostics/pages/loader.js", [7]],

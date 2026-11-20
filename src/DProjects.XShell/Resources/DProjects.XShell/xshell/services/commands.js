@@ -20,15 +20,40 @@ export default class Commands {
     _loader;
     _tasks;
     _jsonValidator;
+    _config;
 
     // ctor
-    constructor({loader, tasks, jsonValidator}, options) {
+    constructor({loader, tasks, jsonValidator, config}, options) {
         this._loader = loader;
         this._tasks = tasks;
         this._jsonValidator = jsonValidator;
+        this._config = config || {xshell: {}, modules: {}};
     }
 
     // methods
+    list(options = {}) {
+        // Validate the small synchronous discovery filter surface.
+        if (!options || typeof options !== "object" || Array.isArray(options)) throw new TypeError("Command list options must be an object");
+        const unexpected = Object.keys(options).find(name => !["moduleId", "category", "query"].includes(name));
+        if (unexpected) throw new TypeError(`Unknown Command list option '${unexpected}'`);
+        for (const name of ["moduleId", "category", "query"]) {
+            if (options[name] !== undefined && typeof options[name] !== "string") throw new TypeError(`Command list option '${name}' must be a string`);
+        }
+
+        // Filter independent inventory projections without resolving or loading Command implementations.
+        const query = options.query?.toLowerCase();
+        const items = this._discover().filter(item => {
+            if (options.moduleId !== undefined && item.moduleId !== options.moduleId) return false;
+            if (options.category !== undefined && item.category !== options.category) return false;
+            return !query || [item.id, item.label, item.description].some(value => value.toLowerCase().includes(query));
+        });
+        return Object.freeze(items);
+    }
+    getInfo(id) {
+        // Reuse the canonical discovery projection so lookup and listing cannot diverge.
+        if (typeof id !== "string" || !id.trim()) throw new TypeError("Command id must be a non-empty string");
+        return this.list().find(item => item.id === id) || null;
+    }
     async run({id, args = {}, background = true} = {}) {
         if (typeof id !== "string" || !id.trim()) throw new TypeError("Command id must be a non-empty string");
         if (!args || typeof args !== "object" || Array.isArray(args)) throw new TypeError("Command arguments must be an object");
@@ -72,6 +97,32 @@ export default class Commands {
         });
     }
 
+    _discover() {
+        // Scan the same effective framework and module inventories used to register bootstrap Command resolver entries.
+        const items = [];
+        const sources = [["xshell", this._config.xshell], ...Object.entries(this._config.modules || {})];
+        for (const [moduleId, module] of sources) {
+            if (!module?.assets?.path) continue;
+            const commandsPath = module.assets.path + "/commands/";
+            for (const file of module.files || []) {
+                if (!file.path.startsWith(commandsPath) || !file.path.endsWith(".js")) continue;
+                const id = file.path.substring(commandsPath.length).replace(/\.js$/, "");
+                const resource = file.resource?.type === "command" ? file.resource : {};
+                items.push(Object.freeze({
+                    id,
+                    moduleId,
+                    label: resource.label || "",
+                    description: resource.description || "",
+                    category: resource.category || moduleId,
+                    icon: resource.icon || "",
+                    path: file.path,
+                    size: file.size ?? 0
+                }));
+            }
+        }
+        items.sort((a, b) => a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
+        return items;
+    }
     _validateArgument(commandId, parameter, types, value) {
         const namedType = parameter.ref ? types[parameter.ref] : null;
         if (parameter.ref && !namedType) {

@@ -7,23 +7,75 @@ import Commands from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshe
 import JsonValidator from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/json-validator.js";
 import Tasks from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/tasks.js";
 
-function createCommands(Command, tasks = new Tasks({bus: null})) {
+function createCommands(Command, tasks = new Tasks({bus: null}), config) {
     const loads = [];
     const commands = new Commands({
         loader: { async load(id) { loads.push(id); return Command; } },
         tasks,
-        jsonValidator: new JsonValidator()
+        jsonValidator: new JsonValidator(),
+        config
     });
     return {commands, loads, tasks};
 }
 
-test("commands contract declares the asynchronous Task-backed run API and validates structurally", () => {
+test("commands contract declares discovery and the asynchronous Task-backed run API", () => {
     const result = new JsonValidator().validate(commandsContract, contractSchema);
     assert.equal(result.valid, true, JSON.stringify(result.errors));
-    assert.deepEqual(Object.keys(commandsContract.methods), ["run"]);
+    assert.deepEqual(Object.keys(commandsContract.methods), ["list", "getInfo", "run"]);
+    assert.equal(commandsContract.methods.list.parameters[0].ref, "commandListOptions");
+    assert.equal(commandsContract.methods.list.returns.ref, "commandDescriptorList");
     assert.equal(commandsContract.methods.run.parameters[0].ref, "commandRunOptions");
     assert.equal(commandsContract.methods.run.returns.ref, "task");
     assert.equal(commandsContract.types.commandRunOptions.schema.properties.background.default, true);
+});
+
+test("commands discovers framework and module inventories without loading implementations", () => {
+    class Command {}
+    const frameworkResource = {type: "command", label: "Framework command", description: "Inspect runtime", icon: "x-runtime", category: "runtime"};
+    const moduleResource = {type: "command", label: "Encrypt file", description: "Encrypts a file using AES.", icon: "x-lock"};
+    const config = {
+        xshell: {assets: {path: "/_assets/xshell/1.0.0.dev"}, files: [
+            {path: "/_assets/xshell/1.0.0.dev/commands/runtime.inspect.js", size: 100, resource: frameworkResource},
+            {path: "/_assets/xshell/1.0.0.dev/pages/not-a-command.js", size: 1, resource: {type: "page"}}
+        ]},
+        modules: {
+            empty: {assets: {path: "/_assets/empty/1.0.0.dev"}, files: []},
+            filesystem: {assets: {path: "/_assets/filesystem/1.0.0.dev"}, files: [
+                {path: "/_assets/filesystem/1.0.0.dev/commands/filesystem.entry.encrypt.aes.js", size: 1234, resource: moduleResource},
+                {path: "/_assets/filesystem/1.0.0.dev/commands/nested/cleanup.js", size: 50},
+                {path: "/_assets/filesystem/1.0.0.dev/commands/readme.txt", size: 2},
+                {path: "/_assets/filesystem/1.0.0.dev/components/x-command.js", size: 3, resource: {type: "command", label: "Wrong path"}}
+            ]}
+        }
+    };
+    const {commands, loads} = createCommands(Command, new Tasks({bus: null}), config);
+
+    const items = commands.list();
+
+    assert.deepEqual(items.map(item => item.id), ["filesystem.entry.encrypt.aes", "nested/cleanup", "runtime.inspect"]);
+    assert.deepEqual(items[0], {
+        id: "filesystem.entry.encrypt.aes", moduleId: "filesystem", label: "Encrypt file", description: "Encrypts a file using AES.",
+        category: "filesystem", icon: "x-lock", path: "/_assets/filesystem/1.0.0.dev/commands/filesystem.entry.encrypt.aes.js", size: 1234
+    });
+    assert.deepEqual(items[1], {
+        id: "nested/cleanup", moduleId: "filesystem", label: "", description: "", category: "filesystem", icon: "",
+        path: "/_assets/filesystem/1.0.0.dev/commands/nested/cleanup.js", size: 50
+    });
+    assert.equal(items[2].moduleId, "xshell");
+    assert.equal(items[2].category, "runtime");
+    assert.deepEqual(loads, []);
+    assert.equal(Object.isFrozen(items), true);
+    assert.equal(items.every(Object.isFrozen), true);
+    assert.notStrictEqual(items[0], moduleResource);
+    assert.throws(() => { items[0].label = "Changed"; }, TypeError);
+    assert.equal(moduleResource.label, "Encrypt file");
+
+    assert.deepEqual(commands.list({moduleId: "filesystem"}).map(item => item.id), ["filesystem.entry.encrypt.aes", "nested/cleanup"]);
+    assert.deepEqual(commands.list({category: "runtime"}).map(item => item.id), ["runtime.inspect"]);
+    assert.deepEqual(commands.list({query: "AES"}).map(item => item.id), ["filesystem.entry.encrypt.aes"]);
+    assert.equal(commands.getInfo("nested/cleanup").path, "/_assets/filesystem/1.0.0.dev/commands/nested/cleanup.js");
+    assert.equal(commands.getInfo("missing"), null);
+    assert.deepEqual(loads, []);
 });
 
 test("commands loads by id, applies defaults and preserves declared positional order", async () => {

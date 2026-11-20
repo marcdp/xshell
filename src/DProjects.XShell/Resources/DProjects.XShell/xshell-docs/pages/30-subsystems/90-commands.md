@@ -1,7 +1,32 @@
 # Commands
 
-The application-wide `commands` service resolves executable Commands and dispatches each execution through the [Tasks](80-tasks.md) service. It
-provides one public method:
+The application-wide `commands` service discovers available Commands, resolves executable implementations, and dispatches each execution through
+the [Tasks](80-tasks.md) service.
+
+## Discovery
+
+`commands.list(options = {})` synchronously returns frozen lightweight descriptors sorted by Command ID. It scans the effective
+`config.xshell.files` and `config.modules[id].files` inventories that bootstrap also uses to register Command resolver entries; it does not load
+JavaScript, issue network requests, or maintain a separate catalog. A descriptor contains `id`, `moduleId`, `label`, `description`, `category`,
+`icon`, `path`, and `size`. Missing descriptive metadata remains an empty string. Category uses authored resource metadata when available and
+otherwise falls back to the owning module ID.
+
+```js
+const available = commands.list({ moduleId: "x-filesystem", query: "encrypt" });
+const command = commands.getInfo("filesystem.entry.encrypt.aes");
+```
+
+The optional `moduleId` and `category` filters are exact. `query` is a case-insensitive substring search across ID, label, and description.
+`commands.getInfo(id)` returns the same descriptor shape for an exact ID, or `null` when the Command is unknown. IDs follow bootstrap's existing
+rule: the path below the owning `/commands/` directory with only the final `.js` removed, so nested paths retain `/` and dotted filenames retain
+their dots.
+
+The Diagnostics console's Commands Page presents these descriptors with ID, label, owner, category, description, size, and source filters. Enter
+or double-click on a Command row opens the existing invocation Page in stack mode. The listing uses the discovery API and therefore does not load
+Command implementations; the invocation Page resolves the selected implementation only after activation. Discovery describes what can be
+resolved, while execution remains the separate operation below.
+
+## Execution
 
 ```js
 const task = await commands.run({

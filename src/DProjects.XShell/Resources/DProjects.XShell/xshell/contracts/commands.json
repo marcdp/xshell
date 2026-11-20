@@ -1,8 +1,48 @@
 {
   "$schema": "../schemas/contract.schema.json",
   "label": "Commands",
-  "description": "Resolves executable Commands, validates their named arguments, and executes them through the Tasks service.",
+  "description": "Discovers Commands from effective file inventories and executes resolved implementations through the Tasks service.",
   "types": {
+    "commandDescriptor": {
+      "type": "object",
+      "description": "Frozen lightweight metadata for one discovered Command; it does not contain or load the implementation.",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "id": {"type": "string", "description": "Command identifier derived from its path below the owning commands directory."},
+          "moduleId": {"type": "string", "description": "Owning module ID, or xshell for a framework Command."},
+          "label": {"type": "string", "description": "Authored Command label, or an empty string when omitted."},
+          "description": {"type": "string", "description": "Authored Command description, or an empty string when omitted."},
+          "category": {"type": "string", "description": "Authored category when available; otherwise the owning module ID."},
+          "icon": {"type": "string", "description": "Authored Command icon, or an empty string when omitted."},
+          "path": {"type": "string", "description": "Normalized virtual path of the Command JavaScript file."},
+          "size": {"type": "integer", "minimum": 0, "description": "Physical Command file size in bytes."}
+        },
+        "required": ["id", "moduleId", "label", "description", "category", "icon", "path", "size"],
+        "additionalProperties": false
+      }
+    },
+    "commandDescriptorList": {
+      "type": "array",
+      "description": "Frozen array of Command descriptors sorted by Command ID.",
+      "schema": {
+        "type": "array",
+        "items": {"type": "object", "description": "Item conforming to commandDescriptor."}
+      }
+    },
+    "commandListOptions": {
+      "type": "object",
+      "description": "Optional exact ownership filters and case-insensitive text query for Command discovery.",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "moduleId": {"type": "string", "description": "Exact owning module ID."},
+          "category": {"type": "string", "description": "Exact effective category."},
+          "query": {"type": "string", "description": "Case-insensitive substring matched against ID, label, and description."}
+        },
+        "additionalProperties": false
+      }
+    },
     "commandRunOptions": {
       "type": "object",
       "description": "Options used to resolve and execute one Command.",
@@ -25,6 +65,20 @@
   "properties": {},
   "events": {},
   "methods": {
+    "list": {
+      "description": "Synchronously lists Commands from effective framework and module file inventories without loading implementations.",
+      "parameters": [{"name": "options", "ref": "commandListOptions", "default": {}}],
+      "returns": {"ref": "commandDescriptorList", "description": "Frozen descriptors sorted by Command ID."}
+    },
+    "getInfo": {
+      "description": "Synchronously gets one discovered Command descriptor by exact ID without loading its implementation.",
+      "parameters": [{"name": "id", "type": "string", "required": true, "description": "Exact Command identifier."}],
+      "returns": {
+        "type": "any",
+        "schema": {"anyOf": [{"type": "object", "description": "Descriptor conforming to commandDescriptor."}, {"type": "null"}]},
+        "description": "Frozen Command descriptor, or null when the ID is unknown."
+      }
+    },
     "run": {
       "description": "Asynchronously loads a Command and validates its arguments before creating a Task. Resolves to the live Task handle; Command execution continues through that Task.",
       "parameters": [{"name":"options","ref":"commandRunOptions","required":true}],

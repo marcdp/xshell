@@ -10,6 +10,7 @@ import LoaderPage from "../../src/DProjects.XShell/Resources/DProjects.XShell/xs
 import ComponentsPage from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell-diagnostics/pages/components.js";
 import PagesPage from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell-diagnostics/pages/pages.js";
 import SchemasPage from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell-diagnostics/pages/schemas.js";
+import CommandsPage from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell-diagnostics/pages/commands.js";
 import ContractsPage from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell-diagnostics/pages/contracts.js";
 import ContractDetailPage from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell-diagnostics/pages/detail/contract-detail.js";
 import NavigationPage from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell-diagnostics/pages/navigation.js";
@@ -101,6 +102,41 @@ test("Schema diagnostics keeps resolver IDs separate from generated schema IDs a
     assert.equal(state.schemas.length, 1);
     assert.deepEqual({ id: state.schemas[0].id, schemaId: state.schemas[0].schemaId, label: state.schemas[0].label },
         { id: "order", schemaId: "https://schemas.example/order", label: "Order Schema" });
+});
+
+test("Commands diagnostics reads and filters service descriptors without configuration access", () => {
+    const state = {...structuredClone(CommandsPage.state), moduleId: "FILE", description: "encrypts"};
+    const commands = {list: () => [
+        {id: "filesystem.encrypt", label: "Encrypt", moduleId: "filesystem", category: "security", description: "Encrypts a file", icon: "x-lock", path: "/commands/encrypt.js", size: 10},
+        {id: "runtime.inspect", label: "Inspect", moduleId: "xshell", category: "runtime", description: "Shows runtime", icon: "", path: "/commands/inspect.js", size: 20}
+    ]};
+
+    CommandsPage.controller({state, commands}).refresh();
+
+    assert.deepEqual(state.items.map(item => item.id), ["filesystem.encrypt"]);
+    assert.match(CommandsPage.template, /x-for="item in state\.items"/);
+    assert.match(CommandsPage.template, /x-attr:href="item\.path"/);
+    assert.match(CommandsPage.template, /<x-empty x-else/);
+});
+
+test("Commands diagnostics opens invoke.js in stack mode on keyboard and double-click activation", async t => {
+    const id = "filesystem.entry.encrypt.aes";
+    const page = {src: "/_assets/xshell-diagnostics/pages/commands.js"};
+    const commands = {getInfo: value => value === id ? {id} : null};
+    const navigation = {navigate: t.mock.fn()};
+    const controller = CommandsPage.controller({commands, navigation, page});
+    const row = Object.assign(new EventTarget(), {value: id, selected: true, closest() { return this; }});
+    const listView = ListView.controller({host: {querySelectorAll: () => [row]}});
+    row.addEventListener("activate", event => controller.invokeCommand({event}));
+
+    assert.match(CommandsPage.template, /x-on:activate="invokeCommand"/);
+    assert.match(CommandsPage.template, /x-prop:value="item\.id"/);
+    await listView.dblClick({event: {target: row}});
+    await listView.keydown({event: Object.assign(new Event("keydown", {cancelable: true}), {key: "Enter"})});
+
+    const expected = [{href: "page:x:/pages/invoke.js", page, open: "stack", params: {type: "command", id, method: "execute"}}];
+    assert.deepEqual(navigation.navigate.mock.calls.map(call => call.arguments), [expected, expected]);
+    assert.equal(controller.invokeCommand({event: {detail: {value: "missing"}}}), undefined);
 });
 
 test("Bus diagnostics retains only the newest 1000 events", () => {
