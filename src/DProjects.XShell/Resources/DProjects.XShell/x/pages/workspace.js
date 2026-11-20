@@ -63,7 +63,7 @@ export default {
         return {
             load() {
                 // Use the named menu for the outer Page metadata and sidebar items.
-                const menu = areas.getGlobalMenu(state.menuName);
+                const menu = areas.getMenu(state.menuName);
                 state.menu = menu?.items || [];
                 if (!menu) return;
                 page.label = menu.label;

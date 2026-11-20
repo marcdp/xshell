@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import commandDefinition from "../../src/DProjects.XShell/Resources/DProjects.XShell/x-demo/commands/demo-operation.js";
+import commandDefinition from "../../src/DProjects.XShell/Resources/DProjects.XShell/x-demo/commands/demo.operation.js";
 import commandsPage from "../../src/DProjects.XShell/Resources/DProjects.XShell/x-demo/pages/90-advanced/08-commands.js";
 import tasksPage from "../../src/DProjects.XShell/Resources/DProjects.XShell/x-demo/pages/90-advanced/07-tasks.js";
 import tempPage from "../../src/DProjects.XShell/Resources/DProjects.XShell/x-demo/pages/90-advanced/09-temp.js";
@@ -80,7 +80,7 @@ test("Commands Page passes named arguments and distinguishes validation from Tas
 
     await controller.runSuccess();
     assert.deepEqual(calls[0], {
-        id:"demo-operation",
+        id:"demo.operation",
         args:{steps:5, fail:false},
         background:false
     });

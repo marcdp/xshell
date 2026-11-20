@@ -24,8 +24,7 @@ export default {
             <x-datafield label="Uptime" readonly>
                 <x-countup x-prop:value="state.startTimeMs"></x-countup>
             </x-datafield>
-            <x-datatable>
-            <table>
+            <table class="datatable">
                 <thead>
                     <tr>
                         <th>Phase</th>
@@ -41,7 +40,6 @@ export default {
                     </tr>
                 </tbody>
             </table>
-            </x-datatable>
         </x-datafields>
     `,
 

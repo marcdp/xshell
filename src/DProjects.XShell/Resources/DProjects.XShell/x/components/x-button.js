@@ -35,7 +35,7 @@ export default {
     },
     style: `
         :host {position:relative; display:inline-flex;}
-        :host > div {display:flex; flex:1;  }
+        :host > div {display:flex; flex:1;}
         :host .button {
             border: var(--x-button-border); 
             padding: var(--x-button-padding); 

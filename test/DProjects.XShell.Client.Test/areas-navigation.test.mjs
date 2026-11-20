@@ -77,7 +77,7 @@ test("Areas preserve tooltip and embedded across effective menu projections", ()
     assert.equal(dynamic.tooltip, "Dynamic tooltip");
     assert.equal(dynamic.embedded, true);
 
-    const global = areas.getGlobalMenu("shortcuts").items[0];
+    const global = areas.getMenu("shortcuts").items[0];
     assert.equal(global.tooltip, "Global tooltip");
     assert.equal(global.embedded, true);
     assert.equal(global.children[0].tooltip, "Global child tooltip");
@@ -111,7 +111,7 @@ test("named menus expose merged metadata and distinguish empty definitions from 
     } });
     init();
 
-    const globalMenu = areas.getGlobalMenu("preferences");
+    const globalMenu = areas.getMenu("preferences");
     const areaMenu = areas.getMenu("settings", "main");
     const [item] = globalMenu.items;
     assert.deepEqual(globalMenu, { name: "preferences", scope: "global", label: "Preferences", description: "Manage your settings", icon: null, items: [item] });
@@ -120,21 +120,23 @@ test("named menus expose merged metadata and distinguish empty definitions from 
         items: [{ ...commonItem, path: "/main/appearance", href: "/main/_assets/base/appearance.js", area: "main" }] });
     assert.equal(areaMenu.items[0].module, "base");
     assert.equal(areas.getArea("main").menus.settings, areaMenu);
-    assert.deepEqual(areas.getMenus("main"), [areaMenu, areas.getMenu("empty")]);
+    const mainMenus = [areaMenu, areas.getMenu("empty"), globalMenu, areas.getMenu("about")];
+    assert.deepEqual(areas.getMenus(), mainMenus);
+    assert.deepEqual(areas.getMenus("main"), mainMenus);
+    assert.equal(new Set(mainMenus.map(menu => menu.name)).size, mainMenus.length);
     const otherMenu = areas.getMenu("settings", "other");
     assert.deepEqual(otherMenu, { name: "settings", scope: "area", label: "settings", description: "Manage your settings", icon: null, items: [] });
-    assert.deepEqual(areas.getMenus("other"), [otherMenu]);
+    assert.deepEqual(areas.getMenus("other"), [otherMenu, globalMenu, areas.getMenu("about")]);
     assert.deepEqual(areas.getMenus("unknown"), []);
-    assert.equal(areas.getMenu("preferences"), null);
-    assert.equal(areas.getMenu("preferences", "other"), null);
-    assert.equal(areas.getMenu("settings", "unknown"), null);
-    assert.equal(areas.getGlobalMenu("settings"), null);
+    assert.equal(areas.getMenu("preferences"), globalMenu);
+    assert.equal(areas.getMenu("preferences", "other"), globalMenu);
+    assert.equal(areas.getMenu("preferences", "unknown"), null);
     assert.deepEqual(areas.getMenu("empty"), { name: "empty", scope: "area", label: "empty", description: "", icon: null, items: [] });
-    assert.equal(areas.getGlobalMenu("about").label, "");
+    assert.equal(areas.getMenu("about").label, "");
     for (const name of ["unknown", "uncontributed", "constructor"]) {
         assert.equal(areas.getMenu(name), null);
-        assert.equal(areas.getGlobalMenu(name), null);
     }
+    assert.equal(typeof areas.getGlobalMenu, "undefined");
     // The exposed menus and static items are frozen without changing their input definitions.
     for (const menu of [globalMenu, areaMenu]) {
         assert.ok(Object.isFrozen(menu) && Object.isFrozen(menu.items) && Object.isFrozen(menu.items[0]));
@@ -149,11 +151,10 @@ test("scope resolution includes all selected modules and rejects conflicting exp
         extra: { menus: { shortcuts: { scope: "global", items: [{ label: "Extra" }] } } }
     };
     const { areas, init } = createMenuContext(modules, { moduleOrder: ["extension"] });
-    const menu = areas.getGlobalMenu("shortcuts");
+    const menu = areas.getMenu("shortcuts");
     assert.deepEqual(menu.items.map(item => item.label), ["Extension", "Base", "Extra"]);
     init();
-    assert.equal(areas.getGlobalMenu("shortcuts"), menu);
-    assert.equal(areas.getMenu("shortcuts"), null);
+    assert.equal(areas.getMenu("shortcuts"), menu);
     assert.equal(areas.resolvePath("/global"), null);
     assert.equal(areas.resolveHref("/_assets/base/pages/global.js", "main"), null);
     assert.equal(areas.getMenuitemBreadcrumb("/_assets/base/pages/global.js", "main"), null);
@@ -186,7 +187,7 @@ test("global menus merge raw sibling definitions in configuration order and keep
         base: { menus: { shortcuts: { scope: "global", items: base } } },
         addon: { menus: { shortcuts: { items: override } } }
     });
-    const { items } = areas.getGlobalMenu("shortcuts");
+    const { items } = areas.getMenu("shortcuts");
     assert.deepEqual(items.map(item => item.label), ["Preferences", "One", "Empty one", "Actions", "Newest", "Two", "Empty two"]);
     assert.deepEqual(items.map(item => item.order), [0, 1, 2, 3, 4, 5, 6]);
     const [settings, , , actions, newest] = items;
@@ -216,7 +217,7 @@ test("leading items from later contributions append to the opening block in glob
     });
     init();
 
-    for (const { items: [root] } of [areas.getGlobalMenu("shortcuts"), areas.getMenu("local")]) {
+    for (const { items: [root] } of [areas.getMenu("shortcuts"), areas.getMenu("local")]) {
         assert.deepEqual(root.children.map(item => [item.label, item.order]), [
             ["Preferences", 0], ["Diagnostics console", 1], ["Another shortcut", 2], ["-", 100], ["About", 101], ["More", 100.5], ["Support", 101.5]
         ]);
@@ -249,7 +250,7 @@ test("global and Area menus sort sibling blocks after merging order overrides", 
     init();
 
     // Check inference after overrides, independent child sequences, and ties across contributions.
-    for (const { items } of [areas.getGlobalMenu("preferences"), areas.getMenu("navigation")]) {
+    for (const { items } of [areas.getMenu("preferences"), areas.getMenu("navigation")]) {
         assert.deepEqual(items.map(item => item.label), [
             "Negative", "Follows negative", "Alpha zero", "Follows zero", "Settings", "Zulu unordered", "Alpha fractional", "Last top-level item"
         ]);
@@ -469,7 +470,7 @@ test("menu schema permits identified partial contributions and composition requi
     const addon = { menus: { shortcuts: { items: [group] }, local: { items: [group] } } };
     const { areas, init } = createMenuContext({ builtin, addon }, { moduleOrder: ["addon"] });
     init();
-    const [global] = areas.getGlobalMenu("shortcuts").items;
+    const [global] = areas.getMenu("shortcuts").items;
     assert.equal(global.icon, "x-more-vert");
     assert.deepEqual(global.children.map(item => item.label), ["Preferences", "Diagnostics"]);
     assert.equal(areas.getMenu("local").items[0].label, "");

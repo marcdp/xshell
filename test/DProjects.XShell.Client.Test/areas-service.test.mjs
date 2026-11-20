@@ -28,10 +28,11 @@ test("Areas declares the effective menu shape in its public contract", () => {
     assert.equal(result.valid, true, JSON.stringify(result.errors));
     const { methods, types } = AreasContract;
     assert.equal(methods.getMenu.returns.ref, "menuDefinition");
-    assert.equal(methods.getGlobalMenu.returns.ref, "menuDefinition");
+    assert.equal(Object.hasOwn(methods, "getGlobalMenu"), false);
     assert.equal(methods.getMenus.returns.type, "array");
     assert.deepEqual(types.menuDefinition.schema.required, ["name", "scope", "label", "description", "icon", "items"]);
     assert.deepEqual(types.menuDefinition.schema.properties.scope.enum, ["global", "area"]);
+    assert.equal(typeof Areas.prototype.getGlobalMenu, "undefined");
 });
 
 test("global configuration delegates Area option validation to the service implementation", () => {

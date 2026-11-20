@@ -199,7 +199,13 @@ export default {
 
         <x-form command="submit" x-prop:errors="state.errors">
 
+
             <section x-if="state.ready && state.phase == 'arguments'" class="arguments" >
+                <x-datafields>
+                    <x-datafield label="Command">
+                        {{state.type}}:{{ state.id }}<span x-if="state.method">:{{ state.method }}</span>
+                    </x-datafield>
+                </x-datafields>
                 <x-datafields label="Arguments">
                     <x-schema ref="arguments" x-prop:schema="state.schema" x-model="state.args"></x-schema>
                     <x-datafield type="checkbox" label="Advanced" label-secondary="Run in background" x-model="state.background" collapsible collapsed></x-datafield>
@@ -368,6 +374,7 @@ export default {
 
         return {
             async load() {
+                // load
                 try {
                     const initialArgs = state.args;
                     if (!initialArgs || typeof initialArgs !== "object" || Array.isArray(initialArgs)) {
@@ -420,6 +427,7 @@ export default {
             },
 
             async submit() {
+                // submit invocation
                 if (!invocation || !state.ready || state.phase !== "arguments" || state.running || submitting) return;
 
                 const args = invocation.parameters.map(parameter => state.args[parameter.name]);
@@ -458,12 +466,14 @@ export default {
             },
 
             toggleOutput() {
+                // toggle output visibility
                 state.showAllOutput = !state.showAllOutput;
                 updateOutputVisibility();
                 page.invalidate?.();
             },
 
             editArguments() {
+                // edit arguments
                 if (!state.running) {
                     stopDurationRefresh();
                     state.phase = "arguments";
@@ -471,6 +481,7 @@ export default {
             },
 
             async cancel() {
+                // cancel
                 if (currentTask && state.running) {
                     await currentTask.cancel();
                     await currentTask.wait();

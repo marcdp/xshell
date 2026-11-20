@@ -43,16 +43,15 @@
     "resolveHref": { "description": "Finds the menu item for an href in the specified area or an area inferred from the target/current context.", "parameters": [{ "name": "href", "type": "string", "required": true }, { "name": "areaId", "type": "any", "required": false, "default": null, "description": "Optional area ID; null uses context-based resolution." }], "returns": { "type": "any" } },
     "getModuleId": { "description": "Extracts the module ID from a URL containing the configured module-assets base path, or returns null.", "parameters": [{ "name": "href", "type": "string", "required": true }], "returns": { "type": "any" } },
     "getMenus": {
-      "description": "Returns all effective menu definitions for an area, or an empty array.",
+      "description": "Returns effective Area menu definitions followed by global menu definitions. If no Area exists, returns global menus. An invalid explicitly requested Area returns an empty array.",
       "parameters": [{ "name": "areaId", "type": "any", "required": false, "default": null }],
       "returns": {
         "type": "array",
         "schema": { "type": "array", "items": { "type": "object", "description": "Read-only menuDefinition object with name, scope, label, description, icon and items." } }
       }
     },
-    "getMenu": { "description": "Returns the named effective menu definition for an area, or null.", "parameters": [{ "name": "name", "type": "string", "required": true }, { "name": "areaId", "type": "any", "required": false, "default": null }], "returns": { "ref": "menuDefinition" } },
+    "getMenu": { "description": "Returns the named effective menu definition from the requested/current Area, falling back to a global menu. Returns null for an unknown menu or invalid explicitly requested Area.", "parameters": [{ "name": "name", "type": "string", "required": true }, { "name": "areaId", "type": "any", "required": false, "default": null }], "returns": { "ref": "menuDefinition" } },
     "getMenuitemBreadcrumb": { "description": "Returns the ordered menu-item breadcrumb for an href in an area, or null.", "parameters": [{ "name": "href", "type": "string", "required": true }, { "name": "areaId", "type": "any", "required": false, "default": null }], "returns": { "type": "any" } },
-    "registerSource": { "description": "Registers a dynamic menu source with resolve() and optional dependsOn events; installs a refresh() method on the source.", "parameters": [{ "name": "name", "type": "string", "required": true }, { "name": "source", "type": "object", "required": true, "schema": { "type": "object", "properties": { "resolve": {}, "dependsOn": { "type": "array", "items": { "type": "string" } } }, "required": ["resolve"] } }] },
-    "getGlobalMenu": { "description": "Returns the named effective global menu definition, or null.", "parameters": [{ "name": "name", "type": "string", "required": true }], "returns": { "ref": "menuDefinition" } }
+    "registerSource": { "description": "Registers a dynamic menu source with resolve() and optional dependsOn events; installs a refresh() method on the source.", "parameters": [{ "name": "name", "type": "string", "required": true }, { "name": "source", "type": "object", "required": true, "schema": { "type": "object", "properties": { "resolve": {}, "dependsOn": { "type": "array", "items": { "type": "string" } } }, "required": ["resolve"] } }] }
   }
 }

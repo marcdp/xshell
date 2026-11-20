@@ -534,13 +534,13 @@ export default {
                         //show menu main and tools
                         state.menuNavigation = areas.getMenu("navigation")?.items || [];
                         state.menuTools = areas.getMenu("tools")?.items || [];
-                        state.menuShortcuts = areas.getGlobalMenu("shortcuts")?.items || [];
+                        state.menuShortcuts = areas.getMenu("shortcuts")?.items || [];
                     } else {
                         // not found breadcrumb in page
                         // show menu main and tools
                         state.menuNavigation = areas.getMenu("navigation")?.items || [];
                         state.menuTools = areas.getMenu("tools")?.items || [];
-                        state.menuShortcuts = areas.getGlobalMenu("shortcuts")?.items || [];
+                        state.menuShortcuts = areas.getMenu("shortcuts")?.items || [];
                         //breadcrumb
                         if (state.menuNavigation) {
                             let menuitems = findObjectsPath(state.menuNavigation, 'href', page.href);

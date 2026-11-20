@@ -222,6 +222,8 @@ export default {
         :host .picker x-button {width:3em; margin: -0.1em; }
         
         :host .list {}
+        :host .list[data-list-length="0"] .list-buttons:first-child {display:none;}
+        :host .list[data-list-length="0"] .list-body {display:none;}
         :host .list .list-body {display:flex; flex-direction:column; margin-top:.4em;}
         :host .list .list-body ::slotted(x-datafields) {}
         :host .list .list-body[empty] {padding:.05em; }
@@ -500,7 +502,7 @@ export default {
             </div>
         </div>
 
-        <div x-elseif="state.type=='list'" class="input list">
+        <div x-elseif="state.type=='list'" class="input list" x-attr:data-list-length="state.value.length">
             <div class="list-buttons" x-if="state.add">
                 <x-button x-if="state.add" x-on:click="listAdd" icon="x-add" class="plain"></x-button>
             </div>

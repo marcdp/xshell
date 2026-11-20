@@ -14,3 +14,26 @@ details[open]::details-content {margin-top:1em;}
 fieldset {border:var(--x-card-border); border-radius:var(--x-card-border-radius); padding:var(--x-card-padding);}
 fieldset legend {font-weight:600; padding-left:.5em; padding-right:.5em;}
 b {font-weight:600;}
+
+:not(:defined) {
+    visibility: hidden;
+}
+
+table.datatable {width:100%; }
+table.datatable > thead > tr > th {text-align:left; font-weight:500; padding:.25em;}
+table.datatable > tbody > tr:nth-child(odd) {background:var(--x-color-background-alt);}
+table.datatable > tbody > tr > td {padding:.25em;}
+
+/* x-markdown */
+x-markdown blockquote {display:block; border-left:.2em var(--x-color-gray) solid; background:var(--x-markdown-blockquote-background); margin:0; padding:0.05em; padding-left:1em;}
+x-markdown blockquote > p {margin:1em 0;}
+x-markdown code {padding:.5em .75em; font-size:90%; color:var(--x-markdown-code-color); background-color:var(--x-markdown-code-background); border-radius:4px;}
+x-markdown a {color:var(--x-color-primary); text-decoration:none;}
+x-markdown a:hover {text-decoration:underline;}
+x-markdown pre code {display:block;font-size:inherit;color:inherit;white-space:pre-wrap;background-color:var(--x-markdown-pre-background);border-radius:var(--x-datafield-border-radius);border:var(--x-datafield-border);padding:1em;}
+x-markdown table {width:100%; border-collapse:collapse; margin:1em 0; }
+x-markdown table th, x-markdown table td {border:1px solid var(--x-color-gray); padding:.5em; text-align:left;}
+
+.x-toast-container {position: fixed; top: 1em; right: 1em; width: min(30em, calc(100vw - 2em)); z-index: 1000; pointer-events: none;}
+.x-toast-container > x-notice { pointer-events: auto;}
+.x-toast-container.x-toast-container-page {position: absolute; z-index:0;}

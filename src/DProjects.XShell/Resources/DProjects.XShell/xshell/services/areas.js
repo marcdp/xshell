@@ -242,12 +242,23 @@ export default class Areas {
         return assetsIndex === -1 ? null : href.substring(assetsIndex + this._assetsBasePath.length + 1).split("/")[0] || null;
     }
     getMenus(areaId = null) {
-        const area = areaId ? this.getArea(areaId) : this.getCurrentArea();
-        return area ? Object.values(area.menus) : [];
+        // Resolve the requested Area while rejecting unknown explicit identifiers.
+        const area = areaId !== null ? this.getArea(areaId) : this.getCurrentArea();
+        if (areaId !== null && !area) return [];
+
+        // Keep Area menus first and append shared global menus without duplicate names.
+        const menus = area ? Object.values(area.menus) : [];
+        const areaNames = new Set(menus.map(menu => menu.name));
+        return [...menus, ...Object.values(this._globalMenus).filter(menu => !areaNames.has(menu.name))];
     }
     getMenu(name, areaId = null) {
-        const area = areaId ? this.getArea(areaId) : this.getCurrentArea();
-        return area && Object.hasOwn(area.menus, name) ? area.menus[name] : null;
+        // Resolve the requested Area while rejecting unknown explicit identifiers.
+        const area = areaId !== null ? this.getArea(areaId) : this.getCurrentArea();
+        if (areaId !== null && !area) return null;
+
+        // Prefer the effective Area menu and then fall back to the shared global menu.
+        if (area && Object.hasOwn(area.menus, name)) return area.menus[name];
+        return Object.hasOwn(this._globalMenus, name) ? this._globalMenus[name] : null;
     }
     getMenuitemBreadcrumb(href, areaId = null) {
         const area = areaId ? this.getArea(areaId) : this.getCurrentArea();
@@ -313,10 +324,6 @@ export default class Areas {
             });
         }
     }
-    getGlobalMenu(name) {
-        return this._globalMenus[name] || null;
-    }
-
     // methods (private)
     _mergeMenuDefinition(previous = { items: [] }, contribution, moduleId) {
         // Keep omitted metadata and merge the static items using the existing contribution order.

@@ -113,9 +113,26 @@ returns a target. A targetless default ends that search at its current sibling l
 Home is computed during `Areas.init()` and is not recomputed by later children refreshes.
 On a fresh load at the selected mode's empty/root URL, Navigation requires the default Area to have a home.
 
-`areas.getMenu("navigation")` looks up an Area menu in the current Area. `areas.getMenu("navigation", "inventory")` selects an Area explicitly.
-`areas.getMenus(areaId)` returns only that Area's menu definitions, defaulting to the current Area. An unknown Area yields an empty array.
-`areas.getGlobalMenu(name)` looks up a global menu.
+Menu scope controls composition, not lookup. `areas.getMenu(name, areaId = null)` first looks for the name in the requested or current Area and then
+falls back to the shared global definition. An omitted or null Area uses the current Area; when no Area exists, global menus remain available. An
+unknown explicit Area returns `null` without falling back to a global menu.
+
+`areas.getMenus(areaId = null)` returns all menus accessible in the requested or current Area: Area definitions in their effective insertion order,
+followed by global definitions in composition order. It returns only global menus when no Area exists and `[]` for an unknown explicit Area. If a
+name occurs in both internal collections defensively, the Area definition appears once.
+
+```javascript
+// Retrieve an Area menu.
+const navigation = areas.getMenu("navigation");
+
+// Retrieve a global menu through the same API.
+const preferences = areas.getMenu("preferences");
+
+// Retrieve all menus accessible in the current or a specific Area.
+const menus = areas.getMenus();
+const adminMenus = areas.getMenus("admin");
+```
+
 Each definition has `name`, `scope`, `label`, `description`, `icon`, and `items`. After merging, missing metadata defaults to the menu name for
 `label`, an empty string for `description`, and `null` for `icon`. Menu lookups return `null` for an unknown name. Authored empty menus have `items: []`.
 Definitions and their root arrays are frozen. Dynamic item children can still refresh through their registered source.
@@ -175,13 +192,14 @@ See [Navigation](../10-architecture/120-navigation.md), [Configuration](../10-ar
 
 Areas automatically discovers global menu names from module definitions with `scope: "global"`. The former
 `xshell.services.areas.options.global` setting has been removed. Areas composes each global menu once from all selected modules that contribute to it,
-in configuration module order. The result is available through `getGlobalMenu()` and is excluded from Area menu collections and Area navigation lookup.
+in configuration module order. Global definitions remain in their separate internal collection but are available through `getMenu()` and
+`getMenus()`. They remain excluded from Area navigation lookup, breadcrumbs, and home calculation.
 
 Global menus use the same metadata, recursive item merge, and ordering rules as Area menus. Global contributions support static `items` and
 metadata. Root `source` and nested `childrenSource` are reserved for Area menus. Global targets keep their normalized module hrefs without an Area
 prefix.
 
-The `x` module's generic Workspace Page accepts a global menu name through the `menu-name` query parameter.
+The `x` module's generic Workspace Page accepts any accessible named menu through the `menu-name` query parameter.
 It uses the definition's label, description, and icon for Page metadata and renders `items` in the sidebar. Its `src` query parameter selects the
 embedded Page and reflects its current target. Without `src`, Workspace selects the first item with an href. The `show-title` query parameter
 controls the embedded Page heading.

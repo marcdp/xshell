@@ -45,24 +45,22 @@ export default {
 
         <x-tabs x-if="state.tables.length > 0">
             <x-tab x-for="table in state.tables" x-attr:label="table.name">
-                <x-datatable>
-                    <table>
-                        <thead>
-                            <tr>
-                                <th x-for="column in table.columns">
-                                    {{ column.label || column.name }}
-                                </th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr x-for="row in table.rows">
-                                <td x-for="column in table.columns">
-                                    {{ row[column.name] | stringify}}
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </x-datatable>
+                <table class="datatable">
+                    <thead>
+                        <tr>
+                            <th x-for="column in table.columns">
+                                {{ column.label || column.name }}
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr x-for="row in table.rows">
+                            <td x-for="column in table.columns">
+                                {{ row[column.name] | stringify}}
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
                 <p x-if="table.rows.length == 0">
                     No rows available.
                 </p>

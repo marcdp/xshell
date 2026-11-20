@@ -22,8 +22,25 @@ function createPage(menuName, src = null) {
 test("Workspace uses the requested global menu metadata and opens its first navigable item", () => {
     const { state, page, areas } = createPage("reports");
     assert.deepEqual(page, { label: reports.label, description: reports.description, icon: reports.icon });
-    assert.equal(state.menu, areas.getGlobalMenu("reports").items);
+    assert.equal(state.menu, areas.getMenu("reports").items);
+    assert.deepEqual(areas.getMenus(), [areas.getMenu("reports"), areas.getMenu("empty")]);
     assert.equal(state.src, href);
+});
+
+test("Workspace uses an Area menu through the unified lookup", () => {
+    const localReports = { label: "Area reports", description: "Reports for this Area.", icon: "x-chart", items: [{ label: "Overview", href }] };
+    const config = { modules: { reports: { menus: { reports: localReports } } }, xshell: { assets: { basePath: "/_assets" } } };
+    const areas = new Areas({ config, bus: new EventTarget() }, { default: "main", definitions: { main: { prefix: "/main", modules: ["reports"] } } });
+    areas.init({ modules: { getModuleById: id => ({ id, config: config.modules[id] }) } });
+    const state = { ...structuredClone(WorkspacePage.state), menuName: "reports", src: null };
+    const page = {};
+    const controller = WorkspacePage.controller({ state, areas, page });
+
+    controller.load();
+
+    assert.deepEqual(page, { label: localReports.label, description: localReports.description, icon: localReports.icon });
+    assert.equal(state.menu, areas.getMenu("reports").items);
+    assert.equal(state.src, "/main" + href);
 });
 
 test("Workspace preserves a supplied source and tracks the embedded Page for selection and reflection", () => {
@@ -67,15 +84,15 @@ test("bundled manifests compose Preferences and Diagnostics shortcuts as global 
     const areas = new Areas({ config, bus: new EventTarget() }, options);
     areas.init({ modules: { getModuleById: id => ({ id, config: config.modules[id] }) } });
 
-    const menu = areas.getGlobalMenu("preferences");
+    const menu = areas.getMenu("preferences");
     assert.deepEqual([menu.name, menu.scope, menu.label, menu.description, menu.icon],
         ["preferences", "global", "Preferences", "Manage application preferences.", "x-settings"]);
     assert.equal(menu.items[0].href, "/pages/preferences-appearance.js");
     const workspaceSrc = "/pages/workspace.js?menu-name=preferences";
     assert.equal(x.xshell.services.preferences.options.page, workspaceSrc);
-    const shortcuts = areas.getGlobalMenu("shortcuts").items[0].children;
+    const shortcuts = areas.getMenu("shortcuts").items[0].children;
     assert.equal(shortcuts.find(item => item.label === "Preferences").href, workspaceSrc);
     assert.equal(shortcuts.find(item => item.label === "Diagnostics console").module, "xshell-diagnostics");
-    assert.equal(areas.getMenu("shortcuts", "main"), null);
+    assert.equal(areas.getMenu("shortcuts", "main").scope, "global");
     assert.equal(areas.getMenu("navigation", "main").scope, "area");
 });

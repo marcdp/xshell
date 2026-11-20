@@ -22,7 +22,7 @@ export default {
             <x-button label="Cancel execution" command="cancel"></x-button>
         </p>
         <pre x-pre><code>const task = await commands.run({
-    id: "demo-operation",
+    id: "demo.operation",
     args: {steps: 5, fail: false},
     background: false
 });
@@ -129,7 +129,7 @@ const result = await task.getResult();</code></pre>
 
             try {
                 const task = await commands.run({
-                    id: "demo-operation",
+                    id: "demo.operation",
                     args: {steps:5, fail},
                     background: false
                 });
@@ -169,7 +169,7 @@ const result = await task.getResult();</code></pre>
                 state.requestError = "";
                 try {
                     await commands.run({
-                        id: "demo-operation",
+                        id: "demo.operation",
                         args: {steps:0, fail:false},
                         background: false
                     });

@@ -4,6 +4,12 @@ import layout from "../../src/DProjects.XShell/Resources/DProjects.XShell/x/layo
 
 const settle = () => new Promise(resolve => setImmediate(resolve));
 
+test("Main layout retrieves shortcuts through the unified menu API", () => {
+    const source = layout.controller.toString();
+    assert.match(source, /areas\.getMenu\("shortcuts"\)/);
+    assert.doesNotMatch(source, /getGlobalMenu/);
+});
+
 function setup() {
     const values = new Map(), writes = [], listeners = new Map();
     const style = {flex:"", removeProperty() { this.flex = ""; }};

@@ -116,7 +116,9 @@ initialization, composes Areas from that initialized singleton, and initializes 
 Module menu and route declarations are reusable contributions. Each named [menu definition](../50-specifications/module.md#menus-and-routes)
 can supply a composition scope, display metadata, root items, or an Area menu source. Areas composes global menus once across all selected modules
 and composes Area-scoped menus from each Area's participating modules. Area membership leaves the dependency graph and runtime module count
-unchanged. Routes map Area-relative friendly paths to normalized canonical Page Paths.
+unchanged. Scope affects composition rather than lookup: `Areas.getMenu()` and `Areas.getMenus()` expose both Area and global effective definitions,
+while route resolution, breadcrumbs, and Area home calculation continue using Area-scoped menus only. Routes map Area-relative friendly paths to
+normalized canonical Page Paths.
 
 Modules are composition units and do not define public contracts. A module may provide multiple Services, each with its own contract describing
 public properties, methods, and published Bus events. Components and Pages have their own public contracts. Optional `requires` names services and

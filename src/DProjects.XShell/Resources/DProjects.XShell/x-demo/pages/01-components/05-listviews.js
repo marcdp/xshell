@@ -32,6 +32,11 @@ export default {
                 <x-listview-item icon="x-image" label="Photo.png" description="Sample image" category="Files" path="/photo.png">
                     <span>Image</span><x-file-size value="1048576"></x-file-size>
                 </x-listview-item>
+                <x-listview-item icon="x-image" label="Photo.png" description="Sample image" category="Files" path="/photo.png">
+                    <span>Image</span><x-file-size value="1048576"></x-file-size>
+                    <x-button slot="right" class="anchor" icon="x-file" style="line-height:1em;"></x-button>
+                </x-listview-item>
+
             </x-listview-body>
         </x-listview>
         <p>Selected item: <strong>{{ state.selected }}</strong></p>

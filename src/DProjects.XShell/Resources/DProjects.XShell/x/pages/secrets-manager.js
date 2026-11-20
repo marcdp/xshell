@@ -65,8 +65,8 @@ export default {
                                 <span x-text="item.label"></span>
                                 <span x-text="item.description || '—'"></span>
                                 <div class="actions" style="text-align:right">
-                                    <x-button class="plain" icon="x-edit" tooltip="Edit" x-attr:data-name="item.name" x-on:click="edit" ></x-button>
-                                    <x-button class="plain" icon="x-trash" tooltip="Delete" x-attr:data-name="item.name" x-on:click="remove"></x-button>
+                                    <x-button class="anchor" icon="x-edit" tooltip="Edit" x-attr:data-name="item.name" x-on:click="edit" ></x-button>
+                                    <x-button class="anchor" icon="x-close" tooltip="Delete" x-attr:data-name="item.name" x-on:click="remove"></x-button>
                                 </div>
                             </x-listview-item>
                         </x-listview-body>
@@ -95,8 +95,8 @@ export default {
                             <x-listview-item x-for="passkey in state.passkeys" x-attr:key="passkey.id" x-attr:label="passkey.label" icon="x-key">
                                 <span x-text="passkey.description || '—'"></span>
                                 <div class="actions" style="text-align:right">
-                                    <x-button class="plain" icon="x-edit" tooltip="Edit" x-attr:data-id="passkey.id" x-on:click="editPasskey"></x-button>
-                                    <x-button class="plain" icon="x-trash" tooltip="Remove" x-attr:data-id="passkey.id" x-on:click="removePasskey"></x-button>
+                                    <x-button class="anchor" icon="x-edit" tooltip="Edit" x-attr:data-id="passkey.id" x-on:click="editPasskey"></x-button>
+                                    <x-button class="anchor" icon="x-close" tooltip="Remove" x-attr:data-id="passkey.id" x-on:click="removePasskey"></x-button>
                                 </div>
                             </x-listview-item>
                         </x-listview-body>

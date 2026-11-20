@@ -164,6 +164,10 @@ Areas discovers global menus from the selected module definitions and composes t
 Area-scoped menus in participation order. A module can extend a menu without declaring its scope again. Explicit scopes for the same name must
 agree, or Areas rejects the configuration.
 
+Scope selects that composition model; it does not select a public lookup method. `areas.getMenu(name, areaId)` prefers the requested/current Area
+definition and falls back to the global definition, while `areas.getMenus(areaId)` returns Area definitions first and global definitions afterward.
+An unknown explicit Area returns `null` or `[]`, respectively, without global fallback.
+
 Later supplied metadata overrides earlier values, and omitted metadata keeps its earlier value. Root items from each contribution merge
 recursively by item ID, with explicit items processed before resolved source items. See [Areas](../30-subsystems/10-areas.md#menus-and-home) for
 ordering, normalization, and effective menu APIs.

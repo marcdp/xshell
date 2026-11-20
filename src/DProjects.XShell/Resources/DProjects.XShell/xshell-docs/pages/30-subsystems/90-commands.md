@@ -5,7 +5,7 @@ provides one public method:
 
 ```js
 const task = await commands.run({
-    id: "encrypt-aes",
+    id: "filesystem.entry.encrypt.aes",
     args: {
         src: "opfs:",
         path: "/documents/test.txt",
