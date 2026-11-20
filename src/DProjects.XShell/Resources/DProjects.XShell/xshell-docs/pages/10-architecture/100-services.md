@@ -192,7 +192,7 @@ accept `void`.
 - Events describe labels, descriptions, and a `detail` field map. Each detail field selects exactly one of `type` or `ref`.
 - Methods describe labels, parameters, and returns. Each parameter requires a nonempty `name` and selects exactly one of `type` or `ref`;
   a return does the same and may add the semantic `format` `text`, `url`, or `blob-url` when its effective type is `string`.
-- Examples require a valid `name` and nonempty `template`, with optional `description` and `state`.
+- Declare [usage examples](../20-components/10-manifest.md#usage-examples) in the top-level `examples` array of the Service contract JSON file.
 
 `type` declares an XShell value category directly. `ref` names a definition in the same contract's `types` map and cannot be combined with
 `type` or `schema`. A direct type descriptor or named type definition may add a JSON Schema object or boolean in `schema`; nested object and

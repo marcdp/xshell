@@ -146,9 +146,15 @@
         "name": { "type": "string", "minLength": 1, "pattern": "^[A-Za-z][A-Za-z0-9_-]*$" },
         "description": { "type": "string" },
         "template": { "type": "string", "minLength": 1 },
+        "code": { "type": "string", "minLength": 1 },
+        "language": { "type": "string", "minLength": 1 },
         "state": { "type": "object" }
       },
-      "required": [ "name", "template" ]
+      "required": [ "name" ],
+      "anyOf": [
+        { "required": [ "template" ] },
+        { "required": [ "code" ] }
+      ]
     }
   }
 }

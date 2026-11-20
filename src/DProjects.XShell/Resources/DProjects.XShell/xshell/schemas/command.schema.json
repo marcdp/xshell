@@ -19,6 +19,7 @@
         "icon": { "type": "string", "description": "Icon representing the Command." },
         "description": { "type": "string", "description": "Human-readable description of the Command." },
         "types": {  "$ref": "./contract.schema.json#/properties/types", "description": "Reusable named types scoped to the Command contract." },
+        "examples": { "$ref": "./contract.schema.json#/properties/examples", "description": "Usage examples for documentation and tooling." },
         "execute": {"$ref": "./contract.schema.json#/$defs/method","description": "Contract of the Command's execute method."}
       }
     },

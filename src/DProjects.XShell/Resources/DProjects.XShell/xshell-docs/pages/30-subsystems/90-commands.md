@@ -26,6 +26,8 @@ Before creating a Task, the service loads `command:<id>`, reads the Command's st
 arguments, preserves explicitly supplied values, validates required arguments, types, enums, named types, and JSON Schema constraints, and orders
 the values according to the declared parameter list. Load and argument-validation failures therefore do not create Tasks.
 
+Command definitions can also declare optional [usage examples](../20-components/10-manifest.md#usage-examples) in `contract.examples`.
+
 The Task handler creates a fresh Command instance with `{ task: taskContext }` and calls `execute(...args)`. Tasks remains the owner of scheduling,
 status, progress, output, cooperative cancellation, errors, and results. A Command exception or rejected promise propagates through the handler and
 places the Task in `error`; the Commands service does not implement a separate lifecycle.

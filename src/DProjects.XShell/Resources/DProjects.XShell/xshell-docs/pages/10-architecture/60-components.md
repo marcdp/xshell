@@ -56,6 +56,7 @@ private state, and controller behavior. A separate named `export const contract`
 
 The shared contract vocabulary is defined by `xshell/schemas/contract.schema.json`. Complete definition objects are validated against
 `component.schema.json` or `page.schema.json`; those schemas specialize the shared vocabulary for their resource types.
+Definition-based Components can declare [usage examples](../20-components/10-manifest.md#usage-examples) in `contract.examples`.
 
 Properties are public API and state is private implementation data. A property participates in state only when it declares `state: true`. Controller
 methods remain private unless the contract declares a same-named public method. Slot metadata documents and validates composition; it does not create

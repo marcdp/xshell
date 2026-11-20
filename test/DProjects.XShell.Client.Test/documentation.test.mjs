@@ -100,13 +100,17 @@ test("each documentation section index links every sibling document", () => {
 });
 
 test("documented contract schemas and validation implementations exist", () => {
+    // Check the shared schema, each specialization, and the runtime validation sites.
     const references = [
         "src/DProjects.XShell/Resources/DProjects.XShell/xshell/schemas/contract.schema.json",
         "src/DProjects.XShell/Resources/DProjects.XShell/xshell/schemas/component.schema.json",
         "src/DProjects.XShell/Resources/DProjects.XShell/xshell/schemas/page.schema.json",
-        "src/DProjects.XShell/Resources/DProjects.XShell/xshell/contracts.js",
+        "src/DProjects.XShell/Resources/DProjects.XShell/xshell/schemas/service.schema.json",
+        "src/DProjects.XShell/Resources/DProjects.XShell/xshell/schemas/command.schema.json",
+        "src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/contracts.js",
         "src/DProjects.XShell/Resources/DProjects.XShell/xshell/loaders/component-js.js",
         "src/DProjects.XShell/Resources/DProjects.XShell/xshell/loaders/page-js.js",
+        "src/DProjects.XShell/Resources/DProjects.XShell/xshell/loaders/command-js.js",
         "src/DProjects.XShell/Resources/DProjects.XShell/xshell/xshell.js"
     ];
     assert.deepEqual(references.filter(reference => !existsSync(path.join(repositoryRoot, reference))), []);

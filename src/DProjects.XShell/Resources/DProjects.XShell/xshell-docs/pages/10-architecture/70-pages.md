@@ -44,9 +44,8 @@ export default {
 ```
 
 `page.schema.json` embeds the common contract from `contract.schema.json` and extends public property descriptors with Page-specific `query`,
-`queryParser`, `context`, `state`, and `reflect` fields. The common contract fields—label, description, icon, named types, properties, events, methods, and
-examples—retain the meanings described in [Component Contract](../20-components/10-manifest.md#shared-contract-model). A separate named
-`contract` export is not read.
+`queryParser`, `context`, `state`, and `reflect` fields. The [shared contract model](../20-components/10-manifest.md#shared-contract-model) also defines
+the Page's optional [usage examples](../20-components/10-manifest.md#usage-examples) in `contract.examples`. A separate named `contract` export is not read.
 
 | Page property field | Runtime behavior |
 | --- | --- |

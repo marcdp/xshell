@@ -40,7 +40,7 @@ The Component and Page loaders validate the complete default export against `com
 | `properties` | Public property descriptors. |
 | `events` | Public events and their `detail` fields. |
 | `methods` | Public methods, parameters, and return values. |
-| `examples` | Documentation/tooling examples with required `name` and `template`. |
+| `examples` | Optional [usage examples](#usage-examples) for documentation and tooling. |
 
 Value types are `string`, `number`, `integer`, `boolean`, `object`, `array`, `function`, `date`, and `any`. Method returns also accept
 `void`. A value descriptor selects exactly one of:
@@ -109,6 +109,43 @@ property, event detail field, method parameter, or return value names a declared
 not perform that extra reference-existence pass. None of these schemas validates runtime property values, event payloads, method arguments, or
 method results against `type`, `ref`, or `schema`.
 
+## Usage examples
+
+Components, Pages, Services, and Commands share the same example format. Declare `contract.examples` in a Component, Page, or Command
+definition. In a Service contract JSON file, declare `examples` at the top level because the file itself is the contract.
+The array is optional and may be empty.
+
+| Field | Shape and role |
+| --- | --- |
+| `name` | Required string identifier matching `^[A-Za-z][A-Za-z0-9_-]*$`. |
+| `description` | Optional string explaining the example. |
+| `template` | Declarative markup or template source. When supplied, it must be a nonempty string. |
+| `code` | Programmatic usage source. When supplied, it must be a nonempty string. |
+| `language` | Optional nonempty language identifier, such as `javascript`, for syntax highlighting. |
+| `state` | Optional object containing sample initial state or other example data. |
+
+Each example requires `template`, `code`, or both. The schema rejects unknown fields and accepts any nonempty language identifier.
+
+```js
+contract: {
+    examples: [
+        {
+            name: "basic",
+            template: `<x-details label="Advanced options"><p>Additional content.</p></x-details>`
+        },
+        {
+            name: "expand",
+            description: "Expand the disclosure programmatically.",
+            language: "javascript",
+            code: `document.querySelector("x-details").expand();`
+        }
+    ]
+}
+```
+
+Examples are passive metadata. XShell validates the fields and retains the source strings and sample data in the contract. Example rendering
+and execution are unimplemented. Example `state` stays in the contract and is never merged into Component or Page runtime state.
+
 ## Specialized contracts
 
 Specialized schemas reuse the shared definitions and then apply element-specific rules:
@@ -118,6 +155,7 @@ Specialized schemas reuse the shared definitions and then apply element-specific
   Component contract fields.
 - `page.schema.json` embeds the contract in the Page implementation object, adds Page property metadata and `slots`, and rejects unsupported Page
   contract fields. The loader separately rejects slots reported by the selected Page render engine.
+- `command.schema.json` defines the specialized Command contract with required `execute` metadata and references the shared `types` and `examples` fields.
 
 Modules do not define public contracts; `module.schema.json` rejects `contract` on effective Module configurations.
 
@@ -143,9 +181,6 @@ consumers to supply content.
 Public methods must have same-named controller functions and cannot collide with framework or native members. Undeclared controller functions stay
 private implementation behavior. Event metadata describes event names and `detail`; it does not dispatch `CustomEvent` objects or configure
 `bubbles`, `composed`, or `cancelable`.
-
-Examples are documentation/tooling data. Each requires a name beginning with a letter and using only letters, digits, `_`, or `-`, plus a
-nonempty template; `description` and `state` are optional.
 
 See [Properties](20-properties.md), [State](30-state.md), [Events](40-events.md), [Slots](50-slots.md),
 [Pages](../10-architecture/70-pages.md), and [Services](../10-architecture/100-services.md).

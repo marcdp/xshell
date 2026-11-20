@@ -1,28 +1,6 @@
 // component
 
 
-// docs
-export const docs = {
-    examples: [
-        {   name: "Basic",
-            template: `
-                <x-details label="Advanced options">
-                    <p>Additional content.</p>
-                </x-details>
-            `
-        },
-        {   name: "Custom summary",
-            template: `
-                <x-details>
-                    <strong slot="summary">More information</strong>
-                    <p>Additional content.</p>
-                </x-details>
-            `
-        }
-    ]
-};
-
-
 // implementation
 export default {
     contract: {
@@ -46,7 +24,26 @@ export default {
         slots: {
             "": {description: "Disclosure body content."},
             summary: {description: "Optional custom summary content. Replaces the label when provided."}
-        }    
+        },
+        examples: [
+            {
+                name: "basic",
+                template: `
+                    <x-details label="Advanced options">
+                        <p>Additional content.</p>
+                    </x-details>
+                `
+            },
+            {
+                name: "custom-summary",
+                template: `
+                    <x-details>
+                        <strong slot="summary">More information</strong>
+                        <p>Additional content.</p>
+                    </x-details>
+                `
+            }
+        ]
     },
 
     // style
