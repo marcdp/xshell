@@ -285,8 +285,12 @@ breadcrumb may be absent. Use an Area-qualified Page href to select an Area. Exp
 ### Stacked Page classes and sizes
 
 Pass an optional array of CSS class names to `navigate({ href, page, open: "stack", classes: ["size-compact"] })`. The same option applies when
-`auto` replaces an existing stacked Page. A Page can declare defaults in `meta.classes`. The first caller size takes precedence over the first
-Page size. The Stack layout also keeps custom classes from both arrays and removes duplicates.
+`auto` replaces an existing stacked Page. A Page can declare defaults in [`meta.classes`](70-pages.md#page-classes). When merging classes, Stack
+keeps the first common size from the caller or, if absent, the first common size from the Page. It also keeps classes such as `stack-size-wide` and
+`stack-layout-fill` under their declared names and removes duplicates.
+
+Stack's CSS gives a `stack-size-*` class precedence over a common `size-*` class from either list. For example, a Page with `stack-size-wide` keeps
+its wide Stack size even when the caller passes `size-compact`. Classes prefixed for another layout have no effect on Stack sizing or fill.
 
 The desktop sizes are `size-compact` (25vw) and `size-narrow` (40vw), both within width limits, plus `size-medium` (60vw), `size-wide` (75vw),
 and `size-full` (100vw). An explicit size takes precedence over the width set by stack depth. Without a size, the first panel is 75vw and the

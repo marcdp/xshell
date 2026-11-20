@@ -55,10 +55,13 @@ const result = await dialog.prompt({
 | `size-wide` | `64rem` |
 | `size-full` | Viewport width with a `1rem` gutter on each side |
 
-A Page can set a preferred size with `meta: { classes: ["size-medium"] }`. An opener can override it with `classes: ["size-compact"]`.
-The layout uses the first supported size in the caller's list, or the first supported size in the Page's list if the caller supplies none.
-Other classes from both lists still apply. When both lists omit a semantic size, the layout uses content-based sizing with a viewport-relative minimum.
-On smaller screens, the ordinary width cap is 90% of the viewport. The full size uses the viewport width minus its gutters.
+A Page can set a preferred common size with `meta: { classes: ["size-medium"] }`. An opener can override that common size with
+`classes: ["size-compact"]`. The merge selects the first common size in the caller's list or, if absent, the first common size in the Page's list.
+The layout preserves `dialog-size-*` and `dialog-layout-fill` class names. Its desktop CSS gives a matching `dialog-size-*` class precedence over
+the selected common size regardless of which list supplied it. See [Page classes](../10-architecture/70-pages.md#page-classes).
+
+Without a size or fill class, the layout uses content-based sizing with a viewport-relative minimum. On smaller screens the width cap is 90% of
+the viewport. The full desktop size uses the viewport width minus its gutters.
 
 ## Results
 

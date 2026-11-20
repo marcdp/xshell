@@ -98,15 +98,24 @@ export default {
             }
             div.panel .header div.title {display:flex; flex-direction:column; justify-content:center; min-height:3em;}
             div.panel .header div.title h2 {flex:0;}
-            div.panel .body.layout-fill {display:flex; flex-direction: column; width:100%; position:absolute; top:var(--x-fill-top); height:var(--x-fill-height); box-sizing:border-box; padding:0;}
-            div.panel:has(.body.layout-fill) {scrollbar-width: none; scrollbar-gutter: none; overflow:hidden;}           
+            div.panel .body:is(.layout-fill, .stack-layout-fill) {display:flex; flex-direction: column; width:100%; position:absolute; top:var(--x-fill-top); height:var(--x-fill-height); box-sizing:border-box; padding:0;}
+            div.panel:has(.body:is(.layout-fill, .stack-layout-fill)) {scrollbar-width: none; scrollbar-gutter: none; overflow:hidden;}
 
             /* Explicit sizes override the width inherited from the Page's stack position. */
             div.panel:has(> .body.size-compact) {--x-layout-stack-width:clamp(22rem, 25vw, 34rem);}
             div.panel:has(> .body.size-narrow) {--x-layout-stack-width:clamp(28rem, 40vw, 46rem);}
             div.panel:has(> .body.size-medium) {--x-layout-stack-width:60vw;}
             div.panel:has(> .body.size-wide) {--x-layout-stack-width:75vw;}
-            div.panel:has(> .body.size-full) {--x-layout-stack-width:100vw; border-radius:0; border:none;}
+
+            /* Layout-specific sizes win by source order. */
+            div.panel:has(> .body.stack-size-compact) {--x-layout-stack-width:clamp(22rem, 25vw, 34rem);}
+            div.panel:has(> .body.stack-size-narrow) {--x-layout-stack-width:clamp(28rem, 40vw, 46rem);}
+            div.panel:has(> .body.stack-size-medium) {--x-layout-stack-width:60vw;}
+            div.panel:has(> .body.stack-size-wide) {--x-layout-stack-width:75vw;}
+
+            /* Skip the common full-size rule when a different Stack size is present. */
+            div.panel:has(> .body.size-full:not(:where(.stack-size-compact, .stack-size-narrow, .stack-size-medium, .stack-size-wide))),
+            div.panel:has(> .body.stack-size-full) {--x-layout-stack-width:100vw; border-radius:0; border:none;}
             
         }
         @media (max-width: 768px) {
@@ -121,8 +130,8 @@ export default {
             }
             
             div.panel .body {padding-top:1.4em;}    
-            div.panel .body.layout-fill {display:flex; flex-direction: column; width:100%; position:absolute; top:var(--x-fill-top); height:var(--x-fill-height); box-sizing:border-box;padding:0;}
-            div.panel:has(.body.layout-fill) {scrollbar-width: none; scrollbar-gutter: none; overflow:hidden;}
+            div.panel .body:is(.layout-fill, .stack-layout-fill) {display:flex; flex-direction: column; width:100%; position:absolute; top:var(--x-fill-top); height:var(--x-fill-height); box-sizing:border-box;padding:0;}
+            div.panel:has(.body:is(.layout-fill, .stack-layout-fill)) {scrollbar-width: none; scrollbar-gutter: none; overflow:hidden;}
         }
 
         

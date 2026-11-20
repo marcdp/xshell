@@ -10,7 +10,7 @@ test("Main layout retrieves shortcuts through the unified menu API", () => {
     assert.doesNotMatch(source, /getGlobalMenu/);
 });
 
-function setup() {
+function setup(getPage = () => null) {
     const values = new Map(), writes = [], listeners = new Map();
     const style = {flex:"", removeProperty() { this.flex = ""; }};
     const viewport = {width:1000, height:800};
@@ -39,7 +39,7 @@ function setup() {
     globalThis.getComputedStyle = () => ({minWidth:"160px", minHeight:"160px"});
     globalThis.document = {documentElement:{setAttribute() {}, removeAttribute() {}}};
     const controller = layout.controller({
-        state, host, preferences, bus:{}, getPage:() => null, postRender() {},
+        state, host, preferences, bus:{}, getPage, postRender() {},
         events:{on(target, names, callback) { listeners.set(String(names), callback); }}
     });
     controller.refreshMenuHeight = () => {};
@@ -48,6 +48,15 @@ function setup() {
         if (originalDocument === undefined) delete globalThis.document; else globalThis.document = originalDocument;
     }};
 }
+
+test("Main layout preserves common and prefixed Page class names", () => {
+    const classes = Object.freeze(["size-medium", "main-size-narrow", "main-layout-fill", "dialog-size-full"]);
+    const ui = setup(() => ({ meta: { classes } }));
+    try {
+        ui.controller.onPageLoaded({});
+        assert.equal(ui.state.pageClasses, "size-medium main-size-narrow main-layout-fill dialog-size-full");
+    } finally { ui.restore(); }
+});
 
 test("dock resize persists only the measured final size", async () => {
     const ui = setup();

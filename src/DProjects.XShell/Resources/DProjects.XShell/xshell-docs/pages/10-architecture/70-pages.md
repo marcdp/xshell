@@ -83,27 +83,28 @@ when it is omitted, no Page classes are declared.
 export default {
     meta: {
         title: "Page Classes",
-        classes: ["layout-fill"]
+        classes: ["size-medium", "stack-size-wide", "stack-layout-fill"]
     },
 
     template: `
-        <p>This Page uses the fill layout class.</p>
+        <p>This Page has Stack-specific sizing and fill.</p>
     `
 };
 ```
 
-Classes are not added automatically to the rendered Page content or to the `<x-page>` element. A layout owns that decision: it reads the active
-Page's metadata when the Page loads and applies the joined class names to its chosen Page container. The checked-in `main`, `stack`, and `dialog`
-layouts do this; their containers are respectively the main body, stack body, and dialog element. A custom layout must explicitly implement the
-same behavior if it supports Page classes.
+The active layout reads the Page's metadata when the Page loads and applies class names as declared to its own container. Main and Stack apply them
+to their body wrappers, Dialog to the native dialog element, and Default and Embed to their content wrappers. A custom layout can implement the same
+behavior to support Page classes.
+
+Main, Stack, and Dialog recognize the common sizes `size-compact`, `size-narrow`, `size-medium`, `size-wide`, and `size-full`, plus `layout-fill`.
+Each layout's CSS also recognizes those names with its own prefix (`main-`, `stack-`, or `dialog-`). A matching layout-specific size takes precedence
+over a common size in the CSS. In the example, Stack uses `stack-size-wide` and `stack-layout-fill` at desktop widths. The Stack-prefixed classes have
+no effect in Main or Dialog, where `size-medium` supplies the desktop size. Default and Embed forward the classes without adding size or fill rules.
 
 Styles for these classes therefore belong to the layout that consumes them. The container is inside that layout's Shadow DOM, so ordinary Page
 content styles do not cross the boundary to style it; layout CSS can target its own container and Page CSS can style its own rendered content.
 `meta.classes` is fixed, frozen definition metadata rather than reactive Page state. On replacement, the receiving layout updates its container
 from the newly loaded Page; removing or unloading a Page removes its containing layout or container with it.
-
-The checked-in `default` and `embed` layouts currently read `page.classes` rather than `page.meta.classes`. `Page` exposes the latter, so those
-two layouts do not currently apply `meta.classes`; this is an implementation inconsistency, not an alternative declaration form.
 
 ## Markdown Pages
 

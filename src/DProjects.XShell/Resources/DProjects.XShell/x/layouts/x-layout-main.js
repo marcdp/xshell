@@ -199,7 +199,7 @@ export default {
 
             /* layout-fill */
             @media (min-width: 769px) {
-                .body.layout-fill > main {
+                .body:is(.layout-fill, .main-layout-fill) > main {
                     max-width:unset;
                     position:absolute;
                     top: var(--x-fill-top);
@@ -213,8 +213,8 @@ export default {
                     --x-layout-main-page-max-width: unset;
                     --x-layout-main-page-max-width
                 }
-                .body.layout-fill.toggled > main {left:0;}
-                .body.layout-fill main > div {
+                .body:is(.layout-fill, .main-layout-fill).toggled > main {left:0;}
+                .body:is(.layout-fill, .main-layout-fill) main > div {
                     max-width: unset;
                     margin-left:unset;
                     margin-right:unset;
@@ -228,6 +228,13 @@ export default {
                 .body.size-medium {--x-layout-main-page-max-width:58rem;}
                 .body.size-wide {--x-layout-main-page-max-width:75em;}
                 .body.size-full {--x-layout-main-page-max-width:100%; }
+
+                /* Layout-specific sizes win by source order. */
+                .body.main-size-compact {--x-layout-main-page-max-width:28rem;}
+                .body.main-size-narrow {--x-layout-main-page-max-width:42rem;}
+                .body.main-size-medium {--x-layout-main-page-max-width:58rem;}
+                .body.main-size-wide {--x-layout-main-page-max-width:75em;}
+                .body.main-size-full {--x-layout-main-page-max-width:100%; }
             }
 
         }

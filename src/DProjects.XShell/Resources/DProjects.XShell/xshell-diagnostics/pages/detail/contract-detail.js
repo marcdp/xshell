@@ -9,7 +9,7 @@ export default {
     },
     meta: {
         title: "Contract detail",
-        classes: ["size-medium", "_layout-fill"]
+        classes: ["stack-size-medium", "stack-layout-fill", "main-size-full"]
     },
     style: `
         h3 {margin-bottom:0}

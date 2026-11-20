@@ -18,7 +18,7 @@ export default {
         ]
     },
     style: `
-        :host {display:block; }
+        :host {display:block; color:var(--x-color-text-xx-gray) }
     `,
     template: `{{ state.description }}`,
     state: {

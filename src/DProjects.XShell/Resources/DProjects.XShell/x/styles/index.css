@@ -33,6 +33,7 @@
     --x-color-text: light-dark(#303030, #DDDDDD);
     --x-color-text-gray: light-dark(#666666, #B0B4BA);
     --x-color-text-x-gray: light-dark(#888888, #8B9098);
+    --x-color-text-xx-gray: light-dark(#606060, #888888);
     --x-color-text-inverse: light-dark(#EEEEEE, #202124);
     --x-color-text-disabled: light-dark(#AAAAAA, #70757A);
     --x-color-text-black: light-dark(#000000, #F1F3F4);

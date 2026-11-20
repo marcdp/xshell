@@ -65,9 +65,9 @@ export default {
 
         /* layout-fill */
         @media (min-width: 769px) {
-            dialog.layout-fill {width:100%; height:100%; }
-            dialog.layout-fill > .container {width:100%; height:100%; display:flex; flex-direction:column;}
-            dialog.layout-fill > .container .body {display:flex; flex-direction:column; flex:1;}
+            dialog:is(.layout-fill, .dialog-layout-fill) {width:100%; height:100%; }
+            dialog:is(.layout-fill, .dialog-layout-fill) > .container {width:100%; height:100%; display:flex; flex-direction:column;}
+            dialog:is(.layout-fill, .dialog-layout-fill) > .container .body {display:flex; flex-direction:column; flex:1;}
         }
 
         /* size */
@@ -76,7 +76,16 @@ export default {
             dialog.size-narrow {width:34rem; min-width:0;}
             dialog.size-medium {width:48rem; min-width:0;}
             dialog.size-wide {width:64rem; min-width:0;}
-            dialog.size-full {width:calc(100vw - 2rem); min-width:0; max-width:none;}
+
+            /* Layout-specific sizes win by source order. */
+            dialog.dialog-size-compact {width:24rem; min-width:0;}
+            dialog.dialog-size-narrow {width:34rem; min-width:0;}
+            dialog.dialog-size-medium {width:48rem; min-width:0;}
+            dialog.dialog-size-wide {width:64rem; min-width:0;}
+
+            /* Skip the common full-size rule when a different Dialog size is present. */
+            dialog.size-full:not(:where(.dialog-size-compact, .dialog-size-narrow, .dialog-size-medium, .dialog-size-wide)),
+            dialog.dialog-size-full {width:calc(100vw - 2rem); min-width:0; max-width:none;}
         }
 
         /* responsive */

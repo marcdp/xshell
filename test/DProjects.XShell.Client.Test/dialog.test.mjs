@@ -200,15 +200,15 @@ test("the dialog layout resolves classes on Page load and renders them before sh
     render();
     assert.equal(nativeDialog.open, false);
 
-    const metaClasses = Object.freeze(["size-medium", "size-narrow", "layout-fill", "page-style", "opened"]);
-    const callerClasses = Object.freeze(["size-compact", "size-wide", "layout-fill", "caller-style", "caller-style"]);
+    const metaClasses = Object.freeze(["size-medium", "size-narrow", "layout-fill", "dialog-size-wide", "stack-size-full", "page-style", "opened"]);
+    const callerClasses = Object.freeze(["size-compact", "size-wide", "layout-fill", "dialog-layout-fill", "caller-style", "caller-style"]);
     page = { label: "Test Page", meta: { classes: metaClasses }, context: { classes: callerClasses } };
     pageHost.dispatchEvent(new Event("load"));
     assert.equal(nativeDialog.open, false);
     render();
-    assert.deepEqual(rendered, ["size-compact fill page-style caller-style"]);
+    assert.deepEqual(rendered, ["size-compact layout-fill dialog-size-wide stack-size-full page-style dialog-layout-fill caller-style"]);
     render();
-    assert.equal(className, "opened size-compact fill page-style caller-style");
+    assert.equal(className, "opened size-compact layout-fill dialog-size-wide stack-size-full page-style dialog-layout-fill caller-style");
 
     // Loading another Page preserves its own default and discards previous classes.
     page = { meta: { classes: ["size-medium", "page-style"] }, context: { classes: ["another-style"] } };
@@ -237,7 +237,7 @@ test("dialog styles define responsive semantic widths and omit numeric width sel
     const widths = {
         "size-compact": "24rem", "size-narrow": "34rem", "size-medium": "48rem", "size-wide": "64rem", "size-full": "calc(100vw - 2rem)"
     };
-    const rules = [...dialogLayout.style.matchAll(/dialog\.(size-[\w-]+)\s*\{\s*width:([^;]+);\s*min-width:0;([^}]*)\}/g)];
+    const rules = [...dialogLayout.style.matchAll(/dialog\.dialog-(size-[\w-]+)\s*\{\s*width:([^;]+);\s*min-width:0;([^}]*)\}/g)];
     assert.deepEqual(Object.fromEntries(rules.map(([, name, width]) => [name, width])), widths);
     assert.match(rules.at(-1)[3], /max-width:none;/);
     assert.match(dialogLayout.style, /dialog\s*\{\s*max-width:90vw;\s*min-width:25vw;/);
@@ -248,8 +248,8 @@ test("dialog styles define responsive semantic widths and omit numeric width sel
 test("the Stack layout applies caller classes before expanding and merges Page defaults after load", t => {
     const originalDocument = globalThis.document;
     const pageHost = new EventTarget();
-    const caller = Object.freeze(["size-compact", "size-full", "caller-style", "caller-style", "layout-fill"]);
-    const defaults = Object.freeze(["size-medium", "size-narrow", "page-style", "layout-fill"]);
+    const caller = Object.freeze(["size-compact", "size-full", "caller-style", "caller-style", "layout-fill", "stack-layout-fill"]);
+    const defaults = Object.freeze(["size-medium", "size-narrow", "stack-size-wide", "dialog-size-full", "page-style", "layout-fill"]);
     const state = { ...stackLayout.state, stackClasses: caller, expanded: false };
     let page;
 
@@ -264,17 +264,17 @@ test("the Stack layout applies caller classes before expanding and merges Page d
     controller.load();
     controller.mount();
     assert.equal(state.expanded, false);
-    assert.equal(state.pageClasses, "size-compact caller-style layout-fill");
+    assert.equal(state.pageClasses, "size-compact caller-style layout-fill stack-layout-fill");
     t.mock.timers.tick(50);
     assert.equal(state.expanded, true);
-    assert.equal(state.pageClasses, "size-compact caller-style layout-fill");
+    assert.equal(state.pageClasses, "size-compact caller-style layout-fill stack-layout-fill");
 
     page = { meta: { classes: defaults } };
     pageHost.dispatchEvent(new Event("load"));
-    assert.equal(state.pageClasses, "size-compact page-style layout-fill caller-style");
+    assert.equal(state.pageClasses, "size-compact stack-size-wide dialog-size-full page-style layout-fill caller-style stack-layout-fill");
     state.stackClasses = ["custom-style"];
     controller.stateChange({ changes: [{ prop: "stackClasses" }] });
-    assert.equal(state.pageClasses, "size-medium page-style layout-fill custom-style");
+    assert.equal(state.pageClasses, "size-medium stack-size-wide dialog-size-full page-style layout-fill custom-style");
     page = {};
     pageHost.dispatchEvent(new Event("load"));
     assert.equal(state.pageClasses, "custom-style");
@@ -287,7 +287,7 @@ test("the Stack layout applies caller classes before expanding and merges Page d
 test("Stack sizes override inherited depth widths on desktop while mobile uses the full viewport", async () => {
     const globalStyle = await readFile(new URL("../../src/DProjects.XShell/Resources/DProjects.XShell/x/styles/index.css", import.meta.url), "utf8");
     const [base, desktop, mobile] = stackLayout.style.split(/@media \([^)]+\)/);
-    const widths = Object.fromEntries([...desktop.matchAll(/div\.panel:has\(> \.body\.(size-[\w-]+)\)\s*\{--x-layout-stack-width:([^;]+);\}/g)]
+    const widths = Object.fromEntries([...desktop.matchAll(/div\.panel:has\(> \.body\.stack-(size-[\w-]+)\)\s*\{--x-layout-stack-width:([^;]+);/g)]
         .map(([, name, width]) => [name, width]));
     assert.deepEqual(widths, {
         "size-compact": "clamp(22rem, 25vw, 34rem)", "size-narrow": "clamp(28rem, 40vw, 46rem)",
