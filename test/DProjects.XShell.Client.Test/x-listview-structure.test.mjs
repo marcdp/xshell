@@ -52,17 +52,17 @@ test("every listview has a direct body after its optional head", () => {
 test("details listviews preserve expected column counts and interactive headers", () => {
     const expectedColumns = new Map([
         ["xshell-diagnostics/pages/bus.js", [4]],
-        ["xshell-diagnostics/pages/components.js", [6]],
-        ["xshell-diagnostics/pages/contracts.js", [7]],
-        ["xshell-diagnostics/pages/icons.js", [5]],
-        ["xshell-diagnostics/pages/loader.js", [6]],
-        ["xshell-diagnostics/pages/modules.js", [7]],
-        ["xshell-diagnostics/pages/navigation.js", [6, 2]],
-        ["xshell-diagnostics/pages/pages.js", [6]],
+        ["xshell-diagnostics/pages/components.js", [8]],
+        ["xshell-diagnostics/pages/contracts.js", [8]],
+        ["xshell-diagnostics/pages/icons.js", [6]],
+        ["xshell-diagnostics/pages/loader.js", [7]],
+        ["xshell-diagnostics/pages/modules.js", [8]],
+        ["xshell-diagnostics/pages/navigation.js", [6, 4, 5]],
+        ["xshell-diagnostics/pages/pages.js", [8]],
         ["xshell-diagnostics/pages/resolver.js", [5]],
-        ["xshell-diagnostics/pages/schemas.js", [4]],
+        ["xshell-diagnostics/pages/schemas.js", [7]],
         ["xshell-diagnostics/pages/service-worker.js", [5]],
-        ["xshell-diagnostics/pages/services.js", [7]]
+        ["xshell-diagnostics/pages/services.js", [9]]
     ]);
 
     for (const [path, counts] of expectedColumns) {

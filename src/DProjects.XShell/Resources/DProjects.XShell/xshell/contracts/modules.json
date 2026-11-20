@@ -20,7 +20,29 @@
             "builtAt": {"type": "string"},
             "configUrl": {"type": "string"},
             "icon": {"type": ["string", "null"]},
-            "files": {"type": "array", "items": {"type": "object", "properties": {"path": {"type": "string"}, "size": {"type": "number"}}}}
+            "files": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": ["path", "size"],
+                "properties": {
+                  "path": {"type": "string"},
+                  "size": {"type": "number"},
+                  "resource": {
+                    "type": "object",
+                    "description": "Optional frozen generated metadata describing the inventoried resource.",
+                    "properties": {
+                      "type": {"type": "string"},
+                      "title": {"type": "string"},
+                      "label": {"type": "string"},
+                      "description": {"type": "string"},
+                      "icon": {"type": "string"},
+                      "id": {"type": "string"}
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       }

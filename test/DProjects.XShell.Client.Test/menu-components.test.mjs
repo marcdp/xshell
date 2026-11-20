@@ -19,6 +19,10 @@ test("x-page-menu reads the effective navigation items and handles a missing men
     assert.deepEqual(state.menu, []);
 });
 
+test("x-page-menu uses descriptions as tooltip fallbacks without overriding explicit tooltips", () => {
+    assert.match(pageMenuDefinition.template, /x-attr:tooltip="menuitem\.tooltip \|\| menuitem\.description"/);
+});
+
 test("x-menu passes canonical tooltip and embedded properties to x-menuitem", () => {
     assert.match(menuDefinition.template, /x-attr:tooltip="menuitem\.tooltip"/);
     assert.match(menuDefinition.template, /x-attr:embedded="menuitem\.embedded"/);

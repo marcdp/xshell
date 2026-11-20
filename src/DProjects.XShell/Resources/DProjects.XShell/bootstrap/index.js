@@ -312,12 +312,17 @@ async function main() {
             if (url.origin !== root.origin || !url.pathname.startsWith(root.pathname)) throw new Error(`Module URL escapes asset root: ${value}`);
             return restoreBraces(url.pathname.slice(new URL(appBaseUrl).pathname.length - 1) + url.search + url.hash);
         }
-        function normalizeManifest(value, module, declaringPath = "/manifest.json") {
-            if (Array.isArray(value)) return value.map(item => normalizeManifest(item, module, declaringPath));
+        function normalizeManifest(value, module, declaringPath = "/manifest.json", manifestPath = []) {
+            if (Array.isArray(value)) return value.map((item, index) => normalizeManifest(item, module, declaringPath, [...manifestPath, index]));
             if (value && typeof value === "object") {
-                const fileEntry = typeof value.path === "string" && typeof value.size === "number" && typeof value.hash === "string";
-                return Object.fromEntries(Object.entries(value).map(([key, item]) =>
-                    [key, fileEntry && key === "resource" ? item : normalizeManifest(item, module, declaringPath)]));
+                return Object.fromEntries(Object.entries(value).map(([key, item]) => {
+                    // Generated resource metadata is literal only at framework and module file-inventory locations.
+                    const inventoryResource = key === "resource" && (
+                        manifestPath.length === 3 && manifestPath[0] === "xshell" && manifestPath[1] === "files" && Number.isInteger(manifestPath[2]) ||
+                        manifestPath.length === 4 && manifestPath[0] === "modules" && typeof manifestPath[1] === "string" &&
+                            manifestPath[2] === "files" && Number.isInteger(manifestPath[3]));
+                    return [key, inventoryResource ? item : normalizeManifest(item, module, declaringPath, [...manifestPath, key])];
+                }));
             }
             return normalizeUrl(value, module, declaringPath);
         }

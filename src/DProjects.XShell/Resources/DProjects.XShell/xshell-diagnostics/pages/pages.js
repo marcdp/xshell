@@ -13,7 +13,8 @@ export default {
         <p>Shows discovered pages, their owning modules, size, load time, and load status.</p>
         <x-listview view="details" x-on:activate="inspectContract">
             <x-listview-head>
-                <x-listview-column><x-datafield type="search" x-model="state.id" placeholder="Page"></x-datafield></x-listview-column>
+                <x-listview-column><x-datafield type="search" x-model="state.label" placeholder="Label"></x-datafield></x-listview-column>
+                <x-listview-column width="17em"><x-datafield type="search" x-model="state.id" placeholder="Page ID"></x-datafield></x-listview-column>
                 <x-listview-column width="10em"><x-datafield type="search" x-model="state.moduleId" placeholder="Module"></x-datafield></x-listview-column>
                 <x-listview-column width="10em"><x-datafield type="search" x-model="state.description" placeholder="Description"></x-datafield></x-listview-column>
                 <x-listview-column label="Size" width="5em" style="text-align:right"></x-listview-column>
@@ -24,10 +25,11 @@ export default {
             <x-listview-body>
             <x-listview-item x-for="page in state.pages"
                 x-prop:value="page.id"
-                x-attr:label="page.id"
+                x-attr:label="page.label"
                 x-attr:icon="page.icon"
                 target="_blank"
             >
+                <div>{{ page.id }}</div>
                 <div>{{ page.moduleId }}</div>
                 <div>{{ page.description }}</div>
                 <x-file-size x-prop:value="page.size" style="text-align:right"></x-file-size>
@@ -68,7 +70,8 @@ export default {
                 return navigation.navigate({
                     href: "page:xshell-diagnostics:/pages/detail/contract-detail.js", 
                     page, 
-                    open: "stack", 
+                    open: "stack",
+                    classes: ["size-wide"],
                     params: { kind: "page", id }
                 });
             },
@@ -76,33 +79,37 @@ export default {
                 event.stopPropagation();
             },
             async refresh() {
-                // refresh
-                let list = [];
-                let loaderRegistryCache = {};
+                // Collect generated page metadata and overlay runtime loader state without loading resources.
+                const list = [];
+                const loaderRegistryCache = {};
                 for (const loaderRegistryItem of loader.registry) {
                     loaderRegistryCache[loaderRegistryItem.resource] = loaderRegistryItem;
                 }
-                for(let moduleId of Object.keys(config.modules)) {
+                for (const moduleId of Object.keys(config.modules)) {
                     const moduleConfig = config.modules[moduleId];
-                    let modulePagesPath = moduleConfig.assets.path + "/pages";
-                    for(const file of Object.values(moduleConfig.files)) {
-                        if (file.path.startsWith(modulePagesPath)) {
+                    const modulePagesPath = moduleConfig.assets.path + "/pages/";
+                    for (const file of Object.values(moduleConfig.files)) {
+                        if (file.path.startsWith(modulePagesPath) && /\.(?:js|html|md)$/i.test(file.path) && (!file.resource || file.resource.type === "page")) {
                             const id = file.path;
                             const loaderRegistryItem = loaderRegistryCache["page:" + file.path];
+                            const label = file.resource?.title || id;
+                            const description = file.resource?.description ?? loaderRegistryItem?.description ?? "";
                             const url = new URL(file.path.replace(/^\/+/, ""),config.app.baseUrl).href;
                             let valid = true;
-                            if (state.id && id.indexOf(state.id) == -1 ) valid = false;
-                            if (state.moduleId && moduleId.indexOf(state.moduleId) == -1 ) valid = false;
-                            if (state.description && (!loaderRegistryItem?.description || loaderRegistryItem.description.indexOf(state.description) == -1 )) valid = false;
+                            if (!this.matches(id, state.id)) valid = false;
+                            if (!this.matches(label, state.label)) valid = false;
+                            if (!this.matches(moduleId, state.moduleId)) valid = false;
+                            if (!this.matches(description, state.description)) valid = false;
                             if (valid) {
                                 list.push({
-                                    id: id,
-                                    moduleId: moduleId,
-                                    description: loaderRegistryItem?.description || "",
-                                    icon: moduleConfig.icon || "x-page",
-                                    url: url,
+                                    id,
+                                    label,
+                                    moduleId,
+                                    description,
+                                    icon: file.resource?.icon || moduleConfig.icon || "x-page",
+                                    url,
                                     status: loaderRegistryItem?.status || "",
-                                    time: loaderRegistryItem?.time || "",
+                                    time: loaderRegistryItem?.time || 0,
                                     size: file.size
                                 });
                             }
@@ -111,6 +118,10 @@ export default {
                 };
                 list.sort((a, b) => a.id.localeCompare(b.id));
                 state.pages = list;
+            },
+            matches(value, query) {
+                // Match diagnostic filters consistently regardless of casing.
+                return !query || String(value ?? "").toLowerCase().includes(query.toLowerCase());
             }
         };
     }

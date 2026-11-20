@@ -158,8 +158,14 @@ are optional. Component metadata prefers `meta.title`, `meta.description`, and `
 `contract.label`, `contract.description`, and `contract.icon`. The inventory never embeds full contracts, schemas, templates, command parameters,
 or datasets.
 
+A JavaScript file under `/commands/` is a valid generated Command resource only when it default-exports a static definition object whose static
+`contract` object contains a static `execute` object. Packaging reads this shape without executing JavaScript and reports the source path when the
+required structure or optional descriptive strings are dynamic or malformed.
+
 `module.files` remains the authoritative enumeration of packaged resources. `file.resource` permits discovery and presentation without loading an
 implementation, but it is not a resource catalog or registry. Resolver and Loader continue to resolve and load the underlying file.
+The Modules service's frozen inspection registry copies this optional metadata onto its file snapshots; this projection does not alter resolution
+or loading behavior.
 
 The optional module-wide `/styles/index.css`, `/styles/shared.css`, and `/module.js` controller are loaded only when their normalized paths occur in
 the inventory. Authors do not declare either stylesheet in the manifest. Both stylesheets use the normal Resolver → Loader path, including CSS

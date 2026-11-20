@@ -20,7 +20,7 @@ namespace DProjects.XShell.Test {
                 };
                 """);
             files.Write("commands/run.js", """
-                export default { contract: { label: "Run", description: `Run now`, icon: "x-run" }, controller() {} };
+                export default { contract: { label: "Run", description: `Run now`, icon: "x-run", execute: {} }, controller() {} };
                 """);
             var builder = new ResourceMetadataBuilder();
 
@@ -98,6 +98,23 @@ namespace DProjects.XShell.Test {
 
             Assert.Contains("/pages/dynamic.js", exception.Message);
             Assert.Contains(property, exception.Message);
+            Assert.Contains("static", exception.Message, StringComparison.OrdinalIgnoreCase);
+        }
+        [Theory]
+        [InlineData("export default class Run {};", "definition object")]
+        [InlineData("export default {};", "contract")]
+        [InlineData("export default { contract: createContract() };", "contract")]
+        [InlineData("export default { contract: {} };", "execute")]
+        [InlineData("export default { contract: { execute: createExecute() } };", "execute")]
+        public async Task InvalidCommandDefinitions_ProducePathAndShapeDiagnostics(string source, string expected) {
+            using var files = new TemporaryDirectory();
+            files.Write("commands/run.js", source);
+
+            var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+                new ResourceMetadataBuilder().BuildAsync(files.Root, "/commands/run.js", TestContext.Current.CancellationToken));
+
+            Assert.Contains("/commands/run.js", exception.Message);
+            Assert.Contains(expected, exception.Message, StringComparison.OrdinalIgnoreCase);
             Assert.Contains("static", exception.Message, StringComparison.OrdinalIgnoreCase);
         }
         [Fact]

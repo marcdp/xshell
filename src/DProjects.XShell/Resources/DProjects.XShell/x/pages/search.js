@@ -24,7 +24,7 @@ export default {
                             x-attr:href="result.path || result.href"
                             x-attr:target="result.target"
                             x-attr:category="result.category"
-                            tooltip="Lorem ipsum"
+                            x-attr:tooltip="result.tooltip || result.description"
                             open="top"
                         ></x-listview-item>
                     </x-listview-body>
@@ -61,15 +61,19 @@ export default {
             },
 
             search() {
-                // search
-                let keyword = state.keyword.toLowerCase();
-                let results = [];
+                // Search labels and generated descriptions while retaining the effective menu item as the result target.
+                const keyword = state.keyword.toLowerCase();
+                const results = [];
+                const seen = new Set();
                 if (keyword.length > 2) {
                     const searchRecursive = function(menuitem, category) {
-                        if (menuitem.label.toLowerCase().indexOf(keyword) >= 0 && menuitem.href) {
+                        const label = String(menuitem.label || "").toLowerCase();
+                        const description = String(menuitem.description || "").toLowerCase();
+                        if ((label.includes(keyword) || description.includes(keyword)) && menuitem.href && !seen.has(menuitem.href)) {
+                            seen.add(menuitem.href);
                             results.push({ 
                                 ...menuitem, 
-                                icon: menuitem.icon || config.modules[menuitem.module].icon,
+                                icon: menuitem.icon || config.modules[menuitem.module]?.icon,
                                 category: category });
                         }
                         if (menuitem.children) {
@@ -97,7 +101,6 @@ export default {
             },
 
             activate({event}) {
-                debugger;
                 const item = event.detail.item;
                 if (item && item.href) {
                     window.location.href = item.href;

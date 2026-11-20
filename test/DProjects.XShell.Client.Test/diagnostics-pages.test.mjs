@@ -9,6 +9,7 @@ import InspectorPage from "../../src/DProjects.XShell/Resources/DProjects.XShell
 import LoaderPage from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell-diagnostics/pages/loader.js";
 import ComponentsPage from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell-diagnostics/pages/components.js";
 import PagesPage from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell-diagnostics/pages/pages.js";
+import SchemasPage from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell-diagnostics/pages/schemas.js";
 import ContractsPage from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell-diagnostics/pages/contracts.js";
 import ContractDetailPage from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell-diagnostics/pages/detail/contract-detail.js";
 import NavigationPage from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell-diagnostics/pages/navigation.js";
@@ -49,6 +50,57 @@ test("Modules diagnostics filters on the canonical configured assets path", () =
     state.assetPath = "/_assets/other";
     controller.refresh();
     assert.deepEqual(state.modules, []);
+});
+
+test("Page and Component diagnostics use generated metadata before resources load", t => {
+    const config = {
+        app: { baseUrl: "https://example.test/app/" },
+        modules: { orders: {
+            assets: { path: "/_assets/orders" }, icon: "module-icon", files: [
+                { path: "/_assets/orders/pages/index.js", size: 10,
+                    resource: { type: "page", title: "Order Home", description: "Manage Orders", icon: "page-icon" } },
+                { path: "/_assets/orders/components/x-order.js", size: 20,
+                    resource: { type: "component", label: "Order Card", description: "Shows Orders", icon: "component-icon" } }
+            ]
+        } }
+    };
+    const loader = { registry: [] };
+    globalThis.customElements = { get: t.mock.fn(() => undefined) };
+    t.after(() => { delete globalThis.customElements; });
+
+    const pageState = { ...structuredClone(PagesPage.state), label: "order home", description: "manage orders" };
+    PagesPage.controller({ state: pageState, config, loader }).refresh();
+    assert.deepEqual(pageState.pages.map(({ id, label, description, icon, status, time }) =>
+        ({ id, label, description, icon, status, time })), [{
+        id: "/_assets/orders/pages/index.js", label: "Order Home", description: "Manage Orders", icon: "page-icon", status: "", time: 0
+    }]);
+
+    const componentState = { ...structuredClone(ComponentsPage.state), id: "X-ORDER", description: "shows orders" };
+    ComponentsPage.controller({ state: componentState, config, loader }).refresh();
+    assert.deepEqual(componentState.components.map(({ id, label, description, icon, status, time }) =>
+        ({ id, label, description, icon, status, time })), [{
+        id: "x-order", label: "Order Card", description: "Shows Orders", icon: "component-icon", status: "", time: 0
+    }]);
+    assert.equal(customElements.get.mock.callCount(), 1);
+});
+
+test("Schema diagnostics keeps resolver IDs separate from generated schema IDs and ignores ordinary JSON", () => {
+    const state = { ...structuredClone(SchemasPage.state), label: "ORDER", description: "payload" };
+    const config = {
+        app: { baseUrl: "https://example.test/app/" },
+        xshell: { assets: { path: "/_assets/xshell" }, files: [] },
+        modules: { orders: { assets: { path: "/_assets/orders" }, files: [
+            { path: "/_assets/orders/schemas/order.schema.json", size: 30,
+                resource: { type: "schema", id: "https://schemas.example/order", title: "Order Schema", description: "Order payload" } },
+            { path: "/_assets/orders/schemas/not-a-schema.json", size: 40 }
+        ] } }
+    };
+
+    SchemasPage.controller({ state, config }).refresh();
+
+    assert.equal(state.schemas.length, 1);
+    assert.deepEqual({ id: state.schemas[0].id, schemaId: state.schemas[0].schemaId, label: state.schemas[0].label },
+        { id: "order", schemaId: "https://schemas.example/order", label: "Order Schema" });
 });
 
 test("Bus diagnostics retains only the newest 1000 events", () => {

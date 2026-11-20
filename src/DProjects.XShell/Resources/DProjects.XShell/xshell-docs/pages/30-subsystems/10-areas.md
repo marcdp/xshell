@@ -78,7 +78,8 @@ the same contribution, up to the next explicit `order`. After merging by ID, Are
 block precedes explicit blocks at `0`, and other ties retain composition order. Effective item orders increment within each block, so blocks
 stay together even when those values overlap. Inferred values only appear on effective menu items.
 
-Menu items may also declare `tooltip` and `embedded`. `tooltip` supplies the navigation anchor's tooltip text. When rendered by `x-menu`, an
+Menu items may also declare `tooltip` and `embedded`. `tooltip` supplies the navigation anchor's tooltip text. The Page sidebar uses an item's
+description as its tooltip when no explicit tooltip is present. When rendered by `x-menu`, an
 `embedded` menu item causes `x-menuitem` to host its target Page inline instead of rendering a navigation anchor. This presentation behavior belongs
 specifically to `x-menu` / `x-menuitem`; it is distinct from Navigation's dialog or embedded Page lifecycle and from `xshell.ui.layout.embed`.
 
@@ -104,6 +105,8 @@ labels and friendly path segments. When a Page inventory entry has generated `re
 and its description and icon are copied to the generated menu item. A nested directory's `index` Page supplies that directory item's metadata.
 Missing metadata retains the filename fallback, and the module label continues to name the root menu item. This is a menu-generation convention
 over the generated inventory, not a parallel authored menu catalog. Registered runtime sources and `childrenSource` remain separate mechanisms.
+The Page search traverses these effective nested menus across Areas and matches both labels and descriptions case-insensitively; duplicate href
+targets retain their first result, including the original target and Area category.
 
 Bootstrap first maps module-relative menu hrefs into `/_assets/<module-id>/<generation>/...`. Areas then applies the Area prefix to both local `path` and local
 `href`, leaving external scheme URLs unchanged. For example, authored `components` and normalized

@@ -66,7 +66,8 @@ export default {
                 return navigation.navigate({
                     href: "page:xshell-diagnostics:/pages/detail/contract-detail.js", 
                     page, 
-                    open: "stack", 
+                    open: "stack",
+                    classes: ["size-wide"],
                     params: { kind: "contract", id }
                 });
             },

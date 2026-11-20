@@ -95,7 +95,8 @@ are not Modules service options.
 Startup explicitly initializes Modules. Its `init()` method iterates effective `config.modules` once and creates one runtime record
 per id. Repeated dependency requirements therefore do not create multiple runtime module instances. Retrieve a module with
 `xshell.modules.getModuleById(id)`; the accessor delegates to the configured singleton, and `xshell.modules.registry` is a frozen inspection
-snapshot.
+snapshot. Each snapshot file retains its path and size plus a frozen copy of optional generated `resource` metadata, so management interfaces can
+present inventory descriptions without loading the underlying resource.
 
 Before controllers start, Modules verifies optional `requires` service names against the finalized service registry. It independently discovers
 conventional module-wide `/styles/index.css`, `/styles/shared.css`, and `/module.js` resources only when those paths occur in the generated

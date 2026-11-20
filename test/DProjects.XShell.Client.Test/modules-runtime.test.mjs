@@ -195,7 +195,10 @@ test("failed module startup rolls back successful starts in reverse order and pr
 test("module registry is a frozen metadata snapshot of the runtime modules", async () => {
     const config = freeze({
         xshell: { assets: { basePath: "/_assets" } },
-        modules: { orders: moduleDefinition("orders") }
+        modules: { orders: moduleDefinition("orders", { files: [
+            { path: "/_assets/orders/pages/index.js", size: 10, resource: { type: "page", title: "Orders" } },
+            { path: "/_assets/orders/images/logo.svg", size: 20 }
+        ] }) }
     });
     const modules = createModules(config);
     const before = modules.registry;
@@ -214,6 +217,10 @@ test("module registry is a frozen metadata snapshot of the runtime modules", asy
     assert.equal(Object.isFrozen(registry[0]), true);
     assert.equal(Object.isFrozen(registry[0].assets), true);
     assert.equal(Object.isFrozen(registry[0].files), true);
+    assert.equal(Object.isFrozen(registry[0].files[0]), true);
+    assert.equal(Object.isFrozen(registry[0].files[0].resource), true);
+    assert.deepEqual(registry[0].files[0].resource, { type: "page", title: "Orders" });
+    assert.equal(Object.hasOwn(registry[0].files[1], "resource"), false);
     assert.throws(() => registry.push({ id: "other" }), TypeError);
     assert.throws(() => registry.splice(0, 1), TypeError);
     assert.notStrictEqual(modules.registry, registry);

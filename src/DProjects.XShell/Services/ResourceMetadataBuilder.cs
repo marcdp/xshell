@@ -71,6 +71,8 @@ namespace DProjects.XShell.Services {
             if (extension.Equals(".html", StringComparison.OrdinalIgnoreCase)) source = new ModuleFileCompilerHtmlSfc().ExtractDefinitionSource(source);
             var definition = JavaScriptSource.Parse(source).FindDefaultExportObject();
             var resource = new JsonObject { ["type"] = type };
+            if (type == "command" && definition == null) throw new InvalidOperationException(
+                $"Command resource '{displayPath}' must default-export a static definition object.");
             if (definition == null) return resource;
 
             // extract the small type-specific surface without copying the complete definition contract
@@ -87,7 +89,8 @@ namespace DProjects.XShell.Services {
                     "meta.description", "contract.description");
                 AddPreferredStaticString(resource, "icon", meta, "icon", contract, "icon", displayPath, "meta.icon", "contract.icon");
             } else if (type == "command") {
-                var contract = ReadStaticObject(definition, "contract", displayPath);
+                var contract = RequireStaticObject(definition, "contract", displayPath, "Command resource");
+                RequireStaticObject(contract, "execute", displayPath, "Command contract");
                 AddStaticString(resource, "label", contract, "label", displayPath, "contract.label");
                 AddStaticString(resource, "description", contract, "description", displayPath, "contract.description");
                 AddStaticString(resource, "icon", contract, "icon", displayPath, "contract.icon");
@@ -100,6 +103,14 @@ namespace DProjects.XShell.Services {
             if (property == null) return null;
             return property.Value.AsObject() ?? throw new InvalidOperationException(
                 $"Resource metadata '{propertyName}' in '{displayPath}' must be a static object literal.");
+        }
+        private static JavaScriptSource.JavaScriptObject RequireStaticObject(JavaScriptSource.JavaScriptObject definition, string propertyName,
+            string displayPath, string owner) {
+            // Require the statically inspectable command shape used by the runtime contract loader.
+            var property = definition.FindProperty(propertyName) ?? throw new InvalidOperationException(
+                $"{owner} in '{displayPath}' must declare a static '{propertyName}' object.");
+            return property.Value.AsObject() ?? throw new InvalidOperationException(
+                $"{owner} '{propertyName}' in '{displayPath}' must be a static object literal.");
         }
         private static void AddPreferredStaticString(JsonObject resource, string targetName, JavaScriptSource.JavaScriptObject? preferred,
             string preferredName, JavaScriptSource.JavaScriptObject? fallback, string fallbackName, string displayPath, string preferredDisplayName,

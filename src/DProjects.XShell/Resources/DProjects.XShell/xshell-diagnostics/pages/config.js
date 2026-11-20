@@ -1,13 +1,13 @@
 // page
 export default {
     contract: {
-        description: "Config page",
+        description: "Config",
         events: {},
         properties: {},
         methods: {}
     },
     meta: {
-        title: "Config Page"
+        title: "Config"
     },
     template: `
         <p>Shows the complete effective XShell configuration used by the running application.</p>

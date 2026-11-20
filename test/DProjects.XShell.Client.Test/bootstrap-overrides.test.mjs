@@ -110,21 +110,24 @@ test("menu configuration follows generic value-driven path semantics", () => {
     });
 });
 
-test("file resource metadata remains literal while inventory paths normalize", () => {
-    const definition = { files: [{
-        path: "/pages/index.js", size: 123, hash: "hash",
-        resource: { type: "page", title: "/Getting Started", description: "app: configuration guide", icon: "x-settings" }
-    }] };
+test("only generated framework and module file resource metadata remains literal", () => {
+    const metadata = { type: "page", title: "/Getting Started", description: "app: configuration guide", icon: "x-settings" };
+    const definition = {
+        xshell: { files: [{ path: "/framework.js", size: 12, hash: "framework", resource: metadata }] },
+        modules: { x: { files: [{ path: "/pages/index.js", size: 123, hash: "module", resource: metadata }] } },
+        unrelated: { path: "/ordinary.js", size: 1, hash: "ordinary", resource: { title: "/Normalize me" } }
+    };
     const normalize = bootstrapSource.match(/^        function normalizeUrl\([\s\S]*?^        \}\r?\n        function normalizeManifest\([\s\S]*?^        \}/m)[0];
     const module = plain(vm.runInNewContext(`${normalize}\nnormalizeManifest(definition, owner)`, {
         URL, definition, appBaseUrl: "https://example.test/app/",
         owner: { assetsPath: "/_assets/x/1.0.0.dev", manifestUrl: "https://example.test/modules/x/manifest.json" }
     }));
 
-    assert.equal(module.files[0].path, "/_assets/x/1.0.0.dev/pages/index.js");
-    assert.deepEqual(module.files[0].resource, {
-        type: "page", title: "/Getting Started", description: "app: configuration guide", icon: "x-settings"
-    });
+    assert.equal(module.xshell.files[0].path, "/_assets/x/1.0.0.dev/framework.js");
+    assert.deepEqual(module.xshell.files[0].resource, metadata);
+    assert.equal(module.modules.x.files[0].path, "/_assets/x/1.0.0.dev/pages/index.js");
+    assert.deepEqual(module.modules.x.files[0].resource, metadata);
+    assert.equal(module.unrelated.resource.title, "/_assets/x/1.0.0.dev/Normalize%20me");
 });
 
 function apply(config, entries) {

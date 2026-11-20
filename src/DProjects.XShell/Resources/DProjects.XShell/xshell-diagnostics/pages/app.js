@@ -1,13 +1,13 @@
 // page
 export default {
     contract: {
-        description: "Application",
+        description: "App",
         events: {},
         properties: {},
         methods: {}
     },
     meta: {
-        title: "Application Page"
+        title: "App"
     },
     template: `
         <p>Shows the effective application configuration derived from the selected root module and host settings.</p>

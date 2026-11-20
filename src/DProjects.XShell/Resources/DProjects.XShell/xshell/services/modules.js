@@ -46,7 +46,12 @@ export default class Modules {
             builtAt: module.config.builtAt || "",
             configUrl: module.config.configUrl || "",
             icon: module.config.icon || null,
-            files: Object.freeze(module.config.files.map(file => Object.freeze({ path: file.path, size: file.size })))
+            files: Object.freeze(module.config.files.map(file => {
+                // Copy optional generated resource metadata without exposing mutable configuration records.
+                const snapshot = { path: file.path, size: file.size };
+                if (file.resource) snapshot.resource = Object.freeze({ ...file.resource });
+                return Object.freeze(snapshot);
+            }))
         })));
     }
     get shadowStyleSheets() {
