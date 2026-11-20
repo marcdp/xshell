@@ -314,7 +314,11 @@ async function main() {
         }
         function normalizeManifest(value, module, declaringPath = "/manifest.json") {
             if (Array.isArray(value)) return value.map(item => normalizeManifest(item, module, declaringPath));
-            if (value && typeof value === "object") return Object.fromEntries(Object.entries(value).map(([key, item]) => [key, normalizeManifest(item, module, declaringPath)]));
+            if (value && typeof value === "object") {
+                const fileEntry = typeof value.path === "string" && typeof value.size === "number" && typeof value.hash === "string";
+                return Object.fromEntries(Object.entries(value).map(([key, item]) =>
+                    [key, fileEntry && key === "resource" ? item : normalizeManifest(item, module, declaringPath)]));
+            }
             return normalizeUrl(value, module, declaringPath);
         }
         for (const module of resolvedModules.values()) {

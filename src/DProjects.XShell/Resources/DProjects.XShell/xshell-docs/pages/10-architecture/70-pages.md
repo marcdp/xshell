@@ -120,8 +120,9 @@ page:/_assets/xshell-docs/<generation>/pages/10-architecture/100-services.md
 
 `page-md` is a Page adapter, not a Markdown renderer. It delegates rendering to `xshell.ui.components.markdown`, loading that Component through the
 normal Loader and mounting it with the resolved document URL. The configured Markdown Component owns the rendering and security policy. Unmount
-detaches the component, and a later mount creates it again. Page load/unload and navigation metadata follow the normal lifecycle. Labels come
-from menu/breadcrumb/navigation metadata, not from parsing a Markdown heading.
+detaches the component, and a later mount creates it again. Page load/unload and navigation metadata follow the normal lifecycle. The generated
+file inventory may project the first suitable ATX heading as `file.resource.title` for automatic menus; `page-md` itself does not parse headings
+for navigation metadata.
 
 The current `x` module selects `x-markdown` by default. This trusted-content-only Component performs no sanitization and owns loading, Markdown
 conversion, relative URL normalization, embedded-component loading, and its rendered content. A replacement Markdown Component may define a

@@ -29,6 +29,14 @@ namespace DProjects.XShell.Services {
             // delegate canonical JavaScript processing to the existing compiler pipeline
             return new ModuleFileCompilerJs().Compile(context, js);
         }
+        internal string ExtractDefinitionSource(string html) {
+            ArgumentNullException.ThrowIfNull(html);
+
+            // expose the embedded definition through the same structural parsing used by compilation
+            var sections = ReadSections(html);
+            if (sections.Template == null) throw new InvalidOperationException("An HTML X Template must contain exactly one <template> element.");
+            return (sections.ModuleScript ?? "export default {};").Trim().Replace("\n    ", "\n", StringComparison.Ordinal);
+        }
 
         // private methods
         private Sections ReadSections(string html) {

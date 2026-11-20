@@ -92,7 +92,7 @@ The effective schema requires `label`, `version`, `copyright`, `icon`, `configUr
 | `configUrl` | Absolute URL of the selected manifest document. |
 | `assets.url` | Absolute physical directory or ZIP container; authored `url:./` is the normal default. |
 | `assets.path` | Generated virtual generation root under `/_assets`. |
-| `files` | Effective virtual resource inventory, with `path`, `size`, and `hash`. |
+| `files` | Effective virtual resource inventory, with required `path`, `size`, and `hash`, plus optional generated `resource` metadata. |
 | `dependencies` | Authored dependency declarations retained as module metadata; index copies drive discovery. |
 
 Development paths use `<version>.dev`. Non-Development paths require an index-provided package hash and use `<version>.<hash>`.
@@ -115,6 +115,51 @@ This means `configUrl`, `assets.url`, and `assets.path` describe different addre
 
 Development middleware generates package-relative `files` entries in the served descriptor; bootstrap converts their effective copies to virtual
 generation paths. Authors should not maintain `files` manually.
+
+Every file remains authoritative physical inventory data. Recognized resources additionally receive a small generated projection:
+
+```json
+{
+  "path": "/pages/orders.js",
+  "size": 4230,
+  "hash": "...",
+  "resource": {
+    "type": "page",
+    "title": "Orders",
+    "description": "Review current orders.",
+    "icon": "x-orders"
+  }
+}
+```
+
+Command and Component entries use the same file shape with their own small projections:
+
+```json
+{
+  "path": "/commands/orders.refresh.js",
+  "size": 1240,
+  "hash": "...",
+  "resource": { "type": "command", "label": "Refresh orders", "description": "Reload current orders." }
+}
+```
+
+```json
+{
+  "path": "/components/orders-grid.js",
+  "size": 2150,
+  "hash": "...",
+  "resource": { "type": "component", "label": "Orders grid", "description": "Displays orders in a grid." }
+}
+```
+
+Supported types are `page`, `component`, `command`, `contract`, and `schema`. Page metadata contains `title`, `description`, and `icon`; Component,
+Command, and contract metadata uses `label`, `description`, and `icon`; schema metadata uses `id`, `title`, and `description`. All descriptive fields
+are optional. Component metadata prefers `meta.title`, `meta.description`, and `meta.icon`, falling back individually to the corresponding
+`contract.label`, `contract.description`, and `contract.icon`. The inventory never embeds full contracts, schemas, templates, command parameters,
+or datasets.
+
+`module.files` remains the authoritative enumeration of packaged resources. `file.resource` permits discovery and presentation without loading an
+implementation, but it is not a resource catalog or registry. Resolver and Loader continue to resolve and load the underlying file.
 
 The optional module-wide `/styles/index.css`, `/styles/shared.css`, and `/module.js` controller are loaded only when their normalized paths occur in
 the inventory. Authors do not declare either stylesheet in the manifest. Both stylesheets use the normal Resolver → Loader path, including CSS

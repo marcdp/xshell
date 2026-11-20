@@ -110,6 +110,23 @@ test("menu configuration follows generic value-driven path semantics", () => {
     });
 });
 
+test("file resource metadata remains literal while inventory paths normalize", () => {
+    const definition = { files: [{
+        path: "/pages/index.js", size: 123, hash: "hash",
+        resource: { type: "page", title: "/Getting Started", description: "app: configuration guide", icon: "x-settings" }
+    }] };
+    const normalize = bootstrapSource.match(/^        function normalizeUrl\([\s\S]*?^        \}\r?\n        function normalizeManifest\([\s\S]*?^        \}/m)[0];
+    const module = plain(vm.runInNewContext(`${normalize}\nnormalizeManifest(definition, owner)`, {
+        URL, definition, appBaseUrl: "https://example.test/app/",
+        owner: { assetsPath: "/_assets/x/1.0.0.dev", manifestUrl: "https://example.test/modules/x/manifest.json" }
+    }));
+
+    assert.equal(module.files[0].path, "/_assets/x/1.0.0.dev/pages/index.js");
+    assert.deepEqual(module.files[0].resource, {
+        type: "page", title: "/Getting Started", description: "app: configuration guide", icon: "x-settings"
+    });
+});
+
 function apply(config, entries) {
     metadata.splice(0, metadata.length, ...Object.entries(entries).map(([name, content]) => ({ name, content })));
     return api.fillXShellOverrides(config);

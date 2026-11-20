@@ -409,6 +409,31 @@ test("effective schema validates inventory path, size, and hash", () => {
     }
 });
 
+test("effective schema accepts typed optional resource metadata", () => {
+    const module = moduleDefinition();
+    module.files[0].resource = { type: "page", title: "Home", description: "Start here.", icon: "x-home" };
+    const config = configuration(module);
+    config.xshell.files[0].resource = { type: "schema", id: "https://example.test/schema", title: "Schema" };
+
+    const result = validator.validate(config);
+
+    assert.equal(result.valid, true, JSON.stringify(result.errors));
+});
+
+test("effective schema rejects invalid resource metadata", () => {
+    for (const resource of [
+        { title: "Missing type" },
+        { type: "dataset", title: "Unsupported" },
+        { type: "page", title: 123 },
+        { type: "page", title: "Page", unexpected: true }
+    ]) {
+        const module = moduleDefinition();
+        module.files[0].resource = resource;
+
+        assert.equal(validator.validate(configuration(module)).valid, false);
+    }
+});
+
 test("effective schema accepts named service contract and implementation objects", () => {
     const config = configuration(moduleDefinition());
     config.xshell.services = {

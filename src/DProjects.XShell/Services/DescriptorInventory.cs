@@ -39,7 +39,8 @@ namespace DProjects.XShell.Services {
             var directory = Path.GetDirectoryName(descriptorPath) ?? throw new InvalidOperationException($"Descriptor '{descriptorPath}' has no containing directory.");
 
             // replace authored inventory metadata with the current physical inventory
-            var inventory = CreateJsonArray(await new FilesIndexer().CreateAsync(directory, cancellationToken, null, skipLinks: true));
+            var physicalInventory = await new FilesIndexer().CreateAsync(directory, cancellationToken, null, skipLinks: true);
+            var inventory = CreateJsonArray(await new ResourceMetadataBuilder().EnrichAsync(directory, physicalInventory, cancellationToken));
             if (kind == DescriptorKind.Module) {
                 var modules = root["modules"] as JsonObject ??
                     throw new InvalidOperationException($"Module configuration '{descriptorPath}' must contain a modules object.");
@@ -54,12 +55,16 @@ namespace DProjects.XShell.Services {
             }
             return root.ToJsonString(JsonOptions);
         }
-        public static JsonArray CreateJsonArray(IEnumerable<FileIndexItem> files) {
+        public static JsonArray CreateJsonArray(IEnumerable<EnrichedFileIndexItem> files) {
             // keep the structured inventory authoritative until descriptor serialization
-            return new JsonArray(files.Select(file => (JsonNode?)new JsonObject {
-                ["path"] = file.Path,
-                ["size"] = file.Size,
-                ["hash"] = file.Hash
+            return new JsonArray(files.Select(file => {
+                var result = new JsonObject {
+                    ["path"] = file.File.Path,
+                    ["size"] = file.File.Size,
+                    ["hash"] = file.File.Hash
+                };
+                if (file.Resource != null) result["resource"] = file.Resource;
+                return (JsonNode?)result;
             }).ToArray());
         }
     }

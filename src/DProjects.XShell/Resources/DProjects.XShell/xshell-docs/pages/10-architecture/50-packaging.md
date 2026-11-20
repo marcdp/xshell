@@ -12,9 +12,14 @@ In Development, `ResourcesMiddleware` provides the representation consumed by th
 - generation URLs such as `/<module-id>/<version>.dev/manifest.json`; and
 - strict-JSON descriptors with generated physical file inventories.
 
-`FilesIndexer` produces sorted package-relative entries containing `path`, `size`, and a lowercase SHA-256 content hash. Development descriptor
-generation replaces stale inventory on the owning local module or framework definition without editing the authored JSONC file. Bootstrap then
-normalizes the inventory paths into `/_assets/<id>/<generation>/...`.
+`FilesIndexer` produces sorted package-relative entries containing `path`, `size`, and a lowercase SHA-256 content hash. A separate
+`ResourceMetadataBuilder` enriches recognized Pages, Components, Commands, contracts, and JSON Schemas with a small optional `resource` object.
+Development descriptor generation replaces stale inventory on the owning local module or framework definition without editing the authored JSONC
+file. Bootstrap then normalizes each file path into `/_assets/<id>/<generation>/...` while retaining descriptive resource metadata literally.
+
+JavaScript metadata is extracted statically from default-exported definition objects and is never executed. Development inventories retain authored
+HTML SFC paths and inspect their embedded definitions through the existing HTML section parser. Pack compiles HTML to JavaScript first and enriches
+the resulting staged `.js` entry. Markdown Pages may use their first ATX heading as a title; other Markdown metadata is not inferred.
 
 ## Implemented reusable package mechanisms
 
@@ -23,7 +28,7 @@ normalizes the inventory paths into `/_assets/<id>/<generation>/...`.
 - classifying normal-module and XShell framework manifests;
 - parsing JSON and JSONC;
 - compiling JavaScript, XShell HTML resources, and CSS in staged module trees;
-- generating descriptor-embedded inventories;
+- enriching descriptor-embedded inventories from the actual staged resources;
 - creating deterministic ZIP archives;
 - deriving content hashes from sorted canonical paths and bytes;
 - publishing immutable `<id>/<version>.<hash>/` package directories;
@@ -69,7 +74,7 @@ configure a hosting environment.
 ## Authoring rules that remain valid
 
 Modules and the framework may be authored as `manifest.json` or `manifest.jsonc`. Generated `files`, `hash`, `builtAt`, `configUrl`, and
-`assets.path` are effective or publication metadata and should not be manually maintained in normal source manifests. A module inventory belongs to
-its local `modules.<id>` definition; framework inventory belongs to `xshell.files`.
+`assets.path` are effective or publication metadata and should not be manually maintained in normal source manifests. This includes generated
+`file.resource` values. A module inventory belongs to its local `modules.<id>` definition; framework inventory belongs to `xshell.files`.
 
 See [Bootstrap](10-bootstrap.md), [Hosting](40-hosting.md), [Modules](30-modules.md), and [Service Worker](110-service-worker.md).

@@ -430,6 +430,7 @@ export default class Areas {
         const result = {
             ...(menuitem.id !== undefined ? { id: menuitem.id } : {}),
             label,
+            ...(menuitem.description !== undefined ? { description: menuitem.description } : {}),
             order,
             href: area ? this._buildAreaHref(menuitem.href, area) : menuitem.href,
             path: area ? this._buildAreaHref(menuitem.path, area) : menuitem.path,
@@ -526,7 +527,14 @@ export default class Areas {
             return match ? Number(match[1]) : Number.MAX_SAFE_INTEGER;
         };
         const createPath = (parts) => "/" + parts.map(toPathPart).filter(Boolean).join("/");
-        const ensureNode = (items, name, href = null, pathParts = []) => {
+        const applyResource = (node, file) => {
+            const resource = file?.resource?.type === "page" ? file.resource : null;
+            if (!resource) return;
+            if (typeof resource.title === "string" && resource.title) node.label = resource.title;
+            if (typeof resource.description === "string") node.description = resource.description;
+            if (typeof resource.icon === "string") node.icon = resource.icon;
+        };
+        const ensureNode = (items, name, href = null, pathParts = [], file = null) => {
             let node = items.find(item => item._name === toPathPart(name));
             if (!node) {
                 node = {
@@ -541,6 +549,7 @@ export default class Areas {
             } else if (href) {
                 node.href = toRuntimePath(href);
             }
+            applyResource(node, file);
             return node;
         };
         // normalize the root index through the same runtime path rule as nested pages
@@ -571,7 +580,7 @@ export default class Areas {
 
                 if (isFile) {
                     if (extensions.some(ext => part === `index${ext}`)) continue;
-                    ensureNode(items, part, file.path, parts.slice(0, i + 1));
+                    ensureNode(items, part, file.path, parts.slice(0, i + 1), file);
                     continue;
                 }
 
@@ -583,6 +592,7 @@ export default class Areas {
 
                 if (indexFile) {
                     node.href = toRuntimePath(indexFile.path);
+                    applyResource(node, indexFile);
                 }
                 items = node.children;
             }

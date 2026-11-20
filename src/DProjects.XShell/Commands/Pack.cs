@@ -217,7 +217,8 @@ namespace DProjects.XShell.Commands {
                 foreach (var file in canonicalStartupFiles) await File.WriteAllTextAsync(Path.Combine(workPath, file.Key.TrimStart('/')), file.Value, cancellationToken);
             }
             var inventory = await new FilesIndexer().CreateAsync(workPath, cancellationToken, canonicalStartupFiles == null ? null : new HashSet<string>(StringComparer.Ordinal) { "/index.html", "/sw.js" });
-            localModule["files"] = DescriptorInventory.CreateJsonArray(inventory);
+            var enrichedInventory = await new ResourceMetadataBuilder().EnrichAsync(workPath, inventory, cancellationToken);
+            localModule["files"] = DescriptorInventory.CreateJsonArray(enrichedInventory);
             await File.WriteAllTextAsync(stagedDescriptor, root.ToJsonString(JsonOptions), cancellationToken);
             var hash = await ComputeHashAsync(workPath, cancellationToken);
             var relativeDirectory = $"{node.Id}/{node.Version}.{hash}";
@@ -286,7 +287,8 @@ namespace DProjects.XShell.Commands {
             var jsonc = Path.Combine(workPath, ManifestFileNames.Jsonc);
             if (File.Exists(jsonc)) File.Delete(jsonc);
             var inventory = await new FilesIndexer().CreateAsync(workPath, cancellationToken);
-            framework["files"] = DescriptorInventory.CreateJsonArray(inventory);
+            var enrichedInventory = await new ResourceMetadataBuilder().EnrichAsync(workPath, inventory, cancellationToken);
+            framework["files"] = DescriptorInventory.CreateJsonArray(enrichedInventory);
             await File.WriteAllTextAsync(Path.Combine(workPath, ManifestFileNames.Json), root.ToJsonString(JsonOptions), cancellationToken);
             var hash = await ComputeHashAsync(workPath, cancellationToken);
             var relativeDirectory = $"xshell/{version}.{hash}";

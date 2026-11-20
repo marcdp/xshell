@@ -100,8 +100,10 @@ Named Area menu sources are registered during module startup, so configuration v
 The bundled `x-demo` and `xshell-docs` modules use `"navigation": { "source": "/pages" }`. Areas derives a hierarchy from each module's normalized
 `moduleConfig.files` inventory. It recognizes `.js`, `.html`, and `.md` Pages; HTML destinations become `.js`, while Markdown retains `.md`.
 An `index` Page is the directory destination. Numeric filename and directory prefixes such as `03-navigation` set order and are removed from
-labels and friendly path segments. The module label names the root menu item. This is a menu-generation convention over the generated physical
-inventory, not authored inventory metadata. Registered runtime sources and `childrenSource` remain separate mechanisms.
+labels and friendly path segments. When a Page inventory entry has generated `resource` metadata, its title overrides the filename-derived label
+and its description and icon are copied to the generated menu item. A nested directory's `index` Page supplies that directory item's metadata.
+Missing metadata retains the filename fallback, and the module label continues to name the root menu item. This is a menu-generation convention
+over the generated inventory, not a parallel authored menu catalog. Registered runtime sources and `childrenSource` remain separate mechanisms.
 
 Bootstrap first maps module-relative menu hrefs into `/_assets/<module-id>/<generation>/...`. Areas then applies the Area prefix to both local `path` and local
 `href`, leaving external scheme URLs unchanged. For example, authored `components` and normalized

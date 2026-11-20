@@ -60,6 +60,10 @@ The `.html` Page convention resolves to the corresponding `.js` source. Exact gl
 `.json` suffix. Bootstrap generates general rules without checking that each requested file exists; a missing resource fails during loading.
 Rules for a canonical module definition are generated once, regardless of repeated dependency references.
 
+The generated file inventory can attach optional `file.resource` descriptions to recognized resources. That metadata avoids loading an
+implementation merely to obtain a title, label, description, or icon, but it does not replace a resolver entry or prove that loading will succeed.
+Resolver still maps locators to concrete resources and loader metadata; Loader still obtains and validates the actual resource.
+
 ## Resolver patterns and placeholders
 
 A custom rule may use this nested shape:

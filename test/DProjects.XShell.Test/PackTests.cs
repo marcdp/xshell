@@ -44,6 +44,9 @@ namespace DProjects.XShell.Test {
             Assert.Equal("Tiny module", module.GetProperty("label").GetString());
             Assert.Equal("url:./module.zip", module.GetProperty("assets").GetProperty("url").GetString());
             AssertInventoryMatchesFiles(ReadInventory(module.GetProperty("files")), files, "index.html", "sw.js");
+            var page = module.GetProperty("files").EnumerateArray().Single(file => file.GetProperty("path").GetString() == "/pages/page.js").GetProperty("resource");
+            Assert.Equal("page", page.GetProperty("type").GetString());
+            Assert.Equal("Pack Page", page.GetProperty("title").GetString());
         }
         [Fact]
         public async Task Pack_RecursivelyPublishesDependenciesAndRewritesReferences() {
@@ -202,6 +205,22 @@ namespace DProjects.XShell.Test {
             Assert.Equal(Path.GetFileName(first), Path.GetFileName(second));
             Assert.Equal(File.ReadAllBytes(Path.Combine(first, "module.zip")), File.ReadAllBytes(Path.Combine(second, "module.zip")));
         }
+        [Fact]
+        public async Task ResourceMetadataChange_ChangesPackageIdentity() {
+            using var workspace = new TemporaryDirectory();
+            var source = CreateModuleSource(workspace.PathFor("source"));
+            var output = workspace.PathFor("dist");
+            var first = await PackAsync(source, output);
+            File.WriteAllText(Path.Combine(source, "pages", "page.html"),
+                "<template><p>pack</p></template><script type=\"module\">export default { meta: { title: \"Updated Pack Page\" } };</script>");
+
+            var second = await PackAsync(source, output);
+
+            Assert.NotEqual(Path.GetFileName(first), Path.GetFileName(second));
+            var page = ReadModuleDescriptor(second).GetProperty("modules").GetProperty(ModuleId).GetProperty("files").EnumerateArray()
+                .Single(file => file.GetProperty("path").GetString() == "/pages/page.js").GetProperty("resource");
+            Assert.Equal("Updated Pack Page", page.GetProperty("title").GetString());
+        }
         [Theory]
         [InlineData("")]
         [InlineData("XDemo")]
@@ -241,7 +260,7 @@ namespace DProjects.XShell.Test {
                         },
                     }
                     """),
-                ("pages/page.html", "<template><p>pack</p></template>"),
+                ("pages/page.html", "<template><p>pack</p></template><script type=\"module\">export default { meta: { title: \"Pack Page\" } };</script>"),
                 ("data/value.txt", "value")
             };
             foreach (var file in reverseCreationOrder ? files.Reverse() : files) {

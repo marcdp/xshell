@@ -42,12 +42,27 @@
       "properties": {
         "path": {"type": "string", "minLength": 1, "description": "Application-root-relative virtual resource Path."},
         "size": {"type": "integer", "minimum": 0, "description": "Size of the physical file in bytes."},
-        "hash": {"type": "string", "minLength": 1, "description": "Hash of the physical file content."}
+        "hash": {"type": "string", "minLength": 1, "description": "Hash of the physical file content."},
+        "resource": {"$ref": "#/$defs/resource", "description": "Optional lightweight metadata for a recognized XShell resource."}
       },
       "required": ["path", "size", "hash"],
       "additionalProperties": false,
       "description": "File entry in the effective XShell resource inventory."
-    },    
+    },
+    "resource": {
+      "type": "object",
+      "properties": {
+        "type": {"type": "string", "enum": ["page", "component", "command", "contract", "schema"], "description": "Recognized XShell resource type."},
+        "id": {"type": "string", "description": "JSON Schema identifier."},
+        "title": {"type": "string", "description": "Human-readable Page or JSON Schema title."},
+        "label": {"type": "string", "description": "Human-readable Component, Command, or Contract label."},
+        "description": {"type": "string", "description": "Human-readable resource description."},
+        "icon": {"type": "string", "description": "Optional resource icon."}
+      },
+      "required": ["type"],
+      "additionalProperties": false,
+      "description": "Small descriptive projection of a recognized resource; the Resolver and Loader still own resource access."
+    },
     "xshell": {
       "type": "object",
       "required": ["version", "assets", "resolver", "ui", "configUrl", "serviceWorker", "files"],

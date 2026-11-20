@@ -86,6 +86,7 @@ namespace DProjects.XShell.Test {
                 """);
             workspace.Write("resources/demo/a.txt", "alpha");
             workspace.Write("resources/demo/nested/b.txt", "beta");
+            workspace.Write("resources/demo/pages/index.js", "export default { meta: { title: \"Home\", description: \"Current metadata\" } };");
 
             var response = await SendAsync(workspace.PathFor("resources"), "/_resources/demo/manifest.json", isDevelopment: true);
 
@@ -95,11 +96,24 @@ namespace DProjects.XShell.Test {
             AssertNoCache(response);
             using var descriptor = JsonDocument.Parse(response.Text);
             var actual = ReadInventory(descriptor.RootElement.GetProperty("modules").GetProperty("demo").GetProperty("files"));
-            Assert.Equal(["/a.txt", "/nested/b.txt"], actual.Select(file => file.Path));
+            Assert.Equal(["/a.txt", "/nested/b.txt", "/pages/index.js"], actual.Select(file => file.Path));
             Assert.False(descriptor.RootElement.GetProperty("modules").GetProperty("dependency").TryGetProperty("files", out _));
             var a = Assert.Single(actual, file => file.Path == "/a.txt");
             Assert.Equal(Encoding.UTF8.GetByteCount("alpha"), a.Size);
             Assert.Equal(Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes("alpha"))).ToLowerInvariant(), a.Hash);
+            var page = descriptor.RootElement.GetProperty("modules").GetProperty("demo").GetProperty("files").EnumerateArray()
+                .Single(file => file.GetProperty("path").GetString() == "/pages/index.js").GetProperty("resource");
+            Assert.Equal("page", page.GetProperty("type").GetString());
+            Assert.Equal("Home", page.GetProperty("title").GetString());
+            Assert.Equal("Current metadata", page.GetProperty("description").GetString());
+            Assert.Contains("/stale.js", File.ReadAllText(workspace.PathFor("resources/demo/manifest.jsonc")));
+
+            workspace.Write("resources/demo/pages/index.js", "export default { meta: { title: \"Updated home\" } };");
+            var updatedResponse = await SendAsync(workspace.PathFor("resources"), "/_resources/demo/manifest.json", isDevelopment: true);
+            using var updatedDescriptor = JsonDocument.Parse(updatedResponse.Text);
+            var updatedPage = updatedDescriptor.RootElement.GetProperty("modules").GetProperty("demo").GetProperty("files").EnumerateArray()
+                .Single(file => file.GetProperty("path").GetString() == "/pages/index.js").GetProperty("resource");
+            Assert.Equal("Updated home", updatedPage.GetProperty("title").GetString());
         }
         [Fact]
         public async Task DevelopmentModuleManifestJson_IsDiscovered() {
@@ -145,12 +159,17 @@ namespace DProjects.XShell.Test {
             workspace.Write("resources/xshell/manifest.jsonc", "{ \"xshell\": { \"files\": [{ \"path\": \"/stale.js\" }] } }");
             workspace.Write("resources/xshell/bootstrap.js", "bootstrap");
             workspace.Write("resources/xshell/sw.js", "worker");
+            workspace.Write("resources/xshell/contracts/runtime.json", "{ \"label\": \"Runtime\" }");
 
             var response = await SendAsync(workspace.PathFor("resources"), "/_resources/xshell/manifest.jsonc", isDevelopment: true);
 
             using var descriptor = JsonDocument.Parse(response.Text);
             var files = ReadInventory(descriptor.RootElement.GetProperty("xshell").GetProperty("files"));
-            Assert.Equal(["/bootstrap.js", "/sw.js"], files.Select(file => file.Path));
+            Assert.Equal(["/bootstrap.js", "/contracts/runtime.json", "/sw.js"], files.Select(file => file.Path));
+            var contract = descriptor.RootElement.GetProperty("xshell").GetProperty("files").EnumerateArray()
+                .Single(file => file.GetProperty("path").GetString() == "/contracts/runtime.json").GetProperty("resource");
+            Assert.Equal("contract", contract.GetProperty("type").GetString());
+            Assert.Equal("Runtime", contract.GetProperty("label").GetString());
         }
         [Fact]
         public async Task DevelopmentNestedXShellManifest_UsesFrameworkDiscoveryContext() {
