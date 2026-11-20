@@ -36,8 +36,8 @@
                     "description": "Manage application preferences.",
                     "icon": "x-settings",
                     "items": [
-                        {"label": "Appearance", "href": "/pages/preferences-appearance.js"},
-                        {"label": "Internationalization", "href": "/pages/preferences-i18n.js"},
+                        {"label": "Appearance", "href": "/pages/preferences/appearance.js"},
+                        {"label": "Internationalization", "href": "/pages/preferences/i18n.js"},
                         {"label": "Language", "class": "inline", "children": [
                             {"label": "Home", "href": "app:/"},
                             {"label": "Preferences", "href": "/pages/workspace.js?menu-name=preferences"},

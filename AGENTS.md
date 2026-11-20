@@ -149,6 +149,18 @@ When generating, modifying, or refactoring code for XShell, follow these convent
 
 6. **Complete code:** When asked to generate a Component, Page, or Service, provide complete, directly usable code unless a partial implementation is explicitly requested.
 
+### UI Composition and CSS
+When generating or modifying XShell Pages, prioritize reusing existing XShell UI Components instead of implementing custom HTML/CSS presentation structures.
+
+1. **Component reuse:** Inspect existing Components in `x/components/` and their public contracts before creating custom UI. Prefer composing existing Components such as `x-card`, `x-chip`, `x-datafields`, `x-details`, `x-tabs`, `x-code`, and `x-object`.
+2. **Minimal CSS:** Generate only the CSS strictly necessary for Page-specific layout, spacing, responsiveness, or behavior that existing Components do not provide. Avoid duplicating borders, backgrounds, colors, typography, padding, or other styling already managed by Components.
+3. **Framework consistency:** Reuse existing Component properties, slots, CSS variables, and layout conventions. Do not create Page-specific visual systems or introduce new UI Components when existing ones adequately cover the requirement.
+4. **Semantic HTML:** Use standard HTML elements for simple structure and content. Do not replace semantic HTML with Components unnecessarily.
+5. **Layout ownership:** Respect the responsibilities of XShell layouts (`main`, `stack`, `dialog`, etc.). Do not duplicate their width, scrolling, headers, or positioning behavior inside Pages.
+6. **Simplicity:** Prefer declarative Component composition over custom CSS and JavaScript. Keep Page templates concise, maintainable, and visually consistent with the rest of XShell.
+
+**Principle:** XShell Pages should primarily compose existing UI Components, not implement their own visual design systems. Custom CSS should be the exception, not the default.
+
 ## Avoid
 
 Do not merge the boundaries listed above; invent contract fields or X Template syntax; convert JSONC to JSON; rename `/_assets` casually; call the

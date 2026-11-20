@@ -87,7 +87,7 @@ test("bundled manifests compose Preferences and Diagnostics shortcuts as global 
     const menu = areas.getMenu("preferences");
     assert.deepEqual([menu.name, menu.scope, menu.label, menu.description, menu.icon],
         ["preferences", "global", "Preferences", "Manage application preferences.", "x-settings"]);
-    assert.equal(menu.items[0].href, "/pages/preferences-appearance.js");
+    assert.equal(menu.items[0].href, "/pages/preferences/appearance.js");
     const workspaceSrc = "/pages/workspace.js?menu-name=preferences";
     assert.equal(x.xshell.services.preferences.options.page, workspaceSrc);
     const shortcuts = areas.getMenu("shortcuts").items[0].children;

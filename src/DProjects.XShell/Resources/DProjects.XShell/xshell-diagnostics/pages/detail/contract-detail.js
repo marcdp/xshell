@@ -1,147 +1,93 @@
-const kinds = {
-    component: { label: "Component", icon: "x-component" },
-    page: { label: "Page", icon: "x-page" },
-    service: { label: "Service", icon: "x-service" },
-    command: { label: "Command", icon: "x-play" },
-    contract: { label: "Registered contract", icon: "x-contract" }
-};
 
 export default {
     contract: { description: "Read-only reference for an XShell public contract." },
-    meta: { title: "Contract detail" },
-    style: `
-        .contract-reference {
-            box-sizing: border-box;
-            display: grid;
-            gap: 1.75rem;
-            max-width: 70rem;
-            min-width: 0;
-            margin-inline: auto;
-            padding-block: .5rem 2rem;
-            overflow-wrap: anywhere;
-        }
-        .contract-reference section, .entry, .fields, x-code { min-width: 0; }
-        .contract-reference h2, .contract-reference h3, .contract-reference h4, .contract-reference p { margin: 0; }
-        .contract-reference p { color: var(--x-color-text); line-height: 1.5; }
-        .contract-reference h2 { font-size: var(--x-font-size-subtitle); }
-        .contract-reference h3, .contract-reference h4 { font-size: 1em; }
-        .overview, .entry {
-            border: var(--x-card-border);
-            border-radius: var(--x-card-border-radius);
-            padding: clamp(.75rem, 2vw, 1.25rem);
-        }
-        .overview { display: grid; gap: .75rem; background: var(--x-color-background-alt); }
-        .overview-heading, .entry-heading, .badges {
-            display: flex;
-            align-items: baseline;
-            flex-wrap: wrap;
-            gap: .35rem .65rem;
-        }
-        .overview-heading { align-items: center; }
-        .identity { display: flex; flex-wrap: wrap; gap: .4rem 1.25rem; margin: 0; }
-        .identity > div { display: flex; flex-wrap: wrap; gap: .25rem .5rem; min-width: 0; }
-        .identity dd { margin: 0; min-width: 0; }
-        .identity dt, .contract-reference .muted { color: var(--x-color-text-gray); }
-        .entries, .entry, .fields, .field { display: grid; gap: .6rem; }
-        .entries { margin-top: .75rem; }
-        .fields {
-            margin-top: .2rem;
-            padding-inline-start: .75rem;
-            border-inline-start: var(--x-card-border);
-        }
-        .field + .field { margin-top: .25rem; }
-        .badges { font-size: .875em; }
-        .badge {
-            border-radius: .35rem;
-            padding: .12em .45em;
-            background: var(--x-color-background-alt);
-        }
-        .schema { overflow: auto; }
-    `,
+    meta: {
+        title: "Contract detail"
+    },
+    style: ``,
     template: `
         <x-notice x-if="state.error" type="error" role="alert" x-prop:message="state.error"></x-notice>
         <div class="contract-reference" x-if="state.detail">
-            <section class="overview">
-                <div class="overview-heading">
-                    <x-icon x-attr:icon="state.detail.icon" aria-hidden="true"></x-icon>
-                    <h2>Overview</h2>
-                </div>
-                <dl class="identity">
+            <x-card>
+                <h2 slot="header"><x-icon x-attr:icon="state.detail.icon" aria-hidden="true"></x-icon> Overview</h2>
+                <dl>
                     <div><dt>Resource</dt><dd><code x-text="state.detail.id"></code></dd></div>
                     <div><dt>Kind</dt><dd x-text="state.detail.kindLabel"></dd></div>
                     <div x-if="state.detail.moduleId"><dt>Module</dt><dd x-text="state.detail.moduleId"></dd></div>
                     <div x-if="state.detail.contractId"><dt>Contract</dt><dd x-text="state.detail.contractId"></dd></div>
                 </dl>
                 <p x-if="state.detail.description" x-text="state.detail.description"></p>
-            </section>
-            <p class="muted" x-if="state.detail.empty">No public contract members or examples are documented for this resource.</p>
+            </x-card>
+            <p x-if="state.detail.empty">No public contract members or examples are documented for this resource.</p>
 
             <section x-for="section in state.detail.sections">
                 <h2 x-text="section.title"></h2>
-                <div class="entries">
-                    <article class="entry" x-for="entry in section.entries">
-                        <div class="entry-heading">
-                            <h3><code x-text="entry.name"></code></h3>
-                            <span class="badge" x-if="entry.typeLabel" x-text="entry.typeLabel"></span>
-                            <span class="muted" x-if="entry.label" x-text="entry.label"></span>
-                        </div>
-                        <p x-if="entry.description" x-text="entry.description"></p>
-                        <div class="badges" x-if="entry.badges && entry.badges.length">
-                            <span class="badge" x-for="badge in entry.badges" x-text="badge"></span>
-                        </div>
-                        <p x-if="entry.hasDefault"><span class="muted">Default</span> <code x-text="entry.defaultText"></code></p>
-                        <p x-if="entry.enumText"><span class="muted">Allowed values</span> <code x-text="entry.enumText"></code></p>
-                        <x-details x-if="entry.hasSchema" label="JSON Schema">
-                            <x-object class="schema" x-prop:value="entry.schema" expanded></x-object>
-                        </x-details>
-                        <div class="fields" x-for="group in entry.groups">
-                            <h4 x-text="group.title"></h4>
-                            <div class="field" x-for="field in group.fields">
-                                <div class="entry-heading">
+                <x-card x-for="entry in section.entries">
+                    <h3 slot="header"><code x-text="entry.name"></code></h3>
+                    <div class="metadata" x-if="entry.typeLabel || entry.label || (entry.badges && entry.badges.length)">
+                        <span x-if="entry.label" x-text="entry.label"></span>
+                        <x-chip x-if="entry.typeLabel" x-attr:label="entry.typeLabel"></x-chip>
+                        <x-chip x-for="badge in entry.badges" x-attr:label="badge"></x-chip>
+                    </div>
+                    <p x-if="entry.description" x-text="entry.description"></p>
+                    <p x-if="entry.hasDefault">Default <code x-text="entry.defaultText"></code></p>
+                    <p x-if="entry.enumText">Allowed values <code x-text="entry.enumText"></code></p>
+                    <x-details x-if="entry.hasSchema" label="JSON Schema">
+                        <x-object x-prop:value="entry.schema" expanded></x-object>
+                    </x-details>
+                    <div x-for="group in entry.groups">
+                        <h4 x-text="group.title"></h4>
+                        <ul>
+                            <li x-for="field in group.fields">
+                                <div class="metadata" x-if="field.name || field.typeLabel || field.label || field.badges.length">
                                     <code x-if="field.name" x-text="field.name"></code>
-                                    <span class="badge" x-if="field.typeLabel" x-text="field.typeLabel"></span>
-                                    <span class="muted" x-if="field.label" x-text="field.label"></span>
+                                    <span x-if="field.label" x-text="field.label"></span>
+                                    <x-chip x-if="field.typeLabel" x-attr:label="field.typeLabel"></x-chip>
+                                    <x-chip x-for="badge in field.badges" x-attr:label="badge"></x-chip>
                                 </div>
                                 <p x-if="field.description" x-text="field.description"></p>
-                                <div class="badges" x-if="field.badges.length">
-                                    <span class="badge" x-for="badge in field.badges" x-text="badge"></span>
-                                </div>
-                                <p x-if="field.hasDefault"><span class="muted">Default</span> <code x-text="field.defaultText"></code></p>
-                                <p x-if="field.enumText"><span class="muted">Allowed values</span> <code x-text="field.enumText"></code></p>
+                                <p x-if="field.hasDefault">Default <code x-text="field.defaultText"></code></p>
+                                <p x-if="field.enumText">Allowed values <code x-text="field.enumText"></code></p>
                                 <x-details x-if="field.hasSchema" label="JSON Schema">
-                                    <x-object class="schema" x-prop:value="field.schema" expanded></x-object>
+                                    <x-object x-prop:value="field.schema" expanded></x-object>
                                 </x-details>
-                            </div>
-                        </div>
-                    </article>
-                </div>
+                            </li>
+                        </ul>
+                    </div>
+                </x-card>
             </section>
 
             <section x-if="state.detail.examples.length">
                 <h2>Examples</h2>
-                <div class="entries">
-                    <article class="entry" x-for="example in state.detail.examples">
-                        <h3 x-text="example.title"></h3>
-                        <p x-if="example.description" x-text="example.description"></p>
-                        <div class="field" x-if="example.template">
-                            <h4>Template</h4>
-                            <x-code language="html" x-prop:value="example.template" wrap></x-code>
-                        </div>
-                        <div class="field" x-if="example.code">
-                            <h4>Code <span class="muted" x-if="example.language" x-text="example.language"></span></h4>
-                            <x-code x-prop:language="example.language" x-prop:value="example.code" wrap></x-code>
-                        </div>
-                        <x-details x-if="example.hasState" label="Initial state">
-                            <x-object class="schema" x-prop:value="example.state" expanded></x-object>
-                        </x-details>
-                    </article>
-                </div>
+                <x-card x-for="example in state.detail.examples">
+                    <h3 slot="header" x-text="example.title"></h3>
+                    <p x-if="example.description" x-text="example.description"></p>
+                    <div x-if="example.template">
+                        <h4>Template</h4>
+                        <x-code language="html" x-prop:value="example.template" wrap></x-code>
+                    </div>
+                    <div x-if="example.code">
+                        <h4>Code <span x-if="example.language" x-text="example.language"></span></h4>
+                        <x-code x-prop:language="example.language" x-prop:value="example.code" wrap></x-code>
+                    </div>
+                    <x-details x-if="example.hasState" label="Initial state">
+                        <x-object x-prop:value="example.state" expanded></x-object>
+                    </x-details>
+                </x-card>
             </section>
         </div>
     `,
     state: { detail: null, error: "" },
     controller({ state, page, loader, resolver, services, contracts, config }) {
         let revision = 0;
+        const kinds = {
+            component: { label: "Component", icon: "x-component" },
+            page: { label: "Page", icon: "x-page" },
+            service: { label: "Service", icon: "x-service" },
+            command: { label: "Command", icon: "x-play" },
+            contract: { label: "Registered contract", icon: "x-contract" }
+        };
+
         return {
             async load() {
                 // Await resolution so the host layout shows its loading indicator.
