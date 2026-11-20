@@ -96,7 +96,7 @@ export default {
             flex-wrap:nowrap; 
             margin:0 1.25em 0 0; 
             border:0; 
-            background: var(--x-layout-main-drawer-background);;
+            background: var(--x-layout-main-drawer-background);
         }
         :host(.sidebar) nav a {
         min-width:0; 

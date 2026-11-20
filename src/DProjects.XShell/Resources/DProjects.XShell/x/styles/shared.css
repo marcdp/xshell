@@ -2,8 +2,8 @@
 h1 {font-size:var(--x-font-size-title); font-weight:600;}
 h2 {font-size:var(--x-font-size-subtitle); font-weight:600;}
 h3 {font-size:var(--x-font-size-subsubtitle); font-weight:normal;}
-h4 {font-size:var(--x-font-size); font-weight:700;}
-h5 {font-size:var(--x-font-size); font-weight:600;}
+h4 {font-size:var(--x-font-size); font-weight:600;}
+h5 {font-size:var(--x-font-size); font-weight:500;}
 h6 {font-size:var(--x-font-size); font-weight:normal;}
 
 p {color:var(--x-color-gray);}

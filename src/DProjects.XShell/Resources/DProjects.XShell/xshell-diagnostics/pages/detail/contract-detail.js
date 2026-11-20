@@ -21,25 +21,15 @@ export default {
         <x-notice x-if="state.error" type="error" role="alert" x-prop:message="state.error"></x-notice>
 
         <x-tabs class="sidebar" x-if="state.detail">
-            <x-tab label="Overview">
-                <h2><x-icon x-attr:icon="state.detail.icon" aria-hidden="true"></x-icon> Overview</h2>
-                <dl>
-                    <div><dt>Resource</dt><dd><code x-text="state.detail.id"></code></dd></div>
-                    <div><dt>Kind</dt><dd x-text="state.detail.kindLabel"></dd></div>
-                    <div x-if="state.detail.moduleId"><dt>Module</dt><dd x-text="state.detail.moduleId"></dd></div>
-                    <div x-if="state.detail.contractId"><dt>Contract</dt><dd x-text="state.detail.contractId"></dd></div>
-                </dl>
-                <p x-if="state.detail.description" x-text="state.detail.description"></p>
-                <p x-if="state.detail.empty">No public contract members or examples are documented for this resource.</p>
-            </x-tab>
 
             <x-tab x-for="section in state.detail.sections" x-key="title" x-attr:label="section.title">
-                <x-accordion>
+                <x-accordion cmultiple>
                     <x-accordion-panel x-for="entry in section.entries" x-key="name"
+                        x-attr:icon="section.icon"
                         x-attr:label="entry.name"
-                        x-attr:description="entry.label || ''">
+                        x-attr:description="entry.label + entry.description">
 
-                        <div class="metadata" x-if="entry.typeLabel || (entry.badges && entry.badges.length)">
+                        <div slot="toolbar"class="metadata" x-if="entry.typeLabel || (entry.badges && entry.badges.length)">
                             <x-chip x-if="entry.typeLabel" x-attr:label="entry.typeLabel"></x-chip>
                             <x-chip x-for="badge in entry.badges" x-attr:label="badge"></x-chip>
                         </div>
@@ -78,9 +68,8 @@ export default {
             </x-tab>
 
             <x-tab x-if="state.detail.examples.length" label="Examples">
-                <x-accordion>
-                    <x-accordion-panel x-for="example in state.detail.examples" x-key="name"
-                        x-attr:label="example.title">
+                <x-accordion multiple>
+                    <x-accordion-panel x-for="example in state.detail.examples" x-key="name" icon="x-example" x-attr:label="example.title" x-attr:description="example.description">
 
                         <p x-if="example.description" x-text="example.description"></p>
 
@@ -139,7 +128,7 @@ export default {
 
                     state.detail = this.describeContract(kind, id, resource);
                     page.label = state.detail.label;
-                    page.description = state.detail.description;
+                    page.description = state.detail.kindLabel + ": " + state.detail.description;
                 } catch (error) {
                     if (request === revision) state.error = error?.message || String(error);
                 }
@@ -242,11 +231,11 @@ export default {
                     : [];
 
                 const sections = [
-                    { title: "Properties", entries: properties },
-                    { title: "Methods", entries: methods },
-                    { title: "Events", entries: events },
-                    { title: "Slots", entries: slots },
-                    { title: "Types", entries: Object.entries(types).map(([name, type]) => describe(name, type)) }
+                    { title: "Properties", entries: properties, icon: "x-property" },
+                    { title: "Methods", entries: methods, icon: "x-method" },
+                    { title: "Events", entries: events, icon: "x-event" },
+                    { title: "Slots", entries: slots, icon: "x-slot" },
+                    { title: "Types", entries: Object.entries(types).map(([name, type]) => describe(name, type)), icon: "x-type" }
                 ].filter(section => section.entries.length);
 
                 // Preserve authored examples as read-only data.
@@ -274,7 +263,7 @@ export default {
                 const schema = referenced?.schema ?? descriptor.schema;
                 const badges = [];
 
-                if (required) badges.push(descriptor.required ? "Required" : "Optional");
+                if (required && descriptor.required) badges.push("required");
                 if (Object.hasOwn(descriptor, "readonly")) badges.push(descriptor.readonly ? "Read-only" : "Writable");
                 if (descriptor.format) badges.push(`Format: ${descriptor.format}`);
 
@@ -285,7 +274,13 @@ export default {
                         : [];
 
                 for (const flag of flags) {
-                    if (Object.hasOwn(descriptor, flag)) badges.push(`${flag}: ${descriptor[flag]}`);
+                    if (Object.hasOwn(descriptor, flag)) {
+                        const value = descriptor[flag];
+                        if (value === true)
+                            badges.push(`${flag}`);
+                        else
+                            badges.push(`${flag}: ${value}`);
+                    }
                 }
 
                 return {

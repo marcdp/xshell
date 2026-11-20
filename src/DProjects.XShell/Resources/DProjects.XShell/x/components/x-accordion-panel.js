@@ -9,10 +9,10 @@ export default {
             }
         },
         properties: {
-            label:    {type:"string",  default:"",    attribute:true, state:true, description:""},
-            description: {type:"string",  default:"",    attribute:true, state:true, description:""},
-            icon:     {type:"string",  default:"",    attribute:true, state:true, description:""},
-            expanded: {type:"boolean", default:false, attribute:true, state:true, description:""}
+            label:    {type:"string",  default:"",    attribute:true, state:true, description:"Label for the accordion panel"},
+            description: {type:"string",  default:"", attribute:true, state:true, description:"Description for the accordion panel"},
+            icon:     {type:"string",  default:"",    attribute:true, state:true, description:"Icon for the accordion panel"},
+            expanded: {type:"boolean", default:false, attribute:true, state:true, description:"Whether the accordion panel is expanded by default"}
         },
         methods: {},
         slots: {
@@ -41,14 +41,17 @@ export default {
     style: `
         :host {display:block;}
         .header {display:flex; min-height:2.5em; align-items:center; cursor:pointer; user-select: none; line-height:var(--x-datafield-line-height); padding-left:1em; padding-right:.5em; padding-top:.5em; padding-bottom:.5em; box-sizing:border-box;}
-        .header > x-icon {margin-right:.5em; transition: transform var(--x-transition-duration); }
+        .header > x-icon {margin-right:.75em; transition: transform var(--x-transition-duration); }
+        .header > x-icon:first-child {align-self:start;}
         .header > label {flex:1; cursor:pointer; display:inline; }
         .header > label .label {font-weight:500;}
-        .header > label .description {font-weight:400; color: var(--x-color-text-gray); }
+        .header > label .description {color: var(--x-color-text-x-gray); display:block; font-size:var(--x-font-size-small); margin-top:-.15em;}
         .header > .toolbar {margin-right:1em; }
-        .header:hover > label {color:var(--x-color-primary)!important; }
-        .header:hover > x-icon {color:var(--x-color-primary)!important;}
-        .header[expanded] label {color:var(--x-color-primary);}
+
+        .header:hover {background: var(--x-color-background-x-gray); }
+
+        _.header:hover > label {color:var(--x-color-primary)!important; }
+        _.header:hover > x-icon:first-child {color:var(--x-color-primary)!important;}
         .header[expanded] x-icon:last-child {transform:rotate(-180deg); }
         
         .body {
@@ -62,7 +65,10 @@ export default {
         .body > div > div {padding:1em;}
         .body[expanded] {grid-template-rows: 1fr;}
 
+        :host(:first-child) .header {border-radius: var(--x-accordion-border-radius) var(--x-accordion-border-radius) 0 0;}
         :host(:last-child) .body {border-bottom:none;}
+        :host(:last-child) .header {border-radius: 0 0 var(--x-accordion-border-radius) var(--x-accordion-border-radius);}
+        :host(:last-child) .header[expanded] {border-radius: 0;}
 
         ::slotted(*:first-child) {margin-top:0!important;}
     `,
@@ -70,7 +76,8 @@ export default {
         <div class="header" x-on:click="toggle" x-attr:expanded="state.expanded">
             <x-icon x-if="state.icon" x-attr:icon="state.icon"></x-icon>
             <label>
-                <span class="label" x-text="state.label"></span><span class="description" x-if="state.description">: {{state.description}}</span>
+                <span class="label" x-text="state.label"></span>
+                <span class="description" x-if="state.description">{{state.description}}</span>
             </label>
             <div class="toolbar">
                 <slot name="toolbar"></slot>

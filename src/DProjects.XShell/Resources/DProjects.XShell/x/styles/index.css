@@ -210,7 +210,7 @@ x-page[layout='stack'] + x-page[layout='stack'] + x-page[layout='stack'] + x-pag
     --x-chip-font-size: var(--x-font-size-small);
 
     /* x-code */
-    --x-code-padding: 1em;
+    --x-code-padding: .5em 1em;
     --x-code-background: var(--x-color-background-gray);
     --x-code-color: var(--x-color-text);
     --x-code-border: var(--x-datafield-border);
@@ -219,6 +219,8 @@ x-page[layout='stack'] + x-page[layout='stack'] + x-page[layout='stack'] + x-pag
     --x-code-font-size: .9em;
     --x-code-line-height: 1.45;
     --x-code-copy-background: var(--x-color-background-x-gray);
+    --x-code-copy-background-hover: var(--x-color-background-xx-gray);
+    --x-code-copy-background-active: var(--x-color-background-xxx-gray);
     --x-code-copy-color: var(--x-color-text-gray);
 
     /* x-datafield */

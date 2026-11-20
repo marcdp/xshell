@@ -84,7 +84,7 @@ export default {
         div.panel .header > x-button:first-child {margin-right:1em; margin-left:-1em;}
         div.panel .header div.title {margin-right:1.5em;}
         div.panel .header div.title h2 {margin:0; font-size: var(--x-font-size-subtitle); }
-        div.panel .header div.title h2 ~ x-page-description {font-size:var(--x-font-size-x-small);display:block;}
+        div.panel .header div.title h2 ~ x-page-description {font-size:var(--x-font-size-small);display:block;}
         div.panel .header .header-actions {display:flex; flex:1; justify-content:start; padding-right:.25em;}
         div.panel .header x-button {}
 

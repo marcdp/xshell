@@ -6,7 +6,8 @@ export default {
         description: "Groups accordion panels and keeps only the expanded panel active.",
         events: {},
         properties: {
-            selectedIndex: {type:"number", default:0, attribute:true, state:true, description:""}
+            selectedIndex: {type:"number", default:0, attribute:true, state:true, description:"Index of the currently selected accordion panel"},
+            multiple: {type:"boolean", default:false, attribute:true, state:true, description:"Allow multiple accordion panels to be expanded simultaneously"}
         },
         methods: {},
         slots: {
@@ -41,7 +42,7 @@ export default {
     template: `
         <slot></slot>
     `,
-    controller({ host }) {
+    controller({ state, host }) {
         return {
             load(params) {
                 //load
@@ -49,9 +50,11 @@ export default {
                     let target = event.target;
                     if (target.expanded) {
                         host.querySelectorAll(":scope > x-accordion-panel").forEach((panel) => {
-                            if (panel != target) {
-                                panel.expanded = false;
-                                panel.dispatchEvent(new CustomEvent("toggle", {bubbles: true, composed: false}));
+                            if (!state.multiple) {
+                                if (panel != target) {
+                                    panel.expanded = false;
+                                    panel.dispatchEvent(new CustomEvent("toggle", {bubbles: true, composed: false}));
+                                }
                             }
                         });
                     }
