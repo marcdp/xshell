@@ -15,7 +15,15 @@ export default {
             collapse: { description: "Collapses the current node." },
             toggle: { description: "Toggles the current node." }
         },
-        slots: {}
+        slots: {},
+        examples: [
+            {
+                name: "basic",
+                description: "Expand a structured value so the initial fields are visible.",
+                state: {response: {status: "ready",options: {visible: true}}},
+                template: `<x-object name="response" expanded x-prop:value="state.response"></x-object>`
+            }
+        ]
     },
     style: `
         :host { display:block; min-width:0; }

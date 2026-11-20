@@ -67,7 +67,49 @@ export default {
             "footer": {
                 description: "The slot for the form footer content."
             }
-        }
+        },
+        examples: [
+            {
+                name: "basic",
+                description: "Group an editable field and display its current value from Page state.",
+                state: {name: "Ada"},
+                template: `
+                    <x-form>
+                        <x-datafield type="text" label="Name" x-model="state.name"></x-datafield>
+                        <p>Hello, {{ state.name }}.</p>
+                    </x-form>
+                `
+            },
+            {
+                name: "required-field",
+                description: "Validate a required email when the user clicks Submit.",
+                state: {email: ""},
+                template: `
+                    <x-form>
+                        <x-datafield type="email" label="Email" required x-model="state.email"></x-datafield>
+                        <x-button slot="footer" label="Submit" command="submit"></x-button>
+                    </x-form>
+                `
+            },
+            {
+                name: "submission",
+                description: "Handle the successful form command and read the field value from the form.",
+                state: {name: "Ada"},
+                language: "javascript",
+                template: `
+                    <x-form id="profile-form" command="saveProfile">
+                        <x-datafield type="text" label="Name" required x-model="state.name"></x-datafield>
+                        <x-button slot="footer" label="Save" command="submit"></x-button>
+                    </x-form>
+                `,
+                code: `
+                    const form = document.querySelector("#profile-form");
+                    form.addEventListener("command", ({ detail }) => {
+                        if (detail.command === "saveProfile") console.log(form.querySelector("x-datafield").value);
+                    });
+                `
+            }
+        ]
     },
     style: `
         :host {display:block;}

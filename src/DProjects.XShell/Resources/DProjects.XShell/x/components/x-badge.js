@@ -7,7 +7,14 @@ export default {
         properties: {
             value: {type:"string", default:"", attribute:true, state:true, description:""}
         },
-        methods: {}
+        methods: {},
+        examples: [
+            {
+                name: "basic",
+                description: "Show a count next to a label.",
+                template: `Inbox <x-badge value="3"></x-badge>`
+            }
+        ]
     },
     style: `
         :host {}

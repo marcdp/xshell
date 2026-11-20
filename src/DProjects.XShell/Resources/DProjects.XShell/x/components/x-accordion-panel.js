@@ -22,7 +22,21 @@ export default {
             toolbar: {
                 description: "Content for the accordion panel toolbar"
             }
-        }
+        },
+        examples: [
+            {
+                name: "with-toolbar",
+                description: "Place a status badge in the panel header and show the body initially.",
+                template: `
+                    <x-accordion>
+                        <x-accordion-panel label="Details" icon="x-info" expanded>
+                            <x-badge slot="toolbar" value="New"></x-badge>
+                            <p>Project details</p>
+                        </x-accordion-panel>
+                    </x-accordion>
+                `
+            }
+        ]
     },
     style: `
         :host {display:block;}

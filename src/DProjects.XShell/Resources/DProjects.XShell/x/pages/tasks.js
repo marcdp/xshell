@@ -5,7 +5,21 @@ export default {
         description: "Background tasks page",
         events: {},
         properties: {},
-        methods: {}
+        methods: {},
+        examples: [
+            {
+                name: "background-tasks",
+                description: "Open the background Task list as a stacked Page.",
+                language: "javascript",
+                code: `
+                    await navigation.navigate({
+                        href: "page:x:/pages/tasks.js",
+                        page,
+                        open: "stack"
+                    });
+                `
+            }
+        ]
     },
     meta: {
         title: "Tasks"

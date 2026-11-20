@@ -31,7 +31,35 @@ export default {
             "": {
                 description: "Default slot for the button content."
             }
-        } 
+        },
+        examples: [
+            {
+                name: "basic",
+                description: "Display a labeled button.",
+                template: `<x-button label="Continue"></x-button>`
+            },
+            {
+                name: "with-icon",
+                description: "Give the save action a recognizable icon.",
+                template: `<x-button label="Save" icon="x-save"></x-button>`
+            },
+            {
+                name: "with-badge",
+                description: "Show how many items are waiting.",
+                template: `<x-button label="Inbox" badge="3"></x-button>`
+            },
+            {
+                name: "command",
+                description: "Read a bubbling UI command and its dataset. The listener runs when the button is clicked.",
+                language: "javascript",
+                template: `<x-button id="refresh" label="Refresh" command="refresh" data-scope="summary"></x-button>`,
+                code: `
+                    document.querySelector("#refresh").addEventListener("command", ({ detail }) => {
+                        console.log(detail.command, detail.data.scope);
+                    });
+                `
+            }
+        ]
     },
     style: `
         :host {position:relative; display:inline-flex;}

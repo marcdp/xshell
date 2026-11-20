@@ -79,7 +79,20 @@ export default {
                 ] 
             }
         },
-        slots: {}
+        slots: {},
+        examples: [
+            {
+                name: "memory-tree",
+                description: "Display a directory tree from a fresh memory filesystem.",
+                language: "javascript",
+                template: `<x-filesystem-tree id="folders" path="/" root></x-filesystem-tree>`,
+                code: `
+                    const filesystem = await loader.load("filesystem:mem:");
+                    await filesystem.createDirectory("/reports");
+                    document.querySelector("#folders").filesystem = filesystem;
+                `
+            }
+        ]
     },
     style: `
         :host {width:100%;}

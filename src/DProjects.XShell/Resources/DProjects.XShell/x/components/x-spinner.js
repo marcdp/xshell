@@ -7,7 +7,14 @@ export default {
         properties: {
             message: {type:"string", default:"", attribute:true, state:true, description:""}
         },
-        methods: {}
+        methods: {},
+        examples: [
+            {
+                name: "basic",
+                description: "Show a spinner with a short status message.",
+                template: `<x-spinner message="Preparing results"></x-spinner>`
+            }
+        ]
     },
     template: `
         <div class="loader"></div>

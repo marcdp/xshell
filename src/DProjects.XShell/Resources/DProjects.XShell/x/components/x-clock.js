@@ -4,7 +4,14 @@ export default {
         description: "Displays the current local time.",
         events: {},
         properties: {},
-        methods: {}
+        methods: {},
+        examples: [
+            {
+                name: "basic",
+                description: "Show a live local clock beside a label.",
+                template: `Local time: <x-clock></x-clock>`
+            }
+        ]
     },
     style: `
         :host {border:1px solid var(--x-clock-border-color); display:inline-block; padding:10px;}

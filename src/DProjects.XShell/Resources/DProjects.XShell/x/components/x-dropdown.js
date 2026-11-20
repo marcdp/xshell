@@ -21,7 +21,31 @@ export default {
             "dropdown": {
                 description: "Slot for the dropdown panel content."
             }
-        } 
+        },
+        examples: [
+            {
+                name: "basic",
+                description: "Use a button trigger and put the choices in the dropdown slot.",
+                template: `
+                    <x-dropdown>
+                        <x-button label="More"></x-button>
+                        <div slot="dropdown"><x-anchor href="page:x:/pages/areas.js">Browse areas</x-anchor></div>
+                    </x-dropdown>
+                `
+            },
+            {
+                name: "open-programmatically",
+                description: "Expand a dropdown through its public method.",
+                language: "javascript",
+                template: `
+                    <x-dropdown id="filters">
+                        <x-button label="Filters"></x-button>
+                        <div slot="dropdown"><x-datafield type="checkbox" label="Only active"></x-datafield></div>
+                    </x-dropdown>
+                `,
+                code: `document.querySelector("#filters").expand();`
+            }
+        ]
     },
     style: `
         :host {display:inline-block; position:relative;}

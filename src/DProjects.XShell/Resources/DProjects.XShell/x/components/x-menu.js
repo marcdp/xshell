@@ -6,7 +6,27 @@ export default {
         properties: {
             menu: {type:"array", default:null, attribute:false, state:true, description:""},
         },
-        methods: {}
+        methods: {},
+        examples: [
+            {
+                name: "basic",
+                description: "Bind an array of navigation items to the menu.",
+                state: {items: [
+                    {label: "Areas", icon: "x-folder", href: "page:x:/pages/areas.js"},
+                    {label: "Tasks", href: "page:x:/pages/tasks.js"}
+                ]},
+                template: `<x-menu x-prop:menu="state.items"></x-menu>`
+            },
+            {
+                name: "nested-items",
+                description: "Group child links and open Tasks in a stack.",
+                state: {items: [{id: "tools", label: "Tools", children: [
+                    {label: "Tasks", href: "page:x:/pages/tasks.js", open: "stack"},
+                    {label: "About", href: "page:x:/pages/about.js"}
+                ]}]},
+                template: `<x-menu x-prop:menu="state.items"></x-menu>`
+            }
+        ]
     },
     style: `
         :host {display: block;}

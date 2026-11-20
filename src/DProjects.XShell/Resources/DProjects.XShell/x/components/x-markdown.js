@@ -14,7 +14,15 @@ export default {
             "":{
                 description: "Default slot."
             }
-        }
+        },
+        examples: [
+            {
+                name: "basic",
+                description: "Render Markdown supplied by trusted application code.",
+                state: {notes: "## Release notes\n- Improved search\n- Faster loading"},
+                template: `<x-markdown x-prop:value="state.notes"></x-markdown>`
+            }
+        ]
     },
     style: `
         :host {display:block;}

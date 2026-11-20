@@ -19,7 +19,15 @@ export default {
         properties: {
             value: {type:"number", default:0, attribute:true, state:true, description:""}
         },
-        methods: {}
+        methods: {},
+        examples: [
+            {
+                name: "basic",
+                description: "Format a byte count from the containing definition's state.",
+                state: {bytes: 1536},
+                template: `<x-file-size x-prop:value="state.bytes"></x-file-size>`
+            }
+        ]
     },
     template: `
         {{ state.valueFormatted || ''}}

@@ -29,7 +29,25 @@ export default {
             "": {
                 description: "Default slot for the anchor content."
             }
-        }
+        },
+        examples: [
+            {
+                name: "basic",
+                description: "Navigate to the Areas page using the default opening behavior.",
+                template: `<x-anchor href="page:x:/pages/areas.js">Browse areas</x-anchor>`
+            },
+            {
+                name: "stack",
+                description: "Open Tasks above the current Page.",
+                template: `<x-anchor href="page:x:/pages/tasks.js" open="stack">View tasks</x-anchor>`
+            },
+            {
+                name: "compact-stack",
+                description: "Bind presentation classes to the stacked Page.",
+                state: {classes: ["size-compact"]},
+                template: `<x-anchor href="page:x:/pages/tasks.js" open="stack" x-prop:classes="state.classes">View tasks</x-anchor>`
+            }
+        ]
     },
     style: `
         :host {}

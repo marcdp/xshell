@@ -34,7 +34,21 @@ export default {
                 }
             }
         },
-        slots: {}
+        slots: {},
+        examples: [
+            {
+                name: "basic",
+                description: "Render an XTemplate string using the supplied object as its state.",
+                state: {summaryTemplate: "<p>Project: {{ state.name }}</p>",project: {name: "Launch"}},
+                template: `<x-template x-prop:template="state.summaryTemplate" x-prop:value="state.project"></x-template>`
+            },
+            {
+                name: "edit-value",
+                description: "Bind an editable dynamic XTemplate to the containing Page's state.",
+                state: {fieldTemplate: "<x-datafield type=\"text\" label=\"Project\" x-model=\"state.name\"></x-datafield>",project: {name: "Launch"}},
+                template: `<x-template x-prop:template="state.fieldTemplate" x-model="state.project"></x-template>`
+            }
+        ]
     },
     dependencies: {
         renderEngineXClient: "render-engine:x-client"

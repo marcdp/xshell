@@ -29,7 +29,20 @@ export default {
             "": {
                 description: "The default slot for data fields."
             }
-        }
+        },
+        examples: [
+            {
+                name: "basic",
+                description: "Lay out two related fields in two columns.",
+                state: {name: "Ada",email: "ada@example.test"},
+                template: `
+                    <x-datafields label="Contact" columns="2">
+                        <x-datafield type="text" label="Name" x-model="state.name"></x-datafield>
+                        <x-datafield type="email" label="Email" x-model="state.email"></x-datafield>
+                    </x-datafields>
+                `
+            }
+        ]
     },
     style: `
         :host {

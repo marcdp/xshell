@@ -47,7 +47,50 @@ export default {
             "": {
                 description: "A list-view head followed by a list-view body."
             }
-        }
+        },
+        examples: [
+            {
+                name: "basic",
+                description: "Display selectable items inside the list body.",
+                template: `
+                    <x-listview>
+                        <x-listview-body>
+                            <x-listview-item label="Notes.txt" path="/notes.txt"></x-listview-item>
+                            <x-listview-item label="Tasks.txt" path="/tasks.txt"></x-listview-item>
+                        </x-listview-body>
+                    </x-listview>
+                `
+            },
+            {
+                name: "select-by-path",
+                description: "Select an existing item by its path.",
+                language: "javascript",
+                template: `
+                    <x-listview id="files">
+                        <x-listview-body>
+                            <x-listview-item label="Notes.txt" path="/notes.txt"></x-listview-item>
+                            <x-listview-item label="Tasks.txt" path="/tasks.txt"></x-listview-item>
+                        </x-listview-body>
+                    </x-listview>
+                `,
+                code: `document.querySelector("#files").select("/tasks.txt");`
+            },
+            {
+                name: "details",
+                description: "Line up item content with details columns.",
+                template: `
+                    <x-listview view="details">
+                        <x-listview-head>
+                            <x-listview-column label="Name"></x-listview-column>
+                            <x-listview-column label="Type" width="8rem"></x-listview-column>
+                        </x-listview-head>
+                        <x-listview-body>
+                            <x-listview-item label="Notes.txt"><span>Text</span></x-listview-item>
+                        </x-listview-body>
+                    </x-listview>
+                `
+            }
+        ]
     },
     style: `
         :host { 

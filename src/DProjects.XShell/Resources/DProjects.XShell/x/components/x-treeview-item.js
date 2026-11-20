@@ -27,7 +27,37 @@ export default {
             "column": {
                 description: "Slot for column content."
             }
-        }
+        },
+        examples: [
+            {
+                name: "nested-item",
+                description: "Nest a child under an expanded parent to indent it automatically.",
+                template: `
+                    <x-treeview>
+                        <x-treeview-body>
+                            <x-treeview-item label="Projects" icon="x-folder" path="/projects" expanded>
+                                <x-treeview-item label="Notes" icon="x-file" path="/projects/notes"></x-treeview-item>
+                            </x-treeview-item>
+                        </x-treeview-body>
+                    </x-treeview>
+                `
+            },
+            {
+                name: "column-content",
+                description: "Show secondary content through the column slot.",
+                template: `
+                    <x-treeview>
+                        <x-treeview-head>
+                            <x-treeview-column label="Name"></x-treeview-column>
+                            <x-treeview-column label="Status" width="8rem"></x-treeview-column>
+                        </x-treeview-head>
+                        <x-treeview-body>
+                            <x-treeview-item label="Reports" path="/reports"><span slot="column">Ready</span></x-treeview-item>
+                        </x-treeview-body>
+                    </x-treeview>
+                `
+            }
+        ]
     },
     style: `
         :host {

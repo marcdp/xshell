@@ -13,7 +13,22 @@ export default {
             required: {type:"boolean", default:false, state:true, description:"Whether the picker is required.", context:true},
             value: {type:"any", default:null, state:true, description:"The current value of the picker.", context:true},       
         },
-        methods: {}
+        methods: {},
+        examples: [
+            {
+                name: "pick-status",
+                description: "Choose a status from a list and read its value.",
+                language: "javascript",
+                code: `
+                    const status = await dialog.picker({
+                        title: "Project status",
+                        inputType: "select",
+                        domain: [{ value: "draft", label: "Draft" }, { value: "ready", label: "Ready" }],
+                        value: "draft"
+                    });
+                `
+            }
+        ]
     },
     template: `
         <x-form command="submit">            

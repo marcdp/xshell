@@ -7,7 +7,20 @@ export default {
             value: {type: "object", default: null, state: true, description: "DataSet object to display."},
             src: {type: "string", attribute:true, state:true, default: "", description: "Source URL for the dataset."}
         },
-        methods: {}
+        methods: {},
+        examples: [
+            {
+                name: "basic",
+                description: "Display a local DataSet with custom column labels.",
+                state: {dataset: {tables: [{name: "Projects", columns: [{name: "project", label: "Project"}], rows: [{project: "Launch"}]}]}},
+                template: `<x-dataset x-prop:value="state.dataset"></x-dataset>`
+            },
+            {
+                name: "static-source",
+                description: "Load a small DataSet from the built-in static source.",
+                template: `<x-dataset src="dataset:static:D=Draft|R=Ready"></x-dataset>`
+            }
+        ]
     },
     style: `
         :host {

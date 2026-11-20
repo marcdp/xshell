@@ -13,7 +13,14 @@ export default {
             stack:   {type:"string", default:"", attribute:true, state:true, description:""},
             errors:  {type:"object", default:null, state:true, description:""}
         },
-        methods: {}
+        methods: {},
+        examples: [
+            {
+                name: "basic",
+                description: "Show an application error with a code and actionable message.",
+                template: `<x-error code="404" message="This report is no longer available."></x-error>`
+            }
+        ]
     },
     style: `
         table {

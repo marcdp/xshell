@@ -15,7 +15,30 @@ export default {
             "buttons":{
                 description: "Slot for providing buttons."
             }
-        }
+        },
+        examples: [
+            {
+                name: "basic",
+                description: "Navigate through two labeled panels with the built-in controls.",
+                template: `
+                    <x-wizard>
+                        <x-wizard-panel label="Plan"><p>Review the project plan.</p></x-wizard-panel>
+                        <x-wizard-panel label="Review"><p>Review the final details.</p></x-wizard-panel>
+                    </x-wizard>
+                `
+            },
+            {
+                name: "final-action",
+                description: "Provide a final-panel action through the buttons slot.",
+                template: `
+                    <x-wizard>
+                        <x-wizard-panel label="Plan"><p>Check the project details.</p></x-wizard-panel>
+                        <x-wizard-panel label="Complete"><p>The plan is ready.</p></x-wizard-panel>
+                        <x-anchor slot="buttons" href="page:x:/pages/areas.js">Back to Areas</x-anchor>
+                    </x-wizard>
+                `
+            }
+        ]
     },
     style: `
         :host {display:block;}

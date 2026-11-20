@@ -9,7 +9,14 @@ export default {
             "":{
                 description: "Slot for providing content that will only be displayed on mobile-sized viewports."
             }
-        }
+        },
+        examples: [
+            {
+                name: "basic",
+                description: "Show touch guidance on mobile-sized viewports.",
+                template: `<x-mobile><p>Tap a project to view its details.</p></x-mobile>`
+            }
+        ]
     },
     style: `
         @media (min-width: 769px) {

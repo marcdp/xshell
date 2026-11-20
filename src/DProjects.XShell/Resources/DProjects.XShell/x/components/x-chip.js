@@ -12,7 +12,24 @@ export default {
             icon:      {type:"string", default:"", attribute:true, state:true, description:"The optional icon displayed before the label."},
             removable: {type:"boolean", default:false, attribute:true, state:true, description:"Indicates whether the chip can be removed."}
         },
-        methods: {}
+        methods: {},
+        examples: [
+            {
+                name: "basic",
+                description: "Display a short category label with an icon.",
+                template: `<x-chip label="Documents" icon="x-folder"></x-chip>`
+            },
+            {
+                name: "removable",
+                description: "Remove a filter chip in response to its remove event.",
+                language: "javascript",
+                template: `<x-chip id="filter-chip" label="Active" removable></x-chip>`,
+                code: `
+                    const chip = document.querySelector("#filter-chip");
+                    chip.addEventListener("remove", () => chip.remove());
+                `
+            }
+        ]
     },
     style: `
         :host {

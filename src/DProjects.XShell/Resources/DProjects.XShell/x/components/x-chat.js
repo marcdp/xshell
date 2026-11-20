@@ -39,7 +39,36 @@ export default {
                 description: "Scrolls to the newest message."
             }
         },
-        slots: {}
+        slots: {},
+        examples: [
+            {
+                name: "basic",
+                description: "Render a local conversation from an array of messages.",
+                state: {messages: [
+                    {id: "1", role: "user", content: "Is the draft ready?"},
+                    {id: "2", role: "assistant", content: "Yes, it is ready for review."}
+                ]},
+                template: `<x-chat x-prop:messages="state.messages" placeholder="Write a message"></x-chat>`
+            },
+            {
+                name: "handle-send",
+                description: "Append sent text to the conversation locally.",
+                language: "javascript",
+                template: `<x-chat id="local-chat" placeholder="Write a note"></x-chat>`,
+                code: `
+                    const chat = document.querySelector("#local-chat");
+                    chat.addEventListener("send", ({ detail }) => {
+                        chat.messages = [...chat.messages, { id: crypto.randomUUID(), role: "user", content: detail.content }];
+                    });
+                `
+            },
+            {
+                name: "disabled-composer",
+                description: "Display an archived conversation with its composer disabled.",
+                state: {messages: [{id: "1", role: "user", content: "The review is complete."}]},
+                template: `<x-chat x-prop:messages="state.messages" disabled></x-chat>`
+            }
+        ]
     },
     meta: {
         renderEngine: "x",

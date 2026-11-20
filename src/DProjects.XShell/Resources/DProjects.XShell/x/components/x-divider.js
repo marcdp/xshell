@@ -5,7 +5,18 @@ export default {
         description: "Renders a visual divider.",
         events: {},
         properties: {},
-        methods: {}
+        methods: {},
+        examples: [
+            {
+                name: "basic",
+                description: "Separate two groups of content.",
+                template: `
+                    <p>General settings</p>
+                    <x-divider></x-divider>
+                    <p>Advanced settings</p>
+                `
+            }
+        ]
     },
     style: `
         :host {display:block;}

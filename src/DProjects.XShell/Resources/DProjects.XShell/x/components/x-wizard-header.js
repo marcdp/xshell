@@ -14,7 +14,15 @@ export default {
             index:  {type:"number", default:0, attribute:true, state:true, description:""},
             panels: {type:"array", default:[], state:true, description:""}
         },
-        methods: {}
+        methods: {},
+        examples: [
+            {
+                name: "basic",
+                description: "Show the current step in a header supplied with one-based panel descriptors.",
+                state: {panels: [{index: 1,label: "Plan"}, {index: 2,label: "Review"}, {index: 3,label: "Complete"}]},
+                template: `<x-wizard-header index="1" x-prop:panels="state.panels"></x-wizard-header>`
+            }
+        ]
     },
     style: `
         :host {display:block;}

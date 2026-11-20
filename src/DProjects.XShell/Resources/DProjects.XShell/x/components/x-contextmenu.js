@@ -28,7 +28,27 @@ export default {
             "": {
                 description: "Default slot for the context menu content."
             }
-        }    
+        },
+        examples: [
+            {
+                name: "pointer-menu",
+                description: "Open a menu at the pointer when the user right-clicks the trigger.",
+                language: "javascript",
+                template: `
+                    <button id="tools-trigger" type="button">Right-click for tools</button>
+                    <x-contextmenu id="tools-menu">
+                        <x-menuitem label="Tasks" href="page:x:/pages/tasks.js" open="stack"></x-menuitem>
+                    </x-contextmenu>
+                `,
+                code: `
+                    const menu = document.querySelector("#tools-menu");
+                    document.querySelector("#tools-trigger").addEventListener("contextmenu", event => {
+                        event.preventDefault();
+                        menu.open({ x: event.clientX, y: event.clientY });
+                    });
+                `
+            }
+        ]
     },
     style: `
         :host div {

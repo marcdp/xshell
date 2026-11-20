@@ -17,7 +17,24 @@ export default {
             size:  {type:"number", default:20, attribute:true, state:true, description:""},
             label: {type:"string", default:"records", attribute:true, state:true, description:""}
         },
-        methods: {}
+        methods: {},
+        examples: [
+            {
+                name: "basic",
+                description: "Display the first page of a 60-row collection in groups of 20.",
+                template: `<x-pager total="60" size="20" index="0" label="results"></x-pager>`
+            },
+            {
+                name: "page-change",
+                description: "Apply the requested zero-based index to the pager.",
+                language: "javascript",
+                template: `<x-pager id="results" total="60" size="20"></x-pager>`,
+                code: `
+                    const pager = document.querySelector("#results");
+                    pager.addEventListener("change", ({ detail }) => { pager.index = detail.index; });
+                `
+            }
+        ]
     },
     style: `
         :host {

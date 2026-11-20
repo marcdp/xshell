@@ -5,7 +5,14 @@ export default {
         description: "Displays the current page title.",
         events: {},
         properties: {},
-        methods: {}
+        methods: {},
+        examples: [
+            {
+                name: "basic",
+                description: "Use the current Page label as the heading.",
+                template: `<h1><x-page-title></x-page-title></h1>`
+            }
+        ]
     },
     style: ``,
     template: `{{ state.label }}`,

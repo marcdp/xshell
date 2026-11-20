@@ -10,7 +10,24 @@ export default {
         methods: {},
         slots: {
             "": {description: "Custom column header content. Overrides the default label if provided."}
-        }
+        },
+        examples: [
+            {
+                name: "column-width",
+                description: "Set a width for a secondary column populated by the item slot.",
+                template: `
+                    <x-treeview>
+                        <x-treeview-head>
+                            <x-treeview-column label="Name"></x-treeview-column>
+                            <x-treeview-column label="Status" width="8rem"></x-treeview-column>
+                        </x-treeview-head>
+                        <x-treeview-body>
+                            <x-treeview-item label="Reports" path="/reports"><span slot="column">Ready</span></x-treeview-item>
+                        </x-treeview-body>
+                    </x-treeview>
+                `
+            }
+        ]
     },
     style: `
         :host {

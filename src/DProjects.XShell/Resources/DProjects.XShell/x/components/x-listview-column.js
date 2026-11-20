@@ -10,7 +10,24 @@ export default {
         methods: {},
         slots: {
             "": {description:"Custom column header content. Overrides the fallback label when provided."}
-        }
+        },
+        examples: [
+            {
+                name: "column-width",
+                description: "Set a fixed width for the secondary details column.",
+                template: `
+                    <x-listview view="details">
+                        <x-listview-head>
+                            <x-listview-column label="Name"></x-listview-column>
+                            <x-listview-column label="Type" width="8rem"></x-listview-column>
+                        </x-listview-head>
+                        <x-listview-body>
+                            <x-listview-item label="Notes.txt"><span>Text</span></x-listview-item>
+                        </x-listview-body>
+                    </x-listview>
+                `
+            }
+        ]
     },
     style: `
         :host {display: block; box-sizing: border-box; min-width: 0; }

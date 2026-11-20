@@ -27,7 +27,20 @@ export default {
             "": {description:"Additional details cells, in header-column order after the primary cell."},
             "bottom": {description:"Content to be displayed in the bottom slot of the item."},
             "right": {description:"Content to be displayed in the right slot of the item."}
-        }
+        },
+        examples: [
+            {
+                name: "with-badge",
+                description: "Place a badge in the item's right slot.",
+                template: `
+                    <x-listview>
+                        <x-listview-body>
+                            <x-listview-item label="Notes" path="/notes"><x-badge slot="right" value="New"></x-badge></x-listview-item>
+                        </x-listview-body>
+                    </x-listview>
+                `
+            }
+        ]
     },
     style: `
         :host {

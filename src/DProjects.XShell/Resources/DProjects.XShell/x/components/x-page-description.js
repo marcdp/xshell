@@ -5,7 +5,17 @@ export default {
         description: "Displays the current page description.",
         events: {},
         properties: {},
-        methods: {}
+        methods: {},
+        examples: [
+            {
+                name: "basic",
+                description: "Display the current Page description below its heading.",
+                template: `
+                    <h1><x-page-title></x-page-title></h1>
+                    <p><x-page-description></x-page-description></p>
+                `
+            }
+        ]
     },
     style: `
         :host {display:block; }

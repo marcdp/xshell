@@ -13,7 +13,18 @@ export default {
             "":{
                 description: "Content for the tab panel"
             }
-        }
+        },
+        examples: [
+            {
+                name: "basic",
+                description: "Provide the content and label of a panel as a direct child of x-tabs.",
+                template: `
+                    <x-tabs>
+                        <x-tab label="Details"><p>Project details go here.</p></x-tab>
+                    </x-tabs>
+                `
+            }
+        ]
     },
     style: `
         :host {display:block;}

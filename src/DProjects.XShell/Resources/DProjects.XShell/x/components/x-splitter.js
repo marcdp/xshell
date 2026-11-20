@@ -18,16 +18,35 @@ export default {
             }
         },
         properties: {
-            disabled: {
-                type: "boolean",
-                default: false,
-                attribute: true,
-                state: true,
-                reflect: true
-            }
+            disabled: {type: "boolean",default: false,attribute: true,state: true,reflect: true},
+            opaque: {type: "boolean",default: false,attribute: true,state: true,reflect: true}
+
         },
-        methods: {}
-        
+        methods: {},
+        examples: [
+            {
+                name: "row-panes",
+                description: "Resize adjacent panes in a flex row while retaining minimum widths.",
+                template: `
+                    <div style="display:flex; min-height:8rem">
+                        <aside style="flex:0 0 14rem; min-width:8rem">Outline</aside>
+                        <x-splitter></x-splitter>
+                        <section style="flex:1; min-width:12rem">Content</section>
+                    </div>
+                `
+            },
+            {
+                name: "disabled-column",
+                description: "Lay out vertical panes with a splitter that cannot be resized.",
+                template: `
+                    <div style="display:flex; flex-direction:column; height:20rem">
+                        <section style="flex:0 0 8rem; min-height:4rem">Preview</section>
+                        <x-splitter disabled></x-splitter>
+                        <section style="flex:1; min-height:4rem">Details</section>
+                    </div>
+                `
+            }
+        ]
     },
     style: `
         :host {
@@ -36,11 +55,12 @@ export default {
             z-index: 1;
             justify-content: end;
             flex: 0 0 .15em;
-            background: var(--x-splitter-background);
+            
         }
 
         /* Handle */
         .handle {
+            background: var(--x-splitter-background);
             position: absolute;
             inset: 0;
             cursor: col-resize;
@@ -50,10 +70,11 @@ export default {
         }
         .handle[aria-orientation="horizontal"] { cursor: row-resize; }
         :host([disabled]) .handle { cursor: default; }
- 
+        .handle.opaque {opacity:0;}
     `,
     template: `
         <div class="handle" role="separator" tabindex="0"
+            x-class:opaque="state.opaque"
             x-attr:aria-disabled="state.disabled"
             x-on:pointerdown="pointerDown"
             x-on:pointermove="pointerMove"

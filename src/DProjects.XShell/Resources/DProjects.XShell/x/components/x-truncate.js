@@ -7,7 +7,18 @@ export default {
             text:  {type:"string", default:"", attribute:true, state:true, description:"The text to display."},
             lines: {type:"number", default:1, attribute:true, state:true, description:"The maximum number of visible lines."}
         },
-        methods: {}
+        methods: {},
+        examples: [
+            {
+                name: "basic",
+                description: "Clamp a description to two lines inside a narrow container.",
+                template: `
+                    <div style="max-width:15rem">
+                        <x-truncate lines="2" text="Review the project notes before sharing this report with the rest of the team."></x-truncate>
+                    </div>
+                `
+            }
+        ]
     },
     style: `
         :host {

@@ -6,7 +6,14 @@ export default {
             format:   {type:"string", default:"{d}d {hh}h {mm}m {ss}s", attribute:true, state:true},
             interval: {type:"number", default:1000, attribute:true, state:true}
         },
-        methods: {}
+        methods: {},
+        examples: [
+            {
+                name: "basic",
+                description: "Display the elapsed time since an ISO timestamp.",
+                template: `<x-countup value="2024-01-01T00:00:00Z" format="{d} days, {hh}:{mm}:{ss}"></x-countup>`
+            }
+        ]
     },
 
     style: `

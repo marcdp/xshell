@@ -20,7 +20,14 @@ export default {
             message:  {type:"string", default:"", attribute:true, state:true, description:""},
             command:  {type:"string", default:"", attribute:true, state:true, description:""}
         },
-        methods: {}
+        methods: {},
+        examples: [
+            {
+                name: "basic",
+                description: "Show initials with identity text without loading an image.",
+                template: `<x-avatar initials="AL" label="Ada Lovelace" message="Project owner"></x-avatar>`
+            }
+        ]
     },
     style: `
         :host {display:flex; flex-direction:row; user-select:none;}

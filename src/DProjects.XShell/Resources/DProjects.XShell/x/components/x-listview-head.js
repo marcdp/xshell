@@ -9,7 +9,24 @@ export default {
             "": {
                 description: "Default slot for x-listview-column elements."
             }
-        }
+        },
+        examples: [
+            {
+                name: "details",
+                description: "Place the details header beside the body.",
+                template: `
+                    <x-listview view="details">
+                        <x-listview-head>
+                            <x-listview-column label="Name"></x-listview-column>
+                            <x-listview-column label="Type" width="8rem"></x-listview-column>
+                        </x-listview-head>
+                        <x-listview-body>
+                            <x-listview-item label="Notes.txt"><span>Text</span></x-listview-item>
+                        </x-listview-body>
+                    </x-listview>
+                `
+            }
+        ]
     },
     style: `
         :host {display: block; min-width: 0; box-sizing: border-box; }

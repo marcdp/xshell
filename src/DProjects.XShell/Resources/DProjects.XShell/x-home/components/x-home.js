@@ -6,7 +6,14 @@ export default {
         description: "Launches Areas and Pages from their composed navigation menus.",
         properties: {
             areaId: {type: "string", default: "", attribute: true, state: true, description: "Area for Quick Links. Defaults to the current Area."}
-        }
+        },
+        examples: [
+            {
+                name: "current-area",
+                description: "Show the home launcher with Quick Links from the current Area.",
+                template: `<x-home></x-home>`
+            }
+        ]
     },
     style: `
         :host {display:grid; gap:1.5rem; color:var(--x-color-text);}

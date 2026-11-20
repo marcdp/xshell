@@ -5,7 +5,15 @@ export default {
         description: "Displays a loading indicator.",
         events: {},
         properties: {},
-        methods: {}
+        methods: {},
+        examples: [
+            {
+                name: "basic",
+                description: "Show a loading indicator while the containing Page is busy.",
+                state: {loading: true},
+                template: `<x-loading x-if="state.loading" role="status" aria-label="Loading results"></x-loading>`
+            }
+        ]
     },
     style: `
         :host {

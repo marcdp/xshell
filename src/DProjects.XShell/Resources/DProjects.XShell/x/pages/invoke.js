@@ -167,7 +167,22 @@ export default {
             id: {type:"string", default:"", state:true, query:true},
             method: {type:"string", default:"execute", state:true, query:true},
             args: {type:"object", default:{}, state:true, query:true, queryParser:"json"}
-        }
+        },
+        examples: [
+            {
+                name: "translate-label",
+                description: "Open the invocation form for I18n translation with a label prefilled.",
+                language: "javascript",
+                code: `
+                    await navigation.navigate({
+                        href: "page:x:/pages/invoke.js",
+                        page,
+                        open: "stack",
+                        params: { type: "service", id: "i18n", method: "translate", args: JSON.stringify({ label: "Save" }) }
+                    });
+                `
+            }
+        ]
     },
 
     meta: {

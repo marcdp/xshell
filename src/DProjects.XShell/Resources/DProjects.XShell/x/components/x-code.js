@@ -16,7 +16,19 @@ export default {
             wrap:     {type:"boolean", default:false, attribute:true, state:true, description:"Indicates whether long lines should wrap."},
             copyable: {type:"boolean", default:true, attribute:true, state:true, description:"Indicates whether the copy action is displayed."}
         },
-        methods: {}
+        methods: {},
+        examples: [
+            {
+                name: "basic",
+                description: "Display copyable source text and identify its language.",
+                template: `<x-code language="javascript" value="const total = 3;"></x-code>`
+            },
+            {
+                name: "wrap",
+                description: "Wrap a long line without offering the copy action.",
+                template: `<x-code wrap x-prop:copyable="false" value="This long line wraps within the available space."></x-code>`
+            }
+        ]
     },
     style: `
         :host {

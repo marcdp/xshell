@@ -6,7 +6,17 @@ export default {
         description: "Displays the current page breadcrumb.",
         events: {},
         properties: {},
-        methods: {}
+        methods: {},
+        examples: [
+            {
+                name: "basic",
+                description: "Place the current Page breadcrumb above its heading.",
+                template: `
+                    <x-page-breadcrumb></x-page-breadcrumb>
+                    <h1><x-page-title></x-page-title></h1>
+                `
+            }
+        ]
     },
     style: `
         :host {display:block;}

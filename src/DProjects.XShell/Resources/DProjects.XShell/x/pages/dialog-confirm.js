@@ -7,7 +7,21 @@ export default {
             message: {type:"string", default:"", state:true, description:"The message to display in the confirmation dialog.", context:true},
             variant: {type:"string", default:"yesno", state:true, enum:["yesno","yesnocancel","okcancel","ok"], description:"The type of confirmation dialog to display.", context:true},
         },
-        methods: {}
+        methods: {},
+        examples: [
+            {
+                name: "confirm-action",
+                description: "Ask whether to continue and read the selected button value.",
+                language: "javascript",
+                code: `
+                    const choice = await dialog.confirm({
+                        title: "Continue?",
+                        message: "Proceed to the review step?",
+                        variant: "yesno"
+                    });
+                `
+            }
+        ]
     },
     meta: {
         classes: []

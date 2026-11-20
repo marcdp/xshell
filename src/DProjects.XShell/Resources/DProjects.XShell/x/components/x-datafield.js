@@ -100,7 +100,27 @@ export default {
             "": {
                 description: "Default slot for the datafield content."
             }
-        } 
+        },
+        examples: [
+            {
+                name: "basic",
+                description: "Bind a text input to an initialized state property.",
+                state: {name: "Ada"},
+                template: `<x-datafield type="text" label="Name" x-model="state.name"></x-datafield>`
+            },
+            {
+                name: "validation",
+                description: "Constrain a numeric input to a supported range.",
+                state: {quantity: 1},
+                template: `<x-datafield type="number" label="Quantity" min="1" max="10" required x-model="state.quantity"></x-datafield>`
+            },
+            {
+                name: "select-domain",
+                description: "Supply options as value and label objects.",
+                state: {status: "draft",options: [{value: "draft",label: "Draft"}, {value: "ready",label: "Ready"}]},
+                template: `<x-datafield type="select" label="Status" x-prop:domain="state.options" x-model="state.status"></x-datafield>`
+            }
+        ]
     },
     style: `
         :host {display:block; position:relative; -webkit-appearance: none!important;}

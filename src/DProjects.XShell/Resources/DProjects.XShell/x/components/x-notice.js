@@ -14,7 +14,19 @@ export default {
             "": {
                 description: "The default slot for notice content."
             }
-        }
+        },
+        examples: [
+            {
+                name: "basic",
+                description: "Show a confirmation after an operation completes.",
+                template: `<x-notice type="success" label="Saved" message="Your preferences were updated."></x-notice>`
+            },
+            {
+                name: "dismissible",
+                description: "Let the user dismiss a warning using the close button.",
+                template: `<x-notice class="close" type="warning" label="Offline" message="Changes are stored locally."></x-notice>`
+            }
+        ]
     },
     style: `
         :host {display:block;}

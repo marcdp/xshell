@@ -9,7 +9,21 @@ export default {
             "": {
                 description: "Default slot for x-listview-item elements."
             }
-        }
+        },
+        examples: [
+            {
+                name: "basic",
+                description: "Group selectable items as direct children of the body.",
+                template: `
+                    <x-listview>
+                        <x-listview-body>
+                            <x-listview-item label="Notes.txt" path="/notes.txt"></x-listview-item>
+                            <x-listview-item label="Tasks.txt" path="/tasks.txt"></x-listview-item>
+                        </x-listview-body>
+                    </x-listview>
+                `
+            }
+        ]
     },
     style: `
         :host {display: block;min-width: 0;}

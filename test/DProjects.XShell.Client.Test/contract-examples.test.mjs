@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import test from "node:test";
 import * as Details from "../../src/DProjects.XShell/Resources/DProjects.XShell/x/components/x-details.js";
 import Accordion from "../../src/DProjects.XShell/Resources/DProjects.XShell/x/components/x-accordion.js";
@@ -13,11 +13,12 @@ globalThis.HTMLElement = class {};
 globalThis.CSSStyleSheet = class { replaceSync() {} };
 globalThis.customElements = { define() {}, get() {} };
 globalThis.window = { customElements: globalThis.customElements };
-globalThis.document = { baseURI: "https://example.test/" };
+globalThis.document = { baseURI: "https://example.test/", documentElement: { style: {} } };
 
 const { default: LoaderCommandJs } = await import("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/loaders/command-js.js");
 const { default: xshell } = await import("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/xshell.js");
-const schemaDirectory = new URL("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/schemas/", import.meta.url);
+const resourceDirectory = new URL("../../src/DProjects.XShell/Resources/DProjects.XShell/", import.meta.url);
+const schemaDirectory = new URL("xshell/schemas/", resourceDirectory);
 const schemas = {};
 const validator = new JsonValidator();
 const template = '<x-details label="Advanced options"></x-details>';
@@ -93,7 +94,81 @@ test("Existing x-details and x-accordion templates validate as inline examples",
     assert.deepEqual(Details.default.contract.examples.map(example => example.name), ["basic", "custom-summary"]);
     assert.match(Details.default.contract.examples[0].template, /label="Advanced options"/);
     assert.match(Details.default.contract.examples[1].template, /slot="summary"/);
-    assert.equal(Accordion.contract.examples[0].template, "<x-accordion></x-accordion>");
+    assert.equal(Accordion.contract.examples[0].name, "basic");
+    assert.match(Accordion.contract.examples[0].template, /<x-accordion-panel label="Overview" expanded>/);
+    assert.match(Accordion.contract.examples[0].template, /<x-accordion-panel label="Activity">/);
+});
+
+test("Public UI usage examples validate against the definition schemas and reference existing APIs", async () => {
+    // Enumerate the reusable UI modules and all core Pages using the same definitions the runtime imports.
+    const components = new Map();
+    const pages = new Map();
+    for (const [module, kind, definitions] of [
+        ["x", "components", components], ["x-filesystem", "components", components],
+        ["x-home", "components", components], ["codemirror", "components", components], ["x", "pages", pages]
+    ]) {
+        const directory = new URL(`${module}/${kind}/`, resourceDirectory);
+        for (const file of readdirSync(directory).filter(file => file.endsWith(".js"))) {
+            const { default: definition } = await import(new URL(file, directory));
+            definitions.set(kind === "components" ? file.slice(0, -3) : `page:${module}:/pages/${file}`, definition);
+        }
+    }
+
+    // Require examples for reusable Components and validate authored metadata in the full definition shape.
+    for (const [definitions, schema] of [[components, schemas.component], [pages, schemas.page]]) {
+        for (const [id, definition] of definitions) {
+            const examples = definition.contract?.examples ?? [];
+            if (definitions === components && id !== "x-page-info") assert.ok(examples.length, id);
+            if (!examples.length) continue;
+            const projected = Object.fromEntries(Object.entries(definition).map(([key, value]) => [key, typeof value === "function" ? {} : value]));
+            if (definitions === components) projected.meta = { id, ...projected.meta };
+            const result = validator.validate(projected, schema);
+            assert.equal(result.valid, true, `${id}: ${JSON.stringify(result.errors)}`);
+            const names = examples.map(example => example.name);
+            assert.equal(new Set(names).size, names.length, id);
+
+            for (const example of examples) {
+                const location = `${id}/${example.name}`;
+                assert.match(example.name, /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/, location);
+
+                // Check custom tags, attributes, and property bindings in the authored snippets.
+                const tags = [...(example.template ?? "").matchAll(/<([a-z][\w-]*)([^<>]*)>/g)];
+                for (const [, tag, attributes] of tags) {
+                    if (!tag.includes("-")) continue;
+                    const component = components.get(tag);
+                    assert.ok(component, `${location}: unknown tag ${tag}`);
+                    const properties = component.contract.properties ?? {};
+                    for (const [, attr] of attributes.matchAll(/\s([\w:-]+)(?:="[^"]*")?/g)) {
+                        if (attr === "x-model") assert.ok(Object.hasOwn(properties, "value"), `${location}: ${tag} has no value property`);
+                        const binding = /^(x-prop|x-attr):(.+)$/.exec(attr);
+                        if (!binding && (/^(x-|aria-|data-)/.test(attr) || ["id", "class", "slot", "role", "style"].includes(attr))) continue;
+                        if (tag === "x-wizard-panel" && attr === "label") continue; // Its parent wizard reads this attribute directly.
+                        const property = (binding?.[2] ?? attr).replace(/-([a-z])/g, (_, letter) => letter.toUpperCase());
+                        assert.ok(Object.hasOwn(properties, property), `${location}: ${tag} has no ${property} property`);
+                        if (binding?.[1] !== "x-prop") assert.equal(properties[property].attribute, true, location);
+                    }
+                }
+
+                // Validate direct calls on example elements without evaluating their JavaScript.
+                for (const [, id, method] of (example.code ?? "").matchAll(/document\.querySelector\("#([\w-]+)"\)\.(\w+)\(/g)) {
+                    if (method === "addEventListener") continue;
+                    const tag = tags.find(([, , attributes]) => attributes.includes(` id="${id}"`))?.[1];
+                    assert.ok(components.get(tag)?.contract.methods?.[method], `${location}: unsupported method ${method}`);
+                }
+
+                // Check literal Page locators and query keys across both markup and code examples.
+                const sources = [example.template, example.code, JSON.stringify(example.state)].join("\n");
+                for (const [, href, query] of sources.matchAll(/(page:x:\/pages\/[\w-]+\.js)(?:\?([^"\s<]+))?/g)) {
+                    const target = pages.get(href);
+                    assert.ok(target, `${location}: unknown Page ${href}`);
+                    for (const key of new URLSearchParams(query?.replaceAll("&amp;", "&")).keys()) {
+                        const property = key.replace(/-([a-z])/g, (_, letter) => letter.toUpperCase());
+                        assert.equal(target.contract?.properties?.[property]?.query, true, `${location}: unsupported query key ${key}`);
+                    }
+                }
+            }
+        }
+    }
 });
 
 test("Component and Page loaders retain examples separately from implementation state and template", async () => {

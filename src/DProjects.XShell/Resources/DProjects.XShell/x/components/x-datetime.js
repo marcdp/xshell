@@ -8,7 +8,14 @@ export default {
             value:    {type:"string", default:"", attribute:true, state:true, description:""},
             format:   {type:"string", default:"", attribute:true, state:true, description:"Optional format override."}
         },
-        methods: {}
+        methods: {},
+        examples: [
+            {
+                name: "basic",
+                description: "Show a timestamp using the configured locale and date format.",
+                template: `<x-datetime value="2025-04-10T14:30:00Z" format="date"></x-datetime>`
+            }
+        ]
     },
     template: `
         <span x-attr:title="state.formattedValueFull">

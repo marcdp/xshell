@@ -11,7 +11,23 @@ export default {
             required: {type:"boolean", default:false, state:true, description:"Whether the prompt is required.", context:true},
             value: {type:"any", default:null, state:true, description:"The current value of the prompt.", context:true}
         },
-        methods: {}
+        methods: {},
+        examples: [
+            {
+                name: "required-text",
+                description: "Ask for a nonempty name with an initial value.",
+                language: "javascript",
+                code: `
+                    const name = await dialog.prompt({
+                        title: "Project name",
+                        message: "Enter a name for the project.",
+                        inputType: "text",
+                        value: "Untitled",
+                        required: true
+                    });
+                `
+            }
+        ]
     },
     template: `
         <x-form command="submit">            

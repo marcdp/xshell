@@ -9,7 +9,19 @@ export default {
             max:   {type:"number", default:100, attribute:true, state:true, description:"The maximum value of the progress bar."},
             unknown: {type:"boolean", default:false, attribute:true, state:true, description:"Displays an animated progress bar when progress is unknown."}
         },
-        methods: {}
+        methods: {},
+        examples: [
+            {
+                name: "basic",
+                description: "Show known progress against an explicit maximum.",
+                template: `<x-progress value="7" max="10" aria-label="Items processed"></x-progress>`
+            },
+            {
+                name: "indeterminate",
+                description: "Show work in progress when the total is unknown.",
+                template: `<x-progress unknown aria-label="Preparing report"></x-progress>`
+            }
+        ]
     },
     style: `
         :host {

@@ -16,7 +16,18 @@ export default {
             "actions": {
                 description: "Optional actions displayed below the empty-state message."
             }
-        }
+        },
+        examples: [
+            {
+                name: "basic",
+                description: "Explain an empty collection and offer a way to navigate elsewhere.",
+                template: `
+                    <x-empty icon="x-folder" label="No projects" message="Projects you follow appear here.">
+                        <x-anchor slot="actions" href="page:x:/pages/areas.js">Browse areas</x-anchor>
+                    </x-empty>
+                `
+            }
+        ]
     },
     style: `
         :host {

@@ -10,7 +10,14 @@ export default {
         properties: {
             icon: {type:"string", default:"", attribute:true, state:true, description:""}
         },
-        methods: {}
+        methods: {},
+        examples: [
+            {
+                name: "basic",
+                description: "Display an icon from the core icon set.",
+                template: `<x-icon icon="x-check"></x-icon>`
+            }
+        ]
     },
     style: `
         :host {display:inline; }

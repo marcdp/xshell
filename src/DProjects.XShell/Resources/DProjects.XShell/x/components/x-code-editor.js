@@ -1,7 +1,7 @@
 // component
 export default {
     contract: {
-        description: "Provides an Ace code editor with configurable presentation and editing options.",
+        description: "Provides a code editor with configurable presentation and editing options.",
         events: {
             change: {
                 description: "Raised when the editor value changes.",
@@ -26,7 +26,21 @@ export default {
                     type:"string"
                 }
             }
-        }
+        },
+        examples: [
+            {
+                name: "basic",
+                description: "Edit JavaScript and bind the source text to Page state.",
+                state: {source: "const title = 'Launch plan';"},
+                template: `<x-code-editor mode="javascript" x-model="state.source"></x-code-editor>`
+            },
+            {
+                name: "json-mode",
+                description: "Edit JSON using the editor's JSON mode.",
+                state: {source: '{"ready": true}'},
+                template: `<x-code-editor mode="json" x-model="state.source"></x-code-editor>`
+            }
+        ]
     },
     style: `
         :host {display:flex; min-height:10em; flex-direction:column; align-items:center; justify-content:center; height:100%;}

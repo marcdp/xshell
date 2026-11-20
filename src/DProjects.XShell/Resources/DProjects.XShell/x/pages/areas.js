@@ -4,7 +4,21 @@ export default {
         description: "Shows the available areas for navigation.",
         events: {},
         properties: {},
-        methods: {}
+        methods: {},
+        examples: [
+            {
+                name: "browse-areas",
+                description: "Open the Area selector over the current Page.",
+                language: "javascript",
+                code: `
+                    await navigation.navigate({
+                        href: "page:x:/pages/areas.js",
+                        page,
+                        open: "stack"
+                    });
+                `
+            }
+        ]
     },
     meta: {
         title: "Areas selector"

@@ -6,7 +6,33 @@ export default {
             menuName: {type:"string", default:"", state:true, query:true},
             src: {type:"string", default:null, state:true, query:true, reflect:true},
             showTitle: {type:"boolean", default:true, state:true, query:true}
-        }
+        },
+        examples: [
+            {
+                name: "preferences",
+                description: "Open the Preferences menu in a stacked workspace.",
+                language: "javascript",
+                code: `
+                    await navigation.navigate({
+                        href: "page:x:/pages/workspace.js?menu-name=preferences",
+                        page,
+                        open: "stack"
+                    });
+                `
+            },
+            {
+                name: "hide-title",
+                description: "Open the Preferences workspace with its embedded Page heading hidden.",
+                language: "javascript",
+                code: `
+                    await navigation.navigate({
+                        href: "page:x:/pages/workspace.js?menu-name=preferences&show-title=false",
+                        page,
+                        open: "stack"
+                    });
+                `
+            }
+        ]
     },
 
     meta: {
@@ -19,7 +45,6 @@ export default {
         :scope {height:100%;}
         :scope > div {display:flex; flex-direction: row; flex:1;}
         :scope > div .menu-container {min-width:16; width:18em; background:var(--x-layout-main-drawer-background); padding:1em}
-        :scope > div x-splitter {opacity:0;}
         :scope > div .page-container {display:block; padding-left:1.5em; flex:1;}
         :scope > div .page-container h1 {margin-top:0;}        
     `,
@@ -42,7 +67,7 @@ export default {
                 </x-menuitem>
             </div>
             
-            <x-splitter></x-splitter>
+            <x-splitter opaque></x-splitter>
 
             <div class="page-container">
                 <h4 x-if="state.showTitle">{{state.title}}</h4>

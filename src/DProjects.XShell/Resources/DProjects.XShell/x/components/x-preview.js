@@ -24,7 +24,15 @@ export default {
                 description: "Opens the full value in a new browser tab."
             }
         },
-        slots: {}
+        slots: {},
+        examples: [
+            {
+                name: "basic",
+                description: "Preview a local object that users can open in a new tab.",
+                state: {summary: {title: "Launch plan",items: 3}},
+                template: `<x-preview x-prop:value="state.summary"></x-preview>`
+            }
+        ]
     },
     style: `
         :host {

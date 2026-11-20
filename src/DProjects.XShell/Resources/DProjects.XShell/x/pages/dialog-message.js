@@ -8,7 +8,15 @@ export default {
             message: {type:"string", default:"", state:true, description:"The message to display in the message dialog.", context:true},
             type: {type:"string", default:"info", state:true, enum:["info","success","warning","error"], description:"The type of message dialog to display.", context:true},
         },
-        methods: {}
+        methods: {},
+        examples: [
+            {
+                name: "success-message",
+                description: "Show a success message and wait for the dialog to close.",
+                language: "javascript",
+                code: `await dialog.message({ type: "success", title: "Saved", message: "Your draft was saved." });`
+            }
+        ]
     },
     meta: {
         title: "Dialog Message",

@@ -34,7 +34,46 @@ export default {
             "": {
                 description: "Default slot for tree-view items."
             }
-        }
+        },
+        examples: [
+            {
+                name: "basic",
+                description: "Display a selectable tree item.",
+                template: `
+                    <x-treeview>
+                        <x-treeview-body>
+                            <x-treeview-item label="Documents" icon="x-folder" path="/documents"></x-treeview-item>
+                        </x-treeview-body>
+                    </x-treeview>
+                `
+            },
+            {
+                name: "hierarchy",
+                description: "Render child items under an initially expanded parent.",
+                template: `
+                    <x-treeview>
+                        <x-treeview-body>
+                            <x-treeview-item label="Projects" icon="x-folder" path="/projects" expanded>
+                                <x-treeview-item label="Notes" icon="x-file" path="/projects/notes"></x-treeview-item>
+                            </x-treeview-item>
+                        </x-treeview-body>
+                    </x-treeview>
+                `
+            },
+            {
+                name: "select-by-path",
+                description: "Select an item by its stable path.",
+                language: "javascript",
+                template: `
+                    <x-treeview id="folders">
+                        <x-treeview-body>
+                            <x-treeview-item label="Documents" icon="x-folder" path="/documents"></x-treeview-item>
+                        </x-treeview-body>
+                    </x-treeview>
+                `,
+                code: `document.querySelector("#folders").select("/documents");`
+            }
+        ]
     },
     style: `
         :host {

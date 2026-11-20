@@ -12,7 +12,18 @@ export default {
             "": {
                 description: "The element or content associated with the tooltip."
             }
-        }
+        },
+        examples: [
+            {
+                name: "basic",
+                description: "Show a hint above a button on hover or focus.",
+                template: `
+                    <x-tooltip text="Changes apply to this device" position="top">
+                        <x-button label="Save preferences"></x-button>
+                    </x-tooltip>
+                `
+            }
+        ]
     },
     style: `
         :host {

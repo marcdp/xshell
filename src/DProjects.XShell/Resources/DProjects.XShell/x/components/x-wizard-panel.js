@@ -9,7 +9,18 @@ export default {
             "":{
                 description: "Slot for providing the content of the wizard panel."
             }
-        }
+        },
+        examples: [
+            {
+                name: "basic",
+                description: "Wrap step content in a panel. The parent wizard reads its label attribute.",
+                template: `
+                    <x-wizard>
+                        <x-wizard-panel label="Review"><p>Confirm the project details.</p></x-wizard-panel>
+                    </x-wizard>
+                `
+            }
+        ]
     },
     style: `
         :host {display:block;}

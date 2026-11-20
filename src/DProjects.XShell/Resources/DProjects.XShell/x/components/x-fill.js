@@ -10,7 +10,20 @@ export default {
             "": {
                 description: "Content for the fill element"
             }
-        }
+        },
+        examples: [
+            {
+                name: "basic",
+                description: "Fill the space between a leading label and a trailing action in a flex toolbar.",
+                template: `
+                    <x-toolbar>
+                        <strong>Project</strong>
+                        <x-fill></x-fill>
+                        <x-button label="Refresh" command="refresh"></x-button>
+                    </x-toolbar>
+                `
+            }
+        ]
     },
     style: `
         :host {

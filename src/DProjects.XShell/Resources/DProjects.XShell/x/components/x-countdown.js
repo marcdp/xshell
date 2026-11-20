@@ -8,7 +8,16 @@ export default {
             expiredLabel: {type:"string", default:"Expired", attribute:true, state:true},
             interval:     {type:"number", default:1000, attribute:true, state:true}
         },
-        methods: {}
+        methods: {},
+        examples: [
+            {
+                name: "basic",
+                description: "Count down from five minutes and show a label when the timer expires.",
+                language: "javascript",
+                template: `<x-countdown id="break-timer" format="{mm}:{ss}" expired-label="Break finished"></x-countdown>`,
+                code: `document.querySelector("#break-timer").value = new Date(Date.now() + 5 * 60 * 1000);`
+            }
+        ]
     },
 
     style: `

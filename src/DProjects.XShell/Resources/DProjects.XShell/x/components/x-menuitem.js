@@ -26,7 +26,23 @@ export default {
             "": {
                 description: "Default slot for the menu item content."
             }
-        }
+        },
+        examples: [
+            {
+                name: "basic",
+                description: "Display an icon and a link as a menu item.",
+                template: `<x-menuitem label="Areas" icon="x-folder" href="page:x:/pages/areas.js"></x-menuitem>`
+            },
+            {
+                name: "submenu",
+                description: "Toggle an inline submenu by clicking its parent item.",
+                template: `
+                    <x-menuitem class="inline" label="Tools">
+                        <x-menuitem label="Tasks" href="page:x:/pages/tasks.js" open="stack"></x-menuitem>
+                    </x-menuitem>
+                `
+            }
+        ]
     },
     style: `
         :host {display:flex; position:relative; box-sizing:border-box; flex-direction:column; margin-bottom:.15em;

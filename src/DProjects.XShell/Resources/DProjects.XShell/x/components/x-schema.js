@@ -159,7 +159,32 @@ export default {
                 returns: { type: "array" }
             }
         },
-        slots: {}
+        slots: {},
+        examples: [
+            {
+                name: "basic",
+                description: "Generate fields from a JSON Schema and bind the edited object.",
+                state: {
+                    schema: {type: "object", required: ["name"], properties: {
+                        name: {type: "string", title: "Name", minLength: 1},
+                        enabled: {type: "boolean", title: "Enabled"}
+                    }},
+                    profile: {name: "Ada", enabled: true}
+                },
+                template: `<x-schema x-prop:schema="state.schema" x-model="state.profile"></x-schema>`
+            },
+            {
+                name: "form-validation",
+                description: "Have a form validate a generated required field on submission.",
+                state: {schema: {type: "object", required: ["name"], properties: {name: {type: "string", minLength: 1}}}, profile: {name: ""}},
+                template: `
+                    <x-form>
+                        <x-schema x-prop:schema="state.schema" x-model="state.profile"></x-schema>
+                        <x-button slot="footer" label="Submit" command="submit"></x-button>
+                    </x-form>
+                `
+            }
+        ]
     },
 
     template: `

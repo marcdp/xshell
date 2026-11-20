@@ -39,7 +39,15 @@ export default {
                     type: "string"
                 }
             } 
-        }
+        },
+        examples: [
+            {
+                name: "basic",
+                description: "Edit a JSON document using the CodeMirror wrapper.",
+                state: {source: "{\n  \"status\": \"draft\"\n}"},
+                template: `<codemirror-editor mode="json" x-prop:value="state.source"></codemirror-editor>`
+            }
+        ]
     },
     style: `
         :host {display:block; width:100%; height:100%;min-height: 0; }

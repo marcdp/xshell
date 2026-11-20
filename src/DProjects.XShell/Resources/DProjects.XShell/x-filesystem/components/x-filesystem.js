@@ -13,12 +13,19 @@ export default {
             root: {type:"boolean", default:false, attribute: true, state: true, description: "Indicates if the root folder should be displayed"}
         },
         methods: {},
-        slots: {}
+        slots: {},
+        examples: [
+            {
+                name: "memory-explorer",
+                description: "Explore a fresh in-memory filesystem with its root visible.",
+                template: `<x-filesystem src="mem:" path="/" root></x-filesystem>`
+            }
+        ]
     },
     style: `
         :host {display:block;}
         .container {display:flex; width:100%; min-width:0; margin-top:.5em; }
-        .container x-filesystem-tree {flex:0 0 20%; min-width:12rem; max-width:calc(100% - 28rem - .15em); padding:.5em; padding-top:0; box-sizing:border-box;}
+        .container x-filesystem-tree {flex:0 0 20%; min-width:12rem; max-width:calc(100% - 28rem - .15em); padding:.5em; padding-top:0; box-sizing:border-box;background:var(--x-layout-main-drawer-background);}
         .container x-filesystem-list {flex:1 1 0; min-width:28rem; padding:.5em; padding-top:0; box-sizing:border-box;}
     `,
     template: `
@@ -43,7 +50,7 @@ export default {
                 x-attr:root="state.root"
             ></x-filesystem-tree>
 
-            <x-splitter></x-splitter>
+            <x-splitter opaque></x-splitter>
 
             <x-filesystem-list 
                 x-prop:filesystem="state.filesystem" 

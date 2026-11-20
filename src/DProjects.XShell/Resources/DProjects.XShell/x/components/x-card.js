@@ -16,7 +16,20 @@ export default {
             footer: {
                 description: "Content for the card footer"
             }
-        }
+        },
+        examples: [
+            {
+                name: "basic",
+                description: "Separate the heading and footer from the card body.",
+                template: `
+                    <x-card>
+                        <h3 slot="header">Project status</h3>
+                        <p>Ready for review.</p>
+                        <small slot="footer">Updated today</small>
+                    </x-card>
+                `
+            }
+        ]
     },
     style: `
         :host {

@@ -9,7 +9,18 @@ export default {
             "": {
                 description: "Default slot for the lazy-loaded content."
             }
-        } 
+        },
+        examples: [
+            {
+                name: "basic",
+                description: "Activate slotted content when it approaches the viewport.",
+                template: `
+                    <x-lazy>
+                        <x-card><h3 slot="header">More details</h3><p>Supplementary content.</p></x-card>
+                    </x-lazy>
+                `
+            }
+        ]
     },
     style: `
         :host {display:inline;}

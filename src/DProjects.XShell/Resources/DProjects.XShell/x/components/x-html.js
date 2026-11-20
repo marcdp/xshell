@@ -59,7 +59,15 @@ export default {
         properties: {
             value: {type:"string", default:"", attribute:true, state:true, description:""}
         },
-        methods: {}
+        methods: {},
+        examples: [
+            {
+                name: "basic",
+                description: "Display HTML as highlighted source.",
+                state: {source: "<p>Hello</p>"},
+                template: `<x-html x-prop:value="state.source"></x-html>`
+            }
+        ]
     },
     style:`
         :host {}

@@ -14,7 +14,39 @@ export default {
             "": {
                 description: "Content for the tab panels"
             }
-        }
+        },
+        examples: [
+            {
+                name: "basic",
+                description: "Group related content in labeled tab panels.",
+                template: `
+                    <x-tabs>
+                        <x-tab label="Overview"><p>Project summary</p></x-tab>
+                        <x-tab label="Activity"><p>Recent changes</p></x-tab>
+                    </x-tabs>
+                `
+            },
+            {
+                name: "initial-selection",
+                description: "Start with the second tab selected using its zero-based index.",
+                template: `
+                    <x-tabs selected-index="1">
+                        <x-tab label="Overview"><p>Project summary</p></x-tab>
+                        <x-tab label="Activity"><p>Recent changes</p></x-tab>
+                    </x-tabs>
+                `
+            },
+            {
+                name: "page-hash",
+                description: "Use the containing Page's fragment to remember the active panel.",
+                template: `
+                    <x-tabs use-hash>
+                        <x-tab label="Overview" hash="overview"><p>Project summary</p></x-tab>
+                        <x-tab label="Activity" hash="activity"><p>Recent changes</p></x-tab>
+                    </x-tabs>
+                `
+            }
+        ]
     },
     style: `
         :host {display:block; }

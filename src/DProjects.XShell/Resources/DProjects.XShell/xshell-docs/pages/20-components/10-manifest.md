@@ -146,6 +146,13 @@ contract: {
 Examples are passive metadata. XShell validates the fields and retains the source strings and sample data in the contract. Example rendering
 and execution are unimplemented. Example `state` stays in the contract and is never merged into Component or Page runtime state.
 
+Public reusable Components should generally include at least one example. One or two examples usually cover a simple Component. General-purpose
+Components often benefit from two or three, and a complex Component may need three to five when they demonstrate distinct capabilities.
+For a reusable Page, show how a caller navigates to or invokes it, including query parameters or context when they are relevant.
+Examples are optional for private and internal resources. Use short, unique kebab-case names within each contract.
+
+Use the contract for concise usage snippets, the [Component guides](index.md) for fuller explanations, and the `x-demo` Pages for interactive examples.
+
 ## Specialized contracts
 
 Specialized schemas reuse the shared definitions and then apply element-specific rules:

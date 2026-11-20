@@ -16,10 +16,7 @@ export default {
     style: `
     `,
     template: `
-        <x-filesystem
-            x-prop:src="state.src"
-            x-prop:path="state.path"
-        >
+        <x-filesystem x-prop:src="state.src" x-prop:path="state.path">
         </x-filesystem>
     `,    
     state: {

@@ -28,7 +28,21 @@ export default {
             "": {
                 description: "Validation message content used when message is not specified."
             }
-        }
+        },
+        examples: [
+            {
+                name: "basic",
+                description: "Require a condition from Page state before form submission.",
+                state: {consent: false},
+                template: `
+                    <x-form>
+                        <x-datafield type="checkbox" label="Consent" x-model="state.consent"></x-datafield>
+                        <x-form-assert label="Consent" x-prop:test="state.consent" message="Confirm consent to continue."></x-form-assert>
+                        <x-button slot="footer" label="Continue" command="submit"></x-button>
+                    </x-form>
+                `
+            }
+        ]
     },
     style: `
         :host {

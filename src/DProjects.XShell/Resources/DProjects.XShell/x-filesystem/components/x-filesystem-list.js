@@ -62,7 +62,20 @@ export default {
                 ]
             },
         },
-        slots: {}
+        slots: {},
+        examples: [
+            {
+                name: "memory-list",
+                description: "List the entries of a fresh memory filesystem supplied through the filesystem property.",
+                language: "javascript",
+                template: `<x-filesystem-list id="files" path="/"></x-filesystem-list>`,
+                code: `
+                    const filesystem = await loader.load("filesystem:mem:");
+                    await filesystem.saveFile("/notes.txt", "Draft");
+                    document.querySelector("#files").filesystem = filesystem;
+                `
+            }
+        ]
     },
     style: `
         :host {width:100%;}

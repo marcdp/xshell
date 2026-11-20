@@ -16,9 +16,15 @@ export default {
         },
         examples: [
             {
-                name: "Basic",
-                template: `<x-accordion></x-accordion>`
-            },
+                name: "basic",
+                description: "Group collapsible panels so opening another panel closes the current one.",
+                template: `
+                    <x-accordion>
+                        <x-accordion-panel label="Overview" expanded><p>Project summary</p></x-accordion-panel>
+                        <x-accordion-panel label="Activity"><p>Recent changes</p></x-accordion-panel>
+                    </x-accordion>
+                `
+            }
         ]
     },
     style: `

@@ -8,7 +8,14 @@ export default {
             height: {type:"string", default:"1em", attribute:true, state:true, description:"The height of the skeleton placeholder."},
             radius: {type:"string", default:".25em", attribute:true, state:true, description:"The border radius of the skeleton placeholder."}
         },
-        methods: {}
+        methods: {},
+        examples: [
+            {
+                name: "basic",
+                description: "Reserve space for a loading heading.",
+                template: `<x-skeleton width="12rem" height="1.25rem" radius="0.25rem"></x-skeleton>`
+            }
+        ]
     },
     style: `
         :host {

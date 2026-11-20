@@ -1,7 +1,17 @@
 
 export default {
     contract: {
-        description: "Displays the child navigation items of the containing Page."
+        description: "Displays the child navigation items of the containing Page.",
+        examples: [
+            {
+                name: "basic",
+                description: "List child navigation items on the Page that owns the menu branch.",
+                template: `
+                    <h1>In this section</h1>
+                    <x-page-index></x-page-index>
+                `
+            }
+        ]
     },
     style: `
         :host {

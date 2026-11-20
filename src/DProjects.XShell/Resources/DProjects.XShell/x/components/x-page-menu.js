@@ -5,7 +5,14 @@ export default {
         description: "Displays the main menu for the current page.",
         events: {},
         properties: {},
-        methods: {}
+        methods: {},
+        examples: [
+            {
+                name: "basic",
+                description: "Place the effective navigation menu in a Page sidebar.",
+                template: `<aside aria-label="Navigation"><x-page-menu></x-page-menu></aside>`
+            }
+        ]
     },
     style: `
         :host {display:block; }

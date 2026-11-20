@@ -7,7 +7,14 @@ export default {
         properties: {
             text: {type:"string", default:"", attribute:true, state:true, description:""}
         },
-        methods: {}
+        methods: {},
+        examples: [
+            {
+                name: "basic",
+                description: "Translate a label using the application's active language.",
+                template: `<x-i18n text="Save"></x-i18n>`
+            }
+        ]
     },
     template: `
         {{ state.localizedText }}

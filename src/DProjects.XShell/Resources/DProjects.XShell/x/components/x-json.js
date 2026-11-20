@@ -31,7 +31,15 @@ export default {
             value: {type:"object", default:null, state:true, changeDetection:"structural", description:"Object to be displayed as syntax-highlighted JSON."},
             indent: {type:"number", default:0, state:true, attribute:true, description:"Indentation level for JSON formatting."}
         },
-        methods: {}
+        methods: {},
+        examples: [
+            {
+                name: "basic",
+                description: "Display an object as indented JSON source.",
+                state: {response: {status: "ready",count: 3}},
+                template: `<x-json x-prop:value="state.response" indent="2"></x-json>`
+            }
+        ]
     },
     style:`
         :host {}

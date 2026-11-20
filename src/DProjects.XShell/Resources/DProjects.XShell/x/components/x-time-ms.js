@@ -16,7 +16,14 @@ export default {
         properties: {
             value: {type:"number", default:0, attribute:true, state:true, description:""}
         },
-        methods: {}
+        methods: {},
+        examples: [
+            {
+                name: "basic",
+                description: "Show an elapsed time measured in milliseconds.",
+                template: `Loaded in <x-time-ms value="128"></x-time-ms>`
+            }
+        ]
     },
     template: `
         {{ state.valueFormatted || ''}}

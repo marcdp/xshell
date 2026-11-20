@@ -24,7 +24,15 @@ export default {
             "toolbar": {
                 description: "Default slot for the rich-text editor toolbar content."
             }
-        } 
+        },
+        examples: [
+            {
+                name: "basic",
+                description: "Edit trusted HTML and bind the edited value to Page state.",
+                state: {notes: "<p><strong>Review:</strong> Add comments here.</p>"},
+                template: `<x-richtext class="standalone" x-model="state.notes"></x-richtext>`
+            }
+        ]
     },
     style: `
         :host(.standalone) {
