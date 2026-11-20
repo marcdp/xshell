@@ -113,6 +113,7 @@ export default class Commands {
                     moduleId,
                     label: resource.label || "",
                     description: resource.description || "",
+                    tags: Object.freeze([...(resource.tags || [])]),
                     category: resource.category || moduleId,
                     icon: resource.icon || "",
                     path: file.path,

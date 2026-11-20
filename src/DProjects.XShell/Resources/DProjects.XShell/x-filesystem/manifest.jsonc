@@ -4,6 +4,7 @@
         "x-filesystem": {
             "label": "x-filesystem",
             "version": "0.9.0",
+            "tags": ["filesystem", "files", "storage"],
             "icon": "",
             "copyright": "",
             "defaults": {

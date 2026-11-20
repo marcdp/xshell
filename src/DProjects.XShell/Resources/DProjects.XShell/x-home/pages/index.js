@@ -1,5 +1,6 @@
 export default {
     contract: {
+        tags: ["home", "navigation"],
         properties: {
             areaId: {type: "string", default: "", query: true, state: true, description: "Area whose navigation menu supplies Quick Links."}
         }

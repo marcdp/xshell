@@ -6,6 +6,7 @@ A definition-based Component or Page declares its public contract inline in its 
 export default {
     contract: {
         label: "Example Component",
+        tags: ["ui", "examples"],
         properties: {
             value: {
                 type: "string",
@@ -36,11 +37,17 @@ The Component and Page loaders validate the complete default export against `com
 | `label` | Human-readable contract label. |
 | `description` | Human-readable explanation of the element or capability. |
 | `icon` | Icon identifier or resource description. |
+| `tags` | Ordered machine-readable classification identifiers. |
 | `types` | Contract-local reusable named types. |
 | `properties` | Public property descriptors. |
 | `events` | Public events and their `detail` fields. |
 | `methods` | Public methods, parameters, and return values. |
 | `examples` | Optional [usage examples](#usage-examples) for documentation and tooling. |
+
+`tags` is optional and may be empty. Each tag is a lowercase kebab-case identifier matching
+`^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$`; duplicates are invalid and declaration order is preserved. Tags classify the contract as a whole and are
+passive metadata: XShell does not infer, normalize, sort, inherit, or act on them. For Components and Pages, author them in `contract.tags`, not
+`meta.tags`.
 
 Value types are `string`, `number`, `integer`, `boolean`, `object`, `array`, `function`, `date`, and `any`. Method returns also accept
 `void`. A value descriptor selects exactly one of:
@@ -162,7 +169,7 @@ Specialized schemas reuse the shared definitions and then apply element-specific
   Component contract fields.
 - `page.schema.json` embeds the contract in the Page implementation object, adds Page property metadata and `slots`, and rejects unsupported Page
   contract fields. The loader separately rejects slots reported by the selected Page render engine.
-- `command.schema.json` defines the specialized Command contract with required `execute` metadata and references the shared `types` and `examples` fields.
+- `command.schema.json` defines the specialized Command contract with required `execute` metadata and references the shared `tags`, `types`, and `examples` fields.
 
 Modules do not define public contracts; `module.schema.json` rejects `contract` on effective Module configurations.
 

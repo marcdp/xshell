@@ -13,12 +13,13 @@
           "moduleId": {"type": "string", "description": "Owning module ID, or xshell for a framework Command."},
           "label": {"type": "string", "description": "Authored Command label, or an empty string when omitted."},
           "description": {"type": "string", "description": "Authored Command description, or an empty string when omitted."},
+          "tags": {"type": "array", "items": {"type": "string"}, "description": "Frozen authored Command tag identifiers in declaration order."},
           "category": {"type": "string", "description": "Authored category when available; otherwise the owning module ID."},
           "icon": {"type": "string", "description": "Authored Command icon, or an empty string when omitted."},
           "path": {"type": "string", "description": "Normalized virtual path of the Command JavaScript file."},
           "size": {"type": "integer", "minimum": 0, "description": "Physical Command file size in bytes."}
         },
-        "required": ["id", "moduleId", "label", "description", "category", "icon", "path", "size"],
+        "required": ["id", "moduleId", "label", "description", "tags", "category", "icon", "path", "size"],
         "additionalProperties": false
       }
     },

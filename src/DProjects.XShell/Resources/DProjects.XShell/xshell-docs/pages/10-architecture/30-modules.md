@@ -27,6 +27,7 @@ A module manifest contains its local definition under its canonical id:
             "version": "1.2.3",
             "copyright": "",
             "icon": "",
+            "tags": ["business", "order-management"],
             "defaults": {
                 "page": { "renderEngine": "x", "stateEngine": "proxy" },
                 "component": { "renderEngine": "x", "stateEngine": "proxy" }
@@ -74,6 +75,9 @@ The effective module definition includes generated location and inventory metada
 `configUrl` identifies the selected descriptor. `assets.url` identifies the physical resource container. `assets.path` identifies the virtual,
 generation-qualified application namespace. They are not interchangeable.
 
+Optional module `tags` are authored classification identifiers retained through normalization and merging at `config.modules[id].tags`. They are
+not dependencies, Area membership, or public contracts, and they are not inherited by the module's resources.
+
 Merge order is framework first, dependency-first among modules, and root last. Objects merge recursively, arrays concatenate, and later scalar
 values replace earlier values. This is whole-manifest composition; the active bootstrap has no separate reference-contribution mechanism.
 
@@ -95,7 +99,8 @@ are not Modules service options.
 Startup explicitly initializes Modules. Its `init()` method iterates effective `config.modules` once and creates one runtime record
 per id. Repeated dependency requirements therefore do not create multiple runtime module instances. Retrieve a module with
 `xshell.modules.getModuleById(id)`; the accessor delegates to the configured singleton, and `xshell.modules.registry` is a frozen inspection
-snapshot. Each snapshot file retains its path and size plus a frozen copy of optional generated `resource` metadata, so management interfaces can
+snapshot. Each snapshot file retains its path and size plus a frozen copy of optional generated `resource` metadata, including a separately frozen
+tags array when present, so management interfaces can
 present inventory descriptions without loading the underlying resource.
 
 Before controllers start, Modules verifies optional `requires` service names against the finalized service registry. It independently discovers

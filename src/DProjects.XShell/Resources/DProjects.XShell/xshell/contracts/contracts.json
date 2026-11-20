@@ -5,7 +5,7 @@
     "registry": {
       "type": "array",
       "readonly": true,
-      "description": "Snapshot of contract metadata, excluding the mutable contract definitions. Each entry contains id, url, path, moduleId, label, description, icon, size, status, and time.",
+      "description": "Snapshot of contract metadata, excluding the mutable contract definitions. Each entry contains id, url, path, moduleId, label, description, tags, icon, size, status, and time.",
       "schema": {
         "type": "array",
         "items": {
@@ -17,12 +17,13 @@
             "moduleId": { "type": "string" },
             "label": { "type": "string" },
             "description": { "type": "string" },
+            "tags": { "type": "array", "items": { "type": "string" }, "description": "Frozen authored contract tag identifiers in declaration order." },
             "icon": { "type": ["string", "null"] },
             "size": { "type": "number" },
             "status": { "type": "string" },
             "time": { "type": "number" }
           },
-          "required": ["id", "url", "path", "moduleId", "label", "description", "icon", "size", "status", "time"]
+          "required": ["id", "url", "path", "moduleId", "label", "description", "tags", "icon", "size", "status", "time"]
         }
       }
     }

@@ -9,6 +9,7 @@
     "version": {"type": "string", "description": "Module version."},
     "copyright": {"type": "string", "description": "Module copyright notice."},
     "icon": {"type": "string", "description": "Module icon resource."},
+    "tags": {"$ref": "./contract.schema.json#/$defs/tags", "description": "Ordered machine-readable classification identifiers authored for the module."},
     "configUrl": {"type": "string", "format": "uri", "description": "Fully qualified absolute URL of the normalized module configuration document."},
     "params": {"type": "object", "additionalProperties": true, "description": "Parameters supplied to the canonical module by root application composition."},
     "requires": {"type": "array", "items": {"type": "string", "minLength": 1}, "uniqueItems": true, "description": "Names of services that must be registered before the module is initialized."},
@@ -58,7 +59,8 @@
         "title": {"type": "string", "description": "Human-readable Page or JSON Schema title."},
         "label": {"type": "string", "description": "Human-readable Component, Command, or Contract label."},
         "description": {"type": "string", "description": "Human-readable resource description."},
-        "icon": {"type": "string", "description": "Optional resource icon."}
+        "icon": {"type": "string", "description": "Optional resource icon."},
+        "tags": {"$ref": "./contract.schema.json#/$defs/tags", "description": "Ordered machine-readable classification identifiers copied from the resource contract."}
       },
       "required": ["type"],
       "additionalProperties": false,

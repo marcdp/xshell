@@ -9,6 +9,9 @@ export default {
     meta: {
         title: "Contracts"
     },
+    style: `
+        .tags { display: flex; flex-wrap: wrap; gap: .25em; align-items: center; }
+    `,
     template: `
         <p>Shows discovered contracts, their owning framework or module package, metadata, size, load time, and status.</p>
         <x-listview view="details" x-on:activate="inspectContract">
@@ -17,6 +20,7 @@ export default {
                 <x-listview-column width="12em"><x-datafield type="search" x-model="state.label" placeholder="Label"></x-datafield></x-listview-column>
                 <x-listview-column><x-datafield type="search" x-model="state.description" placeholder="Description"></x-datafield></x-listview-column>
                 <x-listview-column width="12em"><x-datafield type="search" x-model="state.moduleId" placeholder="Module"></x-datafield></x-listview-column>
+                <x-listview-column width="12em"><x-datafield type="search" x-model="state.tags" placeholder="Tags"></x-datafield></x-listview-column>
                 <x-listview-column label="Size" width="5em" style="text-align:right"></x-listview-column>
                 <x-listview-column label="Time" width="5em" style="text-align:right"></x-listview-column>
                 <x-listview-column label="Status" width="5em" style="text-align:right"></x-listview-column>
@@ -33,6 +37,9 @@ export default {
                 <div>{{ contractItem.label }}</div>
                 <x-truncate x-attr:text="contractItem.description"></x-truncate>
                 <div>{{ contractItem.moduleId }}</div>
+                <div class="tags">
+                    <x-chip x-for="tag in contractItem.tags" x-key="tag" x-attr:label="tag"></x-chip>
+                </div>
                 <x-file-size x-prop:value="contractItem.size" style="text-align:right"></x-file-size>
                 <x-time-ms x-prop:value="contractItem.time" style="text-align:right"></x-time-ms>
                 <div style="text-align:right">{{ contractItem.status }}</div>
@@ -47,6 +54,7 @@ export default {
         label: "",
         description: "",
         moduleId: "",
+        tags: "",
         contractItems: []
     },
     controller({ state, events, contracts, navigation, page }) {
@@ -56,6 +64,7 @@ export default {
                this.refresh();
                events.on(state, "change:id", "refresh");
                events.on(state, "change:moduleId", "refresh");
+               events.on(state, "change:tags", "refresh");
                events.on(state, "change:description", "refresh");
                events.on(state, "change:label", "refresh");
             },
@@ -91,12 +100,17 @@ export default {
                     if (state.moduleId && !item.moduleId.includes(state.moduleId)) {
                         valid = false;
                     }
+                    if (!this.matchesTags(item.tags, state.tags)) valid = false;
                     if (valid) {
                         contractItems.push(item);
                     }
                 }
                 contractItems.sort((a, b) => a.id.localeCompare(b.id));
                 state.contractItems = contractItems;
+            },
+            matchesTags(tags, query) {
+                // Match a partial tag identifier in the projected contract metadata.
+                return !query || (tags || []).some(tag => tag.toLowerCase().includes(query.toLowerCase()));
             }
         };
     }

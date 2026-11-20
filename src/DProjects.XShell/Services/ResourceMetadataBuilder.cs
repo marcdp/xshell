@@ -9,6 +9,9 @@ namespace DProjects.XShell.Services {
 
     internal sealed partial class ResourceMetadataBuilder {
 
+        // vars
+        private static readonly Regex TagPattern = new("^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$", RegexOptions.CultureInvariant);
+
         // methods
         public async Task<IReadOnlyList<EnrichedFileIndexItem>> EnrichAsync(string moduleRoot, IEnumerable<FileIndexItem> files,
             CancellationToken cancellationToken) {
@@ -42,7 +45,7 @@ namespace DProjects.XShell.Services {
                 return type switch {
                     "page" when extension.Equals(".md", StringComparison.OrdinalIgnoreCase) =>
                         await BuildMarkdownPageAsync(sourcePath, cancellationToken),
-                    "contract" => await BuildJsonAsync(sourcePath, "contract", ["label", "description", "icon"], cancellationToken),
+                    "contract" => await BuildJsonAsync(sourcePath, "contract", ["label", "description", "icon"], cancellationToken, normalizedPath),
                     "schema" => await BuildJsonAsync(sourcePath, "schema", ["$id", "title", "description"], cancellationToken),
                     _ => await BuildJavaScriptAsync(sourcePath, normalizedPath, type, extension, cancellationToken)
                 };
@@ -78,9 +81,12 @@ namespace DProjects.XShell.Services {
             // extract the small type-specific surface without copying the complete definition contract
             if (type == "page") {
                 var meta = ReadStaticObject(definition, "meta", displayPath);
+                // Preserve existing Page metadata extraction for nonliteral contracts; only inline contract tags are discoverable statically.
+                var contract = definition.FindProperty("contract")?.Value.AsObject();
                 AddStaticString(resource, "title", meta, "title", displayPath, "meta.title");
                 AddStaticString(resource, "description", meta, "description", displayPath, "meta.description");
                 AddStaticString(resource, "icon", meta, "icon", displayPath, "meta.icon");
+                AddStaticTags(resource, contract, displayPath);
             } else if (type == "component") {
                 var meta = ReadStaticObject(definition, "meta", displayPath);
                 var contract = ReadStaticObject(definition, "contract", displayPath);
@@ -88,12 +94,14 @@ namespace DProjects.XShell.Services {
                 AddPreferredStaticString(resource, "description", meta, "description", contract, "description", displayPath,
                     "meta.description", "contract.description");
                 AddPreferredStaticString(resource, "icon", meta, "icon", contract, "icon", displayPath, "meta.icon", "contract.icon");
+                AddStaticTags(resource, contract, displayPath);
             } else if (type == "command") {
                 var contract = RequireStaticObject(definition, "contract", displayPath, "Command resource");
                 RequireStaticObject(contract, "execute", displayPath, "Command contract");
                 AddStaticString(resource, "label", contract, "label", displayPath, "contract.label");
                 AddStaticString(resource, "description", contract, "description", displayPath, "contract.description");
                 AddStaticString(resource, "icon", contract, "icon", displayPath, "contract.icon");
+                AddStaticTags(resource, contract, displayPath);
             }
             return resource;
         }
@@ -130,8 +138,33 @@ namespace DProjects.XShell.Services {
                 $"Resource metadata '{propertyPath}' in '{displayPath}' must be a static string literal.");
             resource[targetName] = value;
         }
+        private static void AddStaticTags(JsonObject resource, JavaScriptSource.JavaScriptObject? contract, string displayPath) {
+            // Copy only explicitly authored contract tags after applying the same lexical and uniqueness rules as the schemas.
+            var property = contract?.FindProperty("tags");
+            if (property == null) return;
+            IReadOnlyList<string>? tags;
+            try {
+                tags = property.Value.GetStaticStringArray();
+            } catch (InvalidOperationException exception) {
+                throw new InvalidOperationException($"Resource metadata 'contract.tags' in '{displayPath}' is invalid: {exception.Message}", exception);
+            }
+            if (tags == null) throw new InvalidOperationException(
+                $"Resource metadata 'contract.tags' in '{displayPath}' must be a static array of string literals.");
+            ValidateTags(tags, displayPath, "contract.tags");
+            resource["tags"] = new JsonArray(tags.Select(tag => JsonValue.Create(tag)).ToArray());
+        }
+        private static void ValidateTags(IEnumerable<string> tags, string displayPath, string propertyPath) {
+            // Reject invalid or duplicate identifiers without normalizing authored order or values.
+            var unique = new HashSet<string>(StringComparer.Ordinal);
+            foreach (var tag in tags) {
+                if (!TagPattern.IsMatch(tag)) throw new InvalidOperationException(
+                    $"Resource metadata '{propertyPath}' in '{displayPath}' contains invalid tag '{tag}'. Tags must use lowercase kebab-case.");
+                if (!unique.Add(tag)) throw new InvalidOperationException(
+                    $"Resource metadata '{propertyPath}' in '{displayPath}' contains duplicate tag '{tag}'.");
+            }
+        }
         private static async Task<JsonObject> BuildJsonAsync(string sourcePath, string type, IReadOnlyList<string> properties,
-            CancellationToken cancellationToken) {
+            CancellationToken cancellationToken, string? contractDisplayPath = null) {
             // parse ordinary JSON resources and retain only the supported descriptive strings
             var source = await File.ReadAllTextAsync(sourcePath, cancellationToken);
             var document = JsonNode.Parse(source) as JsonObject ?? throw new InvalidOperationException("Resource must contain a JSON object.");
@@ -143,6 +176,16 @@ namespace DProjects.XShell.Services {
                 }
                 resource[propertyName == "$id" ? "id" : propertyName] = text;
             }
+            if (contractDisplayPath == null) return resource;
+
+            // Extend standalone contract metadata with validated authored tags.
+            if (!document.TryGetPropertyValue("tags", out var tagsNode)) return resource;
+            if (tagsNode is not JsonArray array || array.Any(item => item is not JsonValue value || !value.TryGetValue<string>(out _))) {
+                throw new InvalidOperationException($"Resource metadata 'contract.tags' in '{contractDisplayPath}' must be an array of strings.");
+            }
+            var tags = array.Select(item => item!.GetValue<string>()).ToArray();
+            ValidateTags(tags, contractDisplayPath, "contract.tags");
+            resource["tags"] = new JsonArray(tags.Select(tag => JsonValue.Create(tag)).ToArray());
             return resource;
         }
         private static async Task<JsonObject> BuildMarkdownPageAsync(string sourcePath, CancellationToken cancellationToken) {

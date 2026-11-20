@@ -2,6 +2,7 @@
   "$schema": "../../xshell/schemas/contract.schema.json",
   "label": "Preferences",
   "description": "Browser-local persistent named values stored directly through IndexedDB structured cloning.",
+  "tags": ["preferences", "storage"],
   "types": {
     "preferenceValue": {
       "type": "any",

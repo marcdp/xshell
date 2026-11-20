@@ -9,6 +9,9 @@ export default {
     meta: {
         title: "Services"
     },
+    style: `
+        .tags { display: flex; flex-wrap: wrap; gap: .25em; align-items: center; }
+    `,
     template: `
         <p>Shows registered services, their modules and contracts, resource metadata, and load status.</p>
         <x-listview view="details" x-on:activate="inspectService">
@@ -16,6 +19,7 @@ export default {
                 <x-listview-column width="10em"><x-datafield type="search" x-model="state.id" placeholder="Service"></x-datafield></x-listview-column>
                 <x-listview-column width="10em"><x-datafield type="search" x-model="state.moduleId" placeholder="Module"></x-datafield></x-listview-column>
                 <x-listview-column width="10em"><x-datafield type="search" x-model="state.contractId" placeholder="Contract"></x-datafield></x-listview-column>
+                <x-listview-column width="12em"><x-datafield type="search" x-model="state.tags" placeholder="Tags"></x-datafield></x-listview-column>
                 <x-listview-column><x-datafield type="search" x-model="state.description" placeholder="Description"></x-datafield></x-listview-column>
                 <x-listview-column label="Size" width="5em" style="text-align:right"></x-listview-column>
                 <x-listview-column label="Time" width="5em" style="text-align:right"></x-listview-column>
@@ -33,6 +37,9 @@ export default {
                         <x-icon icon="x-open-in-new" ></x-icon>
                     </x-anchor>
                 </div>
+                <div class="tags">
+                    <x-chip x-for="tag in item.tags" x-key="tag" x-attr:label="tag"></x-chip>
+                </div>
                 <x-truncate x-attr:text="item.description"></x-truncate>
                 <x-file-size style="text-align:right" x-prop:value="item.size" ></x-file-size>
                 <div style="text-align:right"><x-time-ms x-prop:value="item.time"></x-time-ms></div>
@@ -48,6 +55,7 @@ export default {
         id: "",
         moduleId: "",
         contractId: "",
+        tags: "",
         description: "",
         items: []
     },
@@ -59,6 +67,7 @@ export default {
                events.on(state, "change:id", "refresh");
                events.on(state, "change:moduleId", "refresh");
                events.on(state, "change:contractId", "refresh");
+               events.on(state, "change:tags", "refresh");
                events.on(state, "change:description", "refresh");
                events.on(bus, "xshell:service:created", "refresh");
             },
@@ -98,6 +107,7 @@ export default {
                     if (state.moduleId && !moduleId.includes(state.moduleId)) {
                         valid = false;
                     }
+                    if (!this.matchesTags(item.tags, state.tags)) valid = false;
                     if (valid) {
                         list.push({
                             serviceId: item.id,
@@ -105,6 +115,7 @@ export default {
                             contractUrl: item.contractUrl,
                             contractId: contractId || "",
                             description: description,
+                            tags: item.tags || [],
                             moduleId: moduleId,
                             url: item.url,
                             status: item.state,
@@ -116,6 +127,10 @@ export default {
                 }
                 list.sort((a, b) => a.serviceId.localeCompare(b.serviceId));
                 state.items = list;
+            },
+            matchesTags(tags, query) {
+                // Match a partial tag identifier from the registered public contract.
+                return !query || (tags || []).some(tag => tag.toLowerCase().includes(query.toLowerCase()));
             }
         };
     }

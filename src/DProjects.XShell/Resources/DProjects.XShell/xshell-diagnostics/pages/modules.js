@@ -9,6 +9,9 @@ export default {
     meta: {
         title: "Modules"
     },
+    style: `
+        .tags { display: flex; flex-wrap: wrap; gap: .25em; align-items: center; }
+    `,
     template: `
         <p>Shows loaded modules, their asset locations, build metadata, resource counts, and status.</p>
         <x-listview view="details">
@@ -16,6 +19,7 @@ export default {
                 <x-listview-column width="12em"><x-datafield type="search" x-model="state.id" placeholder="Module"></x-datafield></x-listview-column>
                 <x-listview-column><x-datafield type="search" x-model="state.label" placeholder="Label"></x-datafield></x-listview-column>
                 <x-listview-column label="Version" width="5em"></x-listview-column>
+                <x-listview-column width="12em"><x-datafield type="search" x-model="state.tags" placeholder="Tags"></x-datafield></x-listview-column>
                 <x-listview-column label="Assets path"></x-listview-column>
                 <x-listview-column label="Size" width="6em" style="text-align:right"></x-listview-column>
                 <x-listview-column label="Files" width="5em" style="text-align:right"></x-listview-column>
@@ -32,6 +36,9 @@ export default {
             >
                 <div>{{ module.label }}</div>
                 <div>{{ module.version }}</div>
+                <div class="tags">
+                    <x-chip x-for="tag in module.tags" x-key="tag" x-attr:label="tag"></x-chip>
+                </div>
                 <div>
                     {{ module.assets.path }}
                     <x-anchor x-attr:href="module.assets.url" target="_blank" class="plain"><x-icon icon="x-open-in-new" ></x-icon></x-anchor>
@@ -49,6 +56,7 @@ export default {
         id: "",
         version: "",
         label: "",
+        tags: "",
         assetPath: "",
         configUrl: "",
         configUrlName: "",
@@ -64,6 +72,7 @@ export default {
                events.on(state, "change:id", "refresh");
                events.on(state, "change:version", "refresh");
                events.on(state, "change:label", "refresh");
+               events.on(state, "change:tags", "refresh");
                events.on(state, "change:assetPath", "refresh");
                events.on(state, "change:configUrl", "refresh");
             },
@@ -75,6 +84,7 @@ export default {
                     if (state.id && target.id.indexOf(state.id) == -1 ) valid = false;
                     if (state.version && target.version.indexOf(state.version) == -1 ) valid = false;
                     if (state.label && (target.label || "").indexOf(state.label) == -1 ) valid = false;
+                    if (!this.matchesTags(target.tags, state.tags)) valid = false;
                     if (state.assetPath && target.assets.path.indexOf(state.assetPath) == -1 ) valid = false;
                     if (state.configUrl && target.configUrl.indexOf(state.configUrl) == -1 ) valid = false;
                     let size = 0;
@@ -106,6 +116,7 @@ export default {
                             id: target.id,
                             version: target.version,
                             label: target.label || "",
+                            tags: target.tags || [],
                             icon: target.icon || "x-module",
                             assets: {
                                 path: target.assets.path,
@@ -122,6 +133,10 @@ export default {
                 };
                 list.sort((a, b) => a.id.localeCompare(b.id));
                 state.modules = list;
+            },
+            matchesTags(tags, query) {
+                // Match a partial authored module tag without inspecting contained resources.
+                return !query || (tags || []).some(tag => tag.toLowerCase().includes(query.toLowerCase()));
             }
         };
     }

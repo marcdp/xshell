@@ -38,16 +38,18 @@ test("Diagnostics console derives its tabs from the effective navigation menu it
     assert.deepEqual(state.menuitems, [tasks]);
 });
 
-test("Modules diagnostics filters on the canonical configured assets path", () => {
-    const state = { id: "", version: "", label: "", assetPath: "/_assets/orders", configUrl: "", modules: [] };
+test("Modules diagnostics filters on the canonical configured assets path and authored tags", () => {
+    const state = { id: "", version: "", label: "", tags: "MER", assetPath: "/_assets/orders", configUrl: "", modules: [] };
     const modules = { registry: [{
-        id: "orders", label: "Orders", version: "", assets: { path: "/_assets/orders", url: "https://example.test/orders/" }, configUrl: "/orders/manifest.jsonc", files: []
+        id: "orders", label: "Orders", version: "", tags: ["commerce", "orders"], assets: { path: "/_assets/orders", url: "https://example.test/orders/" },
+        configUrl: "/orders/manifest.jsonc", files: []
     }] };
     const controller = ModulesPage.controller({ state, modules });
 
     controller.refresh();
     assert.equal(state.modules.length, 1);
     assert.equal(state.modules[0].assets.path, "/_assets/orders");
+    assert.deepEqual(state.modules[0].tags, ["commerce", "orders"]);
     state.assetPath = "/_assets/other";
     controller.refresh();
     assert.deepEqual(state.modules, []);
@@ -59,9 +61,9 @@ test("Page and Component diagnostics use generated metadata before resources loa
         modules: { orders: {
             assets: { path: "/_assets/orders" }, icon: "module-icon", files: [
                 { path: "/_assets/orders/pages/index.js", size: 10,
-                    resource: { type: "page", title: "Order Home", description: "Manage Orders", icon: "page-icon" } },
+                    resource: { type: "page", title: "Order Home", description: "Manage Orders", icon: "page-icon", tags: ["navigation", "orders"] } },
                 { path: "/_assets/orders/components/x-order.js", size: 20,
-                    resource: { type: "component", label: "Order Card", description: "Shows Orders", icon: "component-icon" } }
+                    resource: { type: "component", label: "Order Card", description: "Shows Orders", icon: "component-icon", tags: ["commerce", "cards"] } }
             ]
         } }
     };
@@ -69,19 +71,21 @@ test("Page and Component diagnostics use generated metadata before resources loa
     globalThis.customElements = { get: t.mock.fn(() => undefined) };
     t.after(() => { delete globalThis.customElements; });
 
-    const pageState = { ...structuredClone(PagesPage.state), label: "order home", description: "manage orders" };
+    const pageState = { ...structuredClone(PagesPage.state), label: "order home", description: "manage orders", tags: "VIG" };
     PagesPage.controller({ state: pageState, config, loader }).refresh();
     assert.deepEqual(pageState.pages.map(({ id, label, description, icon, status, time }) =>
         ({ id, label, description, icon, status, time })), [{
         id: "/_assets/orders/pages/index.js", label: "Order Home", description: "Manage Orders", icon: "page-icon", status: "", time: 0
     }]);
+    assert.deepEqual(pageState.pages[0].tags, ["navigation", "orders"]);
 
-    const componentState = { ...structuredClone(ComponentsPage.state), id: "X-ORDER", description: "shows orders" };
+    const componentState = { ...structuredClone(ComponentsPage.state), id: "X-ORDER", description: "shows orders", tags: "MER" };
     ComponentsPage.controller({ state: componentState, config, loader }).refresh();
     assert.deepEqual(componentState.components.map(({ id, label, description, icon, status, time }) =>
         ({ id, label, description, icon, status, time })), [{
         id: "x-order", label: "Order Card", description: "Shows Orders", icon: "component-icon", status: "", time: 0
     }]);
+    assert.deepEqual(componentState.components[0].tags, ["commerce", "cards"]);
     assert.equal(customElements.get.mock.callCount(), 1);
 });
 
@@ -105,10 +109,10 @@ test("Schema diagnostics keeps resolver IDs separate from generated schema IDs a
 });
 
 test("Commands diagnostics reads and filters service descriptors without configuration access", () => {
-    const state = {...structuredClone(CommandsPage.state), moduleId: "FILE", description: "encrypts"};
+    const state = {...structuredClone(CommandsPage.state), moduleId: "FILE", description: "encrypts", tags: "CUR"};
     const commands = {list: () => [
-        {id: "filesystem.encrypt", label: "Encrypt", moduleId: "filesystem", category: "security", description: "Encrypts a file", icon: "x-lock", path: "/commands/encrypt.js", size: 10},
-        {id: "runtime.inspect", label: "Inspect", moduleId: "xshell", category: "runtime", description: "Shows runtime", icon: "", path: "/commands/inspect.js", size: 20}
+        {id: "filesystem.encrypt", label: "Encrypt", moduleId: "filesystem", category: "security", tags: ["files", "security"], description: "Encrypts a file", icon: "x-lock", path: "/commands/encrypt.js", size: 10},
+        {id: "runtime.inspect", label: "Inspect", moduleId: "xshell", category: "runtime", tags: [], description: "Shows runtime", icon: "", path: "/commands/inspect.js", size: 20}
     ]};
 
     CommandsPage.controller({state, commands}).refresh();
@@ -156,14 +160,14 @@ test("Bus diagnostics retains only the newest 1000 events", () => {
 });
 
 test("Services diagnostics re-reads the public registry when a service is created", () => {
-    const state = Object.assign(new EventTarget(), { id: "", moduleId: "", contractId: "", description: "", items: [] });
+    const state = Object.assign(new EventTarget(), { id: "", moduleId: "", contractId: "", tags: "ROUT", description: "", items: [] });
     const bus = new EventTarget();
     let reads = 0;
     let serviceState = "registered";
     const services = {
         get registry() {
             reads++;
-            return [{ id: "example", state: serviceState, initializationState: "not-initialized" }];
+            return [{ id: "example", state: serviceState, initializationState: "not-initialized", tags: ["navigation", "routing"] }];
         }
     };
     let controller;
@@ -171,6 +175,7 @@ test("Services diagnostics re-reads the public registry when a service is create
     controller.load();
     assert.equal(state.items[0].status, "registered");
     assert.equal(state.items[0].initializationStatus, "not-initialized");
+    assert.deepEqual(state.items[0].tags, ["navigation", "routing"]);
 
     serviceState = "created";
     bus.dispatchEvent(new Event("xshell:service:created"));
@@ -395,7 +400,7 @@ function createInspector(t, query = "", { resolutionError, instance = { mode: "p
             return instance;
         }
     };
-    const contracts = { getContractById: id => id === "navigation" ? NavigationContract : { label: "Areas" } };
+    const contracts = { getContractById: id => id === "navigation" ? { ...NavigationContract, tags: ["navigation", "routing"] } : { label: "Areas", tags: ["layout"] } };
     const resolver = { resolve: () => ({ path: "/_assets/x/pages/invoke.js" }) };
     const controller = InspectorPage.controller({ state, services, contracts, resolver, bus, page, navigation });
     controller.load();
@@ -412,6 +417,7 @@ test("Inspector automatically resolves the service named in the URL and displays
     assert.deepEqual(state.properties.map(item => item.name), Object.keys(NavigationContract.properties));
     assert.deepEqual(state.methods.map(item => item.name), Object.keys(NavigationContract.methods));
     assert.deepEqual(state.serviceEvents.map(item => item.name), Object.keys(NavigationContract.events));
+    assert.deepEqual(state.tags, ["navigation", "routing"]);
     assert.doesNotMatch(InspectorPage.template, /type="select"|label="Resolve"/);
     assert.match(InspectorPage.template, /<x-page x-if="method.opened"/);
     assert.ok(state.methods.every(method => !method.opened));
@@ -507,10 +513,22 @@ test("Inspector removes service-monitoring listeners on unmount and unload", t =
 });
 
 test("Contracts diagnostics reads projected contract metadata", () => {
-    const state = { id: "", label: "", description: "", moduleId: "", contractItems: [] };
-    const contracts = { registry: [{ id: "toast", label: "Toast", description: "Messages", moduleId: "x", url: "/toast.json" }] };
+    const state = { id: "", label: "", description: "", moduleId: "", tags: "NOT", contractItems: [] };
+    const contracts = { registry: [
+        { id: "toast", label: "Toast", description: "Messages", moduleId: "x", tags: ["notifications", "ui"], url: "/toast.json" },
+        { id: "storage", label: "Storage", description: "Files", moduleId: "x", tags: ["files"], url: "/storage.json" }
+    ] };
     ContractsPage.controller({ state, contracts }).refresh();
-    assert.deepEqual(state.contractItems, contracts.registry);
+    assert.deepEqual(state.contractItems, [contracts.registry[0]]);
+});
+
+test("Tag columns use ordinary wrapping chips and retain an empty row cell", () => {
+    for (const page of [CommandsPage, ComponentsPage, PagesPage, ContractsPage, ModulesPage, ServicesPage]) {
+        assert.match(page.template, /x-model="state\.tags" placeholder="Tags"/);
+        assert.match(page.template, /<div class="tags">\s*<x-chip x-for="tag in [^"]+\.tags" x-key="tag" x-attr:label="tag"><\/x-chip>/);
+        assert.doesNotMatch(page.template, /<x-chip[^>]+removable/);
+        assert.match(page.style, /flex-wrap:\s*wrap/);
+    }
 });
 
 test("Loader diagnostics re-reads snapshots after events and preserves clear", () => {

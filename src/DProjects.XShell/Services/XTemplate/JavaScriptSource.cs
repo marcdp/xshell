@@ -154,6 +154,25 @@ namespace DProjects.XShell.Services.XTemplate {
             if (token.Kind is not TokenKind.String and not TokenKind.Template) return null;
             return DecodeQuotedString(token.Text, token.Start);
         }
+        private IReadOnlyList<string>? GetStaticStringArray(int valueStartTokenIndex, int valueEndTokenIndex) {
+            // Accept only a complete array literal containing static quoted strings and optional trailing commas.
+            if (!_tokens[valueStartTokenIndex].Is("[") || !_tokens[valueEndTokenIndex].Is("]") ||
+                FindMatchingToken(valueStartTokenIndex, "[", "]") != valueEndTokenIndex) return null;
+            var result = new List<string>();
+            var index = valueStartTokenIndex + 1;
+            while (index < valueEndTokenIndex) {
+                var token = _tokens[index];
+                if (token.Is(",")) return null;
+                if (token.Kind == TokenKind.Template && HasTemplateSubstitution(token.Text)) return null;
+                if (token.Kind is not TokenKind.String and not TokenKind.Template) return null;
+                result.Add(DecodeQuotedString(token.Text, token.Start));
+                index++;
+                if (index == valueEndTokenIndex) break;
+                if (!_tokens[index].Is(",")) return null;
+                index++;
+            }
+            return result;
+        }
         private static bool HasTemplateSubstitution(string literal) {
             for (var index = 1; index < literal.Length - 1; index++) {
                 if (literal[index] == '\\') {
@@ -275,6 +294,7 @@ namespace DProjects.XShell.Services.XTemplate {
             // methods
             public JavaScriptObject? AsObject() => _document.AsObject(_startTokenIndex, _endTokenIndex);
             public string? GetStaticString() => _document.GetStaticString(_startTokenIndex, _endTokenIndex);
+            public IReadOnlyList<string>? GetStaticStringArray() => _document.GetStaticStringArray(_startTokenIndex, _endTokenIndex);
         }
 
         private enum TokenKind { Identifier, String, Template, Punctuation, Number, Regex }

@@ -41,6 +41,7 @@ export default class Contracts {
             moduleId: item.moduleId,
             label: item.contract.label || "",
             description: item.contract.description || "",
+            tags: Object.freeze([...(item.contract.tags || [])]),
             icon: item.contract.icon || null,
             size: item.size,
             status: item.status,

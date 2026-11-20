@@ -9,6 +9,9 @@ export default {
     meta: {
         title: "Pages"
     },
+    style: `
+        .tags { display: flex; flex-wrap: wrap; gap: .25em; align-items: center; }
+    `,
     template: `
         <p>Shows discovered pages, their owning modules, size, load time, and load status.</p>
         <x-listview view="details" x-on:activate="inspectContract">
@@ -16,6 +19,7 @@ export default {
                 <x-listview-column><x-datafield type="search" x-model="state.label" placeholder="Label"></x-datafield></x-listview-column>
                 <x-listview-column width="17em"><x-datafield type="search" x-model="state.id" placeholder="Page ID"></x-datafield></x-listview-column>
                 <x-listview-column width="10em"><x-datafield type="search" x-model="state.moduleId" placeholder="Module"></x-datafield></x-listview-column>
+                <x-listview-column width="12em"><x-datafield type="search" x-model="state.tags" placeholder="Tags"></x-datafield></x-listview-column>
                 <x-listview-column width="10em"><x-datafield type="search" x-model="state.description" placeholder="Description"></x-datafield></x-listview-column>
                 <x-listview-column label="Size" width="5em" style="text-align:right"></x-listview-column>
                 <x-listview-column label="Time" width="5em" style="text-align:right"></x-listview-column>
@@ -31,6 +35,9 @@ export default {
             >
                 <div>{{ page.id }}</div>
                 <div>{{ page.moduleId }}</div>
+                <div class="tags">
+                    <x-chip x-for="tag in page.tags" x-key="tag" x-attr:label="tag"></x-chip>
+                </div>
                 <div>{{ page.description }}</div>
                 <x-file-size x-prop:value="page.size" style="text-align:right"></x-file-size>
                 <div style="text-align:right"><x-time-ms x-prop:value="page.time"></x-time-ms></div>
@@ -45,6 +52,7 @@ export default {
         id: "",
         label: "",
         moduleId: "",
+        tags: "",
         description: "",
         pages: null
     },
@@ -55,6 +63,7 @@ export default {
                this.refresh();
                events.on(state, "change:id", "refresh");
                events.on(state, "change:moduleId", "refresh");
+               events.on(state, "change:tags", "refresh");
                events.on(state, "change:description", "refresh");
                events.on(state, "change:label", "refresh");
                events.on(bus, "xshell:loader:resource:loaded", (event)=>{
@@ -94,11 +103,13 @@ export default {
                             const loaderRegistryItem = loaderRegistryCache["page:" + file.path];
                             const label = file.resource?.title || id;
                             const description = file.resource?.description ?? loaderRegistryItem?.description ?? "";
+                            const tags = file.resource?.tags || [];
                             const url = new URL(file.path.replace(/^\/+/, ""),config.app.baseUrl).href;
                             let valid = true;
                             if (!this.matches(id, state.id)) valid = false;
                             if (!this.matches(label, state.label)) valid = false;
                             if (!this.matches(moduleId, state.moduleId)) valid = false;
+                            if (!this.matchesTags(tags, state.tags)) valid = false;
                             if (!this.matches(description, state.description)) valid = false;
                             if (valid) {
                                 list.push({
@@ -106,6 +117,7 @@ export default {
                                     label,
                                     moduleId,
                                     description,
+                                    tags,
                                     icon: file.resource?.icon || moduleConfig.icon || "x-page",
                                     url,
                                     status: loaderRegistryItem?.status || "",
@@ -122,6 +134,10 @@ export default {
             matches(value, query) {
                 // Match diagnostic filters consistently regardless of casing.
                 return !query || String(value ?? "").toLowerCase().includes(query.toLowerCase());
+            },
+            matchesTags(tags, query) {
+                // Match a partial tag identifier without loading the Page.
+                return !query || tags.some(tag => tag.toLowerCase().includes(query.toLowerCase()));
             }
         };
     }

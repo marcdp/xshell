@@ -42,11 +42,13 @@ namespace DProjects.XShell.Test {
             var module = descriptor.RootElement.GetProperty("modules").GetProperty(ModuleId);
             Assert.Equal(ModuleVersion, module.GetProperty("version").GetString());
             Assert.Equal("Tiny module", module.GetProperty("label").GetString());
+            Assert.Equal(["sample", "packaging"], module.GetProperty("tags").EnumerateArray().Select(tag => tag.GetString()).ToArray());
             Assert.Equal("url:./module.zip", module.GetProperty("assets").GetProperty("url").GetString());
             AssertInventoryMatchesFiles(ReadInventory(module.GetProperty("files")), files, "index.html", "sw.js");
             var page = module.GetProperty("files").EnumerateArray().Single(file => file.GetProperty("path").GetString() == "/pages/page.js").GetProperty("resource");
             Assert.Equal("page", page.GetProperty("type").GetString());
             Assert.Equal("Pack Page", page.GetProperty("title").GetString());
+            Assert.Equal(["packaging", "demo"], page.GetProperty("tags").EnumerateArray().Select(tag => tag.GetString()).ToArray());
         }
         [Fact]
         public async Task Pack_RecursivelyPublishesDependenciesAndRewritesReferences() {
@@ -212,14 +214,15 @@ namespace DProjects.XShell.Test {
             var output = workspace.PathFor("dist");
             var first = await PackAsync(source, output);
             File.WriteAllText(Path.Combine(source, "pages", "page.html"),
-                "<template><p>pack</p></template><script type=\"module\">export default { meta: { title: \"Updated Pack Page\" } };</script>");
+                "<template><p>pack</p></template><script type=\"module\">export default { contract: { tags: [\"packaging\", \"updated\"] }, meta: { title: \"Pack Page\" } };</script>");
 
             var second = await PackAsync(source, output);
 
             Assert.NotEqual(Path.GetFileName(first), Path.GetFileName(second));
             var page = ReadModuleDescriptor(second).GetProperty("modules").GetProperty(ModuleId).GetProperty("files").EnumerateArray()
                 .Single(file => file.GetProperty("path").GetString() == "/pages/page.js").GetProperty("resource");
-            Assert.Equal("Updated Pack Page", page.GetProperty("title").GetString());
+            Assert.Equal("Pack Page", page.GetProperty("title").GetString());
+            Assert.Equal(["packaging", "updated"], page.GetProperty("tags").EnumerateArray().Select(tag => tag.GetString()).ToArray());
         }
         [Theory]
         [InlineData("")]
@@ -255,12 +258,13 @@ namespace DProjects.XShell.Test {
                             "{{moduleId}}": {
                                 "version": "{{ModuleVersion}}",
                                 "label": "Tiny module",
+                                "tags": ["sample", "packaging"],
                                 "defaults": { "page": { "renderEngine": "x" }, },
                             }{{referenceJson}}
                         },
                     }
                     """),
-                ("pages/page.html", "<template><p>pack</p></template><script type=\"module\">export default { meta: { title: \"Pack Page\" } };</script>"),
+                ("pages/page.html", "<template><p>pack</p></template><script type=\"module\">export default { contract: { tags: [\"packaging\", \"demo\"] }, meta: { title: \"Pack Page\" } };</script>"),
                 ("data/value.txt", "value")
             };
             foreach (var file in reverseCreationOrder ? files.Reverse() : files) {

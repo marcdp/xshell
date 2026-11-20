@@ -18,6 +18,7 @@
         "label": { "type": "string", "description": "Human-readable label of the Command." },
         "icon": { "type": "string", "description": "Icon representing the Command." },
         "description": { "type": "string", "description": "Human-readable description of the Command." },
+        "tags": { "$ref": "./contract.schema.json#/$defs/tags", "description": "Ordered machine-readable classification identifiers for the Command." },
         "types": {  "$ref": "./contract.schema.json#/properties/types", "description": "Reusable named types scoped to the Command contract." },
         "examples": { "$ref": "./contract.schema.json#/properties/examples", "description": "Usage examples for documentation and tooling." },
         "execute": {"$ref": "./contract.schema.json#/$defs/method","description": "Contract of the Command's execute method."}

@@ -2,6 +2,7 @@ export default {
     contract: {
         label: "Demo operation",
         description: "Runs a short, cancellable operation for the Commands cookbook Page.",
+        tags: ["demo", "operations"],
         execute: {
             parameters: [
                 {

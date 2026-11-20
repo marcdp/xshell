@@ -3,6 +3,7 @@
 export default {
     contract: {
         description: "Provides a container for data table content.",
+        tags: ["data", "tables", "ui"],
         events: {},
         properties: {},
         methods: {},

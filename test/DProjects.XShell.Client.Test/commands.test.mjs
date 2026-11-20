@@ -32,7 +32,7 @@ test("commands contract declares discovery and the asynchronous Task-backed run 
 test("commands discovers framework and module inventories without loading implementations", () => {
     class Command {}
     const frameworkResource = {type: "command", label: "Framework command", description: "Inspect runtime", icon: "x-runtime", category: "runtime"};
-    const moduleResource = {type: "command", label: "Encrypt file", description: "Encrypts a file using AES.", icon: "x-lock"};
+    const moduleResource = {type: "command", label: "Encrypt file", description: "Encrypts a file using AES.", icon: "x-lock", tags: ["security", "files"]};
     const config = {
         xshell: {assets: {path: "/_assets/xshell/1.0.0.dev"}, files: [
             {path: "/_assets/xshell/1.0.0.dev/commands/runtime.inspect.js", size: 100, resource: frameworkResource},
@@ -55,10 +55,11 @@ test("commands discovers framework and module inventories without loading implem
     assert.deepEqual(items.map(item => item.id), ["filesystem.entry.encrypt.aes", "nested/cleanup", "runtime.inspect"]);
     assert.deepEqual(items[0], {
         id: "filesystem.entry.encrypt.aes", moduleId: "filesystem", label: "Encrypt file", description: "Encrypts a file using AES.",
-        category: "filesystem", icon: "x-lock", path: "/_assets/filesystem/1.0.0.dev/commands/filesystem.entry.encrypt.aes.js", size: 1234
+        tags: ["security", "files"], category: "filesystem", icon: "x-lock",
+        path: "/_assets/filesystem/1.0.0.dev/commands/filesystem.entry.encrypt.aes.js", size: 1234
     });
     assert.deepEqual(items[1], {
-        id: "nested/cleanup", moduleId: "filesystem", label: "", description: "", category: "filesystem", icon: "",
+        id: "nested/cleanup", moduleId: "filesystem", label: "", description: "", tags: [], category: "filesystem", icon: "",
         path: "/_assets/filesystem/1.0.0.dev/commands/nested/cleanup.js", size: 50
     });
     assert.equal(items[2].moduleId, "xshell");
@@ -66,13 +67,17 @@ test("commands discovers framework and module inventories without loading implem
     assert.deepEqual(loads, []);
     assert.equal(Object.isFrozen(items), true);
     assert.equal(items.every(Object.isFrozen), true);
+    assert.equal(items.every(item => Object.isFrozen(item.tags)), true);
     assert.notStrictEqual(items[0], moduleResource);
+    assert.notStrictEqual(items[0].tags, moduleResource.tags);
     assert.throws(() => { items[0].label = "Changed"; }, TypeError);
+    assert.throws(() => items[0].tags.push("other"), TypeError);
     assert.equal(moduleResource.label, "Encrypt file");
 
     assert.deepEqual(commands.list({moduleId: "filesystem"}).map(item => item.id), ["filesystem.entry.encrypt.aes", "nested/cleanup"]);
     assert.deepEqual(commands.list({category: "runtime"}).map(item => item.id), ["runtime.inspect"]);
     assert.deepEqual(commands.list({query: "AES"}).map(item => item.id), ["filesystem.entry.encrypt.aes"]);
+    assert.deepEqual(commands.getInfo("filesystem.entry.encrypt.aes").tags, ["security", "files"]);
     assert.equal(commands.getInfo("nested/cleanup").path, "/_assets/filesystem/1.0.0.dev/commands/nested/cleanup.js");
     assert.equal(commands.getInfo("missing"), null);
     assert.deepEqual(loads, []);

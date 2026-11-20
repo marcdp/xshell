@@ -558,7 +558,8 @@ namespace DProjects.XShell.Test {
         public async Task VersionedResources_UsePhysicalFilesAndExistingCompilationStages() {
             using var workspace = new TemporaryDirectory();
             workspace.Write("resources/demo/manifest.jsonc", VersionedDescriptor);
-            workspace.Write("resources/demo/pages/page.html", "<template><p>Versioned</p></template>");
+            workspace.Write("resources/demo/pages/page.html",
+                "<template><p>Versioned</p></template><script type=\"module\">export default { contract: { tags: ['demo', 'navigation'] } };</script>");
             workspace.Write("resources/demo/styles/site.css", ".card { background: url('../image.png'); }");
             workspace.Write("resources/demo/image.png", new byte[] { 1, 2, 3 });
             var root = workspace.PathFor("resources");
@@ -572,7 +573,17 @@ namespace DProjects.XShell.Test {
 
             Assert.Equal(200, descriptor.StatusCode);
             using var parsed = JsonDocument.Parse(descriptor.Text);
-            Assert.True(parsed.RootElement.GetProperty("modules").GetProperty("demo").TryGetProperty("files", out _));
+            var files = parsed.RootElement.GetProperty("modules").GetProperty("demo").GetProperty("files");
+            var pageMetadata = files.EnumerateArray().Single(file => file.GetProperty("path").GetString() == "/pages/page.html").GetProperty("resource");
+            Assert.Equal(["demo", "navigation"], pageMetadata.GetProperty("tags").EnumerateArray().Select(tag => tag.GetString()).ToArray());
+            Assert.DoesNotContain("\"files\"", File.ReadAllText(workspace.PathFor("resources/demo/manifest.jsonc")));
+            workspace.Write("resources/demo/pages/page.html",
+                "<template><p>Versioned</p></template><script type=\"module\">export default { contract: { tags: ['demo', 'updated'] } };</script>");
+            var updatedDescriptor = await SendAsync(root, "/_resources/demo/0.9.0.dev/manifest.json", true);
+            using var updatedParsed = JsonDocument.Parse(updatedDescriptor.Text);
+            var updatedFiles = updatedParsed.RootElement.GetProperty("modules").GetProperty("demo").GetProperty("files");
+            var updatedPage = updatedFiles.EnumerateArray().Single(file => file.GetProperty("path").GetString() == "/pages/page.html").GetProperty("resource");
+            Assert.Equal(["demo", "updated"], updatedPage.GetProperty("tags").EnumerateArray().Select(tag => tag.GetString()).ToArray());
             AssertNoCache(descriptor);
             AssertCompiledHeadMatchesGet(descriptor, descriptorHead);
             Assert.Equal(200, page.StatusCode);
@@ -584,7 +595,8 @@ namespace DProjects.XShell.Test {
             AssertNoCache(css);
             Assert.Equal(new byte[] { 1, 2, 3 }, image.Body);
             AssertNoCache(image);
-            Assert.Equal(0, descriptor.NextCalls + descriptorHead.NextCalls + page.NextCalls + pageHead.NextCalls + css.NextCalls + image.NextCalls);
+            Assert.Equal(0, descriptor.NextCalls + updatedDescriptor.NextCalls + descriptorHead.NextCalls + page.NextCalls + pageHead.NextCalls +
+                css.NextCalls + image.NextCalls);
         }
         [Fact]
         public async Task VersionedFrameworkScripts_AndHeadUsePhysicalFiles() {

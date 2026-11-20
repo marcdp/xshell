@@ -163,6 +163,7 @@ export default class Services {
         const contractUrl = item.contractItem?.url;
         const description = item.contractItem?.contract?.description;
         const icon = item.contractItem?.contract?.icon;
+        const tags = item.contractItem?.contract?.tags;
         const moduleId = item.implementationItem?.moduleId;
         return Object.freeze({
             id,
@@ -172,6 +173,7 @@ export default class Services {
             contractUrl: typeof contractUrl === "string" ? contractUrl : null,
             description: typeof description === "string" ? description : null,
             icon: typeof icon === "string" ? icon : null,
+            tags: Object.freeze(Array.isArray(tags) ? [...tags] : []),
             moduleId: typeof moduleId === "string" ? moduleId : null,
             implementationName: item.implementationItem?.class?.name ?? null,
             url: item.implementationItem?.url ?? null,

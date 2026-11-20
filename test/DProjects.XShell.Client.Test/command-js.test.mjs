@@ -12,7 +12,7 @@ test("command-js injects invocation task, context and ordinary XShell services t
     const marker = `__command_dependencies_${crypto.randomUUID().replaceAll("-", "")}`;
     const source = `
         export default {
-            contract: { label: "Example", execute: { parameters: [] } },
+            contract: { label: "Example", tags: ["automation", "tasks"], execute: { parameters: [] } },
             controller(services) {
                 globalThis.${marker} = {
                     task: services.task,
@@ -59,6 +59,9 @@ test("command-js injects invocation task, context and ordinary XShell services t
         const Command = await new LoaderCommandJs().load(src, { resourceDefinition: { moduleId: "sample" } });
         const instance = new Command(invocationContext);
 
+        assert.deepEqual(Command.contract.tags, ["automation", "tasks"]);
+        assert.strictEqual(instance.contract, Command.contract);
+        assert.equal(Object.isFrozen(Command.contract.tags), true);
         assert.equal(instance.execute(7), 7);
         assert.equal(globalThis[marker].task, task);
         assert.equal(globalThis[marker].context, invocationContext);

@@ -56,6 +56,14 @@ The reference lists the declared properties, methods, events, slots, and named t
 signature with its parameters and return metadata. Examples show copyable template and code blocks and expandable initial state.
 Example JavaScript and template bindings are never executed, and template source is displayed as text.
 
+### Diagnostics tags
+
+The **Commands**, **Components**, **Pages**, **Contracts**, **Modules**, and **Services** listings show authored classification tags as read-only chips
+and provide a local, case-insensitive partial tag filter. Commands, Components, and Pages read generated `file.resource.tags`; Contracts read public
+contract tags; Modules read their own authored configuration tags; Services read tags from their registered public contracts, not from implementation
+options schemas. Contract Detail and Service Inspector also show the public contract's tags. Diagnostics preserves authored order and does not infer,
+sort, deduplicate, edit, or otherwise manage tags.
+
 ## Documents
 
 - [Bootstrap](10-bootstrap.md) — Repository resolution, startup, validation, and initialization order.

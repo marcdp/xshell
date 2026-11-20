@@ -26,6 +26,7 @@ Do not duplicate identity in `name`, `id`, or `moduleId`; the `modules` property
             "version": "1.2.3",
             "copyright": "",
             "icon": "",
+            "tags": ["business", "order-management"],
             "requires": ["toast"],
             "defaults": {
                 "page": { "renderEngine": "x", "stateEngine": "proxy" },
@@ -84,7 +85,7 @@ After selection, bootstrap merges the manifest and enriches the selected definit
 }
 ```
 
-The effective schema requires `label`, `version`, `copyright`, `icon`, `configUrl`, `assets`, `defaults`, and `files`. It permits `params`,
+The effective schema requires `label`, `version`, `copyright`, `icon`, `configUrl`, `assets`, `defaults`, and `files`. It permits `tags`, `params`,
 `requires`, `hash`, `builtAt`, `menus`, `routes`, and `dependencies`.
 
 | Property | Meaning |
@@ -92,6 +93,7 @@ The effective schema requires `label`, `version`, `copyright`, `icon`, `configUr
 | `configUrl` | Absolute URL of the selected manifest document. |
 | `assets.url` | Absolute physical directory or ZIP container; authored `url:./` is the normal default. |
 | `assets.path` | Generated virtual generation root under `/_assets`. |
+| `tags` | Optional authored lowercase kebab-case module classifications, retained at `config.modules[id].tags`. |
 | `files` | Effective virtual resource inventory, with required `path`, `size`, and `hash`, plus optional generated `resource` metadata. |
 | `dependencies` | Authored dependency declarations retained as module metadata; index copies drive discovery. |
 
@@ -127,7 +129,8 @@ Every file remains authoritative physical inventory data. Recognized resources a
     "type": "page",
     "title": "Orders",
     "description": "Review current orders.",
-    "icon": "x-orders"
+    "icon": "x-orders",
+    "tags": ["navigation", "order-management"]
   }
 }
 ```
@@ -153,14 +156,21 @@ Command and Component entries use the same file shape with their own small proje
 ```
 
 Supported types are `page`, `component`, `command`, `contract`, and `schema`. Page metadata contains `title`, `description`, and `icon`; Component,
-Command, and contract metadata uses `label`, `description`, and `icon`; schema metadata uses `id`, `title`, and `description`. All descriptive fields
-are optional. Component metadata prefers `meta.title`, `meta.description`, and `meta.icon`, falling back individually to the corresponding
+Command, and contract metadata uses `label`, `description`, and `icon`; schema metadata uses `id`, `title`, and `description`. JavaScript Pages,
+Components, and Commands plus standalone JSON contracts may also contain `tags`, copied from authored `contract.tags` in declaration order. All
+descriptive fields are optional. Component metadata prefers `meta.title`, `meta.description`, and `meta.icon`, falling back individually to the corresponding
 `contract.label`, `contract.description`, and `contract.icon`. The inventory never embeds full contracts, schemas, templates, command parameters,
 or datasets.
 
+Module tags and resource tags are independent. Module tags are authored directly on the module definition and are never inherited by contained
+resources. Resource tags are authored on the public resource contract, never inferred from filenames or directories, and generated automatically
+as `file.resource.tags`. Both use unique lowercase kebab-case identifiers, allow an empty array, preserve order, and have no automatic runtime
+behavior.
+
 A JavaScript file under `/commands/` is a valid generated Command resource only when it default-exports a static definition object whose static
 `contract` object contains a static `execute` object. Packaging reads this shape without executing JavaScript and reports the source path when the
-required structure or optional descriptive strings are dynamic or malformed.
+required structure, optional descriptive strings, or `contract.tags` are dynamic or malformed. Static tag extraction accepts quoted strings,
+comments, multiline arrays, escaped literals, empty arrays, and trailing commas without executing JavaScript.
 
 `module.files` remains the authoritative enumeration of packaged resources. `file.resource` permits discovery and presentation without loading an
 implementation, but it is not a resource catalog or registry. Resolver and Loader continue to resolve and load the underlying file.

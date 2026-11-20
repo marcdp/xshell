@@ -181,7 +181,7 @@ through normal configuration merging without assigning it to the `x` module.
 ## Service contract schema
 
 `service.schema.json` specializes the common contract by referencing `contract.schema.json` and closing the top-level object. The common
-`label`, `description`, `icon`, `types`, `properties`, `events`, `methods`, and `examples` fields are all optional. The accepted value
+`label`, `description`, `icon`, `tags`, `types`, `properties`, `events`, `methods`, and `examples` fields are all optional. The accepted value
 types are `string`, `number`, `integer`, `boolean`, `object`, `array`, `function`, `date`, and `any`; method returns additionally
 accept `void`.
 
@@ -193,6 +193,8 @@ accept `void`.
 - Methods describe labels, parameters, and returns. Each parameter requires a nonempty `name` and selects exactly one of `type` or `ref`;
   a return does the same and may add the semantic `format` `text`, `url`, or `blob-url` when its effective type is `string`.
 - Declare [usage examples](../20-components/10-manifest.md#usage-examples) in the top-level `examples` array of the Service contract JSON file.
+- Declare optional lowercase kebab-case classification identifiers in the top-level `tags` array. They describe the public Service contract,
+  appear in generated `file.resource.tags`, and never belong to the implementation's `optionsSchema`, constructor options, or instance state.
 
 `type` declares an XShell value category directly. `ref` names a definition in the same contract's `types` map and cannot be combined with
 `type` or `schema`. A direct type descriptor or named type definition may add a JSON Schema object or boolean in `schema`; nested object and

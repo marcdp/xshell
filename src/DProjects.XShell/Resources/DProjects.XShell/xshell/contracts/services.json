@@ -18,13 +18,14 @@
             "contractUrl": {"type":["string","null"]},
             "description": {"type":["string","null"]},
             "icon": {"type":["string","null"]},
+            "tags": {"type":"array","items":{"type":"string"},"description":"Frozen tag identifiers from the registered public contract, in declaration order."},
             "moduleId": {"type":["string","null"]},
             "implementationName": {"type":["string","null"]},
             "url": {"type":["string","null"]},
             "size": {"type":["number","null"]},
             "time": {"type":["number","null"]}
           },
-          "required": ["id","state","initializationState","contractId","contractUrl","description","icon","moduleId","implementationName","url","size","time"]
+          "required": ["id","state","initializationState","contractId","contractUrl","description","icon","tags","moduleId","implementationName","url","size","time"]
         }
       }
     }
@@ -56,7 +57,7 @@
       "parameters": [{"name":"id","type":"string","required":true}],
       "returns": {
         "type": "any",
-        "description": "Service metadata object with id, construction state, initializationState, contractId, contractUrl, description, icon, moduleId, implementationName, url, size, and time; undefined if not found."
+        "description": "Service metadata object with id, construction state, initializationState, contractId, contractUrl, description, icon, tags, moduleId, implementationName, url, size, and time; undefined if not found."
       }
     }
   }

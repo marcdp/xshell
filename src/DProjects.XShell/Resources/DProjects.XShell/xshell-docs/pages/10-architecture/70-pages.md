@@ -16,6 +16,7 @@ Definition-based Pages declare their public contract inline:
 export default {
     contract: {
         label: "Search",
+        tags: ["navigation", "search"],
         properties: {
             queryText: {
                 type: "string",
@@ -45,7 +46,9 @@ export default {
 
 `page.schema.json` embeds the common contract from `contract.schema.json` and extends public property descriptors with Page-specific `query`,
 `queryParser`, `context`, `state`, and `reflect` fields. The [shared contract model](../20-components/10-manifest.md#shared-contract-model) also defines
-the Page's optional [usage examples](../20-components/10-manifest.md#usage-examples) in `contract.examples`. A separate named `contract` export is not read.
+the Page's optional [usage examples](../20-components/10-manifest.md#usage-examples) in `contract.examples` and classification identifiers in
+`contract.tags`. Page tags do not belong in presentation-oriented `meta`, and they do not affect navigation or rendering. A separate named
+`contract` export is not read.
 
 | Page property field | Runtime behavior |
 | --- | --- |

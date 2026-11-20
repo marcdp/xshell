@@ -73,16 +73,100 @@ namespace DProjects.XShell.Test {
             Assert.False(schema!.ContainsKey("typeBody"));
         }
         [Fact]
+        public async Task ContractTags_AreCopiedForJavaScriptAndJsonResourcesInDeclarationOrder() {
+            using var files = new TemporaryDirectory();
+            files.Write("pages/page.js", "export default { contract: { tags: ['navigation', 'settings'] }, meta: { title: 'Settings' } };");
+            files.Write("components/x-chart.js", "export default { contract: { tags: [\"ui\", /* chart */ \"charts\"] } };");
+            files.Write("commands/export.js", "export default { contract: { tags: [`data`, 'export'], execute: {} }, controller() {} };");
+            files.Write("contracts/navigation.json", "{ \"label\": \"Navigation\", \"tags\": [\"navigation\", \"routing\"] }");
+            var builder = new ResourceMetadataBuilder();
+
+            var page = await builder.BuildAsync(files.Root, "/pages/page.js", TestContext.Current.CancellationToken);
+            var component = await builder.BuildAsync(files.Root, "/components/x-chart.js", TestContext.Current.CancellationToken);
+            var command = await builder.BuildAsync(files.Root, "/commands/export.js", TestContext.Current.CancellationToken);
+            var contract = await builder.BuildAsync(files.Root, "/contracts/navigation.json", TestContext.Current.CancellationToken);
+
+            Assert.Equal(["navigation", "settings"], ReadTags(page));
+            Assert.Equal(["ui", "charts"], ReadTags(component));
+            Assert.Equal(["data", "export"], ReadTags(command));
+            Assert.Equal(["navigation", "routing"], ReadTags(contract));
+            Assert.Equal("Settings", page!["title"]!.GetValue<string>());
+        }
+        [Fact]
+        public async Task MissingAndEmptyContractTags_RemainDistinct() {
+            using var files = new TemporaryDirectory();
+            files.Write("components/missing.js", "export default { contract: {} };");
+            files.Write("components/empty.js", "export default { contract: { tags: [] } };");
+            var builder = new ResourceMetadataBuilder();
+
+            var missing = await builder.BuildAsync(files.Root, "/components/missing.js", TestContext.Current.CancellationToken);
+            var empty = await builder.BuildAsync(files.Root, "/components/empty.js", TestContext.Current.CancellationToken);
+
+            Assert.False(missing!.ContainsKey("tags"));
+            Assert.Empty(ReadTags(empty));
+        }
+        [Theory]
+        [InlineData("getTags()")]
+        [InlineData("DEFAULT_TAGS")]
+        [InlineData("[\"ui\", currentTag]")]
+        [InlineData("[...sharedTags, \"ui\"]")]
+        [InlineData("[`type-${name}`]")]
+        [InlineData("[\"ui\" \"data\"]")]
+        [InlineData("[\"UI\"]")]
+        [InlineData("[\"file management\"]")]
+        [InlineData("[\"data\", \"data\"]")]
+        [InlineData("[\"\"]")]
+        public async Task InvalidContractTags_ProducePathAndPropertyDiagnostics(string expression) {
+            using var files = new TemporaryDirectory();
+            files.Write("components/invalid.js", $"export default {{ contract: {{ tags: {expression} }} }};");
+
+            var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+                new ResourceMetadataBuilder().BuildAsync(files.Root, "/components/invalid.js", TestContext.Current.CancellationToken));
+
+            Assert.Contains("/components/invalid.js", exception.Message);
+            Assert.Contains("contract.tags", exception.Message);
+        }
+        [Fact]
+        public async Task InvalidJsonContractTags_ProducePathAndPropertyDiagnostics() {
+            using var files = new TemporaryDirectory();
+            files.Write("contracts/invalid.json", "{ \"tags\": [\"storage\", \"storage\"] }");
+
+            var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+                new ResourceMetadataBuilder().BuildAsync(files.Root, "/contracts/invalid.json", TestContext.Current.CancellationToken));
+
+            Assert.Contains("/contracts/invalid.json", exception.Message);
+            Assert.Contains("contract.tags", exception.Message);
+            Assert.Contains("duplicate", exception.Message, StringComparison.OrdinalIgnoreCase);
+        }
+        [Fact]
+        public async Task RepresentativeResources_ExposeAuthoredTags() {
+            var resources = Path.Combine(AppContext.BaseDirectory, "Resources", "DProjects.XShell");
+            var builder = new ResourceMetadataBuilder();
+
+            var component = await builder.BuildAsync(Path.Combine(resources, "x"), "/components/x-datatable.js", TestContext.Current.CancellationToken);
+            var page = await builder.BuildAsync(Path.Combine(resources, "x-home"), "/pages/index.js", TestContext.Current.CancellationToken);
+            var command = await builder.BuildAsync(Path.Combine(resources, "x-demo"), "/commands/demo.operation.js", TestContext.Current.CancellationToken);
+            var contract = await builder.BuildAsync(Path.Combine(resources, "xshell"), "/contracts/preferences.json", TestContext.Current.CancellationToken);
+
+            Assert.Equal(["data", "tables", "ui"], ReadTags(component));
+            Assert.Equal(["home", "navigation"], ReadTags(page));
+            Assert.Equal(["demo", "operations"], ReadTags(command));
+            Assert.Equal(["preferences", "storage"], ReadTags(contract));
+        }
+        [Fact]
         public async Task MissingMetadataAndOrdinaryFiles_RemainSmallAndOptional() {
             using var files = new TemporaryDirectory();
             files.Write("pages/plain.js", "export default { state: {} };");
+            files.Write("pages/dynamic-contract.js", "export default { contract: createContract(), meta: { title: 'Dynamic contract' } };");
             files.Write("images/logo.svg", "<svg></svg>");
             var builder = new ResourceMetadataBuilder();
 
             var page = await builder.BuildAsync(files.Root, "/pages/plain.js", TestContext.Current.CancellationToken);
+            var dynamicContract = await builder.BuildAsync(files.Root, "/pages/dynamic-contract.js", TestContext.Current.CancellationToken);
             var ordinary = await builder.BuildAsync(files.Root, "/images/logo.svg", TestContext.Current.CancellationToken);
 
             AssertMetadata(page, "page");
+            AssertMetadata(dynamicContract, "page", ("title", "Dynamic contract"));
             Assert.Null(ordinary);
         }
         [Theory]
@@ -154,6 +238,9 @@ namespace DProjects.XShell.Test {
             Assert.Equal(type, actual["type"]!.GetValue<string>());
             Assert.Equal(properties.Length + 1, actual.Count);
             foreach (var property in properties) Assert.Equal(property.Value, actual[property.Name]!.GetValue<string>());
+        }
+        private static string[] ReadTags(JsonObject? resource) {
+            return resource!["tags"]!.AsArray().Select(tag => tag!.GetValue<string>()).ToArray();
         }
 
         // inner classes

@@ -1,7 +1,9 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import test from "node:test";
 
 import ConfigSchema from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/schemas/config.schema.json" with { type: "json" };
+import ContractSchema from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/schemas/contract.schema.json" with { type: "json" };
 import ModuleSchema from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/schemas/module.schema.json" with { type: "json" };
 import { Validator } from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/vendor/json-schema/4.1.1/json-schema.js";
 import Areas from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/areas.js";
@@ -9,6 +11,7 @@ import { compileRoute } from "../../src/DProjects.XShell/Resources/DProjects.XSh
 
 const validator = new Validator(ConfigSchema, "2020-12");
 validator.addSchema(ModuleSchema, ModuleSchema.$id);
+validator.addSchema(ContractSchema, ContractSchema.$id);
 const areasOptionsValidator = new Validator(Areas.optionsSchema, "2020-12");
 
 const areaOptions = config => config.xshell.services.areas.options;
@@ -86,6 +89,34 @@ function assertValid(module) {
 
 test("module schema keeps routes optional", () => {
     assertValid(moduleDefinition());
+});
+
+test("representative normal module authors stable classification tags", () => {
+    const path = new URL("../../src/DProjects.XShell/Resources/DProjects.XShell/x-filesystem/manifest.jsonc", import.meta.url);
+    const source = readFileSync(path, "utf8");
+
+    assert.match(source, /"tags"\s*:\s*\["filesystem",\s*"files",\s*"storage"\]/);
+});
+
+test("module and generated resource tags use ordered lowercase kebab-case identifiers", () => {
+    const module = moduleDefinition();
+    module.tags = ["business", "order-management"];
+    module.files[0].resource = { type: "page", title: "Orders", tags: ["navigation", "order-management"] };
+    assertValid(module);
+
+    for (const tags of [[], ["ui"], ["file-management", "cloud-storage"]]) {
+        module.tags = tags;
+        module.files[0].resource.tags = tags;
+        assertValid(module);
+    }
+
+    for (const tags of [["UI"], ["file management"], ["data", "data"], [""], ["data_analytics"], "data", [1]]) {
+        module.tags = tags;
+        assert.equal(validator.validate(configuration(module)).valid, false, JSON.stringify(tags));
+        module.tags = ["business"];
+        module.files[0].resource.tags = tags;
+        assert.equal(validator.validate(configuration(module)).valid, false, JSON.stringify(tags));
+    }
 });
 
 test("effective schema accepts optional UTC package build times for modules and XShell", () => {

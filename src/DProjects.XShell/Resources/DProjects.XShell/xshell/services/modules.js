@@ -39,6 +39,7 @@ export default class Modules {
             label: module.label,
             path: module.path,
             version: module.config.version || "",
+            tags: Object.freeze([...(module.config.tags || [])]),
             assets: Object.freeze({
                 path: module.config.assets.path,
                 url: module.config.assets.url || ""
@@ -49,7 +50,10 @@ export default class Modules {
             files: Object.freeze(module.config.files.map(file => {
                 // Copy optional generated resource metadata without exposing mutable configuration records.
                 const snapshot = { path: file.path, size: file.size };
-                if (file.resource) snapshot.resource = Object.freeze({ ...file.resource });
+                if (file.resource) snapshot.resource = Object.freeze({
+                    ...file.resource,
+                    ...(file.resource.tags ? { tags: Object.freeze([...file.resource.tags]) } : {})
+                });
                 return Object.freeze(snapshot);
             }))
         })));

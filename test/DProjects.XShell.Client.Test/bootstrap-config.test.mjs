@@ -582,16 +582,32 @@ test("descriptor-provided module and XShell inventories normalize to generation-
         }
     });
     fetchedResources.set(rootUrl, {
-        modules: { app: definition("app", { files: [{ path: "/contracts/toast.json", size: 7, hash: "module-hash" }] }) }
+        modules: { app: definition("app", {
+            tags: ["application", "demo"],
+            files: [{ path: "/contracts/toast.json", size: 7, hash: "module-hash", resource: {
+                type: "contract", label: "Toast", tags: ["notifications", "ui"]
+            } }]
+        }) }
     });
 
     const config = plain(await api.loadConfig());
 
-    assert.deepEqual(config.modules.app.files, [{ path: "/_assets/app/1.0.0.dev/contracts/toast.json", size: 7, hash: "module-hash" }]);
+    assert.deepEqual(config.modules.app.tags, ["application", "demo"]);
+    assert.deepEqual(config.modules.app.files, [{
+        path: "/_assets/app/1.0.0.dev/contracts/toast.json", size: 7, hash: "module-hash",
+        resource: { type: "contract", label: "Toast", tags: ["notifications", "ui"] }
+    }]);
     assert.deepEqual(config.xshell.files, [{ path: "/_assets/xshell/0.9.0.dev/bootstrap.js", size: 11, hash: "xshell-hash" }]);
     assert.deepEqual(directFetchCalls, [xshellUrl, rootUrl]);
     api.fillResolverRules(config);
     assert.equal(config.xshell.resolver.contract.toast.src, "/_assets/app/1.0.0.dev/contracts/toast.json");
+});
+
+test("representative normal module authors stable classification tags", () => {
+    const path = new URL("../../src/DProjects.XShell/Resources/DProjects.XShell/x-filesystem/manifest.jsonc", import.meta.url);
+    const manifest = api.parseJsonc(readFileSync(path, "utf8"));
+
+    assert.deepEqual(manifest.modules["x-filesystem"].tags, ["filesystem", "files", "storage"]);
 });
 
 test("missing descriptor inventories remain missing for effective schema validation without a fallback request", () => {

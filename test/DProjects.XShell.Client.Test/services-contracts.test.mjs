@@ -1042,6 +1042,7 @@ test("Contracts.init discovers the framework Temp contract", async () => {
 test("Contracts.init deeply freezes validated contract documents", async () => {
     const contract = {
         label: "executor",
+        tags: ["automation", "tasks"],
         properties: {},
         events: {},
         methods: {
@@ -1073,12 +1074,15 @@ test("Contracts.init deeply freezes validated contract documents", async () => {
     assert.equal(Object.isFrozen(loadedContract), true);
     assert.equal(Object.isFrozen(loadedContract.methods), true);
     assert.equal(Object.isFrozen(loadedContract.methods.execute), true);
+    assert.deepEqual(loadedContract.tags, ["automation", "tasks"]);
+    assert.equal(Object.isFrozen(loadedContract.tags), true);
     assert.equal(Object.isFrozen(parameters), true);
     assert.equal(Object.isFrozen(parameters[0]), true);
     assert.equal(Object.isFrozen(parameters[0].enum), true);
     assert.throws(() => { loadedContract.label = "changed"; }, TypeError);
     assert.throws(() => { loadedContract.methods.other = {}; }, TypeError);
     assert.throws(() => { parameters.push({ name: "extra", type: "string" }); }, TypeError);
+    assert.throws(() => { loadedContract.tags.push("other"); }, TypeError);
     assert.deepEqual(contracts.registry.map(item => item.id), ["executor"]);
 });
 

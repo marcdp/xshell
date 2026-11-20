@@ -56,5 +56,50 @@ namespace DProjects.XShell.Test {
 
             Assert.Null(exception);
         }
+        [Fact]
+        public void GetStaticStringArray_ReadsQuotedEscapedCommentedAndTrailingValues() {
+            const string source = """
+                export default {
+                    contract: {
+                        tags: [
+                            "ui",
+                            // escaped literals use the existing JavaScript decoder
+                            'cloud\x2dstorage',
+                            `file-management`,
+                        ]
+                    }
+                };
+                """;
+
+            var tags = JavaScriptSource.Parse(source).FindDefaultExportObject()!.FindProperty("contract")!.Value.AsObject()!
+                .FindProperty("tags")!.Value.GetStaticStringArray();
+
+            Assert.Equal(["ui", "cloud-storage", "file-management"], tags);
+        }
+        [Fact]
+        public void GetStaticStringArray_ReadsEmptyArray() {
+            const string source = "export default { contract: { tags: [] } };";
+
+            var tags = JavaScriptSource.Parse(source).FindDefaultExportObject()!.FindProperty("contract")!.Value.AsObject()!
+                .FindProperty("tags")!.Value.GetStaticStringArray();
+
+            Assert.Empty(tags!);
+        }
+        [Theory]
+        [InlineData("getTags()")]
+        [InlineData("DEFAULT_TAGS")]
+        [InlineData("[\"ui\", currentTag]")]
+        [InlineData("[...sharedTags, \"ui\"]")]
+        [InlineData("[`type-${name}`]")]
+        [InlineData("[\"ui\", 1]")]
+        [InlineData("[\"ui\" \"data\"]")]
+        public void GetStaticStringArray_RejectsDynamicOrMalformedValues(string expression) {
+            var source = $"export default {{ contract: {{ tags: {expression} }} }};";
+
+            var tags = JavaScriptSource.Parse(source).FindDefaultExportObject()!.FindProperty("contract")!.Value.AsObject()!
+                .FindProperty("tags")!.Value.GetStaticStringArray();
+
+            Assert.Null(tags);
+        }
     }
 }

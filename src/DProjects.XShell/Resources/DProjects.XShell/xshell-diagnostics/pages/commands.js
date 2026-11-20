@@ -9,6 +9,9 @@ export default {
     meta: {
         title: "Commands"
     },
+    style: `
+        .tags { display: flex; flex-wrap: wrap; gap: .25em; align-items: center; }
+    `,
     template: `
         <p>Shows Commands discovered from the effective framework and module file inventories without loading their implementations.</p>
         <x-listview x-if="state.items.length" view="details" x-on:activate="invokeCommand">
@@ -17,6 +20,7 @@ export default {
                 <x-listview-column width="12em"><x-datafield type="search" x-model="state.label" placeholder="Label"></x-datafield></x-listview-column>
                 <x-listview-column width="10em"><x-datafield type="search" x-model="state.moduleId" placeholder="Module"></x-datafield></x-listview-column>
                 <x-listview-column width="10em"><x-datafield type="search" x-model="state.category" placeholder="Category"></x-datafield></x-listview-column>
+                <x-listview-column width="12em"><x-datafield type="search" x-model="state.tags" placeholder="Tags"></x-datafield></x-listview-column>
                 <x-listview-column><x-datafield type="search" x-model="state.description" placeholder="Description"></x-datafield></x-listview-column>
                 <x-listview-column label="Size" width="5em" style="text-align:right"></x-listview-column>
                 <x-listview-column label="File" width="3em" style="text-align:right"></x-listview-column>
@@ -26,6 +30,9 @@ export default {
                     <div>{{ item.label }}</div>
                     <div>{{ item.moduleId }}</div>
                     <div>{{ item.category }}</div>
+                    <div class="tags">
+                        <x-chip x-for="tag in item.tags" x-key="tag" x-attr:label="tag"></x-chip>
+                    </div>
                     <x-truncate x-attr:text="item.description"></x-truncate>
                     <x-file-size x-prop:value="item.size" style="text-align:right"></x-file-size>
                     <x-anchor style="text-align:right" x-attr:href="item.path" target="_blank" class="plain" tooltip="Open source file"
@@ -42,6 +49,7 @@ export default {
         label: "",
         moduleId: "",
         category: "",
+        tags: "",
         description: "",
         items: []
     },
@@ -50,7 +58,7 @@ export default {
             load() {
                 // Refresh when any diagnostic filter changes.
                 this.refresh();
-                for (const name of ["id", "label", "moduleId", "category", "description"]) events.on(state, `change:${name}`, "refresh");
+                for (const name of ["id", "label", "moduleId", "category", "tags", "description"]) events.on(state, `change:${name}`, "refresh");
             },
             refresh() {
                 // Filter the service-owned discovery snapshot without reading effective configuration directly.
@@ -59,6 +67,7 @@ export default {
                     this.matches(item.label, state.label) &&
                     this.matches(item.moduleId, state.moduleId) &&
                     this.matches(item.category, state.category) &&
+                    this.matchesTags(item.tags, state.tags) &&
                     this.matches(item.description, state.description));
             },
             invokeCommand({ event }) {
@@ -79,6 +88,10 @@ export default {
             matches(value, query) {
                 // Match diagnostic filters consistently regardless of casing.
                 return !query || String(value ?? "").toLowerCase().includes(query.toLowerCase());
+            },
+            matchesTags(tags, query) {
+                // Match a partial tag identifier without combining tags into synthetic text.
+                return !query || (tags || []).some(tag => tag.toLowerCase().includes(query.toLowerCase()));
             }
         };
     }

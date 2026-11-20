@@ -35,6 +35,7 @@ export default {
             display: grid;
             gap: .5em;
         }
+        .tags { display: flex; flex-wrap: wrap; gap: .25em; align-items: center; }
     `,
     template: `
         <div>
@@ -55,6 +56,9 @@ export default {
                         <b>{{ state.contractLabel }}:</b>
                         {{ state.description }}
                     </p>
+                    <div class="tags" x-if="state.tags.length">
+                        <x-chip x-for="tag in state.tags" x-key="tag" x-attr:label="tag"></x-chip>
+                    </div>
                     <p class="muted">Contract: {{ state.contractId }}</p>
                 </div>
             </x-datafields>
@@ -163,6 +167,7 @@ export default {
         contractId: "",
         contractLabel: "",
         description: "",
+        tags: [],
         properties: [],
         methods: [],
         serviceEvents: [],
@@ -226,6 +231,7 @@ export default {
                 state.contractId = contractId;
                 state.contractLabel = contract.label || contractId;
                 state.description = contract.description || "";
+                state.tags = [...(contract.tags || [])];
 
                 state.properties = Object.entries(contract.properties || {}).map(([name, item]) => ({
                     name,

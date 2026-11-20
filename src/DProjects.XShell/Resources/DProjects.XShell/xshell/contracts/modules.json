@@ -10,12 +10,13 @@
         "type": "array",
         "items": {
           "type": "object",
-          "required": ["id", "label", "path", "version", "assets", "builtAt", "configUrl", "icon", "files"],
+          "required": ["id", "label", "path", "version", "tags", "assets", "builtAt", "configUrl", "icon", "files"],
           "properties": {
             "id": {"type": "string"},
             "label": {"type": "string"},
             "path": {"type": "string"},
             "version": {"type": "string"},
+            "tags": {"type": "array", "items": {"type": "string"}, "description": "Frozen authored module tag identifiers in declaration order."},
             "assets": {"type": "object", "properties": {"path": {"type": "string"}, "url": {"type": "string"}}},
             "builtAt": {"type": "string"},
             "configUrl": {"type": "string"},
@@ -37,7 +38,8 @@
                       "label": {"type": "string"},
                       "description": {"type": "string"},
                       "icon": {"type": "string"},
-                      "id": {"type": "string"}
+                      "id": {"type": "string"},
+                      "tags": {"type": "array", "items": {"type": "string"}}
                     }
                   }
                 }

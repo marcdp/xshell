@@ -33,13 +33,13 @@ namespace DProjects.XShell.Test {
         [InlineData("/prefix", "/prefix/_resources/DProjects.XShell/{module}/index.json")]
         public void ServerConfiguration_DefaultSourceMatchesAppBase(string appBasePath, string expected) {
             var config = new Server { AppBasePath = appBasePath }.BuildConfiguration();
-            Assert.Equal([expected], config.Sources);
+            Assert.Equal([expected], config.App.Sources);
         }
         [Fact]
         public void ServerConfiguration_PreservesOrderedExternalSources() {
             var sources = new[] { "https://cdn.example.test/{module}/index.json", "/mirror/{module}/index.json" };
-            var config = new Server { AppBasePath = "/prefix", Source = sources }.BuildConfiguration();
-            Assert.Equal(sources, config.Sources);
+            var config = new Server { AppBasePath = "/prefix", AppSource = sources }.BuildConfiguration();
+            Assert.Equal(sources, config.App.Sources);
         }
         [Fact]
         public async Task AppBasePath_RedirectsToTrailingSlash() {
@@ -337,9 +337,9 @@ namespace DProjects.XShell.Test {
                         App = new Extensions.AppConfig {
                             BasePath = appBasePath,
                             Module = "module:x-demo:0.9.0",
-                            Params = new Dictionary<string, string>()
+                            Params = new Dictionary<string, string>(),
+                            Sources = sources ?? [appBasePath + "/_resources/DProjects.XShell/{module}/index.json"]
                         },
-                        Sources = sources ?? [appBasePath + "/_resources/DProjects.XShell/{module}/index.json"],
                         Server = new Extensions.ServerConfig {
                             Environment = "Development",
                             UnhandledPrefixes = unhandledPrefixes ?? new Extensions.ServerConfig().UnhandledPrefixes

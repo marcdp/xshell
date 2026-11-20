@@ -19,7 +19,9 @@ file. Bootstrap then normalizes each file path into `/_assets/<id>/<generation>/
 
 JavaScript metadata is extracted statically from default-exported definition objects and is never executed. Development inventories retain authored
 HTML SFC paths and inspect their embedded definitions through the existing HTML section parser. Pack compiles HTML to JavaScript first and enriches
-the resulting staged `.js` entry. Markdown Pages may use their first ATX heading as a title; other Markdown metadata is not inferred.
+the resulting staged `.js` entry. Static `contract.tags` arrays are validated and copied in declaration order to `file.resource.tags`; dynamic
+expressions are rejected. Standalone JSON contracts receive the same projection. Module tags remain authored module metadata and are not propagated
+to resources. Markdown Pages may use their first ATX heading as a title; other Markdown metadata is not inferred.
 
 ## Implemented reusable package mechanisms
 

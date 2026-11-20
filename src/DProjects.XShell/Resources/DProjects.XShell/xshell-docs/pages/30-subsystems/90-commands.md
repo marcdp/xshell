@@ -7,8 +7,9 @@ the [Tasks](80-tasks.md) service.
 
 `commands.list(options = {})` synchronously returns frozen lightweight descriptors sorted by Command ID. It scans the effective
 `config.xshell.files` and `config.modules[id].files` inventories that bootstrap also uses to register Command resolver entries; it does not load
-JavaScript, issue network requests, or maintain a separate catalog. A descriptor contains `id`, `moduleId`, `label`, `description`, `category`,
-`icon`, `path`, and `size`. Missing descriptive metadata remains an empty string. Category uses authored resource metadata when available and
+JavaScript, issue network requests, or maintain a separate catalog. A descriptor contains `id`, `moduleId`, `label`, `description`, `tags`, `category`,
+`icon`, `path`, and `size`. Tags are exposed as an independent frozen array, and missing tags become an empty array. Missing descriptive metadata
+remains an empty string. Category uses authored resource metadata when available and
 otherwise falls back to the owning module ID.
 
 ```js
@@ -21,7 +22,7 @@ The optional `moduleId` and `category` filters are exact. `query` is a case-inse
 rule: the path below the owning `/commands/` directory with only the final `.js` removed, so nested paths retain `/` and dotted filenames retain
 their dots.
 
-The Diagnostics console's Commands Page presents these descriptors with ID, label, owner, category, description, size, and source filters. Enter
+The Diagnostics console's Commands Page presents these descriptors with ID, label, owner, category, tags, description, size, and source filters. Enter
 or double-click on a Command row opens the existing invocation Page in stack mode. The listing uses the discovery API and therefore does not load
 Command implementations; the invocation Page resolves the selected implementation only after activation. Discovery describes what can be
 resolved, while execution remains the separate operation below.
@@ -52,6 +53,8 @@ arguments, preserves explicitly supplied values, validates required arguments, t
 the values according to the declared parameter list. Load and argument-validation failures therefore do not create Tasks.
 
 Command definitions can also declare optional [usage examples](../20-components/10-manifest.md#usage-examples) in `contract.examples`.
+They may declare lowercase kebab-case classification identifiers in `contract.tags`; generated inventory metadata copies those values to
+`file.resource.tags` without loading the Command. Tags do not alter discovery filters, argument validation, Task handling, or execution.
 
 The Task handler creates a fresh Command instance with `{ task: taskContext }` and calls `execute(...args)`. Tasks remains the owner of scheduling,
 status, progress, output, cooperative cancellation, errors, and results. A Command exception or rejected promise propagates through the handler and

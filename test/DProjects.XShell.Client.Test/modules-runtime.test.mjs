@@ -195,8 +195,8 @@ test("failed module startup rolls back successful starts in reverse order and pr
 test("module registry is a frozen metadata snapshot of the runtime modules", async () => {
     const config = freeze({
         xshell: { assets: { basePath: "/_assets" } },
-        modules: { orders: moduleDefinition("orders", { files: [
-            { path: "/_assets/orders/pages/index.js", size: 10, resource: { type: "page", title: "Orders" } },
+        modules: { orders: moduleDefinition("orders", { tags: ["commerce", "orders"], files: [
+            { path: "/_assets/orders/pages/index.js", size: 10, resource: { type: "page", title: "Orders", tags: ["navigation", "orders"] } },
             { path: "/_assets/orders/images/logo.svg", size: 20 }
         ] }) }
     });
@@ -215,11 +215,18 @@ test("module registry is a frozen metadata snapshot of the runtime modules", asy
     assert.equal(Object.hasOwn(registry[0], "controller"), false);
     assert.equal(Object.hasOwn(registry[0], "config"), false);
     assert.equal(Object.isFrozen(registry[0]), true);
+    assert.deepEqual(registry[0].tags, ["commerce", "orders"]);
+    assert.equal(Object.isFrozen(registry[0].tags), true);
+    assert.notStrictEqual(registry[0].tags, config.modules.orders.tags);
+    assert.throws(() => registry[0].tags.push("other"), TypeError);
+    assert.deepEqual(config.modules.orders.tags, ["commerce", "orders"]);
     assert.equal(Object.isFrozen(registry[0].assets), true);
     assert.equal(Object.isFrozen(registry[0].files), true);
     assert.equal(Object.isFrozen(registry[0].files[0]), true);
     assert.equal(Object.isFrozen(registry[0].files[0].resource), true);
-    assert.deepEqual(registry[0].files[0].resource, { type: "page", title: "Orders" });
+    assert.equal(Object.isFrozen(registry[0].files[0].resource.tags), true);
+    assert.deepEqual(registry[0].files[0].resource, { type: "page", title: "Orders", tags: ["navigation", "orders"] });
+    assert.throws(() => registry[0].files[0].resource.tags.push("other"), TypeError);
     assert.equal(Object.hasOwn(registry[0].files[1], "resource"), false);
     assert.throws(() => registry.push({ id: "other" }), TypeError);
     assert.throws(() => registry.splice(0, 1), TypeError);
