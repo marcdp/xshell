@@ -167,6 +167,10 @@ Dependencies resolve through the context that owns the constructed instance. Sin
 their child scope. Transients use the context in which that transient was requested. This explicit propagation lets a scoped service and its
 transient dependencies share the same scoped dependency without global current-scope state.
 
+The reserved `constructor({ services })` dependency returns that same construction context rather than resolving the registered root `services`
+singleton. A singleton therefore receives root Services, while scoped and transient instances receive the scope that owns their construction.
+This constructor-only behavior does not change `scope.resolve("services")`, which continues to return the registered root singleton.
+
 A singleton may depend on other singletons and on transients whose complete constructor graph is scope-free. It cannot capture a scoped service
 directly or through one or more transients. Scoped services may depend on singletons, same-scope scoped services, and transients. A transient may
 depend on a scoped service only when created in an active child scope and outside a singleton construction graph. Violations report the constructor

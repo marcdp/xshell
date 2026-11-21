@@ -80,6 +80,8 @@ export default {
         let renderEngine = null;
         let revision = 0;
         let renderPending = false;
+        let mounted = false;
+        let unloaded = false;
 
         const getContext = () => {
             const page = getPage();
@@ -109,9 +111,13 @@ export default {
             }
         };
 
+        const reportError = (error) => {
+            state.renderingError = error instanceof Error ? error.message : String(error);
+        };
+
         const fail = (error) => {
             unmountRenderer();
-            state.renderingError = error instanceof Error ? error.message : String(error);
+            reportError(error);
         };
 
         const invalidateRenderer = () => {
@@ -144,6 +150,8 @@ export default {
             load() {
                 events.on(state, "change:value", (event) => {
                     valueSnapshot = cloneValue(event.newValue);
+                    if (!mounted || unloaded) return;
+
                     if (event.oldValue === event.newValue) {
                         invalidateRenderer();
                     } else {
@@ -151,33 +159,41 @@ export default {
                     }
                 });
                 events.on(state, "change:template", () => {
+                    if (!mounted || unloaded) return;
                     this.refresh();
                 });
             },
 
             mount() {
+                mounted = true;
+
                 // The component's own XTemplate has not rendered yet when
                 // mount() is called. Run refresh after the first outer render.
                 postRender("refresh");
             },
 
             unmount() {
+                mounted = false;
                 ++revision;
                 unmountRenderer();
             },
 
             unload() {
+                mounted = false;
+                unloaded = true;
                 ++revision;
                 unmountRenderer();
             },
 
             async refresh() {
+                if (unloaded) return;
+
                 const currentRevision = ++revision;
 
-                unmountRenderer();
-                state.renderingError = "";
-
+                // Empty input intentionally clears the active preview immediately.
                 if (!state.template || state.value === null) {
+                    unmountRenderer();
+                    state.renderingError = "";
                     return;
                 }
 
@@ -189,6 +205,8 @@ export default {
                 if (!editor) {
                     return;
                 }
+
+                let replacementStarted = false;
 
                 try {
                     const factory = dependencies.renderEngineXClient(
@@ -249,18 +267,29 @@ export default {
                         }
                     });
 
+                    // A stale, unmounted renderer must not clear the shared preview host during disposal.
                     if (currentRevision !== revision) {
-                        current.unmount();
                         return;
                     }
 
+                    // Commit synchronously so the old preview is removed only when its replacement is ready.
+                    const previous = renderEngine;
                     renderEngine = current;
+                    renderPending = false;
+                    replacementStarted = true;
+
+                    if (previous) previous.unmount();
                     renderEngine.mount();
                     renderEngine.render();
+                    state.renderingError = "";
 
                 } catch (error) {
                     if (currentRevision === revision) {
-                        fail(error);
+                        if (replacementStarted) {
+                            fail(error);
+                        } else {
+                            reportError(error);
+                        }
                     }
                 }
             },

@@ -298,6 +298,111 @@ test("allowed lifetime dependency combinations resolve successfully", () => {
     assert.ok(scopedConsumer.transient instanceof Transient);
 });
 
+test("service constructors receive the Services context that owns their construction", async () => {
+    const services = createServices();
+    services.register("services", services);
+    let scopedId = 0;
+
+    class ScopedDependency {
+        static optionsSchema = { type: "object", additionalProperties: false };
+        constructor() { this.id = ++scopedId; }
+    }
+    class SingletonConsumer {
+        static optionsSchema = { type: "object", additionalProperties: false };
+        constructor({services}) { this.services = services; }
+    }
+    class ScopedConsumer {
+        static optionsSchema = { type: "object", additionalProperties: false };
+        constructor({services, scopeContext}) {
+            this.services = services;
+            this.scopeContext = scopeContext;
+            this.first = services.resolve("scopedDependency");
+            this.second = services.resolve("scopedDependency");
+        }
+    }
+    class TransientConsumer {
+        static optionsSchema = { type: "object", additionalProperties: false };
+        constructor({services}) { this.services = services; }
+    }
+    class ChildTransientConsumer {
+        static optionsSchema = { type: "object", additionalProperties: false };
+        constructor({services}) { this.services = services; this.scoped = services.resolve("scopedDependency"); }
+    }
+    class SingletonWithTransient {
+        static optionsSchema = { type: "object", additionalProperties: false };
+        constructor({transientConsumer}) { this.transient = transientConsumer; }
+    }
+    class InvalidSingleton {
+        static optionsSchema = { type: "object", additionalProperties: false };
+        constructor({services}) { services.resolve("scopedDependency"); }
+    }
+
+    // Register each lifetime without changing the public root registration for services.
+    registerImplementation(services, "scopedDependency", ScopedDependency, "scoped");
+    registerImplementation(services, "singletonConsumer", SingletonConsumer);
+    registerImplementation(services, "scopedConsumer", ScopedConsumer, "scoped");
+    registerImplementation(services, "transientConsumer", TransientConsumer, "transient");
+    registerImplementation(services, "childTransientConsumer", ChildTransientConsumer, "transient");
+    registerImplementation(services, "singletonWithTransient", SingletonWithTransient);
+    registerImplementation(services, "invalidSingleton", InvalidSingleton);
+    const firstContext = { owner: "first" };
+    const first = services.beginScope({context: firstContext});
+    const second = services.beginScope({context: { owner: "second" }});
+    const nested = first.beginScope({context: { owner: "nested" }});
+
+    // Singleton construction remains rooted even when resolution starts in a child scope.
+    const singleton = first.resolve("singletonConsumer");
+    assert.strictEqual(singleton, second.resolve("singletonConsumer"));
+    assert.strictEqual(singleton.services, services);
+    assert.strictEqual(first.resolve("services"), services);
+    assert.strictEqual(first.resolve("singletonWithTransient").transient.services, services);
+    assert.throws(
+        () => first.resolve("invalidSingleton"),
+        /singleton service 'invalidSingleton' cannot depend on scoped service 'scopedDependency'/
+    );
+
+    // Scoped construction receives its exact owner, including nested scopes and their context.
+    const firstScoped = first.resolve("scopedConsumer");
+    const secondScoped = second.resolve("scopedConsumer");
+    const nestedScoped = nested.resolve("scopedConsumer");
+    assert.strictEqual(firstScoped.services, first);
+    assert.strictEqual(secondScoped.services, second);
+    assert.strictEqual(nestedScoped.services, nested);
+    assert.strictEqual(firstScoped.scopeContext, firstContext);
+    assert.strictEqual(firstScoped.first, firstScoped.second);
+    assert.strictEqual(firstScoped.first, first.resolve("scopedDependency"));
+    assert.notStrictEqual(firstScoped.first, secondScoped.first);
+    assert.notStrictEqual(firstScoped.first, nestedScoped.first);
+
+    // Transient construction follows the resolving context and can use that child's scoped instances.
+    assert.strictEqual(services.resolve("transientConsumer").services, services);
+    assert.strictEqual(first.resolve("transientConsumer").services, first);
+    const childTransient = first.resolve("childTransientConsumer");
+    assert.strictEqual(childTransient.services, first);
+    assert.strictEqual(childTransient.scoped, firstScoped.first);
+
+    await Promise.all([first.dispose(), second.dispose()]);
+});
+
+test("dynamic resolution through injected services preserves circular dependency detection", () => {
+    const services = createServices();
+    class First {
+        static optionsSchema = { type: "object", additionalProperties: false };
+        constructor({services}) { this.second = services.resolve("second"); }
+    }
+    class Second {
+        static optionsSchema = { type: "object", additionalProperties: false };
+        constructor({services}) { this.first = services.resolve("first"); }
+    }
+    registerImplementation(services, "first", First, "scoped");
+    registerImplementation(services, "second", Second, "scoped");
+    const scope = services.beginScope();
+
+    assert.throws(() => scope.resolve("first"), /Circular service dependency detected: first -> second -> first/);
+    assert.equal(scope._scopedInstances.get("first")?.instance ?? null, null);
+    assert.equal(scope._scopedInstances.get("second")?.instance ?? null, null);
+});
+
 test("circular dependencies are detected across every lifetime combination without corrupting caches", () => {
     for (const [firstLifetime, secondLifetime] of [
         ["singleton", "singleton"],

@@ -234,111 +234,121 @@ class XPage extends HTMLElement {
         let moduleId = xshell.modules.resolveModuleId(resourceSrc);
         this.setAttribute("module", moduleId ?? "");
 
-        // fetch page
         let page = null;
+        let pageAdopted = false;
+        let failure = null;
+        let failed = false;
         try {
-            const pageClass = await xshell.loader.load("page:" + resourceSrc);
-            page = new pageClass( { src, context: this._context, bus: xshell.bus, navigation: xshell.navigation } );    
-        } catch(exception) {
-            page = new Page({ src, bus: xshell.bus, navigation: xshell.navigation });
-            page.onCommand = (command, params) => {
-                if (command == "mount") {
-                    exception.src = src;
-                    exception.areaId = area?.id;
-                    exception.moduleId = moduleId;
-                    this.showError( exception );
+            // fetch the candidate Page or prepare the existing fallback Page
+            try {
+                const pageClass = await xshell.loader.load("page:" + resourceSrc);
+                page = new pageClass( { src, context: this._context, bus: xshell.bus, navigation: xshell.navigation } );
+            } catch(exception) {
+                page = new Page({ src, bus: xshell.bus, navigation: xshell.navigation });
+                page.onCommand = (command, params) => {
+                    if (command == "mount") {
+                        exception.src = src;
+                        exception.areaId = area?.id;
+                        exception.moduleId = moduleId;
+                        this.showError( exception );
+                    }
                 }
             }
-        }        
 
-        //delay
-        if (false && (src.indexOf("dialog")!=-1 || document.body.querySelectorAll(":scope > x-page").length > 1)) {
-            await new Promise(r => setTimeout(r, 1000111));                
-        }     
-
-        // search params
-        let searchParams = new URLSearchParams(src.indexOf("?") != -1 ? src.substring(src.indexOf("?") + 1).split("#")[0] : "");
-
-        // nav
-        let nav = null;
-        if (searchParams.get("nav")) {
-            nav = JSON.parse(atob(searchParams.get("nav").replace(/_/g, "/").replace(/-/g, "+")));
-            nav.breadcrumb = nav.breadcrumb || [];
-            nav.breadcrumb.push({ label: page.label, href: src });
-            searchParams.delete("nav");
-        }
-
-        // breadcrumb
-        let breadcrumb = xshell.areas.getMenuitemBreadcrumb(src.split("?")[0], area?.id);
-        if (nav && nav.breadcrumb) {
-            breadcrumb = nav.breadcrumb;
-        }
-        page.breadcrumb = breadcrumb;
-
-        // title
-        let label = page.label;
-        if (nav && nav.title) {
-            label = nav.title;
-            if (breadcrumb && breadcrumb.length > 0) breadcrumb[breadcrumb.length - 1].label = label;
-        }
-        if (!label) {
-            if (breadcrumb && breadcrumb.length > 0) label = breadcrumb[breadcrumb.length - 1].label;
-        }
-        if (this._layout == "dialog" && this._context && this._context.title){
-            label = this._context.title;
-        }
-        page.label = label;
-
-        // icon
-        let icon = page.icon;
-        if (!icon && breadcrumb && breadcrumb.length > 0) icon = breadcrumb[breadcrumb.length - 1].icon;
-        if (nav && nav.icon) {
-            icon = nav.icon;
-            if (breadcrumb && breadcrumb.length > 0) breadcrumb[breadcrumb.length - 1].icon = icon;
-        }
-        if (!icon) {
-            if (breadcrumb && breadcrumb.length > 0) icon = breadcrumb[breadcrumb.length - 1].icon;
-        }
-        page.icon = icon;        
-
-        // call load on page
-        await page.load();
-
-        // abort if the load revision has changed
-        if (loadRevision !== this._loadRevision) {
-            await page.unload();
-            return;
-        }
-
-        // Page preparation may overlap, but only the latest load may begin a serialized replacement.
-        const loadCommit = this._loadCommit.then(async () => {
-            // may have become stale while waiting in the queue.
-            if (loadRevision !== this._loadRevision) {
-                await page.unload();
-                return;
+            // delay
+            if (false && (src.indexOf("dialog")!=-1 || document.body.querySelectorAll(":scope > x-page").length > 1)) {
+                await new Promise(r => setTimeout(r, 1000111));
             }
-            // atomic Page transition.
-            await this.unmount();
-            await this.unload();
-            // set the new page before mounting it
-            this._page = page;
-            // mount the new page
-            await this.mount();
-            // another navigation may have started while mount() was awaiting. The transition must finish, but stale host state must not be committed.
+
+            // search params
+            let searchParams = new URLSearchParams(src.indexOf("?") != -1 ? src.substring(src.indexOf("?") + 1).split("#")[0] : "");
+
+            // nav
+            let nav = null;
+            if (searchParams.get("nav")) {
+                nav = JSON.parse(atob(searchParams.get("nav").replace(/_/g, "/").replace(/-/g, "+")));
+                nav.breadcrumb = nav.breadcrumb || [];
+                nav.breadcrumb.push({ label: page.label, href: src });
+                searchParams.delete("nav");
+            }
+
+            // breadcrumb
+            let breadcrumb = xshell.areas.getMenuitemBreadcrumb(src.split("?")[0], area?.id);
+            if (nav && nav.breadcrumb) {
+                breadcrumb = nav.breadcrumb;
+            }
+            page.breadcrumb = breadcrumb;
+
+            // title
+            let label = page.label;
+            if (nav && nav.title) {
+                label = nav.title;
+                if (breadcrumb && breadcrumb.length > 0) breadcrumb[breadcrumb.length - 1].label = label;
+            }
+            if (!label) {
+                if (breadcrumb && breadcrumb.length > 0) label = breadcrumb[breadcrumb.length - 1].label;
+            }
+            if (this._layout == "dialog" && this._context && this._context.title){
+                label = this._context.title;
+            }
+            page.label = label;
+
+            // icon
+            let icon = page.icon;
+            if (!icon && breadcrumb && breadcrumb.length > 0) icon = breadcrumb[breadcrumb.length - 1].icon;
+            if (nav && nav.icon) {
+                icon = nav.icon;
+                if (breadcrumb && breadcrumb.length > 0) breadcrumb[breadcrumb.length - 1].icon = icon;
+            }
+            if (!icon) {
+                if (breadcrumb && breadcrumb.length > 0) icon = breadcrumb[breadcrumb.length - 1].icon;
+            }
+            page.icon = icon;
+
+            // prepare the candidate before entering the serialized replacement queue
+            await page.load();
             if (loadRevision === this._loadRevision) {
-                this._status = "loaded";
-                if (layoutElement) layoutElement.removeAttribute("status");
-                this.dispatchEvent(new CustomEvent("load", {
-                    detail: { page }
-                }));
+                const loadCommit = this._loadCommit.then(async () => {
+                    // abandon a candidate that became stale while waiting in the queue
+                    if (loadRevision !== this._loadRevision) return;
+
+                    // replace the current Page before transferring ownership of the candidate
+                    await this.unmount();
+                    await this.unload();
+                    this._page = page;
+                    pageAdopted = true;
+
+                    // mount the adopted Page through the ordinary host lifecycle
+                    await this.mount();
+                    if (loadRevision === this._loadRevision) {
+                        this._status = "loaded";
+                        if (layoutElement) layoutElement.removeAttribute("status");
+                        this.dispatchEvent(new CustomEvent("load", { detail: { page } }));
+                    }
+                });
+
+                // keep the queue usable while propagating this transition's failure to its caller
+                this._loadCommit = loadCommit.catch(() => {});
+                await loadCommit;
             }
-        });
+        } catch(error) {
+            failure = error;
+            failed = true;
+        } finally {
+            // release every candidate that did not transfer to the XPage lifecycle
+            if (page && !pageAdopted) {
+                try {
+                    await page.unload();
+                } catch(cleanupError) {
+                    failure = failed
+                        ? new AggregateError([failure, cleanupError], `Page '${src}' preparation and cleanup both failed.`, { cause: failure })
+                        : cleanupError;
+                    failed = true;
+                }
+            }
+        }
 
-        // Keep the queue usable even if this particular commit fails.
-        this._loadCommit = loadCommit.catch(() => {});
-
-        // Still propagate the error to this load().
-        await loadCommit;
+        if (failed) throw failure;
     }
     async unmount() {
         // unmount

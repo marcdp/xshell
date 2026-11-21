@@ -19,13 +19,9 @@ export default {
     },
 
     style: `
-        :scope {}
-
         x-form {}
         x-form  x-datafields {}
         x-form  x-datafields x-datafield[type="html"] {}
-        
- 
     `,
 
     template: `
@@ -37,7 +33,6 @@ export default {
                     <x-template x-prop:template="state.template" x-model="state.previewValue" style="height:100%;"></x-template>
                 </x-datafield>
             </x-datafields>
-
             <x-button slot="footer" label="Close" class="cancel" command="close"></x-button>
         </x-form>
     `,

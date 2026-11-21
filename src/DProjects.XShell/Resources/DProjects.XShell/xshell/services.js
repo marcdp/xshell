@@ -248,7 +248,9 @@ export default class Services {
         this._creationPath.push({ name, lifetime: registration.lifetime });
         try {
             const dependencies = new Proxy({}, {
-                get: (target, prop) => prop === "scopeContext" ? context._context : typeof prop === "string" ? context.resolve(prop) : undefined
+                get: (target, prop) => prop === "services" ? context
+                    : prop === "scopeContext" ? context._context
+                    : typeof prop === "string" ? context.resolve(prop) : undefined
             });
             const options = registration.options ?? {};
             this._validateOptions(name, registration.implementationItem.class, options);

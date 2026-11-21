@@ -100,6 +100,9 @@ that permanently destroys a Component remains responsible for calling its idempo
 For Pages, `x-page` unmounts its current Page when disconnected and remounts the same Page on reconnection. Replacing a Page, or using the
 explicit `removePage()` destruction path, unmounts the old Page and then unloads it before discarding the instance. `unload()` is idempotent as a
 safety measure, but lifecycle owners should not use it as normal replacement control flow.
+During navigation, the load operation owns each candidate Page until the serialized transition assigns it to `x-page`. A candidate that fails
+preparation, becomes stale, or cannot complete the pre-adoption transition is unloaded before the failure returns; assignment transfers final
+cleanup responsibility to the ordinary `x-page` lifecycle.
 Closing a dialog uses `removePage()`: its Page unmounts and unloads before the dialog host is removed and the result promise completes.
 
 Invalidation is also mount-scoped. Requests made before mount or after unmount do not render, and an animation-frame callback queued for a prior
