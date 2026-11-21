@@ -7,7 +7,7 @@ import DialogContract from "../../src/DProjects.XShell/Resources/DProjects.XShel
 import dialogLayout from "../../src/DProjects.XShell/Resources/DProjects.XShell/x/layouts/x-layout-dialog.js";
 import stackLayout from "../../src/DProjects.XShell/Resources/DProjects.XShell/x/layouts/x-layout-stack.js";
 import Dialog from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/dialog.js";
-import Events from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/scoped/events.js";
+import Events from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/events.js";
 import Services from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services.js";
 import JsonValidator from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/json-validator.js";
 

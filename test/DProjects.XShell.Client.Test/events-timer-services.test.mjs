@@ -6,8 +6,8 @@ import contractSchema from "../../src/DProjects.XShell/Resources/DProjects.XShel
 import eventsContract from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/contracts/events.json" with {type: "json"};
 import servicesContract from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/contracts/services.json" with {type: "json"};
 import timerContract from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/contracts/timer.json" with {type: "json"};
-import Events from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/scoped/events.js";
-import Timer from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/scoped/timer.js";
+import Events from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/events.js";
+import Timer from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/timer.js";
 import JsonValidator from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/json-validator.js";
 import Services from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services.js";
 
@@ -38,8 +38,8 @@ class CountingTarget extends EventTarget {
 
 test("framework registration and helper contracts declare transient Services", () => {
     const manifest = readFileSync(new URL("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/manifest.jsonc", import.meta.url), "utf8");
-    assert.match(manifest, /"events"\s*:\s*\{[\s\S]*?"implementation"\s*:\s*"\/scoped\/events\.js"[\s\S]*?"lifetime"\s*:\s*"transient"/);
-    assert.match(manifest, /"timer"\s*:\s*\{[\s\S]*?"implementation"\s*:\s*"\/scoped\/timer\.js"[\s\S]*?"lifetime"\s*:\s*"transient"/);
+    assert.match(manifest, /"events"\s*:\s*\{[\s\S]*?"implementation"\s*:\s*"\/services\/events\.js"[\s\S]*?"lifetime"\s*:\s*"transient"/);
+    assert.match(manifest, /"timer"\s*:\s*\{[\s\S]*?"implementation"\s*:\s*"\/services\/timer\.js"[\s\S]*?"lifetime"\s*:\s*"transient"/);
 
     const validator = new JsonValidator();
     assert.equal(validator.validate(eventsContract, contractSchema).valid, true);

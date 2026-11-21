@@ -2,8 +2,8 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import Commands from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/commands.js";
-import Events from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/scoped/events.js";
-import Timer from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/scoped/timer.js";
+import Events from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/events.js";
+import Timer from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/timer.js";
 import JsonValidator from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/json-validator.js";
 import Services from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services.js";
 import Tasks from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/tasks.js";

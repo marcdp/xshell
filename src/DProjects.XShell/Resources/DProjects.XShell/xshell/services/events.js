@@ -2,6 +2,7 @@
 // class
 export default class Events {
 
+    // Options schema for the Events class
     static optionsSchema = {
         type: "object",
         properties: {},

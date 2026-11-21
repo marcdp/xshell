@@ -10,7 +10,7 @@ import moduleSchema from "../../src/DProjects.XShell/Resources/DProjects.XShell/
 import Areas from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/areas.js";
 import Navigation from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/navigation.js";
 import JsonValidator from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/json-validator.js";
-import Events from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/scoped/events.js";
+import Events from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/events.js";
 
 const key = "x-home.favorites";
 const rootAssets = "/_assets/root/1.0.0.hash/pages";

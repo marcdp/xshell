@@ -53,8 +53,8 @@ globalThis.requestAnimationFrame = callback => { callback(); return 1; };
 
 const { createComponentClassFromJsDefinition: createComponentClass } = await import("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/loaders/component-js.js");
 const { default: xshell } = await import("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/xshell.js");
-const { default: Events } = await import("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/scoped/events.js");
-const { default: Timer } = await import("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/scoped/timer.js");
+const { default: Events } = await import("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/events.js");
+const { default: Timer } = await import("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/timer.js");
 
 class StateEngineFactory {
     constructor(state) { this.state = state; }

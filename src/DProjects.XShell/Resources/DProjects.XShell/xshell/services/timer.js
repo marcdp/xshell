@@ -1,6 +1,7 @@
 // class
 export default class Timer {
 
+    // Options schema for the Timer class
     static optionsSchema = {
         type: "object",
         properties: {},

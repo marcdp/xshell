@@ -68,7 +68,7 @@
             },
             "events": {
                 "contract": "events",
-                "implementation": "/scoped/events.js",
+                "implementation": "/services/events.js",
                 "lifetime": "transient"
             },
             "i18n": {
@@ -120,7 +120,7 @@
             },
             "timer": {
                 "contract": "timer",
-                "implementation": "/scoped/timer.js",
+                "implementation": "/services/timer.js",
                 "lifetime": "transient"
             },
             "temp": {

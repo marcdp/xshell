@@ -2,8 +2,8 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import Services from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services.js";
-import Events from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/scoped/events.js";
-import Timer from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/scoped/timer.js";
+import Events from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/events.js";
+import Timer from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/timer.js";
 
 class FakeNode {
     adoptedStyleSheets = [];
