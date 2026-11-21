@@ -2,6 +2,7 @@
 export default {
     contract: {
         description: "Displays a selectable, expandable item in a tree view.",
+        tags: ["data", "hierarchies", "selection"],
         events: {
             toggle: {
                 description: "Raised when the item expansion state changes."

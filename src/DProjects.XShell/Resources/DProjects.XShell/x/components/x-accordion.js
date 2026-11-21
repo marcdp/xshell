@@ -4,6 +4,7 @@
 export default {
     contract: {
         description: "Groups accordion panels and keeps only the expanded panel active.",
+        tags: ["content", "accordions", "selection"],
         events: {},
         properties: {
             selectedIndex: {type:"number", default:0, attribute:true, state:true, description:"Index of the currently selected accordion panel"},

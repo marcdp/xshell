@@ -37,6 +37,7 @@ export default class Modules {
         return Object.freeze(this._modules.map(module => Object.freeze({
             id: module.id,
             label: module.label,
+            description: module.description || "",
             path: module.path,
             version: module.config.version || "",
             tags: Object.freeze([...(module.config.tags || [])]),
@@ -84,6 +85,7 @@ export default class Modules {
                 id: moduleId,
                 config: moduleConfig,
                 label: moduleConfig.label || moduleId,
+                description: moduleConfig.description || "",
                 path: moduleConfig.assets.path,
                 params: moduleConfig.params,
                 routes: moduleConfig.routes || Object.freeze({}),

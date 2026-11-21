@@ -3,6 +3,7 @@
 export default {
     contract: {
         description: "Displays a spinner with an optional message.",
+        tags: ["feedback", "loading"],
         events: {},
         properties: {
             message: {type:"string", default:"", attribute:true, state:true, description:""}

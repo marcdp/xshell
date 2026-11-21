@@ -3,6 +3,7 @@
 export default {
     contract: {
         description: "Provides a styled container for contextual menu content.",
+        tags: ["menus", "commands", "interaction"],
         events: {},
         properties: {
             submenu: {type: "boolean", default: false, attribute:true, state:true, description: "Whether the context menu is a submenu."},

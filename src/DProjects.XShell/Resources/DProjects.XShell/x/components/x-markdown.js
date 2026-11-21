@@ -4,6 +4,7 @@ import parser from "../utils/markdown.js";
 export default {
     contract: {
         description: "Renders trusted Markdown text or trusted Markdown loaded from a source URL. Generated HTML is not sanitized.",
+        tags: ["content", "markdown", "rendering"],
         events: {},
         properties: {
             value: {type:"string", default:"", attribute:true, state:true, description:"Trusted Markdown content. Generated HTML is not sanitized."},

@@ -6,6 +6,7 @@
   "description": "Effective configuration of a resolved XShell module.",
   "properties": {
     "label": {"type": "string", "description": "Human-readable module label."},
+    "description": {"type": "string", "description": "Human-readable module description."},
     "version": {"type": "string", "description": "Module version."},
     "copyright": {"type": "string", "description": "Module copyright notice."},
     "icon": {"type": "string", "description": "Module icon resource."},

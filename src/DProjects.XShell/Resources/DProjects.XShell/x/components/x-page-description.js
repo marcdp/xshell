@@ -3,6 +3,7 @@
 export default {
     contract: {
         description: "Displays the current page description.",
+        tags: ["content", "pages"],
         events: {},
         properties: {},
         methods: {},

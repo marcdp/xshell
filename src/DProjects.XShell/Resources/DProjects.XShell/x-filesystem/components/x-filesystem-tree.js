@@ -3,6 +3,7 @@
 export default {
     contract: {
         description: "Filesystem tree component",
+        tags: ["filesystem", "directories", "hierarchies", "selection"],
         events: {
             select: {
                 description: "Fired when a tree item is selected",

@@ -28,6 +28,7 @@ const formatFileSize = function(bytes) {
 export default {
     contract: {
         description: "Renders and validates an editable form field.",
+        tags: ["forms", "inputs", "validation"],
         events: {
             change: {
                 description: "Raised when the field value changes.",

@@ -2,6 +2,7 @@
 export default {
     contract: {
         description: "Displays wizard panels with previous and next navigation controls.",
+        tags: ["forms", "wizard", "navigation"],
         events: {},
         properties: {
             index:  {type:"number", default:0, attribute:true, state:true, description:""},

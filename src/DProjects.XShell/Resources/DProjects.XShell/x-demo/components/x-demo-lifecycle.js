@@ -1,6 +1,7 @@
 export default {
     contract: {
-        description: "A lifecycle probe that reports its controller hooks to the cookbook Page."
+        description: "A lifecycle probe that reports its controller hooks to the cookbook Page.",
+        tags: ["demo", "lifecycle"],
     },
     template: `<p>Lifecycle probe is mounted.</p>`,
 

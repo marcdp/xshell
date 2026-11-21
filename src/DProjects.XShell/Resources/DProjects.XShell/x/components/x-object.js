@@ -3,6 +3,7 @@
 export default {
     contract: {
         description: "Displays a JavaScript value as an expandable object tree.",
+        tags: ["data", "objects", "hierarchies", "visualization"],
         events: {},
         properties: {
             value: { type: "any", default: null, state: true, description: "Value to display." },

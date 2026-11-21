@@ -2,6 +2,7 @@
 export default {
     contract: {
         description: "Formats a date/time value, showing the time when it is today and the date otherwise.",
+        tags: ["time", "dates", "formatting"],
         events: {},
         properties: {
             datetime: {type:"string", default:"", attribute:true, state:true, description:""},

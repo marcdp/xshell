@@ -43,8 +43,7 @@ export default {
                 <x-file-size x-prop:value="contractItem.size" style="text-align:right"></x-file-size>
                 <x-time-ms x-prop:value="contractItem.time" style="text-align:right"></x-time-ms>
                 <div style="text-align:right">{{ contractItem.status }}</div>
-                <x-anchor style="text-align:right" x-attr:href="contractItem.url" target="_blank" class="plain" tooltip="Open source file"
-                    x-on:dblclick="keepLinkActivation" x-on:keydown.enter="keepLinkActivation"><x-icon icon="x-open-in-new"></x-icon></x-anchor>
+                <x-anchor style="text-align:right" x-attr:href="contractItem.url" target="_blank" class="plain" tooltip="Open source file"><x-icon icon="x-open-in-new"></x-icon></x-anchor>
             </x-listview-item>
             </x-listview-body>
         </x-listview>
@@ -79,9 +78,6 @@ export default {
                     classes: ["size-wide"],
                     params: { kind: "contract", id }
                 });
-            },
-            keepLinkActivation({ event }) {
-                event.stopPropagation();
             },
             async refresh() {
                 // refresh

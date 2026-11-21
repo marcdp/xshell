@@ -3,6 +3,7 @@
 export default {
     contract: {
         description: "Provides a styled card container with header, body, and footer slots.",
+        tags: ["layout", "containers", "panels"],
         events: {},
         properties: {},
         methods: {},

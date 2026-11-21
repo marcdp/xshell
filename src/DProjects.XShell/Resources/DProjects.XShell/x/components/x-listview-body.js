@@ -2,6 +2,7 @@
 export default {
     contract: {
         description: "Provides the presentation container for x-listview items.",
+        tags: ["data", "collections", "containers"],
         events: {},
         properties: {},
         methods: {},

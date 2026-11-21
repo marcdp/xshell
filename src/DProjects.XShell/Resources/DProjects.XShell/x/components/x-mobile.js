@@ -2,6 +2,7 @@
 export default {
     contract: {
         description: "Displays slotted content only on mobile-sized viewports.",
+        tags: ["responsive", "mobile", "visibility"],
         events: {},
         properties: {},
         methods: {},

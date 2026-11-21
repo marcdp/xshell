@@ -14,23 +14,23 @@ export default {
         <p>Shows discovered JSON schemas, their owning modules, and file sizes.</p>
         <x-listview view="details">
             <x-listview-head>
-                <x-listview-column width="17em"><x-datafield type="search" x-model="state.label" placeholder="Schema"></x-datafield></x-listview-column>
-                <x-listview-column width="14em"><x-datafield type="search" x-model="state.id" placeholder="Resolver ID"></x-datafield></x-listview-column>
-                <x-listview-column width="10em"><x-datafield type="search" x-model="state.moduleId" placeholder="Module"></x-datafield></x-listview-column>
+                <x-listview-column width="10em"><x-datafield type="search" x-model="state.id" placeholder="Schema"></x-datafield></x-listview-column>
+                <x-listview-column width="17em"><x-datafield type="search" x-model="state.label" placeholder="Label"></x-datafield></x-listview-column>
                 <x-listview-column><x-datafield type="search" x-model="state.description" placeholder="Description"></x-datafield></x-listview-column>
+                <x-listview-column width="10em"><x-datafield type="search" x-model="state.moduleId" placeholder="Module"></x-datafield></x-listview-column>
                 <x-listview-column><x-datafield type="search" x-model="state.path" placeholder="Path"></x-datafield></x-listview-column>
                 <x-listview-column label="Size" width="5em" style="text-align:right"></x-listview-column>
                 <x-listview-column label="File" width="3em" style="text-align:right"></x-listview-column>
             </x-listview-head>
             <x-listview-body>
             <x-listview-item x-for="schema in state.schemas"
-                x-attr:label="schema.label"
+                x-attr:label="schema.id"
                 x-attr:icon="schema.icon"
                 target="_blank"
             >
-                <div>{{ schema.id }}</div>
-                <div>{{ schema.moduleId }}</div>
+                <div>{{ schema.label }}</div>
                 <x-truncate x-attr:text="schema.description"></x-truncate>
+                <div>{{ schema.moduleId }}</div>
                 <div>{{ schema.path }}</div>
                 <x-file-size x-prop:value="schema.size" style="text-align:right"></x-file-size>
                 <x-anchor style="text-align:right" x-attr:href="schema.url" target="_blank" class="plain"><x-icon icon="x-open-in-new" ></x-icon></x-anchor>

@@ -1,6 +1,7 @@
 export default {
     contract: {
         description: "A small counter with a public label and reset method.",
+        tags: ["demo", "counters"],
         properties: {
             label: {
                 type: "string",

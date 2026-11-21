@@ -182,6 +182,7 @@ function highlightCode(source, language) {
 export default {
     contract: {
         description: "Displays read-only code with normalization, syntax highlighting, and optional copying.",
+        tags: ["code", "syntax-highlighting", "developer-tools"],
         events: {
             copy: {
                 description: "Raised after the displayed code has been copied to the clipboard.",

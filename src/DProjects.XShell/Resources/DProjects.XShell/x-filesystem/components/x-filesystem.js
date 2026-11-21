@@ -5,6 +5,7 @@ import {createZip} from "../utils/zip.js";
 export default {
     contract: {
         description: "Filesystem component",
+        tags: ["filesystem", "files", "navigation"],
         events: {},
         properties: {
             path: {type: "string", default:"/", attribute: true, state:true, description: "Current path in the filesystem"},

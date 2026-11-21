@@ -3,6 +3,7 @@
 export default {
     contract: {
         description: "Renders a button or navigation link and can emit a command.",
+        tags: ["interaction", "commands", "navigation"],
         events: {
             command: {
                 description: "Raised when a configured button command is invoked.",

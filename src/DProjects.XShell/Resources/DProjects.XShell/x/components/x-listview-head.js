@@ -2,6 +2,7 @@
 export default {
     contract: {
         description: "Provides the header container for x-listview columns.",
+        tags: ["data", "collections", "headers"],
         events: {},
         properties: {},
         methods: {},

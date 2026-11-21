@@ -15,6 +15,7 @@ function formatFileSize(bytes) {
 export default {
     contract: {
         description: "Formats and displays a byte count.",
+        tags: ["files", "formatting"],
         events: {},
         properties: {
             value: {type:"number", default:0, attribute:true, state:true, description:""}

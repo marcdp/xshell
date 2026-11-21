@@ -2,6 +2,7 @@
 export default {
     contract: {
         description: "Displays the child navigation items of the containing Page.",
+        tags: ["navigation", "pages", "collections"],
         examples: [
             {
                 name: "basic",

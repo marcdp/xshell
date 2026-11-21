@@ -3,6 +3,7 @@
 export default {
     contract: {
         description: "Displays the main menu for the current page.",
+        tags: ["navigation", "menus", "pages"],
         events: {},
         properties: {},
         methods: {},

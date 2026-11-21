@@ -3,6 +3,7 @@
 export default {
     contract: {
         description: "Provides keyboard navigation and selection for a tree of tree-view items.",
+        tags: ["data", "hierarchies", "selection", "navigation"],
         events: {
             toggle: {description: "Fired when a tree-view item is toggled."},
             select: {description: "Fired when a tree-view item is selected."},

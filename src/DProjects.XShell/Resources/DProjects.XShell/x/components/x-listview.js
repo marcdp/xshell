@@ -2,6 +2,7 @@
 export default {
     contract: {
         description: "Displays and manages a selectable flat collection in list, details, icons, or tiles view.",
+        tags: ["data", "collections", "selection", "views"],
         events: {
             select: {
                 description: "Raised when an item's selected state changes through list interaction.",

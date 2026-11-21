@@ -2,6 +2,7 @@
 export default {
     contract: {
         description: "Displays wizard progress and allows navigation to completed panels.",
+        tags: ["forms", "wizard", "navigation"],
         events: {
             "indexset": {
                 description: "Raised when a completed wizard panel is selected.",

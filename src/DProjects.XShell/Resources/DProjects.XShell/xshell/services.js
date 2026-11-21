@@ -162,6 +162,7 @@ export default class Services {
         const contractId = item.contractItem?.id;
         const contractUrl = item.contractItem?.url;
         const description = item.contractItem?.contract?.description;
+        const label = item.contractItem?.contract?.label;
         const icon = item.contractItem?.contract?.icon;
         const tags = item.contractItem?.contract?.tags;
         const moduleId = item.implementationItem?.moduleId;
@@ -171,6 +172,7 @@ export default class Services {
             initializationState: item.initializationState,
             contractId: typeof contractId === "string" ? contractId : null,
             contractUrl: typeof contractUrl === "string" ? contractUrl : null,
+            label: typeof label === "string" ? label : null,
             description: typeof description === "string" ? description : null,
             icon: typeof icon === "string" ? icon : null,
             tags: Object.freeze(Array.isArray(tags) ? [...tags] : []),

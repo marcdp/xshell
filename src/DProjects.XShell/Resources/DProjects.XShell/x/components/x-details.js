@@ -5,6 +5,7 @@
 export default {
     contract: {
         description: "Displays a single expandable disclosure section.",
+        tags: ["content", "disclosure"],
         events: {
             toggle: {
                 description: "Raised when the open state changes."

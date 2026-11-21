@@ -2,6 +2,7 @@
 export default {
     contract: {
         description: "Displays contextual information when the user hovers or focuses its content.",
+        tags: ["feedback", "tooltips"],
         events: {},
         properties: {
             text:     {type:"string", default:"",    attribute:true, state:true, description:"The tooltip text."},

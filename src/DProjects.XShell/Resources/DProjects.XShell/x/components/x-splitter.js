@@ -3,6 +3,7 @@
 export default {
     contract: {
         description: "Automatically resizes adjacent flex panes.",
+        tags: ["layout", "panels", "resizing"],
         events: {
             resize: {
                 description: "Raised when resizing finishes.",

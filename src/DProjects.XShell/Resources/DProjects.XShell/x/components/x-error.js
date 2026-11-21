@@ -2,6 +2,7 @@
 export default {
     contract: {
         description: "Displays an error code, message, source, module, and stack trace.",
+        tags: ["feedback", "errors", "diagnostics"],
         events: {},
         properties: {
             code:    {type:"number", default:0, attribute:true, state:true, description:""},

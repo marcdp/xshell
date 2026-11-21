@@ -3,6 +3,7 @@
 export default {
     contract: {
         description: "Renders a visual divider.",
+        tags: ["layout", "separators"],
         events: {},
         properties: {},
         methods: {},

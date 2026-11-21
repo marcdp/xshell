@@ -4,6 +4,7 @@
 export default {
     contract: {
         description: "Displays the current page breadcrumb.",
+        tags: ["navigation", "breadcrumbs", "pages"],
         events: {},
         properties: {},
         methods: {},

@@ -2,6 +2,7 @@
 export default {
     contract: {
         description: "Displays a compact preview of a value and opens the full value in a new browser tab.",
+        tags: ["content", "preview", "navigation"],
         events: {
             open: {
                 description: "Raised when the full value is opened.",

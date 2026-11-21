@@ -141,6 +141,7 @@ function applyDefaults(schema, value) {
 export default {
     contract: {
         description: "Edits an object using JSON Schema, x-datafield and x-datafields.",
+        tags: ["forms", "schemas", "editing", "validation"],
         properties: {
             schema: { type: "object", default: null, attribute: true, attributeParser: "json", state: true, description: "Inline JSON Schema; takes precedence over src." },
             src: { type: "string", default: "", attribute: true, state: true, description: "JSON Schema URL or schema: reference." },

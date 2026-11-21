@@ -2,6 +2,7 @@
 export default {
     contract: {
         description: "Displays pagination controls and emits requested page changes.",
+        tags: ["navigation", "pagination"],
         events: {
             change: {
                 description: "Raised when the previous or next page is requested.",

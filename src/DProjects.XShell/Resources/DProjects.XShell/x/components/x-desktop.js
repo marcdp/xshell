@@ -3,6 +3,7 @@
 export default {
     contract: {
         description: "Displays slotted content only on desktop-sized viewports.",
+        tags: ["responsive", "desktop", "visibility"],
         events: {},
         properties: {},
         methods: {},

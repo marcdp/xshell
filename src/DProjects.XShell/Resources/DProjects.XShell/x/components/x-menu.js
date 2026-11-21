@@ -2,6 +2,7 @@
 export default {
     contract: {
         description: "Renders menu data as menu items.",
+        tags: ["navigation", "menus"],
         events: {},
         properties: {
             menu: {type:"array", default:null, attribute:false, state:true, description:""},

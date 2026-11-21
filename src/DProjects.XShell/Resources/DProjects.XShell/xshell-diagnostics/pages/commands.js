@@ -14,35 +14,33 @@ export default {
     `,
     template: `
         <p>Shows Commands discovered from the effective framework and module file inventories without loading their implementations.</p>
-        <x-listview x-if="state.items.length" view="details" x-on:activate="invokeCommand">
+        <x-listview view="details" x-on:activate="invokeCommand">
             <x-listview-head>
                 <x-listview-column width="14em"><x-datafield type="search" x-model="state.id" placeholder="Command"></x-datafield></x-listview-column>
                 <x-listview-column width="12em"><x-datafield type="search" x-model="state.label" placeholder="Label"></x-datafield></x-listview-column>
+                <x-listview-column><x-datafield type="search" x-model="state.description" placeholder="Description"></x-datafield></x-listview-column>
                 <x-listview-column width="10em"><x-datafield type="search" x-model="state.moduleId" placeholder="Module"></x-datafield></x-listview-column>
                 <x-listview-column width="10em"><x-datafield type="search" x-model="state.category" placeholder="Category"></x-datafield></x-listview-column>
                 <x-listview-column width="12em"><x-datafield type="search" x-model="state.tags" placeholder="Tags"></x-datafield></x-listview-column>
-                <x-listview-column><x-datafield type="search" x-model="state.description" placeholder="Description"></x-datafield></x-listview-column>
                 <x-listview-column label="Size" width="5em" style="text-align:right"></x-listview-column>
                 <x-listview-column label="File" width="3em" style="text-align:right"></x-listview-column>
             </x-listview-head>
             <x-listview-body>
                 <x-listview-item x-for="item in state.items" x-prop:value="item.id" x-attr:label="item.id" x-attr:icon="item.icon || 'x-play'">
                     <div>{{ item.label }}</div>
+                    <x-truncate x-attr:text="item.description"></x-truncate>
                     <div>{{ item.moduleId }}</div>
                     <div>{{ item.category }}</div>
                     <div class="tags">
                         <x-chip x-for="tag in item.tags" x-key="tag" x-attr:label="tag"></x-chip>
                     </div>
-                    <x-truncate x-attr:text="item.description"></x-truncate>
                     <x-file-size x-prop:value="item.size" style="text-align:right"></x-file-size>
-                    <x-anchor style="text-align:right" x-attr:href="item.path" target="_blank" class="plain" tooltip="Open source file"
-                        x-on:dblclick="keepLinkActivation" x-on:keydown.enter="keepLinkActivation">
+                    <x-anchor style="text-align:right" x-attr:href="item.path" target="_blank" class="plain" tooltip="Open source file">
                         <x-icon icon="x-open-in-new"></x-icon>
                     </x-anchor>
                 </x-listview-item>
             </x-listview-body>
         </x-listview>
-        <x-empty x-else icon="x-play" label="No Commands" message="No Commands match the current filters."></x-empty>
     `,
     state: {
         id: "",
@@ -80,10 +78,6 @@ export default {
                     open: "stack",
                     params: { type: "command", id, method: "execute" }
                 });
-            },
-            keepLinkActivation({ event }) {
-                // Preserve native source-file activation without invoking the Command row.
-                event.stopPropagation();
             },
             matches(value, query) {
                 // Match diagnostic filters consistently regardless of casing.

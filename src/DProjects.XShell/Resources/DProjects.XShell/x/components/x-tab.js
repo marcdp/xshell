@@ -3,6 +3,7 @@
 export default {
     contract: {
         description: "Defines one tab panel for an x-tabs component.",
+        tags: ["navigation", "tabs", "panels"],
         events: {},
         properties: {
             label: {type:"string", default:"", attribute:true, state:true, description:"Label for the tab."},

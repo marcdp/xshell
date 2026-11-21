@@ -2,6 +2,7 @@
 export default {
     contract: {
         description: "Provides a code editor with configurable presentation and editing options.",
+        tags: ["code", "editing", "developer-tools"],
         events: {
             change: {
                 description: "Raised when the editor value changes.",

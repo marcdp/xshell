@@ -3,6 +3,7 @@
 export default {
     contract: {
         description: "Displays a loading indicator.",
+        tags: ["feedback", "loading"],
         events: {},
         properties: {},
         methods: {},

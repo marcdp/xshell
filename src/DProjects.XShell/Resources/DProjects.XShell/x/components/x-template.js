@@ -2,6 +2,7 @@
 export default {
     contract: {
         description: "Renders a dynamic XTemplate using an object as its state.",
+        tags: ["content", "x-template", "rendering"],
         events: {
             change: {
                 description: "Raised when the rendered XTemplate changes the value.",

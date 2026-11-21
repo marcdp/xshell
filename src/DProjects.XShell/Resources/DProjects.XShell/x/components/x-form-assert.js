@@ -2,6 +2,7 @@
 export default {
     contract: {
         description: "Asserts a form-level validation condition and reports an error when the condition is false.",
+        tags: ["forms", "validation"],
         events: {
             "assert:change": {
                 description: "Raised when the assertion test changes for form validation.",

@@ -2,6 +2,7 @@
 export default {
     contract: {
         description: "Displays the remaining time until a target date.",
+        tags: ["time", "countdown", "formatting"],
         properties: {
             value:        {type:"any", default:null, attribute:true, state:true, description:"Target datetime (ISO string or Date)."},
             format:       {type:"string", default:"{d}d {hh}h {mm}m {ss}s", attribute:true, state:true},

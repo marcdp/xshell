@@ -2,6 +2,7 @@
 export default {
     contract: {
         description: "Displays the tables of a DataSet using a tabbed interface.",
+        tags: ["data", "tables", "datasets", "tabs"],
         events: {},
         properties: {
             value: {type: "object", default: null, state: true, description: "DataSet object to display."},

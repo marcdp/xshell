@@ -3,6 +3,7 @@
 export default {
     contract: {
         description: "Displays a short badge value.",
+        tags: ["feedback", "labels"],
         events: {},
         properties: {
             value: {type:"string", default:"", attribute:true, state:true, description:""}

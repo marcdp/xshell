@@ -26,6 +26,7 @@ function syntaxHighlight(json) {
 export default {
     contract: {
         description: "Displays syntax-highlighted JSON source.",
+        tags: ["data", "json", "syntax-highlighting"],
         events: {},
         properties: {
             value: {type:"object", default:null, state:true, changeDetection:"structural", description:"Object to be displayed as syntax-highlighted JSON."},

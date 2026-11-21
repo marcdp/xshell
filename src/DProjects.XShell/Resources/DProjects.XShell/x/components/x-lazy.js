@@ -2,6 +2,7 @@
 export default {
     contract: {
         description: "Lazily activates and loads dependencies for its slotted content.",
+        tags: ["performance", "lazy-loading"],
         events: {},
         properties: {},
         methods: {},

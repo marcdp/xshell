@@ -2,6 +2,7 @@
 export default {
     contract: {
         description: "Displays a compact labeled item that can optionally be removed.",
+        tags: ["content", "labels"],
         events: {
             remove: {
                 description: "Raised when the remove action is invoked."
@@ -50,7 +51,7 @@ export default {
             border-radius:var(--x-chip-border-radius, 1em);
 
             font-size:var(--x-chip-font-size, var(--x-font-size-small));
-            line-height:1.4;
+            line-height:1.1;
         }
 
         .chip x-icon {

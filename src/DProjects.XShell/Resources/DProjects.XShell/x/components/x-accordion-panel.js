@@ -3,6 +3,7 @@
 export default {
     contract: {
         description: "Displays a collapsible accordion section.",
+        tags: ["content", "accordions", "disclosure"],
         events: {
             toggle: {
                 description: "Raised when the panel expansion state changes."

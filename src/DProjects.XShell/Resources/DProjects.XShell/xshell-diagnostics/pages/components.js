@@ -16,11 +16,11 @@ export default {
         <p>Shows discovered components, their owning modules, load status, size, and load time.</p>
         <x-listview view="details" x-on:activate="inspectContract">
             <x-listview-head>
+                <x-listview-column width="12em"><x-datafield type="search" x-model="state.id" placeholder="Component"></x-datafield></x-listview-column>
                 <x-listview-column width="12em"><x-datafield type="search" x-model="state.label" placeholder="Label"></x-datafield></x-listview-column>
-                <x-listview-column width="12em"><x-datafield type="search" x-model="state.id" placeholder="Component ID"></x-datafield></x-listview-column>
-                <x-listview-column width="12em"><x-datafield type="search" x-model="state.moduleId" placeholder="Module"></x-datafield></x-listview-column>
-                <x-listview-column width="12em"><x-datafield type="search" x-model="state.tags" placeholder="Tags"></x-datafield></x-listview-column>
                 <x-listview-column><x-datafield type="search" x-model="state.description" placeholder="Description"></x-datafield></x-listview-column>
+                <x-listview-column width="12em"><x-datafield type="search" x-model="state.moduleId" placeholder="Module"></x-datafield></x-listview-column>
+                <x-listview-column ><x-datafield type="search" x-model="state.tags" placeholder="Tags"></x-datafield></x-listview-column>
                 <x-listview-column label="Size" width="5em" style="text-align:right"></x-listview-column>
                 <x-listview-column label="Time" width="5em" style="text-align:right"></x-listview-column>
                 <x-listview-column label="Status" width="5em" style="text-align:right"></x-listview-column>
@@ -29,21 +29,20 @@ export default {
             <x-listview-body>
             <x-listview-item x-for="component in state.components"
                 x-prop:value="component.id"
-                x-attr:label="component.label"
+                x-attr:label="component.id"
                 x-attr:icon="component.icon"
                 target="_blank"
             >
-                <div>{{ component.id }}</div>
+                <div>{{ component.label }}</div>
+                <x-truncate x-attr:text="component.description"></x-truncate>
                 <div>{{ component.moduleId }}</div>
                 <div class="tags">
                     <x-chip x-for="tag in component.tags" x-key="tag" x-attr:label="tag"></x-chip>
                 </div>
-                <x-truncate x-attr:text="component.description"></x-truncate>
                 <x-file-size style="text-align:right" x-prop:value="component.size"></x-file-size>
                 <div style="text-align:right"><x-time-ms x-prop:value="component.time"></x-time-ms></div>
                 <div style="text-align:right">{{ component.status }}</div> 
-                <x-anchor style="text-align:right" x-attr:href="component.url" target="_blank" class="plain" tooltip="Open source file"
-                    x-on:dblclick="keepLinkActivation" x-on:keydown.enter="keepLinkActivation"><x-icon icon="x-open-in-new"></x-icon></x-anchor>
+                <x-anchor style="text-align:right" x-attr:href="component.url" target="_blank" class="plain" tooltip="Open source file"><x-icon icon="x-open-in-new"></x-icon></x-anchor>
             </x-listview-item>
             </x-listview-body>
         </x-listview>
@@ -83,9 +82,6 @@ export default {
                     classes: ["size-wide"],
                     params: { kind: "component", id }
                 });
-            },
-            keepLinkActivation({ event }) {
-                event.stopPropagation();
             },
             async refresh() {
                 // Collect generated component metadata and overlay runtime state without loading resources.

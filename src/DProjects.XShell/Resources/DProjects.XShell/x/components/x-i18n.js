@@ -3,6 +3,7 @@
 export default {
     contract: {
         description: "Displays the translated form of a text value.",
+        tags: ["content", "localization"],
         events: {},
         properties: {
             text: {type:"string", default:"", attribute:true, state:true, description:""}

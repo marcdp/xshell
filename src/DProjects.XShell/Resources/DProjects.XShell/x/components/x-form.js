@@ -5,6 +5,7 @@ const inputTypesThatAcceptsEnters = ["text", "password", "number", "date", "date
 export default {
     contract: {
         description: "Coordinates data-field validation, submission, loading state, and wizard navigation.",
+        tags: ["forms", "validation", "submission", "wizard"],
         events: {
             command: {
                 description: "Raised when the form submits successfully.",

@@ -2,6 +2,7 @@
 export default {
     contract: {
         description: "Displays the current local time.",
+        tags: ["time", "formatting"],
         events: {},
         properties: {},
         methods: {},

@@ -4,6 +4,7 @@
 export default {
     contract: {
         description: "Filesystem list component",
+        tags: ["filesystem", "files", "collections", "selection"],
         events: {
             select: {description: "Fired when an item is selected"},
             activate: {

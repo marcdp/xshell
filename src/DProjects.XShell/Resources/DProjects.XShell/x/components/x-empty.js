@@ -2,6 +2,7 @@
 export default {
     contract: {
         description: "Displays an empty-state message when no content is available.",
+        tags: ["feedback", "empty-state"],
         events: {},
         properties: {
             icon:    {type:"string", default:"", attribute:true, state:true, description:"The icon displayed for the empty state."},

@@ -2,6 +2,7 @@
 export default {
     contract: {
         description: "Defines a labeled column in an x-listview details header.",
+        tags: ["data", "collections", "columns"],
         events: {},
         properties: {
             label: {type:"string", default:"", attribute:true, state:true, description:"Fallback header label."},

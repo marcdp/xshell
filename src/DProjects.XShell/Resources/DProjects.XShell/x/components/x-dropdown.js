@@ -4,6 +4,7 @@ import { findFocusableElement, getDeepActiveElement, isDescendantOfElement } fro
 export default {
     contract: {
         description: "Displays slotted content in an expandable dropdown panel.",
+        tags: ["content", "disclosure", "containers"],
         events: {},
         properties: {
             expanded:       {type:"boolean", default:false, attribute:true, state:true, description:""},

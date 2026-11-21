@@ -2,6 +2,7 @@
 export default {
     contract: {
         description: "Displays a dismissible status notice.",
+        tags: ["feedback", "notifications"],
         events: {},
         properties: {
             type:    {type:"string", default:"info", attribute:true, state:true, description:""},

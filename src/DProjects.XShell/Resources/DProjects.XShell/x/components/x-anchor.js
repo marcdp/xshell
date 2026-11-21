@@ -3,6 +3,7 @@
 export default {
     contract: {
         description: "Renders a navigation link handled by the XShell navigation service.",
+        tags: ["navigation", "links"],
         events: {},
         properties: {
             href:       {type:"string", default:"", attribute:true, state:true, description:""},

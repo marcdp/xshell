@@ -2,6 +2,7 @@
 export default {
     contract: {
         description: "Provides a panel container for a wizard.",
+        tags: ["forms", "wizard", "containers"],
         events: {},
         properties: {},
         methods: {},

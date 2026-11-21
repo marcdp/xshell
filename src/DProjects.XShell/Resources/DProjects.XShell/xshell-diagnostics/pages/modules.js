@@ -18,8 +18,9 @@ export default {
             <x-listview-head>
                 <x-listview-column width="12em"><x-datafield type="search" x-model="state.id" placeholder="Module"></x-datafield></x-listview-column>
                 <x-listview-column><x-datafield type="search" x-model="state.label" placeholder="Label"></x-datafield></x-listview-column>
+                <x-listview-column><x-datafield type="search" x-model="state.description" placeholder="Description"></x-datafield></x-listview-column>
+                <x-listview-column ><x-datafield type="search" x-model="state.tags" placeholder="Tags"></x-datafield></x-listview-column>
                 <x-listview-column label="Version" width="5em"></x-listview-column>
-                <x-listview-column width="12em"><x-datafield type="search" x-model="state.tags" placeholder="Tags"></x-datafield></x-listview-column>
                 <x-listview-column label="Assets path"></x-listview-column>
                 <x-listview-column label="Size" width="6em" style="text-align:right"></x-listview-column>
                 <x-listview-column label="Files" width="5em" style="text-align:right"></x-listview-column>
@@ -30,15 +31,15 @@ export default {
             <x-listview-item
                 x-for="module in state.modules"
                 x-attr:label="module.id"
-                x-attr:description="module.description"
                 x-attr:icon="module.icon"
                 target="_blank"
             >
                 <div>{{ module.label }}</div>
-                <div>{{ module.version }}</div>
+                <div>{{ module.description }}</div>
                 <div class="tags">
                     <x-chip x-for="tag in module.tags" x-key="tag" x-attr:label="tag"></x-chip>
                 </div>
+                <div>{{ module.version }}</div>
                 <div>
                     {{ module.assets.path }}
                     <x-anchor x-attr:href="module.assets.url" target="_blank" class="plain"><x-icon icon="x-open-in-new" ></x-icon></x-anchor>
@@ -72,6 +73,7 @@ export default {
                events.on(state, "change:id", "refresh");
                events.on(state, "change:version", "refresh");
                events.on(state, "change:label", "refresh");
+               events.on(state, "change:description", "refresh");
                events.on(state, "change:tags", "refresh");
                events.on(state, "change:assetPath", "refresh");
                events.on(state, "change:configUrl", "refresh");
@@ -84,6 +86,7 @@ export default {
                     if (state.id && target.id.indexOf(state.id) == -1 ) valid = false;
                     if (state.version && target.version.indexOf(state.version) == -1 ) valid = false;
                     if (state.label && (target.label || "").indexOf(state.label) == -1 ) valid = false;
+                    if (state.description && (target.description || "").indexOf(state.description) == -1 ) valid = false;
                     if (!this.matchesTags(target.tags, state.tags)) valid = false;
                     if (state.assetPath && target.assets.path.indexOf(state.assetPath) == -1 ) valid = false;
                     if (state.configUrl && target.configUrl.indexOf(state.configUrl) == -1 ) valid = false;
@@ -116,6 +119,7 @@ export default {
                             id: target.id,
                             version: target.version,
                             label: target.label || "",
+                            description: target.description || "",
                             tags: target.tags || [],
                             icon: target.icon || "x-module",
                             assets: {

@@ -2,6 +2,7 @@
 export default {
     contract: {
         description: "Provides the header container for tree-view columns.",
+        tags: ["data", "hierarchies", "headers"],
         events: {},
         properties: {},
         methods: {},

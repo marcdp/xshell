@@ -2,6 +2,7 @@
 export default {
     contract: {
         description: "Provides a container for tree-view item content.",
+        tags: ["data", "hierarchies", "containers"],
         events: {},
         properties: {},
         methods: {},

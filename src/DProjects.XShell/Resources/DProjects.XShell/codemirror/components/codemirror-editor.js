@@ -5,6 +5,7 @@ import { EditorState,EditorView,basicSetup,javascript,json,html,css,xml,markdown
 export default {
     contract: {
         description: "Displays a code mirror editor.",
+        tags: ["code", "editing", "developer-tools"],
         events: {        
             change: {
                 detail: { 

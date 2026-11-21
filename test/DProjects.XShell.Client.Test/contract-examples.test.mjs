@@ -104,7 +104,7 @@ test("Public UI usage examples validate against the definition schemas and refer
     const components = new Map();
     const pages = new Map();
     for (const [module, kind, definitions] of [
-        ["x", "components", components], ["x-filesystem", "components", components],
+        ["x", "components", components], ["x-demo", "components", components], ["x-filesystem", "components", components],
         ["x-home", "components", components], ["codemirror", "components", components], ["x", "pages", pages]
     ]) {
         const directory = new URL(`${module}/${kind}/`, resourceDirectory);
@@ -114,16 +114,16 @@ test("Public UI usage examples validate against the definition schemas and refer
         }
     }
 
-    // Require examples for reusable Components and validate authored metadata in the full definition shape.
+    // Require examples for reusable Components and validate every authored definition in its full schema shape.
     for (const [definitions, schema] of [[components, schemas.component], [pages, schemas.page]]) {
         for (const [id, definition] of definitions) {
             const examples = definition.contract?.examples ?? [];
-            if (definitions === components && id !== "x-page-info") assert.ok(examples.length, id);
-            if (!examples.length) continue;
+            if (definitions === components && id !== "x-page-info" && !id.startsWith("x-demo-")) assert.ok(examples.length, id);
             const projected = Object.fromEntries(Object.entries(definition).map(([key, value]) => [key, typeof value === "function" ? {} : value]));
             if (definitions === components) projected.meta = { id, ...projected.meta };
             const result = validator.validate(projected, schema);
             assert.equal(result.valid, true, `${id}: ${JSON.stringify(result.errors)}`);
+            if (!examples.length) continue;
             const names = examples.map(example => example.name);
             assert.equal(new Set(names).size, names.length, id);
 

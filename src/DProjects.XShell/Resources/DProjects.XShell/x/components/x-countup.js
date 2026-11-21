@@ -1,6 +1,7 @@
 export default {
     contract: {
         description: "Displays the elapsed time since a start date.",
+        tags: ["time", "elapsed-time", "formatting"],
         properties: {
             value:    {type:"any", default:null, attribute:true, state:true, description:"Start datetime (ISO string or Date)."},
             format:   {type:"string", default:"{d}d {hh}h {mm}m {ss}s", attribute:true, state:true},

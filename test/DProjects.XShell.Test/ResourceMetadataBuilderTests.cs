@@ -143,15 +143,38 @@ namespace DProjects.XShell.Test {
             var resources = Path.Combine(AppContext.BaseDirectory, "Resources", "DProjects.XShell");
             var builder = new ResourceMetadataBuilder();
 
-            var component = await builder.BuildAsync(Path.Combine(resources, "x"), "/components/x-datatable.js", TestContext.Current.CancellationToken);
+            var component = await builder.BuildAsync(Path.Combine(resources, "x"), "/components/x-listview.js", TestContext.Current.CancellationToken);
             var page = await builder.BuildAsync(Path.Combine(resources, "x-home"), "/pages/index.js", TestContext.Current.CancellationToken);
             var command = await builder.BuildAsync(Path.Combine(resources, "x-demo"), "/commands/demo.operation.js", TestContext.Current.CancellationToken);
             var contract = await builder.BuildAsync(Path.Combine(resources, "xshell"), "/contracts/preferences.json", TestContext.Current.CancellationToken);
 
-            Assert.Equal(["data", "tables", "ui"], ReadTags(component));
+            Assert.Equal(["data", "collections", "selection", "views"], ReadTags(component));
             Assert.Equal(["home", "navigation"], ReadTags(page));
             Assert.Equal(["demo", "operations"], ReadTags(command));
             Assert.Equal(["preferences", "storage"], ReadTags(contract));
+        }
+        [Fact]
+        public async Task AuthoredComponents_ExposeStaticUniqueTags() {
+            // Locate every authored JavaScript Component copied into the test resources.
+            var resources = Path.Combine(AppContext.BaseDirectory, "Resources", "DProjects.XShell");
+            var componentFiles = Directory.EnumerateFiles(resources, "*.js", SearchOption.AllDirectories)
+                .Where(file => string.Equals(Path.GetFileName(Path.GetDirectoryName(file)), "components", StringComparison.Ordinal))
+                .OrderBy(file => file, StringComparer.Ordinal)
+                .ToArray();
+            var builder = new ResourceMetadataBuilder();
+
+            Assert.NotEmpty(componentFiles);
+            foreach (var file in componentFiles) {
+                // Verify static extraction and the schema's lexical and uniqueness constraints.
+                var moduleRoot = Directory.GetParent(Path.GetDirectoryName(file)!)!.FullName;
+                var resourcePath = "/" + Path.GetRelativePath(moduleRoot, file).Replace('\\', '/');
+                var resource = await builder.BuildAsync(moduleRoot, resourcePath, TestContext.Current.CancellationToken);
+                var tags = ReadTags(resource);
+
+                Assert.NotEmpty(tags);
+                Assert.Equal(tags.Length, tags.Distinct(StringComparer.Ordinal).Count());
+                Assert.All(tags, tag => Assert.Matches("^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$", tag));
+            }
         }
         [Fact]
         public async Task MissingMetadataAndOrdinaryFiles_RemainSmallAndOptional() {

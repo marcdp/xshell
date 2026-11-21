@@ -2,6 +2,7 @@
 export default {
     contract: {
         description: "Reusable conversation interface with streaming support.",
+        tags: ["communication", "conversations", "streaming"],
         events: {
             send: {
                 description: "Raised when the user submits a message.",

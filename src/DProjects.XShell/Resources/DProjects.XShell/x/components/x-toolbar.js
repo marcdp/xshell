@@ -2,6 +2,7 @@
 export default {
     contract: {
         description: "Provides a flexible toolbar container.",
+        tags: ["layout", "commands", "containers"],
         events: {},
         properties: {},
         methods: {},

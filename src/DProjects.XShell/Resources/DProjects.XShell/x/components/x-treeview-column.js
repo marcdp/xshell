@@ -2,6 +2,7 @@
 export default {
     contract: {
         description: "Defines a labeled column in a tree view.",
+        tags: ["data", "hierarchies", "columns"],
         events: {},
         properties: {
             label: {type:"string", default:"", attribute:true, state:true, description:""},

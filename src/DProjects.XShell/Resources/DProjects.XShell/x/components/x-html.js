@@ -55,6 +55,7 @@ function colorize(html) {
 export default {
     contract: {
         description: "Displays syntax-highlighted HTML source.",
+        tags: ["code", "html", "syntax-highlighting"],
         events: {},
         properties: {
             value: {type:"string", default:"", attribute:true, state:true, description:""}

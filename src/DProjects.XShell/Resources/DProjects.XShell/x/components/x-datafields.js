@@ -2,6 +2,7 @@
 export default {
     contract: {
         description: "Provides a layout and action controls for a group of data fields.",
+        tags: ["forms", "layout", "editing"],
         events: {
             move: {
                 description: "Raised when the field is moved.",

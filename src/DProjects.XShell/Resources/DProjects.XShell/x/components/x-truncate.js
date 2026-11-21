@@ -2,6 +2,7 @@
 export default {
     contract: {
         description: "Displays text truncated with an ellipsis when it exceeds the available space.",
+        tags: ["content", "text", "overflow"],
         events: {},
         properties: {
             text:  {type:"string", default:"", attribute:true, state:true, description:"The text to display."},

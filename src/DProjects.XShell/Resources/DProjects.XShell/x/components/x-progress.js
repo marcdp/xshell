@@ -2,6 +2,7 @@
 export default {
     contract: {
         description: "Displays the progress of an operation.",
+        tags: ["feedback", "progress"],
         events: {},
         properties: {
             value: {type:"number", default:0,   attribute:true, state:true, description:"The current value of the progress bar."},

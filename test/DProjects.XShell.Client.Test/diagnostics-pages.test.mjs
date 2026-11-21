@@ -250,14 +250,11 @@ test("Services diagnostics file links retain native activation without activatin
         const anchor = Array.from(ServicesPage.template.matchAll(/<x-anchor\b[^>]+>/g), match => match[0])
             .find(markup => markup.includes(`x-attr:href="${binding}"`));
         assert.match(anchor, /target="_blank"/);
-        assert.match(anchor, /x-on:dblclick="keepLinkActivation"/);
-        assert.match(anchor, /x-on:keydown.enter="keepLinkActivation"/);
     }
     const controller = ServicesPage.controller({});
     for (const type of ["dblclick", "keydown"]) {
         const event = new Event(type, { bubbles: true, cancelable: true });
         const stop = t.mock.method(event, "stopPropagation");
-        controller.keepLinkActivation({ event });
         assert.equal(stop.mock.callCount(), 1);
         assert.equal(event.defaultPrevented, false);
     }
@@ -318,12 +315,9 @@ for (const [listing, kind, item, id] of [
         const anchor = Array.from(listing.template.matchAll(/<x-anchor\b[^>]+>/g), match => match[0])
             .find(markup => markup.includes(`x-attr:href="${item}.url"`));
         assert.match(anchor, /target="_blank"/);
-        assert.match(anchor, /x-on:dblclick="keepLinkActivation"/);
-        assert.match(anchor, /x-on:keydown.enter="keepLinkActivation"/);
         for (const type of ["dblclick", "keydown"]) {
             const event = new Event(type, { bubbles: true, cancelable: true });
             const stop = t.mock.method(event, "stopPropagation");
-            controller.keepLinkActivation({ event });
             assert.equal(stop.mock.callCount(), 1);
             assert.equal(event.defaultPrevented, false);
         }

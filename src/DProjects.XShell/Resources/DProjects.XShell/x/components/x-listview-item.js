@@ -2,6 +2,7 @@
 export default {
     contract: {
         description: "Displays one selectable item in an x-listview collection.",
+        tags: ["data", "collections", "selection"],
         events: {},
         properties: {
             value:       {type:"any", default:null, attribute:true, state:true, description:"Application-defined value identifying this list item."},

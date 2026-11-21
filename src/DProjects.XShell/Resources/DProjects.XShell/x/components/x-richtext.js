@@ -2,6 +2,7 @@
 export default {
     contract: {
         description: "Provides a rich-text editor with formatting controls.",
+        tags: ["content", "rich-text", "editing"],
         events: {
             change: {
                 description: "Raised when the editor content changes.",

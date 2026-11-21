@@ -3,6 +3,7 @@
 export default {
     contract: {
         description: "Provides a flexible element that fills available layout space.",
+        tags: ["layout", "flexbox"],
         events: {},
         properties: {},
         methods: {},

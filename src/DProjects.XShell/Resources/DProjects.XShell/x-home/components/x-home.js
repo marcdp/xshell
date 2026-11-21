@@ -4,6 +4,7 @@ const pendingWrites = new WeakMap();
 export default {
     contract: {
         description: "Launches Areas and Pages from their composed navigation menus.",
+        tags: ["navigation", "areas", "pages"],
         properties: {
             areaId: {type: "string", default: "", attribute: true, state: true, description: "Area for Quick Links. Defaults to the current Area."}
         },

@@ -3,6 +3,7 @@
 export default {
     contract: {
         description: "Displays tab headers and the selected tab panel.",
+        tags: ["navigation", "tabs", "selection"],
         events: {},
         properties: {
             selectedIndex: {type:"number", default:0, attribute:true, state:true, description:""},

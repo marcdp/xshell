@@ -2,6 +2,7 @@
 export default {
     contract: {
         description: "Displays a placeholder while content is loading.",
+        tags: ["feedback", "loading", "placeholders"],
         events: {},
         properties: {
             width:  {type:"string", default:"100%", attribute:true, state:true, description:"The width of the skeleton placeholder."},

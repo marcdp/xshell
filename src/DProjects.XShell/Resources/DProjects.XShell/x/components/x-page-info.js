@@ -3,6 +3,7 @@
 export default {
     contract: {
         description: "Displays diagnostic information about the current Page",
+        tags: ["developer-tools", "diagnostics", "pages"],
         events: {},
         properties: {},
         methods: {}

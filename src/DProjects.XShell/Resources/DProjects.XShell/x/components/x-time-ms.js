@@ -12,6 +12,7 @@ function formatMilliseconds(ms) {
 export default {
     contract: {
         description: "Formats and displays a duration in milliseconds.",
+        tags: ["time", "durations", "formatting"],
         events: {},
         properties: {
             value: {type:"number", default:0, attribute:true, state:true, description:""}

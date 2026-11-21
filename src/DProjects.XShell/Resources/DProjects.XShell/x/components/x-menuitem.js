@@ -2,6 +2,7 @@
 export default {
     contract: {
         description: "Displays a menu item with optional nested menu content.",
+        tags: ["navigation", "menus", "commands"],
         events: {},
         properties: {
             icon:        {type:"string", default:"", attribute:true, state:true, description:""},

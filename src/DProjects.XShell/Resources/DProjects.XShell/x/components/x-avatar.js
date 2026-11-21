@@ -3,6 +3,7 @@
 export default {
     contract: {
         description: "Displays an avatar with optional identity details and command action.",
+        tags: ["media", "avatars", "identity"],
         events: {
             command: {
                 description: "Raised when the avatar is clicked with a command configured.",
