@@ -45,7 +45,7 @@ export default {
                     x-model="state.value" 
                 ></x-datafield>
             </x-datafields>
-            <x-button slot="footer" label="Save" command="submit" class="submit"></x-button>            
+            <x-button slot="footer" label="Ok" command="submit" class="submit"></x-button>            
             <x-button slot="footer" label="Cancel" command="cancel" class="cancel"></x-button>
         </x-form>
     `,    

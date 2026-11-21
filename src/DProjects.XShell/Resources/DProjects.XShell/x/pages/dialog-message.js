@@ -24,8 +24,7 @@ export default {
     },
     template: `
         <x-form command="submit">            
-            <x-notice x-attr:type="state.type" x-attr:label="state.title" x-attr:message="state.message">
-            </x-notice>
+            <x-notice x-attr:type="state.type" x-attr:label="state.title" x-attr:message="state.message"></x-notice>
             <x-button slot="footer" label="OK" command="submit" class="submit" autofocus></x-button>
         </x-form>
     `,    

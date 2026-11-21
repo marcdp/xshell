@@ -32,7 +32,7 @@
                 "implementation": "/services/filesystems.js",
                 "options": {
                     "commands": [
-                        {"id": "page:x-filesystem:/pages/editor-text.js", "label": "Open", "icon":"x-preview", "type": "file", "extensions": ["txt", "txt.aes", "json", "md", "md.aes", "env", "css", "xml", "js", "html", "cs", "yaml", "yml", "php", "ps1"], "actions": ["open"]},
+                        {"id": "page:x-filesystem:/pages/editor-text.js", "label": "Open", "icon":"x-preview", "type": "file", "extensions": ["txt", "txt.aes", "json", "jsonc", "md", "md.aes", "env", "css", "xml", "js", "html", "cs", "yaml", "yml", "php", "ps1",".ovpn"], "actions": ["open"]},
                         {"id": "page:x-filesystem:/pages/editor-image.js", "label": "Open", "icon":"x-preview", "type": "file", "extensions": ["png", "png.aes", "jpg", "jpg.aes", "jpeg", "jpeg.aes", "gif", "gif.aes", "svg", "svg"], "actions": ["open"]},
                         {"id": "page:x-filesystem:/pages/editor-iframe.js", "label": "Open", "icon":"x-preview", "type": "file", "extensions": ["pdf"], "actions": ["open"]}, 
                         {"id": "command:filesystem.entry.encrypt.aes", "label": "Encrypt", "icon":"x-lock", "type": "file", "extensions": ["txt", "json", "md"], "actions": []},
@@ -51,7 +51,7 @@
                 "https:{url}": {"src": "/js/filesystem-http.js", "loader": "instance-js"},
                 "opfs:": {"src": "/js/filesystem-opfs.js", "loader": "instance-js"},
                 "file:": {"src": "/js/filesystem-file.js", "loader": "instance-js"},
-                "file:{identity}": {"src": "/js/filesystem-file.js", "loader": "instance-js", "cache": true},
+                "file:{identity}": {"src": "/js/filesystem-file.js", "loader": "instance-js", "cache": true}
             }
             
         }

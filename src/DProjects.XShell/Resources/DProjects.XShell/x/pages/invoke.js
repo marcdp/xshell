@@ -443,14 +443,19 @@ export default {
                 const args = invocation.parameters.map(parameter => state.args[parameter.name]);
                 resetExecutionState();
 
+
+
                 let task;
                 submitting = true;
                 try {
+                    // Capture the invocation before the Page can unload.
+                    const execute = invocation.invoke;
+
                     task = tasks.run({
                         title: invocation.label,
                         description: invocation.description,
                         background: state.background,
-                        handler: taskContext => invocation.invoke(args, {task:taskContext})
+                        handler: taskContext => execute(args, {task:taskContext})
                     });
                 } catch (error) {
                     state.errors = [{ label: "Error", message: error?.message || String(error) }];
@@ -459,9 +464,19 @@ export default {
                     submitting = false;
                 }
 
+                // Background Tasks continue independently of this Page.
+                if (task.background) {
+                    page.close();
+                    return;
+                }
+
+                // Foreground Tasks remain attached to the invocation Page.
                 state.phase = "execution";
                 attachTask(task);
                 await task.wait();
+
+
+
                 await refreshTask(task);
 
                 if (task === currentTask) detachTask();

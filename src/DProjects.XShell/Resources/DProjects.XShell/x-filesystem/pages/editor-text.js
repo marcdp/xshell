@@ -82,8 +82,13 @@ export default {
                 // load value
                 const stream = await state.filesystem.loadReadStream(state.path);
                 let value = await new Response(stream).text();
+                // aes decryption
                 if (state.aes) {
-                    state.aes_password = await dialog.prompt({ title: "Enter password", inputType: "password", required:true});
+                    state.aes_password = await dialog.prompt({ 
+                        title: "Enter password",
+                        inputType: "password", 
+                        required:true
+                    });
                     if (!state.aes_password) {
                         state.error = "Password is required.";
                         postRender("close");
@@ -97,6 +102,8 @@ export default {
                         return;
                     }
                 }   
+                // check if xvault
+                // set the loaded value to state
                 state.value = value;
             },
             async save() {   
