@@ -180,10 +180,11 @@
     },
     "xshellService": {
       "type": "object",
-      "required": ["contract", "implementation"],
+      "required": ["contract", "implementation", "lifetime"],
       "properties": {
         "contract": {"type": "string", "description": "Service contract identifier."},
         "implementation": {"type": "string", "description": "Service implementation URL or path."},
+        "lifetime": {"type": "string", "enum": ["singleton", "scoped", "transient"], "description": "Required service lifetime."},
         "options": {
           "type": "object",
           "additionalProperties": true,

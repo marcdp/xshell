@@ -56,9 +56,46 @@ Command definitions can also declare optional [usage examples](../20-components/
 They may declare lowercase kebab-case classification identifiers in `contract.tags`; generated inventory metadata copies those values to
 `file.resource.tags` without loading the Command. Tags do not alter discovery filters, argument validation, Task handling, or execution.
 
-The Task handler creates a fresh Command instance with `{ task: taskContext }` and calls `execute(...args)`. Tasks remains the owner of scheduling,
-status, progress, output, cooperative cancellation, errors, and results. A Command exception or rejected promise propagates through the handler and
-places the Task in `error`; the Commands service does not implement a separate lifecycle.
+The Task handler creates an independent Services scope directly from the application root, constructs a fresh Command instance with
+`{ task: taskContext, services: invocationScope }`, and calls `execute(...args)`. Scope creation therefore happens only after Task execution starts;
+loading and validation failures, or cancellation before the handler starts, create no scope. Command scopes never inherit the initiating Page or
+Component scope, and concurrent executions of the same Command use different scopes.
+
+Definition-based Command controllers keep their existing `context`, `task`, `definition`, `module`, and `moduleConfig` injections. Ordinary service
+names resolve through the invocation scope, and `controller({ services })` returns that scope. Application singletons remain shared, scoped services
+are reused only within one invocation, and transient services are constructed on every resolution.
+
+```js
+export default {
+    contract: {
+        label: "Example",
+        execute: { parameters: [] }
+    },
+
+    controller({ services, task, preferences }) {
+        return {
+            async execute() {
+                const session = services.resolve("editorSession");
+                task.info("Executing command");
+
+                // The invocation scope owns session.
+                return { success: true };
+            }
+        };
+    }
+};
+```
+
+The handler awaits execution and then asynchronously disposes the invocation scope before the Task reaches a terminal status. Successful return
+values are preserved. Execution failures still trigger cleanup; disposal failures fail an otherwise successful Task; and simultaneous execution
+and disposal failures are retained in an `AggregateError`.
+
+Tasks remains the owner of scheduling, status, progress, output, cooperative cancellation, errors, and results. Cancellation aborts the existing
+Task signal but does not dispose a running Command's scope immediately. Cooperative and non-cooperative Commands retain their scope until execution
+settles, after which cleanup completes before the Task becomes `canceled`. Foreground cancellation therefore does not tie Command resources to the
+initiating Page lifetime, while background Commands remain equally independent. Command scopes can resolve the transient `events` and `timer`
+services for function callbacks, and scope disposal cleans them up. Command scopes do not provide Page/Component controller dispatch, so string
+callbacks are rejected clearly rather than bound implicitly.
 
 The generic invocation Page resolves the Command itself only to present its label, description, parameters, return metadata, and generated
 `x-schema` editor. After UI validation it calls `commands.run()` and observes the returned Task. Foreground Tasks are canceled when that Page

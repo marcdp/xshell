@@ -1,5 +1,3 @@
-import Timer from "../scoped/timer.js"
-import Events from "../scoped/events.js"
 import JsonValidator from "../services/json-validator.js"
 import { processStyle } from "../utils/style.js";
 import { deepFreeze } from "../utils/object.js";
@@ -12,6 +10,15 @@ function kebabToCamel(str) {
 function camelToKebab(str) {
     // convert camelCase to kebab-case
     return str.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase();                      
+}
+function disposeFailedScope(scope, componentName) {
+    // dispose constructor-owned resources without replacing the original synchronous failure
+    scope.dispose().catch(error => console.error(`Failed to dispose Services scope for Component '${componentName}' after construction failed.`, error));
+}
+function throwCleanupErrors(errors, message) {
+    // preserve one cleanup failure and aggregate independent lifecycle failures
+    if (errors.length === 1) throw errors[0];
+    if (errors.length > 1) throw new AggregateError(errors, message);
 }
 function isEmptyPlainObject(value) {
     // check if the value is an empty plain object
@@ -233,7 +240,7 @@ export async function createComponentClassFromJsDefinition(src, context, definit
         _state = null;
         _properties = null;
         _stateChanges = [];
-        _disposables = [];
+        _servicesScope = null;
         _reflectingAttributes = new Set();
         _controller = null;
         _renderEngine = null;
@@ -259,6 +266,12 @@ export async function createComponentClassFromJsDefinition(src, context, definit
         constructor() {
             super();
             const self = this;
+            // create this Component's independent direct child of the application root scope
+            const rootServices = context.services.services;
+            this._servicesScope = rootServices.beginScope({context: {
+                invokeController(command, ...params) { return self._controller[command](...params); }
+            }});
+            try {
             //shadowRoot
             this.attachShadow(definition.meta.shadowRootOptions || {mode: "open"});
             this.shadowRoot.adoptedStyleSheets = [...sharedStyleSheets, ...stylesheets];
@@ -287,20 +300,6 @@ export async function createComponentClassFromJsDefinition(src, context, definit
                     } else if (prop == "state") {
                         // state
                         return self._state;
-                    } else if (prop == "timer") {
-                        // timer helper
-                        const timer = new Timer((command, ...params) => { 
-                            self._controller[command](...params); 
-                        });
-                        self._disposables.push(timer);
-                        return timer;
-                    } else if (prop == "events") {
-                        // events helper
-                        const events = new Events((command, ...params) => { 
-                            self._controller[command](...params); 
-                        });
-                        self._disposables.push(events);
-                        return events;
                     } else if (prop == "moduleConfig") {
                         // module configuration
                         return context.services.config.modules[context.resourceDefinition.moduleId];
@@ -324,9 +323,14 @@ export async function createComponentClassFromJsDefinition(src, context, definit
                         return (methodName, ...args) => {
                             self._postRenderPending.push({ methodName, args: [...args] });
                         };
+                    } else if (prop == "services") {
+                        // expose this Component's owning Services scope
+                        return self._servicesScope;
+                    } else if (typeof prop === "symbol") {
+                        return undefined;
                     } else {
-                        // resolve from services
-                        return context.services[prop];
+                        // resolve ordinary services through this Component's scope
+                        return self._servicesScope.resolve(prop);
                     }                    
                 }
             });
@@ -371,6 +375,13 @@ export async function createComponentClassFromJsDefinition(src, context, definit
             }
             // load
             this.onCommand("load", {});
+            } catch (error) {
+                // initiate asynchronous cleanup while preserving synchronous constructor behavior
+                const scope = this._servicesScope;
+                this._servicesScope = null;
+                disposeFailedScope(scope, definition.meta.id ?? src);
+                throw error;
+            }
         }        
         // attributeChangedCallback
         attributeChangedCallback(name, oldValue, newValue) {
@@ -403,21 +414,41 @@ export async function createComponentClassFromJsDefinition(src, context, definit
         async unload() {
             if (this._unloaded) return;
             this._unloaded = true;
+            const errors = [];
             let result;
+
+            // invoke existing unmount and controller unload before final cleanup
             try {
-                try {
-                    this._unmount();
-                } finally {
-                    result = await this.onCommand("unload", {});
-                }
-            } finally {
-                this._mutationObserver?.disconnect();
-                this._mutationObserver = null;
-                for (const disposable of this._disposables) {
-                    disposable.dispose();
-                }
-                this._disposables = [];
+                this._unmount();
+            } catch (error) {
+                errors.push(error);
             }
+            try {
+                result = await this.onCommand("unload", {});
+            } catch (error) {
+                errors.push(error);
+            }
+
+            // perform the existing observer cleanup independently
+            try {
+                this._mutationObserver?.disconnect();
+            } catch (error) {
+                errors.push(error);
+            }
+            this._mutationObserver = null;
+
+            // dispose the owner scope and its transient helpers after existing cleanup
+            const servicesScope = this._servicesScope;
+            try {
+                if (servicesScope) await servicesScope.dispose();
+            } catch (error) {
+                errors.push(error);
+            } finally {
+                this._controller = null;
+                this._servicesScope = null;
+            }
+
+            throwCleanupErrors(errors, `Multiple errors occurred while unloading Component '${definition.meta.id ?? src}'.`);
             return result;
         }
         // methods (private)

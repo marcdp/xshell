@@ -71,6 +71,16 @@ Definition fields include `meta`, `dependencies`, `style`, `template`, compiler-
 derives missing resource metadata where documented, selects engines from resource `meta` and the owning module's defaults, and passes implementation
 services to the controller. Implementation fields do not become public API merely because they exist on the definition or controller.
 
+Each definition-based Component instance creates an independent Services scope directly from the application root during construction, before the
+controller factory runs and without requiring DOM attachment. Ordinary controller service names resolve through that scope, while
+`controller({ services })` returns the owner scope itself. Singletons remain shared, scoped services belong only to that Component, and transients
+are constructed per resolution. Parent, child, and sibling Components never infer or inherit scopes from the DOM.
+
+The scope survives disconnect/reconnect and state-preserving DOM moves. Final `unload()` invokes controller unload, performs existing render,
+and observer cleanup, then awaits scope disposal. `events` and `timer` are transient services resolved through this scope; each access creates a new
+helper using the Component's explicit controller-dispatch context. Scope disposal removes their listeners and cancels their timers. A
+default-exported Web Component class is returned unchanged and does not receive the definition-based scope integration.
+
 ## Declarative dependencies
 
 `dependencies` requests resources needed before the Component class is constructed:

@@ -146,11 +146,27 @@ export default class Page {
     async unload() {
         if (this._unloaded) return;
         this._unloaded = true;
-        // unload
-        await this.onCommand("unload", {});
+
+        // invoke controller unload while preserving final Page cleanup on failure
+        const errors = [];
+        try {
+            await this.onCommand("unload", {});
+        } catch (error) {
+            errors.push(error);
+        }
+
+        // release Page runtime references and publish the unload notification
         this._host = null;
         this._refs = null;
-        this._bus.emit("xshell:page:unload", { src: this._src, id: this._id });
+        try {
+            this._bus.emit("xshell:page:unload", { src: this._src, id: this._id });
+        } catch (error) {
+            errors.push(error);
+        }
+
+        // propagate all lifecycle failures after cleanup has completed
+        if (errors.length === 1) throw errors[0];
+        if (errors.length > 1) throw new AggregateError(errors, `Multiple errors occurred while unloading Page '${this._id}'.`);
     }
 
     // close methods

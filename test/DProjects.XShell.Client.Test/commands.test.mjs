@@ -5,17 +5,21 @@ import commandsContract from "../../src/DProjects.XShell/Resources/DProjects.XSh
 import contractSchema from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/schemas/contract.schema.json" with {type: "json"};
 import Commands from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/commands.js";
 import JsonValidator from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/json-validator.js";
+import Services from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services.js";
 import Tasks from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/tasks.js";
 
 function createCommands(Command, tasks = new Tasks({bus: null}), config) {
     const loads = [];
+    const services = new Services({config: {xshell: {services: {}}}, bus: null});
+    services.register("services", services);
     const commands = new Commands({
         loader: { async load(id) { loads.push(id); return Command; } },
         tasks,
         jsonValidator: new JsonValidator(),
-        config
+        config,
+        services
     });
-    return {commands, loads, tasks};
+    return {commands, loads, tasks, services};
 }
 
 test("commands contract declares discovery and the asynchronous Task-backed run API", () => {
@@ -190,7 +194,7 @@ test("commands preserves cooperative cancellation and concurrent invocation isol
             });
         }
     }
-    const {commands} = createCommands(Command);
+    const {commands, services} = createCommands(Command);
     const [first, second] = await Promise.all([
         commands.run({id: "concurrent", args: {value: 1}, background: false}),
         commands.run({id: "concurrent", args: {value: 2}, background: true})
@@ -206,4 +210,5 @@ test("commands preserves cooperative cancellation and concurrent invocation isol
     assert.equal(first.status, "canceled");
     assert.equal(second.status, "finished");
     assert.equal(await second.getResult(), 2);
+    assert.equal(services._children.length, 0);
 });

@@ -9,6 +9,7 @@ concrete ES module class selected by `xshell.services`.
         "audit": {
             "contract": "audit",
             "implementation": "/services/audit.js",
+            "lifetime": "transient",
             "options": {
                 "endpoint": "/api/audit"
             }
@@ -29,8 +30,9 @@ finalizes the registry. Configured service instances are not constructed during 
 validating its merged `xshell.services.areas.options`, before module controllers execute. It then resolves the declarative `modules` singleton
 and explicitly awaits its once-only initialization. Application definitions remain under top-level `config.modules`; Modules has no implementation options. After Modules
 initialize, XShell explicitly invokes `Areas.init()` with that singleton to compose module contributions, then resolves the declarative `navigation`
-service and awaits `Services.initialize("navigation")`. Each service's static `optionsSchema` validates its options immediately before lazy singleton
-construction. This coordination is specific to startup ordering and does not introduce automatic dependency initialization.
+service and awaits `Services.initialize("navigation")`. Each service's static `optionsSchema` validates its options immediately before construction.
+Every declaratively configured service must explicitly declare `lifetime`; omission is a configuration error. This coordination is specific to
+startup ordering and does not introduce automatic dependency initialization.
 
 The `theme` service is the one explicit startup exception. The X module controller declares `theme` as a constructor dependency, so normal service
 injection resolves it while modules initialize. The service starts with `system` and restores a saved `system`, `light`, or `dark` mode asynchronously
@@ -50,26 +52,129 @@ registry-immutability error. Service objects may still own mutable runtime state
 
 This fixed topology provides deterministic service resolution and prevents provider mutation while the application is running.
 
+## Lifetimes, scopes, and resource ownership
+
+The application creates one root `Services` instance. `Services.beginScope()` creates another `Services` instance with the caller as its direct
+parent. Scopes can be nested, and each parent tracks its immediate children. All scopes share the application's root registration records; a child
+does not copy registrations and cannot call `register()` or initialize the registry with `init()`.
+
+Each `xshell.services.<name>` registration must set `lifetime` to `singleton`, `scoped`, or `transient`. There is no configured-service default;
+omitting the field, using `null`, an empty string, or any other value fails final merged-configuration validation. This is an intentional
+configuration-contract change. Options-only module contributions remain valid inputs to composition when the final merged definition supplies the
+required contract, implementation, and lifetime.
+
+- A **singleton** is lazily constructed and cached by the root. Root, sibling, and nested scope resolutions return the same instance.
+- A **scoped** service is lazily constructed and cached by the explicit child scope that resolves it. Sibling and nested scopes own different
+  instances. Root resolution throws instead of creating an application-wide scoped instance.
+- A **transient** is constructed on every resolution. A child scope owns disposable transients it creates; a transient resolved through the root is
+  owned by the root until explicit root disposal.
+
+Programmatically registered preconstructed core instances are separate from declarative configuration. `Services.register(name, instance)` keeps
+those instances as application singletons without requiring an artificial configuration lifetime.
+
+Scope creation does not construct or initialize services, and there is no ambient current scope. For example, a scope can combine application
+singletons with scope-specific services:
+
+```js
+const scope = services.beginScope();
+
+try {
+    const preferences = scope.resolve("preferences");
+    const editorSession = scope.resolve("editorSession");
+    // preferences is shared; editorSession belongs to this scope.
+} finally {
+    await scope.dispose();
+}
+```
+
+`scope.addDisposable(resource)` gives a scope explicit ownership of a resource with a callable synchronous or asynchronous `dispose()` method.
+Each object is registered at most once per scope. Scoped and transient instances with a callable `dispose()` method are registered automatically
+after successful construction. Non-disposable transients are not retained. Singleton services are never automatically added to child ownership.
+The framework registers `events` and `timer` as disposable transient services, so every resolution creates a new scope-owned helper.
+
+Disposal immediately closes the scope to new child scopes, resolutions, initialization requests, and disposable registrations. Descendants also
+reject those operations as soon as an ancestor begins disposal. Cleanup recursively disposes immediate children in reverse creation order, then
+directly owned resources in reverse registration order. It awaits asynchronous cleanup and continues after failures. One failure is rethrown; two
+or more are reported with `AggregateError` after all cleanup attempts. Concurrent `dispose()` calls share one operation, later calls do not repeat
+cleanup, and a completed child detaches from its parent. Disposing a child leaves its parent and siblings active. Disposing the root follows the same
+hierarchy but does not automatically dispose its registered singleton instances, and XShell shutdown does not invoke root disposal in this phase.
+
+Definition-based Pages and Components automatically create independent scopes during instance construction. Each Command invocation creates an
+independent scope inside its Task handler immediately before Command construction. Every automatic owner scope is a direct child of the application
+root, regardless of DOM, Page composition, or which UI owner initiated a Command. A Component inside a Page does not inherit the Page scope, nested
+or sibling Components do not inherit one another's scopes, and Commands do not inherit UI scopes. This intentionally avoids DOM lookup, scope
+reparenting, and ambient current-scope state.
+
+Their controller providers keep the existing special injections and resolve ordinary service names through the owner scope. The special
+`controller({ services })` injection returns that same owner scope, so controller code can explicitly resolve or initialize additional services or
+create nested scopes. Global `xshell.services` still returns the root container. The owner scope survives temporary Page unmount/remount and
+Component disconnect/reconnect cycles, then is awaited and disposed after controller unload and existing non-service cleanup during final unload.
+
+`beginScope({ context })` optionally supplies explicit owner-specific construction context. It is not a registered service and is available only as
+the reserved `scopeContext` constructor dependency while that scope constructs scoped or transient instances. Singleton construction always uses
+the root context and cannot capture child owner state. Disposal releases the scope's context reference.
+
+Page and Component scopes provide an `invokeController` context callback. The transient `events` and `timer` services use it for string listeners,
+preserving `controller({ events, timer })` and controller `this` binding without ambient state. Function listeners work in any scope, including
+Command scopes with no owner callback; a string listener in such a scope reports a clear error. Unmount and disconnect preserve the helpers because
+their owner scope remains active. Final scope disposal removes listeners, cancels timers, and releases callback references exactly once.
+
+Command controller providers similarly resolve ordinary services through the invocation scope, while `controller({ services })` returns the scope
+and `controller({ task })` retains the Task execution context. Execution settles before the scope is asynchronously disposed, and Task completion
+waits for cleanup. Cancellation remains cooperative: aborting the Task does not dispose a scope while Command code is still running. Foreground and
+background Commands use the same independent ownership model.
+
+Class-based Page and Component exports remain unchanged and do not receive definition-loader integration.
+
 ## Lookup and construction
 
-`Services.has(name)` reports whether a runtime or configured service name is registered. It only checks registry membership and never constructs a
-configured service. `Services.resolve(name)` returns an existing runtime instance or lazily constructs the configured implementation as a singleton.
-The implementation is validated against the contract's declared methods and properties when that singleton is first created.
+`Services.has(name)` reports whether a runtime or configured service name is registered. It only checks root registry membership and never
+constructs a service. `Services.resolve(name)` remains synchronous and selects the instance owner from the registration lifetime. Singleton and
+scoped instances are cached by their root or child owner; transient instances are not cached. Every newly constructed instance is validated against
+the contract's declared methods and properties.
 
 Registration, construction, and asynchronous initialization are separate operations:
 
 ```js
 await services.init();                 // Register configured implementations and freeze the topology
-const service = services.resolve(id);  // Synchronously construct or retrieve the singleton
-await services.initialize(id);         // Explicitly initialize the singleton and await readiness
+const scope = services.beginScope();
+const service = scope.resolve(id);      // Synchronously resolve according to the configured lifetime
+await scope.initialize(id);             // Explicitly initialize a singleton or this scope's scoped instance
 ```
 
-`Services.resolve()` remains synchronous and never invokes a service's `init()` method. `Services.initialize(name)` resolves through that same
-singleton path, requires a callable `init()`, and returns the service instance after initialization completes. Synchronous and asynchronous `init()`
-implementations are both supported. Initialization runs once per service: concurrent callers share one operation, and later calls return the already
-initialized singleton without invoking `init()` again. A thrown or rejected error is retained and propagated to every later caller without retry or
-singleton reconstruction. The constructed service remains available through `resolve()` for inspection. A service without `init()` fails with a
-descriptive error. Neither registration nor the mere presence of `init()` triggers initialization; XShell remains responsible for explicit ordering.
+`Services.resolve()` never invokes `init()`. `Services.initialize(name)` requires a callable `init()` and supports synchronous or asynchronous
+implementations. Singleton initialization runs once per application and remains shared across scopes. Scoped initialization runs once per owning
+scope; sibling scopes retain independent success, failure, and in-flight operations. Concurrent callers for the same owned instance share one
+operation, and a failure is retained without automatic retry or reconstruction. Scope disposal waits for its in-flight scoped initialization to
+settle before disposing that instance. It does not wait for singleton initialization owned by the root.
+
+Name-based transient initialization is intentionally unsupported because no cached instance corresponds to the registration name.
+`scope.initialize("formatter")` throws for a transient; callers explicitly resolve and initialize the particular instance they own. Neither
+registration nor the mere presence of `init()` triggers initialization.
+
+## Constructor dependency lifetimes
+
+The implementation constructor still receives a lazy service provider and validated options:
+
+```js
+constructor({ preferences, documentState }, options) {
+    this.preferences = preferences;
+    this.documentState = documentState;
+}
+```
+
+Dependencies resolve through the context that owns the constructed instance. Singleton constructors use the root context. Scoped constructors use
+their child scope. Transients use the context in which that transient was requested. This explicit propagation lets a scoped service and its
+transient dependencies share the same scoped dependency without global current-scope state.
+
+A singleton may depend on other singletons and on transients whose complete constructor graph is scope-free. It cannot capture a scoped service
+directly or through one or more transients. Scoped services may depend on singletons, same-scope scoped services, and transients. A transient may
+depend on a scoped service only when created in an active child scope and outside a singleton construction graph. Violations report the constructor
+dependency chain and never promote the scoped instance to application lifetime.
+
+One construction stack detects cycles across every lifetime combination, including singleton-to-singleton, scoped-to-transient-to-scoped, and
+transient-to-singleton-to-transient paths. Failed options validation, construction, contract validation, lifetime validation, or cycle detection
+does not leave an invalid cached instance.
 
 Parameterized service setup remains separate. In particular, Areas continues to use `areas.init({ modules })`, and services such as I18n retain their
 existing parameterized semantics rather than using `Services.initialize(name)`.
@@ -115,13 +220,13 @@ validates and passes a new empty object. A missing or invalid `optionsSchema`, o
 invoking the constructor or emitting `xshell:service:created`; the service remains registered and may be resolved again. Validation does not mutate
 the schema or options. Options remain private construction data and are not included in `services.registry` or `services.getServiceInfo()` metadata.
 
-`Services` owns its mutable runtime service records internally. `services.registry` returns a read-only snapshot of the current service metadata:
-each entry has `id`, construction `state`, `initializationState`, `contractId`, `contractUrl`, `description`, `icon`, `moduleId`,
+`Services` owns its mutable runtime service records internally. `services.registry` returns a read-only snapshot of application registration metadata:
+each entry has `id`, `lifetime`, construction `state`, `initializationState`, `contractId`, `contractUrl`, `description`, `icon`, `moduleId`,
 `implementationName`, `url`, `size`, and `time`. Initialization state is `not-initialized`, `initializing`, `initialized`, or `failed`.
 Unavailable values are `null`. The returned array and entries are frozen, contain no live instances or implementation classes, and may become
-stale as services are resolved. `services.getServiceInfo(name)` returns the same projected metadata for one service, or `undefined` if absent.
-Live services are obtained only through `services.resolve(name)`. The registry topology remains immutable after `Services.init()`, while internal
-records change lifecycle state and acquire instances during lazy construction.
+stale as singleton services are resolved. `services.getServiceInfo(name)` returns the same projected metadata for one service, or `undefined` if
+absent. Because the registry is global, scoped and transient entries remain `registered` and `not-initialized`; per-scope instances and initialization
+state are deliberately not exposed. Live services are obtained only through `resolve(name)`. The topology remains immutable after `Services.init()`.
 
 For a declared contract property, V0 validation succeeds when a descriptor with that name exists on the instance or its prototype chain. Validation
 checks presence only: it does not read values, invoke getters, or validate runtime property types. `readonly: true` is contract metadata, and V0
@@ -136,10 +241,12 @@ startup
     -> finalize registry topology
 
 runtime
-    -> Services.has(name)       existence only
-    -> Services.resolve(name)   options validation, lazy singleton construction, and contract validation
-    -> Services.initialize(name) explicit, asynchronous, once-only service initialization
-    -> Services.registry        read-only snapshot of service metadata
+    -> Services.has(name)        existence only
+    -> Services.beginScope()     explicit child ownership context
+    -> Services.resolve(name)    lifetime selection, validation, and synchronous construction
+    -> Services.initialize(name) once per singleton or scope-owned instance; unsupported for transients
+    -> Services.dispose()        hierarchical reverse-order cleanup
+    -> Services.registry         read-only application registration metadata
 ```
 
 ## Module requirements and controller access
@@ -240,30 +347,32 @@ Contract registration checks the schema shape, the object/boolean form of `schem
 `ref` names a type in that same contract.
 Named types and references are descriptive metadata. They do not validate runtime property values, method arguments or returns, or event payloads.
 There is no recursive reference resolution, cross-contract type lookup, type generation, generics, inheritance, parameter checking, version
-negotiation, scopes, or selectable lifetimes.
+negotiation, or DOM-derived Services scope inheritance.
 
 See [Shared contract model](../20-components/10-manifest.md#shared-contract-model) for the common descriptor grammar used by other XShell elements.
 
 ## Resolution validation and core services
 
 Declared methods must resolve to functions. Property validation finds descriptors on the instance/prototype chain, excluding Object.prototype;
-it does not evaluate property getters. This validation runs when a configured singleton is constructed and when a directly registered built-in is
+it does not evaluate property getters. This validation runs whenever a configured instance is constructed and when a directly registered built-in is
 associated with a contract. Defaults, enums, readonly, and property types are descriptive, as are method parameters/returns and events. An
 implementation must emit any promised events itself.
 
 Construction receives the proxy resolving other services by name as its first argument and its implementation `options` as the second. Immediately
 before construction, XShell validates those options against the implementation's mandatory static `optionsSchema`. Resolving a service already
 being constructed detects a circular constructor dependency and reports the resolution chain. Failed options validation, construction, or contract
-validation resets that record so a later resolve can retry.
+validation resets any singleton or scoped cache record so a later resolve can retry; a failed transient is never cached.
 Duplicate registrations, including collisions with core names, fail.
 
-After a configured service is first constructed and validated, XShell emits `xshell:service:created` on the Bus with `{ id }`. Failed attempts emit no
-created event. Consumers can re-read `services.registry` to inspect the current state.
+After each configured instance is constructed and validated, XShell emits `xshell:service:created` on the Bus with `{ id }`. A singleton emits once;
+scoped and transient registrations can emit for multiple instances. Failed attempts emit no created event. Consumers can re-read
+`services.registry`; only singleton construction changes its global state projection.
 
-The directly registered core names are `bus`, `config`, `loader`, `resolver`, `contracts`, and `services`. `areas`, `commands`, `dialog`, `i18n`,
+The directly registered core names are `bus`, `config`, `loader`, `resolver`, `contracts`, and `services`; these preconstructed registrations are
+singletons. `areas`, `commands`, `dialog`, `i18n`,
 `jsonValidator`, `modules`, `navigation`, `preferences`, `registry`, `runtime`, `secrets`, `tasks`, and `temp` are framework-owned configured services
 registered through `xshell.services`. Modules still receives `bus`, `config`, `loader`, `resolver`, and `services` through normal constructor
-injection; its controller provider continues to expose named singleton services plus module-specific `moduleAssetsPath` and `moduleConfig` values.
+injection; its controller provider continues to expose named services plus module-specific `moduleAssetsPath` and `moduleConfig` values.
 There is no auth/identity registration. A Diagnostics getter is not a registered service contract.
 
 See [Bus](../30-subsystems/20-bus.md), [Dialogs](../30-subsystems/30-dialogs.md), [Temp](../30-subsystems/50-temp.md),

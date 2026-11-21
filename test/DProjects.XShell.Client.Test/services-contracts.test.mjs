@@ -207,7 +207,7 @@ test("configured services load eagerly but instantiate lazily as singletons", as
 
         execute() {}
     }
-    const definitions = { example: { contract: "example", implementation: "/_assets/test/services/example.js" } };
+    const definitions = { example: { contract: "example", implementation: "/_assets/test/services/example.js", lifetime: "singleton" } };
     const implementations = { "esm:/_assets/test/services/example.js": ExampleService };
     const contractItems = { example: createContractItem("example", { execute: {} }) };
     const { loads, services } = createServices(definitions, implementations, contractItems);
@@ -272,8 +272,8 @@ test("configured services receive private implementation options alongside lazy 
         }
     }
     const definitions = {
-        dependency: { contract: "dependency", implementation: "/_assets/test/services/dependency.js" },
-        consumer: { contract: "consumer", implementation: "/_assets/test/services/consumer.js", options }
+        dependency: { contract: "dependency", implementation: "/_assets/test/services/dependency.js", lifetime: "singleton" },
+        consumer: { contract: "consumer", implementation: "/_assets/test/services/consumer.js", lifetime: "singleton", options }
     };
     const implementations = {
         "esm:/_assets/test/services/dependency.js": DependencyService,
@@ -313,7 +313,7 @@ test("services without configured options receive an empty object", async () => 
             this.options = options;
         }
     }
-    const definitions = { example: { contract: "example", implementation: "/_assets/test/services/example.js" } };
+    const definitions = { example: { contract: "example", implementation: "/_assets/test/services/example.js", lifetime: "singleton" } };
     const implementations = { "esm:/_assets/test/services/example.js": ExampleService };
     const { services } = createServices(definitions, implementations, { example: createContractItem("example") });
 
@@ -355,7 +355,7 @@ test("service registrations sharing an implementation receive their own configur
 
 test("service configuration schema accepts object options and rejects other JSON types", () => {
     const validator = new Validator(ConfigSchema.$defs.xshellService, "2020-12");
-    const service = { contract: "example", implementation: "/services/example.js" };
+    const service = { contract: "example", implementation: "/services/example.js", lifetime: "singleton" };
 
     assert.equal(validator.validate(service).valid, true);
     assert.equal(validator.validate({ ...service, options: { nested: { enabled: true }, values: [1, "two", null] } }).valid, true);
@@ -376,7 +376,7 @@ test("service options require a valid static JSON Schema object", async () => {
     ];
 
     for (const [implementation, expected] of invalidImplementations) {
-        const definitions = { example: { contract: "example", implementation: "/_assets/test/services/example.js" } };
+        const definitions = { example: { contract: "example", implementation: "/_assets/test/services/example.js", lifetime: "singleton" } };
         const implementations = { "esm:/_assets/test/services/example.js": implementation };
         const { services } = createServices(definitions, implementations, { example: createContractItem("example") });
 
@@ -406,7 +406,7 @@ test("service option validation rejects missing, incorrectly typed, and unknown 
 
     for (const [options, expected] of invalidOptions) {
         const definitions = {
-            example: { contract: "example", implementation: "/_assets/test/services/example.js", options }
+            example: { contract: "example", implementation: "/_assets/test/services/example.js", lifetime: "singleton", options }
         };
         const implementations = { "esm:/_assets/test/services/example.js": ExampleService };
         const { emitted, services } = createServices(definitions, implementations, { example: createContractItem("example") });
@@ -442,7 +442,7 @@ test("valid service options are validated immediately before construction withou
         }
     }
     const definitions = {
-        example: { contract: "example", implementation: "/_assets/test/services/example.js", options }
+        example: { contract: "example", implementation: "/_assets/test/services/example.js", lifetime: "singleton", options }
     };
     const implementations = { "esm:/_assets/test/services/example.js": ExampleService };
     const { emitted, services } = createServices(definitions, implementations, { example: createContractItem("example") });
@@ -467,7 +467,7 @@ test("omitted service options validate as an empty object", async () => {
         };
         constructor(services, options) { this.options = options; }
     }
-    const definitions = { example: { contract: "example", implementation: "/_assets/test/services/example.js" } };
+    const definitions = { example: { contract: "example", implementation: "/_assets/test/services/example.js", lifetime: "singleton" } };
     const implementations = { "esm:/_assets/test/services/example.js": ExampleService };
     const { services } = createServices(definitions, implementations, { example: createContractItem("example") });
 
@@ -492,7 +492,7 @@ test("failed service option validation preserves retry behavior and validation i
         constructor() { constructions++; }
     }
     const definitions = {
-        example: { contract: "example", implementation: "/_assets/test/services/example.js", options }
+        example: { contract: "example", implementation: "/_assets/test/services/example.js", lifetime: "singleton", options }
     };
     const implementations = { "esm:/_assets/test/services/example.js": ExampleService };
     const { emitted, services } = createServices(definitions, implementations, { example: createContractItem("example") });
@@ -521,7 +521,7 @@ test("successful lazy creation emits once after validation with only the service
         };
         execute() {}
     }
-    const definitions = { example: { contract: "example", implementation: "/_assets/test/services/example.js" } };
+    const definitions = { example: { contract: "example", implementation: "/_assets/test/services/example.js", lifetime: "singleton" } };
     const implementations = { "esm:/_assets/test/services/example.js": ExampleService };
     const contractItems = { example: createContractItem("example", { execute: {} }) };
     const { services, emitted } = createServices(definitions, implementations, contractItems);
@@ -544,7 +544,7 @@ test("failed lazy construction emits no created event and can be retried", async
             if (++attempts === 1) throw new Error("construction failed");
         }
     }
-    const definitions = { example: { contract: "example", implementation: "/_assets/test/services/example.js" } };
+    const definitions = { example: { contract: "example", implementation: "/_assets/test/services/example.js", lifetime: "singleton" } };
     const implementations = { "esm:/_assets/test/services/example.js": ExampleService };
     const contractItems = { example: createContractItem("example") };
     const { services, emitted } = createServices(definitions, implementations, contractItems);
@@ -569,7 +569,7 @@ test("service inspection returns independent read-only metadata snapshots", asyn
             return 42;
         }
     }
-    const definitions = { example: { contract: "example", implementation: "/_assets/test/services/example.js" } };
+    const definitions = { example: { contract: "example", implementation: "/_assets/test/services/example.js", lifetime: "singleton" } };
     const implementations = { "esm:/_assets/test/services/example.js": ExampleService };
     const contractItems = { example: createContractItem("example", { execute: {} }) };
     const runtime = { active: true };
@@ -584,6 +584,7 @@ test("service inspection returns independent read-only metadata snapshots", asyn
     assert.ok(Object.isFrozen(example));
     assert.deepEqual(example, {
         id: "example",
+        lifetime: "singleton",
         state: "registered",
         initializationState: "not-initialized",
         contractId: "example",
@@ -605,7 +606,7 @@ test("service inspection returns independent read-only metadata snapshots", asyn
     assert.notStrictEqual(services.getServiceInfo("example"), example);
     assert.equal(services.getServiceInfo("missing"), undefined);
     assert.deepEqual(snapshot.find(item => item.id === "runtime"), {
-        id: "runtime", state: "created", initializationState: "not-initialized", contractId: null, contractUrl: null, description: null, icon: null,
+        id: "runtime", lifetime: "singleton", state: "created", initializationState: "not-initialized", contractId: null, contractUrl: null, description: null, icon: null,
         moduleId: null, implementationName: null, url: null, size: null, time: null
     });
 
@@ -633,7 +634,7 @@ test("has reports runtime and configured services without constructing lazy impl
             constructions++;
         }
     }
-    const definitions = { example: { contract: "example", implementation: "/_assets/test/services/example.js" } };
+    const definitions = { example: { contract: "example", implementation: "/_assets/test/services/example.js", lifetime: "singleton" } };
     const implementations = { "esm:/_assets/test/services/example.js": ExampleService };
     const contractItems = { example: createContractItem("example") };
     const { services } = createServices(definitions, implementations, contractItems);
@@ -679,6 +680,7 @@ test("the framework Temp service loads lazily, validates its contract, and remai
     assert.ok(temp instanceof Temp);
     assert.deepEqual(services.getServiceInfo("temp"), {
         id: "temp",
+        lifetime: "singleton",
         state: "created",
         initializationState: "not-initialized",
         contractId: "temp",
@@ -744,7 +746,7 @@ test("direct built-in registration rejects a missing contracted method", () => {
 });
 
 test("unknown contract references fail before implementation loading", async () => {
-    const definitions = { toast: { contract: "toast", implementation: "/_assets/test/services/toast.js" } };
+    const definitions = { toast: { contract: "toast", implementation: "/_assets/test/services/toast.js", lifetime: "singleton" } };
     const { loads, services } = createServices(definitions, {}, {});
 
     await assert.rejects(() => services.init(), /Service 'toast' references unknown contract 'toast'\./);
@@ -758,7 +760,7 @@ test("service creation rejects an implementation missing a required method", asy
             additionalProperties: false
         };
     }
-    const definitions = { toast: { contract: "toast", implementation: "/_assets/test/services/toast.js" } };
+    const definitions = { toast: { contract: "toast", implementation: "/_assets/test/services/toast.js", lifetime: "singleton" } };
     const implementations = { "esm:/_assets/test/services/toast.js": InvalidService };
     const contractItems = { toast: createContractItem("toast", { show: {} }) };
     const { services, emitted } = createServices(definitions, implementations, contractItems);
@@ -781,7 +783,7 @@ test("service creation accepts a declared own property", async () => {
             this.currentUser = null;
         }
     }
-    const definitions = { identity: { contract: "identity", implementation: "/_assets/test/services/identity.js" } };
+    const definitions = { identity: { contract: "identity", implementation: "/_assets/test/services/identity.js", lifetime: "singleton" } };
     const implementations = { "esm:/_assets/test/services/identity.js": IdentityService };
     const contractItems = { identity: createContractItem("identity", {}, { currentUser: { type: "object", readonly: true } }) };
     const { services } = createServices(definitions, implementations, contractItems);
@@ -804,7 +806,7 @@ test("service creation accepts a prototype getter without executing it during va
             throw new Error("getter must not execute during validation");
         }
     }
-    const definitions = { identity: { contract: "identity", implementation: "/_assets/test/services/identity.js" } };
+    const definitions = { identity: { contract: "identity", implementation: "/_assets/test/services/identity.js", lifetime: "singleton" } };
     const implementations = { "esm:/_assets/test/services/identity.js": IdentityService };
     const contractItems = { identity: createContractItem("identity", {}, { currentUser: { type: "object", readonly: true } }) };
     const { services } = createServices(definitions, implementations, contractItems);
@@ -823,7 +825,7 @@ test("service creation rejects an implementation missing a required property", a
             additionalProperties: false
         };
     }
-    const definitions = { identity: { contract: "identity", implementation: "/_assets/test/services/identity.js" } };
+    const definitions = { identity: { contract: "identity", implementation: "/_assets/test/services/identity.js", lifetime: "singleton" } };
     const implementations = { "esm:/_assets/test/services/identity.js": InvalidIdentityService };
     const contractItems = { identity: createContractItem("identity", {}, { currentUser: { type: "object", readonly: true } }) };
     const { services } = createServices(definitions, implementations, contractItems);
@@ -857,8 +859,8 @@ test("circular constructor dependencies fail with the service path", async () =>
         }
     }
     const definitions = {
-        a: { contract: "a", implementation: "/_assets/test/services/a.js" },
-        b: { contract: "b", implementation: "/_assets/test/services/b.js" }
+        a: { contract: "a", implementation: "/_assets/test/services/a.js", lifetime: "singleton" },
+        b: { contract: "b", implementation: "/_assets/test/services/b.js", lifetime: "singleton" }
     };
     const implementations = {
         "esm:/_assets/test/services/a.js": ServiceA,
@@ -895,8 +897,8 @@ test("different service names may use the same contract", async () => {
         }
     }
     const definitions = {
-        first: { contract: "shared", implementation: "/_assets/test/services/first.js" },
-        second: { contract: "shared", implementation: "/_assets/test/services/second.js" }
+        first: { contract: "shared", implementation: "/_assets/test/services/first.js", lifetime: "singleton" },
+        second: { contract: "shared", implementation: "/_assets/test/services/second.js", lifetime: "singleton" }
     };
     const implementations = {
         "esm:/_assets/test/services/first.js": FirstService,
@@ -938,8 +940,8 @@ test("services receive other lazily-created services through constructor injecti
         }
     }
     const definitions = {
-        dependency: { contract: "dependency", implementation: "/_assets/test/services/dependency.js" },
-        consumer: { contract: "consumer", implementation: "/_assets/test/services/consumer.js" }
+        dependency: { contract: "dependency", implementation: "/_assets/test/services/dependency.js", lifetime: "singleton" },
+        consumer: { contract: "consumer", implementation: "/_assets/test/services/consumer.js", lifetime: "singleton" }
     };
     const implementations = {
         "esm:/_assets/test/services/dependency.js": DependencyService,

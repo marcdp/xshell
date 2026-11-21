@@ -1,0 +1,29 @@
+{
+  "label": "Timer",
+  "description": "Schedules timeout and interval callbacks and cancels outstanding work on disposal.",
+  "properties": {},
+  "events": {},
+  "methods": {
+    "setTimeout": {
+      "description": "Schedules a function listener or controller command string once after the requested delay.",
+      "parameters": [
+        {"name":"listener","type":"any","required":true,"description":"Callback function or controller command string."},
+        {"name":"timeout","type":"number","required":true,"description":"Delay in milliseconds."}
+      ],
+      "returns": {"type":"any","description":"The platform timeout identifier."}
+    },
+    "setInterval": {
+      "description": "Schedules a function listener or controller command string repeatedly at the requested interval.",
+      "parameters": [
+        {"name":"listener","type":"any","required":true,"description":"Callback function or controller command string."},
+        {"name":"timeout","type":"number","required":true,"description":"Interval in milliseconds."}
+      ],
+      "returns": {"type":"any","description":"The platform interval identifier."}
+    },
+    "dispose": {
+      "description": "Cancels all pending timeouts and active intervals owned by this Timer instance. Repeated disposal is safe.",
+      "parameters": [],
+      "returns": {"type":"any","description":"Undefined after tracked timers have been cleared."}
+    }
+  }
+}

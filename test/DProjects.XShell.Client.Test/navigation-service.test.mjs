@@ -9,7 +9,7 @@ const frameworkUrl = new URL("../../src/DProjects.XShell/Resources/DProjects.XSh
 test("framework manifest registers Navigation declaratively with service options", async () => {
     const source = await readFile(new URL("manifest.jsonc", frameworkUrl), "utf8");
 
-    assert.match(source, /"navigation"\s*:\s*\{\s*"contract"\s*:\s*"navigation",\s*"implementation"\s*:\s*"\/services\/navigation\.js",\s*"options"\s*:\s*\{\s*"mode"\s*:\s*"path"\s*\}/s);
+    assert.match(source, /"navigation"\s*:\s*\{\s*"contract"\s*:\s*"navigation",\s*"implementation"\s*:\s*"\/services\/navigation\.js",\s*"lifetime"\s*:\s*"singleton",\s*"options"\s*:\s*\{\s*"mode"\s*:\s*"path"\s*\}/s);
     assert.equal((source.match(/"navigation"\s*:/g) ?? []).length, 1);
 });
 

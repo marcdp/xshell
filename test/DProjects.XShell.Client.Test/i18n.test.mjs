@@ -35,7 +35,7 @@ function configuration(i18n) {
             environment: "test",
             assets: { basePath: "/_assets", path: "/_assets/xshell", url: "https://example.test/xshell/" },
             areas: { default: null, definitions: {} },
-            services: { navigation: { contract: "navigation", implementation: "/services/navigation.js", options: { mode: "path" } } },
+            services: { navigation: { contract: "navigation", implementation: "/services/navigation.js", lifetime: "singleton", options: { mode: "path" } } },
             resolver: {},
             ui: { layout: {}, component: {} },
             i18n,

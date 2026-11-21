@@ -88,14 +88,30 @@ function configureDefinitionLoaders() {
     xshell._bus = { emit() {} };
 }
 
+function withServicesScope(services) {
+    // provide the owner-scope API required by definition-based runtime instances
+    const root = {
+        beginScope() {
+            return {
+                beginScope: () => root.beginScope(),
+                resolve: name => services[name],
+                initialize: async name => services[name],
+                async dispose() {}
+            };
+        }
+    };
+    services.services = root;
+    return services;
+}
+
 function createContext() {
     return {
         resourceDefinition: { moduleId: "test", modulePath: "/_assets/test" },
-        services: {
+        services: withServicesScope({
             config: xshell._config,
             loader: xshell._loader,
             modules: { shadowStyleSheets: sharedShadowStyleSheets }
-        }
+        })
     };
 }
 

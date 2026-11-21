@@ -17,8 +17,8 @@ function effectiveConfig() {
             areas: { default: null, definitions: {} },
             resolver: {},
             services: {
-                navigation: { contract: "navigation", implementation: "/services/navigation.js", options: { mode: "path" } },
-                secrets: { contract: "secrets", implementation: "/services/secrets.js", options: { rememberMinutes: 15, maxRememberMinutes: 60 } }
+                navigation: { contract: "navigation", implementation: "/services/navigation.js", lifetime: "singleton", options: { mode: "path" } },
+                secrets: { contract: "secrets", implementation: "/services/secrets.js", lifetime: "singleton", options: { rememberMinutes: 15, maxRememberMinutes: 60 } }
             },
             ui: { layout: {}, component: {} },
             i18n: { lang: "en", langs: [{ id: "en", label: "English", main: true }], datetime: { options: {}, formats: {} }, strings: {} },

@@ -16,12 +16,11 @@ export default {
             flex:1;
             height:100%;
         }
-        .tags { display: flex; flex-wrap: wrap; gap: .25em; align-items: center; }
     `,
     template: `
         <x-notice x-if="state.error" type="error" role="alert" x-prop:message="state.error"></x-notice>
 
-        <div class="tags" x-if="state.detail && state.detail.tags.length">
+        <div slot="header-actions" x-if="state.detail && state.detail.tags.length">
             <x-chip x-for="tag in state.detail.tags" x-key="tag" x-attr:label="tag"></x-chip>
         </div>
 

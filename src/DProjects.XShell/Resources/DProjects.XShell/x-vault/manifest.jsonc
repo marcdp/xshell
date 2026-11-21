@@ -21,7 +21,8 @@
         "services": {
             "xvault": {
                 "contract": "xvault",
-                "implementation": "/services/xvault.js"
+                "implementation": "/services/xvault.js",
+                "lifetime": "singleton"
             }
         }
     }

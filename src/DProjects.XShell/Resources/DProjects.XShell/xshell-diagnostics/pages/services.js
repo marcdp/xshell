@@ -21,6 +21,7 @@ export default {
                 <x-listview-column><x-datafield type="search" x-model="state.description" placeholder="Description"></x-datafield></x-listview-column>
                 <x-listview-column width="10em"><x-datafield type="search" x-model="state.contractId" placeholder="Contract"></x-datafield></x-listview-column>
                 <x-listview-column width="10em"><x-datafield type="search" x-model="state.moduleId" placeholder="Module"></x-datafield></x-listview-column>
+                <x-listview-column width="7em"><x-datafield type="search" x-model="state.lifetime" placeholder="Lifetime"></x-datafield></x-listview-column>
                 <x-listview-column width="12em"><x-datafield type="search" x-model="state.tags" placeholder="Tags"></x-datafield></x-listview-column>
                 <x-listview-column label="Size" width="5em" style="text-align:right"></x-listview-column>
                 <x-listview-column label="Time" width="5em" style="text-align:right"></x-listview-column>
@@ -39,6 +40,7 @@ export default {
                     </x-anchor>
                 </div>
                 <div>{{ item.moduleId }}</div>
+                <div>{{ item.lifetime }}</div>
                 <div class="tags">
                     <x-chip x-for="tag in item.tags" x-key="tag" x-attr:label="tag"></x-chip>
                 </div>
@@ -55,6 +57,7 @@ export default {
         id: "",
         moduleId: "",
         contractId: "",
+        lifetime: "",
         tags: "",
         description: "",
         items: []
@@ -67,6 +70,7 @@ export default {
                events.on(state, "change:id", "refresh");
                events.on(state, "change:moduleId", "refresh");
                events.on(state, "change:contractId", "refresh");
+               events.on(state, "change:lifetime", "refresh");
                events.on(state, "change:tags", "refresh");
                events.on(state, "change:description", "refresh");
                events.on(state, "change:label", "refresh");
@@ -109,6 +113,9 @@ export default {
                     if (state.moduleId && !moduleId.includes(state.moduleId)) {
                         valid = false;
                     }
+                    if (state.lifetime && !item.lifetime.includes(state.lifetime)) {
+                        valid = false;
+                    }
                     if (!this.matchesTags(item.tags, state.tags)) valid = false;
                     if (valid) {
                         list.push({
@@ -120,6 +127,7 @@ export default {
                             description: description,
                             tags: item.tags || [],
                             moduleId: moduleId,
+                            lifetime: item.lifetime,
                             url: item.url,
                             status: item.state,
                             initializationStatus: item.initializationState,

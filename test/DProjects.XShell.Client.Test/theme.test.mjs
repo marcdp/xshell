@@ -245,7 +245,7 @@ test("theme contract validates and the configured service resolves as a singleto
         const config = {
             app: { baseUrl: "https://example.test/" },
             modules: { x: { files: [{ path: "/services/theme.js", size: 1 }] } },
-            xshell: { services: { theme: { contract: "theme", implementation: "/services/theme.js" } } }
+            xshell: { services: { theme: { contract: "theme", implementation: "/services/theme.js", lifetime: "singleton" } } }
         };
         const services = new Services({
             config,

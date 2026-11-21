@@ -528,7 +528,8 @@ test("component preserves its instance lifetime across reconnects and unloads on
     const mutationObserver = component._mutationObserver;
     const controller = component._controller;
     const disposable = { disposeCount: 0, dispose() { this.disposeCount += 1; } };
-    component._disposables.push(disposable);
+    const servicesScope = component._servicesScope;
+    servicesScope.addDisposable(disposable);
     assert.ok(mutationObserver instanceof MutationObserver);
     assert.deepEqual(mutationObserver.observations, [{ target: component, options: { attributes: true } }]);
 
@@ -549,7 +550,7 @@ test("component preserves its instance lifetime across reconnects and unloads on
     assert.equal(component._renderEngine, null);
     assert.equal(firstRenderEngine.unmountCount, 1);
     assert.equal(disposable.disposeCount, 0);
-    assert.equal(component._disposables.length, 1);
+    assert.equal(servicesScope._disposables.length, 1);
     assert.equal(mutationObserver.disconnectCount, 0);
 
     component.connectedCallback();
@@ -571,7 +572,7 @@ test("component preserves its instance lifetime across reconnects and unloads on
     assert.deepEqual(commands, ["load", "mount", "unmount", "mount", "unmount", "unload"]);
     assert.equal(mutationObserver.disconnectCount, 1);
     assert.equal(disposable.disposeCount, 1);
-    assert.deepEqual(component._disposables, []);
+    assert.deepEqual(servicesScope._disposables, []);
 });
 
 test("component explicit unload while mounted unmounts before final cleanup", async () => {
@@ -643,7 +644,8 @@ test("Component final cleanup survives a throwing controller unmount", async () 
     const component = new Component();
     const observer = component._mutationObserver;
     const disposable = { count: 0, dispose() { this.count++; } };
-    component._disposables.push(disposable);
+    const servicesScope = component._servicesScope;
+    servicesScope.addDisposable(disposable);
     component.connectedCallback();
     const renderEngine = component._renderEngine;
 
@@ -653,7 +655,7 @@ test("Component final cleanup survives a throwing controller unmount", async () 
     assert.equal(component._renderEngine, null);
     assert.equal(observer.disconnectCount, 1);
     assert.equal(disposable.count, 1);
-    assert.deepEqual(component._disposables, []);
+    assert.deepEqual(servicesScope._disposables, []);
     await component.unload();
     assert.equal(disposable.count, 1);
 });
@@ -671,7 +673,8 @@ test("Component final cleanup survives throwing and rejecting controller unload"
         const component = new Component();
         const observer = component._mutationObserver;
         const disposable = { count: 0, dispose() { this.count++; } };
-        component._disposables.push(disposable);
+        const servicesScope = component._servicesScope;
+        servicesScope.addDisposable(disposable);
         component.connectedCallback();
         const renderEngine = component._renderEngine;
 
@@ -680,7 +683,7 @@ test("Component final cleanup survives throwing and rejecting controller unload"
         assert.equal(component._renderEngine, null);
         assert.equal(observer.disconnectCount, 1);
         assert.equal(disposable.count, 1);
-        assert.deepEqual(component._disposables, []);
+        assert.deepEqual(servicesScope._disposables, []);
     }
 });
 
@@ -704,7 +707,8 @@ test("page preserves state and disposables until its final unload", async () => 
     const page = new PageClass({ src: "/pages/lifecycle.js", context: {} });
     const controller = page._controller;
     const disposable = { disposeCount: 0, dispose() { this.disposeCount += 1; } };
-    page._disposables.push(disposable);
+    const servicesScope = page._servicesScope;
+    servicesScope.addDisposable(disposable);
     const root = { adoptedStyleSheets: [] };
     const host = { nodeName: "X-PAGE", getAttribute() { return "/pages/lifecycle.js"; }, getRootNode() { return root; } };
 
@@ -720,7 +724,7 @@ test("page preserves state and disposables until its final unload", async () => 
     assert.equal(page._state.value, 2);
     assert.equal(page._renderEngine, null);
     assert.equal(disposable.disposeCount, 0);
-    assert.equal(page._disposables.length, 1);
+    assert.equal(servicesScope._disposables.length, 1);
 
     await page.mount({ host });
     const secondRenderEngine = page._renderEngine;
@@ -737,7 +741,7 @@ test("page preserves state and disposables until its final unload", async () => 
     await page.unload();
     assert.deepEqual(commands, ["load", "mount", "unmount", "mount", "unmount", "unmount", "unload"]);
     assert.equal(disposable.disposeCount, 1);
-    assert.deepEqual(page._disposables, []);
+    assert.deepEqual(servicesScope._disposables, []);
 });
 
 test("x-page unmounts then unloads a replaced page and only unmounts on disconnection", async () => {

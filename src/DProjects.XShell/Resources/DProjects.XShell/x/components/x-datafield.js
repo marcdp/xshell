@@ -256,7 +256,7 @@ export default {
         :host .template {padding:0; border:none; background:none;}
 
         :host .search {position:relative}
-        :host .search x-icon {position:absolute; left:.5em; top:.35em; color:var(--x-datafield-color-placeholder); }
+        :host .search x-icon {position:absolute; left:.5em; top:.25em; color:var(--x-datafield-color-placeholder); }
         :host .search:focus-within x-icon {color:var(--x-color-text);}
         :host .search input {padding-left:2em; }
         

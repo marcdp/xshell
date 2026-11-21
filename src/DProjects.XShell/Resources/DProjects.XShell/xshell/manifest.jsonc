@@ -44,6 +44,7 @@
             "areas": {
                 "contract": "areas",
                 "implementation": "/services/areas.js",
+                "lifetime": "singleton",
                 "options": {
                     "default": "main",
                     "definitions": {}
@@ -51,11 +52,13 @@
             },
             "commands": {
                 "contract": "commands",
-                "implementation": "/services/commands.js"
+                "implementation": "/services/commands.js",
+                "lifetime": "singleton"
             },
             "dialog": {
                 "contract": "dialog",
                 "implementation": "/services/dialog.js",
+                "lifetime": "singleton",
                 "options": {
                     "confirm": null,
                     "message": null,
@@ -63,21 +66,30 @@
                     "picker": null
                 }
             },
+            "events": {
+                "contract": "events",
+                "implementation": "/scoped/events.js",
+                "lifetime": "transient"
+            },
             "i18n": {
                 "contract": "i18n",
-                "implementation": "/services/i18n.js"
+                "implementation": "/services/i18n.js",
+                "lifetime": "singleton"
             },
             "jsonValidator": {
                 "contract": "json-validator",
-                "implementation": "/services/json-validator.js"
+                "implementation": "/services/json-validator.js",
+                "lifetime": "singleton"
             },
             "modules": {
                 "contract": "modules",
-                "implementation": "/services/modules.js"
+                "implementation": "/services/modules.js",
+                "lifetime": "singleton"
             },
             "navigation": {
                 "contract": "navigation",
                 "implementation": "/services/navigation.js",
+                "lifetime": "singleton",
                 "options": {
                     "mode": "path"
                 }
@@ -85,6 +97,7 @@
             "preferences": {
                 "contract": "preferences",
                 "implementation": "/services/preferences.js",
+                "lifetime": "singleton",
                 "options": {
                     "page": null
                 }
@@ -92,6 +105,7 @@
             "secrets": {
                 "contract": "secrets",
                 "implementation": "/services/secrets.js",
+                "lifetime": "singleton",
                 "options": {
                     "rememberMinutes": 60,
                     "maxRememberMinutes": 43200,
@@ -101,11 +115,18 @@
             },
             "tasks":{
                 "contract": "tasks",
-                "implementation": "/services/tasks.js"
+                "implementation": "/services/tasks.js",
+                "lifetime": "singleton"
+            },
+            "timer": {
+                "contract": "timer",
+                "implementation": "/scoped/timer.js",
+                "lifetime": "transient"
             },
             "temp": {
                 "contract": "temp",
                 "implementation": "/services/temp.js",
+                "lifetime": "singleton",
                 "options": {
                     "url": null
                 }

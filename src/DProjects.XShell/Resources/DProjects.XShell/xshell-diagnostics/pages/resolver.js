@@ -36,7 +36,7 @@ export default {
 
         <x-listview view="details">
             <x-listview-head>
-                <x-listview-column><x-datafield type="search" x-model="state.query_resource" placeholder="Resource"></x-datafield></x-listview-column>
+                <x-listview-column><x-datafield type="search" x-model="state.query_resource" placeholder="Resource pattern"></x-datafield></x-listview-column>
                 <x-listview-column><x-datafield type="search" x-model="state.query_src" placeholder="Source"></x-datafield></x-listview-column>
                 <x-listview-column width="10em"><x-datafield type="search" x-model="state.query_loader" placeholder="Loader"></x-datafield></x-listview-column>
                 <x-listview-column label="Cache" width="5em" style="text-align:right"></x-listview-column>

@@ -197,6 +197,7 @@ After reverse route generation, path mode prepends `App.BasePath` directly. With
             "navigation": {
                 "contract": "navigation",
                 "implementation": "/services/navigation.js",
+                "lifetime": "singleton",
                 "options": { "mode": "path" }
             }
         }

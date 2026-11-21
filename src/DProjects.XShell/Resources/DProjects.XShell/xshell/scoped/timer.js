@@ -1,14 +1,21 @@
 // class
 export default class Timer {
 
+    static optionsSchema = {
+        type: "object",
+        properties: {},
+        additionalProperties: false
+    }
+
     // vars
     _handler = null;
     _timeouts = [];
     _intervals = [];
 
     // ctor
-    constructor(handler) {
-        this._handler = handler;
+    constructor(dependencies = {}, options = {}) {
+        // preserve supported direct construction while accepting standard Services dependencies
+        this._handler = typeof dependencies === "function" ? dependencies : dependencies.scopeContext?.invokeController ?? null;
     }
 
     dispose() {
@@ -23,12 +30,14 @@ export default class Timer {
             clearInterval(intervalId);
         }
         this._intervals = [];
+        this._handler = null;
     }
 
     // methods
     setTimeout(listener, timeout) {
         // Resolve command listeners
         if (typeof listener === "string") {
+            if (typeof this._handler !== "function") throw new Error("Timer string listeners require a Services scope controller context.");
             const command = listener;
             listener = () => this._handler(command);
         }
@@ -46,6 +55,7 @@ export default class Timer {
     setInterval(listener, timeout) {
         // Resolve command listeners
         if (typeof listener === "string") {
+            if (typeof this._handler !== "function") throw new Error("Timer string listeners require a Services scope controller context.");
             const command = listener;
             listener = () => this._handler(command);
         }

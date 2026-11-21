@@ -22,7 +22,7 @@ import XVault from "../../src/DProjects.XShell/Resources/DProjects.XShell/x-vaul
 function createServices(implementation, options, name = "example") {
     const emitted = [];
     const bus = { emit(type, detail) { emitted.push({ type, detail }); } };
-    const definition = { contract: name, implementation: `/services/${name}.js` };
+    const definition = { contract: name, implementation: `/services/${name}.js`, lifetime: "singleton" };
     if (options !== undefined) definition.options = options;
     const config = {
         app: { baseUrl: "https://example.test/" },
@@ -149,8 +149,8 @@ test("validated constructor injection preserves lazy dependency resolution", asy
         constructor({ dependency }) { this.dependency = dependency; }
     }
     const definitions = {
-        dependency: { contract: "dependency", implementation: "/services/dependency.js" },
-        consumer: { contract: "consumer", implementation: "/services/consumer.js" }
+        dependency: { contract: "dependency", implementation: "/services/dependency.js", lifetime: "singleton" },
+        consumer: { contract: "consumer", implementation: "/services/consumer.js", lifetime: "singleton" }
     };
     const implementations = {
         "esm:/services/dependency.js": Dependency,
@@ -245,8 +245,8 @@ test("Areas rejects missing, invalid, and unknown service options without constr
 
 test("Navigation receives the configured Areas singleton through service injection", async () => {
     const definitions = {
-        areas: { contract: "areas", implementation: "/services/areas.js", options: { default: null, definitions: {} } },
-        navigation: { contract: "navigation", implementation: "/services/navigation.js", options: { mode: "path" } }
+        areas: { contract: "areas", implementation: "/services/areas.js", lifetime: "singleton", options: { default: null, definitions: {} } },
+        navigation: { contract: "navigation", implementation: "/services/navigation.js", lifetime: "singleton", options: { mode: "path" } }
     };
     const implementations = {
         "esm:/services/areas.js": Areas,

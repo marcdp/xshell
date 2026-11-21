@@ -1,11 +1,11 @@
 {
   "label": "Events",
-  "description": "Registers DOM event listeners with optional command dispatch and removes the registered listeners on disposal.",
+  "description": "Registers DOM event listeners with optional owner-controller command dispatch and removes the registered listeners on disposal.",
   "properties": {},
   "events": {},
   "methods": {
     "on": {
-      "description": "Registers a listener for one or more DOM event names on an element. When listener is a string, creates a callback that passes that command to the handler supplied to the Events constructor. Registrations are tracked for later disposal.",
+      "description": "Registers a listener for one or more DOM event names on an element. A string listener dispatches through the resolving scope's owner context. Registrations are tracked for later disposal.",
       "parameters": [
         { "name": "element", "type": "object", "required": true, "description": "DOM EventTarget-like element supporting addEventListener and removeEventListener."},
         { "name": "event", "type": "any", "required": true, "description": "A single event name or an iterable collection of event names.",
@@ -16,9 +16,14 @@
             ]
           }
         },
-        { "name": "listener", "type": "any", "required": true, "description": "An event listener function, or a command string dispatched to the constructor-supplied handler."}
+        { "name": "listener", "type": "any", "required": true, "description": "An event listener function, or a command string dispatched through the owner scope context."}
       ],
       "returns": {"type":"any","description":"Undefined; listeners are registered for subsequent removal by dispose()."}
+    },
+    "dispose": {
+      "description": "Removes every listener registered by this Events instance. Repeated disposal is safe.",
+      "parameters": [],
+      "returns": {"type":"any","description":"Undefined after tracked listeners have been removed."}
     }
   }
 }

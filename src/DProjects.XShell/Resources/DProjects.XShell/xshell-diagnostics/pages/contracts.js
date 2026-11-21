@@ -21,7 +21,7 @@ export default {
                 <x-listview-column><x-datafield type="search" x-model="state.description" placeholder="Description"></x-datafield></x-listview-column>
                 <x-listview-column width="12em"><x-datafield type="search" x-model="state.moduleId" placeholder="Module"></x-datafield></x-listview-column>
                 <x-listview-column width="12em"><x-datafield type="search" x-model="state.tags" placeholder="Tags"></x-datafield></x-listview-column>
-                <x-listview-column label="Size" width="5em" style="text-align:right"></x-listview-column>
+                <x-listview-column label="Size" width="6em" style="text-align:right"></x-listview-column>
                 <x-listview-column label="Time" width="5em" style="text-align:right"></x-listview-column>
                 <x-listview-column label="Status" width="5em" style="text-align:right"></x-listview-column>
                 <x-listview-column label="File" width="3em" style="text-align:right"></x-listview-column>

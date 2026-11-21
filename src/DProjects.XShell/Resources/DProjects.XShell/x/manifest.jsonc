@@ -105,7 +105,8 @@
 
             "markdown": {
                 "contract": "markdown",
-                "implementation": "/services/markdown-default.js"
+                "implementation": "/services/markdown-default.js",
+                "lifetime": "singleton"
             },
             "preferences": {
                 "options": {
@@ -120,11 +121,13 @@
             },
             "theme": {
                 "contract": "theme",
-                "implementation": "/services/theme-default.js"
+                "implementation": "/services/theme-default.js",
+                "lifetime": "singleton"
             },
             "toast": {
                 "contract": "toast",
-                "implementation": "/services/toast-default.js"
+                "implementation": "/services/toast-default.js",
+                "lifetime": "singleton"
             }
         },
 

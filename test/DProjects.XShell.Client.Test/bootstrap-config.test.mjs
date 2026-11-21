@@ -205,6 +205,7 @@ test("checked-in assets.basePath resolves for root and subpath hosting", () => {
     assert.deepEqual(plain(defaults.xshell.services.temp), {
         contract: "temp",
         implementation: "/services/temp.js",
+        lifetime: "singleton",
         options: { url: "app:/temp" }
     });
     assert.deepEqual(plain(defaults.xshell.serviceWorker), {});
@@ -300,6 +301,7 @@ test("bootstrap loads the authored XShell JSONC source through the canonical run
     assert.deepEqual(config.xshell.services.temp, {
         contract: "temp",
         implementation: "/_assets/xshell/0.9.0.dev/services/temp.js",
+        lifetime: "singleton",
         options: { url: "https://example.test/app/temp" }
     });
     api.fillResolverRules(config);
@@ -327,6 +329,7 @@ test("application configuration can replace the framework Temp implementation th
     assert.deepEqual(config.xshell.services.temp, {
         contract: "temp",
         implementation: "/_assets/app/1.0.0.dev/services/custom-temp.js",
+        lifetime: "singleton",
         options: { url: "https://example.test/app/temp" }
     });
 });
@@ -451,7 +454,7 @@ test("configuration values normalize generically across resolver, service, UI, a
             resolver: { anyType: { anyRule: { src: "/resources/{name}.js", loader: "/literal-loader" } } },
             ui: { component: { lazy: "x-lazy", error: "/components/error.js", unrelated: "/literal" }, layout: { main: "x-layout-main" },
                 unrelated: { label: "/literal" } },
-            services: { foo: { implementation: "/services/foo.js", contract: "/literal-contract" }, bar: { implementation: "./services/bar.js" },
+            services: { foo: { implementation: "/services/foo.js", contract: "/literal-contract", lifetime: "singleton" }, bar: { implementation: "./services/bar.js" },
                 dialog: { options: { confirm: "url:./dialog.js" } },
                 areas: { options: { definitions: { main: { prefix: "/public", icon: "/icons/main.svg", label: "/literal-label" } } } } }
         }

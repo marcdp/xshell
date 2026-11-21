@@ -21,7 +21,7 @@ function createDialogServices(options) {
             modules: {},
             xshell: {
                 files: [{ path: "/services/dialog.js", size: 1 }],
-                services: { dialog: { contract: "dialog", implementation: "/services/dialog.js", options } }
+                services: { dialog: { contract: "dialog", implementation: "/services/dialog.js", lifetime: "singleton", options } }
             }
         },
         loader: { async load() { return Dialog; } },

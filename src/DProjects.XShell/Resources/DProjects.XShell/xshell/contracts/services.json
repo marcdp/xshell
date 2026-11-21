@@ -1,17 +1,18 @@
 {
   "label": "Services",
-  "description": "Registers framework and configured services, resolves instances lazily, explicitly initializes participating services once, validates their declared contract surface, and exposes service metadata.",
+  "description": "Registers framework and configured services, resolves singleton, scoped, and transient instances lazily, explicitly initializes cached services, creates hierarchical resource-ownership scopes, validates declared contract surfaces, and exposes service metadata.",
   "properties": {
     "registry": {
       "type": "array",
       "readonly": true,
-      "description": "Frozen snapshot of service inspection metadata. Entries do not expose service instances or implementation classes.",
+      "description": "Frozen snapshot of application registration metadata. Scoped and transient entries report registration-level state and do not expose scope caches, service instances, or implementation classes.",
       "schema": {
         "type": "array",
         "items": {
           "type": "object",
           "properties": {
             "id": {"type":"string"},
+            "lifetime": {"type":"string","enum":["singleton","scoped","transient"],"description":"Explicit configured lifetime. Programmatic preconstructed registrations report singleton."},
             "state": {"type":"string","enum":["registered","creating","created"]},
             "initializationState": {"type":"string","enum":["not-initialized","initializing","initialized","failed"]},
             "contractId": {"type":["string","null"]},
@@ -25,39 +26,57 @@
             "size": {"type":["number","null"]},
             "time": {"type":["number","null"]}
           },
-          "required": ["id","state","initializationState","contractId","contractUrl","description","icon","tags","moduleId","implementationName","url","size","time"]
+          "required": ["id","lifetime","state","initializationState","contractId","contractUrl","description","icon","tags","moduleId","implementationName","url","size","time"]
         }
       }
     }
   },
   "events": {
     "xshell:service:created": {
-      "description": "Emitted after a configured service is lazily constructed and its contract surface has been validated.",
+      "description": "Emitted after each configured service instance is constructed and its contract surface has been validated. Singleton construction emits once; scoped and transient registrations may emit for multiple instances.",
       "detail": {"id":{"type":"string","required":true,"description":"Registered service name."}}
     }
   },
   "methods": {
+    "beginScope": {
+      "description": "Creates an active child Services instance that shares root registrations and singletons while owning an independent resource lifecycle and optional construction context.",
+      "parameters": [{
+        "name":"options","type":"object","required":false,"default":{},
+        "description":"Optional scope settings. context is an owner-specific object exposed only to scoped and transient constructors as scopeContext.",
+        "schema":{"type":"object","properties":{"context":{"type":"object"}},"additionalProperties":false}
+      }],
+      "returns": {"type":"object","description":"A new child Services instance whose direct parent is the Services instance that created it."}
+    },
+    "addDisposable": {
+      "description": "Registers a resource for once-only reverse-order disposal by this Services instance. The resource must expose a callable dispose method and is not registered as a service.",
+      "parameters": [{"name":"resource","type":"object","required":true,"description":"Scope-owned resource exposing a synchronous or asynchronous dispose() method."}],
+      "returns": {"type":"object","description":"The registered disposable resource."}
+    },
+    "dispose": {
+      "description": "Disposes child scopes and directly owned resources in reverse order. Concurrent calls share the same asynchronous cleanup operation, which reports cleanup failures after all resources have been attempted.",
+      "returns": {"type":"any","description":"Promise that settles when hierarchical cleanup has completed."}
+    },
     "has": {
       "description": "Checks whether a service name is registered without creating its instance.",
       "parameters": [{"name":"name","type":"string","required":true}],
       "returns": {"type":"boolean","description":"True if registered, otherwise false."}
     },
     "resolve": {
-      "description": "Returns the registered instance, constructing and contract-validating a configured service on first access. Throws for missing services or circular dependencies.",
+      "description": "Synchronously resolves by configured lifetime: a root-owned singleton, one cached instance per explicit child scope, or a new transient. Construction uses the owning Services context for dependencies and throws for missing services, circular dependencies, invalid captive dependencies, or root resolution of a scoped service.",
       "parameters": [{"name":"name","type":"string","required":true}],
       "returns": {"type":"any","description":"Service instance, or null if registered without an instance or implementation."}
     },
     "initialize": {
-      "description": "Resolves a service and explicitly runs its init method once. Concurrent callers share the same asynchronous operation, and failures are retained without automatic retry.",
+      "description": "Resolves and explicitly initializes a singleton once per application or a scoped service once per owning scope. Concurrent callers for the same owned instance share one operation and failures are retained. Transient services cannot be initialized by registration name.",
       "parameters": [{"name":"name","type":"string","required":true}],
-      "returns": {"type":"any","description":"Promise resolving to the initialized singleton service instance."}
+      "returns": {"type":"any","description":"Promise resolving to the initialized singleton or scoped service instance."}
     },
     "getServiceInfo": {
-      "description": "Returns a frozen projection of a registered service's metadata without exposing its instance.",
+      "description": "Returns a frozen projection of application registration metadata, including effective lifetime, without exposing instances or scope-local caches.",
       "parameters": [{"name":"id","type":"string","required":true}],
       "returns": {
         "type": "any",
-        "description": "Service metadata object with id, construction state, initializationState, contractId, contractUrl, description, icon, tags, moduleId, implementationName, url, size, and time; undefined if not found."
+        "description": "Service metadata object with id, lifetime, registration-level construction and initialization state, contractId, contractUrl, description, icon, tags, moduleId, implementationName, url, size, and time; undefined if not found."
       }
     }
   }

@@ -69,6 +69,7 @@ for (const item of items) {
         "audit": {
             "contract": "audit",
             "implementation": "/services/audit.js",
+            "lifetime": "singleton",
             "options": {
                 "endpoint": "/api/audit"
             }

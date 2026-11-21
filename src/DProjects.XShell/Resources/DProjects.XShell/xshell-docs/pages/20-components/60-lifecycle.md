@@ -85,9 +85,9 @@ that fallback.
 The controller context is stable across these calls. A lifecycle handler can use `this.refresh()` to invoke another controller method, while an
 operation on the underlying custom element must use the injected `host`.
 
-The runtime keeps controller, state, `Timer`, `Events`, and registered `_disposables` for the complete `load` → `unload` lifetime. Render-engine
-instances and page-specific adopted stylesheets are mount-owned resources; they are created/adopted for `mount` and unmounted/de-adopted for
-`unmount`.
+The runtime keeps controller, state, and the owner Services scope for the complete `load` → `unload` lifetime. Transient `Timer` and `Events`
+instances are owned by that scope. Render-engine instances and page-specific adopted stylesheets are mount-owned resources; they are
+created/adopted for `mount` and unmounted/de-adopted for `unmount`.
 
 For definition-based components, ordinary DOM disconnection invokes only `unmount`; it does not invoke `unload` or dispose helpers. The browser
 custom-element API has no reliable universal signal that distinguishes a temporary disconnection from permanent destruction.

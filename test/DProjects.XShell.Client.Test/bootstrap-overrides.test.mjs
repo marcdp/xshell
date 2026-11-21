@@ -180,7 +180,7 @@ test("multiple overrides are applied in metadata order", () => {
 });
 
 test("an existing service gains options when an override traverses it", () => {
-    const config = { xshell: { services: { commands: { contract: "commands", implementation: "/commands.js" } } } };
+    const config = { xshell: { services: { commands: { contract: "commands", implementation: "/commands.js", lifetime: "singleton" } } } };
 
     apply(config, { "xshell:services.commands.options.timeout": "30" });
 
@@ -188,7 +188,7 @@ test("an existing service gains options when an override traverses it", () => {
 });
 
 test("unknown services and arbitrary missing intermediate paths remain rejected", () => {
-    const config = { xshell: { services: { commands: { contract: "commands", implementation: "/commands.js" }, navigation: { options: {} } } } };
+    const config = { xshell: { services: { commands: { contract: "commands", implementation: "/commands.js", lifetime: "singleton" }, navigation: { options: {} } } } };
 
     assert.throws(() => apply(config, { "xshell:services.unknown.options.timeout": "30" }),
         /Unknown configuration path: services\.unknown\.options\.timeout/);

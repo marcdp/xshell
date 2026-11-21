@@ -30,6 +30,7 @@
             "filesystems": {
                 "contract": "filesystems",
                 "implementation": "/services/filesystems.js",
+                "lifetime": "singleton",
                 "options": {
                     "commands": [
                         {"id": "command:filesystem.entry.encrypt.aes", "label": "Encrypt", "icon":"x-lock", "type": "file", "extensions": ["txt", "json", "md"], "actions": []},

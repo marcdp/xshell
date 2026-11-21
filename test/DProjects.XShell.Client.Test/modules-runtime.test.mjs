@@ -267,7 +267,7 @@ test("module requirements accept configured lazy services without constructing t
         app: { basePath: "/app", baseUrl: "https://example.test/app/" },
         xshell: {
             assets: { basePath: "/_assets" },
-            services: { identity: { contract: "identity", implementation: servicePath } }
+            services: { identity: { contract: "identity", implementation: servicePath, lifetime: "singleton" } }
         },
         modules: {
             orders: moduleDefinition("orders", { requires: ["identity"], files: [{ path: servicePath, size: 1 }] })

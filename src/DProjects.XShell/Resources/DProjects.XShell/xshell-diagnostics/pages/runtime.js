@@ -14,7 +14,7 @@ export default {
     template: `
         <p>Shows XShell runtime timing information.</p>
 
-        <x-datafields>
+        <x-datafields columns="3">
             <x-datafield label="Started at">
                 <x-datetime x-prop:value="state.startTimeMs"></x-datetime>    
             </x-datafield>            
@@ -24,22 +24,26 @@ export default {
             <x-datafield label="Uptime" readonly>
                 <x-countup x-prop:value="state.startTimeMs"></x-countup>
             </x-datafield>
-            <table class="datatable">
-                <thead>
-                    <tr>
-                        <th>Phase</th>
-                        <th>Duration</th>
-                        <th>Total</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr x-for="item in state.timings">
-                        <td>{{ item.phase }}</td>
-                        <td>{{ item.durationMs }} ms</td>
-                        <td>{{ item.totalMs }} ms</td>
-                    </tr>
-                </tbody>
-            </table>
+        </x-datafields>
+        <x-datafields>
+            <x-datafield label="Timings">
+                <table class="datatable">
+                    <thead>
+                        <tr>
+                            <th>Phase</th>
+                            <th>Duration</th>
+                            <th>Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr x-for="item in state.timings">
+                            <td>{{ item.phase }}</td>
+                            <td>{{ item.durationMs }} ms</td>
+                            <td>{{ item.totalMs }} ms</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </x-datafield>
         </x-datafields>
     `,
 

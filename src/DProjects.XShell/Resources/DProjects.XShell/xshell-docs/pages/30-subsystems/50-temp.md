@@ -9,6 +9,7 @@ The `temp` service uploads files to ASP.NET Temp middleware and returns logical 
     "temp": {
         "contract": "temp",
         "implementation": "/services/temp.js",
+        "lifetime": "singleton",
         "options": {
             "url": "app:/temp"
         }

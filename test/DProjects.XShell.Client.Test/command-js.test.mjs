@@ -20,6 +20,7 @@ test("command-js injects invocation task, context and ordinary XShell services t
                     loader: services.loader,
                     resolver: services.resolver,
                     tasks: services.tasks,
+                    services: services.services,
                     module: services.module,
                     moduleConfig: services.moduleConfig,
                     symbol: services[Symbol.toStringTag]
@@ -42,7 +43,8 @@ test("command-js injects invocation task, context and ordinary XShell services t
     const module = { id: "sample" };
     const moduleConfig = { id: "sample", src: "sample.jsonc" };
     const task = { signal: new AbortController().signal };
-    const invocationContext = { task, metadata: "value" };
+    const invocationServices = { resolve: id => ordinary[id] };
+    const invocationContext = { task, services: invocationServices, metadata: "value" };
 
     try {
         xshell._loader = { load: async id => {
@@ -68,9 +70,15 @@ test("command-js injects invocation task, context and ordinary XShell services t
         assert.equal(globalThis[marker].loader, ordinary.loader);
         assert.equal(globalThis[marker].resolver, ordinary.resolver);
         assert.equal(globalThis[marker].tasks, ordinary.tasks);
+        assert.equal(globalThis[marker].services, invocationServices);
         assert.equal(globalThis[marker].module, module);
         assert.equal(globalThis[marker].moduleConfig, moduleConfig);
         assert.equal(globalThis[marker].symbol, undefined);
+
+        // Preserve direct construction by resolving through the application root when no invocation scope is supplied.
+        new Command({ task });
+        assert.equal(globalThis[marker].loader, ordinary.loader);
+        assert.equal(globalThis[marker].services, xshell._services);
     } finally {
         xshell._loader = originals.loader;
         xshell._services = originals.services;

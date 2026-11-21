@@ -17,6 +17,7 @@ test("framework manifest registers Areas declaratively with service options", as
     const manifest = JSON.parse(source.replace(/^\s*\/\/[^\r\n]*/gm, ""));
     assert.deepEqual(manifest.xshell.services.areas, {
         contract: "areas", implementation: "/services/areas.js",
+        lifetime: "singleton",
         options: { default: "main", definitions: {} }
     });
     assert.equal((source.match(/"areas"\s*:/g) ?? []).length, 1);
@@ -50,7 +51,7 @@ test("Services rejects the removed global menu option", async () => {
         xshell: {
             assets: { basePath: "/_assets" },
             files: [{ path: implementation, size: 1 }],
-            services: { areas: { contract: "areas", implementation, options: { default: null, definitions: {}, global: ["shortcuts"] } } }
+            services: { areas: { contract: "areas", implementation, lifetime: "singleton", options: { default: null, definitions: {}, global: ["shortcuts"] } } }
         }
     };
     const bus = new EventTarget();

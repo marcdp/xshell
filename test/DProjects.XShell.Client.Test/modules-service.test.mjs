@@ -16,7 +16,7 @@ function createServices(options) {
         modules: { orders: { label: "Orders", assets: { path: "/_assets/orders", url: "https://example.test/orders/" }, files: [] } },
         xshell: {
             files: [{ path: "/services/modules.js", size: 1 }],
-            services: { modules: { contract: "modules", implementation: "/services/modules.js", ...(options === undefined ? {} : { options }) } }
+            services: { modules: { contract: "modules", implementation: "/services/modules.js", lifetime: "singleton", ...(options === undefined ? {} : { options }) } }
         }
     };
     const loader = { async load(resource) { assert.equal(resource, "esm:/services/modules.js"); return Modules; } };
@@ -39,7 +39,7 @@ function createServices(options) {
 test("framework manifest registers Modules declaratively without service options", async () => {
     const source = await readFile(new URL("manifest.jsonc", frameworkUrl), "utf8");
 
-    assert.match(source, /"modules"\s*:\s*\{\s*"contract"\s*:\s*"modules",\s*"implementation"\s*:\s*"\/services\/modules\.js"\s*\}/s);
+    assert.match(source, /"modules"\s*:\s*\{\s*"contract"\s*:\s*"modules",\s*"implementation"\s*:\s*"\/services\/modules\.js",\s*"lifetime"\s*:\s*"singleton"\s*\}/s);
     assert.equal((source.match(/"modules"\s*:/g) ?? []).length, 2);
 });
 

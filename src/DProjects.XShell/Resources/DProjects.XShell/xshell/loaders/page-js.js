@@ -1,6 +1,4 @@
 import Page from "../page.js"
-import Timer from "../scoped/timer.js"
-import Events from "../scoped/events.js"
 import JsonValidator from "../services/json-validator.js"
 import { processStyle } from "../utils/style.js";
 import { deepFreeze } from "../utils/object.js";
@@ -10,6 +8,15 @@ import { deepFreeze } from "../utils/object.js";
 function camelToKebab(str) {
     // convert camelCase to kebab-case
     return str.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase();                      
+}
+function disposeFailedScope(scope, pageName) {
+    // dispose constructor-owned resources without replacing the original synchronous failure
+    scope.dispose().catch(error => console.error(`Failed to dispose Services scope for Page '${pageName}' after construction failed.`, error));
+}
+function throwCleanupErrors(errors, message) {
+    // preserve one cleanup failure and aggregate independent lifecycle failures
+    if (errors.length === 1) throw errors[0];
+    if (errors.length > 1) throw new AggregateError(errors, message);
 }
 function areDeclarativeValuesEqual(left, right) {
     // compare declarative values by structure and value
@@ -318,13 +325,19 @@ export async function createPageClassFromJsDefinition(src, context, definition) 
         _renderEngine = null;
         _renderPending = false;
         _styleSheets = [];
-        _disposables = [];
+        _servicesScope = null;
         _initializingQuery = true;
         _postRenderPending = [];
         // ctor
         constructor({ src, context, bus, navigation }) {
             super({ src, context, bus, navigation });
             const self = this;
+            // create this Page's independent direct child of the application root scope
+            const rootServices = definitionContext.services.services;
+            this._servicesScope = rootServices.beginScope({context: {
+                invokeController(command, ...params) { return self._controller[command]?.(...params); }
+            }});
+            try {
             // meta
             this._label = definition.meta.title || "";
             this._description = definition.meta.description || "";
@@ -370,16 +383,6 @@ export async function createPageClassFromJsDefinition(src, context, definition) 
                     } else if (prop == "context") {
                         // context
                         return self._context;
-                    } else if (prop == "timer") {
-                        // timer
-                        const timer = new Timer((command, ...params) => { self._controller[command]?.(...params); });
-                        self._disposables.push(timer);
-                        return timer;
-                    } else if (prop == "events") {
-                        // events
-                        const events = new Events((command, ...params) => { self._controller[command]?.(...params); });
-                        self._disposables.push(events);
-                        return events;
                     } else if (prop == "page") {
                         // get current page
                         return self;
@@ -400,9 +403,14 @@ export async function createPageClassFromJsDefinition(src, context, definition) 
                     } else if (prop == "moduleController") {
                         // get module controller
                         return context.services.modules.getModuleById(moduleId).controller;
+                    } else if (prop == "services") {
+                        // expose this Page's owning Services scope
+                        return self._servicesScope;
+                    } else if (typeof prop === "symbol") {
+                        return undefined;
                     } else {
-                        // resolve from services
-                        return definitionContext.services[prop];                    
+                        // resolve ordinary services through this Page's scope
+                        return self._servicesScope.resolve(prop);
                     }
                 }
             });            
@@ -415,7 +423,13 @@ export async function createPageClassFromJsDefinition(src, context, definition) 
                     throw new Error(`Page '${definition.meta.id}' declares public method '${methodName}' in definition.contract.methods but controller.${methodName} is not a function.`);
                 }
             }
-            
+            } catch (error) {
+                // initiate asynchronous cleanup while preserving synchronous constructor behavior
+                const scope = this._servicesScope;
+                this._servicesScope = null;
+                disposeFailedScope(scope, definition.meta.id ?? src);
+                throw error;
+            }
         }
         // props
         static get definition() {return definition;}
@@ -467,22 +481,43 @@ export async function createPageClassFromJsDefinition(src, context, definition) 
         }
         async unload() {
             if (this._unloaded) return;
+            const errors = [];
+            let result;
+
+            // invoke controller unload before releasing existing runtime resources
             try {
-                await super.unload();
-            } finally {
-                if (this._renderEngine) {
-                    this._renderEngine.unmount();
-                    this._renderEngine = null;
-                }
-                this._renderPending = false;
-                this._styleSheets = [];
-                for (const disposable of this._disposables) {
-                    disposable.dispose();
-                }
-                this._disposables = [];
-                this._stateChanges = [];
-                this._controller = null;
+                result = await super.unload();
+            } catch (error) {
+                errors.push(error);
             }
+
+            // perform the existing Page cleanup even when controller unload fails
+            const renderEngine = this._renderEngine;
+            this._renderEngine = null;
+            if (renderEngine) {
+                try {
+                    renderEngine.unmount();
+                } catch (error) {
+                    errors.push(error);
+                }
+            }
+            this._renderPending = false;
+            this._styleSheets = [];
+            this._stateChanges = [];
+
+            // dispose the owner scope and its transient helpers after existing cleanup
+            const servicesScope = this._servicesScope;
+            try {
+                if (servicesScope) await servicesScope.dispose();
+            } catch (error) {
+                errors.push(error);
+            } finally {
+                this._controller = null;
+                this._servicesScope = null;
+            }
+
+            throwCleanupErrors(errors, `Multiple errors occurred while unloading Page '${definition.meta.id ?? src}'.`);
+            return result;
         }
         // statechange
         stateChange(prop, oldValue, newValue) {

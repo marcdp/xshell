@@ -65,8 +65,8 @@ function configuration(module) {
             version: "1.0.0",
             assets: { basePath: "/_assets", path: "/_assets/xshell", url: "https://example.test/xshell/" },
             services: {
-                areas: { contract: "areas", implementation: "/services/areas.js", options: { default: null, definitions: {} } },
-                navigation: { contract: "navigation", implementation: "/services/navigation.js", options: { mode: "path" } }
+                areas: { contract: "areas", implementation: "/services/areas.js", lifetime: "singleton", options: { default: null, definitions: {} } },
+                navigation: { contract: "navigation", implementation: "/services/navigation.js", lifetime: "singleton", options: { mode: "path" } }
             },
             resolver: {},
             ui: { layouts: {}, components: {} },
@@ -142,6 +142,7 @@ test("effective schema rejects obsolete Temp configuration and accepts service o
         temp: {
             contract: "temp",
             implementation: "/_assets/xshell/services/temp.js",
+            lifetime: "singleton",
             options: { url: "https://example.test/temp" }
         }
     };
@@ -470,7 +471,8 @@ test("effective schema accepts named service contract and implementation objects
     config.xshell.services = {
         toast: {
             contract: "toast",
-            implementation: "/_assets/x/services/toast-default.js"
+            implementation: "/_assets/x/services/toast-default.js",
+            lifetime: "singleton"
         }
     };
 

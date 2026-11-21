@@ -51,8 +51,10 @@ globalThis.document = {
 };
 globalThis.requestAnimationFrame = callback => { callback(); return 1; };
 
-const { createComponentClassFromJsDefinition } = await import("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/loaders/component-js.js");
+const { createComponentClassFromJsDefinition: createComponentClass } = await import("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/loaders/component-js.js");
 const { default: xshell } = await import("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/xshell.js");
+const { default: Events } = await import("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/scoped/events.js");
+const { default: Timer } = await import("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/scoped/timer.js");
 
 class StateEngineFactory {
     constructor(state) { this.state = state; }
@@ -71,12 +73,45 @@ class RenderEngineFactory {
     }
 }
 xshell._config = { modules: { test: { defaults: { component: { stateEngine: "test", renderEngine: "test" } } } } };
-xshell._loader = { async load(resource) { return resource.startsWith("state-engine:") ? StateEngineFactory : RenderEngineFactory; } };
+xshell._loader = { async load(resource) {
+    if (resource === "schema:component") return {};
+    return resource.startsWith("state-engine:") ? StateEngineFactory : RenderEngineFactory;
+} };
 xshell._services = { resolve(name) { return name === "modules" ? { getModuleById() { return {}; } } : null; } };
 
-const context = { resourceDefinition: { moduleId: "test" } };
+const services = {
+    config: xshell._config,
+    loader: xshell._loader,
+    modules: xshell._services.resolve("modules")
+};
+const rootServices = {
+    beginScope(options = {}) {
+        const disposables = [];
+        const scope = {
+            beginScope: () => rootServices.beginScope(),
+            resolve(name) {
+                const Service = name === "events" ? Events : name === "timer" ? Timer : null;
+                if (Service) {
+                    const instance = new Service({scopeContext: options.context});
+                    disposables.push(instance);
+                    return instance;
+                }
+                return services[name] ?? xshell._services.resolve(name);
+            },
+            initialize: async name => services[name] ?? xshell._services.resolve(name),
+            async dispose() { for (const disposable of disposables.reverse()) disposable.dispose(); }
+        };
+        return scope;
+    }
+};
+services.services = rootServices;
+const context = { resourceDefinition: { moduleId: "test" }, services };
 const contract = (methods = {}, slots = {}) => ({ description: "Controller test.", properties: {}, events: {}, slots, methods });
 const definition = (id, overrides = {}) => ({ meta: { id }, state: {}, style: "", template: "", controller() { return {}; }, ...overrides });
+const createComponentClassFromJsDefinition = (src, loaderContext, implementation, publicContract) => {
+    if (publicContract) implementation.contract = publicContract;
+    return createComponentClass(src, loaderContext, implementation);
+};
 
 test("controller methods keep their context through lifecycle, events, timers and public calls", async () => {
     const calls = [];
@@ -87,7 +122,7 @@ test("controller methods keep their context through lifecycle, events, timers an
         controller({ host, events, timer }) {
             injectedHost = host;
             controller = {
-                load() { calls.push(["load", this]); events.on(target, "run", "eventsHandler"); timer.setTimeout(0, "timerHandler"); },
+                load() { calls.push(["load", this]); events.on(target, "run", "eventsHandler"); timer.setTimeout("timerHandler", 0); },
                 mount() { calls.push(["mount", this]); this.refresh(); },
                 unmount() { calls.push(["unmount", this]); },
                 unload() { calls.push(["unload", this]); },

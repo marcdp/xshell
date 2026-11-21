@@ -21,13 +21,15 @@ export default class Commands {
     _tasks;
     _jsonValidator;
     _config;
+    _services;
 
     // ctor
-    constructor({loader, tasks, jsonValidator, config}, options) {
+    constructor({loader, tasks, jsonValidator, config, services}, options) {
         this._loader = loader;
         this._tasks = tasks;
         this._jsonValidator = jsonValidator;
         this._config = config || {xshell: {}, modules: {}};
+        this._services = services;
     }
 
     // methods
@@ -91,8 +93,35 @@ export default class Commands {
             description: contract.description || contract.execute.description || "",
             background,
             handler: async taskContext => {
-                const command = new Command({task: taskContext});
-                return await command.execute(...positionalArgs);
+                // create one direct-root Services scope after Task execution begins
+                const scope = this._services.beginScope();
+                let result;
+                let executionError;
+                try {
+                    const command = new Command({task: taskContext, services: scope});
+                    result = await command.execute(...positionalArgs);
+                } catch (error) {
+                    executionError = error;
+                }
+
+                // settle execution before disposing every invocation-owned resource
+                let disposalError;
+                try {
+                    await scope.dispose();
+                } catch (error) {
+                    disposalError = error;
+                }
+
+                // preserve cancellation status while retaining cleanup failures in diagnostics
+                if (disposalError && taskContext.signal.aborted) {
+                    console.error(`Failed to dispose Services scope for canceled Command '${id}'.`, disposalError);
+                }
+                if (executionError && disposalError) {
+                    throw new AggregateError([executionError, disposalError], `Command '${id}' execution and Services scope disposal both failed.`);
+                }
+                if (executionError) throw executionError;
+                if (disposalError) throw disposalError;
+                return result;
             }
         });
     }

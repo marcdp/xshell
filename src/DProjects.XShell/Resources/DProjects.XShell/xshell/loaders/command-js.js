@@ -65,6 +65,8 @@ export default class LoaderCommandJs {
             }
 
             constructor(invocationContext = {}) {
+                // use the explicit invocation scope while preserving legacy direct construction through root Services
+                const invocationServices = invocationContext.services ?? xshell.services;
                 const servicesProvider = new Proxy({}, {
                     get(target, prop) {
                         if (prop === "context") {
@@ -77,10 +79,12 @@ export default class LoaderCommandJs {
                             return xshell.config.modules[moduleId];
                         } else if (prop === "module") {
                             return xshell.modules.getModuleById(moduleId);
+                        } else if (prop === "services") {
+                            return invocationServices;
                         } else if (typeof prop === "symbol") {
                             return undefined;
                         }
-                        return xshell.services.resolve(prop);
+                        return invocationServices.resolve(prop);
                     }
                 });
 

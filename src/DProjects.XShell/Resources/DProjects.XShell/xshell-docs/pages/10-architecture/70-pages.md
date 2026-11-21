@@ -195,10 +195,6 @@ The Page-specific values are:
   implementation data unless a value is explicitly exposed through the Page contract; public properties and private state are not interchangeable.
 * `context` — the context supplied when that Page instance is created. It is Page-instance framework context; XShell does not establish arbitrary
   context members as part of the public Page contract.
-* `timer` — a newly created Page-scoped `Timer` on every access. String callbacks dispatch commands to that Page's controller. Each Timer is
-  registered as a Page-owned disposable and is disposed during final unload, not during an ordinary unmount.
-* `events` — a newly created Page-scoped `Events` helper on every access. String callbacks dispatch commands to that Page's controller. Each helper
-  is registered as a Page-owned disposable and removes its listeners during final unload.
 * `page` — the current Page instance. Use it only for Page-specific operations that genuinely require the Page object; prefer `state`, `query`, or
   an injected service for ordinary controller work.
 * `dependencies` — the object containing resources declared by the definition's `dependencies` member. These resources are resolved before the
@@ -229,16 +225,28 @@ export default {
 };
 ```
 
-Here `dependencies` is the resolved declarative-resource object, `navigation` falls through to the XShell service container, and `state`, `query`,
-and `events` are Page-specific values. Destructuring requests the values; it does not make them public Page properties.
+Here `dependencies` is the resolved declarative-resource object, `navigation` and `events` resolve through the Page Services scope, and `state` and
+`query` are Page-specific values. Destructuring requests the values; it does not make them public Page properties.
 
 Definition-based Pages can also request `moduleInstance` or `moduleController`. These refer to the runtime Module that owns the Page resource and
 its controller, using the Module ID captured when the Page class is loaded. Navigation context is separate from resource ownership.
 
-Names other than the Page-specific values fall through to `xshell.services.resolve(name)`. Core/runtime services are registered during XShell
-initialization, and configured services are registered from `xshell.services`; code can request any registered service naturally, for example
+Names other than the Page-specific values resolve through the Page's owner Services scope. Core/runtime services are registered during XShell
+initialization, and configured services are registered from `xshell.services`; code can request available services naturally, for example
 `controller({ navigation, bus, loader })`. A missing name fails service resolution; Page injection does not manufacture unknown services.
 `navigation` is the shared service for navigation operations; it is not the current Page's `query` object.
+
+`events` and `timer` are registered transient services. Every access creates a different helper owned by the Page scope. That scope supplies an
+explicit controller-dispatch context so string callbacks still invoke the correct controller method, while function callbacks remain ordinary
+functions. Helpers survive unmount/remount and are disposed with the scope during final unload; Events removes listeners and Timer cancels pending
+work.
+
+Each definition-based Page instance creates an independent Services scope directly from the application root during construction, before its
+controller factory runs. Ordinary controller service names resolve through that scope, and `controller({ services })` returns the same scope.
+Singletons remain application-wide, scoped services are reused only within that Page, and transients are constructed per resolution. The scope is
+preserved across unmount/remount and disposed after controller unload and existing Page cleanup during final unload. Page and Component scopes are
+independent even when a Component is rendered inside the Page; no DOM-derived scope hierarchy exists. A class-based Page export bypasses
+definition-based controller construction and is unchanged.
 
 ## Query reflection ownership
 
@@ -349,15 +357,15 @@ Both raw `query` access and contract-property binding read the Page instance's o
 A Page instance is loaded once and can be mounted and unmounted repeatedly. `x-page` preserves the Page controller and state while its host is
 temporarily disconnected, then remounts that same instance when the host reconnects. Replacing the resource, and `removePage()`, are final
 destruction paths: they unmount the current Page and then unload it before the instance is discarded. Page render engines and page styles belong
-to each mount; Page state, controller, timers, events, and disposables belong to the Page instance until its final unload. See the component
+to each mount; Page state, controller, and its Services scope belong to the Page instance until final unload. Scope-owned timers, event listeners,
+and other disposable services share that lifetime. See the component
 [Lifecycle](../20-components/60-lifecycle.md) contract for the complete sequence.
 
 `x-page` may prepare Page loads concurrently, but it replaces Pages one at a time. When `src` changes during a load, only the most recent candidate
 may begin replacement; obsolete candidates are unloaded without affecting the active Page. Once replacement begins, unmounting and unloading the
 current Page, then installing and mounting the new Page, complete in order before another replacement begins, even if a newer navigation starts meanwhile.
 
-Mounting does not recreate the controller. The Page instance owns its state, controller, Timers, Events helpers, and other disposables across
-mount/unmount cycles, and final unload disposes the helpers and releases the controller.
+Mounting does not recreate the controller or Services scope. Final unload disposes the scope-owned helpers and releases the controller.
 
 A definition-based Page may provide `style` as one CSS source string. `page-js` scopes that source to the mounted Page host; arrays of CSS strings
 are not supported.
