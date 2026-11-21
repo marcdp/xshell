@@ -263,7 +263,7 @@ test("Services diagnostics file links retain native activation without activatin
 const contractDetailHref = "page:xshell-diagnostics:/pages/detail/contract-detail.js";
 
 test("Contract Detail composes accordion tabs, chips, and semantic field lists", () => {
-    const { template, style } = ContractDetailPage;
+    const { template } = ContractDetailPage;
     assert.match(template, /<x-tabs class="sidebar" x-if="state\.detail">/);
     assert.match(template, /<x-tab x-for="section in state\.detail\.sections" x-key="title" x-attr:label="section\.title">/);
     assert.match(template, /<x-tab x-if="state\.detail\.examples\.length" label="Examples">/);
@@ -275,17 +275,12 @@ test("Contract Detail composes accordion tabs, chips, and semantic field lists",
         assert.ok(template.includes(`<x-details x-if="${descriptor}.hasSchema" label="JSON Schema">`));
         assert.ok(template.includes(`<x-object x-prop:value="${descriptor}.schema" expanded>`));
     }
-    assert.match(style, /grid-template-columns:minmax\(0, 1fr\) minmax\(0, 1fr\)/);
-    assert.match(style, /@media \(max-width:52em\)/);
 });
 
-test("Contract Detail keeps authored examples read-only and activates template playgrounds explicitly", () => {
+test("Contract Detail keeps authored examples read-only and delegates HTML playback to x-code", () => {
     const { template } = ContractDetailPage;
-    assert.match(template, /<x-accordion-panel x-for="example in state\.detail\.examples" x-key="playgroundId"/);
-    assert.match(template, /<x-button x-if="example\.hasPlayground && !example\.playgroundOpen" label="Try it"/);
-    assert.match(template, /<x-code[^>]+x-prop:value="example\.template"/);
-    assert.match(template, /<x-code-editor[^>]+x-prop:value="example\.editedTemplate"/);
-    assert.match(template, /<x-template[^>]+x-prop:template="example\.previewTemplate"[^>]+x-prop:value="example\.previewState"/);
+    assert.match(template, /<x-accordion-panel x-for="example in state\.detail\.examples" x-key="exampleId"/);
+    assert.match(template, /<x-code language="html" x-prop:value="example\.template"/);
     assert.match(template, /<div x-if="example\.code">\s*<h4>Code .*?<\/h4>\s*<x-code[^>]+x-prop:language="example\.language"[^>]+x-prop:value="example\.code"/);
     assert.match(template, /<x-details x-if="example\.hasState" label="Initial state">\s*<x-object x-prop:value="example\.state" expanded>/);
     assert.match(template, /<x-notice x-if="state\.error"[^>]+x-prop:message="state\.error"/);

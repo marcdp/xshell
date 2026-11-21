@@ -12,18 +12,18 @@ export default {
         <p>Use <code>x-attr:name</code> to update an element's HTML attribute when state changes. Attribute values are represented as strings in the DOM.</p>
         <x-datafield type="text" label="Tooltip" x-model="state.tooltip"></x-datafield>
         <p x-attr:title="state.tooltip">Hover over this text to see the bound tooltip.</p>
-        <pre x-pre><code>&lt;p x-attr:title="state.tooltip"&gt;Hover over this text.&lt;/p&gt;</code></pre>
+        <x-code language="html" x-pre>&lt;p x-attr:title="state.tooltip"&gt;Hover over this text.&lt;/p&gt;</x-code>
 
         <h2>Reactive attributes</h2>
         <p>The attribute binding updates automatically when its source value changes.</p>
         <x-datafield type="text" label="Image description" x-model="state.description"></x-datafield>
         <p><x-icon icon="x-info" x-attr:title="state.description"></x-icon> Hover over the icon to inspect its title.</p>
-        <pre x-pre><code>&lt;x-icon icon="x-info" x-attr:title="state.description"&gt;&lt;/x-icon&gt;</code></pre>
+        <x-code language="html" x-pre>&lt;x-icon icon="x-info" x-attr:title="state.description"&gt;&lt;/x-icon&gt;</x-code>
 
         <h2>Property bindings</h2>
         <p>Use <code>x-prop:name</code> when a component expects a JavaScript value rather than an HTML attribute string. Property bindings preserve objects, arrays, numbers, and other JavaScript types.</p>
         <x-json x-prop:value="state.record"></x-json>
-        <pre x-pre><code>&lt;x-json x-prop:value="state.record"&gt;&lt;/x-json&gt;</code></pre>
+        <x-code language="html" x-pre>&lt;x-json x-prop:value="state.record"&gt;&lt;/x-json&gt;</x-code>
         <p>The <code>x-json</code> component receives the actual object stored in <code>state.record</code>, not a serialized string.</p>
 
         <h2>Reactive property values</h2>
@@ -33,7 +33,7 @@ export default {
             <x-datafield type="number" label="Count" x-model="state.count"></x-datafield>
         </x-datafields>
         <x-json x-prop:value="state.details"></x-json>
-        <pre x-pre><code>&lt;x-json x-prop:value="state.details"&gt;&lt;/x-json&gt;</code></pre>
+        <x-code language="html" x-pre>&lt;x-json x-prop:value="state.details"&gt;&lt;/x-json&gt;</x-code>
         <p>The Page updates the object in response to changes in the bound fields.</p>
 
         <h2>Attributes versus properties</h2>
@@ -43,14 +43,14 @@ export default {
             <x-datafield label="Value representation">Attributes use string representations</x-datafield>
             <x-datafield label="JavaScript values">Properties preserve the original value type</x-datafield>
         </x-datafields>
-        <pre x-pre><code>&lt;p x-attr:title="state.tooltip"&gt;Hover&lt;/p&gt;
-&lt;x-json x-prop:value="state.record"&gt;&lt;/x-json&gt;</code></pre>
+        <x-code language="html" x-pre>&lt;p x-attr:title="state.tooltip"&gt;Hover&lt;/p&gt;
+&lt;x-json x-prop:value="state.record"&gt;&lt;/x-json&gt;</x-code>
 
         <h2>Static versus reactive values</h2>
         <p>Static attributes are written directly in the template. Reactive attributes and properties use binding directives.</p>
-        <pre x-pre><code>&lt;x-icon icon="x-info" title="Static tooltip"&gt;&lt;/x-icon&gt;
+        <x-code language="html" x-pre>&lt;x-icon icon="x-info" title="Static tooltip"&gt;&lt;/x-icon&gt;
 &lt;x-icon icon="x-info" x-attr:title="state.tooltip"&gt;&lt;/x-icon&gt;
-&lt;x-json x-prop:value="state.record"&gt;&lt;/x-json&gt;</code></pre>
+&lt;x-json x-prop:value="state.record"&gt;&lt;/x-json&gt;</x-code>
 
         <h2>When to use each binding</h2>
         <p>Use <code>x-attr:</code> for HTML attributes such as <code>title</code>, <code>href</code>, and <code>src</code>. Use <code>x-prop:</code> when passing structured data or other JavaScript values to components.</p>

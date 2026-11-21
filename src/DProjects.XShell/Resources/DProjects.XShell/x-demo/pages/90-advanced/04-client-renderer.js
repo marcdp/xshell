@@ -11,7 +11,7 @@ export default {
 
         <h2>Selecting the renderer</h2>
         <p>Set <code>meta.renderEngine</code> to <code>x-client</code> to select the client-side renderer for an individual Page.</p>
-        <pre x-pre><code>export default {
+        <x-code language="javascript" x-pre>export default {
     meta: {
         title: "Client Renderer",
         renderEngine: "x-client"
@@ -22,23 +22,23 @@ export default {
     state: {
         name: "Ada"
     }
-};</code></pre>
+};</x-code>
         <p>The state engine is not overridden, so this Page inherits <code>proxy</code> from the <code>x-demo</code> Module defaults.</p>
 
         <h2>Reactive text binding</h2>
         <p>Client-compiled templates use the same interpolation and model-binding syntax as other X Templates.</p>
         <x-datafield type="text" label="Your name" x-model="state.name"></x-datafield>
         <p>Hello, <strong>{{ state.name }}</strong>!</p>
-        <pre x-pre><code>&lt;x-datafield type="text" label="Name" x-model="state.name"&gt;&lt;/x-datafield&gt;
-&lt;p&gt;Hello {{ state.name }}!&lt;/p&gt;</code></pre>
+        <x-code language="html" x-pre>&lt;x-datafield type="text" label="Name" x-model="state.name"&gt;&lt;/x-datafield&gt;
+&lt;p&gt;Hello {{ state.name }}!&lt;/p&gt;</x-code>
 
         <h2>Conditional rendering</h2>
         <p>The client renderer supports structural directives such as <code>x-if</code>, <code>x-elseif</code>, and <code>x-else</code>.</p>
         <x-datafield type="checkbox" label="Show details" x-model="state.showDetails"></x-datafield>
         <p x-if="state.showDetails">These details are rendered when the checkbox is selected.</p>
         <p x-else>Details are currently hidden.</p>
-        <pre x-pre><code>&lt;p x-if="state.showDetails"&gt;Visible details&lt;/p&gt;
-&lt;p x-else&gt;Details are hidden&lt;/p&gt;</code></pre>
+        <x-code language="html" x-pre>&lt;p x-if="state.showDetails"&gt;Visible details&lt;/p&gt;
+&lt;p x-else&gt;Details are hidden&lt;/p&gt;</x-code>
 
         <h2>Loops</h2>
         <p>Use <code>x-for</code> and <code>x-key</code> to render collections with stable item identities.</p>
@@ -50,9 +50,9 @@ export default {
             <li x-for="item in state.items" x-key="id">{{ item.label }}</li>
         </ul>
         <p x-if="state.items.length == 0">No items available.</p>
-        <pre x-pre><code>&lt;li x-for="item in state.items" x-key="id"&gt;
+        <x-code language="html" x-pre>&lt;li x-for="item in state.items" x-key="id"&gt;
     {{ item.label }}
-&lt;/li&gt;</code></pre>
+&lt;/li&gt;</x-code>
 
         <h2>Controller commands</h2>
         <p>The Page controller works the same way regardless of the selected render engine. Commands update reactive state, and the renderer updates the displayed content.</p>
@@ -61,7 +61,7 @@ export default {
             <x-button label="Reset" command="reset"></x-button>
         </p>
         <p>Counter: <strong>{{ state.count }}</strong></p>
-        <pre x-pre><code>controller({state}) {
+        <x-code language="javascript" x-pre>controller({state}) {
     return {
         increment() {
             state.count++;
@@ -70,7 +70,7 @@ export default {
             state.count = 0;
         }
     };
-}</code></pre>
+}</x-code>
 
         <h2>Client versus default renderer</h2>
         <x-datafields columns="2">

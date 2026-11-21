@@ -10,7 +10,7 @@ export default {
 
         <h2>Area configuration</h2>
         <p>Areas are configured under <code>xshell.services.areas.options</code>. The cookbook defines a default Area with a URL prefix and a list of participating Modules.</p>
-        <pre x-pre><code>"xshell": {
+        <x-code language="json" x-pre>"xshell": {
     "services": {
         "areas": {
             "options": {
@@ -25,7 +25,7 @@ export default {
             }
         }
     }
-}</code></pre>
+}</x-code>
 
         <h2>Current Area</h2>
         <p>The <code>areas</code> service provides information about the active navigation context.</p>
@@ -35,12 +35,12 @@ export default {
             <x-datafield label="URL prefix">{{ state.prefix }}</x-datafield>
             <x-datafield label="Participating Modules">{{ state.modules }}</x-datafield>
         </x-datafields>
-        <pre x-pre><code>const area = areas.getCurrentArea();
+        <x-code language="javascript" x-pre>const area = areas.getCurrentArea();
 
 area.id
 area.label
 area.prefix
-area.modules</code></pre>
+area.modules</x-code>
 
         <h2>Composed navigation menu</h2>
         <p>The <code>areas.getMenu()</code> method returns the composed menu definition for an Area. Its <code>items</code> array contains navigation entries, each of which may contain child items.</p>
@@ -50,8 +50,8 @@ area.modules</code></pre>
                 <p>Child Pages: {{ item.children }}</p>
             </x-datafield>
         </x-datafields>
-        <pre x-pre><code>const menu = areas.getMenu("navigation", area.id);
-const items = menu?.items[0]?.children || [];</code></pre>
+        <x-code language="javascript" x-pre>const menu = areas.getMenu("navigation", area.id);
+const items = menu?.items[0]?.children || [];</x-code>
 
         <h2>Menu paths and Page resources</h2>
         <p>A menu item distinguishes the friendly navigation path from the canonical resource href used to load a Page.</p>
@@ -59,11 +59,11 @@ const items = menu?.items[0]?.children || [];</code></pre>
             <x-datafield label="Friendly path">{{ state.examplePath }}</x-datafield>
             <x-datafield label="Canonical href">{{ state.exampleHref }}</x-datafield>
         </x-datafields>
-        <pre x-pre><code>const areaId = areas.resolveAreaId(page.src);
+        <x-code language="javascript" x-pre>const areaId = areas.resolveAreaId(page.src);
 const item = areas.resolveHref(page.src, areaId);
 
 item.path
-item.href</code></pre>
+item.href</x-code>
         <p>The <code>areas</code> service resolves navigation paths, while the Page loader uses the resolved resource to load the Page.</p>
         <p><x-anchor href="05-resolution.js">Explore Path Resolution</x-anchor></p>
 

@@ -14,7 +14,7 @@ export default {
             <x-button label="Choose a color" command="chooseColor"></x-button>
             <x-button label="Choose a priority" command="choosePriority"></x-button>
         </p>
-        <pre x-pre><code>const result = await dialog.picker({
+        <x-code language="javascript" x-pre>const result = await dialog.picker({
     title: "Choose a color",
     domain: [
         {value:"red", label:"Red"},
@@ -22,7 +22,7 @@ export default {
         {value:"blue", label:"Blue"}
     ],
     inputType: "select"
-});</code></pre>
+});</x-code>
 
         <h2>Picker configuration</h2>
         <p>Use <code>value</code> to specify the initial selection and <code>required</code> to require a selection before saving.</p>
@@ -31,7 +31,7 @@ export default {
             <x-datafield type="checkbox" label="Required" label-secondary="A selection is required" x-model="state.required"></x-datafield>
         </x-datafields>
         <p><x-button class="submit" label="Open configured picker" command="openConfigured"></x-button></p>
-        <pre x-pre><code>const result = await dialog.picker({
+        <x-code language="javascript" x-pre>const result = await dialog.picker({
     title: "Choose a color",
     message: "Select a color.",
     domain: colors,
@@ -39,7 +39,7 @@ export default {
     value: "green",
     placeholder: "Choose a color",
     required: true
-});</code></pre>
+});</x-code>
 
         <h2>Picker options</h2>
         <p>The most common options control the available values and the selection behavior.</p>
@@ -57,7 +57,7 @@ export default {
         <p>The <code>dialog.picker()</code> method returns a Promise. The returned value corresponds to the selected item's <code>value</code>, not its display label.</p>
         <p>Last picker: <strong>{{ state.lastAction }}</strong></p>
         <p>Returned value: <strong>{{ state.resultText }}</strong></p>
-        <pre x-pre><code>const result = await dialog.picker({
+        <x-code language="javascript" x-pre>const result = await dialog.picker({
     title: "Choose a color",
     domain: [{value:"red", label:"Red"}, {value:"blue", label:"Blue"}],
     inputType: "select"
@@ -67,7 +67,7 @@ if (result === null) {
     // The user cancelled.
 } else {
     // Use the selected value.
-}</code></pre>
+}</x-code>
 
         <h2>Multiple selection</h2>
         <p>The Picker service also exposes a <code>multiple</code> option. This example uses single selection because the current datafield/model integration does not reliably return multiple selections.</p>

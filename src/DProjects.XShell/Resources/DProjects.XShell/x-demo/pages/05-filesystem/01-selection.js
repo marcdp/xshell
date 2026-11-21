@@ -36,12 +36,12 @@ export default {
 
         <h2>Reading metadata</h2>
         <p>File metadata is encoded in the path and query parameters of the temporary reference.</p>
-        <pre x-pre><code>const url = new URL(temp.getAbsoluteUrl(state.file));
+        <x-code language="javascript" x-pre>const url = new URL(temp.getAbsoluteUrl(state.file));
 const name = decodeURIComponent(url.pathname.split("/").pop());
 const size = Number(url.searchParams.get("size"));
 const type = url.searchParams.get("type");
 const hash = url.searchParams.get("hash");
-const expiration = Number(url.searchParams.get("expiration"));</code></pre>
+const expiration = Number(url.searchParams.get("expiration"));</x-code>
 
         <p>The expiration value is a UTC Unix timestamp in seconds. The SHA-256 hash identifies the uploaded content; it does not establish that the file is safe or trustworthy.</p>
     `,

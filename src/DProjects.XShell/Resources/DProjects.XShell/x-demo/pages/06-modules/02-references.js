@@ -9,7 +9,7 @@ export default {
         <p>An application can include Modules defined in other directories. Instead of repeating their configuration, it references their <code>manifest.jsonc</code> files using <code>configUrl</code>.</p>
 
         <h2>Local definition versus reference</h2>
-        <pre x-pre><code>{
+        <x-code language="json" x-pre>{
     "modules": {
         "x-demo": {
             "label": "XShell Cookbook",
@@ -22,12 +22,12 @@ export default {
             "configUrl": "url:../x-filesystem/manifest.jsonc"
         }
     }
-}</code></pre>
+}</x-code>
         <p><code>x-demo</code> is defined locally. The entries containing <code>configUrl</code> point to other Module definitions.</p>
 
         <h2>Reference resolution</h2>
         <p>During bootstrap, XShell follows Module references, reads their definitions, and prepares effective configuration for each canonical Module ID.</p>
-        <pre x-pre><code>Application manifest.jsonc
+        <x-code language="text" x-pre>Application manifest.jsonc
     |
     +-- x-demo         local definition
     |
@@ -35,7 +35,7 @@ export default {
     |
     +-- x-filesystem   ../x-filesystem/manifest.jsonc
     |
-    +-- xshell-docs    ../xshell-docs/manifest.jsonc</code></pre>
+    +-- xshell-docs    ../xshell-docs/manifest.jsonc</x-code>
 
         <h2>Referenced Modules in this application</h2>
         <p>The following values come from the effective configuration and runtime Module registry.</p>
@@ -51,7 +51,7 @@ export default {
 
         <h2>References and resource dependencies</h2>
         <p>Module references make a Module's definition and resources available to the application. A Page's <code>dependencies</code> property requests particular resources from those Modules.</p>
-        <pre x-pre><code>// Application configuration:
+        <x-code language="javascript" x-pre>// Application configuration:
 "x": {
     "configUrl": "url:../x/manifest.jsonc"
 }
@@ -60,7 +60,7 @@ export default {
 dependencies: {
     button: "component:x-button",
     icon: "icon:x-file"
-}</code></pre>
+}</x-code>
         <p>These mechanisms operate at different levels: Module discovery happens during bootstrap, while resource dependencies are loaded for a particular Page or Component.</p>
 
         <h2>References and Areas</h2>

@@ -14,7 +14,7 @@ export default {
 
         <h2>How resource loading works</h2>
         <p>A logical reference identifies a resource without requiring the caller to know its physical URL or implementation format.</p>
-        <pre x-pre><code>Logical resource: icon:x-file
+        <x-code language="text" x-pre>Logical resource: icon:x-file
     |
     v
 Resolver
@@ -24,19 +24,19 @@ Resolver
 Loader
     |  Dispatches to icon-svg
     v
-SVG element</code></pre>
+SVG element</x-code>
         <p>The <strong>Resolver</strong> decides where a resource is and which loader handles it. The <strong>Loader</strong> obtains the actual value.</p>
 
         <h2>Resource identifiers</h2>
         <p>Resource references begin with a type such as <code>icon:</code>, <code>component:</code>, <code>page:</code>, or <code>dataset:</code>. References may use global names or identify an owning Module explicitly.</p>
-        <pre x-pre><code>icon:x-file
+        <x-code language="text" x-pre>icon:x-file
 icon:x:x-file
 
 component:x-button
 component:x:x-button
 
 page:x-demo:/pages/index.js
-dataset:x-demo:statuses</code></pre>
+dataset:x-demo:statuses</x-code>
         <p>Global and Module-qualified references use the same Resolver and Loader. Module qualification identifies ownership; it does not change the loading mechanism.</p>
 
         <h2>Interactive resource inspector</h2>
@@ -62,28 +62,28 @@ dataset:x-demo:statuses</code></pre>
 
         <h2>Resolving resources</h2>
         <p>Use <code>resolver.resolve()</code> to inspect how a logical reference maps to a concrete resource.</p>
-        <pre x-pre><code>const result = resolver.resolve("icon:x-file");
+        <x-code language="javascript" x-pre>const result = resolver.resolve("icon:x-file");
 
 const url = result.url;
-const loaderName = result.definition.loader;</code></pre>
+const loaderName = result.definition.loader;</x-code>
         <p>Resolver rules can be generated from Module inventories or supplied through application configuration.</p>
 
         <h2>Loading resources dynamically</h2>
         <p>Use <code>loader.load()</code> to resolve and load a resource in one operation.</p>
-        <pre x-pre><code>const icon = await loader.load("icon:x-file");
+        <x-code language="javascript" x-pre>const icon = await loader.load("icon:x-file");
 const component = await loader.load("component:x-button");
-const dataset = await loader.load("dataset:x-demo:statuses");</code></pre>
+const dataset = await loader.load("dataset:x-demo:statuses");</x-code>
         <p>The result depends on the resource type. For example, an icon loader returns an SVG element, while a Component loader returns a Component class.</p>
 
         <h2>Loading a keyed resource batch</h2>
         <p>Pass an object when several resources are known together. The returned object preserves the requested keys and associates each key with its loaded value.</p>
-        <pre x-pre><code>const resources = await loader.load({
+        <x-code language="javascript" x-pre>const resources = await loader.load({
     icon: "icon:x-file",
     component: "component:x-button"
 });
 
 // resources.icon      -&gt; loaded SVG element
-// resources.component -&gt; loaded Component class</code></pre>
+// resources.component -&gt; loaded Component class</x-code>
 
         <h2>Declarative loading in context</h2>
         <p>This Page's <code>icon:x-file</code> dependency was loaded before its controller was constructed: <strong>{{ state.iconName }}</strong>. For the focused tutorial on declaring and consuming dependencies from provider Modules, see <x-anchor href="../06-modules/06-dependencies.js">Using Module Resources</x-anchor>. The inspector above focuses on resolution and dynamic loading mechanics.</p>
@@ -100,20 +100,20 @@ const dataset = await loader.load("dataset:x-demo:statuses");</code></pre>
 
         <h2>Caching</h2>
         <p>Resolver rules can enable Loader caching. Cached resources are reused instead of performing the concrete load again.</p>
-        <pre x-pre><code>{
+        <x-code language="javascript" x-pre>{
     cache: true,
     cacheMode: "full"
-}</code></pre>
+}</x-code>
         <p>The <code>full</code> mode uses the complete logical reference as the cache key. The <code>path</code> mode ignores query parameters when computing cache identity. Whether caching is enabled depends on the matching resolver rule.</p>
         <p>Two different logical references may resolve to the same URL but still have separate cache entries.</p>
 
         <h2>Errors and missing resources</h2>
         <p>Resolution can fail when no rule matches. Loading can fail even after successful resolution, for example when the underlying resource is unavailable.</p>
-        <pre x-pre><code>try {
+        <x-code language="javascript" x-pre>try {
     const value = await loader.load("icon:x-file");
 } catch (error) {
     console.error("Resource load failed:", error);
-}</code></pre>
+}</x-code>
         <p>A resolved URL does not guarantee that the resource can be loaded successfully.</p>
 
         <h2>Next steps</h2>

@@ -14,14 +14,14 @@ export default {
             <x-datafield label="Navigation mode">{{ state.mode }}</x-datafield>
             <x-datafield label="Current Area">{{ state.area }}</x-datafield>
         </x-datafields>
-        <pre x-pre><code>controller({navigation, areas, state}) {
+        <x-code language="javascript" x-pre>controller({navigation, areas, state}) {
     return {
         load() {
             state.mode = navigation.mode;
             state.area = areas.getCurrentArea()?.label || "";
         }
     };
-}</code></pre>
+}</x-code>
 
         <h2>Core services</h2>
         <p>XShell registers core runtime services such as <code>areas</code>, <code>navigation</code>, <code>dialog</code>, <code>loader</code>, <code>resolver</code>, <code>modules</code>, and <code>services</code>.</p>
@@ -30,9 +30,9 @@ export default {
             <x-datafield label="Registered services">{{ state.serviceCount }}</x-datafield>
             <x-datafield label="Configured services">{{ state.configuredCount }}</x-datafield>
         </x-datafields>
-        <pre x-pre><code>services.has("navigation");
+        <x-code language="javascript" x-pre>services.has("navigation");
 services.getServiceInfo("toast");
-services.registry;</code></pre>
+services.registry;</x-code>
 
         <h2>Service registry</h2>
         <p>The registry exposes a read-only snapshot of registered services, including their lifecycle state and contract information.</p>
@@ -43,11 +43,11 @@ services.registry;</code></pre>
                 <span x-if="item.contractId"> (contract: {{ item.contractId }})</span>
             </li>
         </ul>
-        <pre x-pre><code>const items = services.registry;
+        <x-code language="javascript" x-pre>const items = services.registry;
 
 for (const item of items) {
     // item.id, item.state, item.contractId
-}</code></pre>
+}</x-code>
 
         <h2>Checking and resolving services</h2>
         <p>Use <code>services.has()</code> to check whether a service is registered. Use <code>services.resolve()</code> to obtain its instance.</p>
@@ -57,14 +57,14 @@ for (const item of items) {
             <x-datafield label="Temp registered">{{ state.hasTemp }}</x-datafield>
             <x-datafield label="Unknown service registered">{{ state.hasUnknown }}</x-datafield>
         </x-datafields>
-        <pre x-pre><code>if (services.has("navigation")) {
+        <x-code language="javascript" x-pre>if (services.has("navigation")) {
     const navigation = services.resolve("navigation");
-}</code></pre>
+}</x-code>
         <p>Checking availability does not construct a configured service. Resolving a configured service constructs its singleton on first use.</p>
 
         <h2>Service configuration</h2>
         <p>Configured services have a stable public contract and an implementation class selected through <code>xshell.services</code>.</p>
-        <pre x-pre><code>"xshell": {
+        <x-code language="json" x-pre>"xshell": {
     "services": {
         "audit": {
             "contract": "audit",
@@ -75,20 +75,20 @@ for (const item of items) {
             }
         }
     }
-}</code></pre>
-        <pre x-pre><code>export default class Audit {
+}</x-code>
+        <x-code language="javascript" x-pre>export default class Audit {
     constructor({bus, loader}, options = {}) {
         this.bus = bus;
         this.loader = loader;
         this.endpoint = options.endpoint;
     }
-}</code></pre>
+}</x-code>
         <p>XShell discovers the contract, loads the implementation class during initialization, and creates its instance when first resolved.
         The first constructor argument injects services lazily; the second contains service-specific configuration and defaults to an empty object.</p>
 
         <h2>Service contracts</h2>
         <p>A contract describes the public methods and properties expected from a service. XShell validates their presence when constructing a configured service instance.</p>
-        <pre x-pre><code>{
+        <x-code language="json" x-pre>{
     "label": "Example Service",
     "methods": {
         "getValue": {
@@ -96,7 +96,7 @@ for (const item of items) {
             "returns": {"type": "string"}
         }
     }
-}</code></pre>
+}</x-code>
         <p>Contracts define the expected public interface. They do not perform full runtime validation of method arguments, return values, or property types.</p>
 
         <h2>Service lifetime</h2>
@@ -105,14 +105,14 @@ for (const item of items) {
 
         <h2>Services versus resource dependencies</h2>
         <p>Controller injection provides runtime services. A Page's <code>dependencies</code> declaration instead loads specific resources through the Resolver and Loader.</p>
-        <pre x-pre><code>dependencies: {
+        <x-code language="javascript" x-pre>dependencies: {
     icon: "icon:x-file"
 },
 
 controller({navigation, dependencies}) {
     // navigation: injected service
     // dependencies.icon: loaded resource
-}</code></pre>
+}</x-code>
         <h2>Interactive service examples</h2>
         <p>Continue with <x-anchor href="02-bus.js">Event Bus</x-anchor>, <x-anchor href="07-tasks.js">Tasks</x-anchor>,
         <x-anchor href="08-commands.js">Commands</x-anchor>, or <x-anchor href="09-temp.js">Temp</x-anchor> for focused examples using injected services.</p>

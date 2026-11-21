@@ -4,7 +4,7 @@
 
     <h2>HTML Page structure</h2>
     <p>The <code>&lt;template&gt;</code> element defines the Page content, while <code>&lt;script type="module"&gt;</code> exports its implementation.</p>
-    <pre x-pre><code>&lt;template&gt;
+    <x-code language="html" x-pre>&lt;template&gt;
     &lt;p&gt;Hello world!&lt;/p&gt;
 &lt;/template&gt;
 
@@ -12,7 +12,7 @@
     export default {
         meta: { title: "Hello" }
     };
-&lt;/script&gt;</code></pre>
+&lt;/script&gt;</x-code>
 
     <h2>Reactive state</h2>
     <p>HTML Pages support the same state bindings and controller features as JavaScript Pages.</p>
@@ -20,7 +20,7 @@
         <x-datafield type="text" label="Name" placeholder="Enter your name" x-model="state.name"></x-datafield>
     </x-datafields>
     <p>Hello <strong>{{ state.name }}</strong>!</p>
-    <pre x-pre><code>&lt;template&gt;
+    <x-code language="html" x-pre>&lt;template&gt;
     &lt;x-datafield type="text" label="Name" x-model="state.name"&gt;&lt;/x-datafield&gt;
     &lt;p&gt;Hello {{ state.name }}!&lt;/p&gt;
 &lt;/template&gt;
@@ -29,7 +29,7 @@
     export default {
         state: { name: "Ada" }
     };
-&lt;/script&gt;</code></pre>
+&lt;/script&gt;</x-code>
 
     <h2>When to use HTML Pages</h2>
     <p>HTML Pages are useful when the Page is primarily markup. JavaScript Pages provide the same capabilities and may be more convenient when implementation logic is substantial.</p>

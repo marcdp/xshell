@@ -20,9 +20,9 @@ export default {
             <x-datafield type="search" label="Search" placeholder="Search..."></x-datafield>
             <x-datafield type="number" label="Number" min="0" max="100" step="1"></x-datafield>
         </x-datafields>
-        <pre x-pre><code>&lt;x-datafield type="text" label="Name" placeholder="Enter name"&gt;&lt;/x-datafield&gt;
+        <x-code language="html" x-pre>&lt;x-datafield type="text" label="Name" placeholder="Enter name"&gt;&lt;/x-datafield&gt;
 &lt;x-datafield type="email" label="Email" required&gt;&lt;/x-datafield&gt;
-&lt;x-datafield type="number" label="Age" min="0" max="120"&gt;&lt;/x-datafield&gt;</code></pre>
+&lt;x-datafield type="number" label="Age" min="0" max="120"&gt;&lt;/x-datafield&gt;</x-code>
 
         <h2>Dates and times</h2>
         <p>Date and time fields use the corresponding native input types.</p>
@@ -33,16 +33,16 @@ export default {
             <x-datafield type="month" label="Month"></x-datafield>
             <x-datafield type="week" label="Week"></x-datafield>
         </x-datafields>
-        <pre x-pre><code>&lt;x-datafield type="date" label="Date"&gt;&lt;/x-datafield&gt;
-&lt;x-datafield type="datetime-local" label="Date and time"&gt;&lt;/x-datafield&gt;</code></pre>
+        <x-code language="html" x-pre>&lt;x-datafield type="date" label="Date"&gt;&lt;/x-datafield&gt;
+&lt;x-datafield type="datetime-local" label="Date and time"&gt;&lt;/x-datafield&gt;</x-code>
 
         <h2>Other native inputs</h2>
         <x-datafields columns="2">
             <x-datafield type="color" label="Color" value="#3366cc"></x-datafield>
             <x-datafield type="range" label="Range" min="0" max="100" value="50"></x-datafield>
         </x-datafields>
-        <pre x-pre><code>&lt;x-datafield type="color" label="Color" value="#3366cc"&gt;&lt;/x-datafield&gt;
-&lt;x-datafield type="range" label="Range" min="0" max="100" value="50"&gt;&lt;/x-datafield&gt;</code></pre>
+        <x-code language="html" x-pre>&lt;x-datafield type="color" label="Color" value="#3366cc"&gt;&lt;/x-datafield&gt;
+&lt;x-datafield type="range" label="Range" min="0" max="100" value="50"&gt;&lt;/x-datafield&gt;</x-code>
 
         <h2>Text areas</h2>
         <p>Use <code>textarea</code> for longer plain-text content.</p>
@@ -50,7 +50,7 @@ export default {
             <x-datafield type="textarea" label="Description" placeholder="Write a description"></x-datafield>
             <x-datafield type="textarea" label="Limited text" maxlength="200" placeholder="Maximum 200 characters"></x-datafield>
         </x-datafields>
-        <pre x-pre><code>&lt;x-datafield type="textarea" label="Description" maxlength="200"&gt;&lt;/x-datafield&gt;</code></pre>
+        <x-code language="html" x-pre>&lt;x-datafield type="textarea" label="Description" maxlength="200"&gt;&lt;/x-datafield&gt;</x-code>
 
         <h2>Selections</h2>
         <p>Selection fields use a <code>domain</code> containing value and label pairs.</p>
@@ -61,10 +61,10 @@ export default {
             <x-datafield type="checkboxes" label="Checkbox group" x-prop:domain="state.channels"></x-datafield>
             <x-datafield type="checkbox" label="Checkbox" label-secondary="Enable notifications"></x-datafield>
         </x-datafields>
-        <pre x-pre><code>&lt;x-datafield type="select" label="Country" x-prop:domain="state.countries"&gt;&lt;/x-datafield&gt;
+        <x-code language="html" x-pre>&lt;x-datafield type="select" label="Country" x-prop:domain="state.countries"&gt;&lt;/x-datafield&gt;
 &lt;x-datafield type="radios" label="Priority" x-prop:domain="state.priorities"&gt;&lt;/x-datafield&gt;
 &lt;x-datafield type="checkboxes" label="Channels" x-prop:domain="state.channels"&gt;&lt;/x-datafield&gt;
-&lt;x-datafield type="checkbox" label="Enabled" label-secondary="Enable feature"&gt;&lt;/x-datafield&gt;</code></pre>
+&lt;x-datafield type="checkbox" label="Enabled" label-secondary="Enable feature"&gt;&lt;/x-datafield&gt;</x-code>
 
         <h2>Files and pickers</h2>
         <p>Use <code>file</code> to select files and <code>picker</code> for a value selected through XShell's picker dialog.</p>
@@ -74,16 +74,16 @@ export default {
             <x-datafield type="picker" label="Picker" value="Example value"></x-datafield>
         </x-datafields>
         <p>File handling and picker dialogs depend on the services configured in the application.</p>
-        <pre x-pre><code>&lt;x-datafield type="file" label="File" accept=".pdf,.png"&gt;&lt;/x-datafield&gt;
+        <x-code language="html" x-pre>&lt;x-datafield type="file" label="File" accept=".pdf,.png"&gt;&lt;/x-datafield&gt;
 &lt;x-datafield type="file" label="Files" multiple&gt;&lt;/x-datafield&gt;
-&lt;x-datafield type="picker" label="Picker"&gt;&lt;/x-datafield&gt;</code></pre>
+&lt;x-datafield type="picker" label="Picker"&gt;&lt;/x-datafield&gt;</x-code>
 
         <h2>Rich text</h2>
         <p>Use <code>richtext</code> for formatted HTML content.</p>
         <x-datafields columns="1">
             <x-datafield type="richtext" label="Rich text" x-model="state.richtext"></x-datafield>
         </x-datafields>
-        <pre x-pre><code>&lt;x-datafield type="richtext" label="Description" x-model="state.richtext"&gt;&lt;/x-datafield&gt;</code></pre>
+        <x-code language="html" x-pre>&lt;x-datafield type="richtext" label="Description" x-model="state.richtext"&gt;&lt;/x-datafield&gt;</x-code>
 
         <h2>Code editors</h2>
         <p>These types use the XShell code editor with the corresponding syntax mode.</p>
@@ -94,11 +94,11 @@ export default {
             <x-datafield type="xml" label="XML" x-model="state.xml"></x-datafield>
             <x-datafield type="markdown" label="Markdown" x-model="state.markdown"></x-datafield>
         </x-datafields>
-        <pre x-pre><code>&lt;x-datafield type="javascript" label="JavaScript"&gt;&lt;/x-datafield&gt;
+        <x-code language="html" x-pre>&lt;x-datafield type="javascript" label="JavaScript"&gt;&lt;/x-datafield&gt;
 &lt;x-datafield type="css" label="CSS"&gt;&lt;/x-datafield&gt;
 &lt;x-datafield type="html" label="HTML"&gt;&lt;/x-datafield&gt;
 &lt;x-datafield type="xml" label="XML"&gt;&lt;/x-datafield&gt;
-&lt;x-datafield type="markdown" label="Markdown"&gt;&lt;/x-datafield&gt;</code></pre>
+&lt;x-datafield type="markdown" label="Markdown"&gt;&lt;/x-datafield&gt;</x-code>
 
         <h2>Multilingual fields</h2>
         <p>Types ending in <code>_i18n</code> edit localized values using the configured languages.</p>
@@ -108,10 +108,10 @@ export default {
             <x-datafield type="richtext_i18n" label="Localized rich text" x-model="state.richtextI18n"></x-datafield>
             <x-datafield type="markdown_i18n" label="Localized Markdown" x-model="state.markdownI18n"></x-datafield>
         </x-datafields>
-        <pre x-pre><code>&lt;x-datafield type="text_i18n" label="Name" x-model="state.textI18n"&gt;&lt;/x-datafield&gt;
+        <x-code language="html" x-pre>&lt;x-datafield type="text_i18n" label="Name" x-model="state.textI18n"&gt;&lt;/x-datafield&gt;
 &lt;x-datafield type="textarea_i18n" label="Description" x-model="state.textareaI18n"&gt;&lt;/x-datafield&gt;
 &lt;x-datafield type="richtext_i18n" label="Content" x-model="state.richtextI18n"&gt;&lt;/x-datafield&gt;
-&lt;x-datafield type="markdown_i18n" label="Documentation" x-model="state.markdownI18n"&gt;&lt;/x-datafield&gt;</code></pre>
+&lt;x-datafield type="markdown_i18n" label="Documentation" x-model="state.markdownI18n"&gt;&lt;/x-datafield&gt;</x-code>
 
         <h2>Structured data</h2>
         <p>The <code>object</code> type contains nested fields. The <code>list</code> type manages repeated items.</p>
@@ -129,19 +129,19 @@ export default {
                 </x-datafields>
             </x-datafield>
         </x-datafields>
-        <pre x-pre><code>&lt;x-datafield type="object" label="Address" x-model="state.address"&gt;
+        <x-code language="html" x-pre>&lt;x-datafield type="object" label="Address" x-model="state.address"&gt;
     &lt;x-datafields&gt;...&lt;/x-datafields&gt;
 &lt;/x-datafield&gt;
 &lt;x-datafield type="list" label="Contacts" add x-model="state.contacts"&gt;
     &lt;x-datafields x-for="contact in state.contacts"&gt;...&lt;/x-datafields&gt;
-&lt;/x-datafield&gt;</code></pre>
+&lt;/x-datafield&gt;</x-code>
 
         <h2>X Template field</h2>
         <p>The <code>x-template</code> type renders a custom editing template for an object value.</p>
         <x-datafields columns="1">
             <x-datafield type="x-template" label="Customer" x-prop:template="state.customerTemplate" x-model="state.customer"></x-datafield>
         </x-datafields>
-        <pre x-pre><code>&lt;x-datafield type="x-template" label="Customer" x-prop:template="state.customerTemplate" x-model="state.customer"&gt;&lt;/x-datafield&gt;</code></pre>
+        <x-code language="html" x-pre>&lt;x-datafield type="x-template" label="Customer" x-prop:template="state.customerTemplate" x-model="state.customer"&gt;&lt;/x-datafield&gt;</x-code>
 
         <h2>Custom content</h2>
         <p>When <code>type</code> is omitted, the field displays its slotted content.</p>
@@ -149,7 +149,7 @@ export default {
             <x-datafield label="Status"><x-badge value="Active"></x-badge></x-datafield>
             <x-datafield label="Size"><x-file-size value="2048"></x-file-size></x-datafield>
         </x-datafields>
-        <pre x-pre><code>&lt;x-datafield label="Status"&gt;&lt;x-badge value="Active"&gt;&lt;/x-badge&gt;&lt;/x-datafield&gt;</code></pre>
+        <x-code language="html" x-pre>&lt;x-datafield label="Status"&gt;&lt;x-badge value="Active"&gt;&lt;/x-badge&gt;&lt;/x-datafield&gt;</x-code>
 
         <h2>Field states and validation</h2>
         <p>Fields support required values, readonly and disabled states, descriptions, and validation constraints.</p>
@@ -161,9 +161,9 @@ export default {
             <x-datafield type="number" label="Minimum and maximum" min="1" max="10"></x-datafield>
             <x-datafield type="text" label="Limited length" minlength="3" maxlength="20"></x-datafield>
         </x-datafields>
-        <pre x-pre><code>&lt;x-datafield type="text" label="Required" required&gt;&lt;/x-datafield&gt;
+        <x-code language="html" x-pre>&lt;x-datafield type="text" label="Required" required&gt;&lt;/x-datafield&gt;
 &lt;x-datafield type="text" label="Readonly" readonly&gt;&lt;/x-datafield&gt;
-&lt;x-datafield type="number" label="Quantity" min="1" max="10"&gt;&lt;/x-datafield&gt;</code></pre>
+&lt;x-datafield type="number" label="Quantity" min="1" max="10"&gt;&lt;/x-datafield&gt;</x-code>
 
         <h2>Form submission and validation</h2>
         <p>Click Submit to validate all fields. The form displays errors and executes the Page command only when every field is valid. The Code pattern requires three uppercase letters, a hyphen, and three digits (for example, ABC-123).</p>
@@ -179,7 +179,7 @@ export default {
         </x-form>
         <x-notice x-if="state.validationSubmitted" type="success" label="Form submitted" message="All fields passed validation."></x-notice>
         <x-json x-if="state.validationSubmitted" x-prop:value="state.validationResult"></x-json>
-        <pre x-pre><code>&lt;x-form command="submitValidationDemo" x-on:change="clearValidationResult"&gt;
+        <x-code language="html" x-pre>&lt;x-form command="submitValidationDemo" x-on:change="clearValidationResult"&gt;
     &lt;x-datafield type="text" label="Name" required minlength="3" x-model="state.validationName"&gt;&lt;/x-datafield&gt;
     &lt;x-datafield type="email" label="Email" required x-model="state.validationEmail"&gt;&lt;/x-datafield&gt;
     &lt;x-datafield type="number" label="Age" required min="18" max="100" x-model="state.validationAge"&gt;&lt;/x-datafield&gt;
@@ -196,7 +196,7 @@ controller({state}) {
             state.validationSubmitted = true;
         }
     };
-}</code></pre>
+}</x-code>
         <p>The button's <code>command="submit"</code> starts built-in form validation. The form's <code>command="submitValidationDemo"</code> reaches the Page controller only after validation succeeds.</p>
 
         <h2>Reactive form values</h2>
@@ -208,8 +208,8 @@ controller({state}) {
             </x-datafields>
         </x-form>
         <p>Hello <strong>{{ state.name }}</strong> ({{ state.age }})</p>
-        <pre x-pre><code>&lt;x-datafield type="text" label="Name" x-model="state.name"&gt;&lt;/x-datafield&gt;
-&lt;p&gt;Hello {{ state.name }}&lt;/p&gt;</code></pre>
+        <x-code language="html" x-pre>&lt;x-datafield type="text" label="Name" x-model="state.name"&gt;&lt;/x-datafield&gt;
+&lt;p&gt;Hello {{ state.name }}&lt;/p&gt;</x-code>
 
 
         <h2>Lists</h2>

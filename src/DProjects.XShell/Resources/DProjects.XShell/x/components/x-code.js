@@ -192,18 +192,28 @@ export default {
             }
         },
         properties: {
-            value:     {type:"string", default:"", attribute:true, state:true, description:"Original source code."},
+            value:     {type:"string", default:"", attribute:true, state:true, description:"Original source code. Overrides inline source content when set."},
             language:  {type:"string", default:"", attribute:true, state:true, description:"Language used for syntax highlighting."},
             normalize: {type:"boolean", default:true, attribute:true, state:true, description:"Removes surrounding blank lines and common indentation."},
             wrap:      {type:"boolean", default:false, attribute:true, state:true, description:"Indicates whether long lines should wrap."},
             copyable:  {type:"boolean", default:true, attribute:true, state:true, description:"Indicates whether the Copy button is displayed."}
         },
         methods: {},
+        slots: {
+            "": {
+                description: "Static inline source used when value is empty. Use x-pre to keep X Template syntax literal."
+            }
+        },
         examples: [
             {
                 name: "basic",
                 description: "Display highlighted, copyable JavaScript.",
                 template: `<x-code language="javascript" value="const total = 3;"></x-code>`
+            },
+            {
+                name: "inline",
+                description: "Display inline X Template source without evaluating it.",
+                template: `<x-code language="html" x-pre>&lt;p&gt;{{ state.message }}&lt;/p&gt;</x-code>`
             },
             {
                 name: "wrap",
@@ -262,39 +272,56 @@ export default {
         .token.tag {color:var(--x-code-tag-color, var(--x-color-primary));}
         .token.attribute, .token.key {color:var(--x-code-attribute-color, light-dark(#8b4cb3, #d2a8ff));}
 
-        .copy {
+        .tools {
             position:absolute;
             top:.5em;
             right:.5em;
+            z-index:1;
+            display:flex;
+            align-items:center;
+            gap:.4em;
+        }
+
+        .language, .play, .copy {
             border:0;
             border-radius:.35em;
             padding:.3em .55em;
             background:var(--x-code-copy-background);
             color:var(--x-code-copy-color);
             font-size:var(--x-font-size-small);
+        }
+
+        .language {
+            font-family:var(--x-code-font-family, monospace);
+        }
+
+        .play, .copy {
             cursor:pointer;
         }
-        .copy:hover {background:var(--x-code-copy-background-hover);}
-        .copy:active {background:var(--x-code-copy-background-active);}
+        .play:hover, .copy:hover {background:var(--x-code-copy-background-hover);}
+        .play:active, .copy:active {background:var(--x-code-copy-background-active);}
 
          
     `,
     template: `
         <div class="container">
-            <button x-if="state.copyable"
-                class="copy"
-                type="button"
-                x-on:click="copy">Copy</button>
+            <div x-if="state.language || state.copyable" class="tools">
+                <span x-if="state.language" class="language" x-text="state.language"></span>
+                <button x-if="state.playable" class="play" type="button" x-on:click="play">Play</button>
+                <button x-if="state.copyable" class="copy" type="button" x-on:click="copy">Copy</button>
+            </div>
 
             <pre x-class:wrap="state.wrap"
                 x-attr:data-language="state.language"><code x-html="state.highlighted"></code></pre>
         </div>
     `,
     state: {
+        contentValue: "",
         displayValue: "",
-        highlighted: ""
+        highlighted: "",
+        playable: false
     },
-    controller({ state, host, events }) {
+    controller({ state, host, events, services }) {
         return {
             load() {
                 // Compute the initial representation and react to public property changes.
@@ -302,11 +329,28 @@ export default {
                 events.on(state, ["change:value", "change:language", "change:normalize"], "update");
             },
 
+            mount() {
+                // Capture static inline source after the render engine has attached the light DOM children.
+                state.contentValue = host.textContent ?? "";
+                this.update();
+            },
+
             update() {
-                // Keep the original value intact and generate safe highlighted HTML.
-                const original = state.value ?? "";
+                // Prefer the public value and otherwise generate safe highlighted HTML from inline source.
+                const original = state.value || state.contentValue || "";
                 state.displayValue = state.normalize ? normalizeCode(original) : original;
                 state.highlighted = highlightCode(state.displayValue, state.language ?? "");
+                state.playable = (state.language ?? "").toLowerCase().trim() === "html";
+            },
+
+            async play() {
+                // Open the XTemplate playground with the currently displayed HTML source.
+                await services.resolve("dialog").open({
+                    href: "page:x:/pages/playground.js",
+                    context: {template:state.displayValue},
+                    classes: ["size-wide"]
+
+                });
             },
 
             async copy() {

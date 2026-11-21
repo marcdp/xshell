@@ -19,11 +19,11 @@ export default {
             <x-datafield label="slug">{{ state.name | slug }}</x-datafield>
             <x-datafield label="stringify">{{ state.name | stringify }}</x-datafield>
         </x-datafields>
-        <pre x-pre><code>{{ state.name | trim }}
+        <x-code language="html" x-pre>{{ state.name | trim }}
 {{ state.name | trim | upper }}
 {{ state.name | trim | lower }}
 {{ state.name | slug }}
-{{ state.name | stringify }}</code></pre>
+{{ state.name | stringify }}</x-code>
 
         <h2>String predicates</h2>
         <p>Predicate transformers evaluate a condition and return a Boolean value. They perform case-sensitive comparisons.</p>
@@ -32,9 +32,9 @@ export default {
             <x-datafield label="endsWith('Lovelace')">{{ state.name | trim | endsWith('Lovelace') }}</x-datafield>
             <x-datafield label="contains('Love')">{{ state.name | contains('Love') }}</x-datafield>
         </x-datafields>
-        <pre x-pre><code>{{ state.name | trim | startsWith('Ada') }}
+        <x-code language="html" x-pre>{{ state.name | trim | startsWith('Ada') }}
 {{ state.name | trim | endsWith('Lovelace') }}
-{{ state.name | contains('Love') }}</code></pre>
+{{ state.name | contains('Love') }}</x-code>
 
         <h2>Number transformers</h2>
         <p>Number transformers format numeric values according to the active locale. The argument specifies the number of decimal places.</p>
@@ -48,10 +48,10 @@ export default {
             <x-datafield label="currency('EUR', 2)">{{ state.price | currency('EUR', 2) }}</x-datafield>
             <x-datafield label="currency('USD', 2)">{{ state.price | currency('USD', 2) }}</x-datafield>
         </x-datafields>
-        <pre x-pre><code>{{ state.price | number(2) }}
+        <x-code language="html" x-pre>{{ state.price | number(2) }}
 {{ state.ratio | percent(1) }}
 {{ state.price | currency('EUR', 2) }}
-{{ state.price | currency('USD', 2) }}</code></pre>
+{{ state.price | currency('USD', 2) }}</x-code>
         <p>The <code>percent</code> transformer multiplies the input by 100 for display. For example, <code>0.42</code> is displayed as <code>42%</code>.</p>
 
         <h2>Date and time transformers</h2>
@@ -62,9 +62,9 @@ export default {
             <x-datafield label="time">{{ state.createdAt | time('HH:mm:ss') }}</x-datafield>
             <x-datafield label="datetime">{{ state.createdAt | datetime('yyyy-MM-dd HH:mm') }}</x-datafield>
         </x-datafields>
-        <pre x-pre><code>{{ state.createdAt | date('dd/MM/yyyy') }}
+        <x-code language="html" x-pre>{{ state.createdAt | date('dd/MM/yyyy') }}
 {{ state.createdAt | time('HH:mm:ss') }}
-{{ state.createdAt | datetime('yyyy-MM-dd HH:mm') }}</code></pre>
+{{ state.createdAt | datetime('yyyy-MM-dd HH:mm') }}</x-code>
         <p>Date and time output follows the active locale and its time-zone behavior.</p>
 
         <h2>JSON transformers</h2>
@@ -74,17 +74,17 @@ export default {
             <x-datafield label="Parsed name">{{ (state.jsonText | json_parse).name }}</x-datafield>
             <x-datafield label="Round trip">{{ state.jsonText | json_parse | json_stringify }}</x-datafield>
         </x-datafields>
-        <pre x-pre><code>{{ state.profile | json_stringify }}
+        <x-code language="html" x-pre>{{ state.profile | json_stringify }}
 {{ (state.jsonText | json_parse).name }}
-{{ state.jsonText | json_parse | json_stringify }}</code></pre>
+{{ state.jsonText | json_parse | json_stringify }}</x-code>
         <p>The <code>stringify</code> transformer is intended for display, while <code>json_stringify</code> produces JSON text.</p>
 
         <h2>Chaining transformers</h2>
         <p>Each transformer receives the result of the previous step. Pipeline arguments can also contain their own transformer expressions.</p>
         <x-datafield type="text" label="Currency code" x-model="state.currencyCode"></x-datafield>
         <p>Formatted price: <strong>{{ state.price | currency(state.currencyCode | trim | upper, 2) }}</strong></p>
-        <pre x-pre><code>{{ state.name | trim | upper }}
-{{ state.price | currency(state.currencyCode | trim | upper, 2) }}</code></pre>
+        <x-code language="html" x-pre>{{ state.name | trim | upper }}
+{{ state.price | currency(state.currencyCode | trim | upper, 2) }}</x-code>
         <p>The first expression trims whitespace before converting to uppercase. The second normalizes the currency code before passing it to <code>currency</code>.</p>
 
         <h2>Null values</h2>
@@ -93,13 +93,13 @@ export default {
             <x-datafield label="trim | upper">{{ (state.nullableValue | trim | upper) ?? "(null)" }}</x-datafield>
             <x-datafield label="json_stringify">{{ state.nullableValue | json_stringify }}</x-datafield>
         </x-datafields>
-        <pre x-pre><code>{{ (state.nullableValue | trim | upper) ?? "(null)" }}
-{{ state.nullableValue | json_stringify }}</code></pre>
+        <x-code language="html" x-pre>{{ (state.nullableValue | trim | upper) ?? "(null)" }}
+{{ state.nullableValue | json_stringify }}</x-code>
 
         <h2>Pipeline syntax</h2>
         <p>Transformers are part of the X Template expression language. They are not arbitrary JavaScript functions, and template expressions cannot invoke general JavaScript methods.</p>
-        <pre x-pre><code>{{ state.name | trim | upper }}
-{{ state.price | number(2) }}</code></pre>
+        <x-code language="html" x-pre>{{ state.name | trim | upper }}
+{{ state.price | number(2) }}</x-code>
         <p>For general expression and binding examples, see <x-anchor href="02-bindings.js">Bindings</x-anchor>. Continue with <x-anchor href="08-advanced.js">Advanced Templates</x-anchor> for more expression patterns.</p>
     `,
 

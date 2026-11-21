@@ -17,10 +17,10 @@ export default {
             <x-button label="Warning" command="showWarning"></x-button>
             <x-button label="Error" command="showError"></x-button>
         </p>
-        <pre x-pre><code>toast.show("Operation completed", {
+        <x-code language="javascript" x-pre>toast.show("Operation completed", {
     type: "success",
     duration: 4000
-});</code></pre>
+});</x-code>
 
         <h2>Duration</h2>
         <p>The <code>duration</code> option controls automatic dismissal in milliseconds.
@@ -30,10 +30,10 @@ export default {
             <x-button label="5 seconds" command="showLong"></x-button>
             <x-button label="Persistent" command="showPersistent"></x-button>
         </p>
-        <pre x-pre><code>toast.show("Persistent notification", {
+        <x-code language="javascript" x-pre>toast.show("Persistent notification", {
     type: "info",
     duration: 0
-});</code></pre>
+});</x-code>
 
         <h2>Toast scope</h2>
         <p>Application-scoped toasts appear globally. Page-scoped toasts belong
@@ -42,14 +42,14 @@ export default {
             <x-button label="Application toast" command="showApplication"></x-button>
             <x-button label="Page toast" command="showPage"></x-button>
         </p>
-        <pre x-pre><code>// Application scope
+        <x-code language="javascript" x-pre>// Application scope
 toast.show("Global notification");
 
 // Page scope
 toast.show("Page notification", {
     page,
     type: "info"
-});</code></pre>
+});</x-code>
 
         <h2>Managing toasts</h2>
         <p><code>show()</code> returns a toast identifier that can be passed to
@@ -60,13 +60,13 @@ toast.show("Page notification", {
             <x-button label="Clear page toasts" command="clearPage"></x-button>
             <x-button label="Clear all toasts" command="clearAll"></x-button>
         </p>
-        <pre x-pre><code>const id = toast.show("Hello", {
+        <x-code language="javascript" x-pre>const id = toast.show("Hello", {
     duration: 0
 });
 
 toast.close(id);
 toast.clear(page);
-toast.clear();</code></pre>
+toast.clear();</x-code>
 
         <h2>Lifecycle events</h2>
         <p>The Toast service dispatches <code>shown</code> and <code>closed</code>
@@ -77,13 +77,13 @@ toast.clear();</code></pre>
             <x-datafield label="Last event">{{ state.lastEvent }}</x-datafield>
             <x-datafield label="Event toast ID">{{ state.eventId }}</x-datafield>
         </x-datafields>
-        <pre x-pre><code>events.on(toast, "shown", event => {
+        <x-code language="javascript" x-pre>events.on(toast, "shown", event => {
     console.log("Toast shown:", event.detail.id);
 });
 
 events.on(toast, "closed", event => {
     console.log("Toast closed:", event.detail.id);
-});</code></pre>
+});</x-code>
 
         <h2>Toast versus message dialogs</h2>
         <p>Use toasts for transient feedback, such as saving a record or completing

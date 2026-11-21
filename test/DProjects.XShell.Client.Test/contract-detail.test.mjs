@@ -104,10 +104,6 @@ function section(detail, title) {
     return detail.sections.find(section => section.title === title)?.entries;
 }
 
-function exampleEvent(name, detail = {}) {
-    return { event: { currentTarget: { dataset: { example: name } }, detail } };
-}
-
 for (const [kind, id, contract, reference] of [
     ["component", "x-button", Button.contract],
     ["page", xAssets + "/pages/workspace.js", Workspace.contract],
@@ -254,61 +250,14 @@ test("The reference preserves descriptor metadata, declaration order, and copyab
     assert.deepEqual([markup.title, markup.template, markup.code, markup.hasState], ["Template only", template, undefined, false]);
     assert.deepEqual([script.title, script.template, script.code, script.language], ["Code only", undefined, code, "javascript"]);
     assert.deepEqual([both.template, both.code, both.hasState, both.state], [template, code, true, { count: 0, options: {} }]);
-    assert.deepEqual(detail.examples.map(example => example.hasPlayground), [true, false, true]);
-    assert.deepEqual([markup.originalState, markup.playgroundOpen, markup.previewState], [{}, false, null]);
-    assert.notEqual(both.originalState, both.state);
     assert.match(Detail.template, /<x-code[^>]+x-prop:value="example\.template"/);
     assert.match(Detail.template, /<x-code[^>]+x-prop:value="example\.code"/);
-    assert.match(Detail.template, /<x-code-editor[^>]+x-prop:value="example\.editedTemplate"/);
-    assert.match(Detail.template, /<x-template[^>]+x-prop:template="example\.previewTemplate"[^>]+x-prop:value="example\.previewState"/);
-    assert.match(Detail.template, /x-on:command="blockPlaygroundCommand"/);
     assert.match(Code.template, /<code x-html="state\.highlighted"><\/code>/);
     assert.equal(Code.contract.properties.copyable.default, true);
     assert.equal(exampleContract.properties.options.type, undefined);
 });
 
-test("Template playgrounds open with isolated source and state while code-only examples remain passive", async t => {
-    const Resource = staticResource(t, "component", exampleContract);
-    const { controller, state } = inspect(t, { kind: "component", id: "example" }, { load: () => Resource });
-    await controller.load();
-
-    controller.openPlayground(exampleEvent("template-only"));
-    controller.openPlayground(exampleEvent("both"));
-    const [markup, script, both] = state.detail.examples;
-    assert.equal(markup.editedTemplate, template);
-    assert.equal(markup.previewTemplate, template);
-    assert.deepEqual(markup.previewState, {});
-    assert.equal(script.playgroundOpen, false);
-    assert.equal(both.playgroundOpen, true);
-    assert.notEqual(both.previewState, both.originalState);
-    assert.notEqual(both.previewState, exampleContract.examples[2].state);
-
-    both.previewState.count = 8;
-    assert.equal(exampleContract.examples[2].state.count, 0);
-    assert.equal(both.originalState.count, 0);
-});
-
-test("Playground editing debounces the latest source and keeps examples independent", async t => {
-    const Resource = staticResource(t, "component", exampleContract);
-    const { controller, state } = inspect(t, { kind: "component", id: "example" }, { load: () => Resource });
-    await controller.load();
-    controller.openPlayground(exampleEvent("template-only"));
-    controller.openPlayground(exampleEvent("both"));
-
-    controller.editPlaygroundTemplate(exampleEvent("template-only", { newValue: "<p>First</p>" }));
-    controller.editPlaygroundTemplate(exampleEvent("template-only", { newValue: "<p>Latest</p>" }));
-    assert.equal(controller.findExample("template-only").editedTemplate, "<p>Latest</p>");
-    assert.equal(controller.findExample("template-only").previewTemplate, template);
-    assert.equal(controller.findExample("both").previewTemplate, template);
-
-    await new Promise(resolve => setTimeout(resolve, 275));
-    assert.equal(controller.findExample("template-only").previewTemplate, "<p>Latest</p>");
-    assert.equal(controller.findExample("both").previewTemplate, template);
-    assert.equal(exampleContract.examples[0].template, template);
-    assert.match(Detail.template, /x-for="example in state\.detail\.examples" x-key="playgroundId"/);
-});
-
-test("Duplicate authored example names still receive independent playground identities", () => {
+test("Duplicate authored example names still receive independent stable identities", () => {
     const state = structuredClone(Detail.state);
     const controller = Detail.controller({ state });
     state.detail = controller.describeContract("component", "duplicates", { contract: { examples: [
@@ -316,64 +265,8 @@ test("Duplicate authored example names still receive independent playground iden
         { name: "same", template: "<p>Second</p>", state: { value: 2 } }
     ] } });
     const [first, second] = state.detail.examples;
-    assert.notEqual(first.playgroundId, second.playgroundId);
-    controller.openPlayground(exampleEvent(second.playgroundId));
-    assert.equal(controller.findExample(first.playgroundId).playgroundOpen, false);
-    assert.equal(controller.findExample(second.playgroundId).playgroundOpen, true);
-});
-
-test("Closing, unmounting, or unloading a playground cancels pending preview updates", async t => {
-    const Resource = staticResource(t, "component", exampleContract);
-    const { controller } = inspect(t, { kind: "component", id: "example" }, { load: () => Resource });
-    await controller.load();
-    controller.openPlayground(exampleEvent("template-only"));
-    controller.editPlaygroundTemplate(exampleEvent("template-only", { newValue: "<p>Pending</p>" }));
-    controller.closePlayground(exampleEvent("template-only"));
-    await new Promise(resolve => setTimeout(resolve, 275));
-    const closed = controller.findExample("template-only");
-    assert.deepEqual([closed.editedTemplate, closed.previewTemplate, closed.previewState, closed.playgroundOpen], ["", "", null, false]);
-
-    controller.openPlayground(exampleEvent("both"));
-    controller.editPlaygroundTemplate(exampleEvent("both", { newValue: "<p>Unloaded</p>" }));
-    controller.unmount();
-    await new Promise(resolve => setTimeout(resolve, 275));
-    assert.equal(controller.findExample("both").previewTemplate, template);
-
-    controller.editPlaygroundTemplate(exampleEvent("both", { newValue: "<p>Unloaded</p>" }));
-    controller.unload();
-    await new Promise(resolve => setTimeout(resolve, 275));
-    assert.equal(controller.findExample("both").previewTemplate, template);
-});
-
-test("Reset restores authored source and a fresh state clone", async t => {
-    const Resource = staticResource(t, "component", exampleContract);
-    const { controller } = inspect(t, { kind: "component", id: "example" }, { load: () => Resource });
-    await controller.load();
-    controller.openPlayground(exampleEvent("both"));
-    controller.editPlaygroundTemplate(exampleEvent("both", { newValue: "<p>Edited</p>" }));
-    const changedState = { count: 4, options: { mode: "preview" } };
-    controller.updatePlaygroundState(exampleEvent("both", { newValue: changedState }));
-    controller.resetPlayground(exampleEvent("both"));
-
-    const example = controller.findExample("both");
-    assert.equal(example.editedTemplate, template);
-    assert.equal(example.previewTemplate, template);
-    assert.deepEqual(example.previewState, { count: 0, options: {} });
-    assert.notEqual(example.previewState, example.originalState);
-    assert.deepEqual(exampleContract.examples[2].state, { count: 0, options: {} });
-});
-
-test("Preview commands are stopped at the playground boundary", () => {
-    const state = structuredClone(Detail.state);
-    const controller = Detail.controller({ state });
-    let prevented = false;
-    let stopped = false;
-    controller.blockPlaygroundCommand({ event: {
-        preventDefault() { prevented = true; },
-        stopPropagation() { stopped = true; }
-    } });
-    assert.equal(prevented, true);
-    assert.equal(stopped, true);
+    assert.notEqual(first.exampleId, second.exampleId);
+    assert.match(Detail.template, /x-for="example in state\.detail\.examples" x-key="exampleId"/);
 });
 
 test("Command execute uses the same named type, return, and example display without instantiation", async t => {

@@ -67,7 +67,7 @@ export default {
         <p>The first call to <code>get()</code> prompts for initialization or
         unlocking if necessary. The other operations then use the unlocked vault.</p>
 
-        <pre x-pre><code>// Automatically authenticate when needed
+        <x-code language="javascript" x-pre>// Automatically authenticate when needed
 const value = await secrets.get("x-demo:secrets-example");
 
 // These methods require an unlocked vault
@@ -78,7 +78,7 @@ await secrets.set("x-demo:secrets-example", {
 });
 
 const entries = await secrets.list();
-await secrets.delete("x-demo:secrets-example");</code></pre>
+await secrets.delete("x-demo:secrets-example");</x-code>
 
         <h2>Lifecycle events</h2>
         <p>The <code>secrets:status-changed</code> Bus event reports vault

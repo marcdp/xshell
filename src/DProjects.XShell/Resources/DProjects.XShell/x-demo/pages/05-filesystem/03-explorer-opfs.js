@@ -7,8 +7,9 @@ export default {
     },
 
     template: `
-        <p>The <code>opfs:</code> filesystem uses origin-private browser storage. Files persist across Page visits in the same browser and origin.</p>
-        <p x-if="!state.available">OPFS requires browser support and a secure context.</p>
+        <x-notice type="error" x-if="!state.available">
+            OPFS requires browser support and a secure context.
+        </x-notice>
         <x-filesystem x-if="state.available" root src="opfs:" path="/"></x-filesystem>
     `,
 

@@ -12,8 +12,8 @@ export default {
         <p>Use double braces to render a JavaScript expression as text.</p>
         <x-datafield type="text" label="Your name" x-model="state.name"></x-datafield>
         <p>Hello, <strong>{{ state.name }}</strong>!</p>
-        <pre x-pre><code>&lt;x-datafield type="text" x-model="state.name"&gt;&lt;/x-datafield&gt;
-&lt;p&gt;Hello, {{ state.name }}!&lt;/p&gt;</code></pre>
+        <x-code language="html" x-pre>&lt;x-datafield type="text" x-model="state.name"&gt;&lt;/x-datafield&gt;
+&lt;p&gt;Hello, {{ state.name }}!&lt;/p&gt;</x-code>
         <p>Interpolation reads <code>state.name</code>; <code>x-model</code> is a directive that writes user changes back to that assignable expression. For state ownership, controller mutations, and conditional Page behavior, see <x-anchor href="../02-pages/04-state.js">Page State</x-anchor>.</p>
 
         <h2>Expressions</h2>
@@ -24,15 +24,15 @@ export default {
             <x-datafield label="Name length">{{ state.name.length }}</x-datafield>
             <x-datafield label="Greeting">{{ "Hello, " + state.name + "!" }}</x-datafield>
         </x-datafields>
-        <pre x-pre><code>{{ state.name }}
+        <x-code language="html" x-pre>{{ state.name }}
 {{ state.name | upper }}
 {{ state.name.length }}
-{{ "Hello, " + state.name + "!" }}</code></pre>
+{{ "Hello, " + state.name + "!" }}</x-code>
         <p>Keep template expressions short and use controller methods for more substantial application logic.</p>
 
         <h2>Complete Page example</h2>
         <p>A Page can combine template syntax with initial state. A controller is optional when no additional behavior is needed.</p>
-        <pre x-pre><code>export default {
+        <x-code language="javascript" x-pre>export default {
     template: &#96;
         &lt;x-datafield type="text" label="Name" x-model="state.name"&gt;&lt;/x-datafield&gt;
         &lt;p&gt;Hello, {{ state.name }}!&lt;/p&gt;
@@ -40,7 +40,7 @@ export default {
     state: {
         name: "Ada"
     }
-};</code></pre>
+};</x-code>
 
         <h2>Next steps</h2>
         <p>Text interpolation is only one form of binding. X Templates also support attributes, properties, conditions, loops, and event handling.</p>

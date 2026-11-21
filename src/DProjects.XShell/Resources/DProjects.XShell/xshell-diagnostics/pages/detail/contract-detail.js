@@ -16,62 +16,6 @@ export default {
             flex:1;
             height:100%;
         }
-
-        .example-template-header, .playground-toolbar, .playground-actions {
-            display:flex;
-            align-items:center;
-            gap:.5em;
-        }
-
-        .example-template-header, .playground-toolbar {
-            justify-content:space-between;
-        }
-
-        .example-template-header h4, .playground-toolbar h4, .playground-panel h5 {
-            margin:0;
-        }
-
-        .playground {
-            border:var(--x-card-border);
-            border-radius:var(--x-card-border-radius);
-            box-shadow:var(--x-card-shadow);
-            margin-top:1em;
-            overflow:hidden;
-        }
-
-        .playground-toolbar, .playground-panel {
-            padding:var(--x-card-padding);
-        }
-
-        .playground-toolbar {
-            border-bottom:var(--x-card-border);
-        }
-
-        .playground-grid {
-            display:grid;
-            grid-template-columns:minmax(0, 1fr) minmax(0, 1fr);
-        }
-
-        .playground-panel {
-            display:flex;
-            flex-direction:column;
-            gap:.75em;
-            min-width:0;
-        }
-
-        .playground-panel + .playground-panel {
-            border-left:var(--x-card-border);
-        }
-
-        .playground-source x-code-editor, .playground-preview {
-            min-height:20em;
-            overflow:auto;
-        }
-
-        @media (max-width:52em) {
-            .playground-grid {grid-template-columns:minmax(0, 1fr);}
-            .playground-panel + .playground-panel {border-left:0; border-top:var(--x-card-border);}
-        }
     `,
     template: `
         <x-notice x-if="state.error" type="error" role="alert" x-prop:message="state.error"></x-notice>
@@ -129,43 +73,14 @@ export default {
 
             <x-tab x-if="state.detail.examples.length" label="Examples">
                 <x-accordion multiple>
-                    <x-accordion-panel x-for="example in state.detail.examples" x-key="playgroundId" icon="x-example" x-attr:label="example.title" x-attr:description="example.description">
+                    <x-accordion-panel x-for="example in state.detail.examples" x-key="exampleId" icon="x-example" x-attr:label="example.title" x-attr:description="example.description">
 
                         <p x-if="example.description" x-text="example.description"></p>
 
                         <div x-if="example.template">
-                            <div class="example-template-header">
-                                <h4>Template</h4>
-                                <x-button x-if="example.hasPlayground && !example.playgroundOpen" label="Try it" icon="x-play"
-                                    x-attr:data-example="example.playgroundId" x-on:click="openPlayground"></x-button>
-                            </div>
+                            <h4>Template</h4>
                             <x-code language="html" x-prop:value="example.template" wrap></x-code>
                         </div>
-
-                        <section class="playground" x-if="example.playgroundOpen">
-                            <div class="playground-toolbar">
-                                <h4>{{ example.title }} example</h4>
-                                <div class="playground-actions">
-                                    <x-button label="Reset" icon="x-refresh" x-attr:data-example="example.playgroundId" x-on:click="resetPlayground"></x-button>
-                                    <x-button label="Close" icon="x-close" x-attr:data-example="example.playgroundId" x-on:click="closePlayground"></x-button>
-                                </div>
-                            </div>
-                            <div class="playground-grid">
-                                <section class="playground-panel playground-source">
-                                    <h5>XTemplate</h5>
-                                    <x-code-editor mode="html" x-prop:value="example.editedTemplate" x-attr:data-example="example.playgroundId"
-                                        x-on:change="editPlaygroundTemplate"></x-code-editor>
-                                </section>
-                                <section class="playground-panel">
-                                    <h5>Live preview</h5>
-                                    <div class="playground-preview">
-                                        <x-template x-prop:template="example.previewTemplate" x-prop:value="example.previewState"
-                                            x-attr:data-example="example.playgroundId" x-on:change="updatePlaygroundState"
-                                            x-on:command="blockPlaygroundCommand"></x-template>
-                                    </div>
-                                </section>
-                            </div>
-                        </section>
 
                         <div x-if="example.code">
                             <h4>Code <span x-if="example.language" x-text="example.language"></span></h4>
@@ -186,7 +101,6 @@ export default {
     },
     controller({ state, page, loader, resolver, services, contracts, config }) {
         let revision = 0;
-        const previewUpdates = new Map();
         const kinds = {
             component: { label: "Component", icon: "x-component" },
             page: { label: "Page", icon: "x-page" },
@@ -199,7 +113,6 @@ export default {
             async load() {
                 // Load the selected public contract without constructing the target resource.
                 const request = ++revision;
-                this.cancelPreviewUpdates();
                 const { kind, id } = state;
                 state.detail = null;
                 state.error = "";
@@ -226,117 +139,8 @@ export default {
             },
 
             unload() {
-                // Invalidate pending contract and preview work.
+                // Invalidate pending contract work.
                 ++revision;
-                this.cancelPreviewUpdates();
-            },
-
-            unmount() {
-                // Prevent delayed preview work after the Page leaves the rendered layout.
-                this.cancelPreviewUpdates();
-            },
-
-            cancelPreviewUpdates(name) {
-                // Cancel one example update or every outstanding preview update.
-                if (name !== undefined) {
-                    const pending = previewUpdates.get(name);
-                    if (pending) clearTimeout(pending.timeoutId);
-                    previewUpdates.delete(name);
-                    return;
-                }
-                for (const pending of previewUpdates.values()) clearTimeout(pending.timeoutId);
-                previewUpdates.clear();
-            },
-
-            findExample(identifier) {
-                // Resolve an event's authored example against the current contract projection.
-                return state.detail?.examples.find(example => example.playgroundId === identifier)
-                    ?? state.detail?.examples.find(example => example.name === identifier) ?? null;
-            },
-
-            updateExample(identifier, update) {
-                // Replace only the selected projection so keyed editors and panels retain their DOM instances.
-                if (!state.detail) return null;
-                const selected = this.findExample(identifier);
-                if (!selected) return null;
-                let updated = null;
-                const examples = state.detail.examples.map(example => {
-                    if (example.playgroundId !== selected.playgroundId) return example;
-                    updated = { ...example, ...update };
-                    return updated;
-                });
-                if (updated) state.detail = { ...state.detail, examples };
-                return updated;
-            },
-
-            openPlayground({ event }) {
-                // Start from fresh clones without modifying the authored contract example.
-                const name = event.currentTarget.dataset.example;
-                const example = this.findExample(name);
-                if (!example?.hasPlayground) return;
-                this.cancelPreviewUpdates(name);
-                this.updateExample(name, {
-                    editedTemplate: example.originalTemplate,
-                    previewTemplate: example.originalTemplate,
-                    previewState: structuredClone(example.originalState),
-                    playgroundOpen: true
-                });
-            },
-
-            closePlayground({ event }) {
-                // Remove the editor and renderer while invalidating their delayed work.
-                const name = event.currentTarget.dataset.example;
-                this.cancelPreviewUpdates(name);
-                this.updateExample(name, { editedTemplate: "", previewTemplate: "", previewState: null, playgroundOpen: false });
-            },
-
-            editPlaygroundTemplate({ event }) {
-                // Preserve editor text immediately and publish only the latest debounced preview source.
-                const name = event.currentTarget.dataset.example;
-                const example = this.findExample(name);
-                if (!example?.playgroundOpen) return;
-                const editedTemplate = event.detail.newValue ?? "";
-                this.updateExample(name, { editedTemplate });
-                this.cancelPreviewUpdates(name);
-
-                const token = { revision, timeoutId: null };
-                token.timeoutId = setTimeout(() => {
-                    if (previewUpdates.get(name) !== token || token.revision !== revision) return;
-                    previewUpdates.delete(name);
-                    const current = this.findExample(name);
-                    if (current?.playgroundOpen && current.editedTemplate === editedTemplate) {
-                        this.updateExample(name, { previewTemplate: editedTemplate });
-                    }
-                }, 250);
-                previewUpdates.set(name, token);
-            },
-
-            updatePlaygroundState({ event }) {
-                // Retain a replacement value emitted by x-template while same-reference mutations need no projection update.
-                const name = event.currentTarget.dataset.example;
-                const example = this.findExample(name);
-                if (example?.playgroundOpen && event.detail.newValue !== example.previewState) {
-                    this.updateExample(name, { previewState: event.detail.newValue });
-                }
-            },
-
-            resetPlayground({ event }) {
-                // Restore both source and local state from the authored example snapshots.
-                const name = event.currentTarget.dataset.example;
-                const example = this.findExample(name);
-                if (!example?.playgroundOpen) return;
-                this.cancelPreviewUpdates(name);
-                this.updateExample(name, {
-                    editedTemplate: example.originalTemplate,
-                    previewTemplate: example.originalTemplate,
-                    previewState: structuredClone(example.originalState)
-                });
-            },
-
-            blockPlaygroundCommand({ event }) {
-                // Keep dynamic-template commands inside the preview boundary.
-                event.preventDefault();
-                event.stopPropagation();
             },
 
             async resolveContract(kind, id) {
@@ -438,20 +242,13 @@ export default {
                     { title: "Types", entries: Object.entries(types).map(([name, type]) => describe(name, type)), icon: "x-type" }
                 ].filter(section => section.entries.length);
 
-                // Preserve authored examples and add isolated, inactive playground projections.
+                // Preserve authored examples while adding display metadata and stable keys.
                 const examples = (contract.examples ?? []).map((example, index) => ({
                     ...example,
-                    playgroundId: `${index}:${example.name}`,
+                    exampleId: `${index}:${example.name}`,
                     title: example.name.replace(/[-_]+/g, " ").replace(/^./, letter => letter.toUpperCase()),
                     language: example.language ?? "",
-                    hasState: Object.hasOwn(example, "state"),
-                    hasPlayground: typeof example.template === "string" && example.template.trim().length > 0,
-                    originalTemplate: example.template ?? "",
-                    editedTemplate: "",
-                    previewTemplate: "",
-                    originalState: structuredClone(example.state ?? {}),
-                    previewState: null,
-                    playgroundOpen: false
+                    hasState: Object.hasOwn(example, "state")
                 }));
 
                 return {

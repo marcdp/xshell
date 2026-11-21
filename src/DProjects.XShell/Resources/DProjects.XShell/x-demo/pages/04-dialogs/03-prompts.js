@@ -15,12 +15,12 @@ export default {
             <x-button label="Number" command="promptNumber"></x-button>
             <x-button label="Password" command="promptPassword"></x-button>
         </p>
-        <pre x-pre><code>const result = await dialog.prompt({
+        <x-code language="javascript" x-pre>const result = await dialog.prompt({
     title: "Your name",
     message: "Enter your name.",
     inputType: "text",
     value: "Ada"
-});</code></pre>
+});</x-code>
 
         <h2>Prompt configuration</h2>
         <p>Use <code>inputType</code>, <code>value</code>, <code>placeholder</code>, and <code>required</code> to configure the prompt.</p>
@@ -31,14 +31,14 @@ export default {
             <x-datafield type="checkbox" label="Required" label-secondary="A value is required" x-model="state.required"></x-datafield>
         </x-datafields>
         <p><x-button class="submit" label="Open configured prompt" command="openConfigured"></x-button></p>
-        <pre x-pre><code>const result = await dialog.prompt({
+        <x-code language="javascript" x-pre>const result = await dialog.prompt({
     title: "Prompt example",
     message: "Enter a value.",
     inputType: "text",
     value: "Ada",
     placeholder: "Enter your name",
     required: true
-});</code></pre>
+});</x-code>
 
         <h2>Prompt options</h2>
         <p>The most common options control the content and behavior of the input.</p>
@@ -55,7 +55,7 @@ export default {
         <p>The <code>dialog.prompt()</code> method returns a Promise. Saving returns the entered value; cancelling returns <code>null</code>.</p>
         <p>Last prompt: <strong>{{ state.lastAction }}</strong></p>
         <p>Returned value: <strong>{{ state.resultText }}</strong></p>
-        <pre x-pre><code>const result = await dialog.prompt({
+        <x-code language="javascript" x-pre>const result = await dialog.prompt({
     title: "Your name",
     inputType: "text",
     value: "Ada"
@@ -65,7 +65,7 @@ if (result === null) {
     // The user cancelled.
 } else {
     // Use the entered value.
-}</code></pre>
+}</x-code>
 
         <h2>When to use prompts</h2>
         <p>Prompts are useful for collecting a single value without opening a complete form. For choosing from predefined options, see <x-anchor href="04-pickers.js">Pickers</x-anchor>. For simple decisions, use <x-anchor href="02-confirmations.js">Confirmations</x-anchor>.</p>

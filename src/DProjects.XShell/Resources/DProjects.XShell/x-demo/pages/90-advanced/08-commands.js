@@ -21,14 +21,14 @@ export default {
             <x-button label="Trigger execution error" command="runFailure"></x-button>
             <x-button label="Cancel execution" command="cancel"></x-button>
         </p>
-        <pre x-pre><code>const task = await commands.run({
+        <x-code language="javascript" x-pre>const task = await commands.run({
     id: "demo.operation",
     args: {steps: 5, fail: false},
     background: false
 });
 
 await task.wait();
-const result = await task.getResult();</code></pre>
+const result = await task.getResult();</x-code>
         <x-notice x-if="state.requestError" type="error" label="Command request rejected" x-attr:message="state.requestError"></x-notice>
 
         <h2>Returned Task</h2>

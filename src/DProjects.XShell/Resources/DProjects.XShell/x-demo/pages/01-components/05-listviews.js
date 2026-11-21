@@ -41,7 +41,7 @@ export default {
         </x-listview>
         <p>Selected item: <strong>{{ state.selected }}</strong></p>
         <p>Activated item: <strong>{{ state.activated }}</strong></p>
-        <pre x-pre><code>&lt;x-listview view="details" views="list,details,icons,tiles"&gt;
+        <x-code language="html" x-pre>&lt;x-listview view="details" views="list,details,icons,tiles"&gt;
     &lt;x-listview-head&gt;
         &lt;x-listview-column label="Name" width="minmax(12em, 1fr)"&gt;&lt;/x-listview-column&gt;
         &lt;x-listview-column label="Type" width="8em"&gt;&lt;/x-listview-column&gt;
@@ -51,7 +51,7 @@ export default {
             &lt;span&gt;Text&lt;/span&gt;
         &lt;/x-listview-item&gt;
     &lt;/x-listview-body&gt;
-&lt;/x-listview&gt;</code></pre>
+&lt;/x-listview&gt;</x-code>
 
         <h2>Multiple selection</h2>
         <p>Set <code>multiple</code> to allow selecting more than one item. Click items to toggle their selection.</p>
@@ -63,12 +63,12 @@ export default {
             </x-listview-body>
         </x-listview>
         <p>Selection: {{ state.multipleSelection }}</p>
-        <pre x-pre><code>&lt;x-listview view="list" multiple&gt;
+        <x-code language="html" x-pre>&lt;x-listview view="list" multiple&gt;
     &lt;x-listview-body&gt;
         &lt;x-listview-item label="First.txt" path="/first.txt"&gt;&lt;/x-listview-item&gt;
         &lt;x-listview-item label="Second.txt" path="/second.txt"&gt;&lt;/x-listview-item&gt;
     &lt;/x-listview-body&gt;
-&lt;/x-listview&gt;</code></pre>
+&lt;/x-listview&gt;</x-code>
 
         <h2>Application values</h2>
         <p>Use <code>value</code> for application identity independently from filesystem-style <code>path</code>. Property binding preserves the original JavaScript value.</p>
@@ -85,7 +85,7 @@ export default {
         </x-listview>
         <p>Customer selection: {{ state.customerSelection }}</p>
         <p>Activated customer: {{ state.activatedCustomer }}</p>
-        <pre x-pre><code>&lt;x-listview-item x-prop:value="customer.id" x-attr:label="customer.name"&gt;&lt;/x-listview-item&gt;</code></pre>
+        <x-code language="html" x-pre>&lt;x-listview-item x-prop:value="customer.id" x-attr:label="customer.name"&gt;&lt;/x-listview-item&gt;</x-code>
 
         <h2>Navigation</h2>
         <p>Set <code>href</code> on an item to make it a navigable link. The listview uses <code>x-anchor</code> internally for navigation.</p>
@@ -96,7 +96,7 @@ export default {
                 <x-listview-item icon="x-file" label="Form Inputs" description="Datafield types" href="03-forms.js"></x-listview-item>
             </x-listview-body>
         </x-listview>
-        <pre x-pre><code>&lt;x-listview-item icon="x-file" label="Buttons" href="01-buttons.js"&gt;&lt;/x-listview-item&gt;</code></pre>
+        <x-code language="html" x-pre>&lt;x-listview-item icon="x-file" label="Buttons" href="01-buttons.js"&gt;&lt;/x-listview-item&gt;</x-code>
     `,
 
     state: {

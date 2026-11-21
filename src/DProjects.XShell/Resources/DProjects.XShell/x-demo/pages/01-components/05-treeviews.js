@@ -26,11 +26,11 @@ export default {
         </x-treeview>
         <p>Selected: <strong>{{ state.selected }}</strong></p>
         <p>Last toggled: {{ state.toggled }}</p>
-        <pre x-pre><code>&lt;x-treeview&gt;
+        <x-code language="html" x-pre>&lt;x-treeview&gt;
     &lt;x-treeview-item icon="x-folder" label="Documents" path="/documents" expanded&gt;
         &lt;x-treeview-item icon="x-file" label="Report.pdf" path="/documents/report.pdf"&gt;&lt;/x-treeview-item&gt;
     &lt;/x-treeview-item&gt;
-&lt;/x-treeview&gt;</code></pre>
+&lt;/x-treeview&gt;</x-code>
 
         <h2>Multiple selection</h2>
         <p>Set <code>multiple</code> to allow several items to be selected. Click an item again to deselect it.</p>
@@ -43,10 +43,10 @@ export default {
             <x-treeview-item icon="x-file" label="package.json" path="/package.json"></x-treeview-item>
         </x-treeview>
         <p>Selected items: {{ state.multipleSelection }}</p>
-        <pre x-pre><code>&lt;x-treeview multiple&gt;
+        <x-code language="html" x-pre>&lt;x-treeview multiple&gt;
     &lt;x-treeview-item label="First" path="/first"&gt;&lt;/x-treeview-item&gt;
     &lt;x-treeview-item label="Second" path="/second"&gt;&lt;/x-treeview-item&gt;
-&lt;/x-treeview&gt;</code></pre>
+&lt;/x-treeview&gt;</x-code>
 
 
 <h2>Treeview with columns</h2>
@@ -106,15 +106,15 @@ export default {
 
         <h2>Events</h2>
         <p>The treeview raises <code>select</code> and <code>toggle</code> events. Their event details include the affected item's path.</p>
-        <pre x-pre><code>&lt;x-treeview x-on:select="onSelect" x-on:toggle="onToggle"&gt;
+        <x-code language="html" x-pre>&lt;x-treeview x-on:select="onSelect" x-on:toggle="onToggle"&gt;
     ...
-&lt;/x-treeview&gt;</code></pre>
-        <pre x-pre><code>controller({ state }) {
+&lt;/x-treeview&gt;</x-code>
+        <x-code language="javascript" x-pre>controller({ state }) {
     return {
         onSelect({ event }) { state.selected = event.detail.path; },
         onToggle({ event }) { state.toggled = event.detail.path; }
     };
-}</code></pre>
+}</x-code>
     `,
 
     state: {

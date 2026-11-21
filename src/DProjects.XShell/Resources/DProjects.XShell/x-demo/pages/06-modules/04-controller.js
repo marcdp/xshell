@@ -10,7 +10,7 @@ export default {
 
         <h2>Creating a Module controller</h2>
         <p>Place <code>module.js</code> at the Module root and default-export a class.</p>
-        <pre x-pre><code>export default class {
+        <x-code language="javascript" x-pre>export default class {
     constructor({moduleConfig}) {
         this.id = moduleConfig.id;
         this.label = moduleConfig.label;
@@ -23,21 +23,21 @@ export default {
     stop() {
         // Optional shutdown logic.
     }
-}</code></pre>
+}</x-code>
         <p>XShell discovers the controller through the Module's file inventory, creates an instance, and invokes its <code>start()</code> method during Module initialization.</p>
 
         <h2>Constructor injection</h2>
         <p>Module controllers receive dependencies through constructor injection. The special <code>moduleConfig</code> argument provides the Module's effective configuration.</p>
-        <pre x-pre><code>constructor({moduleConfig}) {
+        <x-code language="javascript" x-pre>constructor({moduleConfig}) {
     this.id = moduleConfig.id;
     this.files = moduleConfig.files;
     this.assetsPath = moduleConfig.assets.path;
-}</code></pre>
+}</x-code>
         <p>Other registered services can also be requested by name, as with Page controllers.</p>
 
         <h2>Lifecycle</h2>
         <p>A Module controller can implement <code>start()</code> and <code>stop()</code>. These methods belong to the Module lifecycle, not the lifecycle of an individual Page.</p>
-        <pre x-pre><code>Module initialization
+        <x-code language="text" x-pre>Module initialization
     |
     +-- Create runtime Module
     +-- Construct optional module.js controller
@@ -49,12 +49,12 @@ Application running
     v
 Module shutdown
     |
-    +-- Invoke stop() if implemented</code></pre>
+    +-- Invoke stop() if implemented</x-code>
         <p>A Module controller is not recreated each time a Page in that Module is opened.</p>
 
         <h2>The cookbook controller</h2>
         <p>The actual <code>x-demo/module.js</code> stores Module information and prepares a summary of its Page resources during startup.</p>
-        <pre x-pre><code>export default class {
+        <x-code language="javascript" x-pre>export default class {
     constructor({moduleConfig}) {
         this.id = moduleConfig.id;
         this.label = moduleConfig.label;
@@ -73,7 +73,7 @@ Module shutdown
 
         this.started = true;
     }
-}</code></pre>
+}</x-code>
         <p>The real controller also exposes <code>getCookbookSummary()</code>, which returns the information displayed below.</p>
 
         <h2>Live Module summary</h2>
@@ -85,7 +85,7 @@ Module shutdown
             <x-datafield label="Page resources">{{ state.pageCount }}</x-datafield>
             <x-datafield label="Navigation source">{{ state.menuSource }}</x-datafield>
         </x-datafields>
-        <pre x-pre><code>controller({moduleController, state}) {
+        <x-code language="javascript" x-pre>controller({moduleController, state}) {
     return {
         load() {
             this.refresh();
@@ -99,7 +99,7 @@ Module shutdown
             state.menuSource = summary.menuSource;
         }
     };
-}</code></pre>
+}</x-code>
 
         <h2>Module versus Page controllers</h2>
         <x-datafields columns="2">

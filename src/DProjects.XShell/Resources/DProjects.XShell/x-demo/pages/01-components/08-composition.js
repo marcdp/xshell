@@ -15,10 +15,10 @@ export default {
             <p>This content is rendered in the card's default slot.</p>
             <x-badge value="Active"></x-badge>
         </x-card>
-        <pre x-pre><code>&lt;x-card&gt;
+        <x-code language="html" x-pre>&lt;x-card&gt;
     &lt;h3&gt;Project summary&lt;/h3&gt;
     &lt;p&gt;Content in the default slot.&lt;/p&gt;
-&lt;/x-card&gt;</code></pre>
+&lt;/x-card&gt;</x-code>
 
         <h2>Named slots</h2>
         <p>Use the <code>slot</code> attribute to place content in a specific region of a Component.</p>
@@ -31,13 +31,13 @@ export default {
             </div>
         </x-card>
         <p>Last action: {{ state.action }}</p>
-        <pre x-pre><code>&lt;x-card&gt;
+        <x-code language="html" x-pre>&lt;x-card&gt;
     &lt;h3 slot="header"&gt;User profile&lt;/h3&gt;
     &lt;p&gt;Profile details&lt;/p&gt;
     &lt;div slot="footer"&gt;
         &lt;x-button label="Edit" command="editProfile"&gt;&lt;/x-button&gt;
     &lt;/div&gt;
-&lt;/x-card&gt;</code></pre>
+&lt;/x-card&gt;</x-code>
 
         <h2>Empty-state composition</h2>
         <p>The <code>x-empty</code> Component provides a default slot for additional content and an <code>actions</code> slot for buttons.</p>
@@ -52,10 +52,10 @@ export default {
                 <x-button label="Remove file" command="removeFile"></x-button>
             </div>
         </x-card>
-        <pre x-pre><code>&lt;x-empty icon="x-folder" label="No files" message="Add a file to continue."&gt;
+        <x-code language="html" x-pre>&lt;x-empty icon="x-folder" label="No files" message="Add a file to continue."&gt;
     &lt;p&gt;Additional information.&lt;/p&gt;
     &lt;x-button slot="actions" label="Add file" command="addFile"&gt;&lt;/x-button&gt;
-&lt;/x-empty&gt;</code></pre>
+&lt;/x-empty&gt;</x-code>
 
         <h2>Toolbar composition</h2>
         <p>The <code>x-toolbar</code> Component arranges arbitrary child Components through its default slot.</p>
@@ -66,11 +66,11 @@ export default {
             <x-button label="Refresh" command="refreshItems"></x-button>
         </x-toolbar>
         <p>Toolbar action: {{ state.toolbarAction }}</p>
-        <pre x-pre><code>&lt;x-toolbar&gt;
+        <x-code language="html" x-pre>&lt;x-toolbar&gt;
     &lt;x-button label="New" command="newItem"&gt;&lt;/x-button&gt;
     &lt;x-divider&gt;&lt;/x-divider&gt;
     &lt;x-button label="Refresh" command="refreshItems"&gt;&lt;/x-button&gt;
-&lt;/x-toolbar&gt;</code></pre>
+&lt;/x-toolbar&gt;</x-code>
 
         <h2>Dropdown composition</h2>
         <p>Use the default slot for the dropdown trigger and the <code>dropdown</code> slot for its expandable content.</p>
@@ -82,12 +82,12 @@ export default {
             </div>
         </x-dropdown>
         <p>Selected action: {{ state.dropdownAction }}</p>
-        <pre x-pre><code>&lt;x-dropdown&gt;
+        <x-code language="html" x-pre>&lt;x-dropdown&gt;
     &lt;x-button label="More actions"&gt;&lt;/x-button&gt;
     &lt;div slot="dropdown"&gt;
         &lt;x-button label="Settings" command="showSettings"&gt;&lt;/x-button&gt;
     &lt;/div&gt;
-&lt;/x-dropdown&gt;</code></pre>
+&lt;/x-dropdown&gt;</x-code>
 
         <h2>Nested Components</h2>
         <p>Components can contain other Components, each managing its own presentation and behavior.</p>
@@ -113,14 +113,14 @@ export default {
             </x-tabs>
         </x-card>
         <p>Settings action: {{ state.settingsAction }}</p>
-        <pre x-pre><code>&lt;x-card&gt;
+        <x-code language="html" x-pre>&lt;x-card&gt;
     &lt;x-tabs&gt;
         &lt;x-tab label="General"&gt;...&lt;/x-tab&gt;
         &lt;x-tab label="Advanced"&gt;
             &lt;x-accordion&gt;...&lt;/x-accordion&gt;
         &lt;/x-tab&gt;
     &lt;/x-tabs&gt;
-&lt;/x-card&gt;</code></pre>
+&lt;/x-card&gt;</x-code>
     `,
 
     state: {

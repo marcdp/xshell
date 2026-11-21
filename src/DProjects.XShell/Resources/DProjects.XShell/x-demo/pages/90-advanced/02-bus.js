@@ -14,16 +14,16 @@ export default {
             <x-button label="Publish event" command="publish"></x-button>
             <x-button label="Publish another event" command="publishOther"></x-button>
         </p>
-        <pre x-pre><code>bus.emit("x-demo:example", {
+        <x-code language="javascript" x-pre>bus.emit("x-demo:example", {
     message: "Hello from XShell",
     count: 1
-});</code></pre>
+});</x-code>
 
         <h2>Subscribing to events</h2>
         <p>Use the injected <code>events</code> helper to register a listener. The helper manages the listener's lifecycle and removes it automatically when the Page unloads.</p>
         <p>Events received: <strong>{{ state.count }}</strong></p>
         <p>Last message: <strong>{{ state.lastMessage }}</strong></p>
-        <pre x-pre><code>controller({bus, events, state}) {
+        <x-code language="javascript" x-pre>controller({bus, events, state}) {
     const receive = event => {
         state.count++;
         state.lastMessage = event.detail.message;
@@ -34,7 +34,7 @@ export default {
             events.on(bus, "x-demo:example", receive);
         }
     };
-}</code></pre>
+}</x-code>
 
         <h2>Event structure</h2>
         <p>Each listener receives an object containing the event name, the emission timestamp, and the payload.</p>
@@ -43,39 +43,39 @@ export default {
             <x-datafield label="Timestamp">{{ state.lastTimestamp }}</x-datafield>
         </x-datafields>
         <x-json x-prop:value="state.lastDetail"></x-json>
-        <pre x-pre><code>{
+        <x-code language="javascript" x-pre>{
     type: "x-demo:example",
     ts: 1234567890,
     detail: {
         message: "Hello from XShell",
         count: 1
     }
-}</code></pre>
+}</x-code>
         <p>The payload must be compatible with structured cloning because the Bus uses <code>MessageChannel</code> internally.</p>
 
         <h2>Multiple subscriptions</h2>
         <p>A Page can subscribe to several event names. Each subscription is managed independently by the same <code>events</code> helper.</p>
-        <pre x-pre><code>load() {
+        <x-code language="javascript" x-pre>load() {
     events.on(bus, "x-demo:example", receive);
     events.on(bus, "x-demo:other", receive);
-}</code></pre>
+}</x-code>
         <p>Both event types in this example update the received-event counter and last-message fields.</p>
 
         <h2>Wildcard listeners</h2>
         <p>Use <code>"*"</code> to subscribe to all events published through the Bus.</p>
         <p>Wildcard notifications received: <strong>{{ state.wildcardCount }}</strong></p>
         <p>Last wildcard event: <strong>{{ state.lastWildcard }}</strong></p>
-        <pre x-pre><code>events.on(bus, "*", event => {
+        <x-code language="javascript" x-pre>events.on(bus, "*", event => {
     // Receives all Bus events.
-});</code></pre>
+});</x-code>
         <p>Wildcard listeners also receive events from other parts of the application, not only events published by this Page.</p>
 
         <h2>Asynchronous delivery</h2>
         <p><code>bus.emit()</code> queues an event and returns immediately. Listeners are notified asynchronously, and their completion is not awaited.</p>
-        <pre x-pre><code>bus.emit("x-demo:example", {message:"Hello"});
+        <x-code language="javascript" x-pre>bus.emit("x-demo:example", {message:"Hello"});
 
 // The event is queued, not delivered synchronously.
-// emit() does not return a completion Promise.</code></pre>
+// emit() does not return a completion Promise.</x-code>
         <p>Use the Bus for notifications rather than request-response operations requiring an immediate result.</p>
 
         <h2>Bus versus DOM events</h2>

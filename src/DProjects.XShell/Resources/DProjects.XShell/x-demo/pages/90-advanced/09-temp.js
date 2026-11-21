@@ -19,11 +19,11 @@ export default {
         <p>Selected: {{ state.selection }}</p>
         <p><x-button label="Upload selected files" command="upload"></x-button></p>
         <x-notice x-if="state.error" type="error" label="Upload error" x-attr:message="state.error"></x-notice>
-        <pre x-pre><code>const results = await temp.upload(files, progress =&gt; {
+        <x-code language="javascript" x-pre>const results = await temp.upload(files, progress =&gt; {
     // progress: {name, loaded, total, percent}
 });
 
-const absoluteUrl = temp.getAbsoluteUrl(results[0]);</code></pre>
+const absoluteUrl = temp.getAbsoluteUrl(results[0]);</x-code>
 
         <h2>Per-file progress and results</h2>
         <p x-if="state.uploads.length == 0">Choose files to prepare the upload list.</p>

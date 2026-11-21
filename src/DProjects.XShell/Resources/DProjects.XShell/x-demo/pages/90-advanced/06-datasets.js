@@ -14,7 +14,7 @@ export default {
 
         <h2>DataSet structure</h2>
         <p>A DataSet is a plain JavaScript object containing a <code>tables</code> array.</p>
-        <pre x-pre><code>{
+        <x-code language="json" x-pre>{
     "tables": [
         {
             "name": "statuses",
@@ -28,17 +28,17 @@ export default {
             ]
         }
     ]
-}</code></pre>
+}</x-code>
         <p>The first table, <code>tables[0]</code>, is the default table by convention. Its rows are ordinary JavaScript objects.</p>
 
         <h2>Module-owned DataSets</h2>
         <p>A Module can expose DataSets by placing JSON files in its <code>datasets</code> directory. This example uses the actual <code>x-demo/datasets/statuses.json</code> file.</p>
-        <pre x-pre><code>x-demo/
+        <x-code language="text" x-pre>x-demo/
     datasets/
         statuses.json
 
 // Logical resource reference:
-dataset:x-demo:statuses</code></pre>
+dataset:x-demo:statuses</x-code>
         <p>The Resolver maps the logical reference to the Module's dataset file, and the Loader fetches and validates its contents.</p>
 
         <h2>Loading a DataSet</h2>
@@ -54,9 +54,9 @@ dataset:x-demo:statuses</code></pre>
             </li>
         </ul>
         <p x-if="state.rows.length == 0">No rows loaded.</p>
-        <pre x-pre><code>const dataset = await loader.load("dataset:x-demo:statuses");
+        <x-code language="javascript" x-pre>const dataset = await loader.load("dataset:x-demo:statuses");
 const table = dataset.tables[0];
-const rows = table.rows;</code></pre>
+const rows = table.rows;</x-code>
 
         <h2>Inspecting tables and columns</h2>
         <p>After loading a DataSet, you can inspect its table names, column definitions, and row counts.</p>
@@ -70,11 +70,11 @@ const rows = table.rows;</code></pre>
                 {{ column.name }} — {{ column.type }}
             </li>
         </ul>
-        <pre x-pre><code>const table = dataset.tables[0];
+        <x-code language="javascript" x-pre>const table = dataset.tables[0];
 
 const name = table.name;
 const columns = table.columns || [];
-const rows = table.rows;</code></pre>
+const rows = table.rows;</x-code>
         <p>Column definitions describe the data but do not automatically convert or validate individual row values.</p>
 
         <h2>Inline static DataSets</h2>
@@ -85,17 +85,17 @@ const rows = table.rows;</code></pre>
                 {{ row.key }} — {{ row.value }}
             </li>
         </ul>
-        <pre x-pre><code>const dataset = await loader.load(
+        <x-code language="javascript" x-pre>const dataset = await loader.load(
     "dataset:static:A=Active|I=Inactive|S=Suspended"
 );
 
 // dataset.tables[0].name === "items"
-// dataset.tables[0].rows[0] === {key:"A", value:"Active"}</code></pre>
+// dataset.tables[0].rows[0] === {key:"A", value:"Active"}</x-code>
         <p>Static DataSets always use an <code>items</code> table with <code>key</code> and <code>value</code> string columns.</p>
 
         <h2>Declarative dependencies</h2>
         <p>If a Page always needs a DataSet, declare it in <code>dependencies</code>. XShell loads it before constructing the Page controller.</p>
-        <pre x-pre><code>export default {
+        <x-code language="javascript" x-pre>export default {
     dependencies: {
         statuses: "dataset:x-demo:statuses"
     },
@@ -107,15 +107,15 @@ const rows = table.rows;</code></pre>
             }
         };
     }
-};</code></pre>
+};</x-code>
         <p>This Page declares the statuses DataSet as a dependency. Its contents are already available to the controller when the Page loads.</p>
         <p>Declaratively available rows: <strong>{{ state.dependencyCount }}</strong></p>
 
         <h2>URL DataSets</h2>
         <p>The <code>dataset:url:</code> resource type loads DataSet-formatted JSON from an application-relative URL.</p>
-        <pre x-pre><code>const dataset = await loader.load(
+        <x-code language="javascript" x-pre>const dataset = await loader.load(
     "dataset:url:api/customers"
-);</code></pre>
+);</x-code>
         <p>The endpoint must return valid DataSet JSON. XShell does not automatically transform arbitrary API responses into DataSet tables.</p>
         <p>For the built-in URL rule, use an application-relative path without a leading slash. Query parameters are not preserved by the current Resolver.</p>
 

@@ -16,11 +16,11 @@ export default {
             <x-button label="OK / Cancel" command="confirmOkCancel"></x-button>
             <x-button label="OK" command="confirmOk"></x-button>
         </p>
-        <pre x-pre><code>await dialog.confirm({
+        <x-code language="javascript" x-pre>await dialog.confirm({
     title: "Confirmation",
     message: "Do you want to continue?",
     variant: "yesno"
-});</code></pre>
+});</x-code>
 
         <h2>Available variants</h2>
         <p>Each variant represents a different kind of decision.</p>
@@ -33,17 +33,17 @@ export default {
 
         <h2>Confirmation options</h2>
         <p>The <code>title</code> identifies the dialog, <code>message</code> explains the decision, and <code>variant</code> defines the available buttons.</p>
-        <pre x-pre><code>const result = await dialog.confirm({
+        <x-code language="javascript" x-pre>const result = await dialog.confirm({
     title: "Delete item",
     message: "Are you sure you want to delete this item?",
     variant: "yesnocancel"
-});</code></pre>
+});</x-code>
 
         <h2>Asynchronous results</h2>
         <p>The <code>dialog.confirm()</code> method returns a Promise that resolves when the dialog closes. The result identifies the selected button.</p>
         <p>Last confirmation: <strong>{{ state.lastAction }}</strong></p>
         <p>Returned value: <strong>{{ state.result }}</strong></p>
-        <pre x-pre><code>controller({dialog, state}) {
+        <x-code language="javascript" x-pre>controller({dialog, state}) {
     return {
         async confirmDelete() {
             const result = await dialog.confirm({
@@ -54,11 +54,11 @@ export default {
             state.result = result;
         }
     };
-}</code></pre>
+}</x-code>
 
         <h2>Handling the result</h2>
         <p>Inspect the returned value before performing the requested action. A Cancel response should not be treated as confirmation.</p>
-        <pre x-pre><code>const result = await dialog.confirm({
+        <x-code language="javascript" x-pre>const result = await dialog.confirm({
     title: "Delete item",
     message: "Delete the selected item?",
     variant: "yesnocancel"
@@ -66,7 +66,7 @@ export default {
 
 if (result === "yes") {
     // Perform the operation.
-}</code></pre>
+}</x-code>
 
         <h2>When to use confirmations</h2>
         <p>Use confirmation dialogs for decisions such as deleting data, discarding changes, or proceeding with an important operation. For informational messages that require only acknowledgment, see <x-anchor href="01-messages.js">Messages</x-anchor>.</p>

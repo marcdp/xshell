@@ -13,9 +13,9 @@ export default {
         <ul>
             <li x-for="item in state.colors">{{ item }}</li>
         </ul>
-        <pre x-pre><code>&lt;ul&gt;
+        <x-code language="html" x-pre>&lt;ul&gt;
     &lt;li x-for="item in state.colors"&gt;{{ item }}&lt;/li&gt;
-&lt;/ul&gt;</code></pre>
+&lt;/ul&gt;</x-code>
 
         <h2>Object properties</h2>
         <p>Array items can be objects. Access their properties using the loop variable.</p>
@@ -24,18 +24,18 @@ export default {
                 <strong>{{ item.name }}</strong> — {{ item.category }}
             </li>
         </ul>
-        <pre x-pre><code>&lt;li x-for="item in state.products" x-key="id"&gt;
+        <x-code language="html" x-pre>&lt;li x-for="item in state.products" x-key="id"&gt;
     {{ item.name }} — {{ item.category }}
-&lt;/li&gt;</code></pre>
+&lt;/li&gt;</x-code>
 
         <h2>Loop indexes</h2>
         <p>Use <code>(item, index)</code> to access both the current item and its position in the collection.</p>
         <ol>
             <li x-for="(item, index) in state.colors">{{ index + 1 }}. {{ item }}</li>
         </ol>
-        <pre x-pre><code>&lt;li x-for="(item, index) in state.colors"&gt;
+        <x-code language="html" x-pre>&lt;li x-for="(item, index) in state.colors"&gt;
     {{ index + 1 }}. {{ item }}
-&lt;/li&gt;</code></pre>
+&lt;/li&gt;</x-code>
 
         <h2>Reactive arrays</h2>
         <p>Change the array to see the rendered list update automatically. This example adds new items, removes the last item, and reverses the list.</p>
@@ -49,31 +49,31 @@ export default {
             <li x-for="item in state.items" x-key="id">{{ item.label }} (ID: {{ item.id }})</li>
         </ul>
         <p x-if="state.items.length == 0">The list is empty.</p>
-        <pre x-pre><code>&lt;ul&gt;
+        <x-code language="html" x-pre>&lt;ul&gt;
     &lt;li x-for="item in state.items" x-key="id"&gt;{{ item.label }}&lt;/li&gt;
-&lt;/ul&gt;</code></pre>
+&lt;/ul&gt;</x-code>
 
         <h2>Stable keys</h2>
         <p>Use <code>x-key</code> to identify each item by a stable property, such as its ID. Stable keys help the renderer associate repeated elements with their corresponding data when items are reordered.</p>
-        <pre x-pre><code>&lt;li x-for="item in state.items" x-key="id"&gt;
+        <x-code language="html" x-pre>&lt;li x-for="item in state.items" x-key="id"&gt;
     {{ item.label }}
-&lt;/li&gt;</code></pre>
+&lt;/li&gt;</x-code>
         <p>Prefer a stable item identifier over its current array position when the list can change order.</p>
 
         <h2>Updating collections</h2>
         <p>Assigning a new array makes changes explicit and triggers reactive updates.</p>
-        <pre x-pre><code>// Add an item.
+        <x-code language="javascript" x-pre>// Add an item.
 state.items = [...state.items, {id:3, label:"Third"}];
 
 // Remove an item.
 state.items = state.items.filter(item => item.id !== 3);
 
 // Reverse the order.
-state.items = [...state.items].reverse();</code></pre>
+state.items = [...state.items].reverse();</x-code>
 
         <h2>Complete Page example</h2>
         <p>A Page can combine a reactive array with controller commands to manage repeated content.</p>
-        <pre x-pre><code>export default {
+        <x-code language="javascript" x-pre>export default {
     template: &#96;
         &lt;x-button label="Add" command="add"&gt;&lt;/x-button&gt;
         &lt;ul&gt;
@@ -92,7 +92,7 @@ state.items = [...state.items].reverse();</code></pre>
             }
         };
     }
-};</code></pre>
+};</x-code>
 
         <h2>Next steps</h2>
         <p>Loops render collections, while event directives let users interact with repeated content. Continue with <x-anchor href="05-events.js">Events and Models</x-anchor>.</p>

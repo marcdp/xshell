@@ -15,46 +15,46 @@ export default {
             <x-datafield type="text" label="Initial value" x-model="state.value"></x-datafield>
         </x-datafields>
         <p><x-button class="submit" label="Open custom dialog" command="openCustom"></x-button></p>
-        <pre x-pre><code>const result = await dialog.open({
+        <x-code language="javascript" x-pre>const result = await dialog.open({
     href: "page:x-demo:/pages/04-dialogs/custom-dialog.js",
     title: "Custom dialog",
     context: {
         message: state.message,
         value: state.value
     }
-});</code></pre>
+});</x-code>
 
         <h2>Context passing</h2>
         <p>The <code>context</code> object supplies initial values to the custom Page. The child declares the corresponding properties using <code>context:true</code>.</p>
-        <pre x-pre><code>export default {
+        <x-code language="javascript" x-pre>export default {
     contract: {
         properties: {
             message: {type:"string", default:"", state:true, context:true},
             value: {type:"string", default:"", state:true, context:true}
         }
     }
-};</code></pre>
+};</x-code>
 
         <h2>Returning a result</h2>
         <p>The child Page calls <code>page.close(result)</code> to close the dialog and resolve the Promise returned by <code>dialog.open()</code>.</p>
         <p>Saving returns an object containing the edited value. Cancelling returns <code>null</code>.</p>
-        <pre x-pre><code>controller({page, state}) {
+        <x-code language="javascript" x-pre>controller({page, state}) {
     return {
         save() {page.close({accepted:true, value:state.value});},
         cancel() {page.close(null);}
     };
-}</code></pre>
+}</x-code>
 
         <h2>Last result</h2>
         <p>Dialog status: <strong>{{ state.status }}</strong></p>
         <pre x-text="state.resultText"></pre>
-        <pre x-pre><code>const result = await dialog.open(options);
+        <x-code language="javascript" x-pre>const result = await dialog.open(options);
 
 if (result === null) {
     // The dialog was cancelled.
 } else {
     // Use result.value.
-}</code></pre>
+}</x-code>
 
         <h2>When to use custom dialogs</h2>
         <p>Use custom dialogs when predefined message, confirmation, prompt, or picker dialogs are insufficient. A custom dialog can contain its own form fields, state, and controller commands.</p>

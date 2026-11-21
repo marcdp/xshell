@@ -17,7 +17,7 @@ export default {
         </p>
         <p>Current JavaScript:</p>
         <pre x-text="state.javascript"></pre>
-        <pre x-pre><code>&lt;x-code-editor mode="javascript" x-model="state.javascript"&gt;&lt;/x-code-editor&gt;</code></pre>
+        <x-code language="html" x-pre>&lt;x-code-editor mode="javascript" x-model="state.javascript"&gt;&lt;/x-code-editor&gt;</x-code>
 
         <h2>Syntax modes</h2>
         <p>The same Component supports different languages through its <code>mode</code> property.</p>
@@ -27,15 +27,15 @@ export default {
             <x-datafield type="xml" label="XML" x-model="state.xml"></x-datafield>
             <x-datafield type="markdown" label="Markdown" x-model="state.markdown"></x-datafield>
         </x-datafields>
-        <pre x-pre><code>&lt;x-datafield type="css" label="CSS" x-model="state.css"&gt;&lt;/x-datafield&gt;
+        <x-code language="html" x-pre>&lt;x-datafield type="css" label="CSS" x-model="state.css"&gt;&lt;/x-datafield&gt;
 &lt;x-datafield type="html" label="HTML" x-model="state.html"&gt;&lt;/x-datafield&gt;
 &lt;x-datafield type="xml" label="XML" x-model="state.xml"&gt;&lt;/x-datafield&gt;
-&lt;x-datafield type="markdown" label="Markdown" x-model="state.markdown"&gt;&lt;/x-datafield&gt;</code></pre>
+&lt;x-datafield type="markdown" label="Markdown" x-model="state.markdown"&gt;&lt;/x-datafield&gt;</x-code>
 
         <h2>Readonly editor</h2>
         <p>Use <code>readonly</code> to display source code without allowing modifications.</p>
         <x-code-editor mode="javascript" readonly x-prop:value="state.readonlyCode"></x-code-editor>
-        <pre x-pre><code>&lt;x-code-editor mode="javascript" readonly x-prop:value="state.readonlyCode"&gt;&lt;/x-code-editor&gt;</code></pre>
+        <x-code language="html" x-pre>&lt;x-code-editor mode="javascript" readonly x-prop:value="state.readonlyCode"&gt;&lt;/x-code-editor&gt;</x-code>
 
         <h2>Rich-text editor</h2>
         <p>Use <code>x-richtext</code> to edit formatted HTML content. The toolbar supports text formatting, alignment, lists, and undo/redo.</p>
@@ -46,20 +46,20 @@ export default {
         </p>
         <p>HTML value:</p>
         <pre x-text="state.richtext"></pre>
-        <pre x-pre><code>&lt;x-richtext class="standalone" x-model="state.richtext"&gt;&lt;/x-richtext&gt;</code></pre>
+        <x-code language="html" x-pre>&lt;x-richtext class="standalone" x-model="state.richtext"&gt;&lt;/x-richtext&gt;</x-code>
 
         <h2>Rich text as a datafield</h2>
         <p>Set <code>type="richtext"</code> to use the rich-text editor inside a form field.</p>
         <x-datafields columns="1">
             <x-datafield type="richtext" label="Description" x-model="state.description"></x-datafield>
         </x-datafields>
-        <pre x-pre><code>&lt;x-datafield type="richtext" label="Description" x-model="state.description"&gt;&lt;/x-datafield&gt;</code></pre>
+        <x-code language="html" x-pre>&lt;x-datafield type="richtext" label="Description" x-model="state.description"&gt;&lt;/x-datafield&gt;</x-code>
 
         <h2>Change events</h2>
         <p>Both editors expose a <code>change</code> event containing <code>oldValue</code> and <code>newValue</code>.</p>
         <x-code-editor mode="javascript" x-on:change="onCodeChange"></x-code-editor>
         <p>Last change: {{ state.lastChange }}</p>
-        <pre x-pre><code>&lt;x-code-editor mode="javascript" x-on:change="onCodeChange"&gt;&lt;/x-code-editor&gt;</code></pre>
+        <x-code language="html" x-pre>&lt;x-code-editor mode="javascript" x-on:change="onCodeChange"&gt;&lt;/x-code-editor&gt;</x-code>
     `,
 
     state: {

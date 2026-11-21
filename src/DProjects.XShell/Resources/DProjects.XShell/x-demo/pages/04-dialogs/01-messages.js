@@ -16,11 +16,11 @@ export default {
             <x-button label="Warning" command="showWarning"></x-button>
             <x-button label="Error" command="showError"></x-button>
         </p>
-        <pre x-pre><code>await dialog.message({
+        <x-code language="javascript" x-pre>await dialog.message({
     type: "success",
     title: "Saved",
     message: "The changes were saved successfully."
-});</code></pre>
+});</x-code>
 
         <h2>Message options</h2>
         <p>The <code>type</code> controls the message appearance, <code>title</code> identifies the dialog, and <code>message</code> contains its content.</p>
@@ -34,7 +34,7 @@ export default {
         <p>The <code>dialog.message()</code> method returns a Promise. Use <code>await</code> to continue after the dialog closes. A message dialog normally returns <code>"ok"</code>.</p>
         <p>Last message: <strong>{{ state.lastMessage }}</strong></p>
         <p>Last result: <strong>{{ state.result }}</strong></p>
-        <pre x-pre><code>controller({dialog, state}) {
+        <x-code language="javascript" x-pre>controller({dialog, state}) {
     return {
         async showSuccess() {
             state.result = await dialog.message({
@@ -44,7 +44,7 @@ export default {
             });
         }
     };
-}</code></pre>
+}</x-code>
 
         <h2>When to use messages</h2>
         <p>Use message dialogs when the user needs to acknowledge important information. For non-blocking status updates, consider <code>x-notice</code> or the Toast service instead.</p>

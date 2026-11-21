@@ -14,7 +14,7 @@ export default {
             <x-datafield label="Page source">{{ state.src }}</x-datafield>
             <x-datafield label="Area ID">{{ state.areaId }}</x-datafield>
         </x-datafields>
-        <pre x-pre><code>const areaId = areas.resolveAreaId(page.src);</code></pre>
+        <x-code language="javascript" x-pre>const areaId = areas.resolveAreaId(page.src);</x-code>
 
         <h2>Menu item resolution</h2>
         <p>Use <code>areas.resolveHref()</code> to find the menu item corresponding to a Page resource within an Area.</p>
@@ -22,10 +22,10 @@ export default {
             <x-datafield label="Friendly path">{{ state.path }}</x-datafield>
             <x-datafield label="Canonical href">{{ state.href }}</x-datafield>
         </x-datafields>
-        <pre x-pre><code>const item = areas.resolveHref(page.src, areaId);
+        <x-code language="javascript" x-pre>const item = areas.resolveHref(page.src, areaId);
 
 item.path
-item.href</code></pre>
+item.href</x-code>
         <p>The friendly <code>path</code> is used for navigation, while the canonical <code>href</code> identifies the resource associated with the menu item.</p>
 
         <h2>Reverse resolution</h2>
@@ -34,8 +34,8 @@ item.href</code></pre>
             <x-datafield label="Input path">{{ state.path }}</x-datafield>
             <x-datafield label="Resolved href">{{ state.resolved }}</x-datafield>
         </x-datafields>
-        <pre x-pre><code>const byPath = areas.resolvePath(item.path);
-const href = byPath?.href;</code></pre>
+        <x-code language="javascript" x-pre>const byPath = areas.resolvePath(item.path);
+const href = byPath?.href;</x-code>
 
         <h2>Resolution sequence</h2>
         <p>The complete resolution process consists of three steps:</p>
@@ -44,9 +44,9 @@ const href = byPath?.href;</code></pre>
             <li>Resolve the Page source to its matching menu item.</li>
             <li>Resolve the menu item's friendly path back to its canonical href.</li>
         </ol>
-        <pre x-pre><code>const areaId = areas.resolveAreaId(page.src);
+        <x-code language="javascript" x-pre>const areaId = areas.resolveAreaId(page.src);
 const item = areas.resolveHref(page.src, areaId);
-const byPath = item?.path ? areas.resolvePath(item.path) : null;</code></pre>
+const byPath = item?.path ? areas.resolvePath(item.path) : null;</x-code>
         <p>Resolution result: <strong>{{ state.matches ? "The canonical hrefs match" : "No matching canonical href" }}</strong></p>
 
         <h2>Navigation and Page loading</h2>

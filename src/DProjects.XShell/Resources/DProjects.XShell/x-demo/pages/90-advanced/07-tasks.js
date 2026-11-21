@@ -22,7 +22,7 @@ export default {
             <x-button label="Start background Task" command="startBackground"></x-button>
             <x-button label="Cancel inspected Task" command="cancelCurrent"></x-button>
         </p>
-        <pre x-pre><code>const task = tasks.run({
+        <x-code language="javascript" x-pre>const task = tasks.run({
     title: "Simulated operation",
     background: false,
     handler: async ({signal, setProgress, info}) =&gt; {
@@ -34,7 +34,7 @@ export default {
 });
 
 await task.wait();
-const result = await task.getResult();</code></pre>
+const result = await task.getResult();</x-code>
 
         <h2>Inspected Task</h2>
         <p x-if="!state.hasCurrent">Start a Task or inspect one from the registry.</p>

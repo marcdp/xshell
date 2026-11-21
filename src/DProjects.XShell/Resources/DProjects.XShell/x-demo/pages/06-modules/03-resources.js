@@ -10,7 +10,7 @@ export default {
 
         <h2>Organizing resources</h2>
         <p>A Module can contain different resource types:</p>
-        <pre x-pre><code>my-module/
+        <x-code language="text" x-pre>my-module/
 ├── manifest.jsonc
 ├── module.js
 ├── pages/
@@ -21,16 +21,16 @@ export default {
 │   └── statuses.json
 ├── icons/
 ├── styles/
-└── ...</code></pre>
+└── ...</x-code>
         <p>Not every Module needs all of these directories. The required structure depends on the resources it provides.</p>
 
         <h2>Resource identifiers</h2>
         <p>Consumers request resources through logical references rather than hardcoded asset URLs.</p>
-        <pre x-pre><code>page:x-demo:/pages/index.js
+        <x-code language="text" x-pre>page:x-demo:/pages/index.js
 dataset:x-demo:statuses
 
 component:x-button
-icon:x-file</code></pre>
+icon:x-file</x-code>
         <p>The first two references explicitly identify <code>x-demo</code>. The Component and icon examples use global logical names supplied by the <code>x</code> Module.</p>
 
         <h2>Physical and virtual locations</h2>
@@ -41,12 +41,12 @@ icon:x-file</code></pre>
             <x-datafield label="Virtual assets path">{{ state.assetsPath }}</x-datafield>
             <x-datafield label="Inventory entries">{{ state.fileCount }}</x-datafield>
         </x-datafields>
-        <pre x-pre><code>const module = config.modules["x-demo"];
+        <x-code language="javascript" x-pre>const module = config.modules["x-demo"];
 
 const definitionUrl = module.configUrl;
 const assetsUrl = module.assets.url;
 const assetsPath = module.assets.path;
-const files = module.files;</code></pre>
+const files = module.files;</x-code>
 
         <h2>Resource inventory</h2>
         <p>Each Module has an effective file inventory. It describes the files available under its asset namespace.</p>
@@ -65,12 +65,12 @@ const files = module.files;</code></pre>
             <x-datafield label="Selected loader">{{ state.loaderName }}</x-datafield>
             <x-datafield label="Resolved URL">{{ state.datasetUrl }}</x-datafield>
         </x-datafields>
-        <pre x-pre><code>const result = resolver.resolve(
+        <x-code language="javascript" x-pre>const result = resolver.resolve(
     "dataset:x-demo:statuses"
 );
 
 // result.url
-// result.definition.loader</code></pre>
+// result.definition.loader</x-code>
         <p>Resolution determines where the resource is and which loader handles it. It does not load the DataSet itself.</p>
 
         <h2>Loading the resource</h2>
@@ -80,11 +80,11 @@ const files = module.files;</code></pre>
         <ul>
             <li x-for="row in state.rows" x-key="code">{{ row.code }} — {{ row.label }}</li>
         </ul>
-        <pre x-pre><code>const dataset = await loader.load(
+        <x-code language="javascript" x-pre>const dataset = await loader.load(
     "dataset:x-demo:statuses"
 );
 
-const rows = dataset.tables[0].rows;</code></pre>
+const rows = dataset.tables[0].rows;</x-code>
 
         <p>Continue with <x-anchor href="04-controller.js">Module Controller</x-anchor> to see how a Module uses its configuration and inventory at startup.</p>
     `,

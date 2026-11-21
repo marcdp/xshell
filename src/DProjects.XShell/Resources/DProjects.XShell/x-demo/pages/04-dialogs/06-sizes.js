@@ -17,12 +17,12 @@ export default {
             <x-button label="size-wide" command="confirmSize" data-size="wide"></x-button>
             <x-button label="size-full" command="confirmSize" data-size="full"></x-button>
         </p>
-        <pre x-pre><code>await dialog.confirm({
+        <x-code language="javascript" x-pre>await dialog.confirm({
     title: "Compact dialog",
     message: "This dialog uses size-compact.",
     variant: "ok",
     classes: ["size-compact"]
-});</code></pre>
+});</x-code>
 
         <h2>Dialog methods</h2>
         <p>Pass <code>classes</code> in the options for each method.</p>

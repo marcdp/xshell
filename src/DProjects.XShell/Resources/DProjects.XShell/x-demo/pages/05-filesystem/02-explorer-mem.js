@@ -7,11 +7,6 @@ export default {
     },
 
     template: `
-        <p>The <code>mem:</code> filesystem stores directories and files in memory. This example creates a small sample project before displaying the explorer.</p>
-
-        <h2>Sample filesystem</h2>
-        <p>The example contains documents, images, source files, and nested directories.</p>
-
         <x-filesystem root x-prop:src="state.src" x-prop:path="state.path"></x-filesystem>
 
     `,

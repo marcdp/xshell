@@ -15,10 +15,10 @@ export default {
             <p>A card can contain text, Components, and other HTML elements.</p>
             <x-badge value="Active"></x-badge>
         </x-card>
-        <pre x-pre><code>&lt;x-card&gt;
+        <x-code language="html" x-pre>&lt;x-card&gt;
     &lt;h3&gt;Simple card&lt;/h3&gt;
     &lt;p&gt;Card content.&lt;/p&gt;
-&lt;/x-card&gt;</code></pre>
+&lt;/x-card&gt;</x-code>
 
         <h2>Card slots</h2>
         <p>Cards provide <code>header</code>, default content, and <code>footer</code> slots.</p>
@@ -31,13 +31,13 @@ export default {
             </div>
         </x-card>
         <p>Last action: {{ state.action }}</p>
-        <pre x-pre><code>&lt;x-card&gt;
+        <x-code language="html" x-pre>&lt;x-card&gt;
     &lt;h3 slot="header"&gt;User profile&lt;/h3&gt;
     &lt;p&gt;Profile details&lt;/p&gt;
     &lt;div slot="footer"&gt;
         &lt;x-button label="Edit" command="editProfile"&gt;&lt;/x-button&gt;
     &lt;/div&gt;
-&lt;/x-card&gt;</code></pre>
+&lt;/x-card&gt;</x-code>
 
         <h2>Tabs</h2>
         <p>Use <code>x-tabs</code> and <code>x-tab</code> to organize related content into selectable panels.</p>
@@ -63,11 +63,11 @@ export default {
                 <p>Setting enabled: {{ state.enabled }}</p>
             </x-tab>
         </x-tabs>
-        <pre x-pre><code>&lt;x-tabs&gt;
+        <x-code language="html" x-pre>&lt;x-tabs&gt;
     &lt;x-tab label="Overview"&gt;Overview content&lt;/x-tab&gt;
     &lt;x-tab label="Details"&gt;Details content&lt;/x-tab&gt;
     &lt;x-tab label="Settings"&gt;Settings content&lt;/x-tab&gt;
-&lt;/x-tabs&gt;</code></pre>
+&lt;/x-tabs&gt;</x-code>
 
         <h2>Initial tab selection</h2>
         <p>Use <code>selected-index</code> to specify which tab is initially displayed. Indexes start at zero.</p>
@@ -76,10 +76,10 @@ export default {
             <x-tab label="Second"><p>The second panel is selected initially.</p></x-tab>
             <x-tab label="Third"><p>Third panel.</p></x-tab>
         </x-tabs>
-        <pre x-pre><code>&lt;x-tabs selected-index="1"&gt;
+        <x-code language="html" x-pre>&lt;x-tabs selected-index="1"&gt;
     &lt;x-tab label="First"&gt;First panel&lt;/x-tab&gt;
     &lt;x-tab label="Second"&gt;Second panel&lt;/x-tab&gt;
-&lt;/x-tabs&gt;</code></pre>
+&lt;/x-tabs&gt;</x-code>
 
         <h2>Accordions</h2>
         <p>Use <code>x-accordion</code> to group expandable panels. Opening one panel closes the other panels in the group.</p>
@@ -94,14 +94,14 @@ export default {
                 <p>Advanced settings and optional configuration.</p>
             </x-accordion-panel>
         </x-accordion>
-        <pre x-pre><code>&lt;x-accordion&gt;
+        <x-code language="html" x-pre>&lt;x-accordion&gt;
     &lt;x-accordion-panel label="General" expanded&gt;
         General information
     &lt;/x-accordion-panel&gt;
     &lt;x-accordion-panel label="Details"&gt;
         Additional details
     &lt;/x-accordion-panel&gt;
-&lt;/x-accordion&gt;</code></pre>
+&lt;/x-accordion&gt;</x-code>
 
         <h2>Accordion panel icons</h2>
         <p>Panels support an optional <code>icon</code> property and a <code>toolbar</code> slot.</p>
@@ -113,18 +113,18 @@ export default {
                 <p>Settings content.</p>
             </x-accordion-panel>
         </x-accordion>
-        <pre x-pre><code>&lt;x-accordion-panel label="Information" icon="x-info"&gt;
+        <x-code language="html" x-pre>&lt;x-accordion-panel label="Information" icon="x-info"&gt;
     Information content
-&lt;/x-accordion-panel&gt;</code></pre>
+&lt;/x-accordion-panel&gt;</x-code>
 
         <h2>Dividers</h2>
         <p>Use <code>x-divider</code> to visually separate related sections.</p>
         <p>First section</p>
         <x-divider></x-divider>
         <p>Second section</p>
-        <pre x-pre><code>&lt;p&gt;First section&lt;/p&gt;
+        <x-code language="html" x-pre>&lt;p&gt;First section&lt;/p&gt;
 &lt;x-divider&gt;&lt;/x-divider&gt;
-&lt;p&gt;Second section&lt;/p&gt;</code></pre>
+&lt;p&gt;Second section&lt;/p&gt;</x-code>
 
     `,
 

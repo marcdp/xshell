@@ -12,12 +12,12 @@ export default {
         <p>The <code>x-if</code> directive includes an element only while its expression is truthy.</p>
         <x-datafield type="checkbox" label="Show details" x-model="state.visible"></x-datafield>
         <p x-if="state.visible">These details are rendered because <code>state.visible</code> is true.</p>
-        <pre x-pre><code>&lt;p x-if="state.visible"&gt;Visible when true&lt;/p&gt;</code></pre>
+        <x-code language="html" x-pre>&lt;p x-if="state.visible"&gt;Visible when true&lt;/p&gt;</x-code>
 
         <h2>Conditional visibility</h2>
         <p>The <code>x-show</code> directive keeps an element in the DOM and controls whether it is displayed.</p>
         <p x-show="state.visible">This element remains in the DOM even when hidden.</p>
-        <pre x-pre><code>&lt;p x-show="state.visible"&gt;Hidden when false&lt;/p&gt;</code></pre>
+        <x-code language="html" x-pre>&lt;p x-show="state.visible"&gt;Hidden when false&lt;/p&gt;</x-code>
 
         <h2>Rendering versus visibility</h2>
         <p>Both directives respond to reactive state, but they behave differently.</p>
@@ -34,10 +34,10 @@ export default {
         <x-notice x-elseif="state.status == 'warning'" type="warning" label="Warning" message="The operation requires attention."></x-notice>
         <x-notice x-elseif="state.status == 'error'" type="error" label="Error" message="The operation failed."></x-notice>
         <x-notice x-else type="info" label="Information" message="No operation has been completed."></x-notice>
-        <pre x-pre><code>&lt;p x-if="state.status == 'success'"&gt;Success&lt;/p&gt;
+        <x-code language="html" x-pre>&lt;p x-if="state.status == 'success'"&gt;Success&lt;/p&gt;
 &lt;p x-elseif="state.status == 'warning'"&gt;Warning&lt;/p&gt;
 &lt;p x-elseif="state.status == 'error'"&gt;Error&lt;/p&gt;
-&lt;p x-else&gt;No result&lt;/p&gt;</code></pre>
+&lt;p x-else&gt;No result&lt;/p&gt;</x-code>
         <p>The first matching condition is rendered. The <code>x-else</code> branch handles all remaining cases.</p>
 
         <h2>Conditional expressions</h2>
@@ -46,13 +46,13 @@ export default {
         <p x-if="state.quantity <= 0">Out of stock.</p>
         <p x-elseif="state.quantity < 5">Low stock: {{ state.quantity }} remaining.</p>
         <p x-else>In stock: {{ state.quantity }} available.</p>
-        <pre x-pre><code>&lt;p x-if="state.quantity &lt;= 0"&gt;Out of stock&lt;/p&gt;
+        <x-code language="html" x-pre>&lt;p x-if="state.quantity &lt;= 0"&gt;Out of stock&lt;/p&gt;
 &lt;p x-elseif="state.quantity &lt; 5"&gt;Low stock&lt;/p&gt;
-&lt;p x-else&gt;In stock&lt;/p&gt;</code></pre>
+&lt;p x-else&gt;In stock&lt;/p&gt;</x-code>
 
         <h2>Complete example</h2>
         <p>A conditional Page can work entirely through reactive state and template directives without requiring a controller.</p>
-        <pre x-pre><code>export default {
+        <x-code language="javascript" x-pre>export default {
     template: &#96;
         &lt;x-datafield type="checkbox" x-model="state.visible"&gt;&lt;/x-datafield&gt;
         &lt;p x-if="state.visible"&gt;Visible content&lt;/p&gt;
@@ -61,7 +61,7 @@ export default {
     state: {
         visible: true
     }
-};</code></pre>
+};</x-code>
 
         <h2>Next steps</h2>
         <p>Conditional directives control which content appears. To render repeated content from an array, continue with <x-anchor href="04-loops.js">Loops</x-anchor>.</p>

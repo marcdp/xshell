@@ -10,11 +10,11 @@ export default {
             and use <code>x-form wizard</code> when each step contains validated form fields.
         </p>
 
-        <pre x-pre><code>x-wizard
+        <x-code language="text" x-pre>x-wizard
     → navigation between arbitrary panels
 
 x-form wizard
-    → navigation + validation + final form submission</code></pre>
+    → navigation + validation + final form submission</x-code>
 
 
         <h2>Standalone wizard</h2>
@@ -120,7 +120,7 @@ x-form wizard
         </p>
 
 
-        <pre x-pre><code>&lt;x-wizard&gt;
+        <x-code language="html" x-pre>&lt;x-wizard&gt;
 
     &lt;x-wizard-panel
         label="Account"
@@ -144,7 +144,7 @@ x-form wizard
         label="Finish"&gt;
     &lt;/x-button&gt;
 
-&lt;/x-wizard&gt;</code></pre>
+&lt;/x-wizard&gt;</x-code>
 
 
         <x-divider></x-divider>
@@ -269,7 +269,7 @@ x-form wizard
         </x-form>
 
 
-        <pre x-pre><code>&lt;x-form wizard&gt;
+        <x-code language="html" x-pre>&lt;x-form wizard&gt;
 
     &lt;div
         label="Account"
@@ -301,7 +301,7 @@ x-form wizard
         command="submit"&gt;
     &lt;/x-button&gt;
 
-&lt;/x-form&gt;</code></pre>
+&lt;/x-form&gt;</x-code>
 
 
         <x-divider></x-divider>
@@ -407,7 +407,7 @@ x-form wizard
         </x-form>
 
 
-        <pre x-pre><code>&lt;x-form
+        <x-code language="html" x-pre>&lt;x-form
     wizard
     wizard-direction="vertical"&gt;
 
@@ -423,7 +423,7 @@ x-form wizard
         ...
     &lt;/div&gt;
 
-&lt;/x-form&gt;</code></pre>
+&lt;/x-form&gt;</x-code>
 
 
         <x-divider></x-divider>

@@ -14,9 +14,9 @@ export default {
             <code>meta.classes</code>.
         </p>
 
-        <pre x-pre><code>meta: {
+        <x-code language="javascript" x-pre>meta: {
     classes: ["size-full"]
-}</code></pre>
+}</x-code>
 
         <p>
             The active layout applies the declared classes

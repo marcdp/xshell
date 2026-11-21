@@ -16,11 +16,11 @@ export default {
 
         <h2>Declarative dependencies</h2>
         <p>Use a Page's <code>dependencies</code> property for resources known when the Page definition is loaded.</p>
-        <pre x-pre><code>dependencies: {
+        <x-code language="javascript" x-pre>dependencies: {
     button: "component:x-button",
     fileIcon: "icon:x-file",
     statuses: "dataset:x-demo:statuses"
-}</code></pre>
+}</x-code>
         <p>The first two resources come from the referenced <code>x</code> Module. The DataSet belongs to <code>x-demo</code>.</p>
 
         <h2>Accessing loaded dependencies</h2>
@@ -31,7 +31,7 @@ export default {
             <x-datafield label="DataSet table">{{ state.tableName }}</x-datafield>
             <x-datafield label="DataSet rows">{{ state.rowCount }}</x-datafield>
         </x-datafields>
-        <pre x-pre><code>controller({dependencies, state}) {
+        <x-code language="javascript" x-pre>controller({dependencies, state}) {
     return {
         load() {
             state.buttonName = dependencies.button.name;
@@ -40,7 +40,7 @@ export default {
                 dependencies.statuses.tables[0].rows.length;
         }
     };
-}</code></pre>
+}</x-code>
 
         <h2>Using the DataSet</h2>
         <p>The DataSet is already available through the declarative dependency. No additional loading step is required to display its rows.</p>
@@ -59,7 +59,7 @@ export default {
 
         <h2>Module references versus resource dependencies</h2>
         <p>These two declarations serve different purposes.</p>
-        <pre x-pre><code>// Application manifest.jsonc
+        <x-code language="javascript" x-pre>// Application manifest.jsonc
 "modules": {
     "x": {
         "configUrl": "url:../x/manifest.jsonc"
@@ -69,7 +69,7 @@ export default {
 // Individual Page
 dependencies: {
     icon: "icon:x-file"
-}</code></pre>
+}</x-code>
         <p>The Module reference makes the provider Module available during bootstrap. The Page dependency requests one of its resources.</p>
 
         <h2>When to use each approach</h2>

@@ -10,17 +10,17 @@ export default {
 
         <h2>Minimal Page</h2>
         <p>The simplest Page needs only a <code>template</code>. It does not require state or a controller.</p>
-        <pre x-pre><code>export default {
+        <x-code language="javascript" x-pre>export default {
     template: &#96;
         &lt;p&gt;Hello world!&lt;/p&gt;
     &#96;
-};</code></pre>
+};</x-code>
         <p>Result:</p>
         <p>Hello world!</p>
 
         <h2>Page metadata</h2>
         <p>Use <code>meta</code> to describe the Page. The <code>title</code> and <code>description</code> provide metadata without adding logic to the implementation.</p>
-        <pre x-pre><code>export default {
+        <x-code language="javascript" x-pre>export default {
     meta: {
         title: "Hello",
         description: "A simple XShell Page."
@@ -29,7 +29,7 @@ export default {
     template: &#96;
         &lt;p&gt;Hello world!&lt;/p&gt;
     &#96;
-};</code></pre>
+};</x-code>
 
         <h2>Optional features</h2>
         <p>Pages can also define reactive <code>state</code> and a <code>controller</code> when they need interactive behavior.</p>

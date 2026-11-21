@@ -30,7 +30,7 @@ export default {
         <p>Use <code>x-style:property</code> to bind an individual CSS property to reactive state.</p>
         <x-datafield type="select" label="Text color" x-prop:domain="state.colors" x-model="state.color"></x-datafield>
         <p x-style:color="state.color">This text changes color when the selected value changes.</p>
-        <pre x-pre><code>&lt;p x-style:color="state.color"&gt;Reactive color&lt;/p&gt;</code></pre>
+        <x-code language="html" x-pre>&lt;p x-style:color="state.color"&gt;Reactive color&lt;/p&gt;</x-code>
 
         <h2>Multiple style properties</h2>
         <p>Bind several CSS properties independently to the same element.</p>
@@ -41,10 +41,10 @@ export default {
         <div class="demo-preview" x-style:background-color="state.background" x-style:text-align="state.alignment">
             This preview uses two reactive style properties.
         </div>
-        <pre x-pre><code>&lt;div x-style:background-color="state.background"
+        <x-code language="html" x-pre>&lt;div x-style:background-color="state.background"
      x-style:text-align="state.alignment"&gt;
     Reactive preview
-&lt;/div&gt;</code></pre>
+&lt;/div&gt;</x-code>
 
         <h2>Dynamic CSS classes</h2>
         <p>Use an attribute binding to update an element's CSS class from state. This is useful when several visual properties should change together.</p>
@@ -52,14 +52,14 @@ export default {
         <p x-attr:class="state.highlighted ? 'demo-highlight' : 'demo-muted'">
             This element changes between highlighted and muted styles.
         </p>
-        <pre x-pre><code>&lt;p x-attr:class="state.highlighted ? 'demo-highlight' : 'demo-muted'"&gt;
+        <x-code language="html" x-pre>&lt;p x-attr:class="state.highlighted ? 'demo-highlight' : 'demo-muted'"&gt;
     Styled content
-&lt;/p&gt;</code></pre>
+&lt;/p&gt;</x-code>
 
         <h2>Page-level styles</h2>
         <p>Define reusable CSS rules in a Page's <code>style</code> property instead of repeating inline styles throughout the template.</p>
         <div class="demo-preview">This container uses the Page's <code>.demo-preview</code> class.</div>
-        <pre x-pre><code>export default {
+        <x-code language="javascript" x-pre>export default {
     style: &#96;
         .demo-preview {
             padding: 1rem;
@@ -70,7 +70,7 @@ export default {
     template: &#96;
         &lt;div class="demo-preview"&gt;Styled content&lt;/div&gt;
     &#96;
-};</code></pre>
+};</x-code>
 
         <h2>State-driven appearance</h2>
         <p>Styles can respond to application state without directly manipulating DOM elements.</p>
@@ -81,9 +81,9 @@ export default {
         <div class="demo-preview" x-style:opacity="state.enabled ? 1 : 0.4">
             Appearance: {{ state.enabled ? "Enabled" : "Disabled" }}
         </div>
-        <pre x-pre><code>&lt;div x-style:opacity="state.enabled ? 1 : 0.4"&gt;
+        <x-code language="html" x-pre>&lt;div x-style:opacity="state.enabled ? 1 : 0.4"&gt;
     {{ state.enabled ? "Enabled" : "Disabled" }}
-&lt;/div&gt;</code></pre>
+&lt;/div&gt;</x-code>
 
         <h2>When to use each approach</h2>
         <p>Use <code>x-style:</code> for individual CSS properties that depend on state. Use reusable CSS classes for visual variants, and the Page's <code>style</code> property for its own presentation rules.</p>

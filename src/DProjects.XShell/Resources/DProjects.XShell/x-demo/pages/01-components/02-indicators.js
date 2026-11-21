@@ -16,8 +16,8 @@ export default {
             <x-icon icon="x-warning"></x-icon> Warning
             <x-icon icon="x-error"></x-icon> Error
         </p>
-        <pre x-pre><code>&lt;x-icon icon="x-info"&gt;&lt;/x-icon&gt;
-&lt;x-icon icon="x-success"&gt;&lt;/x-icon&gt;</code></pre>
+        <x-code language="html" x-pre>&lt;x-icon icon="x-info"&gt;&lt;/x-icon&gt;
+&lt;x-icon icon="x-success"&gt;&lt;/x-icon&gt;</x-code>
 
         <h2>Badges</h2>
         <p>Use <code>x-badge</code> to display short values such as counts or notifications.</p>
@@ -26,8 +26,8 @@ export default {
             Notifications <x-badge value="12"></x-badge>
             Status <x-badge class="plain" value="New"></x-badge>
         </p>
-        <pre x-pre><code>&lt;x-badge value="3"&gt;&lt;/x-badge&gt;
-&lt;x-badge class="plain" value="New"&gt;&lt;/x-badge&gt;</code></pre>
+        <x-code language="html" x-pre>&lt;x-badge value="3"&gt;&lt;/x-badge&gt;
+&lt;x-badge class="plain" value="New"&gt;&lt;/x-badge&gt;</x-code>
 
         <h2>Notices</h2>
         <p>Use <code>x-notice</code> to communicate information, success, warnings, errors, or ongoing work.</p>
@@ -36,8 +36,8 @@ export default {
         <x-notice type="warning" label="Warning" message="Review the information before continuing."></x-notice>
         <x-notice type="error" label="Error" message="The operation could not be completed."></x-notice>
         <x-notice type="working" label="Working" message="Processing the request."></x-notice>
-        <pre x-pre><code>&lt;x-notice type="success" label="Saved" message="Changes saved."&gt;&lt;/x-notice&gt;
-&lt;x-notice type="warning" label="Warning" message="Check the values."&gt;&lt;/x-notice&gt;</code></pre>
+        <x-code language="html" x-pre>&lt;x-notice type="success" label="Saved" message="Changes saved."&gt;&lt;/x-notice&gt;
+&lt;x-notice type="warning" label="Warning" message="Check the values."&gt;&lt;/x-notice&gt;</x-code>
 
         <h2>Progress</h2>
         <p>Use <code>x-progress</code> for operations with measurable progress. The value can be updated through reactive state.</p>
@@ -48,21 +48,21 @@ export default {
             <x-button label="Decrease" command="decrease"></x-button>
             <x-button label="Reset" command="reset"></x-button>
         </p>
-        <pre x-pre><code>&lt;x-progress x-prop:value="state.progress" min="0" max="100"&gt;&lt;/x-progress&gt;</code></pre>
+        <x-code language="html" x-pre>&lt;x-progress x-prop:value="state.progress" min="0" max="100"&gt;&lt;/x-progress&gt;</x-code>
 
         <h2>Spinners</h2>
         <p>Use <code>x-spinner</code> when an operation is running and its progress is unknown.</p>
         <p><x-spinner></x-spinner></p>
         <p><x-spinner message="Loading data..."></x-spinner></p>
-        <pre x-pre><code>&lt;x-spinner&gt;&lt;/x-spinner&gt;
-&lt;x-spinner message="Loading data..."&gt;&lt;/x-spinner&gt;</code></pre>
+        <x-code language="html" x-pre>&lt;x-spinner&gt;&lt;/x-spinner&gt;
+&lt;x-spinner message="Loading data..."&gt;&lt;/x-spinner&gt;</x-code>
 
         <h2>Avatars</h2>
         <p>Use <code>x-avatar</code> to represent users with initials, icons, or images.</p>
         <p><x-avatar initials="AD" label="Ada Developer" message="Administrator"></x-avatar></p>
         <p><x-avatar icon="x-info" label="System" message="Automated account"></x-avatar></p>
-        <pre x-pre><code>&lt;x-avatar initials="AD" label="Ada Developer" message="Administrator"&gt;&lt;/x-avatar&gt;
-&lt;x-avatar icon="x-info" label="System"&gt;&lt;/x-avatar&gt;</code></pre>
+        <x-code language="html" x-pre>&lt;x-avatar initials="AD" label="Ada Developer" message="Administrator"&gt;&lt;/x-avatar&gt;
+&lt;x-avatar icon="x-info" label="System"&gt;&lt;/x-avatar&gt;</x-code>
     `,
 
     state: {

@@ -19,9 +19,9 @@ export default {
             <h3 slot="header">Embedded content</h3>
             <x-page outlet="example"></x-page>
         </x-card>
-        <pre x-pre><code>&lt;x-anchor href="../02-pages/01-basic.js" open="embed" outlet="example"&gt;Basic Page&lt;/x-anchor&gt;
+        <x-code language="html" x-pre>&lt;x-anchor href="../02-pages/01-basic.js" open="embed" outlet="example"&gt;Basic Page&lt;/x-anchor&gt;
 &lt;x-anchor href="../02-pages/04-state.js" open="embed" outlet="example"&gt;Page State&lt;/x-anchor&gt;
-&lt;x-page outlet="example"&gt;&lt;/x-page&gt;</code></pre>
+&lt;x-page outlet="example"&gt;&lt;/x-page&gt;</x-code>
 
         <h2>Named outlets</h2>
         <p>The <code>outlet</code> property identifies where an embedded Page should appear. The name on the navigation link must match the name on its destination <code>x-page</code>.</p>
@@ -36,18 +36,18 @@ export default {
                 <x-page outlet="second"></x-page>
             </x-datafield>
         </x-datafields>
-        <pre x-pre><code>&lt;x-anchor href="../02-pages/01-basic.js" open="embed" outlet="first"&gt;Load first&lt;/x-anchor&gt;
+        <x-code language="html" x-pre>&lt;x-anchor href="../02-pages/01-basic.js" open="embed" outlet="first"&gt;Load first&lt;/x-anchor&gt;
 &lt;x-page outlet="first"&gt;&lt;/x-page&gt;
 
 &lt;x-anchor href="../02-pages/04-state.js" open="embed" outlet="second"&gt;Load second&lt;/x-anchor&gt;
-&lt;x-page outlet="second"&gt;&lt;/x-page&gt;</code></pre>
+&lt;x-page outlet="second"&gt;&lt;/x-page&gt;</x-code>
 
         <h2>Embedded versus normal navigation</h2>
         <p>Normal navigation changes the current destination. Embedded navigation keeps the current Page visible and loads the destination into an outlet.</p>
         <p><x-anchor href="../02-pages/01-basic.js">Open Basic Page normally</x-anchor></p>
         <p><x-anchor href="../02-pages/01-basic.js" open="embed" outlet="example">Open Basic Page in the example outlet</x-anchor></p>
-        <pre x-pre><code>&lt;x-anchor href="../02-pages/01-basic.js"&gt;Normal navigation&lt;/x-anchor&gt;
-&lt;x-anchor href="../02-pages/01-basic.js" open="embed" outlet="example"&gt;Embedded navigation&lt;/x-anchor&gt;</code></pre>
+        <x-code language="html" x-pre>&lt;x-anchor href="../02-pages/01-basic.js"&gt;Normal navigation&lt;/x-anchor&gt;
+&lt;x-anchor href="../02-pages/01-basic.js" open="embed" outlet="example"&gt;Embedded navigation&lt;/x-anchor&gt;</x-code>
 
         <h2>When to use embedded Pages</h2>
         <p>Embedded Pages are useful for detail panels, previews, and interfaces where the parent Page remains visible while the user switches between related destinations.</p>

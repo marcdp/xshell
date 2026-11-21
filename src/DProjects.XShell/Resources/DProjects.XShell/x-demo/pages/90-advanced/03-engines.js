@@ -18,13 +18,13 @@ export default {
             <x-datafield label="State engine">Creates reactive state and detects changes.</x-datafield>
             <x-datafield label="Page loader">Connects engines with the controller, dependencies, and lifecycle.</x-datafield>
         </x-datafields>
-        <pre x-pre><code>Page / Component loader
+        <x-code language="text" x-pre>Page / Component loader
     |
     +-- State engine  -> Reactive state
     |
     +-- Render engine -> User interface
     |
-    +-- Controller    -> Application behavior</code></pre>
+    +-- Controller    -> Application behavior</x-code>
         <p>The loader manages Page and Component orchestration. Engines focus on their own responsibilities rather than replacing the Page or Component contract.</p>
 
         <h2>Module defaults</h2>
@@ -35,7 +35,7 @@ export default {
             <x-datafield label="Default Component render engine">{{ state.defaultComponentRender }}</x-datafield>
             <x-datafield label="Default Component state engine">{{ state.defaultComponentState }}</x-datafield>
         </x-datafields>
-        <pre x-pre><code>"defaults": {
+        <x-code language="json" x-pre>"defaults": {
     "page": {
         "renderEngine": "x",
         "stateEngine": "proxy"
@@ -44,12 +44,12 @@ export default {
         "renderEngine": "x",
         "stateEngine": "proxy"
     }
-}</code></pre>
+}</x-code>
         <p>These are the actual defaults configured by the <code>x-demo</code> Module. They apply when a Page or Component does not select a different engine.</p>
 
         <h2>Page-level overrides</h2>
         <p>A Page can override the Module defaults through its <code>meta</code> properties.</p>
-        <pre x-pre><code>export default {
+        <x-code language="javascript" x-pre>export default {
     meta: {
         title: "Client Renderer",
         renderEngine: "x-client"
@@ -60,7 +60,7 @@ export default {
     state: {
         name: "Ada"
     }
-};</code></pre>
+};</x-code>
         <p>This example selects <code>x-client</code> for rendering but leaves the state engine unspecified, so the Module's <code>proxy</code> default still applies.</p>
 
         <h2>Effective engine selection</h2>
@@ -71,13 +71,13 @@ export default {
             <x-datafield label="Client Renderer — render">{{ state.clientRender }}</x-datafield>
             <x-datafield label="Client Renderer — state">{{ state.clientState }}</x-datafield>
         </x-datafields>
-        <pre x-pre><code>const renderEngine =
+        <x-code language="javascript" x-pre>const renderEngine =
     implementation.meta.renderEngine ||
     moduleConfig.defaults.page.renderEngine;
 
 const stateEngine =
     implementation.meta.stateEngine ||
-    moduleConfig.defaults.page.stateEngine;</code></pre>
+    moduleConfig.defaults.page.stateEngine;</x-code>
         <p>These expressions illustrate the selection rules used by the Page loader.</p>
 
         <h2>Reactive state in action</h2>
@@ -87,7 +87,7 @@ const stateEngine =
             <x-button label="Reset" command="reset"></x-button>
         </p>
         <p>Counter: <strong>{{ state.count }}</strong></p>
-        <pre x-pre><code>state: {
+        <x-code language="javascript" x-pre>state: {
     count: 0
 },
 
@@ -97,7 +97,7 @@ controller({state}) {
             state.count++;
         }
     };
-}</code></pre>
+}</x-code>
         <p>The controller updates reactive state. The state engine detects the change, and the render engine updates the displayed counter.</p>
 
         <h2>Render engines</h2>
@@ -107,13 +107,13 @@ controller({state}) {
 
         <h2>Loading engines</h2>
         <p>The Page loader resolves the selected engine implementations through the normal resource loading pipeline.</p>
-        <pre x-pre><code>const stateEngine = await loader.load(
+        <x-code language="javascript" x-pre>const stateEngine = await loader.load(
     "state-engine:" + implementation.meta.stateEngine
 );
 
 const renderEngine = await loader.load(
     "render-engine:" + implementation.meta.renderEngine
-);</code></pre>
+);</x-code>
         <p>Engine instances are created and connected by the Page loader. Application Pages do not normally need to load or instantiate them directly.</p>
 
         <h2>When to override an engine</h2>

@@ -24,9 +24,9 @@ export default {
             </x-anchor>
         </p>
 
-        <pre x-pre><code>&lt;x-anchor href="../02-pages/01-basic.js"&gt;
+        <x-code language="html" x-pre>&lt;x-anchor href="../02-pages/01-basic.js"&gt;
     Open Basic Page
-&lt;/x-anchor&gt;</code></pre>
+&lt;/x-anchor&gt;</x-code>
 
         <h2>Absolute navigation</h2>
 
@@ -40,9 +40,9 @@ export default {
             </x-anchor>
         </p>
 
-        <pre x-pre><code>&lt;x-anchor href="/cookbook/pages/state"&gt;
+        <x-code language="html" x-pre>&lt;x-anchor href="/cookbook/pages/state"&gt;
     Open Page State
-&lt;/x-anchor&gt;</code></pre>
+&lt;/x-anchor&gt;</x-code>
 
         <h2>Query parameters</h2>
 
@@ -59,11 +59,11 @@ export default {
             </x-anchor>
         </p>
 
-        <pre x-pre><code>&lt;x-anchor
+        <x-code language="html" x-pre>&lt;x-anchor
     href="../02-pages/03-parameters.js"
     x-prop:query="state.query"&gt;
     Open Page with parameters
-&lt;/x-anchor&gt;</code></pre>
+&lt;/x-anchor&gt;</x-code>
 
         <h2>Opening modes</h2>
 
@@ -104,12 +104,12 @@ export default {
             </li>
         </ul>
 
-        <pre x-pre><code>&lt;x-anchor
+        <x-code language="html" x-pre>&lt;x-anchor
     href="../02-pages/01-basic.js"
     open="dialog"
     title="Basic Page"&gt;
     Open as dialog
-&lt;/x-anchor&gt;</code></pre>
+&lt;/x-anchor&gt;</x-code>
 
         <h2>Appearance</h2>
 
@@ -154,11 +154,11 @@ export default {
             </x-anchor>
         </p>
 
-        <pre x-pre><code>&lt;x-anchor
+        <x-code language="html" x-pre>&lt;x-anchor
     href="../02-pages/01-basic.js"
     disabled&gt;
     Disabled anchor
-&lt;/x-anchor&gt;</code></pre>
+&lt;/x-anchor&gt;</x-code>
 
         <h2>Tooltips</h2>
 

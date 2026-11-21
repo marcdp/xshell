@@ -10,19 +10,19 @@ export default {
 
         <h2>Minimal definition</h2>
         <p>A Module is defined by an entry in the <code>modules</code> object.</p>
-        <pre x-pre><code>{
+        <x-code language="json" x-pre>{
     "modules": {
         "my-module": {
             "label": "My Module",
             "version": "1.0.0"
         }
     }
-}</code></pre>
+}</x-code>
         <p>The key <code>my-module</code> is the Module ID. The label is intended for display, while the version identifies the declared Module version.</p>
 
         <h2>The cookbook definition</h2>
         <p>This application defines <code>x-demo</code> locally, with default engines, a navigation source, and an example route.</p>
-        <pre x-pre><code>{
+        <x-code language="json" x-pre>{
     "modules": {
         "x-demo": {
             "label": "XShell Cookbook",
@@ -45,7 +45,7 @@ export default {
             }
         }
     }
-}</code></pre>
+}</x-code>
         <p>This is an excerpt from the actual definition. The same document also references other Modules and configures the cookbook Area.</p>
 
         <h2>Module defaults</h2>
@@ -67,11 +67,11 @@ export default {
             <x-datafield label="Inventory entries">{{ state.fileCount }}</x-datafield>
             <x-datafield label="Runtime Module found">{{ state.runtimeFound }}</x-datafield>
         </x-datafields>
-        <pre x-pre><code>const definition = config.modules["x-demo"];
+        <x-code language="javascript" x-pre>const definition = config.modules["x-demo"];
 const instance = modules.getModuleById("x-demo");
 
 const path = definition.assets.path;
-const files = definition.files;</code></pre>
+const files = definition.files;</x-code>
         <p>The effective configuration includes generated information such as the asset path and file inventory. These values are not required in the minimal local definition.</p>
 
         <h2>Definition versus runtime instance</h2>

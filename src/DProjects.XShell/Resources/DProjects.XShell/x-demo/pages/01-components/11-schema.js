@@ -28,11 +28,11 @@ export default {
             x-attr:message="state.inlineStatus"></x-notice>
         <p>Current value:</p>
         <x-json x-prop:value="state.inlinePreview"></x-json>
-        <pre x-pre><code>&lt;x-schema
+        <x-code language="html" x-pre>&lt;x-schema
     x-prop:schema="state.inlineSchema"
     x-prop:value="state.inlineValue"
     x-on:change="onInlineChange"&gt;
-&lt;/x-schema&gt;</code></pre>
+&lt;/x-schema&gt;</x-code>
 
         <hr/>
 
@@ -55,11 +55,11 @@ export default {
             x-attr:message="state.sourceStatus"></x-notice>
         <p>Current value:</p>
         <x-json x-prop:value="state.sourcePreview"></x-json>
-        <pre x-pre><code>&lt;x-schema
+        <x-code language="html" x-pre>&lt;x-schema
     x-prop:src="state.sourceUrl"
     x-prop:value="state.sourceValue"
     x-on:change="onSourceChange"&gt;
-&lt;/x-schema&gt;</code></pre>
+&lt;/x-schema&gt;</x-code>
 
         <h2>Validation</h2>
         <p>Use <code>validate()</code> to obtain the field errors. The first version supports
