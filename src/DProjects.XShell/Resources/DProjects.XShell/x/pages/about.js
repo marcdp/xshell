@@ -26,6 +26,6 @@ export default {
 
         <h2>Project</h2>
         <p>XShell is part of the DProjects ecosystem.</p>
-        <p><x-anchor href="https://github.com/marcdp/xshell">GitHub repository</x-anchor></p>
+        <p><x-anchor href="https://github.com/marcdp/xshell" target="_blank">GitHub repository</x-anchor></p>
     `
 };

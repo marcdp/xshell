@@ -61,28 +61,15 @@ export default {
             flex:1;
         }
 
-        .editor-stack {
-            position: relative;
-            display: block;
-            flex:1;
-            min-width:0;
-            min-height:0;
-        }
-
         .editor {
             display: block;
             flex:1;
-            min-width:0;
-            min-height:0;
         }
     `,
 
     template: `
         <x-notice x-if="state.renderingError" type="error" x-prop:message="state.renderingError"></x-notice>
-        <div class="editor-stack">
-            <div class="editor"></div>
-            <div class="editor"></div>
-        </div>
+        <div class="editor"></div>
     `,
 
     state: {
@@ -90,11 +77,7 @@ export default {
     },
 
     controller({events, state, dependencies, loader, host, getPage, postRender, services}) {
-        const doubleBufferingEnabled = true;
         let renderEngine = null;
-        let preparingRenderEngine = null;
-        let activeEditor = null;
-        let bufferEditor = null;
         let revision = 0;
         let renderPending = false;
         let mounted = false;
@@ -112,42 +95,8 @@ export default {
             };
         };
 
-        const setEditorActive = (editor, active) => {
-            // Keep the staging editor connected and laid out while preventing visibility and interaction.
-            editor.style.position = active ? "" : "absolute";
-            editor.style.inset = active ? "" : "0";
-            editor.style.visibility = active ? "" : "hidden";
-            editor.style.pointerEvents = active ? "" : "none";
-            editor.inert = !active;
-
-            if (active) {
-                editor.removeAttribute("aria-hidden");
-            } else {
-                editor.setAttribute("aria-hidden", "true");
-            }
-        };
-
-        const initializeEditors = () => {
-            // Resolve the rendered hosts once and assign their initial active and staging roles.
-            if (activeEditor) return;
-            activeEditor = host.shadowRoot?.querySelector(".editor") ?? null;
-            if (!activeEditor || !doubleBufferingEnabled || typeof host.shadowRoot?.querySelectorAll !== "function") return;
-
-            bufferEditor = [...host.shadowRoot.querySelectorAll(".editor")].find(editor => editor !== activeEditor) ?? null;
-            if (!bufferEditor) return;
-
-            setEditorActive(activeEditor, true);
-            setEditorActive(bufferEditor, false);
-        };
-
         const getEditor = () => {
-            initializeEditors();
-            return activeEditor;
-        };
-
-        const getBufferEditor = () => {
-            initializeEditors();
-            return bufferEditor;
+            return host.shadowRoot?.querySelector(".editor") ?? null;
         };
 
         const unmountRenderer = () => {
@@ -161,20 +110,6 @@ export default {
                 getEditor()?.replaceChildren();
             }
         };
-
-        const unmountPreparingRenderer = () => {
-            // Dispose only the inactive host so cancellation cannot clear the visible preview.
-            const current = preparingRenderEngine;
-            preparingRenderEngine = null;
-
-            if (current) {
-                current.unmount();
-            } else {
-                getBufferEditor()?.replaceChildren();
-            }
-        };
-
-        const waitForRenderFrame = () => new Promise(resolve => requestAnimationFrame(resolve));
 
         const reportError = (error) => {
             state.renderingError = error instanceof Error ? error.message : String(error);
@@ -240,27 +175,20 @@ export default {
             unmount() {
                 mounted = false;
                 ++revision;
-                unmountPreparingRenderer();
                 unmountRenderer();
-                activeEditor = null;
-                bufferEditor = null;
             },
 
             unload() {
                 mounted = false;
                 unloaded = true;
                 ++revision;
-                unmountPreparingRenderer();
                 unmountRenderer();
-                activeEditor = null;
-                bufferEditor = null;
             },
 
             async refresh() {
                 if (unloaded) return;
 
                 const currentRevision = ++revision;
-                unmountPreparingRenderer();
 
                 // Empty input intentionally clears the active preview immediately.
                 if (!state.template || state.value === null) {
@@ -278,10 +206,6 @@ export default {
                     return;
                 }
 
-                const stagingEditor = getBufferEditor();
-                const useDoubleBuffering = doubleBufferingEnabled && renderEngine !== null && stagingEditor !== null && stagingEditor !== editor;
-                const replacementEditor = useDoubleBuffering ? stagingEditor : editor;
-                let replacement = null;
                 let replacementStarted = false;
 
                 try {
@@ -307,8 +231,8 @@ export default {
                         return;
                     }
 
-                    replacement = factory.create({
-                        host: replacementEditor,
+                    const current = factory.create({
+                        host: editor,
                         state: state.value,
 
                         // Command routing for embedded x-on:* can be decided as
@@ -343,51 +267,14 @@ export default {
                         }
                     });
 
-                    // A stale, unmounted shared-host renderer must not clear the visible preview during disposal.
+                    // A stale, unmounted renderer must not clear the shared preview host during disposal.
                     if (currentRevision !== revision) {
-                        return;
-                    }
-
-                    if (useDoubleBuffering) {
-                        // Warm the replacement while hidden, then give nested Components two render frames to settle.
-                        preparingRenderEngine = replacement;
-                        replacement.mount();
-                        replacement.render();
-
-                        await waitForRenderFrame();
-                        if (currentRevision !== revision || preparingRenderEngine !== replacement) {
-                            if (preparingRenderEngine === replacement) unmountPreparingRenderer();
-                            return;
-                        }
-
-                        replacement.render();
-                        await waitForRenderFrame();
-                        if (currentRevision !== revision || preparingRenderEngine !== replacement) {
-                            if (preparingRenderEngine === replacement) unmountPreparingRenderer();
-                            return;
-                        }
-
-                        // Reveal the prepared host before retiring the previous renderer and recycling its host.
-                        const previous = renderEngine;
-                        const previousEditor = activeEditor;
-                        preparingRenderEngine = null;
-                        renderEngine = replacement;
-                        renderPending = false;
-                        replacementStarted = true;
-
-                        setEditorActive(replacementEditor, true);
-                        setEditorActive(previousEditor, false);
-                        activeEditor = replacementEditor;
-                        bufferEditor = previousEditor;
-
-                        if (previous) previous.unmount();
-                        state.renderingError = "";
                         return;
                     }
 
                     // Commit synchronously so the old preview is removed only when its replacement is ready.
                     const previous = renderEngine;
-                    renderEngine = replacement;
+                    renderEngine = current;
                     renderPending = false;
                     replacementStarted = true;
 
@@ -397,14 +284,6 @@ export default {
                     state.renderingError = "";
 
                 } catch (error) {
-                    if (preparingRenderEngine === replacement) {
-                        try {
-                            unmountPreparingRenderer();
-                        } catch {
-                            // Preserve the preparation failure as the reported error.
-                        }
-                    }
-
                     if (currentRevision === revision) {
                         if (replacementStarted) {
                             fail(error);
@@ -424,7 +303,7 @@ export default {
 
                 const errors = [];
 
-                editor.querySelectorAll("x-datafield, x-form-assert").forEach(element => {
+                editor.querySelectorAll("x-datafield, x-form-assert, x-schema").forEach(element => {
                     if (typeof element.validate !== "function") return;
 
                     for (const error of element.validate(detail)) {

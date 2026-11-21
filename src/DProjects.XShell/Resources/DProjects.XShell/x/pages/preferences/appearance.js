@@ -12,7 +12,7 @@ export default {
         x-datafield {margin-top: .25em;}
     `,
     template: `
-        <x-datafield class="menuitem segmented" type="radios" label="Theme" x-prop:domain="state.themes" x-model="state.theme"></x-datafield>
+        <x-datafield type="radios" label="Theme" x-prop:domain="state.themes" x-model="state.theme"></x-datafield>
     `,
     state: {
         theme: "system",

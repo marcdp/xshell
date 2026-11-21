@@ -279,7 +279,7 @@ export default {
                 let wizardPanelElement = host.querySelector(`:scope > *:nth-child(${ wizardPanel.index })`);
                 //validate errors in current wizard panel
                 let errors = [];
-                wizardPanelElement.querySelectorAll("x-datafield, x-form-assert").forEach((element) => {
+                wizardPanelElement.querySelectorAll("x-datafield, x-form-assert, x-schema").forEach((element) => {
                     for(let error of element.validate(true)) {
                         errors.push(error);
                     }

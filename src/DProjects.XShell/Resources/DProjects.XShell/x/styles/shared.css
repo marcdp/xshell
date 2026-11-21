@@ -37,6 +37,8 @@ x-markdown table th, x-markdown table td {border:1px solid var(--x-color-gray); 
 
 x-chip {margin-right:0.25em;}
 
+x-code + x-code {margin-top:.5em;}
+
 .x-toast-container {position: fixed; top: 1em; right: 1em; width: min(30em, calc(100vw - 2em)); z-index: 1000; pointer-events: none;}
 .x-toast-container > x-notice { pointer-events: auto;}
 .x-toast-container.x-toast-container-page {position: absolute; z-index:0;}

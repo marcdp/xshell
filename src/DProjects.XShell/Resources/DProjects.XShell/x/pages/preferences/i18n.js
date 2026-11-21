@@ -1,18 +1,18 @@
 
 export default {
     contract: {
-        description: "Application settings",
+        description: "",
         events: {},
         properties: {},
         methods: {}
     },
-    meta: { title: "Settings" },
+    meta: { title: "Internationalization" },
     style: `
         :scope {display:block;}
         x-datafield {margin-top: .25em;}
     `,
     template: `
-        <x-datafield class="menuitem" type="select" label="Language" x-prop:domain="state.languages" x-model="state.language"></x-datafield>
+        <x-datafield type="select" label="Language" x-prop:domain="state.languages" x-model="state.language"></x-datafield>
     `,
     state: {
         language: "en",
