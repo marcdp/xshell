@@ -149,6 +149,9 @@ class Task extends EventTarget {
                 ...(this.#failure.stack ? {stack: this.#failure.stack} : {})
             });
 
+            // Record the unhandled exception in the Task output.
+            this._write("error", this.#failure.message);
+
             this.#complete("error");
         }
     }

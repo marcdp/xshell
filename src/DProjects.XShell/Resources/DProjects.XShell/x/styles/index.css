@@ -303,12 +303,14 @@ x-page[layout='stack'] + x-page[layout='stack'] + x-page[layout='stack'] + x-pag
     /* x-notice */
     --x-notice-border-radius: .75em;
 
+    --x-notice-background-debug: none;
     --x-notice-background-info: light-dark(#F0FBFF, #102A43);
     --x-notice-background-warning: light-dark(#FFFBF0, #332A12);
     --x-notice-background-error: light-dark(#FFF5F5, #35191B);
     --x-notice-background-success: light-dark(#F5FFF5, #15301D);
     --x-notice-background-working: light-dark(#fafafa, #242424);
 
+    --x-notice-border-debug: .1em light-dark(#B4B4BB, #505058) solid;
     --x-notice-border-info: .1em light-dark(#006CE0, #4A9EFF) solid;
     --x-notice-border-warning: .1em light-dark(#E06C00, #FFB347) solid;
     --x-notice-border-error: .1em light-dark(#DB0000, #FF6B6B) solid;

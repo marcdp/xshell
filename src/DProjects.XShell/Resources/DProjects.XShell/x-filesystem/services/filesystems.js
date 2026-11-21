@@ -15,7 +15,7 @@ export default class Filesystems {
                         id: { type: "string", minLength: 1 },
                         label: { type: "string", minLength: 1 },
                         icon: { type: "string" },
-                        type: { type: "string", enum: ["file", "directory"] },
+                        type: { type: "string", enum: ["file", "directory", "entry"] },
                         extensions: {
                             type: "array",
                             items: { type: "string", minLength: 1 },

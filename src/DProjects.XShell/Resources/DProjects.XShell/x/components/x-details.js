@@ -138,10 +138,9 @@ export default {
         };
         return {
             toggle(args) {
-                const event = args.event;
                 if (state.disabled) return;
                 setOpen(!state.open);
-                event.preventDefault();
+                if (args && args.event) args.event.preventDefault();
             },
 
             expand() {

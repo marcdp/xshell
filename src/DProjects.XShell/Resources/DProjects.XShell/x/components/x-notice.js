@@ -5,7 +5,8 @@ export default {
         tags: ["feedback", "notifications"],
         events: {},
         properties: {
-            type:    {type:"string", default:"info", attribute:true, state:true, description:""},
+            type:    {type:"string", default:"info", attribute:true, state:true, description:"", enum:["debug", "info", "warning", "error", "success", "working"]},
+            icon:    {type:"string", default:"", attribute:true, state:true, description:""},
             label:   {type:"string", default:"", attribute:true, state:true, description:""},
             message: {type:"string", default:"", attribute:true, state:true, description:""},
             visible: {type:"boolean", default:true, attribute:true, state:true, description:""}
@@ -36,12 +37,14 @@ export default {
 
         :host > div div.header {padding:.75em; display:flex; align-items:baseline; flex:1}
         :host > div div.header x-icon {width:2.5em; min-width:2.5em; text-align:center; transform:translateY(-.1em);}
-        :host > div div.header .label {font-weight:600; margin-right:.5em; color:}
+        :host > div div.header .label {font-weight:600; margin-right:.5em; }
         :host > div div.header .message {flex:1;}
         :host > div div.header div {flex:1}
         
         :host > div > .close {margin-right:1em; margin-top:.7em; display:none;}
 
+        :host > div.debug {background-color:var(--x-notice-background-debug); border:var(--x-notice-border-debug);}
+        :host > div.debug .header x-icon {color:var(--x-notice-color-debug);}
         :host > div.info {background-color:var(--x-notice-background-info); border:var(--x-notice-border-info);}
         :host > div.info .header x-icon {color:var(--x-notice-color-info);}
         :host > div.warning {background-color:var(--x-notice-background-warning); border:var(--x-notice-border-warning);}
@@ -50,7 +53,6 @@ export default {
         :host > div.error .header x-icon {color:var(--x-notice-color-error);}
         :host > div.success {background-color:var(--x-notice-background-success); border:var(--x-notice-border-success);}
         :host > div.success .header x-icon {color:var(--x-notice-color-success);}
-
         :host > div.working {background-color:var(--x-notice-background-working); border:var(--x-notice-border-working);}
         :host > div.working .header x-spinner {color:var(--x-notice-color-working); margin-left:.55em; margin-right:.75em; align-self: self-start;}
 
@@ -60,8 +62,8 @@ export default {
     template: `
         <div x-if="state.visible" x-attr:class="state.type" >
             <div class="header">
-                <x-spinner x-if="state.type=='working'"></x-spinner>
-                <x-icon x-else x-attr:icon="'x-' + state.type + ''"></x-icon>
+                <x-spinner x-if="state.type=='working' && !state.icon"></x-spinner>
+                <x-icon x-else x-attr:icon="state.icon || 'x-' + state.type + ''"></x-icon>
                 <div>
                     <div class="label" x-text="state.label"></div>
                     <div class="message" x-text="state.message"></div>

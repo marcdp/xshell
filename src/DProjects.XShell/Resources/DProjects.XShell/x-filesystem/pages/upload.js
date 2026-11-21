@@ -16,7 +16,8 @@ export default {
         methods: {}
     },
     meta: {
-        title: "Upload files"
+        title: "Upload files",
+        classes: ["size-narrow"]
     },
     style: `
         :scope x-form {

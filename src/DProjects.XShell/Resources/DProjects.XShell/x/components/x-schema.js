@@ -20,7 +20,7 @@ function initialItem(schema) {
     return value;
 }
 
-function makeTemplate(schema) {
+function makeTemplate(schema, disabled = false) {
     if (!isObject(schema) || schema.type !== "object" || !isObject(schema.properties)) {
         throw new Error("x-schema requires an object schema with properties.");
     }
@@ -41,6 +41,7 @@ function makeTemplate(schema) {
             `label="${escapeAttribute(definition.title || name)}"`,
             `x-model="${escapeAttribute(path)}"`
         ];
+        if (disabled) attributes.push("disabled");
 
         if (definition.description) attributes.push(`description="${escapeAttribute(definition.description)}"`);
         if (required && (type === "string" || type === "array" || type === "object")) attributes.push("required");
@@ -77,16 +78,17 @@ function makeTemplate(schema) {
         if (type === "array") {
             if (!isObject(definition.items)) throw new Error(`Array '${name}' requires a supported items schema.`);
             const index = `index${depth}`;
-            attributes.push("add", `item-default="${escapeAttribute(JSON.stringify(initialItem(definition.items)))}"`);
+            if (!disabled) attributes.push("add");
+            attributes.push(`item-default="${escapeAttribute(JSON.stringify(initialItem(definition.items)))}"`);
             if (definition.minItems !== undefined) attributes.push(`minlength="${escapeAttribute(definition.minItems)}"`);
             if (definition.maxItems !== undefined) attributes.push(`maxlength="${escapeAttribute(definition.maxItems)}"`);
 
             return `<x-datafield ${attributes.join(" ")}>
-                <x-datafields class="grid" columns="1" move remove
+                <x-datafields class="grid" columns="1" ${disabled ? "" : "move remove"}
                     x-for="${escapeAttribute(`(item${depth},${index}) in ${path}`)}">
                     ${field(definition.items, `${path}[${index}]`, definition.items.title || "Item", false, depth + 1)}
                 </x-datafields>
-            </x-datafield>`;
+            </x-datafield>`;;
         }
 
         return `<x-datafield ${attributes.join(" ")}></x-datafield>`;
@@ -145,7 +147,8 @@ export default {
         properties: {
             schema: { type: "object", default: null, attribute: true, attributeParser: "json", state: true, description: "Inline JSON Schema; takes precedence over src." },
             src: { type: "string", default: "", attribute: true, state: true, description: "JSON Schema URL or schema: reference." },
-            value: { type: "object", default: {}, attribute: true, attributeParser: "json", state: true, description: "Object being edited." }
+            value: { type: "object", default: {}, attribute: true, attributeParser: "json", state: true, description: "Object being edited." },
+            disabled: {type: "boolean",default: false,attribute: true,state: true,description: "Disables editing of all generated fields."}
         },
         events: {
             change: {
@@ -205,6 +208,7 @@ export default {
             load() {
                 // load
                 events.on(state, ["change:schema", "change:src"], "refresh");
+                events.on(state, "change:disabled", "updateDisabled");
                 events.on(state, "change:value", ({ newValue }) => {
                     if (!activeSchema || !isObject(newValue)) return;
                     const updated = applyDefaults(activeSchema, newValue);
@@ -219,7 +223,12 @@ export default {
                 revision++;
                 abortController?.abort();
             },
-
+            updateDisabled() {
+                // Rebuild the editor using the already resolved schema.
+                if (activeSchema) {
+                    state.generated = makeTemplate(activeSchema, state.disabled);
+                }
+            },
             async refresh() {
                 // refresh
                 const current = ++revision;
@@ -244,7 +253,7 @@ export default {
 
                     if (current !== revision) return;
 
-                    const generated = makeTemplate(schema);
+                    const generated = makeTemplate(schema, state.disabled);
                     if (!isObject(state.value)) throw new Error("x-schema value must be an object.");
 
                     activeSchema = schema;

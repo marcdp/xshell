@@ -194,59 +194,59 @@ export default {
     style: `
         h2 {margin-top:0;}
         .description {margin-bottom:1.25em;}
-        .task x-progress {margin-top:.9em; width:33%}
+        .progress-container {display: flex; align-items: center; gap: 1em;}
+        x-progress {width:100%}
         .duration {color:var(--x-color-text-gray); }
-
-        .output-controls {display:flex; ajustify-content:flex-end; margin-bottom:.25em; margin-top:.75em;}
-        .output-entries {margin-top:1em; background:rgba(0,0,0,0.25); padding:.5em 1em; max-height:50vh; overflow:auto; border-radius:.5em;}
-        .output-entry {font-family:monospace; display:grid; grid-template-columns:13.5em 3.5em minmax(0, 1fr); gap:.25em; align-items:start;}
-        .output-entry strong {}
-        .output-entry.warn strong, .output-entry.warn pre {color:var(--x-notice-color-warning);}
-        .output-entry.error strong, .output-entry.error pre {color:var(--x-datafield-error-color);}
-        .output-entry pre {margin:0; white-space:pre-wrap; overflow-wrap:anywhere;}
-
-        .result {margin-top:1.25em;}
-        .result pre {white-space:pre-wrap; overflow-wrap:anywhere;}
-        .result-value {white-space:pre-wrap; overflow-wrap:anywhere;}
     `,
 
     template: `
 
         <x-form command="submit" x-prop:errors="state.errors">
 
-
-            <section x-if="state.ready && state.phase == 'arguments'" class="arguments" >
+            <x-details label="Command" x-attr:open="state.phase == 'arguments'">
                 <x-datafields>
-                    <x-datafield label="Command">
-                        {{state.type}}:{{ state.id }}<span x-if="state.method">:{{ state.method }}</span>
-                    </x-datafield>
+                    <x-datafield>{{state.type}}:{{ state.id }}<span x-if="state.method">:{{ state.method }}</span></x-datafield>
+                    <x-datafield type="checkbox" label-secondary="Run in background" x-model="state.background" x-attr:disabled="state.phase != 'arguments'"></x-datafield>
                 </x-datafields>
-                <x-datafields label="Arguments">
-                    <x-schema ref="arguments" x-prop:schema="state.schema" x-model="state.args"></x-schema>
-                    <x-datafield type="checkbox" label="Advanced" label-secondary="Run in background" x-model="state.background" collapsible collapsed></x-datafield>
-                </x-datafields>
-            </section>
-
+            </x-details>
         
-            <section x-if="state.phase == 'execution'" class="execution task" >
-                <x-datafields label="Execution">
-                    <x-notice x-attr:type="state.taskNoticeType" x-attr:label="state.taskNoticeLabel" x-attr:message="state.taskError ? state.taskError.message : state.taskDescription">
-                        <x-progress x-if="state.running" x-attr:unknown="state.taskProgress ? false : true" x-attr:value="state.taskProgress.value" x-attr:max="state.taskProgress.max"></x-progress>
-                        <span x-else class="duration">Process finished in <span x-text="state.taskDurationText"></span></span>
-                        <div x-if="state.hasHiddenOutput" class="output-controls">
-                            <x-button class="anchor" command="toggleOutput" x-attr:label="state.showAllOutput ? 'Show warnings and errors -' : 'Show all output +'"></x-button>
-                        </div>
-                        <div x-if="state.visibleTaskOutput.length > 0" class="output-entries">
-                            <div x-for="entry in state.visibleTaskOutput" x-attr:class="'output-entry ' + entry.level">
-                                <span x-text="entry.timestamp"></span>
-                                <strong x-text="entry.level"></strong>
-                                <pre x-text="entry.text"></pre>
-                            </div>
-                        </div>
-                    </x-notice>
-                </x-datafields>
+            <x-details label="Arguments" x-attr:open="state.phase == 'arguments'">
+                <x-schema ref="arguments" x-prop:schema="state.schema" x-model="state.args" x-attr:disabled="state.phase != 'arguments'"></x-schema>
+            </x-details>
+        
+            <x-details x-if="state.phase == 'execution'" label="Execution" x-attr:open="state.phase == 'execution' && !state.completed">
+                <x-notice x-attr:type="(state.taskStatus =='error' ? 'error' : 'working')" x-attr:icon="(state.completed ? 'x-file' : null)" x-attr:label="state.taskNoticeLabel" x-attr:message="state.taskError ? state.taskError.message : state.taskDescription">
+                    <div x-if="state.running" class="progress-container">
+                        <x-progress x-attr:unknown="state.taskProgress ? false : true" x-attr:value="state.taskProgress.value" x-attr:max="state.taskProgress.max"></x-progress>
+                        <x-button tooltip="Cancel task" icon="x-close" class="light round" command="cancel"></x-button>            
+                    </div>
+                    <span x-else class="duration">Process finished in <span x-text="state.taskDurationText"></span></span>
+                   
+                    <div x-if="state.visibleTaskOutput.length > 0" >
+                        <br/>
+                        Task log: 
+                        <span x-if="state.hasHiddenOutput">(<x-button class="anchor" command="toggleOutput" x-attr:label="state.showAllOutput ? 'show less' : 'show more'"></x-button>)</span>
+                        <table class="datatable">
+                            <tr>
+                                <th>Timestamp</th>
+                                <th>Level</th>
+                                <th>Message</th>
+                            </tr>
+                            <tr x-for="entry in state.visibleTaskOutput" x-attr:class="entry.level">
+                                <td class="timestamp" x-text="entry.timestamp | time('HH:mm:ss')"></td>
+                                <td class="level" x-text="entry.level"></td>
+                                <td class="message" x-text="entry.text"></td>
+                            </tr>
+                        </table>
 
-                <x-datafields label="Result" x-if="state.completed && !state.isDialog" class="result">
+                        
+                    </div>
+
+                </x-notice>
+            </x-details>
+
+            <x-details x-if="state.phase == 'execution' && state.completed" label="Result" open>
+                <x-notice type="success" >
                     <x-object x-if="state.hasResult && !state.resultFormat && (!state.resultType || state.resultType == 'object' || state.resultType == 'array' || state.resultType == 'any' || state.resultType == 'function' || state.resultType == 'date')" x-prop:value="state.result" expanded></x-object>
                     <x-code x-if="state.hasResult && state.resultFormat == 'text'" x-prop:value="state.result" wrap></x-code>
                     <x-anchor class="plain" x-if="state.hasResult && (state.resultFormat == 'url' || state.resultFormat == 'blob-url')" x-prop:href="state.result" target="_blank" rel="noopener noreferrer">                   
@@ -254,15 +254,12 @@ export default {
                         <span x-text="state.result"></span>
                     </x-anchor>
                     <span x-if="state.hasResult && !state.resultFormat && state.resultType && state.resultType != 'object' && state.resultType != 'array' && state.resultType != 'any' && state.resultType != 'function' && state.resultType != 'date' && state.resultType != 'void'" class="result-value" x-text="state.result"></span>
-                </x-datafields>
+                </x-notice>
+            </x-details>
 
-            </section>
-
-            <x-button slot="footer" x-if="state.ready && state.phase == 'arguments'" label="Execute" command="submit" class="submit"></x-button>
+            <x-button slot="footer" x-if="state.ready && state.phase == 'arguments'" label="Execute" icon="x-play" command="submit" class="submit"></x-button>
             <x-button slot="footer" x-if="state.ready && state.phase == 'execution' && !state.running" label="Back" icon="x-arrow-back" command="editArguments"></x-button>
-            <x-button slot="footer" x-if="state.isDialog && !state.ready" label="Close" command="cancel"></x-button>
-            <x-button slot="footer" x-if="state.running" label="Cancel" command="cancel" class="cancel"></x-button>
-            <x-button slot="footer" x-if="state.isDialog && !state.running" label="Close" command="cancel" class="cancel"></x-button>
+            
         </x-form>
     `,
 
@@ -275,7 +272,6 @@ export default {
         ready: false,
         running: false,
         background: false,
-        isDialog: false,
         completed: false,
         hasResult: false,
         result: undefined,
@@ -292,7 +288,6 @@ export default {
         showAllOutput: false,
         hasHiddenOutput: false,
         taskError: null,
-        taskNoticeType: "",
         taskNoticeLabel: ""
     },
 
@@ -345,7 +340,6 @@ export default {
             state.showAllOutput = false;
             state.hasHiddenOutput = false;
             state.taskError = null;
-            state.taskNoticeType = "";
             state.taskNoticeLabel = "";
         };
 
@@ -360,8 +354,7 @@ export default {
             state.taskError = task.error ? {...task.error} : null;
             state.running = task.status === "pending" || task.status === "running";
             state.completed = task.status === "finished";
-            state.taskNoticeType = task.status === "finished" ? "success" : task.status === "error" ? "error" : task.status === "canceled" ? "warning" : "working";
-            state.taskNoticeLabel = task.status === "finished" ? "Completed" : task.status === "error" ? "Failed" : task.status === "canceled" ? "Canceled" : "Executing";
+            state.taskNoticeLabel = task.status === "finished" ? "Completed" : task.status === "error" ? "Task failed" : task.status === "canceled" ? "Canceled" : "Executing";
 
             const output = [];
             let cursor;
@@ -423,7 +416,6 @@ export default {
             },
 
             mount() {
-                state.isDialog = page.host?.layout === "dialog";
             },
 
             unload() {
@@ -445,6 +437,9 @@ export default {
                 // submit invocation
                 if (!invocation || !state.ready || state.phase !== "arguments" || state.running || submitting) return;
 
+                //page.host.querySelector("#details1").collapse();
+                //page.host.querySelector("#details2").collapse();
+                
                 const args = invocation.parameters.map(parameter => state.args[parameter.name]);
                 resetExecutionState();
 
@@ -477,7 +472,6 @@ export default {
                 state.hasResult = result !== undefined;
                 state.result = result;
 
-                if (state.isDialog) await page.close(result);
             },
 
             toggleOutput() {
@@ -501,8 +495,6 @@ export default {
                     await currentTask.cancel();
                     await currentTask.wait();
                     await refreshTask(currentTask);
-                } else if (state.isDialog) {
-                    await page.close(null);
                 }
             }
         };

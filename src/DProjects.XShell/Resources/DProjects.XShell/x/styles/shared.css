@@ -20,9 +20,9 @@ b {font-weight:600;}
 }
 
 table.datatable {width:100%; }
-table.datatable > thead > tr > th {text-align:left; font-weight:500; padding:.25em;}
-table.datatable > tbody > tr:nth-child(odd) {background:var(--x-color-background-alt);}
-table.datatable > tbody > tr > td {padding:.25em;}
+table.datatable th {text-align:left; font-weight:500; padding:.25em;}
+table.datatable tr:nth-child(odd) {background:var(--x-color-background-alt);}
+table.datatable td {padding:.25em; vertical-align:top;}
 
 /* x-markdown */
 x-markdown blockquote {display:block; border-left:.2em var(--x-color-gray) solid; background:var(--x-markdown-blockquote-background); margin:0; padding:0.05em; padding-left:1em;}

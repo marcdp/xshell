@@ -37,7 +37,10 @@ export default {
         methods: {}
     },
 
-    meta: { title: "Properties" },
+    meta: { 
+        title: "Properties",
+        classes: ["size-narrow"]
+    },
 
     template: `
         <x-form>
@@ -50,7 +53,10 @@ export default {
                         <x-datafield label="Name" type="text" x-prop:value="state.info.name" readonly></x-datafield>
                         <x-datafield label="Type" type="text" x-prop:value="state.info.type" readonly></x-datafield>
                         <x-datafield label="Location" type="text" x-prop:value="state.info.parent" readonly></x-datafield>
-                        <x-datafield label="Size" type="text" x-prop:value="state.info.size" readonly></x-datafield>
+                        <x-datafield label="Size" x-if="state.info.type == 'file'" type="text" x-prop:value="state.info.size" readonly></x-datafield>
+                        <x-datafield label="Size" x-else>
+                            <x-filesystem-entry-size x-attr:src="state.src" x-attr:path="state.info.path"></x-filesystem-entry-size>
+                        </x-datafield>
                     </x-datafields>
 
                     <x-datafields label="Dates" columns="2">
@@ -123,6 +129,8 @@ export default {
                 state.info = null;
                 state.metadata = [];
                 state.metadataMessage = "";
+
+                page.description = `Properties for ${state.path}`;
 
                 try {
                     if (!state.src || !state.path)

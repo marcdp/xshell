@@ -104,6 +104,7 @@ export default {
                 if (command.type === "directory" && entry.type === "directory") {
                     return true;
                 }
+                if (command.type === "entry") return true;
                 return false;
             });
         };

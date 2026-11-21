@@ -4,12 +4,12 @@ import { createZip } from "../utils/zip.js";
 export default {
     // contract
     contract: {
-        label: "Download directory as ZIP",
-        description: "Creates a ZIP archive containing a filesystem directory.",
+        label: "Download as ZIP",
+        description: "Creates a ZIP archive containing a filesystem file or directory.",
         execute: {
             parameters: [
                 {name:"src", label:"Filesystem", type:"string", description:"Filesystem source.", required:true},
-                {name:"path", label:"Path", type:"string", description:"Path of the directory to archive.", required:true}
+                {name:"path", label:"Path", type:"string", description:"Path of the file or directory to archive.", required:true}
             ],
             returns: {
                 type: "string",
@@ -25,23 +25,23 @@ export default {
             async execute(src, path) {
                 // Validate arguments.
                 if (!src) throw new Error("Filesystem source is required.");
-                if (!path) throw new Error("Directory path is required.");
+                if (!path) throw new Error("File or directory path is required.");
 
                 // Load the filesystem.
                 task.setDescription("Loading filesystem...");
                 task.setProgress(null);
                 const filesystem = await loader.load("filesystem:" + src);
                 task.signal.throwIfAborted();
-
                 task.warn("Ensure the directory exists and is accessible.");
-
                 task.error("Ensure the directory exists and is accessible.");
-
-                // Validate the source directory.
-                task.setDescription("Reading directory...");
+                
+                // Validate the source entry.
+                task.setDescription("Reading filesystem entry...");
                 const entry = await filesystem.getEntry(path, {signal:task.signal});
-                if (!entry) throw new Error(`Directory not found: ${path}`);
-                if (entry.type !== "directory") throw new Error(`Path is not a directory: ${path}`);
+                if (!entry) throw new Error(`Path not found: ${path}`);
+                if (entry.type !== "file" && entry.type !== "directory") {
+                    throw new Error(`Unsupported filesystem entry type: ${entry.type}`);
+                }
 
                 // Create the ZIP archive.
                 task.setDescription("Creating ZIP archive...");

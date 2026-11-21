@@ -327,14 +327,16 @@ export default {
             class="input" 
             x-model="state.value" 
             x-attr:id="state.inputId"
-            x-attr:multiple="state.multiple">
+            x-attr:multiple="state.multiple"
+            x-attr:disabled="state.disabled"
+            >
             <option x-if="!state.multiple" x-text="state.placeholder" class="placeholder" value=""></option>
-            <option x-for="option in state.domainNormalized" x-attr:value="option.value" x-text="option.label" x-attr:disabled="option.disabled" x-attr:selected="state.selectedOptions[option.value]"></option>
+            <option x-for="option in state.domainNormalized" x-attr:value="option.value" x-text="option.label" x-attr:disabled="state.disabled || option.disabled" x-attr:selected="state.selectedOptions[option.value]"></option>
         </select>
 
         <div x-elseif="state.type=='radios'" class="input container radios">
             <div x-for="(option,index) in state.domainNormalized">
-                <input type="radio" x-attr:value="option.value" name="radio" x-attr:id="'radio' + index" x-model="state.value" x-attr:disabled="option.disabled"/>
+                <input type="radio" x-attr:value="option.value" name="radio" x-attr:id="'radio' + index" x-model="state.value" x-attr:disabled="state.disabled || option.disabled"/>
                 <x-icon x-if="option.icon" x-attr:icon="option.icon"></x-icon>
                 <label x-attr:for="'radio' + index">
                     <span x-text="option.label" class="label"></span>
@@ -353,7 +355,7 @@ export default {
 
         <div x-elseif="state.type=='checkboxes'" class="input container">
             <div x-for="(option,index) in state.domainNormalized">
-                <input type="checkbox" x-attr:value="option.value" x-attr:id="'radio' + index" name="checkbox" x-attr:checked="state.selectedOptions[option.value]" x-on:change="checkboxChanged" x-attr:disabled="option.disabled"/>
+                <input type="checkbox" x-attr:value="option.value" x-attr:id="'radio' + index" name="checkbox" x-attr:checked="state.selectedOptions[option.value]" x-on:change="checkboxChanged" x-attr:disabled="state.disabled || option.disabled"/>
                 <label x-text="option.label" x-attr:for="'radio' + index"></label>
             </div>
         </div>
