@@ -53,3 +53,70 @@ test("x-template reports rendering failures as validation errors", () => {
         type: "error", label: "", message: "Unable to parse XTemplate."
     }]);
 });
+
+test("x-template recovers from invalid source and disposes each replaced renderer", async t => {
+    globalThis.requestAnimationFrame = callback => callback();
+    globalThis.document = { baseURI: "https://example.test/" };
+    t.after(() => {
+        delete globalThis.requestAnimationFrame;
+        delete globalThis.document;
+    });
+    const editor = { replaceChildren: t.mock.fn() };
+    const dispatched = [];
+    const host = {
+        shadowRoot: { querySelector: selector => selector === ".editor" ? editor : null },
+        dispatchEvent(event) { dispatched.push(event); }
+    };
+    const state = { template: "<p>{{ state.name }}</p>", value: { name: "Ada" }, renderingError: "" };
+    const listeners = new Map();
+    const renderers = [];
+    const renderEngineXClient = source => {
+        if (source === "<invalid>") throw new Error("Unable to parse XTemplate.");
+        return {
+            dependencies: [],
+            async init() {},
+            create(options) {
+                const renderer = { options, mount: t.mock.fn(), render: t.mock.fn(), unmount: t.mock.fn() };
+                renderers.push(renderer);
+                return renderer;
+            }
+        };
+    };
+    const controller = templateDefinition.controller({
+        state, host,
+        events: { on(target, name, listener) { listeners.set(name, listener); } },
+        dependencies: { renderEngineXClient },
+        loader: { async load() {} },
+        getPage: () => null,
+        postRender() {},
+        services: {}
+    });
+    controller.load();
+
+    await controller.refresh();
+    assert.equal(renderers.length, 1);
+    assert.equal(renderers[0].mount.mock.callCount(), 1);
+    assert.equal(renderers[0].render.mock.callCount(), 1);
+
+    renderers[0].options.state.name = "Grace";
+    renderers[0].options.invalidate();
+    assert.equal(renderers[0].render.mock.callCount(), 2);
+    assert.equal(dispatched[0].type, "change");
+    assert.equal(dispatched[0].detail.newValue.name, "Grace");
+
+    state.template = "<invalid>";
+    await controller.refresh();
+    assert.equal(renderers[0].unmount.mock.callCount(), 1);
+    assert.equal(state.renderingError, "Unable to parse XTemplate.");
+
+    state.template = "<p>Hello {{ state.name }}</p>";
+    await controller.refresh();
+    assert.equal(state.renderingError, "");
+    assert.equal(renderers.length, 2);
+    assert.equal(renderers[1].mount.mock.callCount(), 1);
+
+    controller.unmount();
+    assert.equal(renderers[1].unmount.mock.callCount(), 1);
+    assert.equal(dispatched.length, 1);
+    assert.deepEqual([...listeners.keys()], ["change:value", "change:template"]);
+});

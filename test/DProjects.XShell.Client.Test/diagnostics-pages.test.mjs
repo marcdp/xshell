@@ -262,33 +262,33 @@ test("Services diagnostics file links retain native activation without activatin
 
 const contractDetailHref = "page:xshell-diagnostics:/pages/detail/contract-detail.js";
 
-test("Contract Detail composes cards, chips, and semantic field lists", () => {
+test("Contract Detail composes accordion tabs, chips, and semantic field lists", () => {
     const { template, style } = ContractDetailPage;
-    assert.match(template, /<x-tabs class="sidebar" x-if="state\.detail">\s*<x-tab label="Overview">/);
+    assert.match(template, /<x-tabs class="sidebar" x-if="state\.detail">/);
     assert.match(template, /<x-tab x-for="section in state\.detail\.sections" x-key="title" x-attr:label="section\.title">/);
     assert.match(template, /<x-tab x-if="state\.detail\.examples\.length" label="Examples">/);
-    assert.match(template, /<x-card>\s*<h2 slot="header">.*<\/x-icon> Overview<\/h2>\s*<dl>/);
-    assert.match(template, /<x-card x-for="entry in section\.entries">\s*<h3 slot="header"><code x-text="entry\.name">/);
-    assert.match(template, /<h2 x-text="section\.title">/);
-    assert.match(template, /<ul>\s*<li x-for="field in group\.fields">/);
+    assert.match(template, /<x-accordion-panel x-for="entry in section\.entries" x-key="name"/);
+    assert.match(template, /<ul>\s*<li x-for="field in group\.fields" x-key="name">/);
     for (const descriptor of ["entry", "field"]) {
         assert.ok(template.includes(`<x-chip x-if="${descriptor}.typeLabel" x-attr:label="${descriptor}.typeLabel">`));
         assert.ok(template.includes(`<x-chip x-for="badge in ${descriptor}.badges" x-attr:label="badge">`));
         assert.ok(template.includes(`<x-details x-if="${descriptor}.hasSchema" label="JSON Schema">`));
         assert.ok(template.includes(`<x-object x-prop:value="${descriptor}.schema" expanded>`));
     }
-    assert.doesNotMatch(style, /\b(?:border|border-radius|box-shadow|background(?:-color)?|overflow-y)\s*:/);
-    assert.doesNotMatch(style, /\boverflow\s*:\s*(?:auto|scroll)\b/);
+    assert.match(style, /grid-template-columns:minmax\(0, 1fr\) minmax\(0, 1fr\)/);
+    assert.match(style, /@media \(max-width:52em\)/);
 });
 
-test("Contract Detail keeps source and initial state in read-only displays", () => {
+test("Contract Detail keeps authored examples read-only and activates template playgrounds explicitly", () => {
     const { template } = ContractDetailPage;
-    assert.match(template, /<x-card x-for="example in state\.detail\.examples">\s*<h3 slot="header" x-text="example\.title">/);
-    assert.match(template, /<div x-if="example\.template">\s*<h4>Template<\/h4>\s*<x-code[^>]+x-prop:value="example\.template"/);
+    assert.match(template, /<x-accordion-panel x-for="example in state\.detail\.examples" x-key="playgroundId"/);
+    assert.match(template, /<x-button x-if="example\.hasPlayground && !example\.playgroundOpen" label="Try it"/);
+    assert.match(template, /<x-code[^>]+x-prop:value="example\.template"/);
+    assert.match(template, /<x-code-editor[^>]+x-prop:value="example\.editedTemplate"/);
+    assert.match(template, /<x-template[^>]+x-prop:template="example\.previewTemplate"[^>]+x-prop:value="example\.previewState"/);
     assert.match(template, /<div x-if="example\.code">\s*<h4>Code .*?<\/h4>\s*<x-code[^>]+x-prop:language="example\.language"[^>]+x-prop:value="example\.code"/);
     assert.match(template, /<x-details x-if="example\.hasState" label="Initial state">\s*<x-object x-prop:value="example\.state" expanded>/);
     assert.match(template, /<x-notice x-if="state\.error"[^>]+x-prop:message="state\.error"/);
-    assert.match(template, /x-if="state\.detail\.empty">No public contract members or examples are documented for this resource\./);
 });
 
 for (const [listing, kind, item, id] of [

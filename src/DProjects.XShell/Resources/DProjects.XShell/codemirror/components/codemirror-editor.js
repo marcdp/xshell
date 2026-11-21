@@ -107,7 +107,12 @@ export default {
                 // mount
                 if (editor) {
                     if (state.value != editor.state.doc.toString()) {
-                        editor.dispatch({changes: {from: 0, to: editor.state.doc.length, insert: state.value}});
+                        avoidRefresh = true;
+                        try {
+                            editor.dispatch({changes: {from: 0, to: editor.state.doc.length, insert: state.value}});
+                        } finally {
+                            avoidRefresh = false;
+                        }
                     }
                     return;
                 }
@@ -127,6 +132,15 @@ export default {
                         EditorView.updateListener.of(update => {
                             if (!update.docChanged) return;
                             state.dirty = true;
+                            if (avoidRefresh) return;
+                            const value = update.state.doc.toString();
+                            avoidRefresh = true;
+                            try {
+                                state.value = value;
+                                host.dispatchEvent(new CustomEvent("change", {detail: { value }, bubbles: true}));
+                            } finally {
+                                avoidRefresh = false;
+                            }
                         }),
                         ...(state.mode == "markdown" ? [EditorView.lineWrapping] : [])
                     ]
@@ -135,16 +149,6 @@ export default {
                     state: editorState,
                     parent: host.shadowRoot
                 });
-                editor.dom.addEventListener("blur", () => {
-                    const value = editor.state.doc.toString();
-                    avoidRefresh = true;
-                    state.value = value;
-                    host.dispatchEvent(new CustomEvent("change", {
-                        detail: { value },
-                        bubbles: true
-                    }));
-                    avoidRefresh = false;
-                }, true);
                 if (state.autofocus) {
                     editor.focus();
                 }

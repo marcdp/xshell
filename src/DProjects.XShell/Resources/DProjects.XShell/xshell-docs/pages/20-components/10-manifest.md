@@ -150,8 +150,12 @@ contract: {
 }
 ```
 
-Examples are passive metadata. XShell validates the fields and retains the source strings and sample data in the contract. Example rendering
-and execution are unimplemented. Example `state` stays in the contract and is never merged into Component or Page runtime state.
+Examples remain passive contract metadata. XShell validates the fields and retains the source strings and sample data in the contract; it does not
+merge example `state` into Component or Page runtime state. Diagnostics Contract Detail displays every example read-only. For an example with a
+`template`, **Try it** creates temporary template and state clones and renders them with the normal XTemplate renderer. Source edits update the live
+preview after a short debounce, and **Reset** recreates both clones from the authored example. Closing the playground discards those changes.
+Diagnostics never executes an example's `code` field, including when the same example also has a template. The preview is intended for trusted,
+bundled examples and is not a security sandbox.
 
 Public reusable Components should generally include at least one example. One or two examples usually cover a simple Component. General-purpose
 Components often benefit from two or three, and a complex Component may need three to five when they demonstrate distinct capabilities.

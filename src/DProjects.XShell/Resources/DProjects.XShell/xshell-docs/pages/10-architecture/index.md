@@ -53,8 +53,11 @@ Page IDs can use the effective asset path from **Pages**, the module-qualified a
 asset form shown above.
 
 The reference lists the declared properties, methods, events, slots, and named types when available. It presents a Command's `execute`
-signature with its parameters and return metadata. Examples show copyable template and code blocks and expandable initial state.
-Example JavaScript and template bindings are never executed, and template source is displayed as text.
+signature with its parameters and return metadata. Examples show copyable template and code blocks and expandable initial state. A template example
+also offers **Try it**, which opens an editor beside a live preview rendered by the normal XTemplate renderer. Preview updates are debounced while
+typing; **Reset** restores the authored template and a fresh clone of its initial state, and **Close** disposes the preview. Edits and interactive
+state remain local to the open playground and are not persisted or written back to the contract. Programmatic `code` examples remain read-only and
+are never executed. The preview is an explicit rendering tool for trusted bundled examples, not a security sandbox.
 
 ### Diagnostics tags
 
