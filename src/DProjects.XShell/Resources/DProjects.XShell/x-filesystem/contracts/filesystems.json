@@ -3,6 +3,18 @@
     "$schema": "../../xshell/schemas/contract.schema.json",
     "label": "Filesystem Factory",
     "description": "Creates or resolves Filesystem instances from provider URLs.",
+    "properties": {
+        "commands": {
+            "type": "array",
+            "readonly": true,
+            "description": "Configured explicit filesystem actions."
+        },
+        "editors": {
+            "type": "object",
+            "readonly": true,
+            "description": "Configured file editors keyed by stable editor ID."
+        }
+    },
     "methods": {
         "create": {
             "description": "Returns a Filesystem instance for the specified URL.",
@@ -17,6 +29,21 @@
             "returns": {
                 "type": "object",
                 "description": "Promise resolving to an instance implementing the Filesystem contract."
+            }
+        },
+        "getEditor": {
+            "description": "Returns the configured editor matching a file path, or null when no editor supports its extension.",
+            "parameters": [
+                {
+                    "name": "path",
+                    "type": "string",
+                    "required": true,
+                    "description": "Filesystem path to match, including the file name."
+                }
+            ],
+            "returns": {
+                "type": "object",
+                "description": "A defensive copy of the matching editor descriptor, or null."
             }
         }
     }

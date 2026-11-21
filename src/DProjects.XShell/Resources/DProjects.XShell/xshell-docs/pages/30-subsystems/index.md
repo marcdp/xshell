@@ -14,6 +14,7 @@ Implemented V0 runtime capabilities:
 - [Secrets](100-secrets.md) — Browser-local envelope encryption with password and passkey unlocking.
 - [Preferences](110-preferences.md) — Browser-local structured-clone settings persisted with IndexedDB.
 - [Stores](120-stores.md) — Provider-independent, schema-described JSON document collections.
+- [Filesystems](130-filesystems.md) — Filesystem actions, file editor selection, and declarative editor contributions.
 
 Authentication and identity are supplied by the optional `x-identity` module; they do not introduce an `xshell.identity` Core configuration section.
 

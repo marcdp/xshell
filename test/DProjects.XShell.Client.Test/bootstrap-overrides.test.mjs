@@ -30,7 +30,12 @@ test("manifest arrays merge by ID in bootstrap precedence order", () => {
     // Supply normalized manifests in a different order from their merge precedence.
     const framework = {
         name: "xshell", manifest: {
-            xshell: { resolver: { esm: { xshell: { src: "/xshell.js" } } } },
+            xshell: {
+                resolver: { esm: { xshell: { src: "/xshell.js" } } },
+                services: { filesystems: { options: { editors: {
+                    text: { page: "/text.js", label: "Open", extensions: ["txt"] }
+                } } } }
+            },
             menu: {
                 items: [{ id: "open", obsolete: true }, "separator", { id: "save" }, { label: "Help" }, { id: "" }, { id: 1 }],
                 other: [{ id: "open", label: "Other" }]
@@ -40,6 +45,9 @@ test("manifest arrays merge by ID in bootstrap precedence order", () => {
     const dependency = {
         name: "dep", manifest: {
             modules: { dep: {} },
+            xshell: { services: { filesystems: { options: { editors: {
+                archive: { page: "/archive.js", label: "Open", extensions: ["zip"] }
+            } } } } },
             menu: { items: [{ id: "save", label: "Dependency" }, { id: "open", label: "Dependency", obsolete: true }] }
         }
     };
@@ -66,6 +74,10 @@ test("manifest arrays merge by ID in bootstrap precedence order", () => {
             "separator", { id: "rename", label: "Last" }, { label: "Help" }, { id: "" }, { id: 1 }],
         other: [{ id: "open", label: "Other" }],
         rootOnly: [{ id: "new", label: "Last" }, null]
+    });
+    assert.deepEqual(plain(config.xshell.services.filesystems.options.editors), {
+        text: { page: "/text.js", label: "Open", extensions: ["txt"] },
+        archive: { page: "/archive.js", label: "Open", extensions: ["zip"] }
     });
     config.menu.items[0].label = "Changed";
     config.menu.other[0].label = "Changed";

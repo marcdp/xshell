@@ -68,8 +68,9 @@ export default {
         </div>
 
         <x-contextmenu x-on:command="onCommand">        
+            <x-menuitem x-if="state.editor" x-attr:label="state.editor.label" x-attr:icon="state.editor.icon" command="open" x-attr:disabled="!state.entry"></x-menuitem>
             <x-menuitem x-for="command in state.commands" x-attr:label="command.label" x-attr:icon="command.icon" command="customCommand" x-attr:data-command="command.id" x-attr:disabled="!state.entry"></x-menuitem>
-            <x-menuitem x-if="state.commands.length" label="-" ></x-menuitem>
+            <x-menuitem x-if="state.editor || state.commands.length" label="-" ></x-menuitem>
             <x-menuitem label="New file ..." icon="x-file" command="newFile" x-attr:disabled="(state.entry && state.entry.type != 'directory' ? true : false)"></x-menuitem>
             <x-menuitem label="New folder ..." icon="x-folder" command="newFolder" x-attr:disabled="(state.entry && state.entry.type != 'directory' ? true : false)"></x-menuitem>
             <x-menuitem label="Upload files ..." icon="x-file" command="uploadFiles" x-attr:disabled="(state.entry && state.entry.type != 'directory' ? true : false)"></x-menuitem>
@@ -88,6 +89,7 @@ export default {
         pathList: "/",
         entry: null,
         entries: [],
+        editor: null,
         commands: [],
         history: ["/"],
         historyIndex: 0,
@@ -99,7 +101,7 @@ export default {
             if (!fileCommands) return [];
             return fileCommands.filter(command => {
                 if (command.type === "file" && entry.type === "file") {
-                    return command.extensions.some(ext => entry.path.endsWith(ext));
+                    return command.extensions?.some(extension => entry.path.toLowerCase().endsWith(`.${extension.toLowerCase()}`)) ?? false;
                 }
                 if (command.type === "directory" && entry.type === "directory") {
                     return true;
@@ -142,20 +144,24 @@ export default {
                 }
             },
             open(entries = state.entries) {
-                // open
+                // Navigate into the first selected directory.
                 for(const entry of entries) {
                     if (entry.type === "directory") {
                         this.navigateTo(entry.path);
                         return;
                     }
                 }
+
+                // Open each selected file once with its configured editor.
                 for(const entry of entries) {
-                    const commands = getFileCommands(entry)
-                    for(const command of commands) {
-                        if (command.actions?.includes("open")) {
-                            this.customCommand(command.id, [entry]);
-                        }
-                    }
+                    const editor = filesystems.getEditor(entry.path);
+                    if (!editor) continue;
+                    navigation.navigate({
+                        href: editor.page,
+                        page: getPage(),
+                        params: { src: state.src, path: entry.path },
+                        open: "stack"
+                    });
                 }
             },
             properties(entries = state.entries) {
@@ -538,6 +544,7 @@ export default {
                 // handle context menu entry event
                 state.entry = event.detail.entry;
                 state.entries = event.detail.entries;
+                state.editor = state.entry?.type === "file" ? filesystems.getEditor(state.entry.path) : null;
                 state.commands = getFileCommands(state.entry);
                 const contextMenu = host.shadowRoot.querySelector("x-contextmenu");
                 contextMenu.open({x: event.detail.x, y: event.detail.y});
