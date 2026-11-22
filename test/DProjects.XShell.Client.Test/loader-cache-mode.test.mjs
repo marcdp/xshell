@@ -7,8 +7,8 @@ globalThis.window = {
     }
 };
 
-const { default: Loader } = await import("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/loader.js");
-const { default: Resolver } = await import("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/resolver.js");
+const { default: Loader } = await import("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/loader.js");
+const { default: Resolver } = await import("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/resolver.js");
 
 const bus = { async emit() {} };
 const debug = { log() {}, error() {} };

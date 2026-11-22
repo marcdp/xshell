@@ -99,16 +99,17 @@ or more are reported with `AggregateError` after all cleanup attempts. Concurren
 cleanup, and a completed child detaches from its parent. Disposing a child leaves its parent and siblings active. Disposing the root follows the same
 hierarchy but does not automatically dispose its registered singleton instances, and XShell shutdown does not invoke root disposal in this phase.
 
-Definition-based Pages and Components automatically create independent scopes during instance construction. Each Command invocation creates an
-independent scope inside its Task handler immediately before Command construction. Every automatic owner scope is a direct child of the application
-root, regardless of DOM, Page composition, or which UI owner initiated a Command. A Component inside a Page does not inherit the Page scope, nested
-or sibling Components do not inherit one another's scopes, and Commands do not inherit UI scopes. This intentionally avoids DOM lookup, scope
-reparenting, and ambient current-scope state.
+Definition-based Pages, Components, and Commands automatically create and own independent scopes during instance construction. Every automatic
+owner scope is a direct child of the application root, regardless of DOM, Page composition, or which UI owner initiated a Command. A Component
+inside a Page does not inherit the Page scope, nested or sibling Components do not inherit one another's scopes, and Commands do not inherit UI
+scopes. This intentionally avoids DOM lookup, scope reparenting, invocation-supplied ownership, and ambient current-scope state.
 
 Their controller providers keep the existing special injections and resolve ordinary service names through the owner scope. The special
 `controller({ services })` injection returns that same owner scope, so controller code can explicitly resolve or initialize additional services or
-create nested scopes. Global `xshell.services` still returns the root container. The owner scope survives temporary Page unmount/remount and
-Component disconnect/reconnect cycles, then is awaited and disposed after controller unload and existing non-service cleanup during final unload.
+create nested scopes. Global `xshell.services` still returns the root container. Page and Component owner scopes survive temporary Page
+unmount/remount and Component disconnect/reconnect cycles, then are awaited and disposed after controller unload and existing non-service cleanup
+during final unload. A Command retains its scope until execution settles, and `Command.dispose()` then disposes it and clears Command-owned
+references.
 
 `beginScope({ context })` optionally supplies explicit owner-specific construction context. It is not a registered service and is available only as
 the reserved `scopeContext` constructor dependency while that scope constructs scoped or transient instances. Singleton construction always uses
@@ -119,10 +120,10 @@ preserving `controller({ events, timer })` and controller `this` binding without
 Command scopes with no owner callback; a string listener in such a scope reports a clear error. Unmount and disconnect preserve the helpers because
 their owner scope remains active. Final scope disposal removes listeners, cancels timers, and releases callback references exactly once.
 
-Command controller providers similarly resolve ordinary services through the invocation scope, while `controller({ services })` returns the scope
-and `controller({ task })` retains the Task execution context. Execution settles before the scope is asynchronously disposed, and Task completion
-waits for cleanup. Cancellation remains cooperative: aborting the Task does not dispose a scope while Command code is still running. Foreground and
-background Commands use the same independent ownership model.
+Command controller providers similarly resolve ordinary services through the Command-owned scope, while `controller({ services })` returns that
+scope and `controller({ task })` retains the Task execution context. The high-level Commands service and direct framework construction paths await
+`Command.dispose()` after execution, so Task completion waits for scope cleanup. Cancellation remains cooperative: aborting the Task does not
+dispose a scope while Command code is still running. Foreground and background Commands use the same independent ownership model.
 
 Class-based Page and Component exports remain unchanged and do not receive definition-loader integration.
 

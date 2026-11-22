@@ -8,6 +8,7 @@ import { createComponentClassFromJsDefinition } from "../../src/DProjects.XShell
 import { createPageClassFromJsDefinition } from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/loaders/page-js.js";
 import Contracts from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/contracts.js";
 import JsonValidator from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/json-validator.js";
+import Services from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services.js";
 
 globalThis.HTMLElement = class {};
 globalThis.CSSStyleSheet = class { replaceSync() {} };
@@ -16,7 +17,6 @@ globalThis.window = { customElements: globalThis.customElements };
 globalThis.document = { baseURI: "https://example.test/", documentElement: { style: {} } };
 
 const { default: LoaderCommandJs } = await import("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/loaders/command-js.js");
-const { default: xshell } = await import("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/xshell.js");
 const resourceDirectory = new URL("../../src/DProjects.XShell/Resources/DProjects.XShell/", import.meta.url);
 const schemaDirectory = new URL("xshell/schemas/", resourceDirectory);
 const schemas = {};
@@ -226,22 +226,29 @@ test("Service registration preserves examples in the validated contract document
     assert.deepEqual(contracts.getContractById("sample").examples, examples);
 });
 
-test("Command loader exposes the same examples on the class and instance", async t => {
+test("Command loader exposes the same examples on the class and instance", async () => {
     // Validate a definition through the Command loader before invoking its actual controller.
-    const originalLoader = xshell._loader;
-    t.after(() => { xshell._loader = originalLoader; });
-    xshell._loader = { async load(id) {
-        assert.equal(id, "schema:command");
-        return schemas.command;
-    } };
+    const root = new Services({config: {xshell: {services: {}}}, bus: null});
+    root.register("services", root);
+    const context = {
+        resourceDefinition: {moduleId: "test"},
+        services: {
+            loader: {async load(id) { assert.equal(id, "schema:command"); return schemas.command; }},
+            config: {modules: {test: {id: "test"}}},
+            modules: {getModuleById() { return {id: "test"}; }},
+            services: root
+        }
+    };
     const source = `export default {
         contract: { execute: { returns: { type: "string" } }, examples: ${JSON.stringify(examples)} },
         controller() { return { execute() { return "executed"; } }; }
     };`;
     const src = `data:text/javascript,${encodeURIComponent(source)}`;
-    const Command = await new LoaderCommandJs().load(src, { resourceDefinition: { moduleId: "test" } });
+    const Command = await new LoaderCommandJs().load(src, context);
     const command = new Command();
     assert.deepEqual(Command.contract.examples, examples);
     assert.equal(command.contract, Command.contract);
     assert.equal(command.execute(), "executed");
+    await command.dispose();
+    assert.equal(root._children.length, 0);
 });

@@ -171,18 +171,17 @@ test("The existing demo.operation Command loads and documents execute without us
         delete globalThis.customElements;
     });
     const { default: CommandLoader } = await import("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/loaders/command-js.js");
-    const { default: xshell } = await import("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/xshell.js");
     const schemaUrl = new URL("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/schemas/command.schema.json", import.meta.url);
     const schemaLoader = new SchemaLoader();
     t.mock.method(globalThis, "fetch", async url => new Response(await readFile(new URL(url)), { status: 200 }));
     const schema = await schemaLoader.load(schemaUrl.href);
-    t.mock.property(xshell, "_loader", { load: async id => {
-        assert.equal(id, "schema:command");
-        return schema;
-    } });
+    const commandContext = {
+        resourceDefinition: {moduleId: "x-demo"},
+        services: {loader: {async load(id) { assert.equal(id, "schema:command"); return schema; }}}
+    };
 
     const src = new URL("../../src/DProjects.XShell/Resources/DProjects.XShell/x-demo/commands/demo.operation.js", import.meta.url);
-    const Command = await new CommandLoader().load(src.href, { resourceDefinition: { moduleId: "x-demo" } });
+    const Command = await new CommandLoader().load(src.href, commandContext);
     const Resource = staticResource(t, "command", Command.contract);
     const { controller, state, loader, bus } = inspect(t, { kind: "command", id: "demo.operation" }, {
         moduleId: "x-demo", load: () => Resource

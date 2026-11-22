@@ -1,88 +1,184 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-test("command-js injects invocation task, context and ordinary XShell services together", async () => {
-    globalThis.CSSStyleSheet ??= class { replaceSync() {} };
-    globalThis.HTMLElement ??= class {};
-    globalThis.customElements ??= { define() {} };
-    const [{ default: LoaderCommandJs }, { default: xshell }] = await Promise.all([
-        import("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/loaders/command-js.js"),
-        import("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/xshell.js")
-    ]);
-    const marker = `__command_dependencies_${crypto.randomUUID().replaceAll("-", "")}`;
-    const source = `
+import LoaderCommandJs from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/loaders/command-js.js";
+import Services from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services.js";
+import Tasks from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/tasks.js";
+
+let instanceId = 0;
+
+function createRoot({disposed = [], scopedDispose} = {}) {
+    const root = new Services({config: {xshell: {services: {}}}, bus: null});
+    class Singleton {
+        static optionsSchema = {type: "object", additionalProperties: false};
+        constructor() { this.id = ++instanceId; }
+        dispose() { throw new Error("Command scopes must not dispose singletons."); }
+    }
+    class Scoped {
+        static optionsSchema = {type: "object", additionalProperties: false};
+        constructor() { this.id = ++instanceId; }
+        async dispose() { disposed.push(`scoped:${this.id}`); await scopedDispose?.(this); }
+    }
+    class Transient {
+        static optionsSchema = {type: "object", additionalProperties: false};
+        constructor() { this.id = ++instanceId; }
+        async dispose() { disposed.push(`transient:${this.id}`); }
+    }
+    root.register("services", root);
+    root.register("singleton", null, {implementationItem: {class: Singleton}});
+    root.register("session", null, {lifetime: "scoped", implementationItem: {class: Scoped}});
+    root.register("formatter", null, {lifetime: "transient", implementationItem: {class: Transient}});
+    return root;
+}
+
+async function loadCommand(source, {root = createRoot(), module, moduleConfig} = {}) {
+    const schema = {
+        type: "object",
+        required: ["contract", "controller"],
+        properties: {contract: {type: "object"}, controller: {type: "object"}}
+    };
+    const context = {
+        resourceDefinition: {moduleId: "sample"},
+        services: {
+            loader: {async load(id) { assert.equal(id, "schema:command"); return schema; }},
+            config: {modules: {sample: moduleConfig ?? {id: "sample", src: "sample.jsonc"}}},
+            modules: {getModuleById(id) { return id === "sample" ? module ?? {id: "sample"} : null; }},
+            services: root
+        }
+    };
+    const src = `data:text/javascript,${encodeURIComponent(source)}#${crypto.randomUUID()}`;
+    return {Command: await new LoaderCommandJs().load(src, context), context, root};
+}
+
+test("Command instances own independent direct-root scopes and preserve controller injections", async () => {
+    const disposed = [];
+    const root = createRoot({disposed});
+    const records = [];
+    const hooks = {records};
+    const ordinary = {
+        loader: {name: "loader"},
+        resolver: {name: "resolver"},
+        tasks: new Tasks({bus: null})
+    };
+    root.register("hooks", hooks);
+    for (const [name, service] of Object.entries(ordinary)) root.register(name, service);
+    const module = {id: "sample"};
+    const moduleConfig = {id: "sample", src: "sample.jsonc"};
+    const {Command} = await loadCommand(`
         export default {
             contract: { label: "Example", tags: ["automation", "tasks"], execute: { parameters: [] } },
-            controller(services) {
-                globalThis.${marker} = {
-                    task: services.task,
-                    context: services.context,
-                    loader: services.loader,
-                    resolver: services.resolver,
-                    tasks: services.tasks,
-                    services: services.services,
-                    module: services.module,
-                    moduleConfig: services.moduleConfig,
-                    symbol: services[Symbol.toStringTag]
+            controller(provider) {
+                const record = {
+                    definition: provider.definition,
+                    context: provider.context,
+                    task: provider.task,
+                    module: provider.module,
+                    moduleConfig: provider.moduleConfig,
+                    services: provider.services,
+                    loader: provider.loader,
+                    resolver: provider.resolver,
+                    tasks: provider.tasks,
+                    singleton: provider.singleton,
+                    session: provider.session,
+                    repeatedSession: provider.session,
+                    transients: [provider.formatter, provider.formatter],
+                    symbol: provider[Symbol.toStringTag]
                 };
+                provider.hooks.records.push(record);
                 return { execute(value) { return value; } };
             }
         };
-    `;
-    const src = `data:text/javascript,${encodeURIComponent(source)}`;
-    const originals = {
-        loader: xshell._loader,
-        services: xshell._services,
-        config: xshell._config
-    };
-    const ordinary = {
-        loader: { name: "loader" },
-        resolver: { name: "resolver" },
-        tasks: { name: "tasks" }
-    };
-    const module = { id: "sample" };
-    const moduleConfig = { id: "sample", src: "sample.jsonc" };
-    const task = { signal: new AbortController().signal };
-    const invocationServices = { resolve: id => ordinary[id] };
-    const invocationContext = { task, services: invocationServices, metadata: "value" };
+    `, {root, module, moduleConfig});
+    const invocationContexts = [
+        {task: {id: "first"}, metadata: 1, services: {resolve() { throw new Error("Invocation Services must not own the Command scope."); }}},
+        {task: {id: "second"}, metadata: 2}
+    ];
 
-    try {
-        xshell._loader = { load: async id => {
-            assert.equal(id, "schema:command");
-            return {
-                type: "object",
-                required: ["contract", "controller"],
-                properties: { contract: { type: "object" }, controller: { type: "object" } }
-            };
-        } };
-        xshell._services = { resolve: id => id === "modules" ? { getModuleById: moduleId => moduleId === "sample" ? module : null } : ordinary[id] };
-        xshell._config = { modules: { sample: moduleConfig } };
+    const commands = invocationContexts.map(context => new Command(context));
 
-        const Command = await new LoaderCommandJs().load(src, { resourceDefinition: { moduleId: "sample" } });
-        const instance = new Command(invocationContext);
-
-        assert.deepEqual(Command.contract.tags, ["automation", "tasks"]);
-        assert.strictEqual(instance.contract, Command.contract);
-        assert.equal(Object.isFrozen(Command.contract.tags), true);
-        assert.equal(instance.execute(7), 7);
-        assert.equal(globalThis[marker].task, task);
-        assert.equal(globalThis[marker].context, invocationContext);
-        assert.equal(globalThis[marker].loader, ordinary.loader);
-        assert.equal(globalThis[marker].resolver, ordinary.resolver);
-        assert.equal(globalThis[marker].tasks, ordinary.tasks);
-        assert.equal(globalThis[marker].services, invocationServices);
-        assert.equal(globalThis[marker].module, module);
-        assert.equal(globalThis[marker].moduleConfig, moduleConfig);
-        assert.equal(globalThis[marker].symbol, undefined);
-
-        // Preserve direct construction by resolving through the application root when no invocation scope is supplied.
-        new Command({ task });
-        assert.equal(globalThis[marker].loader, ordinary.loader);
-        assert.equal(globalThis[marker].services, xshell._services);
-    } finally {
-        xshell._loader = originals.loader;
-        xshell._services = originals.services;
-        xshell._config = originals.config;
-        delete globalThis[marker];
+    assert.deepEqual(Command.contract.tags, ["automation", "tasks"]);
+    assert.strictEqual(commands[0].contract, Command.contract);
+    assert.equal(Object.isFrozen(Command.contract.tags), true);
+    assert.equal(commands[0].execute(7), 7);
+    assert.equal(records.length, 2);
+    assert.notStrictEqual(records[0].services, records[1].services);
+    assert.ok(records.every(record => record.services._parent === root));
+    assert.strictEqual(records[0].singleton, records[1].singleton);
+    assert.strictEqual(records[0].session, records[0].repeatedSession);
+    assert.notStrictEqual(records[0].session, records[1].session);
+    assert.ok(records.every(record => record.transients[0] !== record.transients[1]));
+    for (const [index, record] of records.entries()) {
+        assert.strictEqual(record.context, invocationContexts[index]);
+        assert.strictEqual(record.task, invocationContexts[index].task);
+        assert.strictEqual(record.definition.contract, Command.contract);
+        assert.strictEqual(record.module, module);
+        assert.strictEqual(record.moduleConfig, moduleConfig);
+        assert.strictEqual(record.loader, ordinary.loader);
+        assert.strictEqual(record.resolver, ordinary.resolver);
+        assert.strictEqual(record.tasks, ordinary.tasks);
+        assert.equal(record.symbol, undefined);
     }
+    assert.equal(root._children.length, 2);
+    assert.equal(ordinary.tasks.list().length, 0);
+
+    await commands[0].dispose();
+    assert.equal(root._children.length, 1);
+    assert.equal(records[1].services._lifecycleState, "active");
+    await commands[1].dispose();
+
+    assert.equal(root._children.length, 0);
+    assert.equal(disposed.filter(item => item.startsWith("scoped:")).length, 2);
+    assert.equal(disposed.filter(item => item.startsWith("transient:")).length, 4);
+    assert.strictEqual(commands[0].controller, null);
+    assert.strictEqual(commands[0]._servicesScope, null);
+});
+
+test("Command constructor failure initiates owned-scope cleanup and preserves the construction error", async t => {
+    const disposed = [];
+    const cleanupError = new Error("constructor cleanup failed");
+    const root = createRoot({disposed, scopedDispose() { throw cleanupError; }});
+    const constructionError = new Error("controller failed");
+    const reported = [];
+    t.mock.method(console, "error", (...args) => reported.push(args));
+    root.register("hooks", {constructionError});
+    const {Command} = await loadCommand(`
+        export default {
+            contract: { label: "Failure", execute: { parameters: [] } },
+            controller(provider) {
+                provider.session;
+                throw provider.hooks.constructionError;
+            }
+        };
+    `, {root});
+
+    assert.throws(() => new Command({task: {}}), error => error === constructionError);
+    await new Promise(resolve => setTimeout(resolve, 0));
+
+    assert.equal(root._children.length, 0);
+    assert.equal(disposed.filter(item => item.startsWith("scoped:")).length, 1);
+    assert.equal(reported.length, 1);
+    assert.match(reported[0][0], /Command 'Failure'.*construction failed/);
+    assert.strictEqual(reported[0][1], cleanupError);
+});
+
+test("Command.dispose propagates cleanup failure while clearing owned references", async () => {
+    const disposalError = new Error("scope disposal failed");
+    const root = createRoot({scopedDispose() { throw disposalError; }});
+    const {Command} = await loadCommand(`
+        export default {
+            contract: { label: "Disposal", execute: { parameters: [] } },
+            controller(provider) {
+                provider.session;
+                return { execute() { return true; } };
+            }
+        };
+    `, {root});
+    const command = new Command();
+
+    await assert.rejects(command.dispose(), error => error === disposalError);
+
+    assert.equal(root._children.length, 0);
+    assert.strictEqual(command.controller, null);
+    assert.strictEqual(command._servicesScope, null);
+    await command.dispose();
 });

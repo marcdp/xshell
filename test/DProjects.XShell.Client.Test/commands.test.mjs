@@ -5,21 +5,21 @@ import commandsContract from "../../src/DProjects.XShell/Resources/DProjects.XSh
 import contractSchema from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/schemas/contract.schema.json" with {type: "json"};
 import Commands from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/commands.js";
 import JsonValidator from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/json-validator.js";
-import Services from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services.js";
 import Tasks from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/tasks.js";
 
 function createCommands(Command, tasks = new Tasks({bus: null}), config) {
     const loads = [];
-    const services = new Services({config: {xshell: {services: {}}}, bus: null});
-    services.register("services", services);
     const commands = new Commands({
         loader: { async load(id) { loads.push(id); return Command; } },
         tasks,
         jsonValidator: new JsonValidator(),
-        config,
-        services
+        config
     });
-    return {commands, loads, tasks, services};
+    return {commands, loads, tasks};
+}
+
+class DisposableCommand {
+    async dispose() {}
 }
 
 test("commands contract declares discovery and the asynchronous Task-backed run API", () => {
@@ -90,7 +90,7 @@ test("commands discovers framework and module inventories without loading implem
 test("commands loads by id, applies defaults and preserves declared positional order", async () => {
     const calls = [];
     const contexts = [];
-    class Command {
+    class Command extends DisposableCommand {
         static contract = {
             label: "Example",
             description: "Runs an example",
@@ -101,7 +101,7 @@ test("commands loads by id, applies defaults and preserves declared positional o
                 {name: "note", type: "string", default: "fallback"}
             ]}
         };
-        constructor(context) { contexts.push(context); this.context = context; }
+        constructor(context) { super(); contexts.push(context); this.context = context; }
         execute(...args) { calls.push(args); return args; }
     }
     const {commands, loads, tasks} = createCommands(Command);
@@ -152,15 +152,15 @@ test("commands rejects missing, unknown, typed, enum, named-type and schema-inva
 });
 
 test("commands supports synchronous and asynchronous results and represents execution failures on Tasks", async () => {
-    class SyncCommand {
+    class SyncCommand extends DisposableCommand {
         static contract = {execute: {parameters: []}};
         execute() { return 7; }
     }
-    class AsyncCommand {
+    class AsyncCommand extends DisposableCommand {
         static contract = {execute: {parameters: []}};
         async execute() { return "async"; }
     }
-    class FailingCommand {
+    class FailingCommand extends DisposableCommand {
         static contract = {execute: {parameters: []}};
         execute() { throw new Error("execution failed"); }
     }
@@ -183,9 +183,9 @@ test("commands supports synchronous and asynchronous results and represents exec
 test("commands preserves cooperative cancellation and concurrent invocation isolation", async () => {
     const releases = [];
     const contexts = [];
-    class Command {
+    class Command extends DisposableCommand {
         static contract = {execute: {parameters: [{name: "value", type: "integer", required: true}]}};
-        constructor({task}) { this.task = task; contexts.push(task); }
+        constructor({task}) { super(); this.task = task; contexts.push(task); }
         async execute(value) {
             return await new Promise((resolve, reject) => {
                 const release = () => resolve(value);
@@ -194,7 +194,7 @@ test("commands preserves cooperative cancellation and concurrent invocation isol
             });
         }
     }
-    const {commands, services} = createCommands(Command);
+    const {commands} = createCommands(Command);
     const [first, second] = await Promise.all([
         commands.run({id: "concurrent", args: {value: 1}, background: false}),
         commands.run({id: "concurrent", args: {value: 2}, background: true})
@@ -210,5 +210,4 @@ test("commands preserves cooperative cancellation and concurrent invocation isol
     assert.equal(first.status, "canceled");
     assert.equal(second.status, "finished");
     assert.equal(await second.getResult(), 2);
-    assert.equal(services._children.length, 0);
 });

@@ -37,12 +37,12 @@ export default {
                 <x-listview-head>
                     <x-listview-column label="Permission" width="12em"></x-listview-column>
                     <x-listview-column label="Description"></x-listview-column>
-                    <x-listview-column label="Status" width="7em"></x-listview-column>
+                    <x-listview-column label="Status" width="7em" style="text-align:center;"></x-listview-column>
                 </x-listview-head>
                 <x-listview-body>
                     <x-listview-item x-for="permission in state.permissions" x-attr:key="permission.name" x-attr:label="permission.label" x-attr:data-permission="permission.name">
                         <span x-text="permission.description"></span>
-                        <span>
+                        <span style="text-align:center;">
                             <x-icon x-if="permission.status == 'denied'" icon="x-close"></x-icon>
                             <x-icon x-if="permission.status == 'granted'" icon="x-check"></x-icon>
                             <x-icon x-if="permission.status == 'prompt'" icon="x-empty"></x-icon>
@@ -148,7 +148,6 @@ export default {
             },
             async request({event}) {
                 // Invoke the feature API directly from the user's click, so browsers can show a native prompt.
-                debugger
                 const name = event.target.dataset.permission;
                 const permission = state.permissions.find(item => item.name === name);
                 if (!alive || !permission?.canRequest || state.loading || state.busyName) return;

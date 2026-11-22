@@ -56,14 +56,14 @@ Command definitions can also declare optional [usage examples](../20-components/
 They may declare lowercase kebab-case classification identifiers in `contract.tags`; generated inventory metadata copies those values to
 `file.resource.tags` without loading the Command. Tags do not alter discovery filters, argument validation, Task handling, or execution.
 
-The Task handler creates an independent Services scope directly from the application root, constructs a fresh Command instance with
-`{ task: taskContext, services: invocationScope }`, and calls `execute(...args)`. Scope creation therefore happens only after Task execution starts;
-loading and validation failures, or cancellation before the handler starts, create no scope. Command scopes never inherit the initiating Page or
-Component scope, and concurrent executions of the same Command use different scopes.
+The Task handler constructs a fresh Command instance with `{ task: taskContext }` and calls `execute(...args)`. During construction, the Command
+creates and owns one independent Services scope directly from the application root. Scope creation therefore happens only after Task execution
+starts; loading and validation failures, or cancellation before the handler starts, create no scope. Command scopes never inherit the initiating
+Page or Component scope, and concurrent Command instances use different scopes.
 
 Definition-based Command controllers keep their existing `context`, `task`, `definition`, `module`, and `moduleConfig` injections. Ordinary service
-names resolve through the invocation scope, and `controller({ services })` returns that scope. Application singletons remain shared, scoped services
-are reused only within one invocation, and transient services are constructed on every resolution.
+names resolve through the Command-owned scope, and `controller({ services })` returns that scope. Application singletons remain shared, scoped
+services are reused only within one Command, and transient services are constructed on every resolution.
 
 ```js
 export default {
@@ -78,7 +78,7 @@ export default {
                 const session = services.resolve("editorSession");
                 task.info("Executing command");
 
-                // The invocation scope owns session.
+                // This Command's scope owns session.
                 return { success: true };
             }
         };
@@ -86,9 +86,10 @@ export default {
 };
 ```
 
-The handler awaits execution and then asynchronously disposes the invocation scope before the Task reaches a terminal status. Successful return
-values are preserved. Execution failures still trigger cleanup; disposal failures fail an otherwise successful Task; and simultaneous execution
-and disposal failures are retained in an `AggregateError`.
+The handler awaits execution and then awaits `command.dispose()` before the Task reaches a terminal status. `Command.dispose()` disposes the scope
+owned by that Command. Successful return values are preserved. Execution failures still trigger cleanup; disposal failures fail an otherwise
+successful Task; and simultaneous execution and disposal failures are retained in an `AggregateError`. High-level `commands.run()` handles this
+lifecycle automatically. Framework code that directly constructs a Command must likewise dispose every successfully constructed instance.
 
 Tasks remains the owner of scheduling, status, progress, output, cooperative cancellation, errors, and results. Cancellation aborts the existing
 Task signal but does not dispose a running Command's scope immediately. Cooperative and non-cooperative Commands retain their scope until execution
@@ -97,9 +98,9 @@ initiating Page lifetime, while background Commands remain equally independent. 
 services for function callbacks, and scope disposal cleans them up. Command scopes do not provide Page/Component controller dispatch, so string
 callbacks are rejected clearly rather than bound implicitly.
 
-The generic invocation Page resolves the Command itself only to present its label, description, parameters, return metadata, and generated
-`x-schema` editor. After UI validation it calls `commands.run()` and observes the returned Task. Foreground Tasks are canceled when that Page
-unloads; background Tasks continue. Ordinary Service-method invocation remains a separate shared-instance path.
+The generic invocation Page resolves the Command itself to present its label, description, parameters, return metadata, and generated `x-schema`
+editor. Its existing Task handler constructs and executes the Command directly, then awaits `Command.dispose()` before settling. Foreground Tasks
+are canceled when that Page unloads; background Tasks continue. Ordinary Service-method invocation remains a separate shared-instance path.
 
 Like other registered services, `commands` is available through `services.resolve("commands")` and controller injection as
 `controller({ commands })`. Controller `postRender()` scheduling is a distinct injected function and does not conflict with this service.

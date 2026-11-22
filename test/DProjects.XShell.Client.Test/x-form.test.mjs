@@ -188,6 +188,10 @@ function createInvoke(contract, initialArgs = {}, editorErrors = [], options = {
             calls.push(args);
             return options.execute ? options.execute.call(this, ...args) : "done";
         }
+        async dispose() {
+            // match the framework lifecycle required by directly constructed Commands
+            await options.dispose?.call(this);
+        }
     }
     const editor = { validate: detail => {
         assert.equal(detail, true);
@@ -645,6 +649,7 @@ test("invoke unload lets a background Task continue to completion", async () => 
     assert.equal(task._signal.aborted, false);
     release();
     await submission;
+    await task.wait();
     assert.equal(task.status, "finished");
     assert.equal(await task.getResult(), "completed");
 });

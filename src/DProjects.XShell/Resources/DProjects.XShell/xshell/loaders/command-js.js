@@ -2,6 +2,11 @@
 import JsonValidator from "../services/json-validator.js";
 import { deepFreeze } from "../utils/object.js";
 
+function disposeFailedScope(scope, commandName) {
+    // dispose constructor-owned resources without replacing the original synchronous failure
+    scope.dispose().catch(error => console.error(`Failed to dispose Services scope for Command '${commandName}' after construction failed.`, error));
+}
+
 export default class LoaderCommandJs {
 
     async load(src, context) {
@@ -48,10 +53,10 @@ export default class LoaderCommandJs {
         deepFreeze(definition);
         const moduleId = context.resourceDefinition.moduleId;
 
-        // Return a class, like the Component/Page loaders. Each instance has
-        // its own invocation context and controller.
+        // Return a class, like the Component/Page loaders, with instance-owned context, controller, and Services scope
         return class Command {
             _controller = null;
+            _servicesScope = null;
 
             static get contract() {
                 return definition.contract;
@@ -64,36 +69,61 @@ export default class LoaderCommandJs {
             }
 
             constructor(invocationContext = {}) {
-                // use the explicit invocation scope while preserving legacy direct construction through root Services
-                const invocationServices = invocationContext.services ?? context.services;
-                const servicesProvider = new Proxy({}, {
-                    get(target, prop) {
-                        if (prop === "context") {
-                            return invocationContext;
-                        } else if (prop === "task") {
-                            return invocationContext.task;
-                        } else if (prop === "definition") {
-                            return definition;
-                        } else if (prop === "moduleConfig") {
-                            return invocationServices.resolve("config").modules[moduleId];
-                        } else if (prop === "module") {
-                            return invocationServices.resolve("modules").getModuleById(moduleId);
+                // create this Command's independent direct child of the application root scope
+                const rootServices = context.services.services;
+                this._servicesScope = rootServices.beginScope();
+                try {
+                    // resolve controller dependencies through the Command-owned scope
+                    const servicesProvider = new Proxy({}, {
+                        get: (target, prop) => {
+                            if (prop === "definition") {
+                                return definition;
+                            } else if (prop === "context") {
+                                return invocationContext;
+                            } else if (prop === "task") {
+                                return invocationContext.task;
+                            } else if (prop === "moduleConfig") {
+                                return context.services.config.modules[moduleId];
+                            } else if (prop === "module") {
+                                return context.services.modules.getModuleById(moduleId);
+                            } else if (prop === "services") {
+                                return this._servicesScope;
+                            } else if (typeof prop === "symbol") {
+                                return undefined;
+                            } else {
+                                return this._servicesScope.resolve(prop);
+                            }
                         }
-                        debugger;
-                        return invocationServices.resolve(prop);
-                        //return invocationServices[prop];
-                    }
-                });
+                    });
 
-                const controller = definition.controller(servicesProvider);
-                if (!controller || typeof controller.execute !== "function") {
-                    throw new Error(`Invalid command '${src}': controller must return an object implementing execute().`);
+                    // construct and validate the Command controller
+                    const controller = definition.controller(servicesProvider);
+                    if (!controller || typeof controller.execute !== "function") {
+                        throw new Error(`Invalid command '${src}': controller must return an object implementing execute().`);
+                    }
+                    this._controller = controller;
+                } catch (error) {
+                    // initiate asynchronous cleanup while preserving synchronous constructor behavior
+                    const scope = this._servicesScope;
+                    this._controller = null;
+                    this._servicesScope = null;
+                    disposeFailedScope(scope, definition.contract?.label ?? src);
+                    throw error;
                 }
-                this._controller = controller;
             }
 
             execute(...args) {
                 return this._controller.execute(...args);
+            }
+            async dispose() {
+                // dispose the owner scope and clear Command-owned references even when cleanup fails
+                const servicesScope = this._servicesScope;
+                try {
+                    if (servicesScope) await servicesScope.dispose();
+                } finally {
+                    this._controller = null;
+                    this._servicesScope = null;
+                }
             }
         };
     }

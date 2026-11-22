@@ -406,8 +406,6 @@ export async function createPageClassFromJsDefinition(src, context, definition) 
                     } else if (prop == "services") {
                         // expose this Page's owning Services scope
                         return self._servicesScope;
-                    } else if (typeof prop === "symbol") {
-                        return undefined;
                     } else {
                         // resolve ordinary services through this Page's scope
                         return self._servicesScope.resolve(prop);

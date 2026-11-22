@@ -128,7 +128,33 @@ async function resolveInvocation({type, id, method}, loader, services, contracts
             parameters: contract.execute.parameters || [],
             types: contract.types || {},
             returns: contract.execute.returns || null,
-            invoke: (args, context) => new Command(context).execute(...args)
+            invoke: async (args, context) => {
+                // construct and execute the Command while retaining both execution and disposal failures
+                let command = null;
+                let result;
+                let executionError;
+                try {
+                    command = new Command(context);
+                    result = await command.execute(...args);
+                } catch (error) {
+                    executionError = error;
+                }
+
+                // dispose every successfully constructed Command before settling the invocation Task
+                let disposalError;
+                try {
+                    if (command) await command.dispose();
+                } catch (error) {
+                    disposalError = error;
+                }
+
+                if (executionError && disposalError) {
+                    throw new AggregateError([executionError, disposalError], `Command '${id}' execution and disposal both failed.`);
+                }
+                if (executionError) throw executionError;
+                if (disposalError) throw disposalError;
+                return result;
+            }
         };
     }
 

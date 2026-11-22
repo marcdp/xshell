@@ -21,15 +21,13 @@ export default class Commands {
     _tasks;
     _jsonValidator;
     _config;
-    _services;
 
     // ctor
-    constructor({loader, tasks, jsonValidator, config, services}, options) {
+    constructor({loader, tasks, jsonValidator, config}, options) {
         this._loader = loader;
         this._tasks = tasks;
         this._jsonValidator = jsonValidator;
         this._config = config || {xshell: {}, modules: {}};
-        this._services = services;
     }
 
     // methods
@@ -93,21 +91,21 @@ export default class Commands {
             description: contract.description || contract.execute.description || "",
             background,
             handler: async taskContext => {
-                // create one direct-root Services scope after Task execution begins
-                const scope = this._services.beginScope();
+                // construct and execute one Command after Task execution begins
+                let command = null;
                 let result;
                 let executionError;
                 try {
-                    const command = new Command({task: taskContext, services: scope});
+                    command = new Command({task: taskContext});
                     result = await command.execute(...positionalArgs);
                 } catch (error) {
                     executionError = error;
                 }
 
-                // settle execution before disposing every invocation-owned resource
+                // settle execution before asking the Command to dispose its owned resources
                 let disposalError;
                 try {
-                    await scope.dispose();
+                    if (command) await command.dispose();
                 } catch (error) {
                     disposalError = error;
                 }

@@ -158,7 +158,7 @@ const { default: Navigation } = await import("../../src/DProjects.XShell/Resourc
 const { default: xshell } = await import("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/xshell.js");
 const { default: Page } = await import("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/page.js");
 const { default: LoaderPageMd } = await import("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/loaders/page-md.js");
-const { default: Resolver } = await import("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/resolver.js");
+const { default: Resolver } = await import("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/resolver.js");
 
 test("x-page treats nullish and removed src as empty without loading it", () => {
     const cases = [

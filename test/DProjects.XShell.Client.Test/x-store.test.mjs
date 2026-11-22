@@ -11,8 +11,8 @@ import DetailPage from "../../src/DProjects.XShell/Resources/DProjects.XShell/x-
 import ContractSchema from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/schemas/contract.schema.json" with { type: "json" };
 import PageSchema from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/schemas/page.schema.json" with { type: "json" };
 import JsonValidator from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/json-validator.js";
-import Loader from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/loader.js";
-import Resolver from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/resolver.js";
+import Loader from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/loader.js";
+import Resolver from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/resolver.js";
 
 const createStore = (url = "mem:test") => new MemoryStore({
     url, schema: SampleStore.schema, documents: SampleStore.documents, jsonValidator: new JsonValidator()

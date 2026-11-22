@@ -4,7 +4,7 @@ import test from "node:test";
 import vm from "node:vm";
 
 import Modules from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/modules.js";
-import Resolver from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/resolver.js";
+import Resolver from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/resolver.js";
 
 const rootUrl = "https://example.test/modules/app/manifest.jsonc";
 const bootstrapPath = new URL("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/bootstrap.js", import.meta.url);
