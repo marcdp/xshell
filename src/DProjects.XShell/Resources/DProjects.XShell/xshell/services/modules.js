@@ -1,3 +1,14 @@
+function reportCleanupErrors(errors, message) {
+    // report cleanup failures without replacing the lifecycle error that triggered cleanup
+    if (!errors.length) return;
+    console.error(message, errors.length === 1 ? errors[0] : new AggregateError(errors, message));
+}
+function throwCleanupErrors(errors, message) {
+    // preserve one cleanup failure and aggregate independent lifecycle failures
+    if (errors.length === 1) throw errors[0];
+    if (errors.length > 1) throw new AggregateError(errors, message);
+}
+
 // class
 export default class Modules {
 
@@ -16,6 +27,7 @@ export default class Modules {
     _shadowStyleSheets = null;
     _document = null;
     _services = null;
+    _controllerScopes = null;
     
     
     // ctor
@@ -28,6 +40,7 @@ export default class Modules {
         this._document = document;
         this._services = services;
         this._modules = [];
+        this._controllerScopes = new Map();
         this._shadowStyleSheets = Object.freeze([]);
     }
 
@@ -117,28 +130,45 @@ export default class Modules {
         // publish shared sheets before module controllers can instantiate Components or Pages
         this._shadowStyleSheets = Object.freeze(await Promise.all(sharedStyleTasks));
 
-        // load module controllers after both stylesheet categories are ready
-        for (const module of this._modules) {
-            const moduleId = module.id;
-            const moduleConfig = module.config;
-            const moduleControllerJs = moduleConfig.assets.path + "/module.js";
-            if (!moduleConfig.files.some(file => file.path == moduleControllerJs)) continue;
-            const moduleClass = await this._loader.load("esm:" + moduleControllerJs);
-            const servicesProvider = new Proxy({}, {
-                get: (obj, prop) => {
-                    if (prop == "moduleAssetsPath") {
-                        // module assets path
-                        return moduleConfig.assets.path;
-                    } else if (prop == "moduleConfig") {
-                        // module config
-                        return { id: moduleId, ...moduleConfig };
-                    } else {
-                        // resolve from services
-                        return this._services.resolve(prop);
+        // load Module controllers and give each one an independent direct-root Services scope
+        try {
+            for (const module of this._modules) {
+                const moduleId = module.id;
+                const moduleConfig = module.config;
+                const moduleControllerJs = moduleConfig.assets.path + "/module.js";
+                if (!moduleConfig.files.some(file => file.path == moduleControllerJs)) continue;
+                const moduleClass = await this._loader.load("esm:" + moduleControllerJs);
+                const moduleScope = this._services.beginScope({context: {
+                    invokeController(command, ...params) { return module.controller?.[command]?.(...params); }
+                }});
+                this._controllerScopes.set(moduleId, moduleScope);
+                const servicesProvider = new Proxy({}, {
+                    get: (obj, prop) => {
+                        if (prop == "moduleAssetsPath") {
+                            // module assets path
+                            return moduleConfig.assets.path;
+                        } else if (prop == "moduleConfig") {
+                            // module config
+                            return { id: moduleId, ...moduleConfig };
+                        } else if (prop == "services") {
+                            // expose this Module controller's owning Services scope
+                            return moduleScope;
+                        } else if (typeof prop === "symbol") {
+                            return undefined;
+                        } else {
+                            // resolve ordinary dependencies through the Module-owned scope
+                            return moduleScope.resolve(prop);
+                        }
                     }
-                }
-            });
-            module.controller = new moduleClass(servicesProvider);
+                });
+                module.controller = new moduleClass(servicesProvider);
+            }
+        } catch (error) {
+            // release every scope created during failed controller initialization and preserve the original error
+            const cleanupErrors = [];
+            await this._disposeControllerScopes(cleanupErrors);
+            reportCleanupErrors(cleanupErrors, "Failed to dispose Module Services scopes after controller initialization failed.");
+            throw error;
         }
 
         // dispatch module-load to all instances
@@ -169,24 +199,44 @@ export default class Modules {
                 started.push(module);
             }
         } catch (error) {
+            const cleanupErrors = [];
+            // preserve existing rollback ordering while scopes remain active
             for (const module of [...started].reverse()) {
                 try {
                     if (module.controller?.stop) {
                         await module.controller.stop();
                     }
-                } catch {
-                    // Keep the original startup error.
+                } catch (cleanupError) {
+                    cleanupErrors.push(cleanupError);
                 }
             }
+
+            // release every controller scope created for the failed initialization
+            await this._disposeControllerScopes(cleanupErrors);
+            reportCleanupErrors(cleanupErrors, "Failed to clean up Module controllers after startup failed.");
             throw error;
         }
     } 
     async stop() {
+        const errors = [];
         for (const module of [...this._modules].reverse()) {
-            if (module.controller?.stop) {
-                await module.controller.stop();
+            const moduleScope = this._controllerScopes.get(module.id);
+            if (!moduleScope) continue;
+            this._controllerScopes.delete(module.id);
+
+            // keep the scope active through controller shutdown, then dispose it regardless of stop failures
+            try {
+                if (module.controller?.stop) await module.controller.stop();
+            } catch (error) {
+                errors.push(error);
+            }
+            try {
+                await moduleScope.dispose();
+            } catch (error) {
+                errors.push(error);
             }
         }
+        throwCleanupErrors(errors, "Multiple errors occurred while stopping Module controllers.");
     }
 
 
@@ -209,6 +259,19 @@ export default class Modules {
             }
         }
         return null;
+    }
+    async _disposeControllerScopes(errors) {
+        // detach ownership first so repeated cleanup cannot dispose the same Module scope twice
+        for (const module of [...this._modules].reverse()) {
+            const moduleScope = this._controllerScopes.get(module.id);
+            if (!moduleScope) continue;
+            this._controllerScopes.delete(module.id);
+            try {
+                await moduleScope.dispose();
+            } catch (error) {
+                errors.push(error);
+            }
+        }
     }
 }
 

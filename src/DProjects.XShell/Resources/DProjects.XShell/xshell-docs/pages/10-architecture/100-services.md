@@ -99,26 +99,29 @@ or more are reported with `AggregateError` after all cleanup attempts. Concurren
 cleanup, and a completed child detaches from its parent. Disposing a child leaves its parent and siblings active. Disposing the root follows the same
 hierarchy but does not automatically dispose its registered singleton instances, and XShell shutdown does not invoke root disposal in this phase.
 
-Definition-based Pages, Components, and Commands automatically create and own independent scopes during instance construction. Every automatic
-owner scope is a direct child of the application root, regardless of DOM, Page composition, or which UI owner initiated a Command. A Component
-inside a Page does not inherit the Page scope, nested or sibling Components do not inherit one another's scopes, and Commands do not inherit UI
-scopes. This intentionally avoids DOM lookup, scope reparenting, invocation-supplied ownership, and ambient current-scope state.
+Module controllers and definition-based Pages, Components, and Commands automatically receive independent owner scopes. Every automatic owner
+scope is a direct child of the application root, regardless of Module ownership, DOM, Page composition, or which UI owner initiated a Command. A
+Module controller does not inherit a UI scope, a Component inside a Page does not inherit the Page scope, nested or sibling Components do not
+inherit one another's scopes, and Commands do not inherit UI scopes. This intentionally avoids DOM lookup, scope reparenting,
+invocation-supplied ownership, and ambient current-scope state. A Module with no `/module.js` controller creates no owner scope.
 
 Their controller providers keep the existing special injections and resolve ordinary service names through the owner scope. The special
 `controller({ services })` injection returns that same owner scope, so controller code can explicitly resolve or initialize additional services or
 create nested scopes. Global `xshell.services` still returns the root container. Page and Component owner scopes survive temporary Page
 unmount/remount and Component disconnect/reconnect cycles, then are awaited and disposed after controller unload and existing non-service cleanup
 during final unload. A Command retains its scope until execution settles, and `Command.dispose()` then disposes it and clears Command-owned
-references.
+references. The Modules service privately retains one scope for each Module controller: `start()` and `stop()` run while it is active, and Modules
+disposes it after `stop()` completes. Consequently, repeated scoped resolution within one Module controller returns one instance, while different
+Module controllers receive different scoped instances; application singletons remain shared and transients remain per-resolution.
 
 `beginScope({ context })` optionally supplies explicit owner-specific construction context. It is not a registered service and is available only as
 the reserved `scopeContext` constructor dependency while that scope constructs scoped or transient instances. Singleton construction always uses
 the root context and cannot capture child owner state. Disposal releases the scope's context reference.
 
-Page and Component scopes provide an `invokeController` context callback. The transient `events` and `timer` services use it for string listeners,
-preserving `controller({ events, timer })` and controller `this` binding without ambient state. Function listeners work in any scope, including
-Command scopes with no owner callback; a string listener in such a scope reports a clear error. Unmount and disconnect preserve the helpers because
-their owner scope remains active. Final scope disposal removes listeners, cancels timers, and releases callback references exactly once.
+Module, Page, and Component scopes provide an `invokeController` context callback. The transient `events` and `timer` services use it for string
+listeners, preserving constructor/controller injection and controller `this` binding without ambient state. Function listeners work in any scope,
+including Command scopes with no owner callback; a string listener in such a scope reports a clear error. Module shutdown, final Page unload, and
+final Component unload dispose their scopes, remove listeners, cancel timers, and release callback references exactly once.
 
 Command controller providers similarly resolve ordinary services through the Command-owned scope, while `controller({ services })` returns that
 scope and `controller({ task })` retains the Task execution context. The high-level Commands service and direct framework construction paths await
@@ -377,7 +380,8 @@ The directly registered core names are `bus`, `config`, `loader`, `resolver`, `c
 singletons. `areas`, `commands`, `dialog`, `i18n`,
 `jsonValidator`, `modules`, `navigation`, `preferences`, `registry`, `runtime`, `secrets`, `tasks`, and `temp` are framework-owned configured services
 registered through `xshell.services`. Modules still receives `bus`, `config`, `loader`, `resolver`, and `services` through normal constructor
-injection; its controller provider continues to expose named services plus module-specific `moduleAssetsPath` and `moduleConfig` values.
+injection; each Module controller provider exposes its owner scope as `services`, resolves named services through that scope, and retains the
+module-specific `moduleAssetsPath` and `moduleConfig` values.
 There is no auth/identity registration. A Diagnostics getter is not a registered service contract.
 
 See [Bus](../30-subsystems/20-bus.md), [Dialogs](../30-subsystems/30-dialogs.md), [Temp](../30-subsystems/50-temp.md),

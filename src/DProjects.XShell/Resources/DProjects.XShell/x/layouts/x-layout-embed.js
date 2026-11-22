@@ -32,7 +32,13 @@ export default {
         ::slotted(p:last-child) {
             margin-bottom:0;
         }        
-        .header-actions {float:right}
+        .header {display:flex; justify-content:end; align-items:center; }
+        .header .title {flex:1; margin-bottom:1em; }
+        .header .title x-page-title {margin:0; font-weight:500;}
+        .header .title x-page-description {margin:0; font-weight:normal; font-size:var(--x-font-size-small);}
+        .header .header-actions {float:right}
+        
+        
         x-loading {
             width:var(--x-loading-width);
             left:50%;
@@ -43,8 +49,14 @@ export default {
     template: `
         <x-loading x-if="state.status=='loading'"></x-loading>        
         <div x-attr:class="state.pageClasses">
-            <div class="header-actions">
-                <slot name="header-actions"></slot>
+            <div class="header">
+                <div class="title">
+                    <x-page-title></x-page-title>
+                    <x-page-description></x-page-description>
+                </div>
+                <div class="header-actions">
+                    <slot name="header-actions"></slot>
+                </div>
             </div>
             <slot></slot>
         </div>

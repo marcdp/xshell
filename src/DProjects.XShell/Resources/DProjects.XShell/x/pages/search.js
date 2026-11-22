@@ -7,7 +7,8 @@ export default {
         methods: {}
     },
     meta: {
-        title: "Page search"
+        title: "Page search",
+        description: "Enter at least 3 characters to search"
     },
     template: `
         <x-datafields>
@@ -38,9 +39,6 @@ export default {
             <div x-else>
                 <div x-if="state.keyword.length > 2">
                     <x-empty icon="x-search" label="No results" message="No matching pages were found."></x-empty>
-                </div>
-                <div x-else>
-                    Enter at least 3 characters to search
                 </div>
             </div>
             

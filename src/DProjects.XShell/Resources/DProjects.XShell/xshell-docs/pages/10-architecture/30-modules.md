@@ -113,9 +113,13 @@ existing `shadowStyleSheets` API name remains, while `shared.css` reflects that 
 Document normalization remains exclusively in `index.css`; shared sheets contain visual defaults, and each Component owns any normalization its
 internal implementation requires.
 
-Controllers start sequentially in dependency order and stop in reverse order. A controller receives `moduleAssetsPath`, `moduleConfig`, and named
-services; its optional `start()` and `stop()` methods are lifecycle hooks. XShell resolves Areas before module controllers start, awaits Modules
-initialization, composes Areas from that initialized singleton, and initializes Navigation afterward.
+Controllers start sequentially in dependency order and stop in reverse order. Every controller receives one independent Services scope created as
+a direct child of the application root; Modules owns and keeps that scope private, so a Module without `/module.js` creates none. A controller receives
+`moduleAssetsPath`, `moduleConfig`, its owning scope as `services`, and named services resolved through that scope. Application singletons remain
+shared, scoped services are cached once per Module controller, and transients are constructed per resolution. `start()` runs with the scope active;
+on shutdown, `stop()` runs before Modules disposes the scope. Module scopes are siblings of Page, Component, and Command scopes and do not inherit
+them. XShell resolves Areas before module controllers start, awaits Modules initialization, composes Areas from that initialized singleton, and
+initializes Navigation afterward.
 
 ## Menus, routes, Areas, and services
 

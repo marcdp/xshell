@@ -27,13 +27,15 @@ export default {
         <p>XShell discovers the controller through the Module's file inventory, creates an instance, and invokes its <code>start()</code> method during Module initialization.</p>
 
         <h2>Constructor injection</h2>
-        <p>Module controllers receive dependencies through constructor injection. The special <code>moduleConfig</code> argument provides the Module's effective configuration.</p>
-        <x-code language="javascript" x-pre>constructor({moduleConfig}) {
+        <p>Module controllers receive dependencies through constructor injection. The special <code>moduleConfig</code> argument provides the Module's effective configuration, while <code>services</code> is the controller's own Services scope.</p>
+        <x-code language="javascript" x-pre>constructor({moduleConfig, services, navigation}) {
     this.id = moduleConfig.id;
     this.files = moduleConfig.files;
     this.assetsPath = moduleConfig.assets.path;
+    this.services = services;
+    this.navigation = navigation;
 }</x-code>
-        <p>Other registered services can also be requested by name, as with Page controllers.</p>
+        <p>Other registered services can also be requested by name. They resolve through one direct-root scope owned for the lifetime of this Module controller. Singletons remain shared, repeated scoped resolution returns the same instance within this controller, and transient resolution creates a new instance.</p>
 
         <h2>Lifecycle</h2>
         <p>A Module controller can implement <code>start()</code> and <code>stop()</code>. These methods belong to the Module lifecycle, not the lifecycle of an individual Page.</p>
@@ -49,8 +51,9 @@ Application running
     v
 Module shutdown
     |
-    +-- Invoke stop() if implemented</x-code>
-        <p>A Module controller is not recreated each time a Page in that Module is opened.</p>
+    +-- Invoke stop() if implemented
+    +-- Dispose controller Services scope</x-code>
+        <p>The scope stays active through <code>stop()</code>. It is independent of Page, Component, and Command scopes. A Module controller is not recreated each time a Page in that Module is opened, and a Module without a controller creates no scope.</p>
 
         <h2>The cookbook controller</h2>
         <p>The actual <code>x-demo/module.js</code> stores Module information and prepares a summary of its Page resources during startup.</p>

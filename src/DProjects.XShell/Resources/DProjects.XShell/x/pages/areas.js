@@ -21,12 +21,10 @@ export default {
         ]
     },
     meta: {
-        title: "Areas selector"
+        title: "Areas selector",
+        description: "Please select the area to navigate:"
     },
     template: `
-        <p>
-            Please select the area to navigate:
-        </p>        
         <x-listview view="tiles">
             <x-listview-head></x-listview-head>
             <x-listview-body>

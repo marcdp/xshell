@@ -5,6 +5,8 @@ import Modules from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshel
 import Services from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services.js";
 import Loader from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/loader.js";
 import Resolver from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/resolver.js";
+import Events from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/events.js";
+import Timer from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/timer.js";
 
 function freeze(value) {
     if (value && typeof value === "object" && !Object.isFrozen(value)) {
@@ -23,6 +25,21 @@ function moduleDefinition(id, overrides = {}) {
     };
 }
 
+function addScopeSupport(services) {
+    // keep narrow existing test doubles usable while production-like tests use the real Services container
+    if (typeof services.beginScope === "function") return services;
+    return {
+        ...services,
+        beginScope({context} = {}) {
+            return {
+                resolve(name) { return services.resolve?.(name); },
+                async dispose() { this.context = null; },
+                context: context ?? null
+            };
+        }
+    };
+}
+
 function createModules(config, { loader = {}, services = {}, document = { adoptedStyleSheets: [] } } = {}) {
     globalThis.document = document;
     return new Modules({
@@ -30,9 +47,25 @@ function createModules(config, { loader = {}, services = {}, document = { adopte
         config,
         loader,
         resolver: {},
-        services,
+        services: addScopeSupport(services),
         document
     });
+}
+
+function createRootServices() {
+    // create an unfrozen root registry for focused Module lifetime tests
+    return new Services({
+        config: { app: { baseUrl: "https://example.test/" }, modules: {}, xshell: { services: {} } },
+        loader: {},
+        contracts: {},
+        resolver: {},
+        bus: { emit() {} }
+    });
+}
+
+function registerImplementation(services, name, implementation, lifetime) {
+    // register a lazy test implementation with the selected lifetime
+    services.register(name, null, { lifetime, implementationItem: { class: implementation } });
 }
 
 test("module without service requirements initializes and starts normally", async () => {
@@ -89,6 +122,151 @@ test("module controllers receive singleton services and module-specific metadata
     assert.strictEqual(injected.modules, modules);
     assert.equal(injected.moduleAssetsPath, "/_assets/orders");
     assert.deepEqual(injected.moduleConfig, { id: "orders", ...config.modules.orders });
+});
+
+test("module controllers own independent direct-root scopes with scoped dispatch and lifetime semantics", async () => {
+    const root = createRootServices();
+    const singleton = {id: "singleton"};
+    const captures = new Map();
+    const dispatches = [];
+    const disposals = [];
+    let scopedId = 0;
+    let transientId = 0;
+    class ScopedSession {
+        static optionsSchema = {type: "object", additionalProperties: false};
+        constructor() { this.id = ++scopedId; }
+        dispose() { disposals.push(`scoped:${this.id}`); }
+    }
+    class TransientSession {
+        static optionsSchema = {type: "object", additionalProperties: false};
+        constructor() { this.id = ++transientId; }
+        dispose() { disposals.push(`transient:${this.id}`); }
+    }
+    root.register("singleton", singleton);
+    registerImplementation(root, "scoped", ScopedSession, "scoped");
+    registerImplementation(root, "transient", TransientSession, "transient");
+    registerImplementation(root, "events", Events, "transient");
+    registerImplementation(root, "timer", Timer, "transient");
+    const config = freeze({
+        xshell: {assets: {basePath: "/_assets"}},
+        modules: {
+            first: moduleDefinition("first", {params: {mode: "first"}, files: [{path: "/_assets/first/module.js"}]}),
+            second: moduleDefinition("second", {params: {mode: "second"}, files: [{path: "/_assets/second/module.js"}]}),
+            metadata: moduleDefinition("metadata")
+        }
+    });
+    const unrelatedScope = root.beginScope();
+    const modules = createModules(config, {
+        services: root,
+        loader: {async load(resource) {
+            const id = resource.split("/").at(-2);
+            return class ModuleController {
+                constructor(provider) {
+                    const scoped = provider.scoped;
+                    captures.set(id, {
+                        scope: provider.services,
+                        singleton: provider.singleton,
+                        scoped,
+                        repeatedScoped: provider.scoped,
+                        firstTransient: provider.transient,
+                        secondTransient: provider.transient,
+                        events: provider.events,
+                        timer: provider.timer,
+                        target: new EventTarget(),
+                        symbol: provider[Symbol.toStringTag],
+                        moduleAssetsPath: provider.moduleAssetsPath,
+                        moduleConfig: provider.moduleConfig
+                    });
+                }
+                async start() {
+                    const capture = captures.get(id);
+                    capture.events.on(capture.target, "module-event", "onScopedEvent");
+                    capture.target.dispatchEvent(new Event("module-event"));
+                    capture.timer.setTimeout("onScopedTimer", 0);
+                    capture.timer.setTimeout("onLateTimer", 1000);
+                    await new Promise(resolve => setTimeout(resolve, 5));
+                }
+                onScopedEvent() { dispatches.push(`${id}:events`); }
+                onScopedTimer() { dispatches.push(`${id}:timer`); }
+                onLateTimer() { dispatches.push(`${id}:late`); }
+            };
+        }}
+    });
+
+    await modules.init();
+
+    const first = captures.get("first");
+    const second = captures.get("second");
+    assert.strictEqual(first.scope, root._children[1]);
+    assert.strictEqual(second.scope, root._children[2]);
+    assert.strictEqual(first.scope._parent, root);
+    assert.strictEqual(second.scope._parent, root);
+    assert.notStrictEqual(first.scope, unrelatedScope);
+    assert.notStrictEqual(second.scope, unrelatedScope);
+    assert.strictEqual(first.singleton, singleton);
+    assert.strictEqual(second.singleton, singleton);
+    assert.strictEqual(first.scoped, first.repeatedScoped);
+    assert.notStrictEqual(first.scoped, second.scoped);
+    assert.notStrictEqual(first.firstTransient, first.secondTransient);
+    assert.notStrictEqual(second.firstTransient, second.secondTransient);
+    assert.equal(first.symbol, undefined);
+    assert.equal(first.moduleAssetsPath, "/_assets/first");
+    assert.deepEqual(first.moduleConfig, {id: "first", ...config.modules.first});
+    assert.deepEqual(dispatches, ["first:events", "first:timer", "second:events", "second:timer"]);
+    assert.equal(root._children.length, 3);
+    assert.equal(Object.hasOwn(modules.getModuleById("first"), "services"), false);
+    assert.equal(Object.hasOwn(modules.getModuleById("metadata"), "services"), false);
+    assert.equal(modules._controllerScopes.has("metadata"), false);
+
+    await unrelatedScope.dispose();
+    await modules.stop();
+
+    assert.equal(root._children.length, 0);
+    assert.equal(disposals.filter(item => item.startsWith("scoped:")).length, 2);
+    assert.equal(disposals.filter(item => item.startsWith("transient:")).length, 4);
+    assert.equal(first.events._handler, null);
+    assert.equal(first.timer._handler, null);
+    first.target.dispatchEvent(new Event("module-event"));
+    assert.deepEqual(dispatches, ["first:events", "first:timer", "second:events", "second:timer"]);
+    assert.equal(modules._controllerScopes.size, 0);
+});
+
+test("controller construction failure disposes all created Module scopes and preserves the original error", async t => {
+    const root = createRootServices();
+    const constructionError = new Error("second controller failed");
+    const cleanupError = new Error("second scope cleanup failed");
+    const disposed = [];
+    let scopedId = 0;
+    class ScopedSession {
+        static optionsSchema = {type: "object", additionalProperties: false};
+        constructor() { this.id = ++scopedId; }
+        dispose() { disposed.push(this.id); if (this.id === 2) throw cleanupError; }
+    }
+    registerImplementation(root, "scoped", ScopedSession, "scoped");
+    const config = freeze({
+        xshell: {assets: {basePath: "/_assets"}},
+        modules: Object.fromEntries(["first", "second"].map(id => [id, moduleDefinition(id, {files: [{path: `/_assets/${id}/module.js`}]})]))
+    });
+    const reported = [];
+    t.mock.method(console, "error", (...args) => reported.push(args));
+    const modules = createModules(config, {
+        services: root,
+        loader: {async load(resource) {
+            const id = resource.split("/").at(-2);
+            return class ModuleController {
+                constructor({scoped}) { this.scoped = scoped; if (id === "second") throw constructionError; }
+            };
+        }}
+    });
+
+    await assert.rejects(() => modules.init(), error => error === constructionError);
+
+    assert.deepEqual(disposed, [2, 1]);
+    assert.equal(root._children.length, 0);
+    assert.equal(modules._controllerScopes.size, 0);
+    assert.equal(reported.length, 1);
+    assert.match(reported[0][0], /controller initialization failed/);
+    assert.strictEqual(reported[0][1], cleanupError);
 });
 
 test("shared sheets are published before module controller construction", async () => {
@@ -158,9 +336,11 @@ test("module controllers start in dependency order and stop in reverse dependenc
     assert.deepEqual(modules.registry.map(module => module.id), orderBeforeStop);
 });
 
-test("failed module startup rolls back successful starts in reverse order and preserves the startup error", async () => {
+test("failed module startup rolls back successful starts in reverse order and preserves the startup error", async t => {
     const events = [];
     const startupError = new Error("app startup failed");
+    const reported = [];
+    t.mock.method(console, "error", (...args) => reported.push(args));
     const config = freeze({
         xshell: { assets: { basePath: "/_assets" } },
         modules: Object.fromEntries(["base", "feature", "app"].map(id => [
@@ -190,6 +370,97 @@ test("failed module startup rolls back successful starts in reverse order and pr
         "base.start", "feature.start", "app.start",
         "feature.stop", "base.stop"
     ]);
+    assert.equal(reported.length, 1);
+    assert.match(reported[0][0], /startup failed/);
+    assert.match(reported[0][1].message, /feature stop failed/);
+});
+
+test("startup failure disposes every Module scope after rollback and reports cleanup failures", async t => {
+    const root = createRootServices();
+    const events = [];
+    const startupError = new Error("app startup failed");
+    const rollbackError = new Error("feature rollback failed");
+    const disposalError = new Error("app scope disposal failed");
+    class ScopedSession {
+        static optionsSchema = {type: "object", additionalProperties: false};
+        dispose() { events.push(`${this.owner}.dispose`); if (this.owner === "app") throw disposalError; }
+    }
+    registerImplementation(root, "scoped", ScopedSession, "scoped");
+    const config = freeze({
+        xshell: {assets: {basePath: "/_assets"}},
+        modules: Object.fromEntries(["base", "feature", "app", "later"].map(id => [
+            id,
+            moduleDefinition(id, {files: [{path: `/_assets/${id}/module.js`}]})
+        ]))
+    });
+    const reported = [];
+    t.mock.method(console, "error", (...args) => reported.push(args));
+    const modules = createModules(config, {
+        services: root,
+        loader: {async load(resource) {
+            const id = resource.split("/").at(-2);
+            return class ModuleController {
+                constructor({scoped}) { this.scoped = scoped; scoped.owner = id; }
+                async start() { events.push(`${id}.start`); if (id === "app") throw startupError; }
+                async stop() { events.push(`${id}.stop`); if (id === "feature") throw rollbackError; }
+            };
+        }}
+    });
+
+    await assert.rejects(() => modules.init(), error => error === startupError);
+
+    assert.deepEqual(events.slice(0, 5), ["base.start", "feature.start", "app.start", "feature.stop", "base.stop"]);
+    assert.deepEqual(events.filter(event => event.endsWith(".dispose")), ["later.dispose", "app.dispose", "feature.dispose", "base.dispose"]);
+    assert.equal(events.includes("app.stop"), false);
+    assert.equal(events.includes("later.start"), false);
+    assert.equal(root._children.length, 0);
+    assert.equal(modules._controllerScopes.size, 0);
+    assert.equal(reported.length, 1);
+    assert.ok(reported[0][1] instanceof AggregateError);
+    assert.deepEqual(reported[0][1].errors, [rollbackError, disposalError]);
+});
+
+test("normal stop keeps each Module scope active through stop, continues cleanup, and aggregates failures", async () => {
+    const root = createRootServices();
+    const order = [];
+    const stopError = new Error("second stop failed");
+    const disposalError = new Error("second disposal failed");
+    class ScopedSession {
+        static optionsSchema = {type: "object", additionalProperties: false};
+        dispose() { order.push(`${this.owner}.dispose`); if (this.owner === "second") throw disposalError; }
+    }
+    registerImplementation(root, "scoped", ScopedSession, "scoped");
+    const config = freeze({
+        xshell: {assets: {basePath: "/_assets"}},
+        modules: Object.fromEntries(["first", "second"].map(id => [id, moduleDefinition(id, {files: [{path: `/_assets/${id}/module.js`}]})]))
+    });
+    const modules = createModules(config, {
+        services: root,
+        loader: {async load(resource) {
+            const id = resource.split("/").at(-2);
+            return class ModuleController {
+                constructor({services, scoped}) { this.services = services; this.scoped = scoped; scoped.owner = id; }
+                stop() {
+                    order.push(`${id}.stop`);
+                    assert.strictEqual(this.services.resolve("scoped"), this.scoped);
+                    if (id === "second") throw stopError;
+                }
+            };
+        }}
+    });
+    await modules.init();
+
+    await assert.rejects(modules.stop(), error => {
+        assert.ok(error instanceof AggregateError);
+        assert.deepEqual(error.errors, [stopError, disposalError]);
+        return true;
+    });
+
+    assert.deepEqual(order, ["second.stop", "second.dispose", "first.stop", "first.dispose"]);
+    assert.equal(root._children.length, 0);
+    assert.equal(modules._controllerScopes.size, 0);
+    await modules.stop();
+    assert.deepEqual(order, ["second.stop", "second.dispose", "first.stop", "first.dispose"]);
 });
 
 test("module registry is a frozen metadata snapshot of the runtime modules", async () => {

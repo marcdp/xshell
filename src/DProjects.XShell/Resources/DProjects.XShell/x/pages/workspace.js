@@ -48,7 +48,6 @@ export default {
         :scope > div .menu-container {min-width:16; width:18em; background:var(--x-layout-main-drawer-background); padding:1.5em}
 
         :scope > div .page-container {display:block; padding:1.5em; flex:1; overflow-y:auto; min-width:50%; scrollbar-width: var(--x-scrollbar-width); scrollbar-gutter: var(--x-scrollbar-gutter); }
-        :scope > div .page-container h4 {margin-top:0; }        
         :scope > div .page-container x-page {}
     `,
 
@@ -73,8 +72,7 @@ export default {
             <x-splitter opaque></x-splitter>
 
             <div class="page-container">
-                <h4 x-if="state.showTitle">{{state.title}}</h4>
-                <x-page outlet="content" x-attr:src="state.src" x-on:load="refresh" x-once></x-page>
+                <x-page outlet="content" x-attr:src="state.src" x-on:load="refresh" class="titled" layout="embed" x-once></x-page>
             </div>
         </div>
 
@@ -83,6 +81,7 @@ export default {
     state: {
         menu: [],
         title: null,
+        description: null,
         src: null
     },
 
@@ -115,6 +114,7 @@ export default {
                 // Reflect the embedded Page source and update its heading.
                 state.src = event.detail.page.src;
                 state.title = event.detail.page.label;
+                state.description = event.detail.page.description;
             }
         }
 

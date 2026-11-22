@@ -195,7 +195,11 @@ Component hosts, while document CSS rules and the document reset do not cross a 
 their internal implementation. Styling exposed shadow content still follows platform rules: use a component's supported `::part`, `::slotted`,
 or custom-property API, and note that `::slotted` reaches only directly assigned nodes.
 
-The controller must default-export a class; optional `start()` and `stop()` methods are lifecycle hooks.
+The controller must default-export a class. Its constructor receives `moduleAssetsPath`, `moduleConfig`, its Module-controller Services scope as
+`services`, and ordinary named dependencies resolved through that scope. Each controller gets one independent direct child of the application
+root: singletons remain application-wide, scoped services have one instance per Module controller, and transients are created per resolution.
+Optional `start()` and `stop()` methods run while the scope is active; Modules disposes the scope after `stop()` completes. Modules without a
+controller create no scope, and Module scopes remain independent of Page, Component, and Command scopes.
 
 ## Required services
 
@@ -255,8 +259,8 @@ own public contracts. Module controller `start()` and `stop()` methods remain in
 
 Modules creates one runtime instance for every effective `config.modules` id. It exposes effective params, routes, document `styles`, and the
 optional controller. The Modules service exposes the frozen ordered `shadowStyleSheets` collection separately; that API name is retained while
-the conventional resource is `styles/shared.css`. Controllers start in dependency order and stop in reverse order. This runtime object is
-separate from both the authored and resolved definition.
+the conventional resource is `styles/shared.css`. Controllers start in dependency order and stop in reverse order. Controller scopes remain
+private to the Modules service and are not exposed on this runtime object, which is separate from both the authored and resolved definition.
 
 See [Root Module and Application Metadata](application.md), [Modules](../10-architecture/30-modules.md),
 [Configuration](../10-architecture/20-configuration.md), and [Packaging](../10-architecture/50-packaging.md).

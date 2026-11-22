@@ -16,12 +16,15 @@ export default {
         properties: {},
         methods: {}
     },
-    meta: {title: "Browser permissions", icon: "x-lock"},
+    meta: {
+        title: "Browser permissions", 
+        description: "View and manage supported browser permissions for the current origin.",
+        icon: "x-lock"
+    },
     style: `
         .action  { text-align:center;}
     `,
     template: `
-        <p>View permissions for this site. Request access where supported, or use your browser's site settings to allow, block, or revoke access.</p>
 
         <div class="toolbar" slot="header-actions">
             <x-button class="light round" tooltip="Refresh" icon="x-refresh" x-on:click="refresh" x-attr:disabled="state.loading || state.busyName != ''"></x-button>
