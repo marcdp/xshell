@@ -69,7 +69,7 @@ export default {
         :host([disabled]) .header { cursor: default; opacity: .6; }
 
         .header:hover {cursor:pointer;}
-        .header:hover span {color:var(--x-color-primary)!important; }
+        .header:hover span {}
         .header > .label { flex: 1; display:flex; align-items: baseline; }
 
         .chevron {flex: none; transition: transform var(--x-transition-duration); }

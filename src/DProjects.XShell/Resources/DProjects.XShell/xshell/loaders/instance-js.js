@@ -10,7 +10,7 @@ export default class LoaderInstanceJs {
         const services = new Proxy({}, {
             get(target, property) {
                 if (typeof property !== "string") return undefined;
-                return context.services.resolve(property);
+                return context.services[property];
             }
         });
 

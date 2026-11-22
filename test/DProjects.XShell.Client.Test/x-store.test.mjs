@@ -79,26 +79,21 @@ test("memory Store returns defensive copies and accepts only JSON-compatible doc
 });
 
 test("store resources resolve through instance-js and cache each memory identity", async () => {
-    // Construct the real Resolver/Loader path and expose the canonical lazy service registry to instance-js.
-    globalThis.customElements ??= {get() { return undefined; }, define() {}};
-    globalThis.window ??= {customElements: globalThis.customElements};
-    globalThis.CSSStyleSheet ??= class { replaceSync() {} };
-    globalThis.HTMLElement ??= class {};
-    const {default: xshell} = await import("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/xshell.js");
-    const originalServices = xshell._services;
+    // Construct the real Resolver/Loader path with the same property-based service-provider shape used in production.
     const jsonValidator = new JsonValidator();
     const resolvedServices = [];
-    xshell._services = {resolve(name) {
+    const services = new Proxy(Object.create(null), {get(target, name) {
+        if (typeof name !== "string") return undefined;
         resolvedServices.push(name);
         if (name === "jsonValidator") return jsonValidator;
         throw new Error(`Unexpected service '${name}'`);
-    }};
+    }});
     const providerUrl = new URL("../../src/DProjects.XShell/Resources/DProjects.XShell/x-store/js/store-mem.js", import.meta.url).href;
     const instanceLoaderUrl = new URL("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/loaders/instance-js.js", import.meta.url).href;
     const config = {
         app: {basePath: "", baseUrl: new URL("../../", import.meta.url).href},
         xshell: {
-            assets: {path: "/_assets/xshell"}, services: {navigation: {options: {mode: "path"}}}, ui: {component: {lazy: null}},
+            assets: {path: "/_assets/xshell"}, services: {navigation: {options: {mode: "path"}}}, ui: {components: {lazy: null}},
             resolver: {store: {
                 "mem:": {src: providerUrl, loader: instanceLoaderUrl, cache: true},
                 "mem:{identity}": {src: providerUrl, loader: instanceLoaderUrl, cache: true}
@@ -106,20 +101,20 @@ test("store resources resolve through instance-js and cache each memory identity
         }
     };
     const resolver = new Resolver({config});
-    const loader = new Loader({config, resolver, bus: {emit() {}}});
-    try {
-        const first = await loader.load("store:mem:demo");
-        const again = await loader.load("store:mem:demo");
-        const other = await loader.load("store:mem:other");
-        assert.strictEqual(first, again);
-        assert.notStrictEqual(first, other);
-        assert.equal(first.url, "mem:demo");
-        assert.deepEqual(resolvedServices, ["jsonValidator", "jsonValidator"]);
-        await first.add("customers", {id: "only-demo", name: "Demo"});
-        assert.equal(await other.get("customers", "only-demo"), null);
-    } finally {
-        xshell._services = originalServices;
-    }
+    const loader = new Loader({config, resolver, bus: {emit() {}}, services}, {
+        appBasePath: config.app.basePath,
+        xshellAssetsPath: config.xshell.assets.path,
+        componentLazy: config.xshell.ui.components.lazy
+    });
+    const first = await loader.load("store:mem:demo");
+    const again = await loader.load("store:mem:demo");
+    const other = await loader.load("store:mem:other");
+    assert.strictEqual(first, again);
+    assert.notStrictEqual(first, other);
+    assert.equal(first.url, "mem:demo");
+    assert.deepEqual(resolvedServices, ["jsonValidator", "jsonValidator"]);
+    await first.add("customers", {id: "only-demo", name: "Demo"});
+    assert.equal(await other.get("customers", "only-demo"), null);
 });
 
 test("Store Explorer discovers collections and refreshes after Detail success", async () => {

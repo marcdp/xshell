@@ -35,6 +35,7 @@ export default {
         .content { display: block; min-width: 0; height: 100%; overflow: hidden; padding-right:.15em; box-sizing: border-box; }
         
         :host(:first-child) .content span {padding-left:.3em;}
+        :host(:last-child) .content {padding-right:.5em;}
 
         ::slotted(*) {min-width:0; line-height:var(--x-datafield-line-height);;}
         ::slotted(x-datafield:first-child:last-child) {width:100%;}
