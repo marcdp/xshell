@@ -187,6 +187,8 @@ export default {
     &lt;x-datafield type="textarea" label="Description" maxlength="100" x-model="state.validationDescription"&gt;&lt;/x-datafield&gt;
     &lt;x-button slot="footer" class="submit" label="Submit" command="submit"&gt;&lt;/x-button&gt;
 &lt;/x-form&gt;
+</x-code>
+<x-code language="javascript">
 controller({state}) {
     return {
         clearValidationResult() { state.validationSubmitted = false; },

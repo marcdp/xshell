@@ -38,7 +38,10 @@
                     "icon": "x-settings",
                     "items": [
                         {"label": "Appearance", "href": "/pages/preferences/appearance.js"},
+                        {"label": "Browser permissions", "href": "/pages/preferences/browser-permissions.js"},
                         {"label": "Internationalization", "href": "/pages/preferences/i18n.js"},
+                        {"label": "Secrets", "href": "/pages/preferences/secrets.js"},
+                        {"label": "-", "order": 100},
                         {"label": "About", "href": "/pages/about.js"}
                     ]
                 }
@@ -108,7 +111,7 @@
             "secrets": {
                 "options": {
                     "pageUnlock": "/pages/secrets-unlock.js",
-                    "pageManager": "/pages/secrets-manager.js"
+                    "pageManager": "/pages/preferences/secrets.js"
                 }
             },
             "theme": {

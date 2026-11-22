@@ -23,6 +23,10 @@ export default {
         <x-notice x-if="state.error" type="error" label="Error" x-attr:message="state.error"></x-notice>
         <x-notice x-if="state.busy" type="working" label="Working"></x-notice>
 
+        <p x-if="state.mode == 'manage' && state.ready && !state.busy">
+            Manage your encrypted secrets securely.
+        </p>
+
         <!-- Secrets list -->
         <x-tabs x-if="state.mode == 'manage' && state.ready && !state.busy" use-hash>
        
@@ -53,7 +57,7 @@ export default {
 
                     <x-empty x-if="state.items.length == 0" icon="x-password" label="No secrets" message="Add a secret to your vault."></x-empty>
 
-                    <x-listview x-if="state.items.length > 0" view="details">
+                    <x-listview x-if="state.items.length > 0" view="details" x-on:activate="edit" >
                         <x-listview-head>
                             <x-listview-column label="Name" width="10em"></x-listview-column>
                             <x-listview-column label="Label"></x-listview-column>
@@ -61,7 +65,7 @@ export default {
                             <x-listview-column label="Actions" slot="right" width="5em" style="text-align:right"></x-listview-column>
                         </x-listview-head>
                         <x-listview-body>
-                            <x-listview-item x-for="item in state.items" x-attr:key="item.id" x-attr:path="item.id" x-attr:label="item.name" icon="x-password">
+                            <x-listview-item x-for="item in state.items" x-attr:key="item.id" x-attr:path="item.id" x-attr:label="item.name" icon="x-password" x-attr:data-name="item.name">
                                 <span x-text="item.label"></span>
                                 <span x-text="item.description || '—'"></span>
                                 <div class="actions" style="text-align:right">
@@ -76,7 +80,7 @@ export default {
                 
             </x-tab>
 
-            <x-tab label="Passkeys" class="passkeys" x-if="state.mode == 'manage' && state.ready && state.status == 'unlocked'" hash="passkeys">
+            <x-tab label="Passkeys" class="passkeys" x-if="state.mode == 'manage' && state.ready && state.status == 'unlocked'" hash="passkeys" x-on:activate="editPasskey">
                 <x-form>
                     <p>
                         Here you can add, edit, and delete your passkeys as needed.
@@ -92,7 +96,7 @@ export default {
                             <x-listview-column label="Actions" slot="right" width="5em" style="text-align:right"></x-listview-column>
                         </x-listview-head>
                         <x-listview-body>
-                            <x-listview-item x-for="passkey in state.passkeys" x-attr:key="passkey.id" x-attr:label="passkey.label" icon="x-key">
+                            <x-listview-item x-for="passkey in state.passkeys" x-attr:key="passkey.id" x-attr:label="passkey.label" icon="x-key" x-attr:data-id="passkey.id">
                                 <span x-text="passkey.description || '—'"></span>
                                 <div class="actions" style="text-align:right">
                                     <x-button class="anchor" icon="x-edit" tooltip="Edit" x-attr:data-id="passkey.id" x-on:click="editPasskey"></x-button>
@@ -112,14 +116,14 @@ export default {
         <x-form x-if="(state.mode == 'add' || state.mode == 'edit') && state.ready" command="save">
             <x-datafields columns="1">
                 <x-datafield type="text" label="Name" required x-model="state.secretName" description="Unique identifier for the secret" autofocus></x-datafield>
-                <x-datafield type="text" label="Label" x-model="state.label" description="Optional friendly display name"></x-datafield>
-                <x-datafield type="text" label="Description" x-model="state.description"></x-datafield>
-                <x-datafield type="select" label="Value type" x-prop:domain="state.valueTypes" x-model="state.valueType"></x-datafield>
-                <x-datafield x-if="state.valueType == 'text'" type="password" label="Secret value" autocomplete="off" x-model="state.editorValue" required></x-datafield>
+                <x-datafield type="select" label="Type" x-prop:domain="state.valueTypes" x-model="state.valueType" required></x-datafield>
+                <x-datafield x-if="state.valueType == 'text'" type="password" label="Secret" autocomplete="off" x-model="state.editorValue" required></x-datafield>
                 <x-datafield x-if="state.valueType == 'json'" type="textarea" label="JSON value" x-model="state.editorValue" required></x-datafield>
             </x-datafields>
             <x-details label="Advanced" x-if="state.mode == 'edit'">
                 <x-datafields columns="2">
+                    <x-datafield type="text" label="Label" x-model="state.label" description="Optional friendly display name" columns="2"></x-datafield>
+                    <x-datafield type="text" label="Description" x-model="state.description" columns="2"></x-datafield>
                     <x-datafield type="datetime" label="Created" readonly x-model="state.createdDisplay"></x-datafield>
                     <x-datafield type="datetime" label="Modified" readonly x-model="state.modifiedDisplay"></x-datafield>
                     <x-datafield type="number" label="Revision" readonly x-model="state.revision"></x-datafield>
@@ -403,12 +407,14 @@ export default {
             },
 
             async edit({event}) {
-                const name = event.currentTarget.dataset.name;
+                let name = event.currentTarget.dataset.name;
+                if (!name) name = event.target.dataset.name;
                 if (name) await this.openEditor("edit", name);
             },
 
             async editPasskey({event}) {
-                const id = event.currentTarget.dataset.id;
+                let id = event.currentTarget.dataset.id;
+                if (!id) id = event.target.dataset.id;
                 if (id) await this.openPasskeyEditor(id);
             },
 

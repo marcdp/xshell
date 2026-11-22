@@ -12,6 +12,9 @@ export default {
         x-datafield {margin-top: .25em;}
     `,
     template: `
+        <p>
+            Select your preferred language for the application.
+        </p>
         <x-datafield type="select" label="Language" x-prop:domain="state.languages" x-model="state.language"></x-datafield>
     `,
     state: {

@@ -289,6 +289,9 @@ export default {
         :host(.segmented) .container input:checked + label {background:var(--x-color-primary); color:var(--x-color-white); border-color:var(--x-color-primary);}
         :host(.segmented) .container input:focus-visible + label {outline:2px solid var(--x-color-primary); outline-offset:2px;}
         :host(.segmented) .container input:disabled + label {opacity:.5; cursor:default;}
+
+        /* other */
+        :host(.no-padding) {--x-datafield-padding-left: var(--x-datafield-padding);}
         
         `,
     template: `

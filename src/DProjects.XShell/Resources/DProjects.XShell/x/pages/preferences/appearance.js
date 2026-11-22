@@ -12,6 +12,9 @@ export default {
         x-datafield {margin-top: .25em;}
     `,
     template: `
+        <p>
+            Customize the appearance of the application.
+        </p>
         <x-datafield type="radios" label="Theme" x-prop:domain="state.themes" x-model="state.theme"></x-datafield>
     `,
     state: {

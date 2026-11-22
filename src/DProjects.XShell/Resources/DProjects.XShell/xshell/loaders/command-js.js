@@ -1,5 +1,4 @@
 
-import xshell from "../xshell.js";
 import JsonValidator from "../services/json-validator.js";
 import { deepFreeze } from "../utils/object.js";
 
@@ -32,7 +31,7 @@ export default class LoaderCommandJs {
         }
 
         // validate the declarative definition using the shared XShell schema
-        const schema = await xshell.loader.load("schema:command");
+        const schema = await context.services.loader.load("schema:command");
         const definitionObject = Object.fromEntries(
             Object.entries(definition).map(([key, value]) => [key, typeof value === "function" ? {} : value])
         );
@@ -66,7 +65,7 @@ export default class LoaderCommandJs {
 
             constructor(invocationContext = {}) {
                 // use the explicit invocation scope while preserving legacy direct construction through root Services
-                const invocationServices = invocationContext.services ?? xshell.services;
+                const invocationServices = invocationContext.services ?? context.services;
                 const servicesProvider = new Proxy({}, {
                     get(target, prop) {
                         if (prop === "context") {
@@ -76,15 +75,13 @@ export default class LoaderCommandJs {
                         } else if (prop === "definition") {
                             return definition;
                         } else if (prop === "moduleConfig") {
-                            return xshell.config.modules[moduleId];
+                            return invocationServices.config.modules[moduleId];
                         } else if (prop === "module") {
-                            return xshell.modules.getModuleById(moduleId);
+                            return invocationServices.modules.getModuleById(moduleId);
                         } else if (prop === "services") {
                             return invocationServices;
-                        } else if (typeof prop === "symbol") {
-                            return undefined;
                         }
-                        return invocationServices.resolve(prop);
+                        return invocationServices[prop];
                     }
                 });
 
