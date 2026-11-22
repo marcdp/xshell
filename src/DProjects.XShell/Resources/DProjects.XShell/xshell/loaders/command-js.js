@@ -75,13 +75,13 @@ export default class LoaderCommandJs {
                         } else if (prop === "definition") {
                             return definition;
                         } else if (prop === "moduleConfig") {
-                            return invocationServices.config.modules[moduleId];
+                            return invocationServices.resolve("config").modules[moduleId];
                         } else if (prop === "module") {
-                            return invocationServices.modules.getModuleById(moduleId);
-                        } else if (prop === "services") {
-                            return invocationServices;
+                            return invocationServices.resolve("modules").getModuleById(moduleId);
                         }
-                        return invocationServices[prop];
+                        debugger;
+                        return invocationServices.resolve(prop);
+                        //return invocationServices[prop];
                     }
                 });
 
