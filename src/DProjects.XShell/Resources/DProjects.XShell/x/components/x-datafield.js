@@ -195,6 +195,12 @@ export default {
         :host .input.radios x-icon {margin-right:.25em;}
         :host .input.radios label {cursor:pointer;}
         :host .input.radios .description {display:block; font-size:var(--x-font-size-small); color:var(--x-color-text-xx-gray);}
+
+        ::slotted(p) {
+            color:var(--x-color-text)!important; 
+            margin:0;
+            --x-icon-vertical-align:sub;
+        }
         
 
         input[type='range'] {

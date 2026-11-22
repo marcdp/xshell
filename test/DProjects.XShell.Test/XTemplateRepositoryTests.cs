@@ -56,6 +56,18 @@ namespace DProjects.XShell.Test {
         }
 
         [Fact]
+        public async Task SecretsPageTemplatesCompile() {
+            // Compile each Preferences Secrets Page through the module file pipeline.
+            var directory = Path.Combine(GetResourceDirectory(), "x");
+            var compiler = new ModuleFileCompiler();
+            foreach (var file in new[] { "secrets.js", "secrets-secret.js", "secrets-passkey.js" }) {
+                var result = await compiler.CompileAsync(Path.Combine(directory, "manifest.jsonc"),
+                    Path.Combine(directory, "pages", "preferences", file), TestContext.Current.CancellationToken);
+                Assert.Contains("templateRenderer:", result.Content, StringComparison.Ordinal);
+            }
+        }
+
+        [Fact]
         public void StaticModuleTemplatesCompileWhenTemplatePropertyUsesWhitespaceBeforeTheColon() {
             var compilerType = typeof(XTemplateCompiler).Assembly.GetType("DProjects.XShell.Services.XTemplate.XTemplateJavaScriptCompiler", throwOnError: true)!;
             var compiler = Activator.CreateInstance(compilerType, new XTemplateCompiler())!;

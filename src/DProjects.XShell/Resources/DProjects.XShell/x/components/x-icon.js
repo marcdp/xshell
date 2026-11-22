@@ -22,7 +22,7 @@ export default {
     },
     style: `
         :host {display:inline; }
-        :host svg {height:1.25em;width:1.25em; fill:currentcolor; vertical-align:middle; display:inline-block;}
+        :host svg {height:1.25em;width:1.25em; fill:currentcolor; vertical-align:var(--x-icon-vertical-align, middle); display:inline-block;}
         :host(.size-x2) svg {height:2em;width:2em; fill:currentcolor}
     `,
     template: `

@@ -14,14 +14,18 @@ function effectiveConfig() {
         xshell: {
             version: "1.0.0",
             assets: { basePath: "/_assets", path: "/_assets/xshell", url: "https://example.test/xshell/" },
-            areas: { default: null, definitions: {} },
             resolver: {},
             services: {
                 navigation: { contract: "navigation", implementation: "/services/navigation.js", lifetime: "singleton", options: { mode: "path" } },
-                secrets: { contract: "secrets", implementation: "/services/secrets.js", lifetime: "singleton", options: { rememberMinutes: 15, maxRememberMinutes: 60 } }
+                secrets: {
+                    contract: "secrets", implementation: "/services/secrets.js", lifetime: "singleton",
+                    options: {
+                        rememberMinutes: 15, maxRememberMinutes: 60,
+                        pageUnlock: "page:x:/pages/preferences/secrets-unlock.js", pageManager: "page:x:/pages/preferences/secrets.js"
+                    }
+                }
             },
-            ui: { layout: {}, component: {} },
-            i18n: { lang: "en", langs: [{ id: "en", label: "English", main: true }], datetime: { options: {}, formats: {} }, strings: {} },
+            ui: { layouts: {}, components: {} },
             configUrl: "https://example.test/xshell/manifest.json",
             serviceWorker: { mappings: [] },
             files: []

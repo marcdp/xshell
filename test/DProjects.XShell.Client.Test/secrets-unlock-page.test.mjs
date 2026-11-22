@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import SecretsUnlockPage from "../../src/DProjects.XShell/Resources/DProjects.XShell/x/pages/secrets-unlock.js";
+import SecretsUnlockPage from "../../src/DProjects.XShell/Resources/DProjects.XShell/x/pages/preferences/secrets-unlock.js";
 
 function deferred() {
     let resolve;
@@ -96,7 +96,7 @@ test("Secrets authentication Page initializes memory-only without a second passw
         page.state.createPasskey = false;
         await page.controller.initialize();
 
-        assert.deepEqual(page.calls.initialize, [{password:"master password", rememberMinutes:0}]);
+        assert.deepEqual(page.calls.initialize, [{password:"master password"}]);
         assert.deepEqual(page.calls.unlock, []);
         assert.deepEqual(page.calls.addPasskey, []);
         assert.equal(page.secrets.status, "unlocked");
@@ -117,7 +117,7 @@ test("Secrets authentication Page establishes the selected remembered session be
     };
     await page.controller.initialize();
 
-    assert.deepEqual(page.calls.initialize, [{password:"master password", rememberMinutes:15}]);
+    assert.deepEqual(page.calls.initialize, [{password:"master password"}]);
     assert.deepEqual(page.calls.unlock, [{password:"master password", rememberMinutes:15}]);
     assert.equal(page.state.status, "unlocked");
     assert.deepEqual(page.calls.close, [{unlocked:true}], "the initialization status event must not close the dialog early");

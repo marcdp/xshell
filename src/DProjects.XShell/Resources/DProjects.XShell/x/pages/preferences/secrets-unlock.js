@@ -6,7 +6,7 @@ export default {
     },
 
     template: `
-        <x-notice x-if="!state.ready || state.busy" type="working" label="Working..."></x-notice>
+        <x-notice x-if="!state.ready || state.busy" type="working" x-attr:label="state.message"></x-notice>
         <x-notice x-if="state.error && !state.busy" type="error" x-attr:label="state.setupPasskey ? 'Passkey setup error' : 'Authentication error'" x-attr:message="state.error"></x-notice>
 
         <x-form x-if="state.ready && !state.setupPasskey && state.status == 'uninitialized' && !state.busy" command="initialize">
@@ -55,6 +55,7 @@ export default {
         busy: false,
         error: "",
         status: "locked",
+        message: "Working...",
         password: "",
         confirmPassword: "",
         passkeySupported: false,
@@ -276,6 +277,7 @@ export default {
 
                 state.busy = true;
                 state.error = "";
+                state.message = "Registering passkey...";
 
                 try {
                     await secrets.addPasskey({label, description, password:enrollmentPassword});
@@ -307,6 +309,7 @@ export default {
                 // Validate the selected credential and remembered-session duration.
                 if (!alive || closing || state.busy) return;
                 state.error = "";
+                state.message = "Unlocking...";
 
                 const rememberMinutes = Number(state.rememberMinutes);
                 if (!state.rememberOptions.some(item => item.value === String(rememberMinutes))) {

@@ -2,7 +2,6 @@
 
 The framework-owned `secrets` service stores named JSON-compatible values in a browser-local encrypted vault. Its default implementation is
 `xshell/services/secrets.js`, its contract is `xshell/contracts/secrets.json`, and XShell Core registers it through `xshell.services.secrets`.
-The management Page is `x/pages/secrets-manager.js`; the dedicated initialization and unlock Page is `x/pages/secrets-unlock.js`.
 
 Secrets V2 uses envelope encryption. Vault creation generates a random 256-bit data encryption key (DEK). The DEK, imported as a non-extractable
 AES-GCM key for the active session, encrypts every secret. Each secret record has a fresh random 96-bit IV, authenticated ciphertext containing the
@@ -92,13 +91,24 @@ or alter the label, creation time, PRF salt, or wrapped DEK.
 
 `lock()` immediately invalidates the session epoch, clears the active DEK reference, revokes the current tab's remembered material, and aborts
 active IndexedDB writes. Operations verify the epoch after asynchronous cryptographic, WebAuthn, and storage work so a late completion cannot
-restore an unlocked session. `secrets:status-changed` reports lifecycle changes and the current `sessionExpiresAt` on the Bus. Leaving the Secrets
-Page clears its password, decrypted value, and secret-description editor state but does not lock the Service; Lock remains an explicit security
-action. The Secrets Manager delegates initialization and unlocking to the dedicated authentication Page while retaining secret CRUD, passkey
-management, metadata display, and explicit Lock. The authentication Page calls only `ready()`, `listPasskeys()`, `initialize()`, `addPasskey()`,
-`unlock()`, and `unlockWithPasskey()`; it never calls `get()`, so transparent authentication cannot recurse. Passwords, keys, and secret values are
-neither Page context nor dialog results. The Page closes with only `{ unlocked: true }`, and the Service treats that as a UI result rather than
-proof of access.
+restore an unlocked session. `secrets:status-changed` reports lifecycle changes and the current `sessionExpiresAt` on the Bus.
+
+## Secrets Pages
+
+| Page | Responsibilities and context |
+| --- | --- |
+| `x/pages/preferences/secrets.js` | The Secrets entry in Preferences shows vault status, session expiration, and secret and passkey metadata. It opens the authentication and editor dialogs, confirms deletions and removals, and provides the explicit Lock action. |
+| `x/pages/preferences/secrets-secret.js` | An empty or omitted `secretName` adds a Text or JSON secret. A nonempty `secretName` opens the existing value and metadata for editing. The Page reads the value with `get(name, { interactive: false })`. |
+| `x/pages/preferences/secrets-passkey.js` | An empty or omitted `passkeyId` enrolls a passkey with master-password reauthentication. A nonempty `passkeyId` opens the registration for description editing and shows its read-only label and creation date. |
+| `x/pages/preferences/secrets-unlock.js` | Creates or unlocks a vault and offers optional initial passkey enrollment during creation. It returns `{ unlocked: true }` when authentication is complete. The service checks actual vault access before resuming an interactive read. |
+
+The management Page opens editors through the Dialog service and refreshes its lists when an editor returns `{ saved: true }`. Cancelling returns
+`null` and leaves the lists as they were. A successful removal or vault status change also refreshes the management view. Locking clears the
+management lists and invalidates open editors. Editors clear their value or password fields when they close or unload, and the vault remains unlocked
+until an explicit Lock or session expiration. Editor context and dialog results carry only identifiers or outcomes.
+
+A secret edit writes changed value or metadata first, then performs a requested rename. If the write succeeds and the rename fails, the editor
+reports the name under which the changes were saved and allows the user to retry the rename.
 
 ## Unlock-session policy
 
@@ -111,8 +121,8 @@ prompt. The `x` module supplies the authentication and management Pages when it 
     "services": {
         "secrets": {
             "options": {
-                "pageUnlock": "page:x:/pages/secrets-unlock.js",
-                "pageManager": "page:x:/pages/secrets-manager.js",
+                "pageUnlock": "page:x:/pages/preferences/secrets-unlock.js",
+                "pageManager": "page:x:/pages/preferences/secrets.js",
                 "rememberMinutes": 60,
                 "maxRememberMinutes": 43200
             }
@@ -227,11 +237,13 @@ missing Web Crypto, malformed metadata, policy changes, missing keys, and authen
 
 The client test suite deterministically covers vault initialization, password and mocked-PRF passkey unlock, optional automatic enrollment,
 registration failure and retry, remembered restoration and expiration, explicit locking, secret CRUD and rename behavior, encrypted metadata,
-revision tracking, concurrent writes, in-flight locking, authentication dialog closure, Manager refreshes, and Page/dialog hash isolation. Run:
+revision tracking, concurrent writes, in-flight locking, authentication dialog closure, editor cancellation, and management refreshes. Run:
 
 ```sh
 node --test test/DProjects.XShell.Client.Test/secrets.test.mjs
 node --test test/DProjects.XShell.Client.Test/secrets-page.test.mjs
+node --test test/DProjects.XShell.Client.Test/secrets-secret-page.test.mjs
+node --test test/DProjects.XShell.Client.Test/secrets-passkey-page.test.mjs
 node --test test/DProjects.XShell.Client.Test/secrets-unlock-page.test.mjs
 cd test/DProjects.XShell.Client.Test && npm test
 ```
@@ -252,7 +264,7 @@ supported browser:
 - Create text and structured secrets; edit values, labels, and descriptions; rename and delete them; and verify revision and `modifiedAt` changes
   while immutable ids and `createdAt` remain stable.
 - Add, edit, and remove a passkey through the Manager and verify its list refreshes after every successful dialog or removal.
-- Change the selected Manager tab while dialogs are open, complete or cancel those dialogs, and verify normal refreshes do not replace the tab hash.
+- Complete and cancel each editor dialog and verify the browser stays on the management Page. Confirm that a cancelled edit leaves the list unchanged.
 - Reload the application and verify vault discovery, remembered restoration when eligible, and locked password/passkey authentication otherwise.
 - Inspect IndexedDB and `sessionStorage`. Confirm they contain only the documented records and wrapping material—not passwords, plaintext secret
   values, raw DEKs, KEKs, or PRF outputs.

@@ -584,7 +584,10 @@ test("Navigation resolves Page resources through Resolver into public URLs in pa
         assert.equal(navigation._resolveCanonicalHref(href, page), "/demo/_assets/x-demo/pages/items.js?repositoryId=12#details");
         assert.equal(navigation.buildUrlAbsolute({ href, page, params: { sort: "name" } }), `${prefix}/demo/repository/12/items?sort=name#details`);
         assert.equal(navigation.buildUrlAbsolute({ href: "page:x-demo:/pages/about.js", page }), `${prefix}/demo/something`);
-        assert.equal(navigation.buildUrlAbsolute({ href: "page:x:/pages/secrets-manager.js", page }), `${prefix}/demo/_assets/x/pages/secrets-manager.js`);
+        for (const file of ["secrets.js", "secrets-secret.js", "secrets-passkey.js"]) {
+            const path = `/pages/preferences/${file}`;
+            assert.equal(navigation.buildUrlAbsolute({ href: `page:x:${path}`, page }), `${prefix}/demo/_assets/x${path}`);
+        }
         assert.equal(navigation.buildUrlAbsolute({ href: "/_assets/x-demo/pages/about.js", page }), `${prefix}/demo/something`);
         assert.equal(navigation.buildUrlAbsolute({ href: "relative.js", page }), `${prefix}/demo/_assets/x-demo/pages/relative.js`);
         for (const external of ["https://example.com", "mailto:user@example.com", "tel:+123456789", "custom:outside"]) {

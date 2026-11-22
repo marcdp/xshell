@@ -379,10 +379,10 @@ test("Secrets V2 contract validates against the service contract schema", () => 
 
 test("Secrets Service options schema accepts normalized Pages and rejects obsolete or invalid options", () => {
     const validator = new JsonValidator();
-    for (const page of [null, "page:x:/pages/secrets-unlock.js", "/_assets/x/pages/secrets-unlock.js", "https://example.test/pages/unlock.js"]) {
+    for (const page of [null, "page:x:/pages/preferences/secrets-unlock.js", "/_assets/x/pages/preferences/secrets-unlock.js", "https://example.test/pages/unlock.js"]) {
         assert.equal(validator.validate({pageUnlock:page, pageManager:page}, Secrets.optionsSchema).valid, true);
     }
-    for (const options of [{page:"page:x:/pages/secrets-unlock.js"}, {pageUnlock:"page:"}, {pageManager:" "}, {rememberMinutes:-1}, {maxRememberMinutes:43201}]) {
+    for (const options of [{page:"page:x:/pages/preferences/secrets-unlock.js"}, {pageUnlock:"page:"}, {pageManager:" "}, {rememberMinutes:-1}, {maxRememberMinutes:43201}]) {
         assert.equal(validator.validate(options, Secrets.optionsSchema).valid, false);
     }
 });
@@ -467,7 +467,7 @@ test("Secrets namespaces independent databases by normalized application base pa
 test("get transparently shares one configured authentication dialog and resumes each caller", async () => {
     const database = createIndexedDB();
     installEnvironment(database);
-    const config = secretsConfig(0, 0, "page:x:/pages/secrets-unlock.js", "page:x:/pages/secrets-manager.js");
+    const config = secretsConfig(0, 0, "page:x:/pages/preferences/secrets-unlock.js", "page:x:/pages/preferences/secrets.js");
     let secrets;
     const calls = [];
     const dialog = {
@@ -478,7 +478,7 @@ test("get transparently shares one configured authentication dialog and resumes 
         }
     };
     secrets = createSecrets(config, {config, dialog});
-    assert.equal(secrets.options.pageManager, "page:x:/pages/secrets-manager.js");
+    assert.equal(secrets.options.pageManager, "page:x:/pages/preferences/secrets.js");
     await secrets.ready();
     await secrets.initialize({password:"master password"});
     await secrets.set("first", "one");
@@ -488,13 +488,13 @@ test("get transparently shares one configured authentication dialog and resumes 
     secrets.lock();
 
     assert.deepEqual(await Promise.all([secrets.get("first"), secrets.get("second")]), ["one", "two"]);
-    assert.deepEqual(calls, [{href:"page:x:/pages/secrets-unlock.js", context:{}}]);
+    assert.deepEqual(calls, [{href:"page:x:/pages/preferences/secrets-unlock.js", context:{}}]);
 });
 
 test("get distinguishes authentication cancellation, retries later, and honors non-interactive policy", async () => {
     const database = createIndexedDB();
     installEnvironment(database);
-    const config = secretsConfig(0, 0, "page:x:/pages/secrets-unlock.js");
+    const config = secretsConfig(0, 0, "page:x:/pages/preferences/secrets-unlock.js");
     let opens = 0;
     const secrets = createSecrets(config, {config, dialog:{async open() { opens++; return null; }}});
     await secrets.ready();
@@ -518,7 +518,7 @@ test("get distinguishes authentication cancellation, retries later, and honors n
 test("get supports dialog initialization without creating a missing secret and preserves dialog load failures", async () => {
     const database = createIndexedDB();
     installEnvironment(database);
-    const config = secretsConfig(0, 0, "page:x:/pages/secrets-unlock.js");
+    const config = secretsConfig(0, 0, "page:x:/pages/preferences/secrets-unlock.js");
     let secrets;
     let received;
     secrets = createSecrets(config, {config, dialog:{async open(options) {
@@ -971,7 +971,7 @@ test("remembered-session policy defaults to memory-only and validates durations"
     assert.throws(() => createSecrets(secretsConfig(0, 0, null, "page:")), /Page resource reference/u);
     assert.throws(() => new Secrets({}, {page:null}), /unknown option/u);
 
-    const configuredOptions = {rememberMinutes:15, maxRememberMinutes:60, pageUnlock:"/_assets/x/pages/secrets-unlock.js", pageManager:"page:x:/pages/secrets-manager.js"};
+    const configuredOptions = {rememberMinutes:15, maxRememberMinutes:60, pageUnlock:"/_assets/x/pages/preferences/secrets-unlock.js", pageManager:"page:x:/pages/preferences/secrets.js"};
     const configured = new Secrets({}, configuredOptions);
     assert.deepEqual(configured.options, configuredOptions);
     assert.equal(Object.isFrozen(configured.options), true);

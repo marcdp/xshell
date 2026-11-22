@@ -111,7 +111,7 @@
             },
             "secrets": {
                 "options": {
-                    "pageUnlock": "/pages/secrets-unlock.js",
+                    "pageUnlock": "/pages/preferences/secrets-unlock.js",
                     "pageManager": "/pages/preferences/secrets.js"
                 }
             },
