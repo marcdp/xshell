@@ -37,7 +37,7 @@ test("manifest arrays merge by ID in bootstrap precedence order", () => {
                         text: { page: "/text.js", label: "Open", extensions: ["txt"] }
                     } } },
                     stores: { options: { providers: {
-                        "mem:{identity}": { implementation: "/providers/store-mem.js", cache: true }
+                        mem: { implementation: "/providers/store-mem.js", cache: true }
                     } } }
                 }
             },
@@ -55,7 +55,7 @@ test("manifest arrays merge by ID in bootstrap precedence order", () => {
                     archive: { page: "/archive.js", label: "Open", extensions: ["zip"] }
                 } } },
                 stores: { options: { providers: {
-                    "remote:{identity}": { implementation: "/providers/store-remote.js", cache: true, options: { endpoint: "https://example.test/api" } }
+                    remote: { implementation: "/providers/store-remote.js", cache: true, options: { endpoint: "https://example.test/api" } }
                 } } }
             } },
             menu: { items: [{ id: "save", label: "Dependency" }, { id: "open", label: "Dependency", obsolete: true }] }
@@ -90,8 +90,8 @@ test("manifest arrays merge by ID in bootstrap precedence order", () => {
         archive: { page: "/archive.js", label: "Open", extensions: ["zip"] }
     });
     assert.deepEqual(plain(config.xshell.services.stores.options.providers), {
-        "mem:{identity}": { implementation: "/providers/store-mem.js", cache: true },
-        "remote:{identity}": { implementation: "/providers/store-remote.js", cache: true, options: { endpoint: "https://example.test/api" } }
+        mem: { implementation: "/providers/store-mem.js", cache: true },
+        remote: { implementation: "/providers/store-remote.js", cache: true, options: { endpoint: "https://example.test/api" } }
     });
     config.menu.items[0].label = "Changed";
     config.menu.other[0].label = "Changed";

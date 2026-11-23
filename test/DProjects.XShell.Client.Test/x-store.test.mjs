@@ -18,33 +18,16 @@ import Resolver from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshe
 
 const createStore = (url = "mem:test") => new MemoryStore({jsonValidator: new JsonValidator()}, {url});
 
-function createLoaderStub() {
-    // Capture local provider translation and the internal Loader handoff without using the global Resolver.
-    const calls = [];
-    return {
-        calls,
-        _createResourcePatternResolver(appBaseUrl, providers) {
-            return {
-                resolve(url) {
-                    const definition = providers[url];
-                    if (!definition) return null;
-                    const absolute = /^[A-Za-z][A-Za-z0-9+.-]*:/.test(definition.src);
-                    return {definition, url: absolute ? definition.src : new URL(definition.src.replace(/^\/+/, ""), appBaseUrl).href,
-                        path: absolute ? null : definition.src};
-                }
-            };
-        },
-        async _loadResolved(resource, resolved) {
-            calls.push({resource, resolved});
-            if (!resolved) throw Object.assign(new Error(`Resource not found: ${resource}`), {code: "RESOURCE_NOT_FOUND"});
-            return {resource};
-        }
-    };
+function createServices(values = {}) {
+    // Model the owning Services context while recording only dependencies providers actually request.
+    const resolved = [];
+    return {resolved, resolve(name) { resolved.push(name); if (Object.hasOwn(values, name)) return values[name]; throw new Error(`Unexpected Service '${name}'.`); }};
 }
 
 function createRuntime(providers, services = {}) {
     // Build the local provider matcher and Loader over a global Resolver with no Store category.
-    services = {jsonValidator: new JsonValidator(), ...services};
+    const jsonValidator = new JsonValidator();
+    const serviceScope = createServices({jsonValidator, ...services});
     const config = {
         app: {basePath: "", baseUrl: new URL("../../", import.meta.url).href},
         xshell: {assets: {path: "/_assets/xshell"}, resolver: {}}
@@ -54,7 +37,7 @@ function createRuntime(providers, services = {}) {
     const loader = new Loader({resolver, bus: {emit() {}}, services}, {
         appBasePath: xshellRuntimeUrl, xshellAssetsPath: "", componentLazy: null
     });
-    return {config, resolver, loader, stores: new Stores({loader, config}, {providers})};
+    return {config, resolver, loader, serviceScope, stores: new Stores({config, jsonValidator, services: serviceScope}, {providers})};
 }
 
 test("Store contract and Store metadata schema validate", () => {
@@ -119,37 +102,33 @@ test("memory Store returns defensive copies and accepts only JSON-compatible doc
     await assert.rejects(() => store.add("customers", {id: "date", name: "Bad", value: new Date()}), /plain JSON objects/);
 });
 
-test("Stores.open translates providers and preserves complete internal identity", async () => {
-    // Verify the authored provider surface is cloned and translated to the private instance-js definition.
-    const loader = createLoaderStub();
-    const providerOptions = {tag: "configured", nested: {value: 1}};
-    const stores = new Stores({loader, config: {app: {baseUrl: "https://example.test/"}}}, {providers: {
-        "mem:demo": {implementation: "/providers/store-mem.js", cache: true, cacheMode: "path", options: providerOptions}
+test("Stores.open resolves and imports providers locally with final runtime identity", async () => {
+    // Verify authored options are cloned, validated, and cannot override the domain URL.
+    const implementation = "data:text/javascript," + encodeURIComponent(`export default class Implementation {
+        static optionsSchema = {type: "object", properties: {tag: {type: "string"}, nested: {type: "object"}, url: {type: "string"}}, additionalProperties: false};
+        constructor(services, options) { this.options = options; options.nested.value = 99; }
+    }`);
+    const providerOptions = {tag: "configured", nested: {value: 1}, url: "authored:override"};
+    const jsonValidator = new JsonValidator();
+    const stores = new Stores({config: {app: {baseUrl: "https://example.test/"}}, jsonValidator, services: createServices({jsonValidator})}, {providers: {
+        mem: {implementation, cache: true, cacheMode: "path", options: providerOptions}
     }});
     providerOptions.tag = "changed";
     providerOptions.nested.value = 2;
 
-    assert.deepEqual(await stores.open("mem:demo"), {resource: "store:mem:demo"});
-    assert.deepEqual(loader.calls[0], {
-        resource: "store:mem:demo",
-        resolved: {
-            definition: {src: "/providers/store-mem.js", loader: "instance-js", cache: true, cacheMode: "path",
-                options: {tag: "configured", nested: {value: 1}}},
-            url: "https://example.test/providers/store-mem.js", path: "/providers/store-mem.js"
-        }
-    });
+    assert.deepEqual((await stores.open("mem:demo")).options, {tag: "configured", nested: {value: 99}, url: "mem:demo"});
+    assert.deepEqual(providerOptions, {tag: "changed", nested: {value: 2}, url: "authored:override"});
     for (const value of [null, undefined, "", "   ", 0, false, {}, []]) {
         await assert.rejects(() => stores.open(value), {name: "TypeError", message: "Store URL must be a non-empty string."});
     }
-    assert.equal(loader.calls.length, 1);
+    await assert.rejects(() => stores.open("unknown:missing"), /Store provider not found: unknown:missing/);
 });
 
 test("Stores.open resolves locally and caches each memory identity", async t => {
-    // Exercise Stores, the local matcher, Loader, instance-js, and MemoryStore without a global Store category.
+    // Exercise direct Store provider materialization without a global Store category.
     const providerUrl = new URL("../../src/DProjects.XShell/Resources/DProjects.XShell/x-store/providers/store-mem.js", import.meta.url).href;
     const {resolver, loader, stores} = createRuntime({
-        "mem:": {implementation: providerUrl, cache: true},
-        "mem:{identity}": {implementation: providerUrl, cache: true}
+        mem: {implementation: providerUrl, cache: true}
     });
     const anonymousFirst = await stores.open("mem:");
     const anonymousAgain = await stores.open("mem:");
@@ -162,19 +141,19 @@ test("Stores.open resolves locally and caches each memory identity", async t => 
     assert.equal(first.url, "mem:demo");
     await first.add("customers", {id: "only-demo", name: "Demo"});
     assert.equal(await other.get("customers", "only-demo"), null);
-    assert.deepEqual(loader.registry.map(item => item.resource), ["store:mem:", "store:mem:demo", "store:mem:other"]);
+    assert.deepEqual(loader.registry, []);
     assert.equal(resolver.registry.some(item => item.resource.startsWith("store:")), false);
     t.mock.method(console, "error", () => {});
     assert.equal(resolver.resolve("store:mem:demo"), null);
     await assert.rejects(() => loader.load("store:mem:demo"), {name: "ResourceError", code: "RESOURCE_NOT_FOUND"});
 });
 
-test("Stores reuses Loader sharing, failure eviction, and instance-js option validation", async () => {
-    // Preserve Loader lifecycle behavior and implementation-owned option validation for local providers.
+test("Stores owns sharing, failure eviction, and implementation option validation", async () => {
+    // Preserve provider lifecycle behavior without Loader participation.
     const providerUrl = new URL("./fixtures/store-provider.mjs?case=lifecycle", import.meta.url).href;
     const provider = await import(providerUrl);
     provider.reset();
-    const {stores, loader} = createRuntime({"test:{identity}": {
+    const {stores, loader} = createRuntime({test: {
         implementation: providerUrl, cache: true, options: {tag: "configured"}
     }});
     const firstPromise = stores.open("test:demo");
@@ -183,34 +162,64 @@ test("Stores reuses Loader sharing, failure eviction, and instance-js option val
     const [first, second] = await Promise.all([firstPromise, secondPromise]);
     assert.strictEqual(first, second);
     assert.deepEqual(provider.getCalls().map(call => call.options), [{tag: "configured", url: "test:demo"}]);
-    assert.equal(loader.registry.length, 1);
+    assert.equal(loader.registry.length, 0);
 
     provider.reset();
     provider.failOnce();
-    const retryRuntime = createRuntime({"test:{identity}": {implementation: providerUrl, cache: true}});
+    const retryRuntime = createRuntime({test: {implementation: providerUrl, cache: true}});
     await assert.rejects(() => retryRuntime.stores.open("test:retry"), /Simulated Store provider failure/);
     assert.equal((await retryRuntime.stores.open("test:retry")).number, 2);
 
-    const invalidRuntime = createRuntime({"test:{identity}": {implementation: providerUrl, options: {unknown: true}}});
-    await assert.rejects(() => invalidRuntime.stores.open("test:invalid"), /Invalid provider options/);
+    const invalidRuntime = createRuntime({test: {implementation: providerUrl, options: {unknown: true}}});
+    await assert.rejects(() => invalidRuntime.stores.open("test:invalid"), /Invalid Store provider options/);
+});
+
+test("Stores requires valid schemas and resolves provider dependencies lazily", async () => {
+    // Reject malformed implementation contracts before construction and retain the owning Services context.
+    const invalidImplementation = "data:text/javascript," + encodeURIComponent(`export default class Implementation {
+        static optionsSchema = []; constructor() { globalThis.__storeConstructions++; }
+    }`);
+    globalThis.__storeConstructions = 0;
+    const jsonValidator = new JsonValidator();
+    const invalidStores = new Stores({config: {app: {baseUrl: "https://example.test/"}}, jsonValidator, services: createServices({jsonValidator})}, {
+        providers: {test: {implementation: invalidImplementation}}
+    });
+    await assert.rejects(() => invalidStores.open("test:invalid"), /invalid static optionsSchema.*expected a JSON Schema object/);
+    assert.equal(globalThis.__storeConstructions, 0);
+
+    const implementation = "data:text/javascript," + encodeURIComponent(`export default class Implementation {
+        static optionsSchema = {type: "object", additionalProperties: false};
+        constructor({jsonValidator, services}, options) { this.validator = jsonValidator; this.services = services; this.options = options; }
+    }`);
+    const serviceScope = createServices({jsonValidator, unused: {}});
+    const stores = new Stores({config: {app: {baseUrl: "https://example.test/"}}, jsonValidator, services: serviceScope}, {
+        providers: {test: {implementation}}
+    });
+    const instance = await stores.open("test:demo");
+    assert.strictEqual(instance.validator, jsonValidator);
+    assert.strictEqual(instance.services, serviceScope);
+    assert.deepEqual(serviceScope.resolved, ["jsonValidator"]);
+    delete globalThis.__storeConstructions;
 });
 
 test("Stores options and manifest expose only the domain provider API", () => {
     // Validate the closed provider shape and the configured singleton Service boundary.
     const validator = new JsonValidator();
-    const valid = {providers: {"mem:{identity}": {
+    const valid = {providers: {mem: {
         implementation: "/providers/store-mem.js", cache: true, cacheMode: "path", options: {tag: "work"}
     }}};
     assert.equal(validator.validate(valid, Stores.optionsSchema).valid, true);
+    assert.equal(validator.validate({providers: {"mem:": valid.providers.mem}}, Stores.optionsSchema).valid, false);
+    assert.equal(validator.validate({providers: {MEM: valid.providers.mem}}, Stores.optionsSchema).valid, false);
     for (const definition of [
         {}, {implementation: ""}, {implementation: "/providers/store-mem.js", cache: "yes"},
         {implementation: "/providers/store-mem.js", cacheMode: "identity"}, {implementation: "/providers/store-mem.js", options: null},
-        {implementation: "/providers/store-mem.js", options: []}, {implementation: "/providers/store-mem.js", loader: "instance-js"}
-    ]) assert.equal(validator.validate({providers: {"mem:": definition}}, Stores.optionsSchema).valid, false);
+        {implementation: "/providers/store-mem.js", options: []}, {implementation: "/providers/store-mem.js", loader: "custom-js"}
+    ]) assert.equal(validator.validate({providers: {mem: definition}}, Stores.optionsSchema).valid, false);
 
     const manifest = readFileSync(new URL("../../src/DProjects.XShell/Resources/DProjects.XShell/x-store/manifest.jsonc", import.meta.url), "utf8");
     assert.match(manifest, /"stores"\s*:\s*\{\s*"contract"\s*:\s*"stores"[\s\S]*?"lifetime"\s*:\s*"singleton"/);
-    assert.match(manifest, /"providers"\s*:\s*\{[\s\S]*?"mem:"[\s\S]*?"mem:\{identity\}"/);
+    assert.match(manifest, /"providers"\s*:\s*\{\s*"mem"/);
     assert.match(manifest, /"implementation"\s*:\s*"\/providers\/store-mem\.js"/);
     assert.doesNotMatch(manifest, /"implementation"\s*:\s*"\/js\/store-/);
     assert.doesNotMatch(manifest, /"resolver"\s*:/);

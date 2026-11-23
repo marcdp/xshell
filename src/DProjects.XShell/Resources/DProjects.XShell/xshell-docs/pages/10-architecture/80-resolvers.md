@@ -122,8 +122,8 @@ Resolver rule `src` may be an application Path or an absolute URL. `Resolver.res
 for an absolute URL source) and `url` as the resolved absolute URL.
 
 Filesystem and Store provider URLs are domain-owned exceptions to this global namespace. `filesystems.open(url)` and `stores.open(url)` match their
-Service provider tables locally, then ask Loader to materialize the resolved provider under an internal `filesystem:` or `store:` identity. The
-global Resolver has no corresponding provider category, so these internal identities are not ordinary `loader.load(...)` application inputs.
+scheme against a domain-owned provider table, directly import and validate the selected implementation, and construct and optionally cache it
+within the owning domain Service. The global Resolver and Loader have no corresponding provider category or synthetic provider identities.
 
 Absolute HTTP(S) URLs are a built-in Resolver case and do not require an authored rule. The built-in `http:` and `https:` rules map these resources
 to their absolute URL and the `response-http` loader. See [Absolute HTTP(S) resources](90-loaders.md#absolute-https-resources) for the return value,

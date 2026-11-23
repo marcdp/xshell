@@ -1,6 +1,4 @@
 
-import ResourcePatternResolver from "../utils/resource-pattern-resolver.js";
-
 // Exceptions
 class ResourceError extends Error {
     constructor(resource, message, opts = {}) {
@@ -85,15 +83,6 @@ export default class Loader {
         }
         return result;
     }
-    _createResourcePatternResolver(appBaseUrl, definitions) {
-        // Create an isolated matcher for a domain service without adding definitions to the global Resolver.
-        return new ResourcePatternResolver(appBaseUrl, definitions);
-    }
-    async _loadResolved(resource, resolved) {
-        // Materialize one domain-owned definition through the same path as ordinary Loader requests.
-        return (await this.#loadResources([resource], () => resolved))[0];
-    }
-
     // private methods
     async #loadResources(resources, resolve) {
         // Materialize resources while preserving Loader cache, diagnostics, events, timing, and error behavior.

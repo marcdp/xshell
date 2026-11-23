@@ -18,17 +18,16 @@ controller({filesystems}) {
 }
 ~~~
 
-`filesystems.open(url)` resolves the URL against the Service's configured `options.providers` table. Filesystem provider URLs are not global
+`filesystems.open(url)` extracts the URL scheme and selects it from the Service's configured `options.providers` table. Filesystem provider URLs are not global
 Resolver resources: ordinary `resolver.resolve("filesystem:...")` and `loader.load("filesystem:...")` calls cannot open them. After local matching,
-the Service gives Loader an already-resolved internal identity such as `filesystem:mem:workspace`; Loader then materializes it through
-`instance-js` → provider options validation → runtime `url` composition → `new Implementation(services, options)`. The implementation constructor
-receives a lazy Services proxy as its first argument and final options containing `url: "mem:workspace"` as its second. The internal `filesystem:`
-prefix is not part of that URL.
+Filesystems directly imports the implementation, validates cloned authored options against `Implementation.optionsSchema`, adds the runtime `url`,
+and calls `new Implementation(injectedServices, options)`. The first argument is a lazy proxy over the owning Services context, and the second
+contains `url: "mem:workspace"`. The actual domain URL is the provider identity; no synthetic `filesystem:` Loader identity is created.
 
-The resulting Filesystem is a runtime provider instance, not an individually registered XShell Service. Loader still owns result caching,
-in-flight promise sharing, failed-cache eviction, registry diagnostics, Bus events, and materialization timing.
+The resulting Filesystem is a runtime provider instance, not an individually registered XShell Service. Filesystems owns result caching,
+in-flight promise sharing, and failed-creation eviction. Provider construction does not create Loader registry diagnostics or Bus events.
 
-The matching provider definition determines whether Loader retains an instance. The current memory definitions give anonymous and named identities different
+The matching provider definition determines whether Filesystems retains an instance. The current memory definitions give anonymous and named identities different
 semantics:
 
 | Provider URL | Behavior |
@@ -42,29 +41,26 @@ every provider is cached.
 
 ## Providers
 
-`options.providers` is an object keyed by provider URL pattern. Each definition has a required `implementation` string and optional `cache`,
-`cacheMode`, and `options` fields. Patterns use the same literal and placeholder semantics as Resolver definitions, but they belong only to
-Filesystems. Filesystems uses the generic `instance-js` loader internally; provider configuration does not select or expose that Loader
-implementation. The selected provider class owns the schema for its `options`; Filesystems validates only that the value is an object.
+`options.providers` is an object keyed by normalized URL scheme without the trailing colon. Each definition has a required `implementation` string
+and optional `cache`, `cacheAnonymous`, `cacheMode`, and `options` fields. The selected provider class must expose a static `optionsSchema`;
+Filesystems validates cloned authored options against that schema before adding runtime values and invoking the constructor.
 
 ~~~jsonc
 "providers": {
-    "mem:": {
-        "implementation": "/providers/filesystem-mem.js"
-    },
-    "mem:{identity}": {
+    "mem": {
         "implementation": "/providers/filesystem-mem.js",
-        "cache": true
+        "cache": true,
+        "cacheAnonymous": false
     }
 }
 ~~~
 
-A configurable provider can receive domain-specific declarative options without exposing Loader details. This hypothetical provider illustrates
+A configurable provider can receive domain-specific declarative options without exposing materialization details. This hypothetical provider illustrates
 the shape; it does not imply that WebDAV is implemented:
 
 ~~~jsonc
 "providers": {
-    "webdav:{url}": {
+    "webdav": {
         "implementation": "/providers/filesystem-webdav.js",
         "cache": true,
         "options": {
@@ -78,10 +74,11 @@ the shape; it does not imply that WebDAV is implemented:
 `url` is derived from the opened provider identity and is not authored inside `options`. Runtime-only constructor values such as a directly
 supplied `FileSystemDirectoryHandle` also remain outside declarative JSON configuration.
 
-`cacheMode` retains Loader's ordinary `full` and `path` meanings. Filesystems does not maintain a second instance cache and does not expose the
-provider table as mutable public API.
+`cacheMode` retains the compatible `full` and `path` meanings: `full` uses the complete provider URL, while `path` removes only the query and
+preserves any fragment. When `cache` is true, `cacheAnonymous: false` exempts the scheme-only identity such as `mem:` while named identities remain
+cached. Filesystems owns this cache and does not expose the provider table as mutable public API.
 
-Another module can contribute a provider through ordinary XShell configuration composition by adding a new pattern key under the same Service
+Another module can contribute a provider through ordinary XShell configuration composition by adding a new scheme key under the same Service
 options object:
 
 ~~~jsonc
@@ -91,7 +88,7 @@ options object:
             "filesystems": {
                 "options": {
                     "providers": {
-                        "webdav:{url}": {
+                        "webdav": {
                             "implementation": "/providers/filesystem-webdav.js"
                         }
                     }
@@ -102,7 +99,7 @@ options object:
 }
 ~~~
 
-Configuration composition merges provider entries by pattern key; no imperative provider registry or startup callback is required.
+Configuration composition merges provider entries by scheme; no imperative provider registry or startup callback is required.
 
 ## Commands
 

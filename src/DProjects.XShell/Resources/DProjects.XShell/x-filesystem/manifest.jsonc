@@ -42,12 +42,11 @@
                         "iframe": {"page": "/pages/editor-iframe.js", "label": "Open", "icon": "x-preview", "extensions": ["pdf"]}
                     },
                     "providers": {
-                        "mem:": {"implementation": "/providers/filesystem-mem.js"},
-                        "mem:{identity}": {"implementation": "/providers/filesystem-mem.js", "cache": true},
-                        "http:{url}": {"implementation": "/providers/filesystem-http.js"},
-                        "https:{url}": {"implementation": "/providers/filesystem-http.js"},
-                        "opfs:": {"implementation": "/providers/filesystem-opfs.js"},
-                        "file:": {"implementation": "/providers/filesystem-file.js"}
+                        "mem": {"implementation": "/providers/filesystem-mem.js", "cache": true, "cacheAnonymous": false},
+                        "http": {"implementation": "/providers/filesystem-http.js"},
+                        "https": {"implementation": "/providers/filesystem-http.js"},
+                        "opfs": {"implementation": "/providers/filesystem-opfs.js"},
+                        "file": {"implementation": "/providers/filesystem-file.js"}
                     }
                 }
             }

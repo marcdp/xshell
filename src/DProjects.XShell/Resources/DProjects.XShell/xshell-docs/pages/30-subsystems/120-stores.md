@@ -13,13 +13,14 @@ await store.save("customers", {...customer, name: "Updated customer"});
 await store.remove("customers", customer.id);
 ```
 
-`mem:` and named identities such as `mem:demo` use the memory provider. The configured providers cache each complete Store identity through Loader
-for the application lifetime, while different identities remain isolated. The provider does not persist to browser storage.
+`mem:` and named identities such as `mem:demo` use the memory provider. The `Stores` Service caches each configured Store identity for the
+application lifetime, while different identities remain isolated. The provider does not persist to browser storage.
 
 ## Provider selection
 
 The `Stores` Service owns Store provider URL matching through `xshell.services.stores.options.providers`. These URLs are domain URLs consumed by
-`stores.open(url)`, not ordinary global Resolver resources. Other modules can contribute providers through normal configuration composition:
+`stores.open(url)`, not ordinary global Resolver resources. Provider entries are keyed by URL scheme without the trailing colon; `remote` therefore
+handles identities such as `remote:customers`. Other modules can contribute providers through normal configuration composition:
 
 ```jsonc
 {
@@ -28,7 +29,7 @@ The `Stores` Service owns Store provider URL matching through `xshell.services.s
             "stores": {
                 "options": {
                     "providers": {
-                        "remote:{identity}": {
+                        "remote": {
                             "implementation": "/providers/store-remote.js",
                             "cache": true,
                             "options": {"endpoint": "https://example.test/api"}
@@ -41,22 +42,28 @@ The `Stores` Service owns Store provider URL matching through `xshell.services.s
 }
 ```
 
-This example describes configuration composition; `x-store` does not provide a remote implementation. The selected implementation's static
-`optionsSchema` validates provider-specific `options` through `instance-js`.
+This example describes configuration composition; `x-store` does not provide a remote implementation. `Stores` requires the selected
+implementation's static `optionsSchema` and validates a cloned provider-specific `options` object before construction.
 
 ```text
 Stores Service
-    owns Store provider URL matching
-
-Loader
-    owns materialization, caching, diagnostics, and errors
-
-instance-js
-    validates implementation options and constructs the implementation
+    owns Store provider scheme dispatch and caching
+    ↓
+configured implementation URL
+    ↓
+provider implementation import
+    ↓
+optionsSchema validation
+    ↓
+new Implementation(injectedServices, options)
 
 Store implementation
     owns Store behavior and state
 ```
+
+The runtime `url` is added after authored options validation and wins over a conflicting authored value. Provider dependencies resolve lazily
+through the owning Services context. Store providers are not global Resolver resources or Loader resources, so their construction produces no
+Loader registry entries or generic Loader events.
 
 ## Schema and validation
 

@@ -44,9 +44,9 @@ test("resolver schema accepts the supported cache modes", () => {
 
 test("resolver schema accepts only object-valued loader options", () => {
     // Keep provider-specific fields open while rejecting non-object configuration at the generic boundary.
-    assert.equal(validator.validate({src: "/provider.js", loader: "instance-js", options: {timeout: 30000}}).valid, true);
+    assert.equal(validator.validate({src: "/provider.js", loader: "custom-js", options: {timeout: 30000}}).valid, true);
     for (const options of [null, [], "invalid", 1, false]) {
-        assert.equal(validator.validate({src: "/provider.js", loader: "instance-js", options}).valid, false);
+        assert.equal(validator.validate({src: "/provider.js", loader: "custom-js", options}).valid, false);
     }
 });
 

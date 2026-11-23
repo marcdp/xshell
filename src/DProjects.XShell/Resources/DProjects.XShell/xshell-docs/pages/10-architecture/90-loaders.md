@@ -100,47 +100,10 @@ such as a Page instance's `src`. Use `path` only for resource types whose implem
 Because the key is the logical reference rather than the resolved URL, two different locators—for example a global physical locator and its
 module-qualified equivalent—can resolve to the same URL and still occupy separate cache entries.
 
-A resource-specific loader can materialize a mutable runtime object rather than immutable data. For example, `instance-js` imports a default
-implementation class, validates the resolved definition's declarative `options` against `Implementation.optionsSchema`, adds the resource-derived
-`url`, and calls `new Implementation(services, options)`. Instance implementations follow the same dependency/options constructor model as
-Services:
-
-```text
-Services
-    constructor(services, options)
-
-Instance implementation
-    constructor(services, options)
-```
-
-The first constructor argument is a lazy Services proxy. The second combines validated declarative configuration with framework-owned runtime
-values; the resource-derived `url` is added after validation and therefore overrides any conflicting value. The constructor is the implementation's
-single synchronous construction boundary for dependency consumption, runtime-only validation, defaults, normalization, and state initialization:
-
-~~~js
-export default class Implementation {
-    static optionsSchema = {
-        type: "object",
-        properties: {
-            timeout: { type: "integer", minimum: 0 }
-        },
-        additionalProperties: false
-    };
-
-    constructor({dependency}, {url, timeout = 30000} = {}) {
-        // Initialize one runtime provider instance.
-    }
-}
-~~~
-
-The schema describes only authored `options`; the framework-derived `url` and runtime-only constructor values do not belong in it. Missing authored
-options are validated as an empty object, after which `instance-js` adds `url` to the final constructor options. Invalid schemas or authored options
-fail before construction. When the resolved definition enables caching, the Loader retains the created object by logical resource identity, so later
-loads can observe the same application-lifetime state. The object does not thereby become an XShell Service.
-
-The Filesystems and Stores Services use the same materialization path after matching their domain-owned provider tables. This preserves Loader
-cache and diagnostic behavior without making `filesystem:` or `store:` ordinary global Resolver namespaces. Application code uses
-`filesystems.open(url)` or `stores.open(url)`; the internal Loader collaboration is not an application API.
+Loader caching applies only to ordinary XShell resources. Filesystem and Store provider URLs are owned by their domain Services and never become
+synthetic Loader resources. `Filesystems` and `Stores` each dispatch by URL scheme, import the configured implementation, validate its authored
+options, construct it with a lazy Services dependency proxy, and maintain their own provider-instance cache. Consequently, provider
+construction does not create Loader registry entries or emit Loader resource events.
 
 ## Flow
 
@@ -158,7 +121,7 @@ resource-specific loader
 runtime result
 ```
 
-A domain Service that owns provider resolution joins the flow after resolution and uses the same Loader stages below it.
+Filesystem and Store provider materialization follows a separate domain-owned flow described in the corresponding subsystem documentation.
 
 ## Examples
 
