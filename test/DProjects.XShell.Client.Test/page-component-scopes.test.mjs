@@ -85,6 +85,8 @@ function createRuntime({ order = [], scopedDispose } = {}) {
     root.register("loader", loader);
     root.register("modules", modules);
     root.register("services", root);
+    root.register("i18n", {});
+    root.register("navigation", { mode: "path" });
 
     class Singleton {
         static optionsSchema = { type: "object", additionalProperties: false };

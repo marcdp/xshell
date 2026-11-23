@@ -301,7 +301,16 @@ export async function createPageClassFromJsDefinition(src, context, definition) 
     const stateEngineFactory = new stateEngineFactoryCreator(stateSkeleton, context);
     // render engine
     const renderEngineFactoryCreator = await context.services.loader.load("render-engine:" + definition.meta.renderEngine);
-    const renderEngineFactory = new renderEngineFactoryCreator(definition.template, context, definition.templateRenderer);
+    const renderContext = {
+        resourceName: context.resourceName,
+        resourcePath: context.resourcePath,
+        resourceDefinition: context.resourceDefinition,
+        appBasePath: context.appBasePath,
+        componentLazy: context.componentLazy,
+        i18n: context.services.i18n,
+        navigation: context.services.navigation
+    };
+    const renderEngineFactory = new renderEngineFactoryCreator(definition.template, renderContext, definition.templateRenderer);
     // validate compiled template slots through the render-engine factory contract
     validateSlots(renderEngineFactory.slots, definition.meta?.name || "unknown");
     // load render engine dependencies

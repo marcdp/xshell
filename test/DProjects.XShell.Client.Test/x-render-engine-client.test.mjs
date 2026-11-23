@@ -70,7 +70,7 @@ globalThis.document = {
 
 const modulePath = "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/render-engines/x-client.js";
 const { default: createRenderEngineFactoryXClient, createClientTemplateRenderer, parseExpression, evaluateExpression, assignExpression } = await import(modulePath);
-const { XTemplateRuntimeUtils } = await import("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/render-engines/x.js");
+const { default: createRenderEngineFactoryX, XTemplateRuntimeUtils } = await import("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/render-engines/x.js");
 const renderUtils = Object.assign(Object.create(XTemplateRuntimeUtils), {
     rewriteAttribute(tag, attrs, name, value) { void tag; void attrs; void name; return value; },
     rewriteStyleValue(value) { return value; }
@@ -308,6 +308,25 @@ test("x-client factory ignores a server artifact and delegates its interpreted a
     assert.deepEqual(factory.slots, []);
 });
 
+test("canonical x rendering forwards the explicit i18n capability unchanged", () => {
+    const i18n = { locale: "es-ES" };
+    let receivedI18n = null;
+    const factory = createRenderEngineFactoryX("", { i18n }, {
+        render(state, handler, invalidate, utils, runtimeI18n) {
+            void state; void handler; void invalidate; void utils;
+            receivedI18n = runtimeI18n;
+            return [];
+        },
+        dependencies: [],
+        slots: []
+    });
+    factory.init();
+    const engine = factory.create({ host: new MatchElement("#shadow-root"), state: {}, handler() {}, invalidate() {} });
+    engine.mount();
+    engine.render();
+    assert.equal(receivedI18n, i18n);
+});
+
 const resourceSource = '<img src="images/card.png" style="background:url(icons/card.svg); color:red"><x-lazy><x-heavy></x-heavy></x-lazy><x-shared></x-shared>';
 fixtures.set(resourceSource, () => [
     element("img", { src: "images/card.png", style: "background:url(icons/card.svg); color:red" }, []),
@@ -432,7 +451,7 @@ test("x-client resolves recursive x-key fields independently for nested items", 
 });
 
 test("x-client reconciliation preserves instances when fallback keys and an undefined key move", () => {
-    const factory = createRenderEngineFactoryXClient(keyedLoopSource("x-for", "id,href,path"), { services: {} });
+    const factory = createRenderEngineFactoryXClient(keyedLoopSource("x-for", "id,href,path"), {});
     const host = new MatchElement("#shadow-root");
     const state = { items: [{ id: "first" }, { label: "missing" }, { href: "/last" }] };
     factory.init();
@@ -451,7 +470,7 @@ test("x-client reconciliation preserves instances when fallback keys and an unde
 
 test("x-client reconciliation still warns about duplicate keys, including undefined keys", t => {
     const warn = t.mock.method(console, "warn", () => {});
-    const factory = createRenderEngineFactoryXClient(keyedLoopSource("x-for", "id,href"), { services: {} });
+    const factory = createRenderEngineFactoryXClient(keyedLoopSource("x-for", "id,href"), {});
     const host = new MatchElement("#shadow-root");
     const state = { items: [{ id: "same" }, { href: "same" }, {}, { id: "", href: null }] };
     factory.init();

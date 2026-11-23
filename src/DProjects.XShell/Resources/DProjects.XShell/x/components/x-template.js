@@ -76,7 +76,7 @@ export default {
         renderingError: ""
     },
 
-    controller({events, state, dependencies, loader, host, getPage, postRender, services}) {
+    controller({events, state, dependencies, loader, host, getPage, postRender, i18n, navigation}) {
         let renderEngine = null;
         let revision = 0;
         let renderPending = false;
@@ -99,7 +99,8 @@ export default {
                     resourceDefinition: {},
                     appBasePath: "",
                     componentLazy: "",
-                    services: services
+                    i18n,
+                    navigation
                 };
             },
 

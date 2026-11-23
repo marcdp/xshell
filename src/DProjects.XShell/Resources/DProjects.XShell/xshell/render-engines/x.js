@@ -13,7 +13,7 @@ class XTemplate {
 	//ctor
 	constructor({ styleSheets = [], render, context = null }) {
 		this._compile({ styleSheets, render, context });
-		this._i18n = context?.services.i18n ?? null;
+		this._i18n = context?.i18n ?? null;
 	}
 
 	//props

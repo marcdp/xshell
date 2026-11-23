@@ -48,7 +48,8 @@ function createDocument(...elements) {
 const context = {
     appBasePath: "https://example.test/app",
     resourceDefinition: { modulePath: "/_assets/demo" },
-    resourcePath: "/_assets/demo/pages/page.html"
+    resourcePath: "/_assets/demo/pages/page.html",
+    navigation: { mode: "hash" }
 };
 const resourceBase = "https://example.test/app/_assets/demo/pages/";
 
@@ -58,6 +59,14 @@ test("X Template attribute rewriting lazily creates and reuses its inert documen
     assert.equal(rewriteTemplateAttribute("input", { type: "image" }, "src", "send.png", context), `${resourceBase}send.png`);
     assert.equal(rewriteTemplateAttribute("img", {}, "src", "image.png", context), `${resourceBase}image.png`);
     assert.equal(inertDocumentCreationCount, 1);
+});
+
+test("resource URL rewriting does not require navigation or a service provider", () => {
+    createDocument();
+    const resourceContext = { ...context };
+    delete resourceContext.navigation;
+    assert.equal(rewriteTemplateAttribute("img", {}, "src", "image.png", resourceContext), `${resourceBase}image.png`);
+    assert.equal(Object.hasOwn(resourceContext, "services"), false);
 });
 
 test("every built-in HTML URL rule rewrites a server-logical URL once", () => {
@@ -214,7 +223,7 @@ test("path navigation respects the application base form", () => {
         ["https://example.test/app", "https://example.test/app/_assets/demo/pages/details"]
     ]) {
         const anchor = new TestElement("a", { href: "./details" });
-        rewriteDocumentUrls(createDocument(anchor), { ...context, appBasePath, navigationMode: "path" });
+        rewriteDocumentUrls(createDocument(anchor), { ...context, appBasePath, navigation: { mode: "path" } });
         assert.equal(anchor.getAttribute("href"), expected);
     }
 });
@@ -254,7 +263,7 @@ test("runtime templates reject app: and url: in all static URL locations", () =>
 });
 
 test("custom declaring URLs use ordinary URL semantics", () => {
-    const custom = { resourceDefinition: {}, resourcePath: "https://cdn.example.com/widgets/card.js", appBasePath: "/app", navigationMode: "hash" };
+    const custom = { resourceDefinition: {}, resourcePath: "https://cdn.example.com/widgets/card.js", appBasePath: "/app", navigation: { mode: "hash" } };
     for (const [value, expected] of [
         ["./a.png", "https://cdn.example.com/widgets/a.png"],
         ["../a.png", "https://cdn.example.com/a.png"],

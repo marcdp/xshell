@@ -171,27 +171,37 @@ test("Public UI usage examples validate against the definition schemas and refer
     }
 });
 
-test("Component and Page loaders retain examples separately from implementation state and template", async () => {
+test("Component and Page loaders retain examples and give render engines only the explicit render context", async () => {
     // Observe the inputs delivered to the runtime engines during both definition loads.
     const stateInputs = [];
+    const stateContexts = [];
     const templateInputs = [];
+    const renderContexts = [];
     class StateEngineFactory {
-        constructor(state) { stateInputs.push(state); }
+        constructor(state, context) { stateInputs.push(state); stateContexts.push(context); }
     }
     class RenderEngineFactory {
         dependencies = [];
         slots = [];
-        constructor(template) { templateInputs.push(template); }
+        constructor(template, context) { templateInputs.push(template); renderContexts.push(context); }
         init() {}
     }
     const defaults = { stateEngine: "test", renderEngine: "test" };
     const engines = { "state-engine:test": StateEngineFactory, "render-engine:test": RenderEngineFactory };
+    const i18n = { id: "i18n" };
+    const navigation = { mode: "hash" };
     const context = {
-        resourceDefinition: { moduleId: "test" },
+        resourceName: "x-example-test",
+        resourcePath: "/_assets/test/components/example.js",
+        resourceDefinition: { moduleId: "test", modulePath: "/_assets/test" },
+        appBasePath: "/app",
+        componentLazy: "x-lazy",
         services: {
             config: { modules: { test: { defaults: { component: defaults, page: defaults } } } },
             loader: { async load(id) { return id.startsWith("schema:") ? schemas[id.slice(7)] : engines[id]; } },
-            modules: {}
+            modules: {},
+            i18n,
+            navigation
         }
     };
     const createDefinition = () => ({
@@ -206,6 +216,14 @@ test("Component and Page loaders retain examples separately from implementation 
     assert.deepEqual(Page.definition.contract.examples, examples);
     assert.deepEqual(stateInputs, [{ mode: "runtime" }, { mode: "runtime" }]);
     assert.deepEqual(templateInputs, ["<p>Implementation</p>", "<p>Implementation</p>"]);
+    assert.deepEqual(stateContexts, [context, context]);
+    for (const renderContext of renderContexts) {
+        assert.deepEqual(Object.keys(renderContext), ["resourceName", "resourcePath", "resourceDefinition", "appBasePath", "componentLazy", "i18n", "navigation"]);
+        assert.equal(Object.hasOwn(renderContext, "services"), false);
+        assert.equal(renderContext.resourceDefinition, context.resourceDefinition);
+        assert.equal(renderContext.i18n, i18n);
+        assert.equal(renderContext.navigation, navigation);
+    }
 });
 
 test("Service registration preserves examples in the validated contract document", async () => {

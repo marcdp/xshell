@@ -6,7 +6,7 @@ import templateDefinition from "../../src/DProjects.XShell/Resources/DProjects.X
 function createTemplate({ elements = [], renderingError = "", editor = true } = {}) {
     const renderedEditor = editor ? {
         querySelectorAll(selector) {
-            assert.equal(selector, "x-datafield, x-form-assert");
+            assert.equal(selector, "x-datafield, x-form-assert, x-schema");
             return elements;
         }
     } : null;
@@ -70,10 +70,13 @@ test("x-template recovers from invalid source and disposes each replaced rendere
     const state = { template: "<p>{{ state.name }}</p>", value: { name: "Ada" }, renderingError: "" };
     const listeners = new Map();
     const renderers = [];
-    const renderEngineXClient = source => {
+    const loadedDependencies = [];
+    const renderContexts = [];
+    const renderEngineXClient = (source, context) => {
+        renderContexts.push(context);
         if (source === "<invalid>") throw new Error("Unable to parse XTemplate.");
         return {
-            dependencies: [],
+            dependencies: ["component:x-card"],
             async init() {},
             create(options) {
                 const renderer = { options, mount: t.mock.fn(), render: t.mock.fn(), unmount: t.mock.fn() };
@@ -86,37 +89,48 @@ test("x-template recovers from invalid source and disposes each replaced rendere
         state, host,
         events: { on(target, name, listener) { listeners.set(name, listener); } },
         dependencies: { renderEngineXClient },
-        loader: { async load() {} },
+        loader: { async load(resources) { loadedDependencies.push(resources); } },
         getPage: () => null,
         postRender() {},
-        services: {}
+        i18n: { id: "i18n" },
+        navigation: { mode: "hash" }
     });
     controller.load();
 
     await controller.refresh();
     assert.equal(renderers.length, 1);
+    assert.deepEqual(Object.keys(renderContexts[0]), ["resourceName", "resourcePath", "resourceDefinition", "appBasePath", "componentLazy", "i18n", "navigation"]);
+    assert.equal(Object.hasOwn(renderContexts[0], "services"), false);
+    assert.equal(renderContexts[0].i18n.id, "i18n");
+    assert.equal(renderContexts[0].navigation.mode, "hash");
+    assert.deepEqual(loadedDependencies, [["component:x-card"]]);
     assert.equal(renderers[0].mount.mock.callCount(), 1);
     assert.equal(renderers[0].render.mock.callCount(), 1);
+
+    renderers[0].options.handler("save", { event: { detail: { id: 7 } } });
+    assert.equal(dispatched[0].type, "command");
+    assert.deepEqual(dispatched[0].detail, { name: "save", detail: { id: 7 } });
 
     renderers[0].options.state.name = "Grace";
     renderers[0].options.invalidate();
     assert.equal(renderers[0].render.mock.callCount(), 2);
-    assert.equal(dispatched[0].type, "change");
-    assert.equal(dispatched[0].detail.newValue.name, "Grace");
+    assert.equal(dispatched[1].type, "change");
+    assert.equal(dispatched[1].detail.newValue.name, "Grace");
 
     state.template = "<invalid>";
     await controller.refresh();
-    assert.equal(renderers[0].unmount.mock.callCount(), 1);
+    assert.equal(renderers[0].unmount.mock.callCount(), 0);
     assert.equal(state.renderingError, "Unable to parse XTemplate.");
 
     state.template = "<p>Hello {{ state.name }}</p>";
     await controller.refresh();
     assert.equal(state.renderingError, "");
     assert.equal(renderers.length, 2);
+    assert.equal(renderers[0].unmount.mock.callCount(), 1);
     assert.equal(renderers[1].mount.mock.callCount(), 1);
 
     controller.unmount();
     assert.equal(renderers[1].unmount.mock.callCount(), 1);
-    assert.equal(dispatched.length, 1);
+    assert.equal(dispatched.length, 2);
     assert.deepEqual([...listeners.keys()], ["change:value", "change:template"]);
 });

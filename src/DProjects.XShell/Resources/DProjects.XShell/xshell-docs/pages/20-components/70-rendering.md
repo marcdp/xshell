@@ -24,9 +24,11 @@ Every render-engine module exports the same factory signature:
 export default function createRenderEngineFactory(template, context, templateRenderer)
 ```
 
-`template` is the source template or input, `context` is the resource/render context, and `templateRenderer` is optional engine-specific precompiled
-information. The third argument is deliberately generic: its shape is defined by the selected render engine. Factories expose eager `dependencies`
-and declared `slots` as normalized metadata for generic loaders; engines without slot metadata expose an empty array.
+`template` is the source template or input, `context` is a narrow resource/render context, and `templateRenderer` is optional engine-specific
+precompiled information. The render context guarantees only `resourceName`, `resourcePath`, `resourceDefinition`, `appBasePath`, `componentLazy`,
+`i18n`, and `navigation`. It does not expose the Loader context, an owning Services scope, or generic service resolution. The third argument is
+deliberately generic: its shape is defined by the selected render engine. Factories expose eager `dependencies` and declared `slots` as normalized
+metadata for generic loaders; engines without slot metadata expose an empty array.
 
 For the `x` engine, `templateRenderer` is a server-compiled artifact containing `render`, `dependencies`, and `slots`. The `template` parameter remains
 present for cross-engine consistency, but the browser `x` engine does not parse it.

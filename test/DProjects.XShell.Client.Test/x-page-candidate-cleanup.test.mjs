@@ -96,6 +96,8 @@ function createRuntime() {
     root.register("loader", loader);
     root.register("modules", modules);
     root.register("services", root);
+    root.register("i18n", {});
+    root.register("navigation", { mode: "path" });
     const services = new Proxy({}, { get(target, prop) { return typeof prop === "string" ? root.resolve(prop) : undefined; } });
     return { root, context: { resourceDefinition: { moduleId: "test" }, services } };
 }

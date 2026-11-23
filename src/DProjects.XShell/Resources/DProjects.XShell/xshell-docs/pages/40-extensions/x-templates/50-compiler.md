@@ -119,6 +119,9 @@ The common render-engine factory signature remains `(template, context, template
 scanning DOM. Slots remain static metadata even below lazy or structural directives. Descendants of `x-pre` are opaque and contribute neither kind of
 metadata.
 
+The render context is the explicit `{ resourceName, resourcePath, resourceDefinition, appBasePath, componentLazy, i18n, navigation }` capability
+boundary shared with the built-in render engines. It does not contain the Loader context, a Services provider, or a generic service-resolution API.
+
 The `x` browser runtime requires the complete artifact; renderer-function-only artifacts fail with a compatibility error and must be regenerated. It has
 no raw-XTemplate `template.innerHTML` path, source compiler, expression parser, `eval`, or `new Function` fallback. The separate `x-client` frontend is
 the only raw-template path and delegates its interpreted artifact back to `x.js`. URL-bearing attributes are rewritten
