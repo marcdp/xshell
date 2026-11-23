@@ -46,6 +46,7 @@ function createLoaderStub() {
 
 function createRuntime(providers, services = {}) {
     // Build the real local provider matcher and Loader over a global Resolver with no Filesystem category.
+    services = {jsonValidator: new JsonValidator(), ...services};
     const config = {
         app: { basePath: "", baseUrl: new URL("../../", import.meta.url).href },
         xshell: { assets: { path: "/_assets/xshell" }, resolver: {} }
@@ -99,14 +100,18 @@ function createController() {
 test("Filesystems.open resolves locally and delegates the complete internal resource", async () => {
     // Preserve the provider definition while constructing exactly one internal Filesystem resource identity.
     const loader = createLoaderStub();
+    const providerOptions = {credential: "work", transport: {timeout: 30000}};
     const filesystems = new Filesystems({loader, config: testConfig}, {
-        providers: {"mem:demo": {implementation: "/filesystem-mem.js", cache: true}}
+        providers: {"mem:demo": {implementation: "/filesystem-mem.js", cache: true, options: providerOptions}}
     });
+    providerOptions.credential = "changed";
+    providerOptions.transport.timeout = 1;
 
     assert.deepEqual(await filesystems.open("mem:demo"), {resource: "filesystem:mem:demo"});
     assert.equal(loader.calls[0].resource, "filesystem:mem:demo");
     assert.deepEqual(loader.calls[0].resolved.definition, {
-        src: "/filesystem-mem.js", loader: "instance-js", cache: true
+        src: "/filesystem-mem.js", loader: "instance-js", cache: true,
+        options: {credential: "work", transport: {timeout: 30000}}
     });
     assert.equal(loader.calls[0].resolved.url, "https://example.test/filesystem-mem.js");
     for (const value of [null, undefined, "", "   ", 0, false, {}, []]) {
@@ -208,18 +213,21 @@ test("instance-js receives the provider URL from the internal resource identity"
     const providerUrl = new URL("./fixtures/filesystem-provider.mjs?case=context", import.meta.url).href;
     const provider = await import(providerUrl);
     provider.reset();
-    const {filesystems, loader} = createRuntime({"test:{identity}": {implementation: providerUrl}});
+    const {filesystems, loader} = createRuntime({"test:{identity}": {implementation: providerUrl, options: {tag: "configured"}}});
 
     await filesystems.open("test:demo");
 
     assert.deepEqual(loader.registry.map(item => item.resource), ["filesystem:test:demo"]);
     assert.deepEqual(provider.getCalls().map(call => call.url), ["test:demo"]);
+    assert.deepEqual(provider.getCalls().map(call => call.options), [{tag: "configured"}]);
 });
 
 test("Filesystems options validate commands, keyed editors, and closed provider definitions", () => {
     // Accept provider policy while rejecting incomplete, mistyped, or extended definitions.
     const validator = new JsonValidator();
-    const providers = { "mem:{identity}": { implementation: "/filesystem-mem.js", cache: true, cacheMode: "path" } };
+    const providers = { "mem:{identity}": {
+        implementation: "/filesystem-mem.js", cache: true, cacheMode: "path", options: {credential: "work"}
+    } };
     assert.equal(validator.validate({ commands, editors, providers }, Filesystems.optionsSchema).valid, true);
     assert.equal(validator.validate({ commands, editors: [] }, Filesystems.optionsSchema).valid, false);
     assert.equal(validator.validate({ editors: { text: { label: "Open", extensions: ["txt"] } } }, Filesystems.optionsSchema).valid, false);
@@ -229,6 +237,9 @@ test("Filesystems options validate commands, keyed editors, and closed provider 
         { implementation: "" },
         { implementation: "/filesystem-mem.js", cache: "yes" },
         { implementation: "/filesystem-mem.js", cacheMode: "identity" },
+        { implementation: "/filesystem-mem.js", options: null },
+        { implementation: "/filesystem-mem.js", options: [] },
+        { implementation: "/filesystem-mem.js", options: "invalid" },
         { implementation: "/filesystem-mem.js", loader: "instance-js" },
         { implementation: "/filesystem-mem.js", src: "/other.js" }
     ]) assert.equal(validator.validate({providers: {"mem:": definition}}, Filesystems.optionsSchema).valid, false);

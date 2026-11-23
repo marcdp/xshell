@@ -22,9 +22,15 @@ export function waitForCallCount(count) {
 }
 
 export default class TestFilesystemProvider {
-    static async create({url}) {
+    static optionsSchema = {
+        type: "object",
+        properties: { tag: { type: "string" } },
+        additionalProperties: false
+    };
+
+    static async create({url, options}) {
         // Record the provider URL before exercising failure or in-flight sharing behavior.
-        const call = { url, number: calls.length + 1 };
+        const call = { url, options: structuredClone(options), number: calls.length + 1 };
         calls.push(call);
         for (const waiter of waiters.filter(item => calls.length >= item.count)) waiter.resolve();
         waiters = waiters.filter(item => calls.length < item.count);

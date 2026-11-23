@@ -34,11 +34,19 @@ function effectiveConfig() {
 }
 
 test("resolver schema accepts the supported cache modes", () => {
-    const defaultResult = validator.validate({ src: "/resource", loader: "test", cache: true });
+    const defaultResult = validator.validate({ src: "/resource", loader: "test", cache: true, options: {timeout: 30000} });
     assert.equal(defaultResult.valid, true, JSON.stringify(defaultResult.errors));
     for (const cacheMode of ["full", "path"]) {
         const result = validator.validate({ src: "/resource", loader: "test", cache: true, cacheMode });
         assert.equal(result.valid, true, JSON.stringify(result.errors));
+    }
+});
+
+test("resolver schema accepts only object-valued loader options", () => {
+    // Keep provider-specific fields open while rejecting non-object configuration at the generic boundary.
+    assert.equal(validator.validate({src: "/provider.js", loader: "instance-js", options: {timeout: 30000}}).valid, true);
+    for (const options of [null, [], "invalid", 1, false]) {
+        assert.equal(validator.validate({src: "/provider.js", loader: "instance-js", options}).valid, false);
     }
 });
 

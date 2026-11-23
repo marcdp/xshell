@@ -32,9 +32,15 @@ function checkAbort(signal) {
 // class
 export default class FilesystemHttp extends Filesystem {
 
+    // options schema
+    static optionsSchema = {
+        type: "object",
+        additionalProperties: false
+    };
+
     // static factory
-    static create({ url, services }) {
-        return new this(services, { url });
+    static create({ url, services, options = {} }) {
+        return new this(services, { url, ...options });
     }
     // constructor
     constructor({}, { url, isReadonly = false } = {}) {

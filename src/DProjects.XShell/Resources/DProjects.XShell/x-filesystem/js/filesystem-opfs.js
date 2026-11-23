@@ -65,10 +65,16 @@ const MIME_TYPES = Object.freeze({
  */
 export default class FilesystemOpfs extends Filesystem {
 
+    // options schema
+    static optionsSchema = {
+        type: "object",
+        additionalProperties: false
+    };
+
     // create
-    static create({ url, services }) {
+    static create({ url, services, options = {} }) {
         // Create the browser OPFS provider; this provider needs no runtime services.
-        return new this(services, { url });
+        return new this(services, { url, ...options });
     }
 
     // ctor

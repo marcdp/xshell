@@ -130,10 +130,16 @@ async function readBytes(input, signal) {
 // class
 export default class FilesystemMem extends Filesystem {
 
+    // options schema
+    static optionsSchema = {
+        type: "object",
+        additionalProperties: false
+    };
+
     // static factory
-    static create({ url, services }) {
+    static create({ url, services, options = {} }) {
         // Create an isolated memory filesystem; this provider needs no runtime services.
-        return new this(services, { url });
+        return new this(services, { url, ...options });
     }
 
 

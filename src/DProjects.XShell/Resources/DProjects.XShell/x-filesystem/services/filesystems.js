@@ -58,7 +58,8 @@ export default class Filesystems {
                     properties: {
                         implementation: { type: "string", minLength: 1 },
                         cache: { type: "boolean" },
-                        cacheMode: { type: "string", enum: ["full", "path"] }
+                        cacheMode: { type: "string", enum: ["full", "path"] },
+                        options: { type: "object" }
                     },
                     additionalProperties: false
                 }
@@ -81,6 +82,7 @@ export default class Filesystems {
             const definition = { src: provider.implementation, loader: "instance-js" };
             if (Object.hasOwn(provider, "cache")) definition.cache = provider.cache;
             if (Object.hasOwn(provider, "cacheMode")) definition.cacheMode = provider.cacheMode;
+            if (Object.hasOwn(provider, "options")) definition.options = structuredClone(provider.options);
             providers[pattern] = definition;
         }
 

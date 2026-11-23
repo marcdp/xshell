@@ -100,9 +100,43 @@ such as a Page instance's `src`. Use `path` only for resource types whose implem
 Because the key is the logical reference rather than the resolved URL, two different locators—for example a global physical locator and its
 module-qualified equivalent—can resolve to the same URL and still occupy separate cache entries.
 
-A resource-specific loader can materialize a mutable runtime object rather than immutable data. For example, `instance-js` imports a provider and
-calls its `Provider.create({url, services})` factory. When the Resolver rule enables caching, the Loader retains that object by logical resource
-identity, so later loads can observe the same application-lifetime state. The object does not thereby become an XShell Service.
+A resource-specific loader can materialize a mutable runtime object rather than immutable data. For example, `instance-js` imports a provider,
+validates the resolved definition's declarative `options` against `Provider.optionsSchema`, and calls
+`Provider.create({url, services, options})`. The three factory values remain distinct:
+
+```text
+url       resource-derived provider identity
+services  lazily resolved runtime dependencies
+options   validated declarative provider configuration
+```
+
+An `instance-js` provider follows the same dependency/options constructor convention as a Service, with an additional factory layer for the
+resource identity:
+
+~~~js
+export default class Provider {
+    static optionsSchema = {
+        type: "object",
+        properties: {
+            timeout: { type: "integer", minimum: 0 }
+        },
+        additionalProperties: false
+    };
+
+    static create({url, services, options = {}}) {
+        return new this(services, {url, ...options});
+    }
+
+    constructor({dependency}, {url, timeout = 30000} = {}) {
+        // Initialize one runtime provider instance.
+    }
+}
+~~~
+
+The schema describes only authored `options`; `url` and runtime-only constructor values do not belong in it. Missing options are validated as an
+empty object. Invalid schemas or options fail before `create()` executes. When the Resolver rule enables caching, the Loader retains the created
+object by logical resource identity, so later loads can observe the same application-lifetime state. The object does not thereby become an XShell
+Service.
 
 The Filesystems Service uses the same materialization path after matching its domain-owned provider table. This preserves Loader cache and
 diagnostic behavior without making `filesystem:` an ordinary global Resolver namespace. Application code continues to use

@@ -14,8 +14,8 @@ import JsonValidator from "../../src/DProjects.XShell/Resources/DProjects.XShell
 import Loader from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/loader.js";
 import Resolver from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/resolver.js";
 
-const createStore = (url = "mem:test") => new MemoryStore({
-    url, schema: SampleStore.schema, documents: SampleStore.documents, jsonValidator: new JsonValidator()
+const createStore = (url = "mem:test") => new MemoryStore({jsonValidator: new JsonValidator()}, {
+    url, schema: SampleStore.schema, documents: SampleStore.documents
 });
 
 test("Store contract and Store metadata schema validate", () => {
@@ -112,7 +112,7 @@ test("store resources resolve through instance-js and cache each memory identity
     assert.strictEqual(first, again);
     assert.notStrictEqual(first, other);
     assert.equal(first.url, "mem:demo");
-    assert.deepEqual(resolvedServices, ["jsonValidator", "jsonValidator"]);
+    assert.deepEqual(resolvedServices, ["jsonValidator", "jsonValidator", "jsonValidator", "jsonValidator"]);
     await first.add("customers", {id: "only-demo", name: "Demo"});
     assert.equal(await other.get("customers", "only-demo"), null);
 });

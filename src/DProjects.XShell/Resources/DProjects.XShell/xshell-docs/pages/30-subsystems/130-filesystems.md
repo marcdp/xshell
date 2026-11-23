@@ -21,7 +21,8 @@ controller({filesystems}) {
 `filesystems.open(url)` resolves the URL against the Service's configured `options.providers` table. Filesystem provider URLs are not global
 Resolver resources: ordinary `resolver.resolve("filesystem:...")` and `loader.load("filesystem:...")` calls cannot open them. After local matching,
 the Service gives Loader an already-resolved internal identity such as `filesystem:mem:workspace`; Loader then materializes it through
-`instance-js` → `Provider.create({url, services})`. The provider receives `mem:workspace`, without the internal `filesystem:` prefix.
+`instance-js` → provider options validation → `Provider.create({url, services, options})`. The provider receives `mem:workspace`, without the
+internal `filesystem:` prefix, separately from its runtime dependencies and declarative options.
 
 The resulting Filesystem is a runtime provider instance, not an individually registered XShell Service. Loader still owns result caching,
 in-flight promise sharing, failed-cache eviction, registry diagnostics, Bus events, and materialization timing.
@@ -40,9 +41,10 @@ every provider is cached.
 
 ## Providers
 
-`options.providers` is an object keyed by provider URL pattern. Each definition has a required `implementation` string and optional `cache` and
-`cacheMode` fields. Patterns use the same literal and placeholder semantics as Resolver definitions, but they belong only to Filesystems.
-Filesystems uses the generic `instance-js` loader internally; provider configuration does not select or expose that Loader implementation.
+`options.providers` is an object keyed by provider URL pattern. Each definition has a required `implementation` string and optional `cache`,
+`cacheMode`, and `options` fields. Patterns use the same literal and placeholder semantics as Resolver definitions, but they belong only to
+Filesystems. Filesystems uses the generic `instance-js` loader internally; provider configuration does not select or expose that Loader
+implementation. The selected provider class owns the schema for its `options`; Filesystems validates only that the value is an object.
 
 ~~~jsonc
 "providers": {
@@ -55,6 +57,25 @@ Filesystems uses the generic `instance-js` loader internally; provider configura
     }
 }
 ~~~
+
+A configurable provider can receive domain-specific declarative options without exposing Loader details. This hypothetical provider illustrates
+the shape; it does not imply that WebDAV is implemented:
+
+~~~jsonc
+"providers": {
+    "webdav:{url}": {
+        "implementation": "/js/filesystem-webdav.js",
+        "cache": true,
+        "options": {
+            "credential": "work-webdav",
+            "timeout": 30000
+        }
+    }
+}
+~~~
+
+`url` is derived from the opened provider identity and is not authored inside `options`. Runtime-only constructor values such as a directly
+supplied `FileSystemDirectoryHandle` also remain outside declarative JSON configuration.
 
 `cacheMode` retains Loader's ordinary `full` and `path` meanings. Filesystems does not maintain a second instance cache and does not expose the
 provider table as mutable public API.

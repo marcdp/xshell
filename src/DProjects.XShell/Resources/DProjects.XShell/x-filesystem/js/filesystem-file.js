@@ -33,10 +33,16 @@ function matchesPattern(name, pattern) {
 
 export default class FilesystemFile extends Filesystem {
 
+    // options schema
+    static optionsSchema = {
+        type: "object",
+        additionalProperties: false
+    };
+
     // create
-    static create({ url, services }) {
+    static create({ url, services, options = {} }) {
         // Create the browser file-picker provider; this provider needs no runtime services.
-        return new this(services, { url });
+        return new this(services, { url, ...options });
     }
 
     // ctor

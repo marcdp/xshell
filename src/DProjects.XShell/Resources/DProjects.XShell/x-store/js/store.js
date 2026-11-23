@@ -31,7 +31,7 @@ export function cloneDocument(document) {
 }
 
 export default class Store {
-    constructor({ schema, schemaDefinition, jsonValidator } = {}) {
+    constructor({ jsonValidator } = {}, { schema, schemaDefinition } = {}) {
         // Validate and snapshot Store metadata once so providers and callers cannot mutate it.
         if (!schemaDefinition) throw new TypeError("schemaDefinition is required");
         if (!jsonValidator?.validate) throw new TypeError("jsonValidator with validate() is required");

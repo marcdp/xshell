@@ -3,17 +3,23 @@ import SampleStore from "../samples/store.json" with { type: "json" };
 import Store, { cloneDocument } from "./store.js";
 
 export default class MemoryStore extends Store {
-    static async create({ url, services }) {
+    // options schema
+    static optionsSchema = {
+        type: "object",
+        additionalProperties: false
+    };
+
+    static async create({ url, services, options = {} }) {
         // Inject the shared JSON Schema validator without crossing module asset roots.
         const jsonValidator = services.jsonValidator;
 
         // Give every resolver identity an independent seeded Store; Loader caching preserves that identity thereafter.
-        return new MemoryStore({ url, schema: SampleStore.schema, documents: SampleStore.documents, jsonValidator });
+        return new this({ jsonValidator }, { url, ...options, schema: SampleStore.schema, documents: SampleStore.documents });
     }
 
-    constructor({ url = "mem:", schema, documents = {}, schemaDefinition = StoreSchemaDefinition, jsonValidator } = {}) {
+    constructor({ jsonValidator } = {}, { url = "mem:", schema, documents = {}, schemaDefinition = StoreSchemaDefinition } = {}) {
         // Validate metadata before constructing collection Maps or accepting initial documents.
-        super({ schema, schemaDefinition, jsonValidator });
+        super({ jsonValidator }, { schema, schemaDefinition });
         this.url = url;
         this._collections = new Map(Object.keys(this._schema.collections).map(name => [name, new Map()]));
         for (const [collection, values] of Object.entries(documents)) {
