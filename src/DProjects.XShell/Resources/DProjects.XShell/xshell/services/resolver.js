@@ -1,5 +1,7 @@
 
 
+import ResourcePatternResolver from "../utils/resource-pattern-resolver.js";
+
 // class
 export default class Resolver {
 
@@ -13,141 +15,34 @@ export default class Resolver {
 
 
     //vars
-    #definitions = [];
-    #appBasePath = "";
-    #appBaseUrl = "";
+    #patterns;
     
 
     //ctor
     constructor( { config }, options) {
-        this.#appBasePath = config.app.basePath;
-        this.#appBaseUrl = config.app.baseUrl;
-        for(let type in config.xshell.resolver) {
-            for(let pattern in config.xshell.resolver[type]) {
-                const value = config.xshell.resolver[type][pattern]; 
-                this.addDefinition(type + ":" + pattern, value);
-            }
+        // Flatten global resource categories into the shared pattern matcher.
+        const definitions = {};
+        for (const [type, patterns] of Object.entries(config.xshell.resolver)) {
+            for (const [pattern, definition] of Object.entries(patterns)) definitions[`${type}:${pattern}`] = definition;
         }
-        // sort definitions by definition.resource alphabetically
-        this.#definitions.sort((a, b) => a.resource.localeCompare(b.resource));
+        this.#patterns = new ResourcePatternResolver(config.app.baseUrl, definitions);
     }
 
     // props
     get registry() {
-        // expose rule metadata without sharing mutable definitions or regular expressions
-        return Object.freeze(this.#definitions.map(definition => Object.freeze({
-            resource: definition.resource,
-            src: definition.src,
-            loader: definition.loader,
-            cache: definition.cache,
-            cacheMode: definition.cacheMode
-        })));
+        return this.#patterns.registry;
     }
 
     //methods
     addDefinition(resource, value) {
-        // compile pattern
-        let regexp = "^";
-        let index = 0;
-        let previousTokenWasPlaceholder = false;
-        const placeholders = new Set();
-        // parse literal text and placeholders without exposing regular expression syntax
-        while (index < resource.length) {
-            const literalStart = index;
-            while (index < resource.length && resource[index] !== "{" && resource[index] !== "}") {
-                index++;
-            }
-            if (index > literalStart) {
-                regexp += resource.substring(literalStart, index).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-                previousTokenWasPlaceholder = false;
-            }
-            if (index === resource.length) {
-                break;
-            }
-            if (resource[index] === "}") {
-                throw new Error(`Invalid resolver pattern '${resource}': unmatched '}'.`);
-            }
-            if (previousTokenWasPlaceholder) {
-                throw new Error(`Invalid resolver pattern '${resource}': adjacent placeholders are not supported.`);
-            }
-            // validate the placeholder before compiling its named capture
-            const end = resource.indexOf("}", index + 1);
-            if (end === -1) {
-                throw new Error(`Invalid resolver pattern '${resource}': unmatched '{'.`);
-            }
-            const name = resource.substring(index + 1, end);
-            if (name.length === 0) {
-                throw new Error(`Invalid resolver pattern '${resource}': empty placeholder name.`);
-            }
-            if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(name)) {
-                throw new Error(`Invalid resolver pattern '${resource}': invalid placeholder name '${name}'.`);
-            }
-            if (placeholders.has(name)) {
-                throw new Error(`Invalid resolver pattern '${resource}': duplicate placeholder '${name}'.`);
-            }
-            placeholders.add(name);
-            regexp += name === "name"
-                ? `(?<name>[^/\\\\?#%]+?)`
-                : name === "path"
-                    ? `(?<path>[^/\\\\?#%]+(?:/[^/\\\\?#%]+)*?)`
-                    : `(?<${name}>.+?)`;
-            index = end + 1;
-            previousTokenWasPlaceholder = true;
-        }
-        const regexpCompiled = new RegExp(regexp + "$");
-        //add definition
-        let definition = {
-            resource,
-            src: value.src,
-            regexp: regexpCompiled,
-            ...value
-        };
-        this.#definitions.push(definition);
+        this.#patterns.addDefinition(resource, value);
     }
     has(resource) {
-        if (resource.indexOf("#") != -1) resource = resource.split("#")[0];
-        if (resource.indexOf("?") != -1) resource = resource.split("?")[0];
-        for(let i = 0; i < this.#definitions.length ; i++) {
-            let definition = this.#definitions[i];
-            let match = resource.match(definition.regexp);
-            if (match && !Object.entries(match.groups ?? {}).some(([key, value]) =>
-                key === "name"
-                    ? value === "." || value === ".." || /[/\\?#%]/.test(value)
-                    : key === "path" && (/[\\?#%]/.test(value) || value.split("/").some(segment => !segment || segment === "." || segment === "..")))) {
-                return true;
-            }
-        }
-        return false;
+        return this.#patterns.has(resource);
     }
-    resolve(resource) {                
-        if (resource.indexOf("#") != -1) resource = resource.split("#")[0];
-        if (resource.indexOf("?") != -1) resource = resource.split("?")[0];        
-        for(let i = 0; i < this.#definitions.length ; i++) {
-            const definition = this.#definitions[i];
-            if (definition.resource === resource) {
-                const isAbsoluteUrl = /^[A-Za-z][A-Za-z0-9+.-]*:/.test(definition.src);
-                let url = isAbsoluteUrl ? definition.src : new URL(definition.src.replace(/^\/+/, ""), this.#appBaseUrl).href;
-                let path = isAbsoluteUrl ? null : definition.src;
-                return { definition, url, path };
-            }
-        }
-        for(let i = this.#definitions.length - 1; i >= 0 ; i--) {
-            const definition = this.#definitions[i];
-            const match = resource.match(definition.regexp);
-            if (match && !Object.entries(match.groups ?? {}).some(([key, value]) =>
-                key === "name"
-                    ? value === "." || value === ".." || /[/\\?#%]/.test(value)
-                    : key === "path" && (/[\\?#%]/.test(value) || value.split("/").some(segment => !segment || segment === "." || segment === "..")))) {
-                const isAbsoluteUrl = /^[A-Za-z][A-Za-z0-9+.-]*:/.test(definition.src);
-                let url = isAbsoluteUrl ? definition.src : new URL(definition.src.replace(/^\/+/, ""), this.#appBaseUrl).href.replaceAll("%7B", "{").replaceAll("%7D", "}");
-                let path = isAbsoluteUrl ? null : definition.src;
-                for(var key in match.groups) {
-                    url = url.replaceAll("{" + key + "}", match.groups[key]);
-                    if (path !== null) path = path.replaceAll("{" + key + "}", match.groups[key]);
-                }                
-                return { definition, url, path };
-            }
-        }
+    resolve(resource) {
+        const result = this.#patterns.resolve(resource);
+        if (result) return result;
         console.error(`resolver.resolveDefinition('${resource}'): unable to resolve`);
         return null;
     }

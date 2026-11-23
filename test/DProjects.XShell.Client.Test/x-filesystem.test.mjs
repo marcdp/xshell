@@ -18,6 +18,47 @@ const editors = {
     image: { page: "page:x-filesystem:/pages/editor-image.js", label: "Open", icon: "x-preview", extensions: ["png", "png.aes"] },
     iframe: { page: "page:x-filesystem:/pages/editor-iframe.js", label: "Open", icon: "x-preview", extensions: ["pdf"] }
 };
+const testConfig = { app: { baseUrl: "https://example.test/" } };
+
+function createLoaderStub() {
+    // Resolve exact test providers and capture the internal Loader handoff without involving the global Resolver.
+    const calls = [];
+    return {
+        calls,
+        _createResourcePatternResolver(appBaseUrl, providers) {
+            return {
+                resolve(url) {
+                    const definition = providers[url];
+                    if (!definition) return null;
+                    const isAbsoluteUrl = /^[A-Za-z][A-Za-z0-9+.-]*:/.test(definition.src);
+                    return { definition, url: isAbsoluteUrl ? definition.src : new URL(definition.src.replace(/^\/+/, ""), appBaseUrl).href,
+                        path: isAbsoluteUrl ? null : definition.src };
+                }
+            };
+        },
+        async _loadResolved(resource, resolved) {
+            calls.push({ resource, resolved });
+            if (!resolved) throw Object.assign(new Error(`Resource not found: ${resource}`), { code: "RESOURCE_NOT_FOUND" });
+            return { resource };
+        }
+    };
+}
+
+function createRuntime(providers, services = {}) {
+    // Build the real local provider matcher and Loader over a global Resolver with no Filesystem category.
+    const config = {
+        app: { basePath: "", baseUrl: new URL("../../", import.meta.url).href },
+        xshell: { assets: { path: "/_assets/xshell" }, resolver: {} }
+    };
+    const resolver = new Resolver({config});
+    const xshellRuntimeUrl = new URL("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell", import.meta.url).href;
+    const loader = new Loader({resolver, bus: {emit() {}}, services}, {
+        appBasePath: xshellRuntimeUrl,
+        xshellAssetsPath: "",
+        componentLazy: null
+    });
+    return { config, resolver, loader, filesystems: new Filesystems({loader, config}, {providers}) };
+}
 
 function createController() {
     // Create a focused controller harness with real editor selection and captured navigation.
@@ -26,8 +67,10 @@ function createController() {
     const navigationCalls = [];
     const contextMenuCalls = [];
     const filesystemOpenCalls = [];
-    const loader = { async load(resource) { return { resource }; } };
-    const filesystems = new Filesystems({ loader }, { commands, editors });
+    const loader = createLoaderStub();
+    const filesystems = new Filesystems({ loader, config: testConfig }, {
+        commands, editors, providers: { "mem:": { implementation: "/filesystem-mem.js" } }
+    });
     const open = filesystems.open.bind(filesystems);
     filesystems.open = async url => { filesystemOpenCalls.push(url); return open(url); };
     const eventHandlers = {};
@@ -53,18 +96,23 @@ function createController() {
     return { state, controller, navigationCalls, contextMenuCalls, filesystemOpenCalls, eventHandlers };
 }
 
-test("Filesystems.open validates and delegates the complete logical resource", async () => {
-    // Preserve the Loader result while constructing exactly one filesystem resource reference.
-    const expected = { id: "filesystem" };
-    const calls = [];
-    const filesystems = new Filesystems({ loader: { async load(resource) { calls.push(resource); return expected; } } });
+test("Filesystems.open resolves locally and delegates the complete internal resource", async () => {
+    // Preserve the provider definition while constructing exactly one internal Filesystem resource identity.
+    const loader = createLoaderStub();
+    const filesystems = new Filesystems({loader, config: testConfig}, {
+        providers: {"mem:demo": {implementation: "/filesystem-mem.js", cache: true}}
+    });
 
-    assert.strictEqual(await filesystems.open("mem:demo"), expected);
-    assert.deepEqual(calls, ["filesystem:mem:demo"]);
+    assert.deepEqual(await filesystems.open("mem:demo"), {resource: "filesystem:mem:demo"});
+    assert.equal(loader.calls[0].resource, "filesystem:mem:demo");
+    assert.deepEqual(loader.calls[0].resolved.definition, {
+        src: "/filesystem-mem.js", loader: "instance-js", cache: true
+    });
+    assert.equal(loader.calls[0].resolved.url, "https://example.test/filesystem-mem.js");
     for (const value of [null, undefined, "", "   ", 0, false, {}, []]) {
         await assert.rejects(() => filesystems.open(value), { name: "TypeError", message: "Filesystem URL must be a non-empty string." });
     }
-    assert.deepEqual(calls, ["filesystem:mem:demo"]);
+    assert.equal(loader.calls.length, 1);
 });
 
 test("Filesystems contract exposes open as the canonical provider operation", () => {
@@ -74,27 +122,13 @@ test("Filesystems contract exposes open as the canonical provider operation", ()
     assert.deepEqual(Object.keys(FilesystemsContract.methods), ["open", "getEditor"]);
 });
 
-test("Filesystems.open preserves Resolver and Loader memory identity semantics", async () => {
-    // Exercise the real Resolver, Loader, instance-js adapter, and memory provider through the domain Service.
+test("Filesystems.open preserves local provider and Loader memory identity semantics", async t => {
+    // Exercise the local matcher, Loader, instance-js adapter, and memory provider through the domain Service.
     const providerUrl = new URL("../../src/DProjects.XShell/Resources/DProjects.XShell/x-filesystem/js/filesystem-mem.js", import.meta.url).href;
-    const instanceLoaderUrl = new URL("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/loaders/instance-js.js", import.meta.url).href;
-    const config = {
-        app: {basePath: "", baseUrl: new URL("../../", import.meta.url).href},
-        xshell: {
-            assets: {path: "/_assets/xshell"}, services: {navigation: {options: {mode: "path"}}}, ui: {components: {lazy: null}},
-            resolver: {filesystem: {
-                "mem:": {src: providerUrl, loader: instanceLoaderUrl},
-                "mem:{identity}": {src: providerUrl, loader: instanceLoaderUrl, cache: true}
-            }}
-        }
-    };
-    const resolver = new Resolver({config});
-    const loader = new Loader({config, resolver, bus: {emit() {}}, services: {}}, {
-        appBasePath: config.app.basePath,
-        xshellAssetsPath: config.xshell.assets.path,
-        componentLazy: config.xshell.ui.components.lazy
+    const {resolver, loader, filesystems} = createRuntime({
+        "mem:": {implementation: providerUrl},
+        "mem:{identity}": {implementation: providerUrl, cache: true}
     });
-    const filesystems = new Filesystems({loader});
 
     const anonymousFirst = await filesystems.open("mem:");
     const anonymousSecond = await filesystems.open("mem:");
@@ -111,20 +145,98 @@ test("Filesystems.open preserves Resolver and Loader memory identity semantics",
     assert.deepEqual(loader.registry.map(item => item.resource), [
         "filesystem:mem:", "filesystem:mem:", "filesystem:mem:demo", "filesystem:mem:other"
     ]);
+    assert.equal(resolver.registry.some(item => item.resource.startsWith("filesystem:")), false);
+    t.mock.method(console, "error", () => {});
+    assert.equal(resolver.resolve("filesystem:mem:demo"), null);
+    await assert.rejects(() => loader.load("filesystem:mem:demo"), { name: "ResourceError", code: "RESOURCE_NOT_FOUND" });
 });
 
-test("Filesystems options validate separate commands and keyed editors", () => {
-    // Accept the new shape while rejecting arrays, incomplete descriptors, and dotted extension spelling.
+test("failed cached provider creation is evicted and retried", async () => {
+    // Reuse Loader failure eviction for a locally resolved provider without adding a Filesystems cache.
+    const providerUrl = new URL("./fixtures/filesystem-provider.mjs?case=retry", import.meta.url).href;
+    const provider = await import(providerUrl);
+    provider.reset();
+    provider.failOnce();
+    const {filesystems, loader} = createRuntime({"test:{identity}": {implementation: providerUrl, cache: true}});
+
+    await assert.rejects(() => filesystems.open("test:demo"), /Simulated Filesystem provider failure/);
+    const value = await filesystems.open("test:demo");
+
+    assert.equal(value.number, 2);
+    assert.deepEqual(provider.getCalls().map(call => call.url), ["test:demo", "test:demo"]);
+    assert.deepEqual(loader.registry.map(item => item.status), ["error", "loaded"]);
+});
+
+test("concurrent cached opens share one in-flight provider materialization", async () => {
+    // Preserve Loader promise sharing when provider resolution originates in Filesystems.
+    const providerUrl = new URL("./fixtures/filesystem-provider.mjs?case=concurrent", import.meta.url).href;
+    const provider = await import(providerUrl);
+    provider.reset();
+    provider.deferCreates();
+    const {filesystems, loader} = createRuntime({"test:{identity}": {implementation: providerUrl, cache: true}});
+
+    const firstPromise = filesystems.open("test:demo");
+    const secondPromise = filesystems.open("test:demo");
+    await provider.waitForCallCount(1);
+    assert.equal(provider.getCalls().length, 1);
+    provider.releaseCreates();
+    const [first, second] = await Promise.all([firstPromise, secondPromise]);
+
+    assert.strictEqual(first, second);
+    assert.equal(loader.registry.length, 1);
+});
+
+test("local providers preserve Loader path cache mode", async () => {
+    // Share query variants through Loader while retaining the original internal resource in diagnostics.
+    const providerUrl = new URL("./fixtures/filesystem-provider.mjs?case=path-cache", import.meta.url).href;
+    const provider = await import(providerUrl);
+    provider.reset();
+    const {filesystems, loader} = createRuntime({
+        "test:{identity}": {implementation: providerUrl, cache: true, cacheMode: "path"}
+    });
+
+    const first = await filesystems.open("test:demo?view=one");
+    const second = await filesystems.open("test:demo?view=two");
+
+    assert.strictEqual(first, second);
+    assert.equal(loader.registry[0].resource, "filesystem:test:demo?view=one");
+    assert.deepEqual(provider.getCalls().map(call => call.url), ["test:demo?view=one"]);
+});
+
+test("instance-js receives the provider URL from the internal resource identity", async () => {
+    // Verify the fixed generic adapter receives the domain URL without exposing Loader selection in configuration.
+    const providerUrl = new URL("./fixtures/filesystem-provider.mjs?case=context", import.meta.url).href;
+    const provider = await import(providerUrl);
+    provider.reset();
+    const {filesystems, loader} = createRuntime({"test:{identity}": {implementation: providerUrl}});
+
+    await filesystems.open("test:demo");
+
+    assert.deepEqual(loader.registry.map(item => item.resource), ["filesystem:test:demo"]);
+    assert.deepEqual(provider.getCalls().map(call => call.url), ["test:demo"]);
+});
+
+test("Filesystems options validate commands, keyed editors, and closed provider definitions", () => {
+    // Accept provider policy while rejecting incomplete, mistyped, or extended definitions.
     const validator = new JsonValidator();
-    assert.equal(validator.validate({ commands, editors }, Filesystems.optionsSchema).valid, true);
+    const providers = { "mem:{identity}": { implementation: "/filesystem-mem.js", cache: true, cacheMode: "path" } };
+    assert.equal(validator.validate({ commands, editors, providers }, Filesystems.optionsSchema).valid, true);
     assert.equal(validator.validate({ commands, editors: [] }, Filesystems.optionsSchema).valid, false);
     assert.equal(validator.validate({ editors: { text: { label: "Open", extensions: ["txt"] } } }, Filesystems.optionsSchema).valid, false);
     assert.equal(validator.validate({ editors: { text: { page: "/editor.js", label: "Open", extensions: [".txt"] } } }, Filesystems.optionsSchema).valid, false);
+    for (const definition of [
+        {},
+        { implementation: "" },
+        { implementation: "/filesystem-mem.js", cache: "yes" },
+        { implementation: "/filesystem-mem.js", cacheMode: "identity" },
+        { implementation: "/filesystem-mem.js", loader: "instance-js" },
+        { implementation: "/filesystem-mem.js", src: "/other.js" }
+    ]) assert.equal(validator.validate({providers: {"mem:": definition}}, Filesystems.optionsSchema).valid, false);
 });
 
 test("Filesystems exposes defensive command and editor snapshots", () => {
     // Verify editor definitions remain independent from explicit filesystem Commands.
-    const filesystems = new Filesystems({ loader: { load() {} } }, { commands, editors });
+    const filesystems = new Filesystems({ loader: createLoaderStub(), config: testConfig }, { commands, editors });
     const commandSnapshot = filesystems.commands;
     const editorSnapshot = filesystems.editors;
     commandSnapshot.push({ id: "page:editor", label: "Open", type: "file", extensions: ["txt"], actions: ["open"] });
@@ -141,7 +253,7 @@ test("getEditor selects simple and compound extensions deterministically", () =>
     const configuredEditors = structuredClone(editors);
     configuredEditors.fallback = { page: "/fallback.js", label: "Open", extensions: ["aes", "txt"] };
     configuredEditors.alternate = { page: "/alternate.js", label: "Open", extensions: ["pdf"] };
-    const filesystems = new Filesystems({ loader: { load() {} } }, { editors: configuredEditors });
+    const filesystems = new Filesystems({ loader: createLoaderStub(), config: testConfig }, { editors: configuredEditors });
 
     assert.equal(filesystems.getEditor("/notes/readme.txt").page, "/fallback.js");
     assert.equal(filesystems.getEditor("/notes/secret.TXT.AES").page, editors.text.page);

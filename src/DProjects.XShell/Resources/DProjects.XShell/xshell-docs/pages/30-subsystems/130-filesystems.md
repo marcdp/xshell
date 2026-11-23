@@ -1,7 +1,8 @@
 # Filesystems
 
-The `filesystems` Service opens Filesystem instances and supplies the actions and editors used by `x-filesystem`. Explicit filesystem Commands and
-file editor Pages are separate configuration concepts under `xshell.services.filesystems.options`.
+The `filesystems` Service owns Filesystem provider selection, opens Filesystem instances, and supplies the actions and editors used by
+`x-filesystem`. Providers, explicit filesystem Commands, and file editor Pages are separate configuration concepts under
+`xshell.services.filesystems.options`.
 
 ## Opening a Filesystem
 
@@ -17,11 +18,15 @@ controller({filesystems}) {
 }
 ~~~
 
-`filesystems.open(url)` delegates the provider URL through Resolver → Loader → `instance-js` → `Provider.create()`. The resulting Filesystem is a
-runtime resource/provider instance, not an individually registered XShell Service. Provider factories retain their separate internal `create()`
-contract.
+`filesystems.open(url)` resolves the URL against the Service's configured `options.providers` table. Filesystem provider URLs are not global
+Resolver resources: ordinary `resolver.resolve("filesystem:...")` and `loader.load("filesystem:...")` calls cannot open them. After local matching,
+the Service gives Loader an already-resolved internal identity such as `filesystem:mem:workspace`; Loader then materializes it through
+`instance-js` → `Provider.create({url, services})`. The provider receives `mem:workspace`, without the internal `filesystem:` prefix.
 
-The matching Resolver rule determines whether Loader retains an instance. The current memory rules give anonymous and named identities different
+The resulting Filesystem is a runtime provider instance, not an individually registered XShell Service. Loader still owns result caching,
+in-flight promise sharing, failed-cache eviction, registry diagnostics, Bus events, and materialization timing.
+
+The matching provider definition determines whether Loader retains an instance. The current memory definitions give anonymous and named identities different
 semantics:
 
 | Provider URL | Behavior |
@@ -30,8 +35,52 @@ semantics:
 | `mem:<identity>` | Cached by the complete logical resource identity. Reopening the same identity returns the same Filesystem and state. |
 
 Different named identities, such as `mem:workspace` and `mem:preview`, remain different instances. This is application resource-cache behavior,
-not a singleton, scoped, or transient Services lifetime. Other provider URLs follow their own Resolver rules; `open()` does not imply that every
-provider is cached.
+not a singleton, scoped, or transient Services lifetime. Other provider URLs follow their own provider definitions; `open()` does not imply that
+every provider is cached.
+
+## Providers
+
+`options.providers` is an object keyed by provider URL pattern. Each definition has a required `implementation` string and optional `cache` and
+`cacheMode` fields. Patterns use the same literal and placeholder semantics as Resolver definitions, but they belong only to Filesystems.
+Filesystems uses the generic `instance-js` loader internally; provider configuration does not select or expose that Loader implementation.
+
+~~~jsonc
+"providers": {
+    "mem:": {
+        "implementation": "/js/filesystem-mem.js"
+    },
+    "mem:{identity}": {
+        "implementation": "/js/filesystem-mem.js",
+        "cache": true
+    }
+}
+~~~
+
+`cacheMode` retains Loader's ordinary `full` and `path` meanings. Filesystems does not maintain a second instance cache and does not expose the
+provider table as mutable public API.
+
+Another module can contribute a provider through ordinary XShell configuration composition by adding a new pattern key under the same Service
+options object:
+
+~~~jsonc
+{
+    "xshell": {
+        "services": {
+            "filesystems": {
+                "options": {
+                    "providers": {
+                        "webdav:{url}": {
+                            "implementation": "/js/filesystem-webdav.js"
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+~~~
+
+Configuration composition merges provider entries by pattern key; no imperative provider registry or startup callback is required.
 
 ## Commands
 

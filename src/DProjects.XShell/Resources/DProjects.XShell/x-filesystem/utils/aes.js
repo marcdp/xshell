@@ -1,6 +1,5 @@
 export default {
 
-    
     /**
      * Encrypts text or bytes using the DProjects AES format.
      *

@@ -48,6 +48,20 @@ export default class Filesystems {
                     },
                     additionalProperties: false
                 }
+            },
+            providers: {
+                type: "object",
+                propertyNames: { minLength: 1 },
+                additionalProperties: {
+                    type: "object",
+                    required: ["implementation"],
+                    properties: {
+                        implementation: { type: "string", minLength: 1 },
+                        cache: { type: "boolean" },
+                        cacheMode: { type: "string", enum: ["full", "path"] }
+                    },
+                    additionalProperties: false
+                }
             }
         },
         additionalProperties: false
@@ -55,13 +69,24 @@ export default class Filesystems {
 
     // fields
     #loader;
+    #providerResolver;
     #commands;
     #editors;
 
     // constructor
-    constructor({loader}, options = {}) {
-        // Store the Loader and snapshot configured Commands and editors.
+    constructor({loader, config}, options = {}) {
+        // Translate domain provider configuration into internal instance-js Loader definitions.
+        const providers = {};
+        for (const [pattern, provider] of Object.entries(options.providers ?? {})) {
+            const definition = { src: provider.implementation, loader: "instance-js" };
+            if (Object.hasOwn(provider, "cache")) definition.cache = provider.cache;
+            if (Object.hasOwn(provider, "cacheMode")) definition.cacheMode = provider.cacheMode;
+            providers[pattern] = definition;
+        }
+
+        // Store the Loader, create the local provider matcher, and snapshot configured Commands and editors.
         this.#loader = loader;
+        this.#providerResolver = loader._createResourcePatternResolver(config.app.baseUrl, providers);
         this.#commands = structuredClone(options.commands ?? []);
         this.#editors = structuredClone(options.editors ?? {});
     }
@@ -76,12 +101,13 @@ export default class Filesystems {
 
     // methods
     async open(url) {
-        // Open or resolve a Filesystem using the existing Resolver and Loader pipeline.
+        // Resolve the provider locally before handing its internal resource identity to Loader.
         if (typeof url !== "string" || !url.trim()) {
             throw new TypeError("Filesystem URL must be a non-empty string.");
         }
 
-        return this.#loader.load(`filesystem:${url}`);
+        const resource = `filesystem:${url}`;
+        return this.#loader._loadResolved(resource, this.#providerResolver.resolve(url));
     }
     getEditor(path) {
         // Select the longest real extension match, then use the stable editor ID to break ties.

@@ -31,10 +31,9 @@ function checkAbort(signal) {
 
 // class
 export default class FilesystemHttp extends Filesystem {
+
     // static factory
-    static create({ url, services }) {
-        // Create the HTTP provider from its resolved filesystem identity.
-        void services;
+    static create({ url }) {
         return new FilesystemHttp(url);
     }
     // constructor

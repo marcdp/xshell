@@ -40,24 +40,17 @@
                         "text": {"page": "page:x-filesystem:/pages/editor-text.js", "label": "Open", "icon": "x-preview", "extensions": ["txt", "txt.aes", "json", "jsonc", "md", "md.aes", "env", "css", "xml", "js", "html", "cs", "yaml", "yml", "php", "ps1", "ovpn"]},
                         "image": {"page": "page:x-filesystem:/pages/editor-image.js", "label": "Open", "icon": "x-preview", "extensions": ["png", "png.aes", "jpg", "jpg.aes", "jpeg", "jpeg.aes", "gif", "gif.aes", "svg"]},
                         "iframe": {"page": "page:x-filesystem:/pages/editor-iframe.js", "label": "Open", "icon": "x-preview", "extensions": ["pdf"]}
+                    },
+                    "providers": {
+                        "mem:": {"implementation": "/js/filesystem-mem.js"},
+                        "mem:{identity}": {"implementation": "/js/filesystem-mem.js", "cache": true},
+                        "http:{url}": {"implementation": "/js/filesystem-http.js"},
+                        "https:{url}": {"implementation": "/js/filesystem-http.js"},
+                        "opfs:": {"implementation": "/js/filesystem-opfs.js"},
+                        "file:": {"implementation": "/js/filesystem-file.js"}
                     }
                 }
             }
-        },
-
-        // resolver
-        "resolver": {
-            "filesystem": {
-                // Anonymous memory Filesystems are fresh; named identities are cached by their complete logical resource reference.
-                "mem:": {"src": "/js/filesystem-mem.js", "loader": "instance-js"},
-                "mem:{identity}": {"src": "/js/filesystem-mem.js", "loader": "instance-js", "cache": true},
-                "http:{url}": {"src": "/js/filesystem-http.js", "loader": "instance-js"},
-                "https:{url}": {"src": "/js/filesystem-http.js", "loader": "instance-js"},
-                "opfs:": {"src": "/js/filesystem-opfs.js", "loader": "instance-js"},
-                "file:": {"src": "/js/filesystem-file.js", "loader": "instance-js"},
-                "file:{identity}": {"src": "/js/filesystem-file.js", "loader": "instance-js", "cache": true}
-            }
-            
         }
     }
 

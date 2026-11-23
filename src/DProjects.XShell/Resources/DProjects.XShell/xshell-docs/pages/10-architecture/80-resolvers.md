@@ -121,6 +121,11 @@ module-qualified locators that resolve to the same URL can still have separate c
 Resolver rule `src` may be an application Path or an absolute URL. `Resolver.resolve()` returns `path` as the resolved application Path (or `null`
 for an absolute URL source) and `url` as the resolved absolute URL.
 
+Filesystem provider URLs are a domain-owned exception to this global namespace. `filesystems.open(url)` matches
+`xshell.services.filesystems.options.providers` locally, then asks Loader to materialize the resolved provider under an internal `filesystem:`
+identity. The global Resolver has no `filesystem` category, so `resolver.resolve("filesystem:mem:workspace")` returns no resource and ordinary
+`loader.load("filesystem:mem:workspace")` fails. Store providers remain global `store:` Resolver resources in this version.
+
 Absolute HTTP(S) URLs are a built-in Resolver case and do not require an authored rule. The built-in `http:` and `https:` rules map these resources
 to their absolute URL and the `response-http` loader. See [Absolute HTTP(S) resources](90-loaders.md#absolute-https-resources) for the return value,
 caching, suffix limitation, and browser security behavior.

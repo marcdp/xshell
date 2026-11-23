@@ -1,5 +1,5 @@
 
-import aes from "../js/aes.js";
+import aes from "../utils/aes.js";
 
 // command
 export default {

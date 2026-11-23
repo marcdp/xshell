@@ -1,4 +1,4 @@
-import aes from "../js/aes.js";
+import aes from "../utils/aes.js";
 
 export default {
     contract: {

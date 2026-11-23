@@ -1,4 +1,6 @@
 
+import ResourcePatternResolver from "../utils/resource-pattern-resolver.js";
+
 // Exceptions
 class ResourceError extends Error {
     constructor(resource, message, opts = {}) {
@@ -73,7 +75,28 @@ export default class Loader {
         const isArray = Array.isArray(resources);
         const isObject = typeof(resources) == "object" && !isArray;
         if (isObject) resources = Object.values(resources);
-        //load resources
+
+        // Resolve global resources and materialize them through the shared loading path.
+        let result = await this.#loadResources(resources, resource => this.#resolver.resolve(resource));
+        if (isString) {
+            result = result[0];
+        } else if (isObject) {
+            result = Object.fromEntries(Object.keys(resourcesOriginal).map((key, index) => [key, result[index]]));
+        }
+        return result;
+    }
+    _createResourcePatternResolver(appBaseUrl, definitions) {
+        // Create an isolated matcher for a domain service without adding definitions to the global Resolver.
+        return new ResourcePatternResolver(appBaseUrl, definitions);
+    }
+    async _loadResolved(resource, resolved) {
+        // Materialize one domain-owned definition through the same path as ordinary Loader requests.
+        return (await this.#loadResources([resource], () => resolved))[0];
+    }
+
+    // private methods
+    async #loadResources(resources, resolve) {
+        // Materialize resources while preserving Loader cache, diagnostics, events, timing, and error behavior.
         let result = [];
         let urls = [];
         let paths = [];
@@ -81,7 +104,7 @@ export default class Loader {
         for(let resource of resources) {            
             // resolve definition
             let name = resource.split(":")[1];
-            let definitionObject = this.#resolver.resolve(resource);
+            let definitionObject = resolve(resource);
             if (!definitionObject) {
                 throw new ResourceError(resource, `Resource not found: ${resource}`, { code: "RESOURCE_NOT_FOUND" });
             }
@@ -226,17 +249,8 @@ export default class Loader {
                 throw new AggregateError(errors, message);
             }
         }
-        // result
-        if (isString) {
-            result = result[0];
-        } else if (isObject) {
-            result = Object.fromEntries(Object.keys(resourcesOriginal).map((key, index) => [key, result[index]]));
-        }
-        //return
         return result;
-    }    
-
-    // private methods
+    }
     #removeQuery(resource) {
         // remove only the URL query while preserving the logical resource scheme and fragment
         const queryIndex = resource.indexOf("?");

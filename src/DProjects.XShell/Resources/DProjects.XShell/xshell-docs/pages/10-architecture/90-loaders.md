@@ -11,6 +11,7 @@ The Loader coordinates the actual load.
 The Loader is responsible for:
 
 * asking the Resolver to resolve a logical resource;
+* accepting an already-resolved internal resource from a domain Service when that Service owns its provider namespace;
 * selecting the resource-specific loader;
 * invoking that loader with the resolved resource location and context;
 * returning the loaded runtime result.
@@ -103,6 +104,10 @@ A resource-specific loader can materialize a mutable runtime object rather than 
 calls its `Provider.create({url, services})` factory. When the Resolver rule enables caching, the Loader retains that object by logical resource
 identity, so later loads can observe the same application-lifetime state. The object does not thereby become an XShell Service.
 
+The Filesystems Service uses the same materialization path after matching its domain-owned provider table. This preserves Loader cache and
+diagnostic behavior without making `filesystem:` an ordinary global Resolver namespace. Application code continues to use
+`filesystems.open(url)`; the internal Loader collaboration is not an application API.
+
 ## Flow
 
 ```text
@@ -118,6 +123,8 @@ resource-specific loader
     ↓
 runtime result
 ```
+
+A domain Service that owns provider resolution joins the flow after resolution and uses the same Loader stages below it.
 
 ## Examples
 

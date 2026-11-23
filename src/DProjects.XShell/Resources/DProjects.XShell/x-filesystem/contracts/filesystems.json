@@ -17,7 +17,7 @@
     },
     "methods": {
         "open": {
-            "description": "Opens or resolves the Filesystem represented by a provider URL. Repeated calls share an instance only when the matching Resolver rule enables Loader caching.",
+            "description": "Opens or resolves the Filesystem represented by a configured provider URL. Repeated calls share an instance only when the matching provider definition enables Loader caching.",
             "parameters": [
                 {
                     "name": "url",

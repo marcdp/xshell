@@ -66,9 +66,8 @@ const MIME_TYPES = Object.freeze({
 export default class FilesystemOpfs extends Filesystem {
 
     // create
-    static create({ url, services }) {
+    static create({ url }) {
         // Create the browser OPFS provider; this provider needs no runtime services.
-        void services;
         if (url && url !== "opfs" && url !== "opfs:") {
             throw new TypeError(`Unsupported OPFS filesystem URL: ${url}`);
         }

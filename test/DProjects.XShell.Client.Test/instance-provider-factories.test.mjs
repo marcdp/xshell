@@ -51,4 +51,5 @@ test("instance providers accept the shared factory context", () => {
     ];
 
     assert.deepEqual(providers.map(provider => provider.url), ["mem://", "https://example.test/files", "opfs:", "file:"]);
+    assert.throws(() => FilesystemFile.create({url: "file:demo", services}), /Unsupported local filesystem URL: file:demo/);
 });
