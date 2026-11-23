@@ -39,12 +39,6 @@ export default class FilesystemFile extends Filesystem {
         additionalProperties: false
     };
 
-    // create
-    static create(services, options = {}) {
-        // Create the browser file-picker provider; this provider needs no runtime services.
-        return new this(services, options);
-    }
-
     // ctor
     constructor({}, { url = "file:", handle = null, isReadonly = false } = {}) {
         // Reject unsupported identities for factory and direct construction alike.

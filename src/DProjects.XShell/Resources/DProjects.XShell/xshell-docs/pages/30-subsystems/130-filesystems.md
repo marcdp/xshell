@@ -21,9 +21,9 @@ controller({filesystems}) {
 `filesystems.open(url)` resolves the URL against the Service's configured `options.providers` table. Filesystem provider URLs are not global
 Resolver resources: ordinary `resolver.resolve("filesystem:...")` and `loader.load("filesystem:...")` calls cannot open them. After local matching,
 the Service gives Loader an already-resolved internal identity such as `filesystem:mem:workspace`; Loader then materializes it through
-`instance-js` → provider options validation → runtime `url` composition → `Provider.create(services, options)`. The provider receives a lazy
-Services proxy as its first argument and final options containing `url: "mem:workspace"` as its second. The internal `filesystem:` prefix is not
-part of that URL.
+`instance-js` → provider options validation → runtime `url` composition → `new Implementation(services, options)`. The implementation constructor
+receives a lazy Services proxy as its first argument and final options containing `url: "mem:workspace"` as its second. The internal `filesystem:`
+prefix is not part of that URL.
 
 The resulting Filesystem is a runtime provider instance, not an individually registered XShell Service. Loader still owns result caching,
 in-flight promise sharing, failed-cache eviction, registry diagnostics, Bus events, and materialization timing.

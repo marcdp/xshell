@@ -14,9 +14,7 @@ import JsonValidator from "../../src/DProjects.XShell/Resources/DProjects.XShell
 import Loader from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/loader.js";
 import Resolver from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/resolver.js";
 
-const createStore = (url = "mem:test") => new MemoryStore({jsonValidator: new JsonValidator()}, {
-    url, schema: SampleStore.schema, documents: SampleStore.documents
-});
+const createStore = (url = "mem:test") => new MemoryStore({jsonValidator: new JsonValidator()}, {url});
 
 test("Store contract and Store metadata schema validate", () => {
     // Validate the public contract through the shared contract vocabulary.

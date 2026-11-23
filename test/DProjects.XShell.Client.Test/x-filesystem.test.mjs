@@ -177,14 +177,12 @@ test("concurrent cached opens share one in-flight provider materialization", asy
     const providerUrl = new URL("./fixtures/filesystem-provider.mjs?case=concurrent", import.meta.url).href;
     const provider = await import(providerUrl);
     provider.reset();
-    provider.deferCreates();
     const {filesystems, loader} = createRuntime({"test:{identity}": {implementation: providerUrl, cache: true}});
 
     const firstPromise = filesystems.open("test:demo");
     const secondPromise = filesystems.open("test:demo");
     await provider.waitForCallCount(1);
     assert.equal(provider.getCalls().length, 1);
-    provider.releaseCreates();
     const [first, second] = await Promise.all([firstPromise, secondPromise]);
 
     assert.strictEqual(first, second);

@@ -38,10 +38,6 @@ export default class FilesystemHttp extends Filesystem {
         additionalProperties: false
     };
 
-    // static factory
-    static create(services, options = {}) {
-        return new this(services, options);
-    }
     // constructor
     constructor({}, { url, isReadonly = false } = {}) {
         // Validate and normalize the endpoint for factory and direct construction alike.

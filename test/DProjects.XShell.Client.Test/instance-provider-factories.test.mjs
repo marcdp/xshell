@@ -10,8 +10,8 @@ import MemoryStore from "../../src/DProjects.XShell/Resources/DProjects.XShell/x
 import LoaderInstanceJs from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/loaders/instance-js.js";
 import JsonValidator from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/json-validator.js";
 
-test("instance-js invokes the provider factory with lazy services and final options", async () => {
-    // Destructure one dependency while proving the factory receives exactly the normalized two arguments.
+test("instance-js directly constructs the implementation with lazy services and final options", async () => {
+    // Destructure one dependency while proving the constructor receives exactly the normalized two arguments.
     const jsonValidator = new JsonValidator();
     const serviceReads = [];
     const runtimeServices = new Proxy(Object.create(null), {
@@ -23,25 +23,23 @@ test("instance-js invokes the provider factory with lazy services and final opti
             throw new Error(`Unexpected service '${String(property)}'`);
         }
     });
-    const providerUrl = "data:text/javascript," + encodeURIComponent(`export default class Provider {
+    const implementationUrl = "data:text/javascript," + encodeURIComponent(`export default class Implementation {
         static optionsSchema = {
             type: "object",
             properties: { timeout: { type: "integer", minimum: 0 } },
             additionalProperties: false
         };
-        static create({ jsonValidator }, options) {
-            return {
-                argumentCount: arguments.length,
-                options,
-                jsonValidator
-            };
+        constructor({ jsonValidator }, options) {
+            this.argumentCount = arguments.length;
+            this.options = options;
+            this.jsonValidator = jsonValidator;
         }
     }`);
 
     const authoredOptions = {timeout: 30};
-    const Provider = (await import(providerUrl)).default;
-    const originalSchema = structuredClone(Provider.optionsSchema);
-    const instance = await new LoaderInstanceJs().load(providerUrl, {
+    const Implementation = (await import(implementationUrl)).default;
+    const originalSchema = structuredClone(Implementation.optionsSchema);
+    const instance = await new LoaderInstanceJs().load(implementationUrl, {
         resource: "store:mem:demo", resourceDefinition: {options: authoredOptions}, services: runtimeServices
     });
 
@@ -50,24 +48,24 @@ test("instance-js invokes the provider factory with lazy services and final opti
     assert.notStrictEqual(instance.options, authoredOptions);
     assert.strictEqual(instance.jsonValidator, jsonValidator);
     assert.deepEqual(serviceReads, ["jsonValidator", "jsonValidator"]);
-    assert.deepEqual(Provider.optionsSchema, originalSchema);
+    assert.deepEqual(Implementation.optionsSchema, originalSchema);
 });
 
 test("instance-js supplies an empty validated options object when configuration omits it", async () => {
     // Add the resource-derived URL after validating the missing authored configuration as an empty object.
-    const providerUrl = "data:text/javascript," + encodeURIComponent(`export default class Provider {
+    const implementationUrl = "data:text/javascript," + encodeURIComponent(`export default class Implementation {
         static optionsSchema = { type: "object", additionalProperties: false };
-        static create(services, options) { return options; }
+        constructor(services, options) { this.options = options; }
     }`);
-    const instance = await new LoaderInstanceJs().load(providerUrl, {
+    const instance = await new LoaderInstanceJs().load(implementationUrl, {
         resource: "test:empty", resourceDefinition: {}, services: {jsonValidator: new JsonValidator()}
     });
 
-    assert.deepEqual(instance, {url: "empty"});
+    assert.deepEqual(instance.options, {url: "empty"});
 });
 
-test("instance-js rejects missing and invalid provider option schemas before construction", async () => {
-    // Reject absent, non-object, throwing, and malformed schemas without calling create().
+test("instance-js rejects missing and invalid implementation option schemas before construction", async () => {
+    // Reject absent, non-object, throwing, and malformed schemas without invoking the constructor.
     const cases = [
         ["", /must define a static optionsSchema object/],
         ["static optionsSchema = [];", /invalid static optionsSchema.*expected a JSON Schema object/],
@@ -75,71 +73,72 @@ test("instance-js rejects missing and invalid provider option schemas before con
         ["static optionsSchema = { type: 'object', patternProperties: { '[': { type: 'string' } } };", /invalid static optionsSchema/]
     ];
     for (const [schemaSource, expected] of cases) {
-        globalThis.__instanceProviderCreates = 0;
-        const providerUrl = "data:text/javascript," + encodeURIComponent(`export default class Provider {
+        globalThis.__instanceConstructions = 0;
+        const implementationUrl = "data:text/javascript," + encodeURIComponent(`export default class Implementation {
             ${schemaSource}
-            static create() { globalThis.__instanceProviderCreates++; return {}; }
+            constructor() { globalThis.__instanceConstructions++; }
         }`);
-        await assert.rejects(() => new LoaderInstanceJs().load(providerUrl, {
+        await assert.rejects(() => new LoaderInstanceJs().load(implementationUrl, {
             resource: "test:invalid-schema", resourceDefinition: {}, services: {jsonValidator: new JsonValidator()}
         }), expected);
-        assert.equal(globalThis.__instanceProviderCreates, 0);
+        assert.equal(globalThis.__instanceConstructions, 0);
     }
-    delete globalThis.__instanceProviderCreates;
+    delete globalThis.__instanceConstructions;
 });
 
 test("instance-js validates a cloned provider options snapshot before construction", async () => {
     // Reject invalid and unknown fields, then prove provider mutation cannot reach authored configuration.
-    const providerUrl = "data:text/javascript," + encodeURIComponent(`export default class Provider {
+    const implementationUrl = "data:text/javascript," + encodeURIComponent(`export default class Implementation {
         static optionsSchema = {
             type: "object",
             required: ["timeout"],
             properties: { timeout: { type: "integer", minimum: 0 }, url: { type: "string" } },
             additionalProperties: false
         };
-        static create(services, options) {
-            globalThis.__instanceProviderCreates++;
-            const received = structuredClone(options);
+        constructor(services, options) {
+            globalThis.__instanceConstructions++;
+            this.received = structuredClone(options);
             options.timeout = 99;
-            return received;
         }
     }`);
     const loader = new LoaderInstanceJs();
     const services = {jsonValidator: new JsonValidator()};
-    globalThis.__instanceProviderCreates = 0;
+    globalThis.__instanceConstructions = 0;
     for (const [options, expected] of [
         [{timeout: "fast"}, /Invalid provider options for 'test:invalid'.*#\/timeout/],
         [{timeout: 30, unknown: true}, /Invalid provider options for 'test:invalid'.*additional properties schema/]
     ]) {
         const original = structuredClone(options);
-        await assert.rejects(() => loader.load(providerUrl, {resource: "test:invalid", resourceDefinition: {options}, services}), expected);
+        await assert.rejects(() => loader.load(implementationUrl, {resource: "test:invalid", resourceDefinition: {options}, services}), expected);
         assert.deepEqual(options, original);
     }
-    assert.equal(globalThis.__instanceProviderCreates, 0);
+    assert.equal(globalThis.__instanceConstructions, 0);
 
     const authoredOptions = {timeout: 30, url: "authored:override"};
-    assert.deepEqual(await loader.load(providerUrl, {
+    const instance = await loader.load(implementationUrl, {
         resource: "test:valid", resourceDefinition: {options: authoredOptions}, services
-    }), {timeout: 30, url: "valid"});
+    });
+    assert.deepEqual(instance.received, {timeout: 30, url: "valid"});
     assert.deepEqual(authoredOptions, {timeout: 30, url: "authored:override"});
-    assert.equal(globalThis.__instanceProviderCreates, 1);
-    delete globalThis.__instanceProviderCreates;
+    assert.equal(globalThis.__instanceConstructions, 1);
+    delete globalThis.__instanceConstructions;
 });
 
-test("instance providers accept the shared factory arguments", () => {
-    // Create every filesystem provider without resolving services they do not use.
+test("filesystem implementations construct directly without resolving unused services", () => {
+    // Construct every filesystem implementation through the shared dependency/options convention.
     const services = new Proxy({}, { get() { throw new Error("Filesystem provider unexpectedly resolved a Service"); } });
     const providers = [
-        FilesystemMem.create(services, {url: "mem"}),
-        FilesystemHttp.create(services, {url: "https://example.test/files"}),
-        FilesystemOpfs.create(services, {url: "opfs"}),
-        FilesystemFile.create(services, {url: "file"})
+        new FilesystemMem(services, {url: "mem"}),
+        new FilesystemHttp(services, {url: "https://example.test/files"}),
+        new FilesystemOpfs(services, {url: "opfs"}),
+        new FilesystemFile(services, {url: "file"})
     ];
 
     assert.deepEqual(providers.map(provider => provider.url), ["mem://", "https://example.test/files", "opfs:", "file:"]);
-    assert.throws(() => FilesystemFile.create(services, {url: "file:demo"}), /Unsupported local filesystem URL: file:demo/);
-    for (const Provider of [FilesystemMem, FilesystemHttp, FilesystemOpfs, FilesystemFile, MemoryStore]) {
-        assert.deepEqual(Provider.optionsSchema, {type: "object", additionalProperties: false});
+    assert.throws(() => new FilesystemFile(services, {url: "file:demo"}), /Unsupported local filesystem URL: file:demo/);
+    for (const Implementation of [FilesystemMem, FilesystemHttp, FilesystemOpfs, FilesystemFile, MemoryStore]) {
+        assert.deepEqual(Implementation.optionsSchema, {type: "object", additionalProperties: false});
+        assert.equal(Object.hasOwn(Implementation, "create"), false);
     }
 });
 
@@ -168,7 +167,7 @@ test("filesystem constructors separate dependencies from provider options", () =
 });
 
 test("direct filesystem construction preserves provider URL validation", () => {
-    // Keep constructor invariants aligned with static factory creation.
+    // Keep constructor invariants aligned with instance-js construction.
     assert.throws(() => new FilesystemHttp("https://example.test/files"), /baseUrl must be a URL or string/);
     assert.throws(() => new FilesystemHttp({}, {url: "file:///tmp"}), /requires an HTTP or HTTPS URL/);
     for (const url of ["https://user@example.test/files", "https://example.test/files?view=all", "https://example.test/files#entry"]) {

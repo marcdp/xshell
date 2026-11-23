@@ -71,12 +71,6 @@ export default class FilesystemOpfs extends Filesystem {
         additionalProperties: false
     };
 
-    // create
-    static create(services, options = {}) {
-        // Create the browser OPFS provider; this provider needs no runtime services.
-        return new this(services, options);
-    }
-
     // ctor
     constructor({}, { url = "opfs:", isReadonly = false } = {}) {
         // Reject unsupported identities for factory and direct construction alike.

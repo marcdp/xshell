@@ -10,15 +10,14 @@ function formatValidationFailure(errors) {
 //export
 export default class LoaderInstanceJs {
     async load(src, context) {
-        // Import the provider factory through its resolved physical module URL.
+        // Import the implementation class through its resolved physical module URL.
         const module = await import(src);
-        const Provider = module.default;
-        if (typeof Provider?.create !== "function") throw new TypeError(`Instance provider '${context.resource}' must expose static create().`);
+        const Implementation = module.default;
 
-        // Require a provider-owned JSON Schema before resolving services or constructing the instance.
+        // Require an implementation-owned JSON Schema before resolving services or constructing the instance.
         let schema;
         try {
-            schema = Provider.optionsSchema;
+            schema = Implementation?.optionsSchema;
         } catch (cause) {
             throw new Error(`Instance provider '${context.resource}' has an invalid static optionsSchema: ${cause.message}`, { cause });
         }
@@ -51,7 +50,7 @@ export default class LoaderInstanceJs {
 
         // Add framework-owned runtime values after validation so the resource identity cannot be overridden.
         const url = context.resource.substring(context.resource.indexOf(":") + 1);
-        const providerOptions = { ...options, url };
-        return Provider.create(services, providerOptions);
+        const instanceOptions = { ...options, url };
+        return new Implementation(services, instanceOptions);
     }
 };
