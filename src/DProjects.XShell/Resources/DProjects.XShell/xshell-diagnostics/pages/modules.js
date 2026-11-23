@@ -37,7 +37,7 @@ export default {
                 <div>{{ module.label }}</div>
                 <div>{{ module.description }}</div>
                 <div class="tags">
-                    <x-chip x-for="tag in module.tags" x-key="tag" x-attr:label="tag"></x-chip>
+                    <x-chip x-for="tag in module.tags" x-attr:label="tag"></x-chip>
                 </div>
                 <div>{{ module.version }}</div>
                 <div>

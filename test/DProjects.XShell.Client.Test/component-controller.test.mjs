@@ -52,7 +52,6 @@ globalThis.document = {
 globalThis.requestAnimationFrame = callback => { callback(); return 1; };
 
 const { createComponentClassFromJsDefinition: createComponentClass } = await import("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/loaders/component-js.js");
-const { default: xshell } = await import("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/xshell.js");
 const { default: Events } = await import("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/events.js");
 const { default: Timer } = await import("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/timer.js");
 
@@ -72,17 +71,16 @@ class RenderEngineFactory {
         return { mount() {}, unmount() {}, render() {} };
     }
 }
-xshell._config = { modules: { test: { defaults: { component: { stateEngine: "test", renderEngine: "test" } } } } };
-xshell._loader = { async load(resource) {
+const config = { modules: { test: { defaults: { component: { stateEngine: "test", renderEngine: "test" } } } } };
+const loader = { async load(resource) {
     if (resource === "schema:component") return {};
     return resource.startsWith("state-engine:") ? StateEngineFactory : RenderEngineFactory;
 } };
-xshell._services = { resolve(name) { return name === "modules" ? { getModuleById() { return {}; } } : null; } };
-
+const modules = { getModuleById() { return {}; } };
 const services = {
-    config: xshell._config,
-    loader: xshell._loader,
-    modules: xshell._services.resolve("modules")
+    config,
+    loader,
+    modules
 };
 const rootServices = {
     beginScope(options = {}) {
@@ -96,9 +94,9 @@ const rootServices = {
                     disposables.push(instance);
                     return instance;
                 }
-                return services[name] ?? xshell._services.resolve(name);
+                return services[name] ?? null;
             },
-            initialize: async name => services[name] ?? xshell._services.resolve(name),
+            initialize: async name => services[name] ?? null,
             async dispose() { for (const disposable of disposables.reverse()) disposable.dispose(); }
         };
         return scope;

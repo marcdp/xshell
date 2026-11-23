@@ -15,7 +15,6 @@ globalThis.window = {
 
 const { createComponentClassFromJsDefinition } = await import("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/loaders/component-js.js");
 const { createPageClassFromJsDefinition } = await import("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/loaders/page-js.js");
-const { default: xshell } = await import("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/xshell.js");
 const loaders = [
     { name: "component", create: createComponentClassFromJsDefinition },
     { name: "page", create: createPageClassFromJsDefinition }
@@ -39,7 +38,7 @@ class RenderEngineFactory {
     init() {}
 }
 
-xshell._config = {
+const config = {
     modules: {
         test: {
             defaults: {
@@ -49,11 +48,13 @@ xshell._config = {
         }
     }
 };
-xshell._loader = {
+const loader = {
     async load(resource) {
+        if (resource === "schema:component" || resource === "schema:page") return {};
         return resource.startsWith("state-engine:") ? StateEngineFactory : RenderEngineFactory;
     }
 };
+const services = { config, loader, modules: { shadowStyleSheets: [] } };
 
 function createDefinition(state) {
     return { meta: { id: "x-contract-state-test" }, state };
@@ -64,12 +65,12 @@ function createContract(property) {
 }
 
 function createContext() {
-    return { resourceDefinition: { moduleId: "test" } };
+    return { resourceDefinition: { moduleId: "test" }, services };
 }
 
 async function loadDefinition(loader, state, property) {
     capturedState = null;
-    await loader.create("test.js", createContext(), createDefinition(state), createContract(property));
+    await loader.create("test.js", createContext(), { ...createDefinition(state), contract: createContract(property) });
     return capturedState;
 }
 

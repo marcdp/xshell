@@ -38,7 +38,7 @@ export default {
                 <x-truncate x-attr:text="contractItem.description"></x-truncate>
                 <div>{{ contractItem.moduleId }}</div>
                 <div class="tags">
-                    <x-chip x-for="tag in contractItem.tags" x-key="tag" x-attr:label="tag"></x-chip>
+                    <x-chip x-for="tag in contractItem.tags" x-attr:label="tag"></x-chip>
                 </div>
                 <x-file-size x-prop:value="contractItem.size" style="text-align:right"></x-file-size>
                 <x-time-ms x-prop:value="contractItem.time" style="text-align:right"></x-time-ms>

@@ -24,7 +24,6 @@ globalThis.window = { customElements: globalThis.customElements };
 globalThis.document = { baseURI: "https://example.test/" };
 
 const { createPageClassFromJsDefinition } = await import("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/loaders/page-js.js");
-const { default: xshell } = await import("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/xshell.js");
 
 class StateEngineFactory {
     constructor(state) {
@@ -43,8 +42,8 @@ class RenderEngineFactory {
     init() {}
 }
 
-function configureDefinitionLoaders() {
-    xshell._config = {
+function configureDefinitionLoaders(modules = { getModuleById() { return { controller: {} }; } }) {
+    const config = {
         modules: {
             test: {
                 defaults: {
@@ -54,16 +53,29 @@ function configureDefinitionLoaders() {
             }
         }
     };
-    xshell._loader = {
+    const loader = {
         async load(resource) {
+            if (resource === "schema:page") return {};
             return resource.startsWith("state-engine:") ? StateEngineFactory : RenderEngineFactory;
         }
     };
-    xshell._bus = { emit() {} };
+    const services = { config, loader, bus: { emit() {} }, modules };
+    const rootServices = {
+        beginScope() {
+            return {
+                beginScope: () => rootServices.beginScope(),
+                resolve: name => services[name] ?? null,
+                initialize: async name => services[name] ?? null,
+                async dispose() {}
+            };
+        }
+    };
+    services.services = rootServices;
+    return services;
 }
 
-function createContext() {
-    return { resourceDefinition: { moduleId: "test" } };
+function createContext(services) {
+    return { resourceDefinition: { moduleId: "test" }, services };
 }
 
 function createDefinition(controller = () => ({})) {
@@ -75,13 +87,12 @@ function createContract(properties) {
 }
 
 async function createPage(properties, src, controller = () => ({})) {
-    configureDefinitionLoaders();
-    const PageClass = await createPageClassFromJsDefinition(src, createContext(), { ...createDefinition(controller), contract: createContract(properties) });
-    return new PageClass({ src, context: {} });
+    const services = configureDefinitionLoaders();
+    const PageClass = await createPageClassFromJsDefinition(src, createContext(services), { ...createDefinition(controller), contract: createContract(properties) });
+    return new PageClass({ src, context: {}, bus: services.bus, navigation: services.navigation });
 }
 
 test("Page injects its owning Module instance and controller from loader context", async () => {
-    configureDefinitionLoaders();
     const moduleController = { id: "test-controller" };
     const moduleInstance = { id: "test", controller: moduleController };
     const modules = {
@@ -90,15 +101,15 @@ test("Page injects its owning Module instance and controller from loader context
             return moduleInstance;
         }
     };
-    xshell._services = { resolve(name) { return name === "modules" ? modules : null; } };
+    const services = configureDefinitionLoaders(modules);
     let injected;
-    const PageClass = await createPageClassFromJsDefinition("/page.js", createContext(),
+    const PageClass = await createPageClassFromJsDefinition("/page.js", createContext(services),
         createDefinition(({ moduleInstance, moduleController }) => {
             injected = { moduleInstance, moduleController };
             return {};
         }), {});
 
-    new PageClass({ src: "/page.js", context: { fromNavigation: true } });
+    new PageClass({ src: "/page.js", context: { fromNavigation: true, services }, bus: services.bus, navigation: services.navigation });
     assert.strictEqual(injected.moduleInstance, moduleInstance);
     assert.strictEqual(injected.moduleController, moduleController);
 });
@@ -245,16 +256,16 @@ test("The controller and load lifecycle see query-derived state", async () => {
 });
 
 test("query values are isolated between Page instances", async () => {
-    configureDefinitionLoaders();
+    const services = configureDefinitionLoaders();
     const observedQueryIds = [];
-    const PageClass = await createPageClassFromJsDefinition("/page.js", createContext(), { ...createDefinition(({ query }) => {
+    const PageClass = await createPageClassFromJsDefinition("/page.js", createContext(services), { ...createDefinition(({ query }) => {
         observedQueryIds.push(query.get("id"));
         return {};
     }), contract: createContract({
         id: { type: "string", default: "", state: true, query: true }
     }) });
-    const pageA = new PageClass({ src: "/page.js?id=A", context: {} });
-    const pageB = new PageClass({ src: "/page.js?id=B", context: {} });
+    const pageA = new PageClass({ src: "/page.js?id=A", context: {}, bus: services.bus, navigation: services.navigation });
+    const pageB = new PageClass({ src: "/page.js?id=B", context: {}, bus: services.bus, navigation: services.navigation });
 
     assert.equal(pageA.src, "/page.js?id=A");
     assert.equal(pageB.src, "/page.js?id=B");

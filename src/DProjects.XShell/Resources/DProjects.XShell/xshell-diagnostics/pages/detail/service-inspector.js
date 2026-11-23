@@ -57,7 +57,7 @@ export default {
                         {{ state.description }}
                     </p>
                     <div class="tags" x-if="state.tags.length">
-                        <x-chip x-for="tag in state.tags" x-key="tag" x-attr:label="tag"></x-chip>
+                        <x-chip x-for="tag in state.tags" x-attr:label="tag"></x-chip>
                     </div>
                     <p class="muted">Contract: {{ state.contractId }}</p>
                 </div>

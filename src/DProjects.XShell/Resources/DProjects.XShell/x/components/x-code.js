@@ -321,7 +321,7 @@ export default {
         highlighted: "",
         playable: false
     },
-    controller({ state, host, events, services }) {
+    controller({ state, host, events, dialog }) {
         return {
             load() {
                 // Compute the initial representation and react to public property changes.
@@ -345,7 +345,7 @@ export default {
 
             async play() {
                 // Open the XTemplate playground with the currently displayed HTML source.
-                await services.resolve("dialog").open({
+                await dialog.open({
                     href: "page:x:/pages/playground.js",
                     context: {template:state.displayValue},
                     classes: ["size-wide"]

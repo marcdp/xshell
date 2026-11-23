@@ -37,7 +37,7 @@ export default {
                 <x-truncate x-attr:text="page.description"></x-truncate>
                 <div>{{ page.moduleId }}</div>
                 <div class="tags">
-                    <x-chip x-for="tag in page.tags" x-key="tag" x-attr:label="tag"></x-chip>
+                    <x-chip x-for="tag in page.tags" x-attr:label="tag"></x-chip>
                 </div>
                 <x-file-size x-prop:value="page.size" style="text-align:right"></x-file-size>
                 <div style="text-align:right"><x-time-ms x-prop:value="page.time"></x-time-ms></div>

@@ -6,7 +6,7 @@ import Services from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshe
 
 const framework = new URL("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/", import.meta.url);
 
-test("XShell registers the native x-page at import and Loader returns the registered class", async t => {
+test("XShell init registers the native x-page and Loader returns the registered class", async t => {
     const factoryUrl = new URL("x-page.js", framework).href;
     const rootUrl = new URL("xshell.js", framework).href;
     const hooks = registerHooks({
@@ -34,28 +34,27 @@ test("XShell registers the native x-page at import and Loader returns the regist
         define(name, implementation) {
             assert.equal(definitions.has(name), false);
             definitions.set(name, implementation);
-            assert.deepEqual(new implementation().shadowRoot.adoptedStyleSheets, [localSheet]);
         },
         get(name) { return definitions.get(name); }
     };
     globalThis.window = { document: {}, customElements };
-    const { default: xshell } = await import(rootUrl);
+    const { default: XShell } = await import(rootUrl);
+    assert.equal(typeof XShell, "function");
+    const xshell = new XShell();
     t.after(() => {
-        xshell.bus?._channel.port1.close();
-        xshell.bus?._channel.port2.close();
+        xshell._bus?._channel.port1.close();
+        xshell._bus?._channel.port2.close();
     });
-    const XPage = definitions.get("x-page");
-    assert.ok(XPage.prototype instanceof HTMLElement);
-    assert.equal(xshell.services, null);
+    assert.equal(customElements.get("x-page"), undefined);
 
-    // Register test implementations at the Services boundary and construct a host before init returns.
+    // Register test implementations at the Services boundary for the production initialization path.
     const sharedSheet = new CSSStyleSheet();
     t.mock.method(xshell, "validateConfig", async () => {});
     t.mock.method(Services.prototype, "init", async function () {
         this.register("areas", { init() {} });
         this.register("navigation", { init() {} });
         this.register("modules", { init() {}, shadowStyleSheets: [sharedSheet] });
-        assert.deepEqual(new XPage().shadowRoot.adoptedStyleSheets, [localSheet]);
+        assert.equal(customElements.get("x-page"), undefined);
     });
     const manifestSource = await readFile(new URL("manifest.jsonc", framework), "utf8");
     const { xshell: { resolver } } = JSON.parse(manifestSource.replace(/^\s*\/\/[^\r\n]*/gm, ""));
@@ -65,11 +64,14 @@ test("XShell registers the native x-page at import and Loader returns the regist
         xshell: { assets: { path: framework.href.slice(0, -1) }, resolver, ui: { components: {} } }
     }, {});
 
+    const XPage = definitions.get("x-page");
+    assert.ok(XPage.prototype instanceof HTMLElement);
+    assert.equal(customElements.get("x-page"), XPage);
     const [shared, local] = new XPage().shadowRoot.adoptedStyleSheets;
     assert.equal(shared, sharedSheet);
     assert.equal(local, localSheet);
 
     // Resolve the manifest entry without loading the factory as a Component definition.
-    assert.equal(await xshell.loader.load("component:x-page"), XPage);
-    assert.deepEqual(xshell.loader.registry, []);
+    assert.equal(await xshell._loader.load("component:x-page"), XPage);
+    assert.deepEqual(xshell._loader.registry, []);
 });

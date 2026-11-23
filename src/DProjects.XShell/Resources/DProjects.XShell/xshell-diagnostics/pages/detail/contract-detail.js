@@ -21,7 +21,7 @@ export default {
         <x-notice x-if="state.error" type="error" role="alert" x-prop:message="state.error"></x-notice>
 
         <div slot="header-actions" x-if="state.detail && state.detail.tags.length">
-            <x-chip x-for="tag in state.detail.tags" x-key="tag" x-attr:label="tag"></x-chip>
+            <x-chip x-for="tag in state.detail.tags" x-attr:label="tag"></x-chip>
         </div>
 
         <x-tabs class="sidebar" x-if="state.detail">

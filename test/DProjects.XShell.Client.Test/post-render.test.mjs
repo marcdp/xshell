@@ -34,7 +34,6 @@ globalThis.requestAnimationFrame = callback => {
 
 const { createComponentClassFromJsDefinition } = await import("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/loaders/component-js.js");
 const { createPageClassFromJsDefinition } = await import("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/loaders/page-js.js");
-const { default: xshell } = await import("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/xshell.js");
 
 class StateEngineFactory {
     constructor(state) { this.state = state; }
@@ -60,7 +59,7 @@ class RenderEngineFactory {
 }
 
 function configureRuntime(commandsService) {
-    xshell._config = {
+    const config = {
         modules: {
             test: {
                 defaults: {
@@ -70,22 +69,35 @@ function configureRuntime(commandsService) {
             }
         }
     };
-    xshell._loader = {
+    const loader = {
         async load(resource) {
             if (resource === "schema:component" || resource === "schema:page") return {};
             return resource.startsWith("state-engine:") ? StateEngineFactory : RenderEngineFactory;
         }
     };
-    xshell._services = { resolve(name) {
-        if (name === "commands") return commandsService;
-        if (name === "modules") return { getModuleById() { return { controller: {} }; } };
-        return null;
-    } };
-    xshell._bus = { emit() {} };
+    const services = {
+        config,
+        loader,
+        bus: { emit() {} },
+        commands: commandsService,
+        modules: { shadowStyleSheets: [], getModuleById() { return { controller: {} }; } }
+    };
+    const rootServices = {
+        beginScope() {
+            return {
+                beginScope: () => rootServices.beginScope(),
+                resolve: name => services[name] ?? null,
+                initialize: async name => services[name] ?? null,
+                async dispose() {}
+            };
+        }
+    };
+    services.services = rootServices;
+    return services;
 }
 
-function createContext() {
-    return { resourceDefinition: { moduleId: "test" } };
+function createContext(services) {
+    return { resourceDefinition: { moduleId: "test" }, services };
 }
 
 function flushAnimationFrames() {
@@ -105,12 +117,12 @@ test("Component postRender runs queued controller methods after rendering in FIF
     animationFrames.length = 0;
     renderEngines.length = 0;
     const commandsService = { id: "component-commands-service" };
-    configureRuntime(commandsService);
+    const services = configureRuntime(commandsService);
     const calls = [];
     let controller;
     let queue;
     let injectedCommands;
-    const Component = await createComponentClassFromJsDefinition("post-render-component.js", createContext(), {
+    const Component = await createComponentClassFromJsDefinition("post-render-component.js", createContext(services), {
         meta: { id: "x-post-render-component-test" },
         controller({ postRender, commands }) {
             queue = postRender;
@@ -143,12 +155,12 @@ test("Page postRender runs queued controller methods after rendering in FIFO ord
     animationFrames.length = 0;
     renderEngines.length = 0;
     const commandsService = { id: "page-commands-service" };
-    configureRuntime(commandsService);
+    const services = configureRuntime(commandsService);
     const calls = [];
     let controller;
     let queue;
     let injectedCommands;
-    const PageClass = await createPageClassFromJsDefinition("post-render-page.js", createContext(), {
+    const PageClass = await createPageClassFromJsDefinition("post-render-page.js", createContext(services), {
         meta: { id: "post-render-page-test" },
         controller({ postRender, commands }) {
             queue = postRender;
@@ -160,9 +172,9 @@ test("Page postRender runs queued controller methods after rendering in FIFO ord
             return controller;
         }
     }, {});
-    const page = new PageClass({ src: "/pages/post-render.js", context: {} });
+    const page = new PageClass({ src: "/pages/post-render.js", context: {}, bus: services.bus, navigation: services.navigation });
     const root = { adoptedStyleSheets: [] };
-    const host = { nodeName: "X-PAGE", getAttribute() { return "/pages/post-render.js"; }, getRootNode() { return root; } };
+    const host = { nodeName: "X-PAGE", dispatchEvent() {}, getAttribute() { return "/pages/post-render.js"; }, getRootNode() { return root; } };
 
     assert.equal(typeof queue, "function");
     assert.equal(injectedCommands, commandsService);

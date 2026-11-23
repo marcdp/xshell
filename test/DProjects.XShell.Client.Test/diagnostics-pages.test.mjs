@@ -514,7 +514,7 @@ test("Contracts diagnostics reads projected contract metadata", () => {
 test("Tag columns use ordinary wrapping chips and retain an empty row cell", () => {
     for (const page of [CommandsPage, ComponentsPage, PagesPage, ContractsPage, ModulesPage, ServicesPage]) {
         assert.match(page.template, /x-model="state\.tags" placeholder="Tags"/);
-        assert.match(page.template, /<div class="tags">\s*<x-chip x-for="tag in [^"]+\.tags" x-key="tag" x-attr:label="tag"><\/x-chip>/);
+        assert.match(page.template, /<div class="tags">\s*<x-chip x-for="tag in [^"]+\.tags" x-attr:label="tag"><\/x-chip>/);
         assert.doesNotMatch(page.template, /<x-chip[^>]+removable/);
         assert.match(page.style, /flex-wrap:\s*wrap/);
     }

@@ -42,7 +42,7 @@ export default {
                 <div>{{ item.moduleId }}</div>
                 <div>{{ item.lifetime }}</div>
                 <div class="tags">
-                    <x-chip x-for="tag in item.tags" x-key="tag" x-attr:label="tag"></x-chip>
+                    <x-chip x-for="tag in item.tags" x-attr:label="tag"></x-chip>
                 </div>
                 <x-file-size style="text-align:right" x-prop:value="item.size" ></x-file-size>
                 <div style="text-align:right"><x-time-ms x-prop:value="item.time"></x-time-ms></div>

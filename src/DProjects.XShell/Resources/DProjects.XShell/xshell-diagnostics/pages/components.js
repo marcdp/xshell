@@ -37,7 +37,7 @@ export default {
                 <x-truncate x-attr:text="component.description"></x-truncate>
                 <div>{{ component.moduleId }}</div>
                 <div class="tags">
-                    <x-chip x-for="tag in component.tags" x-key="tag" x-attr:label="tag"></x-chip>
+                    <x-chip x-for="tag in component.tags" x-attr:label="tag"></x-chip>
                 </div>
                 <x-file-size style="text-align:right" x-prop:value="component.size"></x-file-size>
                 <div style="text-align:right"><x-time-ms x-prop:value="component.time"></x-time-ms></div>

@@ -10,7 +10,7 @@ import JsonValidator from "./services/json-validator.js";
 import { compileRoute } from "./utils/route.js";
 
 // class
-class XShell {
+export default class XShell {
 
     //fields
     _config = null;
@@ -24,17 +24,6 @@ class XShell {
     
     //ctor
     constructor() {}
-
-    //props
-    get areas() { return this._services.resolve("areas"); }
-    get bus() { return this._bus; }
-    get config() { return this._config; }
-    get contracts() { return this._contracts; }
-    get loader() { return this._loader; }
-    get modules() { return this._services.resolve("modules"); }
-    get navigation() { return this._services.resolve("navigation"); }
-    get resolver() { return this._resolver; }
-    get services() { return this._services; }
 
     //methods
     async init(config, timings) {
@@ -102,11 +91,15 @@ class XShell {
         // Compose effective Areas after Modules initialization
         areas.init({ modules });
         // initialize XPage custom element
-        const XPage = createXPageClass(new Proxy(this, {
-            get(target, prop) {
-                return target._services.resolve(prop);
-            }
-        }));
+        const services = this._services;
+        const XPage = createXPageClass({
+            get config() { return services.resolve("config"); },
+            get loader() { return services.resolve("loader"); },
+            get bus() { return services.resolve("bus"); },
+            get navigation() { return services.resolve("navigation"); },
+            get areas() { return services.resolve("areas"); },
+            get modules() { return services.resolve("modules"); }
+        });
         customElements.define("x-page", XPage);
         // initialize the declaratively registered Navigation service
         await this._services.initialize("navigation");
@@ -114,7 +107,7 @@ class XShell {
     }   
     async validateConfig(config) {
         // validate
-        const configSchema = await this.loader.load("schema:config");
+        const configSchema = await this._loader.load("schema:config");
         const result = new JsonValidator().validate(config, configSchema);
         if (!result.valid) {
             console.error(`Invalid config:`, result.errors);
@@ -136,9 +129,3 @@ class XShell {
     }
 
 }
-
-
-// export default instance
-export default XShell;
-
-

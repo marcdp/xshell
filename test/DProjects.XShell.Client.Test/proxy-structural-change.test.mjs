@@ -117,7 +117,6 @@ test("x-json receives change:value after a modified same-reference value is reas
     globalThis.customElements = globalThis.window.customElements;
 
     const { createComponentClassFromJsDefinition } = await import("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/loaders/component-js.js");
-    const { default: xshell } = await import("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/xshell.js");
     const { default: xJsonDefinition } = await import("../../src/DProjects.XShell/Resources/DProjects.XShell/x/components/x-json.js");
     const { default: filesystemEditDefinition } = await import("../../src/DProjects.XShell/Resources/DProjects.XShell/x-filesystem/pages/edit.js");
     let receivedOptions;
@@ -132,17 +131,28 @@ test("x-json receives change:value after a modified same-reference value is reas
         slots = [];
         init() {}
     }
-    xshell._config = { modules: { test: { defaults: { component: { stateEngine: "proxy", renderEngine: "test" } } } } };
-    xshell._loader = {
+    const config = { modules: { test: { defaults: { component: { stateEngine: "proxy", renderEngine: "test" } } } } };
+    const loader = {
         async load(resource) {
             if (resource === "schema:component") return {};
             return resource.startsWith("state-engine:") ? StateEngineFactory : RenderEngineFactory;
         }
     };
-    xshell._services = { resolve(name) { return name === "modules" ? { getModuleById() { return {}; } } : null; } };
+    const services = { config, loader, modules: { shadowStyleSheets: [], getModuleById() { return {}; } } };
+    const rootServices = {
+        beginScope() {
+            return {
+                beginScope: () => rootServices.beginScope(),
+                resolve: name => services[name] ?? null,
+                initialize: async name => services[name] ?? null,
+                async dispose() {}
+            };
+        }
+    };
+    services.services = rootServices;
 
     const Component = await createComponentClassFromJsDefinition("https://example.test/x-json.js", {
-        resourceDefinition: { moduleId: "test" }
+        resourceDefinition: { moduleId: "test" }, services
     }, { ...xJsonDefinition, meta: { id: "x-json-structural-test" } });
     const xJson = new Component();
     const events = [];
