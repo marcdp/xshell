@@ -32,9 +32,14 @@ test("manifest arrays merge by ID in bootstrap precedence order", () => {
         name: "xshell", manifest: {
             xshell: {
                 resolver: { esm: { xshell: { src: "/xshell.js" } } },
-                services: { filesystems: { options: { editors: {
-                    text: { page: "/text.js", label: "Open", extensions: ["txt"] }
-                } } } }
+                services: {
+                    filesystems: { options: { editors: {
+                        text: { page: "/text.js", label: "Open", extensions: ["txt"] }
+                    } } },
+                    stores: { options: { providers: {
+                        "mem:{identity}": { implementation: "/providers/store-mem.js", cache: true }
+                    } } }
+                }
             },
             menu: {
                 items: [{ id: "open", obsolete: true }, "separator", { id: "save" }, { label: "Help" }, { id: "" }, { id: 1 }],
@@ -45,9 +50,14 @@ test("manifest arrays merge by ID in bootstrap precedence order", () => {
     const dependency = {
         name: "dep", manifest: {
             modules: { dep: {} },
-            xshell: { services: { filesystems: { options: { editors: {
-                archive: { page: "/archive.js", label: "Open", extensions: ["zip"] }
-            } } } } },
+            xshell: { services: {
+                filesystems: { options: { editors: {
+                    archive: { page: "/archive.js", label: "Open", extensions: ["zip"] }
+                } } },
+                stores: { options: { providers: {
+                    "remote:{identity}": { implementation: "/providers/store-remote.js", cache: true, options: { endpoint: "https://example.test/api" } }
+                } } }
+            } },
             menu: { items: [{ id: "save", label: "Dependency" }, { id: "open", label: "Dependency", obsolete: true }] }
         }
     };
@@ -78,6 +88,10 @@ test("manifest arrays merge by ID in bootstrap precedence order", () => {
     assert.deepEqual(plain(config.xshell.services.filesystems.options.editors), {
         text: { page: "/text.js", label: "Open", extensions: ["txt"] },
         archive: { page: "/archive.js", label: "Open", extensions: ["zip"] }
+    });
+    assert.deepEqual(plain(config.xshell.services.stores.options.providers), {
+        "mem:{identity}": { implementation: "/providers/store-mem.js", cache: true },
+        "remote:{identity}": { implementation: "/providers/store-remote.js", cache: true, options: { endpoint: "https://example.test/api" } }
     });
     config.menu.items[0].label = "Changed";
     config.menu.other[0].label = "Changed";

@@ -50,10 +50,10 @@ implementation. The selected provider class owns the schema for its `options`; F
 ~~~jsonc
 "providers": {
     "mem:": {
-        "implementation": "/js/filesystem-mem.js"
+        "implementation": "/providers/filesystem-mem.js"
     },
     "mem:{identity}": {
-        "implementation": "/js/filesystem-mem.js",
+        "implementation": "/providers/filesystem-mem.js",
         "cache": true
     }
 }
@@ -65,7 +65,7 @@ the shape; it does not imply that WebDAV is implemented:
 ~~~jsonc
 "providers": {
     "webdav:{url}": {
-        "implementation": "/js/filesystem-webdav.js",
+        "implementation": "/providers/filesystem-webdav.js",
         "cache": true,
         "options": {
             "credential": "work-webdav",
@@ -92,7 +92,7 @@ options object:
                 "options": {
                     "providers": {
                         "webdav:{url}": {
-                            "implementation": "/js/filesystem-webdav.js"
+                            "implementation": "/providers/filesystem-webdav.js"
                         }
                     }
                 }
@@ -113,7 +113,7 @@ resource prefix. The explorer continues to invoke them through the Commands invo
 ~~~jsonc
 "commands": [
     {
-        "id": "command:filesystem.entry.encrypt.aes",
+        "id": "filesystem.entry.encrypt.aes",
         "label": "Encrypt",
         "icon": "x-lock",
         "type": "file",

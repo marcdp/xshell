@@ -31,14 +31,14 @@ export default {
         saving: false,
         error: ""
     },
-    controller({state, loader, page}) {
+    controller({state, stores, page}) {
         let alive = true;
 
         return {
             async load() {
                 // Resolve the same cached Store identity used by the Explorer.
                 try {
-                    state.store = await loader.load(`store:${state.src}`);
+                    state.store = await stores.open(state.src);
                     const definition = state.store.schema.collections[state.collection];
                     if (!definition) throw new Error(`Unknown Store collection '${state.collection}'`);
                     state.schema = definition.schema;

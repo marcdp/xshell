@@ -67,12 +67,12 @@ export default {
         loading: false,
         error: ""
     },
-    controller({state, loader, navigation, page, dialog}) {
+    controller({state, stores, navigation, page, dialog}) {
         let alive = true;
 
         return {
             async load() {
-                // Load the Store through the ordinary Resolver and Loader pipeline.
+                // Open the Store through the domain Service.
                 await this.loadStore();
             },
             unload() {
@@ -84,7 +84,7 @@ export default {
                 state.loading = true;
                 state.error = "";
                 try {
-                    const store = await loader.load(`store:${state.src}`);
+                    const store = await stores.open(state.src);
                     if (!alive) return;
                     state.store = store;
                     state.collections = Object.entries(store.schema.collections).map(([name, definition]) => ({

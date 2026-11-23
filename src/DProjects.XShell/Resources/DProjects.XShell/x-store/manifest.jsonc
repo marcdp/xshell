@@ -24,11 +24,18 @@
     },
 
     "xshell": {
-        // Store providers use the shared instance-js factory loader. Caching gives each logical identity one application-lifetime instance.
-        "resolver": {
-            "store": {
-                "mem:": {"src": "/js/store-mem.js", "loader": "instance-js", "cache": true},
-                "mem:{identity}": {"src": "/js/store-mem.js", "loader": "instance-js", "cache": true}
+        // The Stores Service owns provider matching. Loader caching gives each logical identity one application-lifetime instance.
+        "services": {
+            "stores": {
+                "contract": "stores",
+                "implementation": "/services/stores.js",
+                "lifetime": "singleton",
+                "options": {
+                    "providers": {
+                        "mem:": {"implementation": "/providers/store-mem.js", "cache": true},
+                        "mem:{identity}": {"implementation": "/providers/store-mem.js", "cache": true}
+                    }
+                }
             }
         }
     }

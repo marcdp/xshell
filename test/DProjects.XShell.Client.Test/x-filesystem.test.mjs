@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import test from "node:test";
 
 import FilesystemsContract from "../../src/DProjects.XShell/Resources/DProjects.XShell/x-filesystem/contracts/filesystems.json" with { type: "json" };
@@ -70,7 +71,7 @@ function createController() {
     const filesystemOpenCalls = [];
     const loader = createLoaderStub();
     const filesystems = new Filesystems({ loader, config: testConfig }, {
-        commands, editors, providers: { "mem:": { implementation: "/filesystem-mem.js" } }
+        commands, editors, providers: { "mem:": { implementation: "/providers/filesystem-mem.js" } }
     });
     const open = filesystems.open.bind(filesystems);
     filesystems.open = async url => { filesystemOpenCalls.push(url); return open(url); };
@@ -102,7 +103,7 @@ test("Filesystems.open resolves locally and delegates the complete internal reso
     const loader = createLoaderStub();
     const providerOptions = {credential: "work", transport: {timeout: 30000}};
     const filesystems = new Filesystems({loader, config: testConfig}, {
-        providers: {"mem:demo": {implementation: "/filesystem-mem.js", cache: true, options: providerOptions}}
+        providers: {"mem:demo": {implementation: "/providers/filesystem-mem.js", cache: true, options: providerOptions}}
     });
     providerOptions.credential = "changed";
     providerOptions.transport.timeout = 1;
@@ -110,10 +111,10 @@ test("Filesystems.open resolves locally and delegates the complete internal reso
     assert.deepEqual(await filesystems.open("mem:demo"), {resource: "filesystem:mem:demo"});
     assert.equal(loader.calls[0].resource, "filesystem:mem:demo");
     assert.deepEqual(loader.calls[0].resolved.definition, {
-        src: "/filesystem-mem.js", loader: "instance-js", cache: true,
+        src: "/providers/filesystem-mem.js", loader: "instance-js", cache: true,
         options: {credential: "work", transport: {timeout: 30000}}
     });
-    assert.equal(loader.calls[0].resolved.url, "https://example.test/filesystem-mem.js");
+    assert.equal(loader.calls[0].resolved.url, "https://example.test/providers/filesystem-mem.js");
     for (const value of [null, undefined, "", "   ", 0, false, {}, []]) {
         await assert.rejects(() => filesystems.open(value), { name: "TypeError", message: "Filesystem URL must be a non-empty string." });
     }
@@ -129,7 +130,7 @@ test("Filesystems contract exposes open as the canonical provider operation", ()
 
 test("Filesystems.open preserves local provider and Loader memory identity semantics", async t => {
     // Exercise the local matcher, Loader, instance-js adapter, and memory provider through the domain Service.
-    const providerUrl = new URL("../../src/DProjects.XShell/Resources/DProjects.XShell/x-filesystem/js/filesystem-mem.js", import.meta.url).href;
+    const providerUrl = new URL("../../src/DProjects.XShell/Resources/DProjects.XShell/x-filesystem/providers/filesystem-mem.js", import.meta.url).href;
     const {resolver, loader, filesystems} = createRuntime({
         "mem:": {implementation: providerUrl},
         "mem:{identity}": {implementation: providerUrl, cache: true}
@@ -224,7 +225,7 @@ test("Filesystems options validate commands, keyed editors, and closed provider 
     // Accept provider policy while rejecting incomplete, mistyped, or extended definitions.
     const validator = new JsonValidator();
     const providers = { "mem:{identity}": {
-        implementation: "/filesystem-mem.js", cache: true, cacheMode: "path", options: {credential: "work"}
+        implementation: "/providers/filesystem-mem.js", cache: true, cacheMode: "path", options: {credential: "work"}
     } };
     assert.equal(validator.validate({ commands, editors, providers }, Filesystems.optionsSchema).valid, true);
     assert.equal(validator.validate({ commands, editors: [] }, Filesystems.optionsSchema).valid, false);
@@ -233,14 +234,22 @@ test("Filesystems options validate commands, keyed editors, and closed provider 
     for (const definition of [
         {},
         { implementation: "" },
-        { implementation: "/filesystem-mem.js", cache: "yes" },
-        { implementation: "/filesystem-mem.js", cacheMode: "identity" },
-        { implementation: "/filesystem-mem.js", options: null },
-        { implementation: "/filesystem-mem.js", options: [] },
-        { implementation: "/filesystem-mem.js", options: "invalid" },
-        { implementation: "/filesystem-mem.js", loader: "instance-js" },
-        { implementation: "/filesystem-mem.js", src: "/other.js" }
+        { implementation: "/providers/filesystem-mem.js", cache: "yes" },
+        { implementation: "/providers/filesystem-mem.js", cacheMode: "identity" },
+        { implementation: "/providers/filesystem-mem.js", options: null },
+        { implementation: "/providers/filesystem-mem.js", options: [] },
+        { implementation: "/providers/filesystem-mem.js", options: "invalid" },
+        { implementation: "/providers/filesystem-mem.js", loader: "instance-js" },
+        { implementation: "/providers/filesystem-mem.js", src: "/other.js" }
     ]) assert.equal(validator.validate({providers: {"mem:": definition}}, Filesystems.optionsSchema).valid, false);
+});
+
+test("x-filesystem manifest uses the providers directory for instance implementations", () => {
+    // Keep authored provider implementations separate from registered Services.
+    const manifest = readFileSync(new URL("../../src/DProjects.XShell/Resources/DProjects.XShell/x-filesystem/manifest.jsonc", import.meta.url), "utf8");
+    assert.match(manifest, /"implementation"\s*:\s*"\/providers\/filesystem-mem\.js"/);
+    assert.match(manifest, /"implementation"\s*:\s*"\/providers\/filesystem-http\.js"/);
+    assert.doesNotMatch(manifest, /"implementation"\s*:\s*"\/js\/filesystem-/);
 });
 
 test("Filesystems exposes defensive command and editor snapshots", () => {

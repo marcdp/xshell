@@ -135,12 +135,12 @@ export default class Implementation {
 
 The schema describes only authored `options`; the framework-derived `url` and runtime-only constructor values do not belong in it. Missing authored
 options are validated as an empty object, after which `instance-js` adds `url` to the final constructor options. Invalid schemas or authored options
-fail before construction. When the Resolver rule enables caching, the Loader retains the created object by logical resource identity, so later
+fail before construction. When the resolved definition enables caching, the Loader retains the created object by logical resource identity, so later
 loads can observe the same application-lifetime state. The object does not thereby become an XShell Service.
 
-The Filesystems Service uses the same materialization path after matching its domain-owned provider table. This preserves Loader cache and
-diagnostic behavior without making `filesystem:` an ordinary global Resolver namespace. Application code continues to use
-`filesystems.open(url)`; the internal Loader collaboration is not an application API.
+The Filesystems and Stores Services use the same materialization path after matching their domain-owned provider tables. This preserves Loader
+cache and diagnostic behavior without making `filesystem:` or `store:` ordinary global Resolver namespaces. Application code uses
+`filesystems.open(url)` or `stores.open(url)`; the internal Loader collaboration is not an application API.
 
 ## Flow
 

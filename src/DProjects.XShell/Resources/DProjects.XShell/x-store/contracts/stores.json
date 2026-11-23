@@ -1,0 +1,22 @@
+{
+    "$schema": "../../xshell/schemas/contract.schema.json",
+    "label": "Stores",
+    "description": "Selects Store provider implementations and opens Store instances from provider URLs.",
+    "methods": {
+        "open": {
+            "description": "Resolves a configured provider URL and asynchronously materializes a Store instance. Repeated calls share an instance only when the matching provider definition enables Loader caching.",
+            "parameters": [
+                {
+                    "name": "url",
+                    "type": "string",
+                    "required": true,
+                    "description": "Store provider URL, such as mem: or mem:demo."
+                }
+            ],
+            "returns": {
+                "type": "object",
+                "description": "Promise resolving to an instance implementing the Store contract."
+            }
+        }
+    }
+}

@@ -1,12 +1,12 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import Filesystem from "../../src/DProjects.XShell/Resources/DProjects.XShell/x-filesystem/js/filesystem.js";
-import FilesystemFile from "../../src/DProjects.XShell/Resources/DProjects.XShell/x-filesystem/js/filesystem-file.js";
-import FilesystemHttp from "../../src/DProjects.XShell/Resources/DProjects.XShell/x-filesystem/js/filesystem-http.js";
-import FilesystemMem from "../../src/DProjects.XShell/Resources/DProjects.XShell/x-filesystem/js/filesystem-mem.js";
-import FilesystemOpfs from "../../src/DProjects.XShell/Resources/DProjects.XShell/x-filesystem/js/filesystem-opfs.js";
-import MemoryStore from "../../src/DProjects.XShell/Resources/DProjects.XShell/x-store/js/store-mem.js";
+import Filesystem from "../../src/DProjects.XShell/Resources/DProjects.XShell/x-filesystem/providers/filesystem.js";
+import FilesystemFile from "../../src/DProjects.XShell/Resources/DProjects.XShell/x-filesystem/providers/filesystem-file.js";
+import FilesystemHttp from "../../src/DProjects.XShell/Resources/DProjects.XShell/x-filesystem/providers/filesystem-http.js";
+import FilesystemMem from "../../src/DProjects.XShell/Resources/DProjects.XShell/x-filesystem/providers/filesystem-mem.js";
+import FilesystemOpfs from "../../src/DProjects.XShell/Resources/DProjects.XShell/x-filesystem/providers/filesystem-opfs.js";
+import MemoryStore from "../../src/DProjects.XShell/Resources/DProjects.XShell/x-store/providers/store-mem.js";
 import LoaderInstanceJs from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/loaders/instance-js.js";
 import JsonValidator from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/json-validator.js";
 
@@ -144,7 +144,7 @@ test("filesystem implementations construct directly without resolving unused ser
 
 test("filesystem provider schemas reject unknown authored options", async () => {
     // Validate a real restrictive provider schema through the generic instance-js boundary.
-    const providerUrl = new URL("../../src/DProjects.XShell/Resources/DProjects.XShell/x-filesystem/js/filesystem-mem.js", import.meta.url).href;
+    const providerUrl = new URL("../../src/DProjects.XShell/Resources/DProjects.XShell/x-filesystem/providers/filesystem-mem.js", import.meta.url).href;
     await assert.rejects(() => new LoaderInstanceJs().load(providerUrl, {
         resource: "filesystem:mem:", resourceDefinition: {options: {unknown: true}}, services: {jsonValidator: new JsonValidator()}
     }), /Invalid provider options for 'filesystem:mem:'.*additional properties schema/);

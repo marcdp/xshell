@@ -33,21 +33,21 @@
                 "lifetime": "singleton",
                 "options": {
                     "commands": [
-                        {"id": "command:filesystem.entry.encrypt.aes", "label": "Encrypt", "icon":"x-lock", "type": "file", "extensions": ["txt", "json", "md"], "actions": []},
-                        {"id": "command:filesystem.entry.zip", "label": "Download as ZIP", "type":"entry", "icon":"x-zip", "actions": []}
+                        {"id": "filesystem.entry.encrypt.aes", "label": "Encrypt", "icon":"x-lock", "type": "file", "extensions": ["txt", "json", "md"], "actions": []},
+                        {"id": "filesystem.entry.zip", "label": "Download as ZIP", "type":"entry", "icon":"x-zip", "actions": []}
                     ],
                     "editors": {
-                        "text": {"page": "page:x-filesystem:/pages/editor-text.js", "label": "Open", "icon": "x-preview", "extensions": ["txt", "txt.aes", "json", "jsonc", "md", "md.aes", "env", "css", "xml", "js", "html", "cs", "yaml", "yml", "php", "ps1", "ovpn"]},
-                        "image": {"page": "page:x-filesystem:/pages/editor-image.js", "label": "Open", "icon": "x-preview", "extensions": ["png", "png.aes", "jpg", "jpg.aes", "jpeg", "jpeg.aes", "gif", "gif.aes", "svg"]},
-                        "iframe": {"page": "page:x-filesystem:/pages/editor-iframe.js", "label": "Open", "icon": "x-preview", "extensions": ["pdf"]}
+                        "text": {"page": "/pages/editor-text.js", "label": "Open", "icon": "x-preview", "extensions": ["txt", "txt.aes", "json", "jsonc", "md", "md.aes", "env", "css", "xml", "js", "html", "cs", "yaml", "yml", "php", "ps1", "ovpn"]},
+                        "image": {"page": "/pages/editor-image.js", "label": "Open", "icon": "x-preview", "extensions": ["png", "png.aes", "jpg", "jpg.aes", "jpeg", "jpeg.aes", "gif", "gif.aes", "svg"]},
+                        "iframe": {"page": "/pages/editor-iframe.js", "label": "Open", "icon": "x-preview", "extensions": ["pdf"]}
                     },
                     "providers": {
-                        "mem:": {"implementation": "/js/filesystem-mem.js"},
-                        "mem:{identity}": {"implementation": "/js/filesystem-mem.js", "cache": true},
-                        "http:{url}": {"implementation": "/js/filesystem-http.js"},
-                        "https:{url}": {"implementation": "/js/filesystem-http.js"},
-                        "opfs:": {"implementation": "/js/filesystem-opfs.js"},
-                        "file:": {"implementation": "/js/filesystem-file.js"}
+                        "mem:": {"implementation": "/providers/filesystem-mem.js"},
+                        "mem:{identity}": {"implementation": "/providers/filesystem-mem.js", "cache": true},
+                        "http:{url}": {"implementation": "/providers/filesystem-http.js"},
+                        "https:{url}": {"implementation": "/providers/filesystem-http.js"},
+                        "opfs:": {"implementation": "/providers/filesystem-opfs.js"},
+                        "file:": {"implementation": "/providers/filesystem-file.js"}
                     }
                 }
             }

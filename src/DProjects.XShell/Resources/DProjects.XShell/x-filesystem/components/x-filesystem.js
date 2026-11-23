@@ -375,53 +375,21 @@ export default {
             },
             async customCommand(command, entries) {
                 // handle custom command
-                if (command.startsWith("command:")) {
-                    command = command.substring(command.indexOf(":") + 1);
-                    for(const entry of entries) {
-                        await navigation.navigate({ 
-                            href: "page:x:/pages/invoke.js", 
-                            page: getPage(),
-                            open:"stack",
-                            params: {
-                                type: "command",
-                                id: command,
-                                args: JSON.stringify({
-                                    src: state.src,
-                                    path: entry.path
-                                }),
-                            } 
-                        });
-                    }
-                } else if (command.startsWith("page:")) {
-                    const page = getPage();
-                    for(const entry of entries) {
-                        navigation.navigate( {
-                            href: command,
-                            page: page,
-                            params: {
-                                src: state.src,
-                                path: entry.path,
-                            },
-                            open: "stack"
-                        });
-                    }
-                }
-                /*
                 for(const entry of entries) {
-                    const page = getPage();
-                    const resolverDefinition = getFileHandler(resolver, entry.path);
-                    if (resolverDefinition) {
-                        navigation.navigate( {
-                            href: resolverDefinition.path,
-                            page: page,
-                            params: {
+                    await navigation.navigate({
+                        href: "page:x:/pages/invoke.js",
+                        page: getPage(),
+                        open:"stack",
+                        params: {
+                            type: "command",
+                            id: command,
+                            args: JSON.stringify({
                                 src: state.src,
-                                path: entry.path,
-                            },
-                            open: "stack"
-                        });
-                    }
-                }*/
+                                path: entry.path
+                            }),
+                        }
+                    });
+                }
             },
 
 
