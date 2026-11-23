@@ -39,8 +39,8 @@ export default class FilesystemHttp extends Filesystem {
     };
 
     // static factory
-    static create({ url, services, options = {} }) {
-        return new this(services, { url, ...options });
+    static create(services, options = {}) {
+        return new this(services, options);
     }
     // constructor
     constructor({}, { url, isReadonly = false } = {}) {

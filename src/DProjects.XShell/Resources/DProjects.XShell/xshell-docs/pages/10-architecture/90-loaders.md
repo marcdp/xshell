@@ -101,17 +101,21 @@ Because the key is the logical reference rather than the resolved URL, two diffe
 module-qualified equivalent—can resolve to the same URL and still occupy separate cache entries.
 
 A resource-specific loader can materialize a mutable runtime object rather than immutable data. For example, `instance-js` imports a provider,
-validates the resolved definition's declarative `options` against `Provider.optionsSchema`, and calls
-`Provider.create({url, services, options})`. The three factory values remain distinct:
+validates the resolved definition's declarative `options` against `Provider.optionsSchema`, adds the resource-derived `url`, and calls
+`Provider.create(services, options)`. The factory follows the same dependency/options argument model as a Service constructor:
 
 ```text
-url       resource-derived provider identity
-services  lazily resolved runtime dependencies
-options   validated declarative provider configuration
+Services
+    constructor(services, options)
+
+Instance provider
+    static create(services, options)
+    constructor(services, options)
 ```
 
-An `instance-js` provider follows the same dependency/options constructor convention as a Service, with an additional factory layer for the
-resource identity:
+The first factory argument is a lazy Services proxy. The second combines validated declarative configuration with framework-owned runtime values;
+the resource-derived `url` is added after validation and therefore overrides any conflicting value. The factory remains an extension point for
+asynchronous construction, dependency adaptation, runtime-only values, and provider-specific setup:
 
 ~~~js
 export default class Provider {
@@ -123,8 +127,8 @@ export default class Provider {
         additionalProperties: false
     };
 
-    static create({url, services, options = {}}) {
-        return new this(services, {url, ...options});
+    static create({dependency}, options = {}) {
+        return new this({dependency}, options);
     }
 
     constructor({dependency}, {url, timeout = 30000} = {}) {
@@ -133,10 +137,10 @@ export default class Provider {
 }
 ~~~
 
-The schema describes only authored `options`; `url` and runtime-only constructor values do not belong in it. Missing options are validated as an
-empty object. Invalid schemas or options fail before `create()` executes. When the Resolver rule enables caching, the Loader retains the created
-object by logical resource identity, so later loads can observe the same application-lifetime state. The object does not thereby become an XShell
-Service.
+The schema describes only authored `options`; the framework-derived `url` and runtime-only constructor values do not belong in it. Missing authored
+options are validated as an empty object, after which `instance-js` adds `url` to the final factory options. Invalid schemas or authored options
+fail before `create()` executes. When the Resolver rule enables caching, the Loader retains the created object by logical resource identity, so
+later loads can observe the same application-lifetime state. The object does not thereby become an XShell Service.
 
 The Filesystems Service uses the same materialization path after matching its domain-owned provider table. This preserves Loader cache and
 diagnostic behavior without making `filesystem:` an ordinary global Resolver namespace. Application code continues to use

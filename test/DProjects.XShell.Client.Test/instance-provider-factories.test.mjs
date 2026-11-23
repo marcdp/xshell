@@ -10,8 +10,8 @@ import MemoryStore from "../../src/DProjects.XShell/Resources/DProjects.XShell/x
 import LoaderInstanceJs from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/loaders/instance-js.js";
 import JsonValidator from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/json-validator.js";
 
-test("instance-js delegates services to the Loader provider by property access", async () => {
-    // Capture the complete factory context while exercising ordinary and symbol service reads.
+test("instance-js invokes the provider factory with lazy services and final options", async () => {
+    // Destructure one dependency while proving the factory receives exactly the normalized two arguments.
     const jsonValidator = new JsonValidator();
     const serviceReads = [];
     const runtimeServices = new Proxy(Object.create(null), {
@@ -29,13 +29,11 @@ test("instance-js delegates services to the Loader provider by property access",
             properties: { timeout: { type: "integer", minimum: 0 } },
             additionalProperties: false
         };
-        static create(context) {
+        static create({ jsonValidator }, options) {
             return {
-                contextKeys: Object.keys(context),
-                url: context.url,
-                options: context.options,
-                jsonValidator: context.services.jsonValidator,
-                symbolValue: context.services[Symbol.toStringTag]
+                argumentCount: arguments.length,
+                options,
+                jsonValidator
             };
         }
     }`);
@@ -47,27 +45,25 @@ test("instance-js delegates services to the Loader provider by property access",
         resource: "store:mem:demo", resourceDefinition: {options: authoredOptions}, services: runtimeServices
     });
 
-    assert.deepEqual(instance.contextKeys, ["url", "services", "options"]);
-    assert.equal(instance.url, "mem:demo");
-    assert.deepEqual(instance.options, authoredOptions);
+    assert.equal(instance.argumentCount, 2);
+    assert.deepEqual(instance.options, {timeout: 30, url: "mem:demo"});
     assert.notStrictEqual(instance.options, authoredOptions);
     assert.strictEqual(instance.jsonValidator, jsonValidator);
-    assert.equal(instance.symbolValue, undefined);
     assert.deepEqual(serviceReads, ["jsonValidator", "jsonValidator"]);
     assert.deepEqual(Provider.optionsSchema, originalSchema);
 });
 
 test("instance-js supplies an empty validated options object when configuration omits it", async () => {
-    // Preserve the three-field factory context even when a provider has no authored configuration.
+    // Add the resource-derived URL after validating the missing authored configuration as an empty object.
     const providerUrl = "data:text/javascript," + encodeURIComponent(`export default class Provider {
         static optionsSchema = { type: "object", additionalProperties: false };
-        static create({ options }) { return options; }
+        static create(services, options) { return options; }
     }`);
     const instance = await new LoaderInstanceJs().load(providerUrl, {
         resource: "test:empty", resourceDefinition: {}, services: {jsonValidator: new JsonValidator()}
     });
 
-    assert.deepEqual(instance, {});
+    assert.deepEqual(instance, {url: "empty"});
 });
 
 test("instance-js rejects missing and invalid provider option schemas before construction", async () => {
@@ -98,10 +94,10 @@ test("instance-js validates a cloned provider options snapshot before constructi
         static optionsSchema = {
             type: "object",
             required: ["timeout"],
-            properties: { timeout: { type: "integer", minimum: 0 } },
+            properties: { timeout: { type: "integer", minimum: 0 }, url: { type: "string" } },
             additionalProperties: false
         };
-        static create({ options }) {
+        static create(services, options) {
             globalThis.__instanceProviderCreates++;
             const received = structuredClone(options);
             options.timeout = 99;
@@ -121,27 +117,27 @@ test("instance-js validates a cloned provider options snapshot before constructi
     }
     assert.equal(globalThis.__instanceProviderCreates, 0);
 
-    const authoredOptions = {timeout: 30};
+    const authoredOptions = {timeout: 30, url: "authored:override"};
     assert.deepEqual(await loader.load(providerUrl, {
         resource: "test:valid", resourceDefinition: {options: authoredOptions}, services
-    }), authoredOptions);
-    assert.deepEqual(authoredOptions, {timeout: 30});
+    }), {timeout: 30, url: "valid"});
+    assert.deepEqual(authoredOptions, {timeout: 30, url: "authored:override"});
     assert.equal(globalThis.__instanceProviderCreates, 1);
     delete globalThis.__instanceProviderCreates;
 });
 
-test("instance providers accept the shared factory context", () => {
+test("instance providers accept the shared factory arguments", () => {
     // Create every filesystem provider without resolving services they do not use.
     const services = new Proxy({}, { get() { throw new Error("Filesystem provider unexpectedly resolved a Service"); } });
     const providers = [
-        FilesystemMem.create({url: "mem", services}),
-        FilesystemHttp.create({url: "https://example.test/files", services}),
-        FilesystemOpfs.create({url: "opfs", services}),
-        FilesystemFile.create({url: "file", services})
+        FilesystemMem.create(services, {url: "mem"}),
+        FilesystemHttp.create(services, {url: "https://example.test/files"}),
+        FilesystemOpfs.create(services, {url: "opfs"}),
+        FilesystemFile.create(services, {url: "file"})
     ];
 
     assert.deepEqual(providers.map(provider => provider.url), ["mem://", "https://example.test/files", "opfs:", "file:"]);
-    assert.throws(() => FilesystemFile.create({url: "file:demo", services}), /Unsupported local filesystem URL: file:demo/);
+    assert.throws(() => FilesystemFile.create(services, {url: "file:demo"}), /Unsupported local filesystem URL: file:demo/);
     for (const Provider of [FilesystemMem, FilesystemHttp, FilesystemOpfs, FilesystemFile, MemoryStore]) {
         assert.deepEqual(Provider.optionsSchema, {type: "object", additionalProperties: false});
     }

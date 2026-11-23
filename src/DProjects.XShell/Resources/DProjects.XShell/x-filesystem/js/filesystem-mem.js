@@ -137,9 +137,9 @@ export default class FilesystemMem extends Filesystem {
     };
 
     // static factory
-    static create({ url, services, options = {} }) {
+    static create(services, options = {}) {
         // Create an isolated memory filesystem; this provider needs no runtime services.
-        return new this(services, { url, ...options });
+        return new this(services, options);
     }
 
 

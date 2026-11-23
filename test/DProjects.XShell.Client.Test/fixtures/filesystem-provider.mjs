@@ -28,9 +28,9 @@ export default class TestFilesystemProvider {
         additionalProperties: false
     };
 
-    static async create({url, options}) {
+    static async create(services, options = {}) {
         // Record the provider URL before exercising failure or in-flight sharing behavior.
-        const call = { url, options: structuredClone(options), number: calls.length + 1 };
+        const call = { url: options.url, options: structuredClone(options), number: calls.length + 1 };
         calls.push(call);
         for (const waiter of waiters.filter(item => calls.length >= item.count)) waiter.resolve();
         waiters = waiters.filter(item => calls.length < item.count);

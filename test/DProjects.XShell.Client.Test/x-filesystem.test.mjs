@@ -219,7 +219,7 @@ test("instance-js receives the provider URL from the internal resource identity"
 
     assert.deepEqual(loader.registry.map(item => item.resource), ["filesystem:test:demo"]);
     assert.deepEqual(provider.getCalls().map(call => call.url), ["test:demo"]);
-    assert.deepEqual(provider.getCalls().map(call => call.options), [{tag: "configured"}]);
+    assert.deepEqual(provider.getCalls().map(call => call.options), [{tag: "configured", url: "test:demo"}]);
 });
 
 test("Filesystems options validate commands, keyed editors, and closed provider definitions", () => {

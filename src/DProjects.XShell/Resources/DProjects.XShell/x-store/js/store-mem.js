@@ -9,12 +9,9 @@ export default class MemoryStore extends Store {
         additionalProperties: false
     };
 
-    static async create({ url, services, options = {} }) {
-        // Inject the shared JSON Schema validator without crossing module asset roots.
-        const jsonValidator = services.jsonValidator;
-
+    static async create({ jsonValidator }, options = {}) {
         // Give every resolver identity an independent seeded Store; Loader caching preserves that identity thereafter.
-        return new this({ jsonValidator }, { url, ...options, schema: SampleStore.schema, documents: SampleStore.documents });
+        return new this({ jsonValidator }, { ...options, schema: SampleStore.schema, documents: SampleStore.documents });
     }
 
     constructor({ jsonValidator } = {}, { url = "mem:", schema, documents = {}, schemaDefinition = StoreSchemaDefinition } = {}) {

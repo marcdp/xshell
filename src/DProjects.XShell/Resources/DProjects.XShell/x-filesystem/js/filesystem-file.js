@@ -40,9 +40,9 @@ export default class FilesystemFile extends Filesystem {
     };
 
     // create
-    static create({ url, services, options = {} }) {
+    static create(services, options = {}) {
         // Create the browser file-picker provider; this provider needs no runtime services.
-        return new this(services, { url, ...options });
+        return new this(services, options);
     }
 
     // ctor

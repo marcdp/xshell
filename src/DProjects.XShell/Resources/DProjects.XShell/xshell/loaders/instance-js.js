@@ -49,8 +49,9 @@ export default class LoaderInstanceJs {
             });
         }
 
-        // Keep resource identity, runtime dependencies, and declarative configuration separate.
+        // Add framework-owned runtime values after validation so the resource identity cannot be overridden.
         const url = context.resource.substring(context.resource.indexOf(":") + 1);
-        return Provider.create({ url, services, options });
+        const providerOptions = { ...options, url };
+        return Provider.create(services, providerOptions);
     }
 };
