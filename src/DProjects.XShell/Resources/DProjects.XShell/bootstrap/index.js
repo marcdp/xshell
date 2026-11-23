@@ -882,8 +882,10 @@ async function main() {
         console.log("bootstrap: xshell: import  from ... ", xshellUrl);
         const xshellModule = await import(xshellUrl);
         timings.record("xshell instance imported");
-
-        const xshell = xshellModule.default;
+        
+        // instantiate XShell class
+        const XShell = xshellModule.default;
+        const xshell = new XShell();
         console.log("bootstrap: xshell: init", config);
         await xshell.init(deepFreeze(config), timings);
         timings.record("xshell initialized");

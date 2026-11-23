@@ -23,8 +23,7 @@ class XShell {
     _servicesInitialized = false;
     
     //ctor
-    constructor() {
-    }
+    constructor() {}
 
     //props
     get areas() { return this._services.resolve("areas"); }
@@ -102,6 +101,13 @@ class XShell {
         const modules = await this._services.initialize("modules");
         // Compose effective Areas after Modules initialization
         areas.init({ modules });
+        // initialize XPage custom element
+        const XPage = createXPageClass(new Proxy(this, {
+            get(target, prop) {
+                return target._services.resolve(prop);
+            }
+        }));
+        customElements.define("x-page", XPage);
         // initialize the declaratively registered Navigation service
         await this._services.initialize("navigation");
         
@@ -131,21 +137,8 @@ class XShell {
 
 }
 
-// creates a default instance
-let xshell = new XShell();
-
-// Bind x-page to the runtime and register it before application initialization.
-const XPage = createXPageClass({
-    get config() { return xshell.config; },
-    get loader() { return xshell.loader; },
-    get bus() { return xshell.bus; },
-    get navigation() { return xshell._servicesInitialized ? xshell.navigation : null; },
-    get areas() { return xshell._servicesInitialized ? xshell.areas : null; },
-    get modules() { return xshell._servicesInitialized ? xshell.modules : null; }
-});
-customElements.define("x-page", XPage);
 
 // export default instance
-export default xshell;
+export default XShell;
 
 
