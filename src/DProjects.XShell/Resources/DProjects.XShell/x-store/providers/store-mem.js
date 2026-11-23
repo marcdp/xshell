@@ -3,12 +3,16 @@ import SampleStore from "../samples/store.json" with { type: "json" };
 import Store, { cloneDocument } from "./store.js";
 
 export default class MemoryStore extends Store {
+
+
     // options schema
     static optionsSchema = {
         type: "object",
         additionalProperties: false
     };
 
+
+    // ctor
     constructor({ jsonValidator } = {}, {
         url = "mem:", schema = SampleStore.schema, documents = SampleStore.documents, schemaDefinition = StoreSchemaDefinition
     } = {}) {
