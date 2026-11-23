@@ -33,28 +33,29 @@ function checkAbort(signal) {
 export default class FilesystemHttp extends Filesystem {
 
     // static factory
-    static create({ url }) {
-        return new FilesystemHttp(url);
+    static create({ url, services }) {
+        return new this(services, { url });
     }
     // constructor
-    constructor(baseUrl, { isReadonly = false } = {}) {
-        if (typeof baseUrl !== "string" && !(baseUrl instanceof URL)) {
+    constructor({}, { url, isReadonly = false } = {}) {
+        // Validate and normalize the endpoint for factory and direct construction alike.
+        if (typeof url !== "string" && !(url instanceof URL)) {
             throw new TypeError("baseUrl must be a URL or string");
         }
-        const url = new URL(baseUrl, globalThis.location?.href);
+        const normalizedUrl = new URL(url, globalThis.location?.href);
 
-        if (!["http:", "https:"].includes(url.protocol)) {
+        if (!["http:", "https:"].includes(normalizedUrl.protocol)) {
             throw new TypeError("The HTTP filesystem requires an HTTP or HTTPS URL");
         }
 
-        if (url.username || url.password || url.search || url.hash) {
+        if (normalizedUrl.username || normalizedUrl.password || normalizedUrl.search || normalizedUrl.hash) {
             throw new TypeError("The filesystem base URL must not contain credentials, query or fragment");
         }
 
-        url.pathname = url.pathname.replace(/\/+$/, "") || "/";
-        super({ url: url.href, isReadonly });
-        this._baseUrl = url;
-        this._basePath = decodeURIComponent(url.pathname);
+        normalizedUrl.pathname = normalizedUrl.pathname.replace(/\/+$/, "") || "/";
+        super({}, { url: normalizedUrl.href, isReadonly });
+        this._baseUrl = normalizedUrl;
+        this._basePath = decodeURIComponent(normalizedUrl.pathname);
     }
     // methods LEVEL 0
     async getEntry(path, { signal } = {}) {

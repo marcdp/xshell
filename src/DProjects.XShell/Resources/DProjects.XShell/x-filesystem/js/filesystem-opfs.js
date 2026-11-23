@@ -66,17 +66,17 @@ const MIME_TYPES = Object.freeze({
 export default class FilesystemOpfs extends Filesystem {
 
     // create
-    static create({ url }) {
+    static create({ url, services }) {
         // Create the browser OPFS provider; this provider needs no runtime services.
-        if (url && url !== "opfs" && url !== "opfs:") {
-            throw new TypeError(`Unsupported OPFS filesystem URL: ${url}`);
-        }
-        return new FilesystemOpfs();
+        return new this(services, { url });
     }
 
     // ctor
-    constructor({ isReadonly = false } = {}) {
-        super({ url: "opfs:", isReadonly });
+    constructor({}, { url = "opfs:", isReadonly = false } = {}) {
+        // Reject unsupported identities for factory and direct construction alike.
+        if (url && url !== "opfs" && url !== "opfs:") throw new TypeError(`Unsupported OPFS filesystem URL: ${url}`);
+
+        super({}, { url: "opfs:", isReadonly });
         this._rootPromise = null;
     }
 

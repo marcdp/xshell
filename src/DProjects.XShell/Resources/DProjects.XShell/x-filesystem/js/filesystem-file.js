@@ -34,15 +34,17 @@ function matchesPattern(name, pattern) {
 export default class FilesystemFile extends Filesystem {
 
     // create
-    static create({ url }) {
+    static create({ url, services }) {
         // Create the browser file-picker provider; this provider needs no runtime services.
-        if (url && url !== "file" && url !== "file:") throw new TypeError(`Unsupported local filesystem URL: ${url}`);
-        return new FilesystemFile();
+        return new this(services, { url });
     }
 
     // ctor
-    constructor({ handle = null, isReadonly = false } = {}) {
-        super({ url:"file:", isReadonly });
+    constructor({}, { url = "file:", handle = null, isReadonly = false } = {}) {
+        // Reject unsupported identities for factory and direct construction alike.
+        if (url && url !== "file" && url !== "file:") throw new TypeError(`Unsupported local filesystem URL: ${url}`);
+
+        super({}, { url:"file:", isReadonly });
         this._rootHandle = handle;
     }
 

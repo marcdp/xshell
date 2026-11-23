@@ -131,15 +131,17 @@ async function readBytes(input, signal) {
 export default class FilesystemMem extends Filesystem {
 
     // static factory
-    static create({ }) {
+    static create({ url, services }) {
         // Create an isolated memory filesystem; this provider needs no runtime services.
-        return new FilesystemMem();
+        return new this(services, { url });
     }
 
 
     // constructor
-    constructor({ isReadonly = false } = {}) {
-        super({ url: "mem://", isReadonly });
+    constructor({}, { url = "mem:", isReadonly = false } = {}) {
+        // Preserve the provider-independent diagnostic identity for isolated memory filesystems.
+        super({}, { url: "mem://", isReadonly });
+        void url;
 
         this._entries = new Map();
         this._revision = 0;

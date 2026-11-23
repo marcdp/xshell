@@ -138,7 +138,7 @@ export default class Filesystem {
     static GetModes = GetModes;
     
     // ctor
-    constructor({ url = "", isReadonly = false } = {}) {
+    constructor({}, { url = "", isReadonly = false } = {}) {
         // 'url' is a SAFE diagnostic identity, never an authenticated URL.
         this._url = url;
         this.isReadonly = Boolean(isReadonly);
