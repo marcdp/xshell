@@ -1,14 +1,11 @@
 
-import Filesystem, {
-    EntryType,
-    GetModes,
-    joinPath,
-    pathName,
-    validatePath
-} from "./filesystem.js";
+import Filesystem, {EntryType, GetModes, joinPath, pathName, validatePath} from "./filesystem.js";
 
+// constants
 const READONLY_FLAG = 1;
 
+
+// utils
 function checkAbort(signal) {
     if (!signal?.aborted) return;
     if (typeof signal.throwIfAborted === "function") signal.throwIfAborted();
@@ -65,18 +62,34 @@ const MIME_TYPES = Object.freeze({
  */
 export default class FilesystemOpfs extends Filesystem {
 
-    // options schema
-    static optionsSchema = {
-        type: "object",
-        additionalProperties: false
+    // options definition
+    static optionsDefinition = {
+        schema: {
+            type: "object",
+            properties: {
+                isReadonly: {type: "boolean", title: "Read only", default: false}
+            },
+            additionalProperties: false
+        },
+
+        parseUrl(url) {
+            // Accept the existing local forms and deserialize their option-free identity.
+            if (url !== "opfs" && url !== "opfs:") throw new TypeError(`Unsupported OPFS filesystem URL: ${url}`);
+            return {options: {}};
+        },
+
+        getUrl(options, context = {}) {
+            // OPFS has one origin-scoped canonical identity.
+            void options;
+            void context;
+            return "opfs:";
+        }
     };
 
     // ctor
-    constructor({}, { url = "opfs:", isReadonly = false } = {}) {
-        // Reject unsupported identities for factory and direct construction alike.
-        if (url && url !== "opfs" && url !== "opfs:") throw new TypeError(`Unsupported OPFS filesystem URL: ${url}`);
-
-        super({}, { url: "opfs:", isReadonly });
+    constructor(services, options = {}, credentials = null) {
+        // Derive the constant canonical identity from provider options alone.
+        super(options);
         this._rootPromise = null;
     }
 

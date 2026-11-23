@@ -109,10 +109,15 @@ export default class Filesystems {
         if (!definition) throw new Error(`Filesystem provider not found: ${url}`);
 
         const Implementation = await this.#importProvider(url, definition);
-        const cacheKey = this.#getCacheKey(url, Implementation);
+        const optionsDefinition = this.#getProviderOptionsDefinition(url, Implementation);
+        const parsed = this.#parseProviderUrl(url, optionsDefinition);
+        const options = this.#mergeProviderOptions(definition, parsed.options);
+        this.#validateProviderOptions(url, optionsDefinition, options);
+        const canonicalUrl = this.#getProviderUrl(url, optionsDefinition, options);
+        const cacheKey = this.#getCacheKey(canonicalUrl, Implementation);
         if (cacheKey !== null && this.#instances.has(cacheKey)) return await this.#instances.get(cacheKey);
 
-        const creation = this.#createProvider(url, definition, Implementation);
+        const creation = this.#createProvider(options, Implementation);
         if (cacheKey !== null) this.#instances.set(cacheKey, creation);
         try {
             const instance = await creation;
@@ -139,39 +144,116 @@ export default class Filesystems {
 
     // private methods
     async #importProvider(url, definition) {
-        // Import the implementation class before asking it for provider-owned cache identity.
+        // Import the implementation class before asking it to deserialize provider configuration.
         try {
             return (await import(definition.implementation)).default;
         } catch (cause) {
             throw new Error(`Filesystem provider '${url}' could not import implementation '${definition.implementation}': ${cause.message}`, {cause});
         }
     }
-    async #createProvider(url, definition, Implementation) {
-        // Require the implementation-owned options schema before constructing the provider.
-        let schema;
+    #getProviderOptionsDefinition(url, Implementation) {
+        // Resolve and validate the provider-owned options definition once per materialization.
+        let optionsDefinition;
         try {
-            schema = Implementation?.optionsSchema;
+            optionsDefinition = Implementation?.optionsDefinition;
         } catch (cause) {
-            throw new Error(`Filesystem provider '${url}' has an invalid static optionsSchema: ${cause.message}`, {cause});
+            throw new Error(`Filesystem provider '${url}' has an invalid static optionsDefinition: ${cause.message}`, {cause});
         }
-        if (schema === undefined) throw new Error(`Filesystem provider '${url}' must define a static optionsSchema object.`);
-        if (!schema || typeof schema !== "object" || Array.isArray(schema)) {
-            throw new Error(`Filesystem provider '${url}' has an invalid static optionsSchema: expected a JSON Schema object.`);
+        if (optionsDefinition === undefined) throw new Error(`Filesystem provider '${url}' must define a static optionsDefinition object.`);
+        if (!optionsDefinition || typeof optionsDefinition !== "object" || Array.isArray(optionsDefinition)) {
+            throw new Error(`Filesystem provider '${url}' has an invalid static optionsDefinition: expected an object.`);
+        }
+        return optionsDefinition;
+    }
+    #parseProviderUrl(url, optionsDefinition) {
+        // Require provider-owned URL deserialization and constrain it to declarative options plus optional identity.
+        let parseUrl;
+        try {
+            parseUrl = optionsDefinition.parseUrl;
+        } catch (cause) {
+            throw new Error(`Filesystem provider '${url}' has an invalid static optionsDefinition.parseUrl: ${cause.message}`, {cause});
+        }
+        if (parseUrl === undefined) throw new Error(`Filesystem provider '${url}' must define static optionsDefinition.parseUrl().`);
+        if (typeof parseUrl !== "function") throw new Error(`Filesystem provider '${url}' has an invalid static optionsDefinition.parseUrl: expected a function.`);
+
+        let parsed;
+        try {
+            parsed = optionsDefinition.parseUrl(url);
+        } catch (cause) {
+            throw new Error(`Filesystem provider '${url}' static optionsDefinition.parseUrl() failed: ${cause.message}`, {cause});
+        }
+        if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+            throw new Error(`Filesystem provider '${url}' static optionsDefinition.parseUrl() must return an object.`);
+        }
+        if (Object.keys(parsed).some(key => key !== "options" && key !== "name")) {
+            throw new Error(`Filesystem provider '${url}' static optionsDefinition.parseUrl() may only return options and optional name.`);
+        }
+        if (!parsed.options || typeof parsed.options !== "object" || Array.isArray(parsed.options)) {
+            throw new Error(`Filesystem provider '${url}' static optionsDefinition.parseUrl() must return a non-null options object.`);
+        }
+        if (Object.hasOwn(parsed, "name") && parsed.name !== null && (typeof parsed.name !== "string" || !parsed.name)) {
+            throw new Error(`Filesystem provider '${url}' static optionsDefinition.parseUrl() name must be a non-empty string or null.`);
         }
 
-        // Validate a private authored-options snapshot before adding the domain-owned URL.
-        const options = structuredClone(definition.options ?? {});
+        try {
+            return {options: structuredClone(parsed.options), name: parsed.name ?? null};
+        } catch (cause) {
+            throw new Error(`Filesystem provider '${url}' static optionsDefinition.parseUrl() returned options that cannot be cloned: ${cause.message}`, {cause});
+        }
+    }
+    #mergeProviderOptions(definition, parsedOptions) {
+        // Merge private snapshots so URL-derived configuration wins without mutating authored defaults.
+        return {...structuredClone(definition.options ?? {}), ...structuredClone(parsedOptions)};
+    }
+    #validateProviderOptions(url, optionsDefinition, options) {
+        // Require the definition-owned configuration schema before URL projection or construction.
+        let schema;
+        try {
+            schema = optionsDefinition.schema;
+        } catch (cause) {
+            throw new Error(`Filesystem provider '${url}' has an invalid static optionsDefinition.schema: ${cause.message}`, {cause});
+        }
+        if (schema === undefined) throw new Error(`Filesystem provider '${url}' must define static optionsDefinition.schema.`);
+        if (!schema || typeof schema !== "object" || Array.isArray(schema)) {
+            throw new Error(`Filesystem provider '${url}' has an invalid static optionsDefinition.schema: expected a JSON Schema object.`);
+        }
+
+        // Validate the merged declarative configuration before projecting its canonical URL.
         let result;
         try {
             result = this.#jsonValidator.validate(options, schema);
         } catch (cause) {
-            throw new Error(`Filesystem provider '${url}' has an invalid static optionsSchema: ${cause.message}`, {cause});
+            throw new Error(`Filesystem provider '${url}' has an invalid static optionsDefinition.schema: ${cause.message}`, {cause});
         }
         if (!result.valid) {
             throw new Error(`Invalid Filesystem provider options for '${url}'${this.#formatValidationFailure(result.errors)}.`, {cause: result.errors});
         }
+    }
+    #getProviderUrl(url, optionsDefinition, options) {
+        // Project validated configuration into the single canonical runtime URL.
+        let getUrl;
+        try {
+            getUrl = optionsDefinition.getUrl;
+        } catch (cause) {
+            throw new Error(`Filesystem provider '${url}' has an invalid static optionsDefinition.getUrl: ${cause.message}`, {cause});
+        }
+        if (getUrl === undefined) throw new Error(`Filesystem provider '${url}' must define static optionsDefinition.getUrl().`);
+        if (typeof getUrl !== "function") throw new Error(`Filesystem provider '${url}' has an invalid static optionsDefinition.getUrl: expected a function.`);
 
-        // Resolve provider dependencies lazily through this singleton's owning Services context.
+        let canonicalUrl;
+        try {
+            canonicalUrl = optionsDefinition.getUrl(structuredClone(options));
+        } catch (cause) {
+            throw new Error(`Filesystem provider '${url}' static optionsDefinition.getUrl() failed: ${cause.message}`, {cause});
+        }
+        if (typeof canonicalUrl !== "string" || !canonicalUrl.trim()) {
+            throw new Error(`Filesystem provider '${url}' static optionsDefinition.getUrl() must return a non-empty string.`);
+        }
+        return canonicalUrl;
+    }
+    async #createProvider(options, Implementation, credentials = null) {
+        // Resolve provider dependencies lazily and construct from options plus optional credentials.
+
         const services = this.#services;
         const dependencies = new Proxy({}, {
             get(target, property) {
@@ -179,7 +261,7 @@ export default class Filesystems {
                 return typeof property === "string" ? services.resolve(property) : undefined;
             }
         });
-        return new Implementation(dependencies, {...options, url});
+        return new Implementation(dependencies, structuredClone(options), credentials);
     }
     #formatValidationFailure(errors) {
         // Select the most specific validation detail using the same conventions as Services.

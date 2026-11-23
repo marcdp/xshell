@@ -33,19 +33,35 @@ function matchesPattern(name, pattern) {
 
 export default class FilesystemFile extends Filesystem {
 
-    // options schema
-    static optionsSchema = {
-        type: "object",
-        additionalProperties: false
+    // options definition
+    static optionsDefinition = {
+        schema: {
+            type: "object",
+            properties: {
+                isReadonly: {type: "boolean", title: "Read only", default: false}
+            },
+            additionalProperties: false
+        },
+
+        parseUrl(url) {
+            // Accept the existing local forms without attempting to serialize a directory handle.
+            if (url !== "file" && url !== "file:") throw new TypeError(`Unsupported local filesystem URL: ${url}`);
+            return {options: {}};
+        },
+
+        getUrl(options, context = {}) {
+            // Local directory handles remain runtime-only behind one canonical URL.
+            void options;
+            void context;
+            return "file:";
+        }
     };
 
     // ctor
-    constructor({}, { url = "file:", handle = null, isReadonly = false } = {}) {
-        // Reject unsupported identities for factory and direct construction alike.
-        if (url && url !== "file" && url !== "file:") throw new TypeError(`Unsupported local filesystem URL: ${url}`);
-
-        super({}, { url:"file:", isReadonly });
-        this._rootHandle = handle;
+    constructor(services, options = {}, credentials = null) {
+        // Derive the constant canonical identity while retaining the runtime-only directory handle.
+        super(options);
+        this._rootHandle = options.handle ?? null;
     }
 
     // props

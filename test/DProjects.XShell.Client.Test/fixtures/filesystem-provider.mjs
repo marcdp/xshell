@@ -16,10 +16,25 @@ export function waitForCallCount(count) {
 }
 
 export default class TestFilesystemProvider {
-    static optionsSchema = {
-        type: "object",
-        properties: { tag: { type: "string" } },
-        additionalProperties: false
+    static optionsDefinition = {
+        schema: {
+            type: "object",
+            required: ["scheme", "resource"],
+            properties: { scheme: { type: "string", minLength: 1 }, tag: { type: "string" }, resource: { type: "string", minLength: 1 } },
+            additionalProperties: false
+        },
+
+        parseUrl(url) {
+            // Deserialize the opaque test resource so Filesystems can validate and re-project it.
+            const separator = url.indexOf(":");
+            return {options: {scheme: url.slice(0, separator).toLowerCase(), resource: url.slice(separator + 1)}};
+        },
+
+        getUrl(options, context = {}) {
+            // Normalize trailing slashes while preserving query variants for provider-owned cache policy.
+            void context;
+            return `${options.scheme}:${options.resource.replace(/\/+$/, "")}`;
+        }
     };
 
     static getCacheKey(url) {
@@ -31,9 +46,9 @@ export default class TestFilesystemProvider {
             ? url : url.substring(0, queryIndex) + (fragmentIndex === -1 ? "" : url.substring(fragmentIndex));
     }
 
-    constructor(services, options = {}) {
-        // Record the provider URL before exercising failure and Loader sharing behavior.
-        const call = { url: options.url, options: structuredClone(options), number: calls.length + 1 };
+    constructor(services, options = {}, credentials = null) {
+        // Record options-derived identity before exercising failure and Loader sharing behavior.
+        const call = { url: TestFilesystemProvider.optionsDefinition.getUrl(options), options: structuredClone(options), credentials, number: calls.length + 1 };
         calls.push(call);
         for (const waiter of waiters.filter(item => calls.length >= item.count)) waiter.resolve();
         waiters = waiters.filter(item => calls.length < item.count);

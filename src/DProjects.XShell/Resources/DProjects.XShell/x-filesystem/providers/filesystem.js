@@ -136,12 +136,16 @@ export default class Filesystem {
 
     // static
     static GetModes = GetModes;
+
+    // vars
+    #url = "";
+    #isReadonly = false;
     
     // ctor
-    constructor({}, { url = "", isReadonly = false } = {}) {
-        // 'url' is a SAFE diagnostic identity, never an authenticated URL.
-        this._url = url;
-        this.isReadonly = Boolean(isReadonly);
+    constructor(options = {}) {
+        // Retain provider-independent runtime options and derive provider URLs from their option definitions.
+        this.#url = this.constructor.optionsDefinition?.getUrl(options) ?? "";
+        this.#isReadonly = Boolean(options.isReadonly ?? false);
         this.isStarted = false;
     }
     dispose() { 
@@ -149,7 +153,8 @@ export default class Filesystem {
     }
 
     // props
-    get url() { return this._url; }
+    get url() { return this.#url; }
+    get isReadonly() { return this.#isReadonly; }
 
     // LEVEL 0: provider primitives
     async getEntry(path, { signal } = {}) {
@@ -396,13 +401,12 @@ export default class Filesystem {
     }
 
     // lifecycle methods
-    start() { 
-        this.isStarted = true; 
+    start() {
+        this.isStarted = true;
     }
-    stop() { 
-        this.isStarted = false; 
+    stop() {
+        this.isStarted = false;
     }
-
 
     // private methods
     _ensureWritable() {

@@ -85,23 +85,29 @@ function createController() {
 }
 
 test("Filesystems.open resolves and imports providers locally", async () => {
-    // Prove authored options are cloned, validated before URL composition, and passed to direct construction.
+    // Prove parsed options override cloned defaults and the canonical URL reaches direct construction.
     const implementation = "data:text/javascript," + encodeURIComponent(`export default class Implementation {
-        static optionsSchema = {type: "object", properties: {tag: {type: "string"}, url: {type: "string"}}, additionalProperties: false};
-        constructor(services, options) { this.options = structuredClone(options); options.tag = "provider mutation"; }
+        static optionsDefinition = {
+            schema: {type: "object", required: ["scheme", "resource"], properties: {scheme: {type: "string"}, tag: {type: "string"}, resource: {type: "string"}}, additionalProperties: false},
+            parseUrl(url) { if (!this.schema) throw new Error("missing descriptor context"); const separator = url.indexOf(":"); return {options: {scheme: url.slice(0, separator).toLowerCase(), resource: url.slice(separator + 1)}}; },
+            getUrl(options) { if (!this.schema) throw new Error("missing descriptor context"); return options.scheme + ":" + options.resource.toLowerCase(); }
+        };
+        constructor(services, options, credentials = null) { this.options = structuredClone(options); this.url = Implementation.optionsDefinition.getUrl(options); this.credentials = credentials; options.tag = "provider mutation"; }
     }`);
-    const providerOptions = {tag: "configured", url: "authored:override"};
+    const providerOptions = {tag: "configured", resource: "authored"};
     const jsonValidator = new JsonValidator();
     const filesystems = new Filesystems({config: testConfig, jsonValidator, services: createServices({jsonValidator})}, {
         providers: {test: {implementation, options: providerOptions}}
     });
     providerOptions.tag = "changed";
 
-    const instance = await filesystems.open("test:demo");
-    const second = await filesystems.open("test:demo");
-    assert.deepEqual(instance.options, {tag: "configured", url: "test:demo"});
+    const instance = await filesystems.open("test:DEMO");
+    const second = await filesystems.open("test:DEMO");
+    assert.deepEqual(instance.options, {tag: "configured", scheme: "test", resource: "DEMO"});
+    assert.equal(instance.url, "test:demo");
+    assert.equal(instance.credentials, null);
     assert.notStrictEqual(instance, second);
-    assert.deepEqual(providerOptions, {tag: "changed", url: "authored:override"});
+    assert.deepEqual(providerOptions, {tag: "changed", resource: "authored"});
     for (const value of [null, undefined, "", "   ", 0, false, {}, []]) {
         await assert.rejects(() => filesystems.open(value), { name: "TypeError", message: "Filesystem URL must be a non-empty string." });
     }
@@ -119,7 +125,7 @@ test("Filesystems.open preserves local provider memory identity semantics withou
     // Exercise scheme dispatch, direct import, validation, construction, and the domain-owned cache.
     const providerUrl = new URL("../../src/DProjects.XShell/Resources/DProjects.XShell/x-filesystem/providers/filesystem-mem.js", import.meta.url).href;
     const {resolver, loader, filesystems} = createRuntime({
-        mem: {implementation: providerUrl}
+        mem: {implementation: providerUrl, options: {instance: "configured"}}
     });
 
     const anonymousFirst = await filesystems.open("mem:");
@@ -132,6 +138,7 @@ test("Filesystems.open preserves local provider memory identity semantics withou
     assert.notStrictEqual(anonymousFirst, anonymousSecond);
     assert.strictEqual(namedFirst, namedAgain);
     assert.notStrictEqual(namedFirst, namedOther);
+    assert.deepEqual([anonymousFirst.url, namedFirst.url, namedOther.url], ["mem:", "mem:demo", "mem:other"]);
     assert.equal((await namedAgain.getEntry("/shared.txt")).length, 12);
     assert.equal(await namedOther.getEntry("/shared.txt"), null);
     assert.deepEqual(loader.registry, []);
@@ -191,8 +198,8 @@ test("providers can define query-independent cache identity", async () => {
     assert.deepEqual(provider.getCalls().map(call => call.url), ["test:demo?view=one"]);
 });
 
-test("Filesystems adds the provider URL after options validation", async () => {
-    // Verify direct materialization passes the domain URL without exposing Loader selection in configuration.
+test("Filesystems constructs from validated options without injecting the projected URL", async () => {
+    // Verify construction receives the URL representation as options and leaves credentials null.
     const providerUrl = new URL("./fixtures/filesystem-provider.mjs?case=context", import.meta.url).href;
     const provider = await import(providerUrl);
     provider.reset();
@@ -202,19 +209,24 @@ test("Filesystems adds the provider URL after options validation", async () => {
 
     assert.deepEqual(loader.registry, []);
     assert.deepEqual(provider.getCalls().map(call => call.url), ["test:demo"]);
-    assert.deepEqual(provider.getCalls().map(call => call.options), [{tag: "configured", url: "test:demo"}]);
+    assert.deepEqual(provider.getCalls().map(call => call.options), [{tag: "configured", scheme: "test", resource: "demo"}]);
+    assert.deepEqual(provider.getCalls().map(call => call.credentials), [null]);
 });
 
-test("Filesystems requires valid schemas and resolves provider dependencies lazily", async () => {
-    // Reject schema and option failures before construction, then expose only requested Services plus the owning context.
-    for (const [schemaSource, expected] of [
-        ["", /must define a static optionsSchema object/],
-        ["static optionsSchema = [];", /invalid static optionsSchema.*expected a JSON Schema object/],
-        ["static optionsSchema = {type: 'object', patternProperties: {'[': {type: 'string'}}};", /invalid static optionsSchema/]
+test("Filesystems requires valid provider options definitions and resolves dependencies lazily", async () => {
+    // Reject definition, schema, and option failures before construction, then expose only requested Services plus the owning context.
+    for (const [optionsSource, expected] of [
+        ["", /must define a static optionsDefinition object/],
+        ["static optionsDefinition = null;", /invalid static optionsDefinition.*expected an object/],
+        ["static optionsDefinition = [];", /invalid static optionsDefinition.*expected an object/],
+        ["static optionsDefinition = {};", /must define static optionsDefinition\.parseUrl\(\)/],
+        ["static optionsDefinition = {parseUrl() { return {options: {}}; }, getUrl() { return 'test:demo'; }};", /must define static optionsDefinition\.schema/],
+        ["static optionsDefinition = {schema: [], parseUrl() { return {options: {}}; }, getUrl() { return 'test:demo'; }};", /invalid static optionsDefinition\.schema.*expected a JSON Schema object/],
+        ["static optionsDefinition = {schema: {type: 'object', patternProperties: {'[': {type: 'string'}}}, parseUrl() { return {options: {}}; }, getUrl() { return 'test:demo'; }};", /invalid static optionsDefinition\.schema/]
     ]) {
         globalThis.__filesystemConstructions = 0;
         const implementation = "data:text/javascript," + encodeURIComponent(`export default class Implementation {
-            ${schemaSource} constructor() { globalThis.__filesystemConstructions++; }
+            ${optionsSource} constructor() { globalThis.__filesystemConstructions++; }
         }`);
         const jsonValidator = new JsonValidator();
         const filesystems = new Filesystems({config: testConfig, jsonValidator, services: createServices({jsonValidator})}, {
@@ -225,8 +237,12 @@ test("Filesystems requires valid schemas and resolves provider dependencies lazi
     }
 
     const implementation = "data:text/javascript," + encodeURIComponent(`export default class Implementation {
-        static optionsSchema = {type: "object", properties: {timeout: {type: "integer"}}, additionalProperties: false};
-        constructor({secrets, services}, options) { this.secrets = secrets; this.services = services; this.options = options; }
+        static optionsDefinition = {
+            schema: {type: "object", properties: {scheme: {type: "string"}, timeout: {type: "integer"}, resource: {type: "string"}}, additionalProperties: false},
+            parseUrl(url) { const separator = url.indexOf(":"); return {options: {scheme: url.slice(0, separator), resource: url.slice(separator + 1)}}; },
+            getUrl(options) { return options.scheme + ":" + options.resource; }
+        };
+        constructor({secrets, services}, options, credentials = null) { this.secrets = secrets; this.services = services; this.options = options; this.credentials = credentials; }
     }`);
     const jsonValidator = new JsonValidator();
     const serviceScope = createServices({jsonValidator, secrets: {credential: "work"}, unused: {}});
@@ -236,8 +252,65 @@ test("Filesystems requires valid schemas and resolves provider dependencies lazi
     const instance = await filesystems.open("test:demo");
     assert.deepEqual(instance.secrets, {credential: "work"});
     assert.strictEqual(instance.services, serviceScope);
+    assert.equal(instance.credentials, null);
     assert.deepEqual(serviceScope.resolved, ["secrets"]);
     delete globalThis.__filesystemConstructions;
+});
+
+test("Filesystems requires valid URL parsing and projection contracts", async () => {
+    // Reject missing, malformed, and throwing provider URL methods before construction.
+    const cases = [
+        ["static optionsDefinition = {schema: {}, getUrl() { return 'test:demo'; }};", /must define static optionsDefinition\.parseUrl\(\)/],
+        ["static optionsDefinition = {schema: {}, parseUrl: true, getUrl() { return 'test:demo'; }};", /invalid static optionsDefinition\.parseUrl.*expected a function/],
+        ["static optionsDefinition = {schema: {}, parseUrl() { throw new Error('parse failed'); }, getUrl() { return 'test:demo'; }};", /static optionsDefinition\.parseUrl\(\) failed: parse failed/],
+        ["static optionsDefinition = {schema: {}, parseUrl() { return null; }, getUrl() { return 'test:demo'; }};", /static optionsDefinition\.parseUrl\(\) must return an object/],
+        ["static optionsDefinition = {schema: {}, parseUrl() { return {options: {}, handle: {}}; }, getUrl() { return 'test:demo'; }};", /may only return options and optional name/],
+        ["static optionsDefinition = {schema: {}, parseUrl() { return {options: []}; }, getUrl() { return 'test:demo'; }};", /must return a non-null options object/],
+        ["static optionsDefinition = {schema: {}, parseUrl() { return {options: {}, name: ''}; }, getUrl() { return 'test:demo'; }};", /name must be a non-empty string or null/],
+        ["static optionsDefinition = {schema: {}, parseUrl() { return {options: {}}; }};", /must define static optionsDefinition\.getUrl\(\)/],
+        ["static optionsDefinition = {schema: {}, parseUrl() { return {options: {}}; }, getUrl: true};", /invalid static optionsDefinition\.getUrl.*expected a function/],
+        ["static optionsDefinition = {schema: {}, parseUrl() { return {options: {}}; }, getUrl() { throw new Error('projection failed'); }};", /static optionsDefinition\.getUrl\(\) failed: projection failed/],
+        ["static optionsDefinition = {schema: {}, parseUrl() { return {options: {}}; }, getUrl() { return ''; }};", /static optionsDefinition\.getUrl\(\) must return a non-empty string/]
+    ];
+    for (const [optionsSource, expected] of cases) {
+        globalThis.__filesystemContractConstructions = 0;
+        const implementation = "data:text/javascript," + encodeURIComponent(`export default class Implementation {
+            ${optionsSource} constructor() { globalThis.__filesystemContractConstructions++; }
+        }`);
+        const jsonValidator = new JsonValidator();
+        const filesystems = new Filesystems({config: testConfig, jsonValidator, services: createServices({jsonValidator})}, {
+            providers: {test: {implementation}}
+        });
+        await assert.rejects(() => filesystems.open("test:demo"), expected);
+        assert.equal(globalThis.__filesystemContractConstructions, 0);
+    }
+    delete globalThis.__filesystemContractConstructions;
+});
+
+test("Filesystems validates parsed and merged options before canonical projection", async () => {
+    // Prove invalid parsed data stops projection and construction after defaults are merged.
+    globalThis.__filesystemProjectionCalls = 0;
+    globalThis.__filesystemValidationConstructions = 0;
+    const implementation = "data:text/javascript," + encodeURIComponent(`export default class Implementation {
+        static optionsDefinition = {
+            schema: {type: "object", required: ["count"], properties: {count: {type: "integer"}}, additionalProperties: false},
+            parseUrl() { return {options: {count: "invalid"}}; },
+            getUrl() { globalThis.__filesystemProjectionCalls++; return "test:canonical"; }
+        };
+        constructor() { globalThis.__filesystemValidationConstructions++; }
+    }`);
+    const jsonValidator = new JsonValidator();
+    const defaults = {count: 1};
+    const filesystems = new Filesystems({config: testConfig, jsonValidator, services: createServices({jsonValidator})}, {
+        providers: {test: {implementation, options: defaults}}
+    });
+
+    await assert.rejects(() => filesystems.open("test:demo"), /Invalid Filesystem provider options/);
+    assert.equal(globalThis.__filesystemProjectionCalls, 0);
+    assert.equal(globalThis.__filesystemValidationConstructions, 0);
+    assert.deepEqual(defaults, {count: 1});
+    delete globalThis.__filesystemProjectionCalls;
+    delete globalThis.__filesystemValidationConstructions;
 });
 
 test("Filesystems validates provider-defined cache identity before construction", async () => {
@@ -249,7 +322,11 @@ test("Filesystems validates provider-defined cache identity before construction"
     ]) {
         globalThis.__filesystemCacheConstructions = 0;
         const implementation = "data:text/javascript," + encodeURIComponent(`export default class Implementation {
-            static optionsSchema = {type: "object", additionalProperties: false};
+            static optionsDefinition = {
+                schema: {type: "object", properties: {scheme: {type: "string"}, resource: {type: "string"}}, additionalProperties: false},
+                parseUrl(url) { const separator = url.indexOf(":"); return {options: {scheme: url.slice(0, separator), resource: url.slice(separator + 1)}}; },
+                getUrl(options) { return options.scheme + ":" + options.resource; }
+            };
             ${cacheSource} constructor() { globalThis.__filesystemCacheConstructions++; }
         }`);
         const jsonValidator = new JsonValidator();
@@ -260,6 +337,21 @@ test("Filesystems validates provider-defined cache identity before construction"
         assert.equal(globalThis.__filesystemCacheConstructions, 0);
     }
     delete globalThis.__filesystemCacheConstructions;
+});
+
+test("Filesystems uses the canonical projected URL for cache identity", async () => {
+    // Collapse distinct raw spellings only after provider-owned canonical projection.
+    const providerUrl = new URL("./fixtures/filesystem-provider.mjs?case=canonical-cache", import.meta.url).href;
+    const provider = await import(providerUrl);
+    provider.reset();
+    const {filesystems} = createRuntime({test: {implementation: providerUrl}});
+
+    const first = await filesystems.open("test:demo/");
+    const second = await filesystems.open("test:demo");
+
+    assert.strictEqual(first, second);
+    assert.equal(first.url, "test:demo");
+    assert.equal(provider.getCalls().length, 1);
 });
 
 test("Filesystems options validate commands, keyed editors, and closed provider definitions", () => {
@@ -291,22 +383,32 @@ test("Filesystems options validate commands, keyed editors, and closed provider 
 });
 
 test("filesystem implementations retain direct dependency/options construction", () => {
-    // Preserve provider constructor defaults, runtime-only options, and the absence of factory methods.
+    // Construct every provider from options plus separate credentials, never a projected URL option.
     const services = new Proxy({}, {get() { throw new Error("Filesystem provider unexpectedly resolved a Service"); }});
     const handle = {kind: "directory"};
+    const credentials = {token: "runtime-only"};
     const providers = [
-        new Filesystem({}, {url: "test:", isReadonly: true}),
-        new FilesystemMem(services, {url: "mem:direct", isReadonly: true}),
-        new FilesystemHttp(services, {url: new URL("https://example.test/files/"), isReadonly: true}),
-        new FilesystemOpfs(services, {url: "opfs:", isReadonly: true}),
-        new FilesystemFile(services, {url: "file:", handle, isReadonly: true})
+        new Filesystem({isReadonly: true}),
+        new FilesystemMem(services, {instance: "direct", isReadonly: true}, credentials),
+        new FilesystemHttp(services, {scheme: "https", host: "example.test", path: "/files/", isReadonly: true}, credentials),
+        new FilesystemOpfs(services, {isReadonly: true}, credentials),
+        new FilesystemFile(services, {handle, isReadonly: true}, credentials)
     ];
 
-    assert.deepEqual(providers.map(provider => provider.url), ["test:", "mem://", "https://example.test/files", "opfs:", "file:"]);
+    assert.deepEqual(providers.map(provider => provider.url), ["", "mem:direct", "https://example.test/files", "opfs:", "file:"]);
     assert.deepEqual(providers.map(provider => provider.isReadonly), [true, true, true, true, true]);
     assert.strictEqual(providers[4].handle, handle);
     for (const Implementation of [FilesystemMem, FilesystemHttp, FilesystemOpfs, FilesystemFile]) {
-        assert.deepEqual(Implementation.optionsSchema, {type: "object", additionalProperties: false});
+        assert.equal(typeof Implementation.optionsDefinition, "object");
+        assert.equal(Array.isArray(Implementation.optionsDefinition), false);
+        assert.equal(typeof Implementation.optionsDefinition.schema, "object");
+        assert.equal(typeof Implementation.optionsDefinition.parseUrl, "function");
+        assert.equal(typeof Implementation.optionsDefinition.getUrl, "function");
+        assert.deepEqual(Object.keys(Implementation.optionsDefinition), ["schema", "parseUrl", "getUrl"]);
+        assert.equal(Object.hasOwn(Implementation, "options"), false);
+        assert.equal(Object.hasOwn(Implementation, "optionsSchema"), false);
+        assert.equal(Object.hasOwn(Implementation, "parseUrl"), false);
+        assert.equal(Object.hasOwn(Implementation, "getUrl"), false);
         assert.equal(Object.hasOwn(Implementation, "create"), false);
     }
     assert.equal(FilesystemMem.getCacheKey("mem:"), null);
@@ -314,15 +416,84 @@ test("filesystem implementations retain direct dependency/options construction",
     assert.equal(FilesystemHttp.getCacheKey, undefined);
 });
 
-test("direct filesystem construction preserves provider URL validation", () => {
-    // Keep provider-specific runtime invariants independent from domain materialization.
-    assert.throws(() => new FilesystemHttp("https://example.test/files"), /baseUrl must be a URL or string/);
-    assert.throws(() => new FilesystemHttp({}, {url: "file:///tmp"}), /requires an HTTP or HTTPS URL/);
-    for (const url of ["https://user@example.test/files", "https://example.test/files?view=all", "https://example.test/files#entry"]) {
-        assert.throws(() => new FilesystemHttp({}, {url}), /must not contain credentials, query or fragment/);
+test("filesystem provider schemas describe declarative options and exclude runtime URL state", () => {
+    // Keep the schemas suitable for generated forms without admitting canonical URLs or local handles.
+    const validator = new JsonValidator();
+    for (const Implementation of [FilesystemMem, FilesystemOpfs, FilesystemFile]) {
+        assert.equal(validator.validate({}, Implementation.optionsDefinition.schema).valid, true);
+        assert.equal(validator.validate({isReadonly: true}, Implementation.optionsDefinition.schema).valid, true);
+        assert.equal(Implementation.optionsDefinition.schema.properties.isReadonly.default, false);
+        assert.equal(validator.validate({url: "runtime:"}, Implementation.optionsDefinition.schema).valid, false);
     }
-    assert.throws(() => new FilesystemOpfs({}, {url: "opfs:demo"}), /Unsupported OPFS filesystem URL: opfs:demo/);
-    assert.throws(() => new FilesystemFile({}, {url: "file:demo"}), /Unsupported local filesystem URL: file:demo/);
+    assert.equal(FilesystemMem.optionsDefinition.schema.properties.instance.default, null);
+    assert.equal(validator.validate({instance: null}, FilesystemMem.optionsDefinition.schema).valid, true);
+    assert.equal(validator.validate({instance: "nameOfTheInstance"}, FilesystemMem.optionsDefinition.schema).valid, true);
+    assert.equal(validator.validate({instance: ""}, FilesystemMem.optionsDefinition.schema).valid, false);
+    assert.equal(validator.validate({instance: 1}, FilesystemMem.optionsDefinition.schema).valid, false);
+    assert.equal(validator.validate({scheme: "https", host: "example.test", path: "/files", isReadonly: true}, FilesystemHttp.optionsDefinition.schema).valid, true);
+    assert.equal(validator.validate({scheme: "ftp", host: "example.test", path: "/files"}, FilesystemHttp.optionsDefinition.schema).valid, false);
+    assert.equal(validator.validate({path: "/files"}, FilesystemHttp.optionsDefinition.schema).valid, false);
+    assert.equal(validator.validate({scheme: "https", host: "example.test", url: "https://example.test/"}, FilesystemHttp.optionsDefinition.schema).valid, false);
+    assert.equal(validator.validate({handle: {kind: "directory"}}, FilesystemFile.optionsDefinition.schema).valid, false);
+});
+
+test("filesystem providers parse and canonically project their URL-represented configuration", () => {
+    // Exercise provider round trips independently from Filesystems orchestration.
+    const validator = new JsonValidator();
+    const anonymous = FilesystemMem.optionsDefinition.parseUrl(FilesystemMem.optionsDefinition.getUrl({instance: null}, {scheme: "mem"}));
+    const named = FilesystemMem.optionsDefinition.parseUrl(FilesystemMem.optionsDefinition.getUrl({instance: "nameOfTheInstance", isReadonly: true}, {scheme: "mem"}));
+    assert.deepEqual(anonymous, {options: {instance: null}});
+    assert.deepEqual(named, {options: {instance: "nameOfTheInstance"}});
+
+    for (const [raw, canonical, expectedOptions] of [
+        ["http://example.test:8080/files/", "http://example.test:8080/files", {scheme: "http", host: "example.test:8080", path: "/files"}],
+        ["https://example.test/", "https://example.test/", {scheme: "https", host: "example.test", path: "/"}]
+    ]) {
+        const parsed = FilesystemHttp.optionsDefinition.parseUrl(raw);
+        assert.deepEqual(parsed, {options: expectedOptions});
+        assert.equal(validator.validate(parsed.options, FilesystemHttp.optionsDefinition.schema).valid, true);
+        assert.equal(FilesystemHttp.optionsDefinition.getUrl(parsed.options), canonical);
+        assert.deepEqual(FilesystemHttp.optionsDefinition.parseUrl(canonical), parsed);
+    }
+
+    for (const [Implementation, input, canonical] of [
+        [FilesystemOpfs, "opfs", "opfs:"],
+        [FilesystemFile, "file", "file:"]
+    ]) {
+        const parsed = Implementation.optionsDefinition.parseUrl(input);
+        assert.equal(validator.validate(parsed.options, Implementation.optionsDefinition.schema).valid, true);
+        assert.equal(Implementation.optionsDefinition.getUrl(parsed.options), canonical);
+        assert.deepEqual(Implementation.optionsDefinition.parseUrl(canonical), parsed);
+    }
+});
+
+test("HTTP opening overlays URL fields on provider defaults without encoding readonly state", async () => {
+    // Keep URL-represented host and path authoritative while retaining non-URL provider configuration.
+    const providerUrl = new URL("../../src/DProjects.XShell/Resources/DProjects.XShell/x-filesystem/providers/filesystem-http.js", import.meta.url).href;
+    const defaults = {scheme: "http", host: "configured.test", path: "/configured", isReadonly: true};
+    const {filesystems} = createRuntime({https: {implementation: providerUrl, options: defaults}});
+
+    const filesystem = await filesystems.open("https://example.test:8443/files/");
+
+    assert.equal(filesystem.url, "https://example.test:8443/files");
+    assert.equal(filesystem.isReadonly, true);
+    assert.deepEqual(defaults, {scheme: "http", host: "configured.test", path: "/configured", isReadonly: true});
+});
+
+test("direct filesystem construction validates structured provider options", () => {
+    // Keep provider-specific runtime invariants independent from domain materialization.
+    assert.throws(() => new FilesystemHttp({}, {}), /Unsupported HTTP filesystem scheme/);
+    assert.throws(() => new FilesystemHttp({}, {scheme: "file", host: "example.test", path: "/"}), /Unsupported HTTP filesystem scheme/);
+    for (const url of ["https://user@example.test/files", "https://example.test/files?view=all", "https://example.test/files#entry"]) {
+        assert.throws(() => FilesystemHttp.optionsDefinition.parseUrl(url), /must not contain credentials, query or fragment/);
+    }
+    assert.throws(() => FilesystemHttp.optionsDefinition.getUrl({scheme: "https", host: "user@example.test", path: "/"}), /Invalid HTTP filesystem host/);
+    assert.throws(() => FilesystemHttp.optionsDefinition.getUrl({scheme: "https", host: "example.test", path: "relative"}), /path must start/);
+    assert.throws(() => FilesystemHttp.optionsDefinition.getUrl({scheme: "ftp", host: "example.test", path: "/"}), /Unsupported HTTP filesystem scheme/);
+    assert.throws(() => FilesystemMem.optionsDefinition.parseUrl("mem:invalid identity"), /Unsupported memory filesystem URL/);
+    assert.throws(() => new FilesystemMem({}, {instance: "invalid identity"}), /instance must be a non-empty string or null/);
+    assert.throws(() => FilesystemOpfs.optionsDefinition.parseUrl("opfs:demo"), /Unsupported OPFS filesystem URL: opfs:demo/);
+    assert.throws(() => FilesystemFile.optionsDefinition.parseUrl("file:demo"), /Unsupported local filesystem URL: file:demo/);
 });
 
 test("x-filesystem manifest uses the providers directory for instance implementations", () => {

@@ -130,10 +130,29 @@ async function readBytes(input, signal) {
 // class
 export default class FilesystemMem extends Filesystem {
 
-    // options schema
-    static optionsSchema = {
-        type: "object",
-        additionalProperties: false
+    // options definition
+    static optionsDefinition = {
+        schema: {
+            type: "object",
+            properties: {
+                instance: {type: ["string", "null"], title: "Instance", description: "Logical memory filesystem instance name.", minLength: 1, default: null},
+                isReadonly: {type: "boolean", title: "Read only", default: false}
+            },
+            additionalProperties: false
+        },
+        parseUrl(url) {
+            if (typeof url !== "string") throw new TypeError("Memory filesystem URL must be a string");
+            const match = url.match(/^mem:(.*)$/i);
+            if (!match || /[\x00-\x20]/.test(match[1])) throw new TypeError(`Unsupported memory filesystem URL: ${url}`);
+            return {options: {instance: match[1] || null}};
+        },
+        getUrl(options) {
+            if (options.instance === null || options.instance === undefined) return "mem:";
+            if (typeof options.instance !== "string" || !options.instance || /[\x00-\x20]/.test(options.instance)) {
+                throw new TypeError("Memory filesystem instance must be a non-empty string or null");
+            }
+            return `mem:${options.instance}`;
+        }
     };
 
     static getCacheKey(url) {
@@ -143,10 +162,8 @@ export default class FilesystemMem extends Filesystem {
     }
 
     // constructor
-    constructor({}, { url = "mem:", isReadonly = false } = {}) {
-        // Preserve the provider-independent diagnostic identity for isolated memory filesystems.
-        super({}, { url: "mem://", isReadonly });
-        void url;
+    constructor(services, options = {}, credentials = null) {
+        super(options);
 
         this._entries = new Map();
         this._revision = 0;

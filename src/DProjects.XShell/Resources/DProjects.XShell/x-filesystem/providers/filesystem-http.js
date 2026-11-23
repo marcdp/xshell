@@ -32,30 +32,67 @@ function checkAbort(signal) {
 // class
 export default class FilesystemHttp extends Filesystem {
 
-    // options schema
-    static optionsSchema = {
-        type: "object",
-        additionalProperties: false
+    // options definition
+    static optionsDefinition = {
+        schema: {
+            type: "object",
+            required: ["scheme", "host"],
+            properties: {
+                scheme: {type: "string", title: "Scheme", enum: ["http", "https"]},
+                host: {type: "string", title: "Host", description: "Server hostname, optionally including a port.", minLength: 1},
+                path: {type: "string", title: "Path", default: "/", pattern: "^/"},
+                isReadonly: {type: "boolean", title: "Read only", default: false}
+            },
+            additionalProperties: false
+        },
+
+        parseUrl(url) {
+            // Deserialize the endpoint into form-friendly host and path options.
+            if (typeof url !== "string" && !(url instanceof URL)) throw new TypeError("baseUrl must be a URL or string");
+            let normalizedUrl;
+            try {
+                normalizedUrl = new URL(url, globalThis.location?.href);
+            } catch (cause) {
+                throw new TypeError(`Invalid HTTP filesystem URL: ${url}`, {cause});
+            }
+            if (!["http:", "https:"].includes(normalizedUrl.protocol)) throw new TypeError("The HTTP filesystem requires an HTTP or HTTPS URL");
+            if (normalizedUrl.username || normalizedUrl.password || normalizedUrl.search || normalizedUrl.hash) {
+                throw new TypeError("The filesystem base URL must not contain credentials, query or fragment");
+            }
+            normalizedUrl.pathname = normalizedUrl.pathname.replace(/\/+$/, "") || "/";
+            return {options: {scheme: normalizedUrl.protocol.slice(0, -1), host: normalizedUrl.host, path: normalizedUrl.pathname}};
+        },
+
+        getUrl(options, context = {}) {
+            // Project validated structured options without relying on constructor-only context.
+            void context;
+            const scheme = options?.scheme;
+            if (!["http", "https"].includes(scheme)) throw new TypeError(`Unsupported HTTP filesystem scheme: ${scheme}`);
+            if (!options || typeof options !== "object" || typeof options.host !== "string" || !options.host) {
+                throw new TypeError("HTTP filesystem host must be a non-empty string");
+            }
+            const path = options.path ?? "/";
+            if (typeof path !== "string" || !path.startsWith("/")) throw new TypeError("HTTP filesystem path must start with '/'");
+
+            let url;
+            try {
+                url = new URL(`${scheme}://${options.host}/`);
+            } catch (cause) {
+                throw new TypeError(`Invalid HTTP filesystem host: ${options.host}`, {cause});
+            }
+            if (!url.host || url.username || url.password || url.search || url.hash || url.pathname !== "/") {
+                throw new TypeError(`Invalid HTTP filesystem host: ${options.host}`);
+            }
+            url.pathname = path.replace(/\/+$/, "") || "/";
+            return url.href;
+        }
     };
 
     // constructor
-    constructor({}, { url, isReadonly = false } = {}) {
-        // Validate and normalize the endpoint for factory and direct construction alike.
-        if (typeof url !== "string" && !(url instanceof URL)) {
-            throw new TypeError("baseUrl must be a URL or string");
-        }
-        const normalizedUrl = new URL(url, globalThis.location?.href);
-
-        if (!["http:", "https:"].includes(normalizedUrl.protocol)) {
-            throw new TypeError("The HTTP filesystem requires an HTTP or HTTPS URL");
-        }
-
-        if (normalizedUrl.username || normalizedUrl.password || normalizedUrl.search || normalizedUrl.hash) {
-            throw new TypeError("The filesystem base URL must not contain credentials, query or fragment");
-        }
-
-        normalizedUrl.pathname = normalizedUrl.pathname.replace(/\/+$/, "") || "/";
-        super({}, { url: normalizedUrl.href, isReadonly });
+    constructor(services, options = {}, credentials = null) {
+        // Defend direct construction by projecting the structured provider options.
+        const normalizedUrl = new URL(FilesystemHttp.optionsDefinition.getUrl(options));
+        super(options);
         this._baseUrl = normalizedUrl;
         this._basePath = decodeURIComponent(normalizedUrl.pathname);
     }
