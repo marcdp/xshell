@@ -77,7 +77,8 @@ test("each concurrent Command invocation owns an independent direct-root lifetim
         static contract = {execute: {parameters: []}};
         execute() {}
     }
-    const {commands, root, disposed} = createRuntime(Placeholder);
+    let LoadedCommand = Placeholder;
+    const {commands, root, disposed} = createRuntime(Placeholder, {loader: {async load() { return LoadedCommand; }}});
     root.register("hooks", {invocations});
     const schema = {type: "object", required: ["contract", "controller"], properties: {contract: {type: "object"}, controller: {type: "object"}}};
     const context = {
@@ -99,8 +100,7 @@ test("each concurrent Command invocation owns an independent direct-root lifetim
         }
     };`;
     const src = `data:text/javascript,${encodeURIComponent(source)}#${crypto.randomUUID()}`;
-    const Command = await new LoaderCommandJs().load(src, context);
-    commands._loader = {async load() { return Command; }};
+    LoadedCommand = await new LoaderCommandJs().load(src, context);
 
     const [foreground, background] = await Promise.all([
         commands.run({id: "scoped", args: {value: 1}, background: false}),

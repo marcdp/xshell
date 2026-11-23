@@ -17,17 +17,17 @@ export default class Commands {
     }
 
     // vars
-    _loader;
-    _tasks;
-    _jsonValidator;
-    _config;
+    #loader;
+    #tasks;
+    #jsonValidator;
+    #config;
 
     // ctor
     constructor({loader, tasks, jsonValidator, config}, options) {
-        this._loader = loader;
-        this._tasks = tasks;
-        this._jsonValidator = jsonValidator;
-        this._config = config || {xshell: {}, modules: {}};
+        this.#loader = loader;
+        this.#tasks = tasks;
+        this.#jsonValidator = jsonValidator;
+        this.#config = config || {xshell: {}, modules: {}};
     }
 
     // methods
@@ -42,7 +42,7 @@ export default class Commands {
 
         // Filter independent inventory projections without resolving or loading Command implementations.
         const query = options.query?.toLowerCase();
-        const items = this._discover().filter(item => {
+        const items = this.#discover().filter(item => {
             if (options.moduleId !== undefined && item.moduleId !== options.moduleId) return false;
             if (options.category !== undefined && item.category !== options.category) return false;
             return !query || [item.id, item.label, item.description].some(value => value.toLowerCase().includes(query));
@@ -59,7 +59,7 @@ export default class Commands {
         if (!args || typeof args !== "object" || Array.isArray(args)) throw new TypeError("Command arguments must be an object");
         if (typeof background !== "boolean") throw new TypeError("Command background must be a boolean");
 
-        const Command = await this._loader.load(`command:${id}`);
+        const Command = await this.#loader.load(`command:${id}`);
         if (typeof Command !== "function") throw new Error(`Invalid command '${id}': loader did not return a Command class.`);
 
         const contract = Command.contract;
@@ -82,11 +82,11 @@ export default class Commands {
             }
 
             const value = supplied ? args[parameter.name] : structuredClone(parameter.default);
-            this._validateArgument(id, parameter, contract.types || {}, value);
+            this.#validateArgument(id, parameter, contract.types || {}, value);
             return value;
         });
 
-        return this._tasks.run({
+        return this.#tasks.run({
             title: contract.label || id,
             description: contract.description || contract.execute.description || "",
             background,
@@ -124,10 +124,10 @@ export default class Commands {
         });
     }
 
-    _discover() {
+    #discover() {
         // Scan the same effective framework and module inventories used to register bootstrap Command resolver entries.
         const items = [];
-        const sources = [["xshell", this._config.xshell], ...Object.entries(this._config.modules || {})];
+        const sources = [["xshell", this.#config.xshell], ...Object.entries(this.#config.modules || {})];
         for (const [moduleId, module] of sources) {
             if (!module?.assets?.path) continue;
             const commandsPath = module.assets.path + "/commands/";
@@ -151,7 +151,7 @@ export default class Commands {
         items.sort((a, b) => a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
         return items;
     }
-    _validateArgument(commandId, parameter, types, value) {
+    #validateArgument(commandId, parameter, types, value) {
         const namedType = parameter.ref ? types[parameter.ref] : null;
         if (parameter.ref && !namedType) {
             throw new Error(`Unknown argument type '${parameter.ref}' for '${parameter.name}' in Command '${commandId}'.`);
@@ -180,7 +180,7 @@ export default class Commands {
 
         let result;
         try {
-            result = this._jsonValidator.validate(value, schema);
+            result = this.#jsonValidator.validate(value, schema);
         } catch (error) {
             throw new TypeError(`Invalid argument '${parameter.name}' for Command '${commandId}'.`, {cause: error});
         }

@@ -33,26 +33,26 @@ export default class Loader {
     }
 
     // vars
-    _bus = null;
-    _options = null;
-    _resolver = null;
-    _services = null;    
+    #bus = null;
+    #options = null;
+    #resolver = null;
+    #services = null;
     
-    _cache = {};
-    _registry = [];
+    #cache = {};
+    #registry = [];
 
     // ctor
     constructor( {bus, resolver, services}, options ) {
-        this._bus = bus;
-        this._resolver = resolver;
-        this._services = services;
-        this._options = options;
+        this.#bus = bus;
+        this.#resolver = resolver;
+        this.#services = services;
+        this.#options = options;
     }
 
     // props
     get registry() { 
         // project load metadata without exposing the loaded value or mutable records
-        return Object.freeze(this._registry.map(item => Object.freeze({
+        return Object.freeze(this.#registry.map(item => Object.freeze({
             resource: item.resource, 
             url: item.url, 
             path: item.path, 
@@ -81,12 +81,12 @@ export default class Loader {
         for(let resource of resources) {            
             // resolve definition
             let name = resource.split(":")[1];
-            let definitionObject = this._resolver.resolve(resource);
+            let definitionObject = this.#resolver.resolve(resource);
             if (!definitionObject) {
                 throw new ResourceError(resource, `Resource not found: ${resource}`, { code: "RESOURCE_NOT_FOUND" });
             }
             let {definition, url, path} = definitionObject;
-            const cacheKey = this._getCacheKey(resource, definition);
+            const cacheKey = this.#getCacheKey(resource, definition);
             urls.push(url);
             paths.push(path);
             //if (url.indexOf("x-page") != -1) debugger;
@@ -97,16 +97,16 @@ export default class Loader {
                 if (loaderUrl.indexOf(":")!=-1) {
                     loaderUrl = definition.loader;
                 } else if (loaderUrl.indexOf("/")!=-1) {
-                    loaderUrl = this._options.appBasePath + definition.loader;
+                    loaderUrl = this.#options.appBasePath + definition.loader;
                 } else {
-                    loaderUrl = this._options.appBasePath + this._options.xshellAssetsPath + "/loaders/" + definition.loader + ".js";
+                    loaderUrl = this.#options.appBasePath + this.#options.xshellAssetsPath + "/loaders/" + definition.loader + ".js";
                 }
                 let loaderToUse = new (await import(loaderUrl)).default();
                 loaders[definition.loader] = loaderToUse;
                 loader = loaderToUse;
             }
             // check cache
-            let cacheItem = this._cache[cacheKey];
+            let cacheItem = this.#cache[cacheKey];
             if (cacheItem) {
                 tasks.push({index: result.length, promise: cacheItem.promise ?? Promise.resolve(cacheItem.value)});
                 result.push(null);
@@ -124,16 +124,16 @@ export default class Loader {
                         status: "pending", 
                         time: null, 
                         moduleId: definition.moduleId};
-                    this._registry.push(registryItem);
-                    this._bus.emit("xshell:loader:resource:fetch", {resource, url, path, moduleId: definition.moduleId});
+                    this.#registry.push(registryItem);
+                    this.#bus.emit("xshell:loader:resource:fetch", {resource, url, path, moduleId: definition.moduleId});
                     const context = {
                         resource: resource,
                         resourceName: name,
                         resourcePath: path,
                         resourceDefinition: definition,
-                        appBasePath: this._options.appBasePath,
-                        componentLazy: this._options.componentLazy,
-                        services: this._services
+                        appBasePath: this.#options.appBasePath,
+                        componentLazy: this.#options.componentLazy,
+                        services: this.#services
                     };
                     const start = performance.now();
                     try {
@@ -148,13 +148,13 @@ export default class Loader {
                             const description = value?.contract?.description;
                             registryItem.description = typeof description === "string" ? description : "";
                         }
-                        this._bus.emit("xshell:loader:resource:loaded", {resource, url, path, time});
+                        this.#bus.emit("xshell:loader:resource:loaded", {resource, url, path, time});
                     } catch (exception) {
                         const end = performance.now();
                         const time = end - start;
                         registryItem.time = time;
                         registryItem.status = "error";
-                        this._bus.emit("xshell:loader:resource:error", {resource, url, path, time, code: exception.code, message: exception.message, details: exception.details});
+                        this.#bus.emit("xshell:loader:resource:error", {resource, url, path, time, code: exception.code, message: exception.message, details: exception.details});
                         throw exception;
                     }
                     return value;
@@ -166,18 +166,18 @@ export default class Loader {
                         promise: null
                     };
                     cacheItem.promise = promise.then(value => {
-                        if (this._cache[cacheKey] === cacheItem) {
+                        if (this.#cache[cacheKey] === cacheItem) {
                             cacheItem.value = value;
                             cacheItem.promise = null;
                         }
                         return value;
                     }, exception => {
-                        if (this._cache[cacheKey] === cacheItem) {
-                            delete this._cache[cacheKey];
+                        if (this.#cache[cacheKey] === cacheItem) {
+                            delete this.#cache[cacheKey];
                         }
                         throw exception;
                     });
-                    this._cache[cacheKey] = cacheItem;
+                    this.#cache[cacheKey] = cacheItem;
                     promise = cacheItem.promise;
                 }
                 tasks.push({index: result.length, promise});
@@ -237,7 +237,7 @@ export default class Loader {
     }    
 
     // private methods
-    _removeQuery(resource) {
+    #removeQuery(resource) {
         // remove only the URL query while preserving the logical resource scheme and fragment
         const queryIndex = resource.indexOf("?");
         const fragmentIndex = resource.indexOf("#");
@@ -246,14 +246,14 @@ export default class Loader {
         }
         return resource.substring(0, queryIndex) + (fragmentIndex === -1 ? "" : resource.substring(fragmentIndex));
     }
-    _getCacheKey(resource, definition) {
+    #getCacheKey(resource, definition) {
         // select cache identity without changing the resource passed through resolution and loading
         const cacheMode = definition.cacheMode ?? "full";
         switch (cacheMode) {
             case "full":
                 return resource;
             case "path":
-                return this._removeQuery(resource);
+                return this.#removeQuery(resource);
             default:
                 throw new Error(`Unsupported cache mode '${cacheMode}'.`);
         }

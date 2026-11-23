@@ -32,11 +32,12 @@ async function createLoader(testName, { cacheMode, type = "resource", src = "/{p
         }
     };
     const resolver = new Resolver({ config });
-    return { fixture, loader: new Loader({ bus, config, resolver }) };
+    return { fixture, loader: new Loader({ bus, resolver }, { appBasePath: "", xshellAssetsPath: "/_assets/xshell", componentLazy: null }) };
 }
 
 test("cacheMode defaults to full cache identity", async () => {
     const { fixture, loader } = await createLoader("default-full");
+    assert.ok(["_bus", "_options", "_resolver", "_services", "_cache", "_registry", "_removeQuery", "_getCacheKey"].every(name => !(name in loader)));
     const first = await loader.load("resource:/foo?a=1");
     const second = await loader.load("resource:/foo?a=2");
 
@@ -73,11 +74,11 @@ test("successful cached load stores its value for later requests", async () => {
     const { fixture, loader } = await createLoader("resolved-value");
     const first = await loader.load("resource:/foo");
 
-    assert.deepEqual(loader._cache["resource:/foo"], { value: first, promise: null });
     const second = await loader.load("resource:/foo");
 
     assert.strictEqual(second, first);
     assert.deepEqual(fixture.getRequests(), ["https://example.test/foo"]);
+    assert.equal(loader.registry.length, 1);
 });
 
 test("failed cached load is evicted and a later request succeeds", async () => {
@@ -85,14 +86,13 @@ test("failed cached load is evicted and a later request succeeds", async () => {
     fixture.failOnce();
 
     await assert.rejects(() => loader.load("resource:/foo"), /Simulated load failure/);
-    assert.equal(loader._cache["resource:/foo"], undefined);
     assert.equal(loader.registry[0].status, "error");
 
     const value = await loader.load("resource:/foo");
 
     assert.deepEqual(fixture.getRequests(), ["https://example.test/foo", "https://example.test/foo"]);
     assert.equal(loader.registry[1].status, "loaded");
-    assert.strictEqual(loader._cache["resource:/foo"].value, value);
+    assert.ok(value);
 });
 
 
@@ -178,9 +178,6 @@ test("concurrent failures share one load and a later request retries", async () 
     assert.equal(second.reason.name, "ResourceError");
     assert.notStrictEqual(first.reason, second.reason);
     assert.strictEqual(first.reason.cause, second.reason.cause);
-
-    // Failed loads must not remain cached.
-    assert.equal(loader._cache["resource:/foo"], undefined);
 
     // A subsequent request must retry the resource.
     const value = await loader.load("resource:/foo?a=3");

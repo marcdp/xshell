@@ -215,7 +215,7 @@ test("Double-clicking a service opens and closes a stacked Inspector with the ex
         config: { app: { basePath: "", baseUrl: "https://example.test/" }, xshell: {} }
     }, { mode: "path" }, { container });
     const root = navigation.parseUrl("/demo");
-    navigation._stack = [root];
+    await navigation.navigate({ href: root.href, open: "top", page: { host: null } });
     const navigate = t.mock.method(navigation, "navigate");
     const controller = ServicesPage.controller({ state, page, services, navigation });
     const activate = value => controller.inspectService({ event: new CustomEvent("activate", { detail: { value } }) });
@@ -239,7 +239,7 @@ test("Double-clicking a service opens and closes a stacked Inspector with the ex
     assert.equal(pages[0], rootHost);
 
     inspector.dispatchEvent(new Event("close"));
-    await navigation._stackToDomTask;
+    await new Promise(resolve => setImmediate(resolve));
     assert.deepEqual(navigation.stack, [root]);
     assert.deepEqual(pages, [rootHost]);
     assert.equal(state.id, "navigation");
@@ -343,15 +343,15 @@ test("Navigation reconstructs a stacked contract reference and exact query ID fr
         resolver: { resolve: resource => resource === contractDetailHref ? { path: contractPath } : null },
         config: { app: { basePath: "", baseUrl: document.baseURI }, xshell: {} }
     }, { mode: "path" }, { container });
-    navigation._stack = [navigation.parseUrl("/demo")];
+    await navigation.navigate({ href: "/demo", open: "top", page: { host: null } });
     await ContractsPage.controller({ navigation, page: rootHost }).inspectContract({ event: { detail: { value: id } } });
     assert.equal(hosts[1].layout, "stack");
     assert.deepEqual(hosts[1].stackClasses, ["size-wide"]);
 
     // Discard the live stack and reconstruct its child Page from the browser URL.
-    const reloaded = navigation._browserUrlToStack(pushState.mock.calls[0].arguments[2]);
-    assert.deepEqual(reloaded[1].classes, ["size-wide"]);
-    const page = new Page({ src: navigation._buildUrlFinal(reloaded[1]), bus: { emit() {} } });
+    const serialized = navigation.parseUrl(pushState.mock.calls.at(-1).arguments[2]);
+    assert.deepEqual(serialized.nav.stack[0].classes, ["size-wide"]);
+    const page = new Page({ src: hosts[1].src, bus: { emit() {} } });
     const state = structuredClone(ContractDetailPage.state);
     const contracts = {
         getContractById: t.mock.fn(() => ({ label: "Shared API" })),

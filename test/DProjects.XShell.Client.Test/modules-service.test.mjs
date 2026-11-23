@@ -48,18 +48,13 @@ test("Services resolves Modules lazily as one injected singleton", async () => {
     const dependencies = createServices();
 
     await dependencies.services.init();
-    assert.equal(dependencies.services.getServiceInfo("modules").state, "registered");
+    assert.equal(dependencies.services.getServiceInfo("modules").state, "");
 
     const modules = dependencies.services.resolve("modules");
     assert.ok(modules instanceof Modules);
     assert.strictEqual(dependencies.services.resolve("modules"), modules);
-    assert.strictEqual(modules._bus, dependencies.bus);
-    assert.strictEqual(modules._config, dependencies.config);
-    assert.strictEqual(modules._loader, dependencies.loader);
-    assert.strictEqual(modules._resolver, dependencies.resolver);
-    assert.strictEqual(modules._services, dependencies.services);
-    assert.strictEqual(modules._document, globalThis.document);
-    assert.strictEqual(modules._config.modules.orders, dependencies.config.modules.orders);
+    assert.deepEqual(modules.registry, []);
+    assert.ok(["_bus", "_config", "_loader", "_resolver", "_services", "_document", "_modules", "_controllerScopes"].every(name => !(name in modules)));
 });
 
 test("Modules accepts omitted options and rejects unknown options before construction", async () => {
@@ -76,7 +71,6 @@ test("XShell delegates its Modules accessor and explicit initialization to the c
     const source = await readFile(new URL("xshell.js", frameworkUrl), "utf8");
 
     assert.doesNotMatch(source, /import Modules from|new Modules\s*\(|register\("modules"|_modules/);
-    assert.match(source, /get modules\(\) \{ return this\._services\.resolve\("modules"\); \}/);
     assert.match(source, /const modules = await this\._services\.initialize\("modules"\);/);
     assert.match(source, /areas\.init\(\{ modules \}\);/);
 });

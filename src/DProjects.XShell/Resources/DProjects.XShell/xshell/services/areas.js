@@ -33,23 +33,23 @@ export default class Areas {
     };
 
     // vars
-    _config = null;
-    _options = null;
-    _bus = null;
-    _areas = [];
-    _assetsBasePath = null;
-    _currentAreaId = null;
-    _sources = Object.create(null);
-    _sourceTargets = new Map();
-    _globalMenus = Object.create(null);
+    #config = null;
+    #options = null;
+    #bus = null;
+    #areas = [];
+    #assetsBasePath = null;
+    #currentAreaId = null;
+    #sources = Object.create(null);
+    #sourceTargets = new Map();
+    #globalMenus = Object.create(null);
 
     // ctor
     constructor({ config, bus }, options = {}) {
-        this._options = options;    
+        this.#options = options;
         // initialize injected dependencies and Area configuration
-        this._config = config;
-        this._bus = bus;
-        this._assetsBasePath = config.xshell.assets.basePath;
+        this.#config = config;
+        this.#bus = bus;
+        this.#assetsBasePath = config.xshell.assets.basePath;
         const definitions = options.definitions || {};
         const defaultAreaId = options.default;
 
@@ -57,7 +57,7 @@ export default class Areas {
         if (defaultAreaId !== null && !Object.hasOwn(definitions, defaultAreaId)) throw new Error(`Default area '${defaultAreaId}' is not defined.`);
         const prefixes = new Map();
         for (const [areaId, area] of Object.entries(definitions)) {
-            const prefix = this._normalizeAreaPrefix(area.prefix);
+            const prefix = this.#normalizeAreaPrefix(area.prefix);
             if (prefixes.has(prefix)) throw new Error(`Areas '${prefixes.get(prefix)}' and '${areaId}' have duplicate normalized prefix '${prefix}'.`);
             prefixes.set(prefix, areaId);
             for (const moduleId of area.modules || []) {
@@ -74,7 +74,7 @@ export default class Areas {
                 id: areaId,
                 label: areaConfig.label || areaId,
                 icon: areaConfig.icon || null,
-                prefix: this._normalizeAreaPrefix(areaConfig.prefix),
+                prefix: this.#normalizeAreaPrefix(areaConfig.prefix),
                 modules: Object.freeze([...(areaConfig.modules || [])]),
                 order: areaConfig.order || 0,
                 default: areaId === defaultAreaId,
@@ -88,8 +88,8 @@ export default class Areas {
             if (a.order !== b.order) return a.order - b.order;
             return a.label.localeCompare(b.label);
         });
-        this._areas = Object.freeze(areas);
-        this._currentAreaId = this.getDefaultArea()?.id || null;
+        this.#areas = Object.freeze(areas);
+        this.#currentAreaId = this.getDefaultArea()?.id || null;
 
         // Group contributions in configuration order and resolve explicit scopes before composing any menu.
         const menus = new Map();
@@ -118,15 +118,15 @@ export default class Areas {
                 if (contribution.source !== undefined) {
                     throw new Error(`Global menu '${name}' from module '${moduleId}' must use static contributions. Source '${contribution.source}' is unsupported.`);
                 }
-                definition = this._mergeMenuDefinition(definition, contribution, moduleId);
+                definition = this.#mergeMenuDefinition(definition, contribution, moduleId);
             }
-            this._globalMenus[name] = this._createMenuDefinition(name, definition);
+            this.#globalMenus[name] = this.#createMenuDefinition(name, definition);
         }
 
         // navigation determines the current area from its URL
         bus.addEventListener("xshell:navigation:end", evt => {
             const areaId = this.resolveAreaId(evt.detail.src);
-            if (areaId) this._setCurrentArea(areaId);
+            if (areaId) this.#setCurrentArea(areaId);
         });
     }
 
@@ -152,7 +152,7 @@ export default class Areas {
             return null;
         };
         // process each area
-        for (const area of this._areas) {
+        for (const area of this.#areas) {
             const definitions = new Map();
             const routes = [];
             for (const moduleId of area.modules) {
@@ -162,11 +162,11 @@ export default class Areas {
                 }
                 for (const [name, contribution] of Object.entries(module.config.menus || {})) {
                     // Compose Area menus and resolve each module's source after its explicit items.
-                    if (Object.hasOwn(this._globalMenus, name)) continue;
-                    const definition = this._mergeMenuDefinition(definitions.get(name), contribution, module.id);
+                    if (Object.hasOwn(this.#globalMenus, name)) continue;
+                    const definition = this.#mergeMenuDefinition(definitions.get(name), contribution, module.id);
                     if (contribution.source !== undefined) {
-                        const items = this._resolveMenuSource(contribution.source, name, module.id, area);
-                        definition.items = this._mergeMenuitems(definition.items, items, module.id);
+                        const items = this.#resolveMenuSource(contribution.source, name, module.id, area);
+                        definition.items = this.#mergeMenuitems(definition.items, items, module.id);
                     }
                     definitions.set(name, definition);
                 }
@@ -176,7 +176,7 @@ export default class Areas {
             }
             // Project each merged menu once, including its effective source registrations.
             const menus = Object.fromEntries([...definitions].map(([name, definition]) => [
-                name, this._createMenuDefinition(name, definition, area)
+                name, this.#createMenuDefinition(name, definition, area)
             ]));
             area.menus = Object.freeze(menus);
             area.routes = Object.freeze(routes);
@@ -186,30 +186,30 @@ export default class Areas {
         }
     }
     getAreas() {
-        return this._areas;
+        return this.#areas;
     }
     getArea(id) {
-        return this._areas.find(area => area.id === id) || null;
+        return this.#areas.find(area => area.id === id) || null;
     }
     getDefaultArea() {
-        return this._areas.find(area => area.default) || this._areas[0] || null;
+        return this.#areas.find(area => area.default) || this.#areas[0] || null;
     }
     getCurrentArea() {
-        return this.getArea(this._currentAreaId) || this.getDefaultArea();
+        return this.getArea(this.#currentAreaId) || this.getDefaultArea();
     }
     resolveAreaId(href) {
         if (!href) return null;
         // longest matching navigation prefix wins
-        const areas = [...this._areas].sort((a, b) => b.prefix.length - a.prefix.length);
+        const areas = [...this.#areas].sort((a, b) => b.prefix.length - a.prefix.length);
         for (const area of areas) {
-            if (this._matchesPrefix(href, area.prefix)) return area.id;
+            if (this.#matchesPrefix(href, area.prefix)) return area.id;
         }
         return null;
     }
     resolvePath(path) {
-        for (const area of this._areas) {
+        for (const area of this.#areas) {
             for (const menu of Object.values(area.menus)) {
-                const item = this._findMenuitemPath(menu.items, menuitem => menuitem.path === path)?.at(-1);
+                const item = this.#findMenuitemPath(menu.items, menuitem => menuitem.path === path)?.at(-1);
                 if (item) return item;
             }
         }
@@ -218,28 +218,28 @@ export default class Areas {
     resolveHref(href, areaId = null) {
         if (!href) return null;
         // search the selected Area or only Areas associated with the target module
-        const targetHref = this._getHrefIdentity(href);
+        const targetHref = this.#getHrefIdentity(href);
         const moduleId = this.getModuleId(targetHref);
         let areas;
         if (areaId) {
             areas = [this.getArea(areaId)].filter(Boolean);
         } else if (moduleId) {
-            areas = this._areas.filter(area => area.modules.includes(moduleId));
+            areas = this.#areas.filter(area => area.modules.includes(moduleId));
         } else {
             areas = [this.getCurrentArea()].filter(Boolean);
         }
         for (const area of areas) {
-            const areaHref = this._buildAreaHref(targetHref, area);
+            const areaHref = this.#buildAreaHref(targetHref, area);
             for (const menu of Object.values(area.menus)) {
-                const menuitems = this._findMenuitemPath(menu.items, menuitem => this._getHrefIdentity(menuitem.href) === areaHref);
+                const menuitems = this.#findMenuitemPath(menu.items, menuitem => this.#getHrefIdentity(menuitem.href) === areaHref);
                 if (menuitems) return menuitems.at(-1);
             }
         }
         return null;
     }
     getModuleId(href) {
-        const assetsIndex = href.lastIndexOf(this._assetsBasePath + "/");
-        return assetsIndex === -1 ? null : href.substring(assetsIndex + this._assetsBasePath.length + 1).split("/")[0] || null;
+        const assetsIndex = href.lastIndexOf(this.#assetsBasePath + "/");
+        return assetsIndex === -1 ? null : href.substring(assetsIndex + this.#assetsBasePath.length + 1).split("/")[0] || null;
     }
     getMenus(areaId = null) {
         // Resolve the requested Area while rejecting unknown explicit identifiers.
@@ -249,7 +249,7 @@ export default class Areas {
         // Keep Area menus first and append shared global menus without duplicate names.
         const menus = area ? Object.values(area.menus) : [];
         const areaNames = new Set(menus.map(menu => menu.name));
-        return [...menus, ...Object.values(this._globalMenus).filter(menu => !areaNames.has(menu.name))];
+        return [...menus, ...Object.values(this.#globalMenus).filter(menu => !areaNames.has(menu.name))];
     }
     getMenu(name, areaId = null) {
         // Resolve the requested Area while rejecting unknown explicit identifiers.
@@ -258,15 +258,15 @@ export default class Areas {
 
         // Prefer the effective Area menu and then fall back to the shared global menu.
         if (area && Object.hasOwn(area.menus, name)) return area.menus[name];
-        return Object.hasOwn(this._globalMenus, name) ? this._globalMenus[name] : null;
+        return Object.hasOwn(this.#globalMenus, name) ? this.#globalMenus[name] : null;
     }
     getMenuitemBreadcrumb(href, areaId = null) {
         const area = areaId ? this.getArea(areaId) : this.getCurrentArea();
         if (!area || !href) return null;
         // search only the selected area's effective menus
-        const targetHref = this._getHrefIdentity(href);
+        const targetHref = this.#getHrefIdentity(href);
         for (const menu of Object.values(area.menus)) {
-            const menuitems = this._findMenuitemPath(menu.items, menuitem => this._getHrefIdentity(menuitem.href) === targetHref);
+            const menuitems = this.#findMenuitemPath(menu.items, menuitem => this.#getHrefIdentity(menuitem.href) === targetHref);
             if (menuitems) {
                 return menuitems.map(menuitem => ({
                     label: menuitem.label,
@@ -283,19 +283,19 @@ export default class Areas {
     }
     registerSource(name, source) {
         // register a dynamic menu source
-        if (Object.hasOwn(this._sources, name)) {
+        if (Object.hasOwn(this.#sources, name)) {
             throw new Error(`Menu source '${name}' is already registered.`);
         }        
         if (!source || typeof source.resolve !== "function") {
             throw new Error(`Menu source '${name}' must provide a resolve() function.`);
         }        
-        this._sources[name] = source;
+        this.#sources[name] = source;
         // refresh every effective copy backed by this source
         source.refresh = () => {
             let changed = false;
-            for (const target of [...this._sourceTargets.values()]) {
-                if (target.name !== name || !this._sourceTargets.has(target.children)) continue;
-                const items = this._resolveSourceChildren(target);
+            for (const target of [...this.#sourceTargets.values()]) {
+                if (target.name !== name || !this.#sourceTargets.has(target.children)) continue;
+                const items = this.#resolveSourceChildren(target);
                 const definition = JSON.stringify(items);
                 if (definition === target.definition) continue;
 
@@ -305,56 +305,56 @@ export default class Areas {
                 const children = items.map(entry => {
                     const { item, order } = entry;
                     const child = previous.get(item);
-                    if (!child) return this._cloneMenuitem(entry, target.area, targets);
+                    if (!child) return this.#cloneMenuitem(entry, target.area, targets);
                     previous.delete(item);
                     return child.order === order ? child : Object.freeze({ ...child, order });
                 });
                 changed ||= JSON.stringify(target.children) !== JSON.stringify(children);
-                this._removeSourceTargets(previous.values());
+                this.#removeSourceTargets(previous.values());
                 target.children.splice(0, target.children.length, ...children);
-                for (const [collection, nested] of targets) this._sourceTargets.set(collection, nested);
+                for (const [collection, nested] of targets) this.#sourceTargets.set(collection, nested);
                 target.items = items;
                 target.definition = definition;
             }
             return changed;
         };
         for (const event of source.dependsOn || []) {
-            this._bus.addEventListener(event, () => {
-                if (source.refresh()) this._bus.emit("xshell:menus:change", {});
+            this.#bus.addEventListener(event, () => {
+                if (source.refresh()) this.#bus.emit("xshell:menus:change", {});
             });
         }
     }
     // methods (private)
-    _mergeMenuDefinition(previous = { items: [] }, contribution, moduleId) {
+    #mergeMenuDefinition(previous = { items: [] }, contribution, moduleId) {
         // Keep omitted metadata and merge the static items using the existing contribution order.
         const { label = previous.label, description = previous.description, icon = previous.icon, items } = contribution;
-        return { label, description, icon, items: items ? this._mergeMenuitems(previous.items, items, moduleId) : previous.items };
+        return { label, description, icon, items: items ? this.#mergeMenuitems(previous.items, items, moduleId) : previous.items };
     }
-    _createMenuDefinition(name, definition, area = null) {
+    #createMenuDefinition(name, definition, area = null) {
         // Apply defaults only after composition and project the effective item hierarchy.
         const { label = name, description = "", icon = null, items } = definition;
         return Object.freeze({
             name, scope: area ? "area" : "global", label, description, icon,
-            items: Object.freeze(this._sortMenuitems(items).map(entry => this._cloneMenuitem(entry, area)))
+            items: Object.freeze(this.#sortMenuitems(items).map(entry => this.#cloneMenuitem(entry, area)))
         });
     }
-    _resolveMenuSource(source, name, moduleId, area) {
+    #resolveMenuSource(source, name, moduleId, area) {
         // Inventory sources use the owning module's generated file list.
         if (source.startsWith("/")) {
-            const { files, label } = this._config.modules[moduleId];
-            return this._createMenuFromModuleFiles(files, source, label, [".js", ".html", ".md"], true);
+            const { files, label } = this.#config.modules[moduleId];
+            return this.#createMenuFromModuleFiles(files, source, label, [".js", ".html", ".md"], true);
         }
         // Registered menu sources contribute root items during initialization.
-        if (!Object.hasOwn(this._sources, source)) {
+        if (!Object.hasOwn(this.#sources, source)) {
             throw new Error(`Module '${moduleId}' menu '${name}' references unregistered menu source '${source}'.`);
         }
-        const items = this._sources[source].resolve() || [];
+        const items = this.#sources[source].resolve() || [];
         if (!Array.isArray(items)) {
             throw new Error(`Menu source '${source}' for Area '${area.id}', module '${moduleId}', menu '${name}' must resolve to an array.`);
         }
         return items;
     }
-    _sortMenuitems(items) {
+    #sortMenuitems(items) {
         // Group unanchored contributions into the opening block and keep anchored runs together.
         const opening = { order: 0, entries: [] };
         const blocks = [opening];
@@ -370,7 +370,7 @@ export default class Areas {
         }
         return blocks.sort((a, b) => a.order - b.order).flatMap(block => block.entries);
     }
-    _mergeMenuitems(target, source, moduleId) {
+    #mergeMenuitems(target, source, moduleId) {
         // The target has already been merged. Match only the first position in this array.
         const result = [...target];
         const indexes = new Map();
@@ -386,20 +386,20 @@ export default class Areas {
             const index = indexes.get(id) ?? result.length;
             const isNew = index === result.length;
             if (id !== null) indexes.set(id, index);
-            const merged = this._mergeMenuitemValue(result[index], item, moduleId);
+            const merged = this.#mergeMenuitemValue(result[index], item, moduleId);
             if (moduleId !== undefined && isNew && previousIndex !== undefined) merged[previousMenuitemIndex] = previousIndex;
             result[index] = merged;
             if (isNew || typeof item?.order === "number") previousIndex = index;
         }
         return result;
     }
-    _mergeMenuitemValue(previous, value, moduleId) {
+    #mergeMenuitemValue(previous, value, moduleId) {
         // Merge raw properties so projection defaults cannot overwrite an omitted field.
-        if (Array.isArray(value)) return this._mergeMenuitems(Array.isArray(previous) ? previous : [], value, moduleId);
+        if (Array.isArray(value)) return this.#mergeMenuitems(Array.isArray(previous) ? previous : [], value, moduleId);
         if (value === null || typeof value !== "object") return value;
         const base = previous && typeof previous === "object" && !Array.isArray(previous) ? previous : {};
         const properties = Object.fromEntries(Object.entries(value).map(([key, entry]) => [
-            key, this._mergeMenuitemValue(Object.hasOwn(base, key) ? base[key] : undefined, entry, key === "children" ? moduleId : undefined)
+            key, this.#mergeMenuitemValue(Object.hasOwn(base, key) ? base[key] : undefined, entry, key === "children" ? moduleId : undefined)
         ]));
         const item = { ...base, ...properties };
         if (moduleId !== undefined) {
@@ -409,7 +409,7 @@ export default class Areas {
         }
         return item;
     }
-    _cloneMenuitem({ item: menuitem, order }, area = null, sourceTargets = this._sourceTargets) {
+    #cloneMenuitem({ item: menuitem, order }, area = null, sourceTargets = this.#sourceTargets) {
         // Global menus are composed before runtime sources are registered.
         if (!area && menuitem.childrenSource !== undefined) {
             throw new Error(`Global menu item '${menuitem.id ?? menuitem.label}' from module '${menuitem.childrenSourceModule}' ` +
@@ -432,8 +432,8 @@ export default class Areas {
             label,
             ...(menuitem.description !== undefined ? { description: menuitem.description } : {}),
             order,
-            href: area ? this._buildAreaHref(menuitem.href, area) : menuitem.href,
-            path: area ? this._buildAreaHref(menuitem.path, area) : menuitem.path,
+            href: area ? this.#buildAreaHref(menuitem.href, area) : menuitem.href,
+            path: area ? this.#buildAreaHref(menuitem.path, area) : menuitem.path,
             command: menuitem.command ?? null,
             icon: menuitem.icon ?? null,
             embedded: menuitem.embedded ?? false,
@@ -449,72 +449,72 @@ export default class Areas {
         if (area && menuitem.childrenSource) {
             const name = menuitem.childrenSource;
             const sourceModule = menuitem.childrenSourceModule;
-            if (!Object.hasOwn(this._sources, name)) {
+            if (!Object.hasOwn(this.#sources, name)) {
                 throw new Error(`Module '${sourceModule}' menu item '${label}' references unregistered children source '${name}'.`);
             }
             const target = { name, moduleId: sourceModule, area, staticItems, children: result.children };
-            const items = this._resolveSourceChildren(target);
-            result.children.push(...items.map(entry => this._cloneMenuitem(entry, area, sourceTargets)));
+            const items = this.#resolveSourceChildren(target);
+            result.children.push(...items.map(entry => this.#cloneMenuitem(entry, area, sourceTargets)));
             target.items = items;
             target.definition = JSON.stringify(items);
             sourceTargets.set(result.children, target);
         } else {
-            result.children = Object.freeze(this._sortMenuitems(staticItems).map(entry => this._cloneMenuitem(entry, area, sourceTargets)));
+            result.children = Object.freeze(this.#sortMenuitems(staticItems).map(entry => this.#cloneMenuitem(entry, area, sourceTargets)));
         }
         return Object.freeze(result);
     }
-    _resolveSourceChildren({ name, moduleId, staticItems }) {
+    #resolveSourceChildren({ name, moduleId, staticItems }) {
         // Reapply the current source results to the unchanged static definitions on every refresh.
-        const items = this._sources[name].resolve() || [];
+        const items = this.#sources[name].resolve() || [];
         if (!Array.isArray(items)) throw new Error(`Children source '${name}' from module '${moduleId}' must resolve to an array.`);
-        return this._sortMenuitems(this._mergeMenuitems(staticItems, items, moduleId));
+        return this.#sortMenuitems(this.#mergeMenuitems(staticItems, items, moduleId));
     }
-    _removeSourceTargets(items) {
+    #removeSourceTargets(items) {
         // Forget descendants of replaced children so later refreshes only visit live collections.
         for (const item of items) {
-            this._sourceTargets.delete(item.children);
-            this._removeSourceTargets(item.children);
+            this.#sourceTargets.delete(item.children);
+            this.#removeSourceTargets(item.children);
         }
     }
-    _buildAreaHref(href, area) {
+    #buildAreaHref(href, area) {
         if (!href) return null;
         if (/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(href)) return href;
         const path = href.startsWith("/") ? href : "/" + href;
         if (area.prefix && (path === area.prefix || path.startsWith(area.prefix + "/"))) return path;
         return area.prefix + path;
     }
-    _getHrefIdentity(href) {
+    #getHrefIdentity(href) {
         if (!href) return href;
         const queryIndex = href.indexOf("?");
         const hashIndex = href.indexOf("#");
         const suffixIndexes = [queryIndex, hashIndex].filter(index => index !== -1);
         return suffixIndexes.length ? href.substring(0, Math.min(...suffixIndexes)) : href;
     }
-    _setCurrentArea(areaId) {
-        if (this._currentAreaId === areaId) return;
+    #setCurrentArea(areaId) {
+        if (this.#currentAreaId === areaId) return;
         const area = this.getArea(areaId);
         if (!area) throw new Error(`Unknown area '${areaId}'`);
-        this._currentAreaId = areaId;
-        this._bus.emit("xshell:area:change", { areaId });
+        this.#currentAreaId = areaId;
+        this.#bus.emit("xshell:area:change", { areaId });
     }
-    _matchesPrefix(href, prefix) {
+    #matchesPrefix(href, prefix) {
         if (prefix === "") return href.startsWith("/");
         return href === prefix || href.startsWith(prefix + "/") || href.startsWith(prefix + "?");
     }
-    _findMenuitemPath(items, predicate, parents = []) {
+    #findMenuitemPath(items, predicate, parents = []) {
         for (const item of items || []) {
             const path = [...parents, item];
             if (predicate(item)) return path;
-            const found = this._findMenuitemPath(item.children, predicate, path);
+            const found = this.#findMenuitemPath(item.children, predicate, path);
             if (found) return found;
         }
         return null;
     }
-    _normalizeAreaPrefix(prefix) {
+    #normalizeAreaPrefix(prefix) {
         if (!prefix || prefix === "/") return "";
         return "/" + prefix.replace(/^\/+|\/+$/g, "");
     }
-    _createMenuFromModuleFiles(files, root, rootItemLabel, extensions, createPaths) {
+    #createMenuFromModuleFiles(files, root, rootItemLabel, extensions, createPaths) {
         const getExtension = (path) => extensions.find(extension => path.endsWith(extension));
         const toRuntimePath = (path) => {
             const extension = getExtension(path);

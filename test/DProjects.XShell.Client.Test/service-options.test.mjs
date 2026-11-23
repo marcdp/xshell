@@ -196,12 +196,8 @@ test("Navigation validates service options before lazy singleton construction", 
             assert.equal(services.getServiceInfo("navigation").state, "registered");
             const first = services.resolve("navigation");
             assert.strictEqual(services.resolve("navigation"), first);
-            assert.strictEqual(first._areas, areas);
-            assert.strictEqual(first._bus, bus);
-            assert.strictEqual(first._config, config);
-            assert.strictEqual(first._resolver, resolver);
-            assert.strictEqual(first._container, body);
             assert.equal(first.mode, mode);
+            assert.ok(["_areas", "_bus", "_config", "_resolver", "_container"].every(name => !(name in first)));
         } finally {
             globalThis.document = originalDocument;
         }
@@ -221,9 +217,8 @@ test("Areas validates options and injects config and bus before lazy singleton c
     assert.equal(services.getServiceInfo("areas").state, "registered");
     const first = services.resolve("areas");
     assert.strictEqual(services.resolve("areas"), first);
-    assert.strictEqual(first._bus, bus);
-    assert.strictEqual(first._config, config);
     assert.equal(first.getDefaultArea().id, "main");
+    assert.ok(["_bus", "_config", "_areas", "_sources"].every(name => !(name in first)));
 });
 
 test("Areas rejects missing, invalid, and unknown service options without constructing", async () => {
@@ -274,7 +269,8 @@ test("Navigation receives the configured Areas singleton through service injecti
     try {
         await services.init();
         const navigation = services.resolve("navigation");
-        assert.strictEqual(navigation._areas, services.resolve("areas"));
+        assert.equal(navigation.mode, "path");
+        assert.equal(services.resolve("areas").getDefaultArea().id, "main");
     } finally {
         globalThis.document = originalDocument;
     }

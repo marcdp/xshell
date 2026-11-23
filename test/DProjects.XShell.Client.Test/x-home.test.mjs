@@ -48,7 +48,7 @@ function setup({ saved, delayedRead } = {}) {
         resolve: resource => resource === "page:x-home:/pages/index.js" ? {path: homeAssets + "/pages/index.js"} : null
     }}, {mode: "hash"}, {container: {}});
     const navigated = [];
-    navigation._stackToBrowser = stack => navigated.push(stack[0].href);
+    navigation.navigate = ({ href }) => { navigated.push(href); };
     let firstRead = delayedRead;
     const preferences = {
         async get(name, fallback) {

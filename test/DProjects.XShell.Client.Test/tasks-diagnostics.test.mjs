@@ -79,7 +79,7 @@ test("Tasks activates the selected row in the stack and retains its live filtere
         resolver: { resolve: href => href === detailHref ? { path: detailPath } : null },
         config: { app: { basePath: "", baseUrl: "https://example.test/" }, xshell: {} }
     }, { mode: "path" }, { container });
-    navigation._stack = [navigation.parseUrl(root.src)];
+    await navigation.navigate({ href: root.src, open: "top", page: { host: null } });
     const navigate = t.mock.method(navigation, "navigate");
     const list = await loadPage(TasksPage, root.src, { tasks, bus, navigation });
     t.after(() => list.unload());
@@ -105,7 +105,7 @@ test("Tasks activates the selected row in the stack and retains its live filtere
     assert.equal(detailHost.page._state.task.id, target.id);
 
     detailHost.dispatchEvent(new Event("close"));
-    await navigation._stackToDomTask;
+    await new Promise(resolve => setImmediate(resolve));
     assert.deepEqual(pages, [root]);
     assert.equal(target.status, "running");
     assert.equal(list._state.query_title, "Import");

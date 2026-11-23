@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-const { default: Loader } = await import("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/loader.js");
+const { default: Loader } = await import("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/loader.js");
 
 async function createLoader(testName, events, onResolve = () => {}) {
     // isolate each test's concrete loader and capture its resource events
@@ -20,7 +20,7 @@ async function createLoader(testName, events, onResolve = () => {}) {
         xshell: { assets: { basePath: "/_assets", path: "/_assets/xshell" }, services: { navigation: { options: { mode: "path" } } }, ui: { component: { lazy: null } } }
     };
     const bus = { emit(name, detail) { events.push({ name, detail }); } };
-    return { fixture, loader: new Loader({ bus, config, resolver }) };
+    return { fixture, loader: new Loader({ bus, resolver }, { appBasePath: "", xshellAssetsPath: "/_assets/xshell", componentLazy: null }) };
 }
 
 test("successful resource time covers only its concrete load and matches the Bus event", async t => {
@@ -96,5 +96,7 @@ test("failed resource time matches its error event and the failed cache entry is
     assert.equal(loader.registry[0].time, 17);
     assert.equal(events[1].name, "xshell:loader:resource:error");
     assert.equal(events[1].detail.time, loader.registry[0].time);
-    assert.equal(loader._cache["resource:/a"], undefined);
+    const retried = await loader.load("resource:/a");
+    assert.ok(retried);
+    assert.equal(loader.registry.length, 2);
 });

@@ -53,6 +53,7 @@ test("commands discovers framework and module inventories without loading implem
         }
     };
     const {commands, loads} = createCommands(Command, new Tasks({bus: null}), config);
+    assert.ok(["_loader", "_tasks", "_jsonValidator", "_config", "_discover", "_validateArgument"].every(name => !(name in commands)));
 
     const items = commands.list();
 

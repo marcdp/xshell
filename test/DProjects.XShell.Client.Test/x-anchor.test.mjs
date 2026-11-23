@@ -267,7 +267,7 @@ test("x-anchor delegates route-aware native href generation to Navigation while 
     assert.equal(anchor._state.href, "/_assets/x-demo/pages/items.js");
     assert.equal(anchor._state.hrefReal, "/app/demo/repository/12/items?sort=name");
     assert.equal(
-        navigation._buildUrlFinal(navigation.parseUrl("/demo/repository/12/items?sort=name")),
+        navigation.resolveRoute("/demo/repository/12/items?sort=name").href,
         "/demo/_assets/x-demo/pages/items.js?repositoryId=12&sort=name"
     );
 

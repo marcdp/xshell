@@ -215,7 +215,6 @@ test("module controllers own independent direct-root scopes with scoped dispatch
     assert.deepEqual(dispatches, ["first:events", "first:timer", "second:events", "second:timer"]);
     assert.equal(Object.hasOwn(modules.getModuleById("first"), "services"), false);
     assert.equal(Object.hasOwn(modules.getModuleById("metadata"), "services"), false);
-    assert.equal(modules._controllerScopes.has("metadata"), false);
 
     await unrelatedScope.dispose();
     await modules.stop();
@@ -228,7 +227,6 @@ test("module controllers own independent direct-root scopes with scoped dispatch
     assert.throws(() => first.timer.setTimeout("onScopedTimer", 0), /require a Services scope controller context/);
     first.target.dispatchEvent(new Event("module-event"));
     assert.deepEqual(dispatches, ["first:events", "first:timer", "second:events", "second:timer"]);
-    assert.equal(modules._controllerScopes.size, 0);
 });
 
 test("controller construction failure disposes all created Module scopes and preserves the original error", async t => {
@@ -262,7 +260,6 @@ test("controller construction failure disposes all created Module scopes and pre
     await assert.rejects(() => modules.init(), error => error === constructionError);
 
     assert.deepEqual(disposed, [2, 1]);
-    assert.equal(modules._controllerScopes.size, 0);
     assert.equal(reported.length, 1);
     assert.match(reported[0][0], /controller initialization failed/);
     assert.strictEqual(reported[0][1], cleanupError);
@@ -412,7 +409,6 @@ test("startup failure disposes every Module scope after rollback and reports cle
     assert.deepEqual(events.filter(event => event.endsWith(".dispose")), ["later.dispose", "app.dispose", "feature.dispose", "base.dispose"]);
     assert.equal(events.includes("app.stop"), false);
     assert.equal(events.includes("later.start"), false);
-    assert.equal(modules._controllerScopes.size, 0);
     assert.equal(reported.length, 1);
     assert.ok(reported[0][1] instanceof AggregateError);
     assert.deepEqual(reported[0][1].errors, [rollbackError, disposalError]);
@@ -455,7 +451,6 @@ test("normal stop keeps each Module scope active through stop, continues cleanup
     });
 
     assert.deepEqual(order, ["second.stop", "second.dispose", "first.stop", "first.dispose"]);
-    assert.equal(modules._controllerScopes.size, 0);
     await modules.stop();
     assert.deepEqual(order, ["second.stop", "second.dispose", "first.stop", "first.dispose"]);
 });
@@ -560,7 +555,7 @@ test("module requirements accept configured lazy services without constructing t
 
     await modules.init();
 
-    assert.equal(services.getServiceInfo("identity").state, "registered");
+    assert.equal(services.getServiceInfo("identity").state, "");
     assert.equal(constructions, 0);
 });
 

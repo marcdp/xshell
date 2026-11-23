@@ -28,45 +28,45 @@ export default class Navigation {
     };
 
     // vars
-    _areas = null;
-    _bus = null;
-    _config = null;
-    _container = null;
-    _resolver = null;
+    #areas = null;
+    #bus = null;
+    #config = null;
+    #container = null;
+    #resolver = null;
 
-    _mode = ""; 
-    _appBasePath = "";
-    _assetsBasePath = "";
-    _compiledRoutes = new Map();
+    #mode = "";
+    #appBasePath = "";
+    #assetsBasePath = "";
+    #compiledRoutes = new Map();
 
-    _stack = [];
-    _stackToDomTask = Promise.resolve();
+    #stack = [];
+    #stackToDomTask = Promise.resolve();
     
     // ctor
     constructor( { areas, bus, config, resolver }, options = {}, { container = document.body } = {} ) {
         // initialize injected dependencies
-        this._areas = areas;
-        this._bus = bus;
-        this._config = config;
-        this._resolver = resolver;
+        this.#areas = areas;
+        this.#bus = bus;
+        this.#config = config;
+        this.#resolver = resolver;
 
         // initialize navigation settings
-        this._mode = options.mode;
-        this._container = container;
-        this._appBasePath = config.app.basePath === "/" ? "" : config.app.basePath;
-        this._assetsBasePath = config.xshell.assets?.basePath || "";
+        this.#mode = options.mode;
+        this.#container = container;
+        this.#appBasePath = config.app.basePath === "/" ? "" : config.app.basePath;
+        this.#assetsBasePath = config.xshell.assets?.basePath || "";
     }
 
     // props
-    get mode() { return this._mode; }
+    get mode() { return this.#mode; }
     get src() { 
-        if (!this._stack.length) return null;
-        this._stack[0].href;
+        if (!this.#stack.length) return null;
+        this.#stack[0].href;
         let xpage = this.getXPage();
         return (xpage ? xpage.src : null);
     }
     get stack() {
-        return this._stack.map(p => Object.freeze({
+        return this.#stack.map(p => Object.freeze({
             href: p.href,
             params: p.params,
             nav: p.nav,
@@ -76,40 +76,40 @@ export default class Navigation {
     
     // init
     async init() {
-        if (this._mode == "hash") {
+        if (this.#mode == "hash") {
             // hash mode
             window.addEventListener("hashchange", async () => {
-                this._stack = this._browserUrlToStack(document.location.hash);
-                await this._stackToDom();
+                this.#stack = this.#browserUrlToStack(document.location.hash);
+                await this.#stackToDom();
             });
             // init
             if (document.location.hash) {
-                this._stack = this._browserUrlToStack(document.location.hash);
-                await this._stackToDom();
+                this.#stack = this.#browserUrlToStack(document.location.hash);
+                await this.#stackToDom();
             } else {
-                let defaultArea = this._areas.getDefaultArea();
+                let defaultArea = this.#areas.getDefaultArea();
                 if (!defaultArea?.home) throw new Error("Default area has no navigation item marked default");
-                await this._stackToBrowser([this.parseUrl(defaultArea.home)], { replace: false });
+                await this.#stackToBrowser([this.parseUrl(defaultArea.home)], { replace: false });
             }
-        } else if (this._mode == "path") {
+        } else if (this.#mode == "path") {
             // path mode
             window.addEventListener("popstate", async () => {
                 let url = document.location.pathname + document.location.search;
-                if (url.startsWith(this._appBasePath)) url = url.substring(this._appBasePath.length);
-                this._stack = this._browserUrlToStack(url + document.location.hash);
-                await this._stackToDom();
+                if (url.startsWith(this.#appBasePath)) url = url.substring(this.#appBasePath.length);
+                this.#stack = this.#browserUrlToStack(url + document.location.hash);
+                await this.#stackToDom();
             });
             // init
             let url = document.location.pathname + document.location.search;
-            if (url.startsWith(this._appBasePath)) url = url.substring(this._appBasePath.length);
+            if (url.startsWith(this.#appBasePath)) url = url.substring(this.#appBasePath.length);
             if (url != "" && url != "/") {
-                this._stack = this._browserUrlToStack(url + document.location.hash);
-                await this._stackToDom();
+                this.#stack = this.#browserUrlToStack(url + document.location.hash);
+                await this.#stackToDom();
             } else {
-                let defaultArea = this._areas.getDefaultArea();
+                let defaultArea = this.#areas.getDefaultArea();
                 if (!defaultArea?.home) throw new Error("Default area has no navigation item marked default");
                 url = this.parseUrl(defaultArea.home);
-                await this._stackToBrowser([url], { replace: false });
+                await this.#stackToBrowser([url], { replace: false });
             }
         }
     }
@@ -121,7 +121,7 @@ export default class Navigation {
     }
     getXPages() {
         // get pages that are direct children of the container and not dialogs
-        return Array.from(this._container.querySelectorAll(":scope > x-page:not([layout='dialog'])"));
+        return Array.from(this.#container.querySelectorAll(":scope > x-page:not([layout='dialog'])"));
     }
     getXPageFromElement(target) {
         // get the page element from a target element by traversing up the DOM tree
@@ -145,16 +145,16 @@ export default class Navigation {
         const xpage = page?.host || null;
         const xpages = xpage ? this.getXPages() : [];
         const index = xpages.indexOf(xpage);
-        if (index < 0 || index >= this._stack.length) {
-            return this._replacePageSrcQuery(page?.src || null, changes);
+        if (index < 0 || index >= this.#stack.length) {
+            return this.#replacePageSrcQuery(page?.src || null, changes);
         }
-        const item = this._stack[index];
+        const item = this.#stack[index];
         const params = { ...(item.params || {}) };
-        this._applyQueryChanges(params, changes);
-        const stack = [...this._stack];
+        this.#applyQueryChanges(params, changes);
+        const stack = [...this.#stack];
         stack[index] = { ...item, params };
-        this._stackToBrowser(stack, { replace: true });
-        return this._buildUrlFinal(stack[index]);
+        this.#stackToBrowser(stack, { replace: true });
+        return this.#buildUrlFinal(stack[index]);
     }
     replacePageHash(page, hash) {
         // replace one Page fragment without navigating or reloading the Page
@@ -165,22 +165,22 @@ export default class Navigation {
         const xpage = page?.host || null;
         const xpages = xpage ? this.getXPages() : [];
         const index = xpages.indexOf(xpage);
-        if (index < 0 || index >= this._stack.length) {
-            return this._replacePageSrcHash(page?.src || null, fragment);
+        if (index < 0 || index >= this.#stack.length) {
+            return this.#replacePageSrcHash(page?.src || null, fragment);
         }
-        const item = this._stack[index];
-        const stack = [...this._stack];
-        stack[index] = { ...item, href: this._replacePageSrcHash(item.href, fragment) };
-        this._stackToBrowser(stack, { replace: true });
-        return this._buildUrlFinal(stack[index]);
+        const item = this.#stack[index];
+        const stack = [...this.#stack];
+        stack[index] = { ...item, href: this.#replacePageSrcHash(item.href, fragment) };
+        this.#stackToBrowser(stack, { replace: true });
+        return this.#buildUrlFinal(stack[index]);
     }
     buildUrlAbsolute(params){
-        let href = this._buildUrlPublic(params);
+        let href = this.#buildUrlPublic(params);
         if (/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(href)) return href;
-        if (this._mode == "hash") {
-            href = this._appBasePath + "/" + HASH_PREFIX + href;
+        if (this.#mode == "hash") {
+            href = this.#appBasePath + "/" + HASH_PREFIX + href;
         } else {
-            href = this._appBasePath + href;
+            href = this.#appBasePath + href;
         }
         return href;
     }
@@ -202,7 +202,7 @@ export default class Navigation {
         if (!href.startsWith("/")) href = combineUrls(page ? page.src : "/", href);
         // params
         for (const [k, v] of Object.entries(params)) {
-            href = this._appendQueryParameter(href, encodeURIComponent(k), encodeURIComponent(v));
+            href = this.#appendQueryParameter(href, encodeURIComponent(k), encodeURIComponent(v));
         }    
         // nav
         if (nav && (nav.title || nav.description || nav.icon || nav.breadcrumb)) {
@@ -210,7 +210,7 @@ export default class Navigation {
                 if (value !== null) return value;
                 return undefined;
             });
-            href = this._appendQueryParameter(href, "nav", base64UrlEncode(navJson));
+            href = this.#appendQueryParameter(href, "nav", base64UrlEncode(navJson));
         }
         // return
         return href;
@@ -262,7 +262,7 @@ export default class Navigation {
         if (typeof path !== "string" || !path.trim()) throw new Error("resolveRoute: path must be a non-empty string");
         if (!path.startsWith("/") || path.startsWith("//")) throw new Error("resolveRoute: path must start with a single '/'");
         const item = this.parseUrl(path);
-        const match = this._findRouteMatch(this._splitHref(item.href).identity);
+        const match = this.#findRouteMatch(this.#splitHref(item.href).identity);
         if (!match) return null;
 
         // describe the first match and build the same logical Page href used during navigation
@@ -274,7 +274,7 @@ export default class Navigation {
             route: route.path,
             target: route.href,
             params,
-            href: this._buildRouteHref(match, item, area)
+            href: this.#buildRouteHref(match, item, area)
         };
     }
 
@@ -296,7 +296,7 @@ export default class Navigation {
         // Preserve explicit asset targets for embeds while retaining ordinary relative resolution.
         if (!open) open = "auto";
         const preserveAssetPath = open === "embed" && (href.startsWith("/") || href.startsWith(HASH_PREFIX + "/") || href.startsWith("page:"));
-        const hrefResolved = this._resolveCanonicalHref(href, page, { preserveAssetPath });
+        const hrefResolved = this.#resolveCanonicalHref(href, page, { preserveAssetPath });
         const hrefAbsolute = this.buildUrl({ href: hrefResolved, params, nav, page });
         // open
         if (open == "auto") {
@@ -306,32 +306,32 @@ export default class Navigation {
             const indexPage = xpages.indexOf(xpage);
             if  (xpage == null) {
                 // top
-                await this._stackToBrowser([ this.parseUrl(hrefAbsolute) ], { replace });
+                await this.#stackToBrowser([ this.parseUrl(hrefAbsolute) ], { replace });
             } else if (indexPage == 0) {
                 // top
-                await this._stackToBrowser([ this.parseUrl(hrefAbsolute) ], { replace });
+                await this.#stackToBrowser([ this.parseUrl(hrefAbsolute) ], { replace });
             } else if (indexPage != -1) {
                 // stackpage
-                let stack = [...this._stack];
+                let stack = [...this.#stack];
                 stack[indexPage] = withStackClasses(this.parseUrl(hrefAbsolute), classes);
-                await this._stackToBrowser(stack, { replace });
+                await this.#stackToBrowser(stack, { replace });
             } else {
                 // dialog or embed 
-                const hrefFinal = this._buildUrlFinal(this.parseUrl(hrefAbsolute));
+                const hrefFinal = this.#buildUrlFinal(this.parseUrl(hrefAbsolute));
                 xpage.setAttribute("src", hrefFinal);
             }
         } else if (open == "top") {
             // top                        
-            await this._stackToBrowser([ this.parseUrl(hrefAbsolute) ], { replace });
+            await this.#stackToBrowser([ this.parseUrl(hrefAbsolute) ], { replace });
 
         } else if (open == "stack") {
             // stack
-            await this._stackToBrowser([...this._stack, withStackClasses(this.parseUrl(hrefAbsolute), classes)], { replace });
+            await this.#stackToBrowser([...this.#stack, withStackClasses(this.parseUrl(hrefAbsolute), classes)], { replace });
             
         } else if (open == "dialog") {
             // dialog
-            const hrefFinal = this._buildUrlFinal(this.parseUrl(hrefAbsolute));
-            return await this._showDialog({ href: hrefFinal, context });
+            const hrefFinal = this.#buildUrlFinal(this.parseUrl(hrefAbsolute));
+            return await this.#showDialog({ href: hrefFinal, context });
 
         } else if (open == "embed") {
             // embed
@@ -339,13 +339,13 @@ export default class Navigation {
                 const xpage = page.host;
                 const outletElement = xpage.querySelector(`x-page[outlet="${outlet}"]`);
                 if (outletElement) {
-                    const hrefFinal = this._buildUrlFinal(this.parseUrl(hrefAbsolute), { preserveAssetPath });
+                    const hrefFinal = this.#buildUrlFinal(this.parseUrl(hrefAbsolute), { preserveAssetPath });
                     outletElement.setAttribute("src", hrefFinal);
                 }
             }
         } else if (open == "dock") {
             // stack
-            this._bus.emit("xshell:navigation:dock:changed", { 
+            this.#bus.emit("xshell:navigation:dock:changed", {
                 src: hrefAbsolute,
             });
         }  
@@ -353,12 +353,12 @@ export default class Navigation {
 
 
     // private methods
-    _stackToBrowser(stack, { replace }) {
+    #stackToBrowser(stack, { replace }) {
         let url = "";
         if (stack.length) {
             // root page
             const root = stack[0];
-            url = this._buildUrlPublic({
+            url = this.#buildUrlPublic({
                 href: root.href,
                 params: root.params,
                 nav: (stack.length == 1 ? root.nav : null)
@@ -375,32 +375,32 @@ export default class Navigation {
                     if (value !== null) return value;
                     return undefined;
                 });
-                url = this._appendQueryParameter(url, "nav", base64UrlEncode(navJson));
+                url = this.#appendQueryParameter(url, "nav", base64UrlEncode(navJson));
             }
         }
-        this._stack = stack;
-        if (this._mode === "hash") {
+        this.#stack = stack;
+        if (this.#mode === "hash") {
             if (replace) {
                 location.replace(HASH_PREFIX + url);
             } else {
                 location.hash = HASH_PREFIX + url;
             }            
-        } else if (this._mode === "path") {
+        } else if (this.#mode === "path") {
             if (replace) {
-                history.replaceState(null, "", this._appBasePath + url);
+                history.replaceState(null, "", this.#appBasePath + url);
             } else {
-                history.pushState(null, "", this._appBasePath + url);
+                history.pushState(null, "", this.#appBasePath + url);
             }
         }
         // keep the live Page elements and the logical stack aligned without reloading href-identical Pages
-        return this._stackToDom();
+        return this.#stackToDom();
     }
-    _browserUrlToStack(url) {
+    #browserUrlToStack(url) {
         if (!url || typeof url !== "string") {
             throw new Error("_browserUrlToStack: url must be a non-empty string");
         }
         // remove hash prefix if needed
-        if (this._mode === "hash") {
+        if (this.#mode === "hash") {
             if (url.startsWith(HASH_PREFIX)) {
                 url = url.substring(HASH_PREFIX.length);
             }
@@ -414,27 +414,27 @@ export default class Navigation {
         }
         return stack;
     }
-    _stackToDom() {
+    #stackToDom() {
         // serialize reconciliations so a pending Page unload cannot be selected again
-        const task = this._stackToDomTask.then(() => this._reconcileStackToDom());
-        this._stackToDomTask = task.then(() => {}, () => {});
+        const task = this.#stackToDomTask.then(() => this.#reconcileStackToDom());
+        this.#stackToDomTask = task.then(() => {}, () => {});
         return task;
     }
-    async _reconcileStackToDom() {
+    async #reconcileStackToDom() {
         //navigate
         const xpages = this.getXPages();
         const domStack = xpages.map(xpage => this.parseUrl(xpage.src));
 
         // Detect structural navigation, ignoring query parameters and URL fragments.
-        const structuralChange = domStack.length !== this._stack.length ||
+        const structuralChange = domStack.length !== this.#stack.length ||
             domStack.some((before, index) => {
-                const targetHref = this.parseUrl(this._buildUrlFinal(this._stack[index])).href;
-                return this._splitHref(before.href).identity !== this._splitHref(targetHref).identity;
+                const targetHref = this.parseUrl(this.#buildUrlFinal(this.#stack[index])).href;
+                return this.#splitHref(before.href).identity !== this.#splitHref(targetHref).identity;
             });
 
         // Close dialogs only when the navigation stack changes structurally.
         if (structuralChange) {
-            const allXPages = Array.from(this._container.querySelectorAll(":scope > x-page"));
+            const allXPages = Array.from(this.#container.querySelectorAll(":scope > x-page"));
             for (let i = allXPages.length - 1; i >= 0; i--) {
                 const xpage = allXPages[i];
                 if (xpage.getAttribute("layout") !== "dialog") break;
@@ -443,18 +443,18 @@ export default class Navigation {
         }
 
         //process stack
-        for (let i = 0; i < Math.max(this._stack.length, domStack.length); i++) {
+        for (let i = 0; i < Math.max(this.#stack.length, domStack.length); i++) {
             let itemBefore = domStack[i];
-            let itemAfter = this._stack[i];
+            let itemAfter = this.#stack[i];
             if (!itemBefore && itemAfter) {
                 //add page
                 let xpage = document.createElement("x-page");
-                const hrefFinal = this._buildUrlFinal(itemAfter);
+                const hrefFinal = this.#buildUrlFinal(itemAfter);
                 xpage.setAttribute("src", hrefFinal);
                 if (i == 0) {
                     xpage.setAttribute("layout", "main");
                     //emit event navigation-start
-                    this._bus.emit("xshell:navigation:start", { src: xpage.src });
+                    this.#bus.emit("xshell:navigation:start", { src: xpage.src });
                 } else {
                     xpage.setAttribute("layout", "stack");
                     xpage.stackClasses = itemAfter.classes;
@@ -462,8 +462,8 @@ export default class Navigation {
                         //page close
                         let xpages = this.getXPages();
                         let index = xpages.indexOf(event.target);
-                        this._stack.splice(index, 1);
-                        await this._stackToBrowser(this._stack, { replace: false });
+                        this.#stack.splice(index, 1);
+                        await this.#stackToBrowser(this.#stack, { replace: false });
                     });
                 }
                 xpage.addEventListener("change", (event) => {
@@ -471,7 +471,7 @@ export default class Navigation {
                     let xpages = this.getXPages();
                     if (xpages.indexOf(event.target) == 0) {
                         var label = event.target.label;
-                        if (label) document.title = label + " / " + this._config.app.label;
+                        if (label) document.title = label + " / " + this.#config.app.label;
                     }
                 });
                 xpage.addEventListener("load", (event) => {
@@ -479,20 +479,20 @@ export default class Navigation {
                     let xpages = this.getXPages();
                     if (xpages.indexOf(event.target) == 0) {
                         var label = event.target.label;
-                        if (label) document.title = label + " / " + this._config.app.label;
-                        this._bus.emit("xshell:navigation:end", { src: event.target.src, id: event.target.page.id});
+                        if (label) document.title = label + " / " + this.#config.app.label;
+                        this.#bus.emit("xshell:navigation:end", { src: event.target.src, id: event.target.page.id});
                     }
                 });
                 xpage.addEventListener("first-render", event => {
                     // Forward the first render of the main Page
                     if (this.getXPages()[0] !== event.target) return;
-                    this._bus.emit("xshell:navigation:first-render", {
+                    this.#bus.emit("xshell:navigation:first-render", {
                         src: event.target.src,
                         id: event.detail.page.id
                     });
                 }, { once: true });
                 //add page to container
-                this._container.appendChild(xpage);
+                this.#container.appendChild(xpage);
             } else if (itemBefore && !itemAfter) {
                 //remove page
                 // use the original host for this position and await its final cleanup
@@ -504,22 +504,22 @@ export default class Navigation {
                 if (itemBefore.href === itemAfter.href) continue;
 
                 //change page
-                const hrefFinal = itemAfter ? this._buildUrlFinal(itemAfter) : null;
+                const hrefFinal = itemAfter ? this.#buildUrlFinal(itemAfter) : null;
                 const itemFinal = hrefFinal ? this.parseUrl(hrefFinal) : null;
                 if (itemBefore.href != itemFinal.href) {
                     xpage.src = hrefFinal;
                     //emit event navigation-start
                     if (i == 0) {
-                        this._bus.emit("xshell:navigation:start", { src: xpage.src });
+                        this.#bus.emit("xshell:navigation:start", { src: xpage.src });
                     }
                 }
             }
         }
     }
-    async _showDialog({ href, context }) {
+    async #showDialog({ href, context }) {
         //show page dialog
         let xpage = document.createElement("x-page");
-        const hrefFinal = this._buildUrlFinal(this.parseUrl(href));
+        const hrefFinal = this.#buildUrlFinal(this.parseUrl(href));
         xpage.setAttribute("src", hrefFinal);
         xpage.setAttribute("layout", "dialog");
         xpage.context = context || {};
@@ -537,97 +537,97 @@ export default class Navigation {
                     reject(error);
                 }
             });
-            this._container.appendChild(xpage);
+            this.#container.appendChild(xpage);
         });
     }
-    _buildUrlFinal(item, { preserveAssetPath = false } = {}) {
-        const { identity, suffix } = this._splitHref(item.href);
+    #buildUrlFinal(item, { preserveAssetPath = false } = {}) {
+        const { identity, suffix } = this.#splitHref(item.href);
 
         // Keep explicit embedded resources out of friendly menu and route matching.
         if (preserveAssetPath) {
-            const area = this._areas.getArea?.(this._areas.resolveAreaId?.(identity));
-            if (this._isAssetPath(identity) || this._isAssetPath(this._removeAreaPrefix(identity, area))) return this.buildUrl(item);
+            const area = this.#areas.getArea?.(this.#areas.resolveAreaId?.(identity));
+            if (this.#isAssetPath(identity) || this.#isAssetPath(this.#removeAreaPrefix(identity, area))) return this.buildUrl(item);
         }
-        const menuitem = this._areas.resolvePath(identity);
+        const menuitem = this.#areas.resolvePath(identity);
         if (menuitem) {
             return this.buildUrl({
                 ...item,
                 href: menuitem.href + suffix
             });
         }
-        const match = this._findRouteMatch(identity);
-        if (match) return this._buildRouteHref(match, item, match.area);
+        const match = this.#findRouteMatch(identity);
+        if (match) return this.#buildRouteHref(match, item, match.area);
         return this.buildUrl({
             ...item,
             href: identity + suffix
         });
     }
-    _buildUrlPublic(params) {
-        const target = this._resolvePublicTarget(params.href, params.params || {}, params.page);
+    #buildUrlPublic(params) {
+        const target = this.#resolvePublicTarget(params.href, params.params || {}, params.page);
         return this.buildUrl({ ...params, href: target.href, params: target.params });
     }
-    _resolvePublicHref(href, page) {
-        return this._resolvePublicTarget(href, {}, page).href;
+    #resolvePublicHref(href, page) {
+        return this.#resolvePublicTarget(href, {}, page).href;
     }
-    _resolvePublicTarget(href, params, page) {
+    #resolvePublicTarget(href, params, page) {
         // leave external targets under native browser control
         if (!href.startsWith("page:") && /^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(href)) return { href, params };
-        const canonicalHref = this._resolveCanonicalHref(href, page);
-        const { identity, suffix } = this._splitHref(canonicalHref);
-        const areaId = this._areas.resolveAreaId?.(identity);
-        const area = this._areas.getArea?.(areaId);
-        const menuitem = area ? this._areas.resolveHref?.(identity, area.id) : null;
+        const canonicalHref = this.#resolveCanonicalHref(href, page);
+        const { identity, suffix } = this.#splitHref(canonicalHref);
+        const areaId = this.#areas.resolveAreaId?.(identity);
+        const area = this.#areas.getArea?.(areaId);
+        const menuitem = area ? this.#areas.resolveHref?.(identity, area.id) : null;
         if (menuitem) return { href: (menuitem.path || identity) + suffix, params };
-        for (const routeArea of this._getPublicRouteAreas(href.startsWith("page:") ? canonicalHref : href, page)) {
-            const routeTarget = this._resolvePublicRouteTarget(canonicalHref, params, routeArea);
+        for (const routeArea of this.#getPublicRouteAreas(href.startsWith("page:") ? canonicalHref : href, page)) {
+            const routeTarget = this.#resolvePublicRouteTarget(canonicalHref, params, routeArea);
             if (routeTarget) return routeTarget;
         }
         return { href: canonicalHref, params };
     }
-    _resolveCanonicalHref(href, page, { preserveAssetPath = false } = {}) {
+    #resolveCanonicalHref(href, page, { preserveAssetPath = false } = {}) {
         // resolve relative targets and apply the originating navigation context
         if (href.startsWith("page:")) {
-            const { identity, suffix } = this._splitHref(href);
-            const resolved = this._resolver.resolve(identity);
+            const { identity, suffix } = this.#splitHref(href);
+            const resolved = this.#resolver.resolve(identity);
             if (!resolved?.path) throw new Error(`Navigation: unable to resolve Page reference '${identity}' to a browser path.`);
             href = resolved.path + suffix;
         }
         if (/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(href)) return href;
         if (href.startsWith("#!")) href = href.substring(2);
-        href = this._removeAppBasePathFromAssetHref(href);
+        href = this.#removeAppBasePathFromAssetHref(href);
         if (!href.startsWith("/")) href = combineUrls(page ? page.src : "/", href);
-        const { identity, suffix } = this._splitHref(href);
-        const targetArea = this._areas.getArea?.(this._areas.resolveAreaId?.(identity));
+        const { identity, suffix } = this.#splitHref(href);
+        const targetArea = this.#areas.getArea?.(this.#areas.resolveAreaId?.(identity));
         if (targetArea?.prefix) return identity + suffix;
 
         // Preserve an explicit canonical asset path before looking up the originating Area or menu.
-        if (preserveAssetPath && this._isAssetPath(identity)) return identity + suffix;
-        const pageAreaId = page?.src ? this._areas.resolveAreaId?.(page.src) : null;
-        const menuitem = this._areas.resolveHref?.(identity, pageAreaId) || this._areas.resolveHref?.(identity);
+        if (preserveAssetPath && this.#isAssetPath(identity)) return identity + suffix;
+        const pageAreaId = page?.src ? this.#areas.resolveAreaId?.(page.src) : null;
+        const menuitem = this.#areas.resolveHref?.(identity, pageAreaId) || this.#areas.resolveHref?.(identity);
         if (menuitem) return menuitem.href + suffix;
-        const area = page ? this._areas.getArea?.(pageAreaId) : this._areas.getCurrentArea?.() || this._areas.getDefaultArea?.();
+        const area = page ? this.#areas.getArea?.(pageAreaId) : this.#areas.getCurrentArea?.() || this.#areas.getDefaultArea?.();
         if (!area) return href;
-        const canonicalHref = this._applyAreaPrefix(identity, area);
+        const canonicalHref = this.#applyAreaPrefix(identity, area);
         return canonicalHref + suffix;
     }
-    _findRouteMatch(identity) {
+    #findRouteMatch(identity) {
         // select the Area from the public path and match against Area-relative declarations
-        const area = this._areas.getArea?.(this._areas.resolveAreaId?.(identity));
+        const area = this.#areas.getArea?.(this.#areas.resolveAreaId?.(identity));
         if (!area) return null;
-        const match = this._matchAreaRoutes(this._removeAreaPrefix(identity, area), area);
+        const match = this.#matchAreaRoutes(this.#removeAreaPrefix(identity, area), area);
         return match ? { area, ...match } : null;
     }
-    _compileRoute(path) {
+    #compileRoute(path) {
         return compileRoute(path);
     }
-    _matchAreaRoutes(path, area) {
-        return this._matchRoutes(path, area?.routes || []);
+    #matchAreaRoutes(path, area) {
+        return this.#matchRoutes(path, area?.routes || []);
     }
-    _matchRoutes(path, routes) {
+    #matchRoutes(path, routes) {
         if (typeof path !== "string") throw new TypeError("matchRoutes: path must be a string");
-        const pathname = this._splitHref(path).identity;
+        const pathname = this.#splitHref(path).identity;
         for (const route of routes || []) {
-            const compiled = this._getCompiledRoute(route.path);
+            const compiled = this.#getCompiledRoute(route.path);
             const match = compiled.matcher.exec(pathname);
             if (!match) continue;
             const params = {};
@@ -642,20 +642,20 @@ export default class Navigation {
         }
         return null;
     }
-    _getCompiledRoute(path) {
-        let compiled = this._compiledRoutes.get(path);
+    #getCompiledRoute(path) {
+        let compiled = this.#compiledRoutes.get(path);
         if (!compiled) {
-            compiled = this._compileRoute(path);
-            this._compiledRoutes.set(path, compiled);
+            compiled = this.#compileRoute(path);
+            this.#compiledRoutes.set(path, compiled);
         }
         return compiled;
     }
-    _buildRouteHref(match, item, area) {
+    #buildRouteHref(match, item, area) {
         // merge the route target and incoming URL while keeping path parameters authoritative
         const target = this.parseUrl(match.route.href);
-        const targetParts = this._splitHref(target.href);
-        const inputParts = this._splitHref(item.href);
-        const targetIdentity = this._applyAreaPrefix(targetParts.identity, area);
+        const targetParts = this.#splitHref(target.href);
+        const inputParts = this.#splitHref(item.href);
+        const targetIdentity = this.#applyAreaPrefix(targetParts.identity, area);
         const params = { ...target.params, ...match.params };
         for (const [key, value] of Object.entries(item.params || {})) {
             if (!Object.hasOwn(match.params, key)) params[key] = value;
@@ -666,33 +666,33 @@ export default class Navigation {
             params
         });
     }
-    _getPublicRouteAreas(href, page) {
+    #getPublicRouteAreas(href, page) {
         const areas = [];
         const add = area => {
             if (area && !areas.includes(area)) areas.push(area);
         };
-        const identity = this._splitHref(href).identity;
-        add(this._areas.getArea?.(this._areas.resolveAreaId?.(identity)));
-        if (page?.src) add(this._areas.getArea?.(this._areas.resolveAreaId?.(page.src)));
-        const moduleId = this._areas.getModuleId?.(identity);
+        const identity = this.#splitHref(href).identity;
+        add(this.#areas.getArea?.(this.#areas.resolveAreaId?.(identity)));
+        if (page?.src) add(this.#areas.getArea?.(this.#areas.resolveAreaId?.(page.src)));
+        const moduleId = this.#areas.getModuleId?.(identity);
         if (moduleId) {
-            for (const area of this._areas.getAreas?.() || []) {
+            for (const area of this.#areas.getAreas?.() || []) {
                 if (area.modules.includes(moduleId)) add(area);
             }
         }
-        add(this._areas.getCurrentArea?.());
-        add(this._areas.getDefaultArea?.());
+        add(this.#areas.getCurrentArea?.());
+        add(this.#areas.getDefaultArea?.());
         return areas;
     }
-    _resolvePublicRouteTarget(canonicalHref, suppliedParams, area) {
+    #resolvePublicRouteTarget(canonicalHref, suppliedParams, area) {
         const canonical = this.parseUrl(canonicalHref);
-        const canonicalParts = this._splitHref(canonical.href);
-        const canonicalArea = this._areas.getArea?.(this._areas.resolveAreaId?.(canonicalParts.identity));
-        const canonicalIdentity = this._removeAreaPrefix(canonicalParts.identity, canonicalArea);
+        const canonicalParts = this.#splitHref(canonical.href);
+        const canonicalArea = this.#areas.getArea?.(this.#areas.resolveAreaId?.(canonicalParts.identity));
+        const canonicalIdentity = this.#removeAreaPrefix(canonicalParts.identity, canonicalArea);
         const canonicalParams = { ...canonical.params, ...suppliedParams };
         for (const route of area.routes || []) {
             const target = this.parseUrl(route.href);
-            const targetIdentity = this._splitHref(target.href).identity;
+            const targetIdentity = this.#splitHref(target.href).identity;
             if (targetIdentity !== canonicalIdentity) continue;
             let applicable = true;
             for (const [key, value] of Object.entries(target.params)) {
@@ -702,7 +702,7 @@ export default class Navigation {
                 }
             }
             if (!applicable) continue;
-            const compiled = this._getCompiledRoute(route.path);
+            const compiled = this.#getCompiledRoute(route.path);
             for (const parameter of compiled.parameters) {
                 const value = canonicalParams[parameter];
                 if (!Object.hasOwn(canonicalParams, parameter) || value === null || typeof value === "undefined" || String(value) === "") {
@@ -717,51 +717,51 @@ export default class Navigation {
             const remainingParams = { ...canonicalParams };
             for (const key of Object.keys(target.params)) delete remainingParams[key];
             for (const parameter of compiled.parameters) delete remainingParams[parameter];
-            const publicPath = this._applyAreaPrefix(routePath, area);
+            const publicPath = this.#applyAreaPrefix(routePath, area);
             return { href: publicPath + canonicalParts.suffix, params: remainingParams };
         }
         return null;
     }
-    _removeAreaPrefix(path, area) {
+    #removeAreaPrefix(path, area) {
         // derive the Area-relative identity without modifying route declarations
         if (!area?.prefix) return path;
         if (path === area.prefix) return "/";
         return path.startsWith(area.prefix + "/") ? path.substring(area.prefix.length) : path;
     }
-    _applyAreaPrefix(path, area) {
+    #applyAreaPrefix(path, area) {
         // apply the public navigation context exactly once
         if (!area?.prefix || path === area.prefix || path.startsWith(area.prefix + "/")) return path;
         return area.prefix + path;
     }
-    _removeAppBasePathFromAssetHref(href) {
+    #removeAppBasePathFromAssetHref(href) {
         // Rendered native links may already contain App.BasePath. Convert only
         // structural application asset URLs back to Navigation's logical namespace.
-        if (!this._appBasePath || !this._assetsBasePath) return href;
-        const { identity, suffix } = this._splitHref(href);
-        if (identity !== this._appBasePath && !identity.startsWith(this._appBasePath + "/")) return href;
-        const applicationIdentity = identity.substring(this._appBasePath.length) || "/";
-        if (this._isAssetPath(applicationIdentity)) return applicationIdentity + suffix;
-        const area = this._areas.getArea?.(this._areas.resolveAreaId?.(applicationIdentity));
-        return this._isAssetPath(this._removeAreaPrefix(applicationIdentity, area)) ? applicationIdentity + suffix : href;
+        if (!this.#appBasePath || !this.#assetsBasePath) return href;
+        const { identity, suffix } = this.#splitHref(href);
+        if (identity !== this.#appBasePath && !identity.startsWith(this.#appBasePath + "/")) return href;
+        const applicationIdentity = identity.substring(this.#appBasePath.length) || "/";
+        if (this.#isAssetPath(applicationIdentity)) return applicationIdentity + suffix;
+        const area = this.#areas.getArea?.(this.#areas.resolveAreaId?.(applicationIdentity));
+        return this.#isAssetPath(this.#removeAreaPrefix(applicationIdentity, area)) ? applicationIdentity + suffix : href;
     }
-    _isAssetPath(path) {
+    #isAssetPath(path) {
         // Require a namespace boundary so similarly named friendly paths still resolve normally.
-        return Boolean(this._assetsBasePath) && (path === this._assetsBasePath || path.startsWith(this._assetsBasePath + "/"));
+        return Boolean(this.#assetsBasePath) && (path === this.#assetsBasePath || path.startsWith(this.#assetsBasePath + "/"));
     }
-    _splitHref(href) {
+    #splitHref(href) {
         const queryIndex = href.indexOf("?");
         const hashIndex = href.indexOf("#");
         const suffixIndexes = [queryIndex, hashIndex].filter(index => index !== -1);
         const suffixIndex = suffixIndexes.length ? Math.min(...suffixIndexes) : href.length;
         return { identity: href.substring(0, suffixIndex), suffix: href.substring(suffixIndex) };
     }
-    _appendQueryParameter(href, key, value) {
+    #appendQueryParameter(href, key, value) {
         const hashIndex = href.indexOf("#");
         const fragment = hashIndex === -1 ? "" : href.substring(hashIndex);
         const source = hashIndex === -1 ? href : href.substring(0, hashIndex);
         return source + (source.includes("?") ? "&" : "?") + key + "=" + value + fragment;
     }
-    _applyQueryChanges(params, changes) {
+    #applyQueryChanges(params, changes) {
         // apply query patches while preserving unrelated parameters
         for (const [key, value] of Object.entries(changes)) {
             if (typeof(value) === "undefined") {
@@ -780,7 +780,7 @@ export default class Navigation {
             params[key] = String(value);
         }
     }
-    _replacePageSrcQuery(src, changes) {
+    #replacePageSrcQuery(src, changes) {
         // patch a dialog or embedded Page source without touching browser navigation
         if (typeof(src) !== "string") {
             return null;
@@ -792,11 +792,11 @@ export default class Navigation {
         const href = queryIndex < 0 ? source : source.substring(0, queryIndex);
         const query = new URLSearchParams(queryIndex < 0 ? "" : source.substring(queryIndex + 1));
         const params = Object.fromEntries(query.entries());
-        this._applyQueryChanges(params, changes);
+        this.#applyQueryChanges(params, changes);
         const serialized = new URLSearchParams(params).toString();
         return href + (serialized ? `?${serialized}` : "") + hash;
     }
-    _replacePageSrcHash(src, hash) {
+    #replacePageSrcHash(src, hash) {
         // replace only a Page source fragment while preserving its path and query
         if (typeof(src) !== "string") {
             return null;

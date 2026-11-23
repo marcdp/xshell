@@ -296,7 +296,7 @@ test("x-page intercepts only application anchors and preserves native clicks", a
             await t.test(`${mode}: ${JSON.stringify(scenario)}`, () => {
                 // exercise the registered click listener with real Navigation URL parsing
                 const navigation = new Navigation({
-                    areas: {}, bus: {},
+                    areas: { resolvePath() { return null; } }, bus: {},
                     config: { app: { basePath: "", baseUrl: "https://example.test/" }, xshell: { assets: { basePath: "/_assets" } } }
                 }, { mode }, { container: {} });
                 const calls = [];
@@ -376,10 +376,7 @@ test("x-page native anchors and x-anchor targets reach the same JavaScript and M
                     xshell: { assets: { basePath: "/_assets" } }
                 }
             }, { mode }, { container: { querySelectorAll() { return []; } } });
-            navigation._stackToBrowser = stack => {
-                browserUrls.push(navigation.buildUrlAbsolute(stack[0]));
-                return Promise.resolve();
-            };
+            navigation.navigate = params => { browserUrls.push(navigation.buildUrlAbsolute(params)); };
             const XPage = createXPageClass({ navigation });
             const xpage = new XPage();
             xpage._page = new Page({ src: scenario.pageSrc, context: {} });
@@ -843,12 +840,11 @@ test("dialog close completes after one final Page unload and host removal", asyn
     const unloadGate = new Promise(resolve => { finishUnload = resolve; });
     const container = new FakeNode();
     const navigation = new Navigation({
-        areas: {},
+        areas: { resolvePath() { return null; } },
         bus: {},
         config: { app: { basePath: "", baseUrl: "https://example.test/" }, xshell: {} }
     }, { mode: "path" }, { container });
-    navigation._buildUrlFinal = item => item.href;
-    const resultPromise = navigation._showDialog({ href: "/pages/dialog.js", context: {} });
+    const resultPromise = navigation.navigate({ href: "/pages/dialog.js", open: "dialog", context: {} });
     const xpage = container.firstChild;
     xpage._page = {
         async unmount() { commands.push("unmount"); },
@@ -878,12 +874,11 @@ test("dialog close completes after one final Page unload and host removal", asyn
 test("dialog close rejects its promise when final Page cleanup fails", async () => {
     const container = new FakeNode();
     const navigation = new Navigation({
-        areas: {},
+        areas: { resolvePath() { return null; } },
         bus: {},
         config: { app: { basePath: "", baseUrl: "https://example.test/" }, xshell: {} }
     }, { mode: "path" }, { container });
-    navigation._buildUrlFinal = item => item.href;
-    const resultPromise = navigation._showDialog({ href: "/pages/dialog.js", context: {} });
+    const resultPromise = navigation.navigate({ href: "/pages/dialog.js", open: "dialog", context: {} });
     const xpage = container.firstChild;
     const failure = new Error("unload failed");
     xpage._page = {
@@ -895,36 +890,38 @@ test("dialog close rejects its promise when final Page cleanup fails", async () 
     await assert.rejects(resultPromise, error => error === failure);
 });
 
-test("navigation stack changes close dialogs through final Page cleanup", async () => {
+test("navigation stack changes close dialogs through final Page cleanup", async t => {
+    globalThis.history = { pushState() {} };
+    t.after(() => { delete globalThis.history; });
     const commands = [];
     const container = new FakeNode();
     container.querySelectorAll = () => container.childNodes;
     const navigation = new Navigation({
-        areas: {},
+        areas: { resolvePath() { return null; } },
         bus,
         config: { app: { basePath: "", baseUrl: "https://example.test/" }, xshell: {} }
     }, { mode: "path" }, { container });
-    navigation._buildUrlFinal = item => item.href;
     navigation.getXPages = () => [];
-    const resultPromise = navigation._showDialog({ href: "/pages/dialog.js", context: {} });
+    const resultPromise = navigation.navigate({ href: "/pages/dialog.js", open: "dialog", context: {} });
     const xpage = container.firstChild;
     xpage._page = {
         async unmount() { commands.push("unmount"); },
         async unload() { commands.push("unload"); }
     };
 
-    navigation._stack = [{ href: "/pages/main.js" }];
-    await navigation._stackToDom();
+    await navigation.navigate({ href: "/pages/main.js", open: "top", page: { host: null } });
     assert.equal(await resultPromise, null);
     assert.deepEqual(commands, ["unmount", "unload"]);
     assert.deepEqual(container.childNodes.map(host => host.getAttribute("src")), ["/pages/main.js"]);
 });
 
-test("navigation shrinks three stack Pages to one after asynchronous final unloads", async () => {
+test("navigation shrinks three stack Pages to one after asynchronous final unloads", async t => {
+    globalThis.history = { pushState() {} };
+    t.after(() => { delete globalThis.history; });
     const container = new FakeNode();
     container.querySelectorAll = () => container.childNodes;
     const navigation = new Navigation({
-        areas: {}, bus: { emit() {} },
+        areas: { resolvePath() { return null; } }, bus: { emit() {} },
         config: { app: { basePath: "", baseUrl: "https://example.test/" }, xshell: {} }
     }, { mode: "path" }, { container });
     const counts = [0, 0, 0];
@@ -942,8 +939,7 @@ test("navigation shrinks three stack Pages to one after asynchronous final unloa
         container.appendChild(host);
     }
     const [root, middle, top] = container.childNodes;
-    navigation._stack = [navigation.parseUrl(root.src)];
-    const reconciliation = navigation._stackToDom();
+    const reconciliation = navigation.navigate({ href: root.src, open: "top", page: { host: root } });
     await new Promise(resolve => setImmediate(resolve));
     assert.deepEqual(counts, [0, 1, 0]);
     gates.shift()();
@@ -1006,12 +1002,11 @@ test("x-page renders a failed Page through the configured error Component", asyn
 test("x-page and dialog preserve falsy results", async () => {
     const container = new FakeNode();
     const navigation = new Navigation({
-        areas: {}, bus: {},
+        areas: { resolvePath() { return null; } }, bus: {},
         config: { app: { basePath: "", baseUrl: "https://example.test/" }, xshell: {} }
     }, { mode: "path" }, { container });
-    navigation._buildUrlFinal = item => item.href;
     for (const value of [false, 0, "", null]) {
-        const resultPromise = navigation._showDialog({ href: "/pages/dialog.js", context: {} });
+        const resultPromise = navigation.navigate({ href: "/pages/dialog.js", open: "dialog", context: {} });
         const host = container.firstChild;
         assert.equal(host.result, null);
         host._page = { async unmount() {}, async unload() {} };

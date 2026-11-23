@@ -19,35 +19,35 @@ export default class Modules {
     };
 
     // vars
-    _bus = null;
-    _config = null;
-    _loader = null;
-    _resolver = null;
-    _modules = null;
-    _shadowStyleSheets = null;
-    _document = null;
-    _services = null;
-    _controllerScopes = null;
+    #bus = null;
+    #config = null;
+    #loader = null;
+    #resolver = null;
+    #modules = null;
+    #shadowStyleSheets = null;
+    #document = null;
+    #services = null;
+    #controllerScopes = null;
     
     
     // ctor
     constructor({ bus, config, loader, resolver, services, document }, options = {}) {
         // initialize injected dependencies
-        this._bus = bus;
-        this._config = config;
-        this._loader = loader;
-        this._resolver = resolver;
-        this._document = document;
-        this._services = services;
-        this._modules = [];
-        this._controllerScopes = new Map();
-        this._shadowStyleSheets = Object.freeze([]);
+        this.#bus = bus;
+        this.#config = config;
+        this.#loader = loader;
+        this.#resolver = resolver;
+        this.#document = document;
+        this.#services = services;
+        this.#modules = [];
+        this.#controllerScopes = new Map();
+        this.#shadowStyleSheets = Object.freeze([]);
     }
 
     // props
     get registry() {
         // expose module metadata without returning controllers or mutable runtime records
-        return Object.freeze(this._modules.map(module => Object.freeze({
+        return Object.freeze(this.#modules.map(module => Object.freeze({
             id: module.id,
             label: module.label,
             description: module.description || "",
@@ -74,25 +74,25 @@ export default class Modules {
     }
     get shadowStyleSheets() {
         // expose the shared sheets in deterministic module order without allowing collection changes
-        return this._shadowStyleSheets;
+        return this.#shadowStyleSheets;
     }
 
     // method
     async init() {
         // init modules instances
         // validate service requirements before loading or starting any module controller
-        for (const moduleId of Object.keys(this._config.modules)) {
-            const moduleConfig = this._config.modules[moduleId];
+        for (const moduleId of Object.keys(this.#config.modules)) {
+            const moduleConfig = this.#config.modules[moduleId];
             for (const serviceName of moduleConfig.requires || []) {
-                if (!this._services.has(serviceName)) throw new Error(`Module '${moduleId}' requires unavailable service '${serviceName}'.`);
+                if (!this.#services.has(serviceName)) throw new Error(`Module '${moduleId}' requires unavailable service '${serviceName}'.`);
             }
         }
 
         // create modules
         let tasks = [];
         const sharedStyleTasks = [];
-        for(var moduleId of Object.keys(this._config.modules)) {
-            const moduleConfig = this._config.modules[moduleId];
+        for(var moduleId of Object.keys(this.#config.modules)) {
+            const moduleConfig = this.#config.modules[moduleId];
             // instance
             let module = {
                 id: moduleId,
@@ -111,37 +111,37 @@ export default class Modules {
             const moduleIndexCss = moduleConfig.assets.path + "/styles/index.css";
             if (moduleConfig.files.some(file => file.path == moduleIndexCss)) {
                 tasks.push((async() => {
-                    let styleSheet = await this._loader.load("style:" + moduleIndexCss);
+                    let styleSheet = await this.#loader.load("style:" + moduleIndexCss);
                     module.styles.push(styleSheet);
                 })());
             }
             // shared document and Shadow DOM styles
             const moduleSharedCss = moduleConfig.assets.path + "/styles/shared.css";
             if (moduleConfig.files.some(file => file.path == moduleSharedCss)) {
-                const task = this._loader.load("style:" + moduleSharedCss);
+                const task = this.#loader.load("style:" + moduleSharedCss);
                 sharedStyleTasks.push(task);
                 tasks.push(task);
             }
             // add module instance
-            this._modules.push(module);
+            this.#modules.push(module);
         }
         await Promise.all(tasks);
 
         // publish shared sheets before module controllers can instantiate Components or Pages
-        this._shadowStyleSheets = Object.freeze(await Promise.all(sharedStyleTasks));
+        this.#shadowStyleSheets = Object.freeze(await Promise.all(sharedStyleTasks));
 
         // load Module controllers and give each one an independent direct-root Services scope
         try {
-            for (const module of this._modules) {
+            for (const module of this.#modules) {
                 const moduleId = module.id;
                 const moduleConfig = module.config;
                 const moduleControllerJs = moduleConfig.assets.path + "/module.js";
                 if (!moduleConfig.files.some(file => file.path == moduleControllerJs)) continue;
-                const moduleClass = await this._loader.load("esm:" + moduleControllerJs);
-                const moduleScope = this._services.beginScope({context: {
+                const moduleClass = await this.#loader.load("esm:" + moduleControllerJs);
+                const moduleScope = this.#services.beginScope({context: {
                     invokeController(command, ...params) { return module.controller?.[command]?.(...params); }
                 }});
-                this._controllerScopes.set(moduleId, moduleScope);
+                this.#controllerScopes.set(moduleId, moduleScope);
                 const servicesProvider = new Proxy({}, {
                     get: (obj, prop) => {
                         if (prop == "moduleAssetsPath") {
@@ -166,7 +166,7 @@ export default class Modules {
         } catch (error) {
             // release every scope created during failed controller initialization and preserve the original error
             const cleanupErrors = [];
-            await this._disposeControllerScopes(cleanupErrors);
+            await this.#disposeControllerScopes(cleanupErrors);
             reportCleanupErrors(cleanupErrors, "Failed to dispose Module Services scopes after controller initialization failed.");
             throw error;
         }
@@ -175,15 +175,15 @@ export default class Modules {
         await this.start();
 
         // freeze modules
-        for (let module of this._modules) {
+        for (let module of this.#modules) {
             Object.freeze(module);
         }
 
         // adopt shared sheets before document-only sheets while preserving prior adoption and object identity
-        const documentStyleSheets = this._modules.flatMap(module => module.styles);
-        this._document.adoptedStyleSheets = [
-            ...this._document.adoptedStyleSheets,
-            ...this._shadowStyleSheets,
+        const documentStyleSheets = this.#modules.flatMap(module => module.styles);
+        this.#document.adoptedStyleSheets = [
+            ...this.#document.adoptedStyleSheets,
+            ...this.#shadowStyleSheets,
             ...documentStyleSheets
         ].filter((styleSheet, index, styleSheets) => styleSheets.indexOf(styleSheet) === index);
     }
@@ -192,7 +192,7 @@ export default class Modules {
     async start() {
         const started = [];
         try {
-            for (const module of [...this._modules]) {
+            for (const module of [...this.#modules]) {
                 if (module.controller?.start) {
                     await module.controller.start();
                 }
@@ -212,17 +212,17 @@ export default class Modules {
             }
 
             // release every controller scope created for the failed initialization
-            await this._disposeControllerScopes(cleanupErrors);
+            await this.#disposeControllerScopes(cleanupErrors);
             reportCleanupErrors(cleanupErrors, "Failed to clean up Module controllers after startup failed.");
             throw error;
         }
     } 
     async stop() {
         const errors = [];
-        for (const module of [...this._modules].reverse()) {
-            const moduleScope = this._controllerScopes.get(module.id);
+        for (const module of [...this.#modules].reverse()) {
+            const moduleScope = this.#controllerScopes.get(module.id);
             if (!moduleScope) continue;
-            this._controllerScopes.delete(module.id);
+            this.#controllerScopes.delete(module.id);
 
             // keep the scope active through controller shutdown, then dispose it regardless of stop failures
             try {
@@ -244,7 +244,7 @@ export default class Modules {
     resolveModuleId(src) {
         //get module name by src
         if (!src) return null;
-        for (let module of this._modules) {
+        for (let module of this.#modules) {
             if (src.startsWith(module.path + "/")) {
                 return module.id;
             }
@@ -253,19 +253,19 @@ export default class Modules {
     }
     getModuleById(id) {
         //get module by id
-        for (let module of this._modules) {
+        for (let module of this.#modules) {
             if (module.id == id) {
                 return module;
             }
         }
         return null;
     }
-    async _disposeControllerScopes(errors) {
+    async #disposeControllerScopes(errors) {
         // detach ownership first so repeated cleanup cannot dispose the same Module scope twice
-        for (const module of [...this._modules].reverse()) {
-            const moduleScope = this._controllerScopes.get(module.id);
+        for (const module of [...this.#modules].reverse()) {
+            const moduleScope = this.#controllerScopes.get(module.id);
             if (!moduleScope) continue;
-            this._controllerScopes.delete(module.id);
+            this.#controllerScopes.delete(module.id);
             try {
                 await moduleScope.dispose();
             } catch (error) {
