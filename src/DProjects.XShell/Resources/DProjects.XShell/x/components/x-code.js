@@ -311,8 +311,7 @@ export default {
                 <button x-if="state.copyable" class="copy" type="button" x-on:click="copy">Copy</button>
             </div>
 
-            <pre x-class:wrap="state.wrap"
-                x-attr:data-language="state.language"><code x-html="state.highlighted"></code></pre>
+            <pre x-class:wrap="state.wrap" x-attr:data-language="state.language"><code x-html="state.highlighted"></code></pre>
         </div>
     `,
     state: {

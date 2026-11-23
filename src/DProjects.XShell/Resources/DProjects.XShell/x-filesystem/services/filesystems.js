@@ -61,7 +61,6 @@ export default class Filesystems {
     // constructor
     constructor({loader}, options = {}) {
         // Store the Loader and snapshot configured Commands and editors.
-        debugger
         this.#loader = loader;
         this.#commands = structuredClone(options.commands ?? []);
         this.#editors = structuredClone(options.editors ?? {});

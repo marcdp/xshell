@@ -408,7 +408,7 @@ export default {
                     x-attr:readonly="state.readonly" 
                     x-attr:spellcheck="state.spellcheck"
                 />
-                <span class="lang" x-html="lang" x-attr:title="state.langLabels[lang]"></span>
+                <span class="lang" x-text="lang" x-attr:title="state.langLabels[lang]"></span>
             </div>
         </div>
 
@@ -427,7 +427,7 @@ export default {
                     x-attr:readonly="state.readonly" 
                     x-attr:spellcheck="state.spellcheck"
                 ></textarea>
-                <span class="lang" x-html="lang" x-attr:title="state.langLabels[lang]"></span>
+                <span class="lang" x-text="lang" x-attr:title="state.langLabels[lang]"></span>
             </div>
         </div>
         

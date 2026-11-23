@@ -186,10 +186,10 @@ export default {
                         <ul>
                             <li x-for="error in state.errors">
                                 <span x-if="error.path">
-                                    [<span x-html="error.path"></span>]
+                                    [<span x-text="error.path"></span>]
                                 </span>
-                                <b><span x-html="error.label"></span>:</b>
-                                <span x-html="error.message"></span>
+                                <b><span x-text="error.label"></span>:</b>
+                                <span x-text="error.message"></span>
                             </li>
                         </ul>
                     </div>
