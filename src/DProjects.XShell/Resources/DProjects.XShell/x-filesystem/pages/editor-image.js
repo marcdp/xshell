@@ -86,7 +86,7 @@ export default {
         aes: false
     },
 
-    controller({ state, page, loader, dialog, postRender}) {
+    controller({ state, page, filesystems, dialog, postRender}) {
         let filesystem = null;
         let readUrl = null;
         let viewport = null;
@@ -190,7 +190,7 @@ export default {
                 release();
 
                 try {
-                    const fs = await loader.load("filesystem:" + state.src);
+                    const fs = await filesystems.open(state.src);
                     const entry = await fs.getEntry(state.path);
                     filesystem = fs;
                     state.fileSize = entry?.length ?? 0;

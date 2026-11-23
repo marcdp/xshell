@@ -87,7 +87,7 @@ export default {
             errors: 0
         }
     },
-    controller({ state, page, loader }) {
+    controller({ state, page, filesystems }) {
         const isNativeFile = entry => typeof File !== "undefined" && entry instanceof File;
         const isFileEntry = entry => isNativeFile(entry) || entry?.isFile === true || entry?.kind === "file";
         const isDirectoryEntry = entry => entry?.isDirectory === true || entry?.kind === "directory";
@@ -129,7 +129,7 @@ export default {
                 try {
                     // mount
                     if (state.src && state.path) {
-                        state.filesystem = await loader.load("filesystem:" + state.src);
+                        state.filesystem = await filesystems.open(state.src);
                     }
                     // expand directories and create upload tasks
                     state.summary.path= "Scanning files ...";

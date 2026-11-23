@@ -50,7 +50,7 @@ export default {
         aes_password: null,
     },
 
-    controller({state, page, loader, dialog, postRender, markdown}) {
+    controller({state, page, filesystems, dialog, postRender, markdown}) {
         return {
             async load() {
                 // load
@@ -60,7 +60,7 @@ export default {
             },
             async refresh() {
                 // refresh
-                state.filesystem = await loader.load("filesystem:" + state.src);
+                state.filesystem = await filesystems.open(state.src);
                 state.entry = await state.filesystem.getEntry(state.path);
                 if (state.entry == null) {
                     state.error = "Entry not found: " + state.path;

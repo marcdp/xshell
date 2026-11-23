@@ -48,6 +48,7 @@
         // resolver
         "resolver": {
             "filesystem": {
+                // Anonymous memory Filesystems are fresh; named identities are cached by their complete logical resource reference.
                 "mem:": {"src": "/js/filesystem-mem.js", "loader": "instance-js"},
                 "mem:{identity}": {"src": "/js/filesystem-mem.js", "loader": "instance-js", "cache": true},
                 "http:{url}": {"src": "/js/filesystem-http.js", "loader": "instance-js"},

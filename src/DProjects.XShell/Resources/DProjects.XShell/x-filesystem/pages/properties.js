@@ -105,7 +105,7 @@ export default {
         metadataMessage: ""
     },
 
-    controller({ state, loader, page }) {
+    controller({ state, filesystems, page }) {
         let filesystem = null;
         let source = null;
         let abortController = null;
@@ -137,7 +137,7 @@ export default {
                         throw new Error("Filesystem source and path are required.");
 
                     if (!filesystem || source !== state.src) {
-                        const fs = await loader.load("filesystem:" + state.src);
+                        const fs = await filesystems.open(state.src);
                         signal.throwIfAborted();
                         filesystem = fs;
                         source = state.src;

@@ -40,7 +40,7 @@ export default {
         url: null
     },
 
-    controller({state, page, loader}) {
+    controller({state, page, filesystems}) {
         return {
             async load() {
                 // load
@@ -50,7 +50,7 @@ export default {
             },
             async refresh() {
                 // refresh
-                state.filesystem = await loader.load("filesystem:" + state.src);
+                state.filesystem = await filesystems.open(state.src);
                 state.entry = await state.filesystem.getEntry(state.path);
                 if (state.entry== null) {
                     state.error = "File not found";

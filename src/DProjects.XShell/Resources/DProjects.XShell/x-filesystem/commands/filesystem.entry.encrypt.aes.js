@@ -20,7 +20,7 @@ export default {
         }
     },
 
-    controller({task, loader}) {
+    controller({task, filesystems}) {
         return {
             async execute(src, path, password) {
                 // Validate arguments.
@@ -32,7 +32,7 @@ export default {
                 task.setDescription("Loading filesystem...");
                 task.setProgress(null);
 
-                const filesystem = await loader.load("filesystem:" + src);
+                const filesystem = await filesystems.open(src);
                 task.signal.throwIfAborted();
 
                 const entry = await filesystem.getEntry(path, {signal:task.signal});

@@ -88,7 +88,7 @@ export default {
                 language: "javascript",
                 template: `<x-filesystem-tree id="folders" path="/" root></x-filesystem-tree>`,
                 code: `
-                    const filesystem = await loader.load("filesystem:mem:");
+                    const filesystem = await filesystems.open("mem:");
                     await filesystem.createDirectory("/reports");
                     document.querySelector("#folders").filesystem = filesystem;
                 `

@@ -71,7 +71,7 @@ export default {
                 language: "javascript",
                 template: `<x-filesystem-list id="files" path="/"></x-filesystem-list>`,
                 code: `
-                    const filesystem = await loader.load("filesystem:mem:");
+                    const filesystem = await filesystems.open("mem:");
                     await filesystem.saveFile("/notes.txt", "Draft");
                     document.querySelector("#files").filesystem = filesystem;
                 `

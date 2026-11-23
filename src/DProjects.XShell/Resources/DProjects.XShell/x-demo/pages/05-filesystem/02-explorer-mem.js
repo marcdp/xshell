@@ -17,11 +17,11 @@ export default {
         path: "/"
 
     },
-    controller({ state, loader }) {
+    controller({ state, filesystems }) {
         return {
             async mount() {
                 // load
-                const fs = await loader.load("filesystem:" +state.src);
+                const fs = await filesystems.open(state.src);
 
                 await fs.createDirectory("/documents");
                 await fs.createDirectory("/documents/reports");

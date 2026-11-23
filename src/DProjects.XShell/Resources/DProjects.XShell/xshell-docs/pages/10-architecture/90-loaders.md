@@ -99,6 +99,10 @@ such as a Page instance's `src`. Use `path` only for resource types whose implem
 Because the key is the logical reference rather than the resolved URL, two different locators—for example a global physical locator and its
 module-qualified equivalent—can resolve to the same URL and still occupy separate cache entries.
 
+A resource-specific loader can materialize a mutable runtime object rather than immutable data. For example, `instance-js` imports a provider and
+calls its `Provider.create({url, services})` factory. When the Resolver rule enables caching, the Loader retains that object by logical resource
+identity, so later loads can observe the same application-lifetime state. The object does not thereby become an XShell Service.
+
 ## Flow
 
 ```text

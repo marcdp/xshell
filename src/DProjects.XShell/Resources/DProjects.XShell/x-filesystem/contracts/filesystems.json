@@ -1,8 +1,8 @@
 
 {
     "$schema": "../../xshell/schemas/contract.schema.json",
-    "label": "Filesystem Factory",
-    "description": "Creates or resolves Filesystem instances from provider URLs.",
+    "label": "Filesystems",
+    "description": "Opens or resolves Filesystem instances from provider URLs.",
     "properties": {
         "commands": {
             "type": "array",
@@ -16,8 +16,8 @@
         }
     },
     "methods": {
-        "create": {
-            "description": "Returns a Filesystem instance for the specified URL.",
+        "open": {
+            "description": "Opens or resolves the Filesystem represented by a provider URL. Repeated calls share an instance only when the matching Resolver rule enables Loader caching.",
             "parameters": [
                 {
                     "name": "url",

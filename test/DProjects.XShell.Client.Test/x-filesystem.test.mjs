@@ -1,9 +1,13 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
+import FilesystemsContract from "../../src/DProjects.XShell/Resources/DProjects.XShell/x-filesystem/contracts/filesystems.json" with { type: "json" };
 import filesystemDefinition from "../../src/DProjects.XShell/Resources/DProjects.XShell/x-filesystem/components/x-filesystem.js";
 import Filesystems from "../../src/DProjects.XShell/Resources/DProjects.XShell/x-filesystem/services/filesystems.js";
+import ContractSchema from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/schemas/contract.schema.json" with { type: "json" };
 import JsonValidator from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/json-validator.js";
+import Loader from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/loader.js";
+import Resolver from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/resolver.js";
 
 const commands = [
     { id: "command:filesystem.entry.encrypt.aes", label: "Encrypt", icon: "x-lock", type: "file", extensions: ["txt"], actions: [] },
@@ -21,7 +25,12 @@ function createController() {
     state.src = "mem:";
     const navigationCalls = [];
     const contextMenuCalls = [];
-    const filesystems = new Filesystems({ loader: { load() {} } }, { commands, editors });
+    const filesystemOpenCalls = [];
+    const loader = { async load(resource) { return { resource }; } };
+    const filesystems = new Filesystems({ loader }, { commands, editors });
+    const open = filesystems.open.bind(filesystems);
+    filesystems.open = async url => { filesystemOpenCalls.push(url); return open(url); };
+    const eventHandlers = {};
     const host = {
         shadowRoot: {
             querySelector(selector) {
@@ -32,8 +41,7 @@ function createController() {
     };
     const controller = filesystemDefinition.controller({
         state,
-        events: { on() {} },
-        loader: { async load(resource) { return { resource }; } },
+        events: { on(target, event, handler) { eventHandlers[event] = handler; } },
         navigation: { navigate(options) { navigationCalls.push(options); } },
         getPage() { return { id: "filesystem-page" }; },
         host,
@@ -42,8 +50,68 @@ function createController() {
         resolver: {},
         filesystems
     });
-    return { state, controller, navigationCalls, contextMenuCalls };
+    return { state, controller, navigationCalls, contextMenuCalls, filesystemOpenCalls, eventHandlers };
 }
+
+test("Filesystems.open validates and delegates the complete logical resource", async () => {
+    // Preserve the Loader result while constructing exactly one filesystem resource reference.
+    const expected = { id: "filesystem" };
+    const calls = [];
+    const filesystems = new Filesystems({ loader: { async load(resource) { calls.push(resource); return expected; } } });
+
+    assert.strictEqual(await filesystems.open("mem:demo"), expected);
+    assert.deepEqual(calls, ["filesystem:mem:demo"]);
+    for (const value of [null, undefined, "", "   ", 0, false, {}, []]) {
+        await assert.rejects(() => filesystems.open(value), { name: "TypeError", message: "Filesystem URL must be a non-empty string." });
+    }
+    assert.deepEqual(calls, ["filesystem:mem:demo"]);
+});
+
+test("Filesystems contract exposes open as the canonical provider operation", () => {
+    // Validate the renamed public method through the shared Service contract vocabulary.
+    const result = new JsonValidator().validate(FilesystemsContract, ContractSchema);
+    assert.equal(result.valid, true, JSON.stringify(result.errors));
+    assert.deepEqual(Object.keys(FilesystemsContract.methods), ["open", "getEditor"]);
+});
+
+test("Filesystems.open preserves Resolver and Loader memory identity semantics", async () => {
+    // Exercise the real Resolver, Loader, instance-js adapter, and memory provider through the domain Service.
+    const providerUrl = new URL("../../src/DProjects.XShell/Resources/DProjects.XShell/x-filesystem/js/filesystem-mem.js", import.meta.url).href;
+    const instanceLoaderUrl = new URL("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/loaders/instance-js.js", import.meta.url).href;
+    const config = {
+        app: {basePath: "", baseUrl: new URL("../../", import.meta.url).href},
+        xshell: {
+            assets: {path: "/_assets/xshell"}, services: {navigation: {options: {mode: "path"}}}, ui: {components: {lazy: null}},
+            resolver: {filesystem: {
+                "mem:": {src: providerUrl, loader: instanceLoaderUrl},
+                "mem:{identity}": {src: providerUrl, loader: instanceLoaderUrl, cache: true}
+            }}
+        }
+    };
+    const resolver = new Resolver({config});
+    const loader = new Loader({config, resolver, bus: {emit() {}}, services: {}}, {
+        appBasePath: config.app.basePath,
+        xshellAssetsPath: config.xshell.assets.path,
+        componentLazy: config.xshell.ui.components.lazy
+    });
+    const filesystems = new Filesystems({loader});
+
+    const anonymousFirst = await filesystems.open("mem:");
+    const anonymousSecond = await filesystems.open("mem:");
+    const namedFirst = await filesystems.open("mem:demo");
+    await namedFirst.saveFile("/shared.txt", "shared state");
+    const namedAgain = await filesystems.open("mem:demo");
+    const namedOther = await filesystems.open("mem:other");
+
+    assert.notStrictEqual(anonymousFirst, anonymousSecond);
+    assert.strictEqual(namedFirst, namedAgain);
+    assert.notStrictEqual(namedFirst, namedOther);
+    assert.equal((await namedAgain.getEntry("/shared.txt")).length, 12);
+    assert.equal(await namedOther.getEntry("/shared.txt"), null);
+    assert.deepEqual(loader.registry.map(item => item.resource), [
+        "filesystem:mem:", "filesystem:mem:", "filesystem:mem:demo", "filesystem:mem:other"
+    ]);
+});
 
 test("Filesystems options validate separate commands and keyed editors", () => {
     // Accept the new shape while rejecting arrays, incomplete descriptors, and dotted extension spelling.
@@ -102,6 +170,15 @@ test("filesystem opening uses editors for files and navigation for directories",
     assert.equal(state.pathList, "/notes");
     assert.deepEqual(state.history, ["/", "/notes"]);
     assert.equal(navigationCalls.length, 1);
+});
+
+test("filesystem component opens its source through the Filesystems Service", async () => {
+    // Ensure the Component passes the provider URL without constructing a Loader resource reference.
+    const { state, controller, filesystemOpenCalls, eventHandlers } = createController();
+    await controller.load();
+    await eventHandlers["change:src"]({});
+    assert.deepEqual(filesystemOpenCalls, ["mem:"]);
+    assert.deepEqual(state.filesystem, {resource: "filesystem:mem:"});
 });
 
 test("context-menu Open is independent from explicit Commands and is not duplicated", () => {

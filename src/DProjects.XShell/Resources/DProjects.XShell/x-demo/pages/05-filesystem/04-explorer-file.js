@@ -21,7 +21,7 @@ export default {
         filesystem: null
     },
 
-    controller({state, loader}) {
+    controller({state, filesystems}) {
         return {
             load() {
                 // load availability of local filesystem access
@@ -30,7 +30,7 @@ export default {
 
             async selectFolder() {
                 try {
-                    const fs = await loader.load("filesystem:file:");
+                    const fs = await filesystems.open("file:");
                     await fs.selectDirectory();
                     state.filesystem = fs;
                 } catch (error) {

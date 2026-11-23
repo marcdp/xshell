@@ -1,7 +1,37 @@
 # Filesystems
 
-The `filesystems` service creates Filesystem instances and supplies the actions and editors used by `x-filesystem`. Explicit filesystem Commands
-and file editor Pages are separate configuration concepts under `xshell.services.filesystems.options`.
+The `filesystems` Service opens Filesystem instances and supplies the actions and editors used by `x-filesystem`. Explicit filesystem Commands and
+file editor Pages are separate configuration concepts under `xshell.services.filesystems.options`.
+
+## Opening a Filesystem
+
+Pages, Components, and Commands obtain a Filesystem through the injected `filesystems` Service:
+
+~~~js
+controller({filesystems}) {
+    return {
+        async load() {
+            const filesystem = await filesystems.open("mem:workspace");
+        }
+    };
+}
+~~~
+
+`filesystems.open(url)` delegates the provider URL through Resolver → Loader → `instance-js` → `Provider.create()`. The resulting Filesystem is a
+runtime resource/provider instance, not an individually registered XShell Service. Provider factories retain their separate internal `create()`
+contract.
+
+The matching Resolver rule determines whether Loader retains an instance. The current memory rules give anonymous and named identities different
+semantics:
+
+| Provider URL | Behavior |
+| --- | --- |
+| `mem:` | Uncached; each call opens a fresh isolated Filesystem. |
+| `mem:<identity>` | Cached by the complete logical resource identity. Reopening the same identity returns the same Filesystem and state. |
+
+Different named identities, such as `mem:workspace` and `mem:preview`, remain different instances. This is application resource-cache behavior,
+not a singleton, scoped, or transient Services lifetime. Other provider URLs follow their own Resolver rules; `open()` does not imply that every
+provider is cached.
 
 ## Commands
 

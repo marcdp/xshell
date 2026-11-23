@@ -76,8 +76,8 @@ export default class Filesystems {
     }
 
     // methods
-    async create(url) {
-        // Create or resolve a Filesystem using the existing Resolver and Loader pipeline.
+    async open(url) {
+        // Open or resolve a Filesystem using the existing Resolver and Loader pipeline.
         if (typeof url !== "string" || !url.trim()) {
             throw new TypeError("Filesystem URL must be a non-empty string.");
         }

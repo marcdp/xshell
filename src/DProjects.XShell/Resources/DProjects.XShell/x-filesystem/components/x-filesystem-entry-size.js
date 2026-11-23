@@ -29,7 +29,7 @@ export default {
         size: -1
     },
 
-    controller({ state, events, loader }) {
+    controller({ state, events, filesystems }) {
         let abortController = null;
 
         return {
@@ -56,7 +56,7 @@ export default {
 
                 try {
                     // Resolve the filesystem and inspect the requested entry.
-                    const filesystem = await loader.load("filesystem:" + state.src);
+                    const filesystem = await filesystems.open(state.src);
                     if (signal.aborted) return;
 
                     const entry = await filesystem.getEntry(state.path, { signal });

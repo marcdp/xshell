@@ -95,7 +95,7 @@ export default {
         historyIndex: 0,
         root: false
     },
-    controller({ state, events, loader, navigation, getPage, host, dialog, tasks, resolver, filesystems }) {
+    controller({ state, events, navigation, getPage, host, dialog, tasks, resolver, filesystems }) {
         const getFileCommands = (entry) => {
             const fileCommands = filesystems.commands;
             if (!fileCommands) return [];
@@ -120,7 +120,7 @@ export default {
                 events.on(state, "change:src", async (event)=>{
                     state.history = [state.pathList];
                     state.historyIndex = 0;
-                    state.filesystem = await loader.load("filesystem:" + state.src);
+                    state.filesystem = await filesystems.open(state.src);
                 })
             },
 
