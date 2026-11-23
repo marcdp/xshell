@@ -112,6 +112,7 @@ export default {
             },
 
             focus() {
+                // focus
                 const a = host.shadowRoot.querySelector("a");
                 if (!a.tabIndex) a.tabIndex = 0;
                 a.focus();
@@ -142,6 +143,7 @@ export default {
             },
 
             async keydown(args) {
+                // keydown
                 let event = args.event;
                 if (event.key == "Enter" && !event.altKey) {
                     const a = host.shadowRoot.querySelector("a");

@@ -180,7 +180,6 @@ export default class Services {
     #resolve(name, context) {
         const result = this.#items[name];
         if (result == undefined) {
-            debugger;
             throw new Error(`Service not found: ${name}`); 
         }
         this.#validateLifetimeResolution(name, result, context);

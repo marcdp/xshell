@@ -68,10 +68,10 @@ export default class Navigation {
     get stack() {
         return this.#stack.map(p => Object.freeze({
             href: p.href,
-            params: p.params,
-            nav: p.nav,
+            params: Object.freeze({ ...p.params }),
+            nav: Object.freeze({ ...p.nav }),
             ...(p.classes ? { classes: Object.freeze([...p.classes]) } : {})
-        }))
+        }));
     }
     
     // init

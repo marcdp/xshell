@@ -28,7 +28,6 @@ export default class Page {
         this._src = src;
         this._context = context;
         this._bus = bus;
-        if (!this._bus) debugger;
         this._navigation = navigation;
         this._id = generateId("page");
     }

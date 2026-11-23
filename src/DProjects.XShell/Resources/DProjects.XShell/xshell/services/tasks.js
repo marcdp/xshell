@@ -4,6 +4,8 @@ const MAX_OUTPUT_PAGE = 1000;
 const TERMINAL_STATUSES = new Set(["finished", "error", "canceled"]);
 
 class Task extends EventTarget {
+
+    // fields
     #id;
     #title;
     #description;
@@ -25,6 +27,7 @@ class Task extends EventTarget {
     #resolveDone;
     #onChange;
 
+    // ctor
     constructor({id, title, description, background, onChange}) {
         super();
         this.#id = id;
