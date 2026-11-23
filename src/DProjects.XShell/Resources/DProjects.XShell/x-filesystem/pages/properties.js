@@ -44,54 +44,57 @@ export default {
 
     template: `
         <x-form>
-            
+
             <x-notice x-if="state.error" type="error" x-attr:message="state.error"></x-notice>
 
-            <x-tabs x-if="state.info">
-                <x-tab label="General">
-                    <x-datafields columns="2">
-                        <x-datafield label="Name" type="text" x-prop:value="state.info.name" readonly></x-datafield>
-                        <x-datafield label="Type" type="text" x-prop:value="state.info.type" readonly></x-datafield>
-                        <x-datafield label="Location" type="text" x-prop:value="state.info.parent" readonly></x-datafield>
-                        <x-datafield label="Size" x-if="state.info.type == 'file'" type="text" x-prop:value="state.info.size" readonly></x-datafield>
-                        <x-datafield label="Size" x-else>
-                            <x-filesystem-entry-size x-attr:src="state.src" x-attr:path="state.info.path"></x-filesystem-entry-size>
-                        </x-datafield>
-                    </x-datafields>
+            <x-datafields columns="2">
+                <x-datafield label="Name" type="text" x-prop:value="state.info.name" readonly></x-datafield>
+                <x-datafield label="Type" type="text" x-prop:value="state.info.type" readonly></x-datafield>
+                <x-datafield label="Location" type="text" x-prop:value="state.info.parent" readonly></x-datafield>
+                <x-datafield label="Size" x-if="state.info.type == 'file'" type="text" x-prop:value="state.info.size" readonly></x-datafield>
+                <x-datafield label="Size" x-else>
+                    <x-filesystem-entry-size x-attr:src="state.src" x-attr:path="state.info.path"></x-filesystem-entry-size>
+                </x-datafield>
+            </x-datafields>
 
-                    <x-datafields label="Dates" columns="2">
-                        <x-datafield label="Created" type="datetime-local" x-prop:value="state.info.created" readonly></x-datafield>
-                        <x-datafield label="Modified" type="datetime-local" x-prop:value="state.info.modified" readonly></x-datafield>
-                    </x-datafields>
+            <x-details label="Dates" open>
+                <x-datafields columns="2">
+                    <x-datafield label="Created" type="datetime-local" x-prop:value="state.info.created" readonly></x-datafield>
+                    <x-datafield label="Modified" type="datetime-local" x-prop:value="state.info.modified" readonly></x-datafield>
+                </x-datafields>
+            </x-details>
 
-                    <x-datafields label="Attributes" columns="2">
-                        <x-datafield label="Read-only" type="checkbox" x-prop:value="state.info.readonly" readonly></x-datafield>
-                    </x-datafields>
-                </x-tab>
+            <x-details label="Attributes">
+                <x-datafields columns="2">
+                    <x-datafield label="Read-only" type="checkbox" x-prop:value="state.info.readonly" readonly></x-datafield>
+                </x-datafields>
+            </x-details>
 
-                <x-tab label="Details">
-                    <x-datafields columns="2">
-                        <x-datafield label="Filesystem" type="text" x-prop:value="state.src" readonly></x-datafield>
-                        <x-datafield label="Full path" type="text" x-prop:value="state.info.path" readonly></x-datafield>
-                        <x-datafield label="Flags" type="number" x-prop:value="state.info.flags" readonly></x-datafield>
-                        <x-datafield label="ETag" type="text" x-prop:value="state.info.etag" readonly></x-datafield>
-                    </x-datafields>
+            <x-details label="Advanced">
+                <x-datafields columns="2">
+                    <x-datafield label="Filesystem" type="text" x-prop:value="state.src" readonly></x-datafield>
+                    <x-datafield label="Full path" type="text" x-prop:value="state.info.path" readonly></x-datafield>
+                    <x-datafield label="Flags" type="number" x-prop:value="state.info.flags" readonly></x-datafield>
+                    <x-datafield label="ETag" type="text" x-prop:value="state.info.etag" readonly></x-datafield>
+                </x-datafields>
+            </x-details>
 
-                    <x-datafields label="Metadata" columns="2">
-                        <x-datafield x-for="item in state.metadata"
-                            x-attr:label="item.name"
-                            type="text"
-                            x-prop:value="item.value"
-                            readonly>
-                        </x-datafield>
-                    </x-datafields>
+            <x-details label="Metadata">
+                <x-datafields columns="2">
+                    <x-datafield x-for="item in state.metadata"
+                        x-attr:label="item.name"
+                        type="text"
+                        x-prop:value="item.value"
+                        readonly>
+                    </x-datafield>
+                </x-datafields>
+                <x-notice x-if="state.metadataMessage"
+                    type="info"
+                    x-attr:message="state.metadataMessage">
+                </x-notice>
+            </x-details>
 
-                    <x-notice x-if="state.metadataMessage"
-                        type="info"
-                        x-attr:message="state.metadataMessage">
-                    </x-notice>
-                </x-tab>
-            </x-tabs>
+
         </x-form>
     `,
 
@@ -161,7 +164,7 @@ export default {
                         size: isDirectory ? "Not calculated" : formatSize(entry.length),
                         created: formatDate(entry.created),
                         modified: formatDate(entry.modified),
-                        readonly: filesystem.isReadonly || (flags & 1) ? "Yes" : "No",
+                        readonly: (filesystem.isReadonly || (flags & 1)),
                         flags,
                         etag: entry.etag || ""
                     };
