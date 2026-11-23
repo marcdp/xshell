@@ -190,19 +190,22 @@ test("Component and Page loaders retain examples and give render engines only th
     const engines = { "state-engine:test": StateEngineFactory, "render-engine:test": RenderEngineFactory };
     const i18n = { id: "i18n" };
     const navigation = { mode: "hash" };
+    let navigationResolutionCount = 0;
+    const services = {
+        config: { modules: { test: { defaults: { component: defaults, page: defaults } } } },
+        loader: { async load(id) { return id.startsWith("schema:") ? schemas[id.slice(7)] : engines[id]; } },
+        modules: {},
+        i18n
+    };
+    // Count Navigation resolution separately from render-context construction.
+    Object.defineProperty(services, "navigation", { get() { navigationResolutionCount++; return navigation; } });
     const context = {
         resourceName: "x-example-test",
         resourcePath: "/_assets/test/components/example.js",
         resourceDefinition: { moduleId: "test", modulePath: "/_assets/test" },
         appBasePath: "/app",
         componentLazy: "x-lazy",
-        services: {
-            config: { modules: { test: { defaults: { component: defaults, page: defaults } } } },
-            loader: { async load(id) { return id.startsWith("schema:") ? schemas[id.slice(7)] : engines[id]; } },
-            modules: {},
-            i18n,
-            navigation
-        }
+        services
     };
     const createDefinition = () => ({
         meta: { id: "x-example-test" },
@@ -217,13 +220,16 @@ test("Component and Page loaders retain examples and give render engines only th
     assert.deepEqual(stateInputs, [{ mode: "runtime" }, { mode: "runtime" }]);
     assert.deepEqual(templateInputs, ["<p>Implementation</p>", "<p>Implementation</p>"]);
     assert.deepEqual(stateContexts, [context, context]);
+    assert.equal(navigationResolutionCount, 0);
     for (const renderContext of renderContexts) {
-        assert.deepEqual(Object.keys(renderContext), ["resourceName", "resourcePath", "resourceDefinition", "appBasePath", "componentLazy", "i18n", "navigation"]);
+        assert.deepEqual(Object.keys(renderContext), ["resourceName", "resourcePath", "resourceDefinition", "appBasePath", "componentLazy", "i18n", "navigationMode"]);
         assert.equal(Object.hasOwn(renderContext, "services"), false);
+        assert.equal(Object.hasOwn(renderContext, "navigation"), false);
         assert.equal(renderContext.resourceDefinition, context.resourceDefinition);
         assert.equal(renderContext.i18n, i18n);
-        assert.equal(renderContext.navigation, navigation);
+        assert.equal(renderContext.navigationMode, "hash");
     }
+    assert.equal(navigationResolutionCount, 2);
 });
 
 test("Service registration preserves examples in the validated contract document", async () => {

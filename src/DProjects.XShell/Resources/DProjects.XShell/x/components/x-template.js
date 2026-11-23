@@ -100,7 +100,7 @@ export default {
                     appBasePath: "",
                     componentLazy: "",
                     i18n,
-                    navigation
+                    get navigationMode() {return navigation.mode;}
                 };
             },
 

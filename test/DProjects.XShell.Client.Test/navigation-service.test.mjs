@@ -34,10 +34,11 @@ test("XShell resolves the configured Navigation singleton after Areas compositio
     assert.ok(servicesIndex < areasResolveIndex && areasResolveIndex < resolveModulesIndex && resolveModulesIndex < areasIndex && areasIndex < navigationIndex);
 });
 
-test("HTML link processing reads Navigation from the explicit render context", async () => {
+test("HTML link processing reads only Navigation mode from the explicit render context", async () => {
     const source = await readFile(new URL("utils/html.js", frameworkUrl), "utf8");
 
-    assert.match(source, /context\.navigation\.mode/);
+    assert.match(source, /context\.navigationMode/);
+    assert.doesNotMatch(source, /context\.navigation(?:\.|\[)/);
     assert.doesNotMatch(source, /context\.services/);
     assert.doesNotMatch(source, /config\.xshell\.navigation/);
 });

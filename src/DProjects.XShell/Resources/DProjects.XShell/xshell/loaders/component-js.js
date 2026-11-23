@@ -226,8 +226,8 @@ export async function createComponentClassFromJsDefinition(src, context, definit
         resourceDefinition: context.resourceDefinition,
         appBasePath: context.appBasePath,
         componentLazy: context.componentLazy,
-        i18n: context.services.i18n,
-        navigation: context.services.navigation
+        get i18n() {return context.services.i18n;},
+        get navigationMode() {return context.services.navigation.mode;}
     };
     const renderEngineFactory = new renderEngineFactoryCreator(definition.template, renderContext, definition.templateRenderer);
     // validate compiled template slots through the render-engine factory contract

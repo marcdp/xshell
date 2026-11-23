@@ -68,7 +68,7 @@ export function rewrite(el, attr, type, url, context) {
         if (!source.moduleBase) return virtualUrl;
 
         // Resolve navigation mode only when needed
-        const navigationMode = context.navigation.mode;
+        const navigationMode = context.navigationMode;
         return navigationMode === "hash"
             ? HASH_PREFIX + virtualUrl
             : source.absoluteOutput

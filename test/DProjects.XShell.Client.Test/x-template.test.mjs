@@ -72,6 +72,7 @@ test("x-template recovers from invalid source and disposes each replaced rendere
     const renderers = [];
     const loadedDependencies = [];
     const renderContexts = [];
+    const navigation = { mode: "hash" };
     const renderEngineXClient = (source, context) => {
         renderContexts.push(context);
         if (source === "<invalid>") throw new Error("Unable to parse XTemplate.");
@@ -93,16 +94,19 @@ test("x-template recovers from invalid source and disposes each replaced rendere
         getPage: () => null,
         postRender() {},
         i18n: { id: "i18n" },
-        navigation: { mode: "hash" }
+        navigation
     });
     controller.load();
 
     await controller.refresh();
     assert.equal(renderers.length, 1);
-    assert.deepEqual(Object.keys(renderContexts[0]), ["resourceName", "resourcePath", "resourceDefinition", "appBasePath", "componentLazy", "i18n", "navigation"]);
+    assert.deepEqual(Object.keys(renderContexts[0]), ["resourceName", "resourcePath", "resourceDefinition", "appBasePath", "componentLazy", "i18n", "navigationMode"]);
     assert.equal(Object.hasOwn(renderContexts[0], "services"), false);
+    assert.equal(Object.hasOwn(renderContexts[0], "navigation"), false);
     assert.equal(renderContexts[0].i18n.id, "i18n");
-    assert.equal(renderContexts[0].navigation.mode, "hash");
+    assert.equal(renderContexts[0].navigationMode, "hash");
+    navigation.mode = "path";
+    assert.equal(renderContexts[0].navigationMode, "path");
     assert.deepEqual(loadedDependencies, [["component:x-card"]]);
     assert.equal(renderers[0].mount.mock.callCount(), 1);
     assert.equal(renderers[0].render.mock.callCount(), 1);
