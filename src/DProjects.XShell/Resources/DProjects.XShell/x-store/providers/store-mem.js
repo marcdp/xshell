@@ -11,6 +11,11 @@ export default class MemoryStore extends Store {
         additionalProperties: false
     };
 
+    static getCacheKey(url) {
+        // Share each memory Store identity, including the anonymous default Store.
+        return url;
+    }
+
 
     // ctor
     constructor({ jsonValidator } = {}, {

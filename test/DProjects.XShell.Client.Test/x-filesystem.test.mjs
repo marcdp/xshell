@@ -34,7 +34,7 @@ function createServices(values = {}) {
 }
 
 function createRuntime(providers, services = {}) {
-    // Build the real local provider matcher and Loader over a global Resolver with no Filesystem category.
+    // Build scheme-dispatched providers beside a global Resolver and Loader with no Filesystem category.
     const jsonValidator = new JsonValidator();
     const serviceScope = createServices({jsonValidator, ...services});
     const config = {
@@ -98,7 +98,9 @@ test("Filesystems.open resolves and imports providers locally", async () => {
     providerOptions.tag = "changed";
 
     const instance = await filesystems.open("test:demo");
+    const second = await filesystems.open("test:demo");
     assert.deepEqual(instance.options, {tag: "configured", url: "test:demo"});
+    assert.notStrictEqual(instance, second);
     assert.deepEqual(providerOptions, {tag: "changed", url: "authored:override"});
     for (const value of [null, undefined, "", "   ", 0, false, {}, []]) {
         await assert.rejects(() => filesystems.open(value), { name: "TypeError", message: "Filesystem URL must be a non-empty string." });
@@ -117,7 +119,7 @@ test("Filesystems.open preserves local provider memory identity semantics withou
     // Exercise scheme dispatch, direct import, validation, construction, and the domain-owned cache.
     const providerUrl = new URL("../../src/DProjects.XShell/Resources/DProjects.XShell/x-filesystem/providers/filesystem-mem.js", import.meta.url).href;
     const {resolver, loader, filesystems} = createRuntime({
-        mem: {implementation: providerUrl, cache: true, cacheAnonymous: false}
+        mem: {implementation: providerUrl}
     });
 
     const anonymousFirst = await filesystems.open("mem:");
@@ -140,12 +142,12 @@ test("Filesystems.open preserves local provider memory identity semantics withou
 });
 
 test("failed cached provider creation is evicted and retried", async () => {
-    // Reuse Loader failure eviction for a locally resolved provider without adding a Filesystems cache.
+    // Evict a failed provider-owned cache identity so a later open can retry construction.
     const providerUrl = new URL("./fixtures/filesystem-provider.mjs?case=retry", import.meta.url).href;
     const provider = await import(providerUrl);
     provider.reset();
     provider.failOnce();
-    const {filesystems, loader} = createRuntime({test: {implementation: providerUrl, cache: true}});
+    const {filesystems, loader} = createRuntime({test: {implementation: providerUrl}});
 
     await assert.rejects(() => filesystems.open("test:demo"), /Simulated Filesystem provider failure/);
     const value = await filesystems.open("test:demo");
@@ -156,11 +158,11 @@ test("failed cached provider creation is evicted and retried", async () => {
 });
 
 test("concurrent cached opens share one in-flight provider materialization", async () => {
-    // Preserve Loader promise sharing when provider resolution originates in Filesystems.
+    // Share one in-flight construction for the provider-defined cache identity.
     const providerUrl = new URL("./fixtures/filesystem-provider.mjs?case=concurrent", import.meta.url).href;
     const provider = await import(providerUrl);
     provider.reset();
-    const {filesystems, loader} = createRuntime({test: {implementation: providerUrl, cache: true}});
+    const {filesystems, loader} = createRuntime({test: {implementation: providerUrl}});
 
     const firstPromise = filesystems.open("test:demo");
     const secondPromise = filesystems.open("test:demo");
@@ -172,13 +174,13 @@ test("concurrent cached opens share one in-flight provider materialization", asy
     assert.equal(loader.registry.length, 0);
 });
 
-test("local providers preserve path cache mode", async () => {
-    // Share query variants in the domain cache while passing the first complete URL to construction.
+test("providers can define query-independent cache identity", async () => {
+    // Let the implementation share query variants while passing the first complete URL to construction.
     const providerUrl = new URL("./fixtures/filesystem-provider.mjs?case=path-cache", import.meta.url).href;
     const provider = await import(providerUrl);
     provider.reset();
     const {filesystems, loader} = createRuntime({
-        test: {implementation: providerUrl, cache: true, cacheMode: "path"}
+        test: {implementation: providerUrl}
     });
 
     const first = await filesystems.open("test:demo?view=one");
@@ -238,11 +240,33 @@ test("Filesystems requires valid schemas and resolves provider dependencies lazi
     delete globalThis.__filesystemConstructions;
 });
 
+test("Filesystems validates provider-defined cache identity before construction", async () => {
+    // Reject malformed, empty, and throwing cache policies without constructing an implementation.
+    for (const [cacheSource, expected] of [
+        ["static getCacheKey = true;", /invalid static getCacheKey.*expected a function/],
+        ["static getCacheKey() { return ''; }", /must return a non-empty string or null/],
+        ["static getCacheKey() { throw new Error('identity failed'); }", /static getCacheKey failed: identity failed/]
+    ]) {
+        globalThis.__filesystemCacheConstructions = 0;
+        const implementation = "data:text/javascript," + encodeURIComponent(`export default class Implementation {
+            static optionsSchema = {type: "object", additionalProperties: false};
+            ${cacheSource} constructor() { globalThis.__filesystemCacheConstructions++; }
+        }`);
+        const jsonValidator = new JsonValidator();
+        const filesystems = new Filesystems({config: testConfig, jsonValidator, services: createServices({jsonValidator})}, {
+            providers: {test: {implementation}}
+        });
+        await assert.rejects(() => filesystems.open("test:demo"), expected);
+        assert.equal(globalThis.__filesystemCacheConstructions, 0);
+    }
+    delete globalThis.__filesystemCacheConstructions;
+});
+
 test("Filesystems options validate commands, keyed editors, and closed provider definitions", () => {
     // Accept provider policy while rejecting incomplete, mistyped, or extended definitions.
     const validator = new JsonValidator();
     const providers = {mem: {
-        implementation: "/providers/filesystem-mem.js", cache: true, cacheAnonymous: false, cacheMode: "path", options: {credential: "work"}
+        implementation: "/providers/filesystem-mem.js", options: {credential: "work"}
     } };
     assert.equal(validator.validate({ commands, editors, providers }, Filesystems.optionsSchema).valid, true);
     assert.equal(validator.validate({providers: {"mem:": providers.mem}}, Filesystems.optionsSchema).valid, false);
@@ -253,7 +277,10 @@ test("Filesystems options validate commands, keyed editors, and closed provider 
     for (const definition of [
         {},
         { implementation: "" },
+        { implementation: "/providers/filesystem-mem.js", cache: true },
         { implementation: "/providers/filesystem-mem.js", cache: "yes" },
+        { implementation: "/providers/filesystem-mem.js", cacheAnonymous: false },
+        { implementation: "/providers/filesystem-mem.js", cacheMode: "path" },
         { implementation: "/providers/filesystem-mem.js", cacheMode: "identity" },
         { implementation: "/providers/filesystem-mem.js", options: null },
         { implementation: "/providers/filesystem-mem.js", options: [] },
@@ -282,6 +309,9 @@ test("filesystem implementations retain direct dependency/options construction",
         assert.deepEqual(Implementation.optionsSchema, {type: "object", additionalProperties: false});
         assert.equal(Object.hasOwn(Implementation, "create"), false);
     }
+    assert.equal(FilesystemMem.getCacheKey("mem:"), null);
+    assert.equal(FilesystemMem.getCacheKey("mem:workspace"), "mem:workspace");
+    assert.equal(FilesystemHttp.getCacheKey, undefined);
 });
 
 test("direct filesystem construction preserves provider URL validation", () => {

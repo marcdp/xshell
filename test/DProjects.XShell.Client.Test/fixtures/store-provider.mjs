@@ -22,6 +22,11 @@ export default class TestStoreProvider {
         additionalProperties: false
     };
 
+    static getCacheKey(url) {
+        // Share construction by complete Store provider identity.
+        return url;
+    }
+
     constructor(services, options = {}) {
         // Record construction before exercising failure and Loader sharing behavior.
         const call = { url: options.url, options: structuredClone(options), number: calls.length + 1 };

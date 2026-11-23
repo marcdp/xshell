@@ -1,5 +1,5 @@
 
-import { Features } from "../js/filesystem.js";
+import { Features } from "../providers/filesystem.js";
 
 // utils
 const formatSize = bytes => {

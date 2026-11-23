@@ -136,6 +136,12 @@ export default class FilesystemMem extends Filesystem {
         additionalProperties: false
     };
 
+    static getCacheKey(url) {
+        // Keep anonymous memory filesystems isolated while sharing each named identity.
+        const identity = url.split("#", 1)[0].split("?", 1)[0];
+        return identity.toLowerCase() === "mem:" ? null : url;
+    }
+
     // constructor
     constructor({}, { url = "mem:", isReadonly = false } = {}) {
         // Preserve the provider-independent diagnostic identity for isolated memory filesystems.

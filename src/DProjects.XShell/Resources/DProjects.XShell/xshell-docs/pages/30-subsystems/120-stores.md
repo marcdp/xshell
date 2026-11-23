@@ -31,7 +31,6 @@ handles identities such as `remote:customers`. Other modules can contribute prov
                     "providers": {
                         "remote": {
                             "implementation": "/providers/store-remote.js",
-                            "cache": true,
                             "options": {"endpoint": "https://example.test/api"}
                         }
                     }
@@ -64,6 +63,10 @@ Store implementation
 The runtime `url` is added after authored options validation and wins over a conflicting authored value. Provider dependencies resolve lazily
 through the owning Services context. Store providers are not global Resolver resources or Loader resources, so their construction produces no
 Loader registry entries or generic Loader events.
+
+A provider opts into instance reuse with an optional static `getCacheKey(url)` method. Returning a nonempty string selects the provider-defined
+cache identity; returning `null`, or omitting the method, creates a new instance for every `open()`. Stores owns in-flight sharing and failed-entry
+eviction, while the implementation owns the semantic identity. The memory Store returns its complete URL so each identity is cached independently.
 
 ## Schema and validation
 

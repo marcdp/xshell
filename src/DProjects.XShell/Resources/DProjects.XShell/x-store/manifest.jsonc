@@ -32,7 +32,7 @@
                 "lifetime": "singleton",
                 "options": {
                     "providers": {
-                        "mem": {"implementation": "/providers/store-mem.js", "cache": true}
+                        "mem": {"implementation": "/providers/store-mem.js"}
                     }
                 }
             }

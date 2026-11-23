@@ -12,8 +12,6 @@ export default class Stores {
                     required: ["implementation"],
                     properties: {
                         implementation: { type: "string", minLength: 1 },
-                        cache: { type: "boolean" },
-                        cacheMode: { type: "string", enum: ["full", "path"] },
                         options: { type: "object" }
                     },
                     additionalProperties: false
@@ -36,8 +34,6 @@ export default class Stores {
             const isAbsoluteUrl = /^[A-Za-z][A-Za-z0-9+.-]*:/.test(provider.implementation);
             const definition = {implementation: isAbsoluteUrl ? provider.implementation
                 : new URL(provider.implementation.replace(/^\/+/, ""), config.app.baseUrl).href};
-            if (Object.hasOwn(provider, "cache")) definition.cache = provider.cache;
-            if (Object.hasOwn(provider, "cacheMode")) definition.cacheMode = provider.cacheMode;
             if (Object.hasOwn(provider, "options")) definition.options = structuredClone(provider.options);
             this.#providers.set(scheme.toLowerCase(), definition);
         }
@@ -55,31 +51,33 @@ export default class Stores {
         const definition = scheme ? this.#providers.get(scheme) : null;
         if (!definition) throw new Error(`Store provider not found: ${url}`);
 
-        const cacheKey = this.#getCacheKey(url, definition);
-        if (definition.cache && this.#instances.has(cacheKey)) return await this.#instances.get(cacheKey);
+        const Implementation = await this.#importProvider(url, definition);
+        const cacheKey = this.#getCacheKey(url, Implementation);
+        if (cacheKey !== null && this.#instances.has(cacheKey)) return await this.#instances.get(cacheKey);
 
-        const creation = this.#createProvider(url, definition);
-        if (definition.cache) this.#instances.set(cacheKey, creation);
+        const creation = this.#createProvider(url, definition, Implementation);
+        if (cacheKey !== null) this.#instances.set(cacheKey, creation);
         try {
             const instance = await creation;
-            if (definition.cache && this.#instances.get(cacheKey) === creation) this.#instances.set(cacheKey, instance);
+            if (cacheKey !== null && this.#instances.get(cacheKey) === creation) this.#instances.set(cacheKey, instance);
             return instance;
         } catch (error) {
-            if (definition.cache && this.#instances.get(cacheKey) === creation) this.#instances.delete(cacheKey);
+            if (cacheKey !== null && this.#instances.get(cacheKey) === creation) this.#instances.delete(cacheKey);
             throw error;
         }
     }
 
     // private methods
-    async #createProvider(url, definition) {
-        // Import the implementation and require its implementation-owned options schema.
-        let module;
+    async #importProvider(url, definition) {
+        // Import the implementation class before asking it for provider-owned cache identity.
         try {
-            module = await import(definition.implementation);
+            return (await import(definition.implementation)).default;
         } catch (cause) {
             throw new Error(`Store provider '${url}' could not import implementation '${definition.implementation}': ${cause.message}`, {cause});
         }
-        const Implementation = module.default;
+    }
+    async #createProvider(url, definition, Implementation) {
+        // Require the implementation-owned options schema before constructing the provider.
         let schema;
         try {
             schema = Implementation?.optionsSchema;
@@ -121,16 +119,24 @@ export default class Stores {
         // Treat provider identity as a domain URL and dispatch only by its normalized scheme.
         return url.match(/^([A-Za-z][A-Za-z0-9+.-]*):/)?.[1].toLowerCase() ?? null;
     }
-    #getCacheKey(url, definition) {
-        // Preserve the former Loader full/path provider identity behavior.
-        const cacheMode = definition.cacheMode ?? "full";
-        if (cacheMode === "full") return url;
-        if (cacheMode === "path") {
-            const queryIndex = url.indexOf("?");
-            const fragmentIndex = url.indexOf("#");
-            return queryIndex === -1 || (fragmentIndex !== -1 && queryIndex > fragmentIndex)
-                ? url : url.substring(0, queryIndex) + (fragmentIndex === -1 ? "" : url.substring(fragmentIndex));
+    #getCacheKey(url, Implementation) {
+        // Let the provider opt into caching and define its semantic identity.
+        let getCacheKey;
+        try {
+            getCacheKey = Implementation?.getCacheKey;
+        } catch (cause) {
+            throw new Error(`Store provider '${url}' has an invalid static getCacheKey: ${cause.message}`, {cause});
         }
-        throw new Error(`Unsupported cache mode '${cacheMode}'.`);
+        if (getCacheKey === undefined) return null;
+        if (typeof getCacheKey !== "function") throw new Error(`Store provider '${url}' has an invalid static getCacheKey: expected a function.`);
+        let cacheKey;
+        try {
+            cacheKey = getCacheKey.call(Implementation, url);
+        } catch (cause) {
+            throw new Error(`Store provider '${url}' static getCacheKey failed: ${cause.message}`, {cause});
+        }
+        if (cacheKey === null) return null;
+        if (typeof cacheKey !== "string" || !cacheKey) throw new Error(`Store provider '${url}' static getCacheKey must return a non-empty string or null.`);
+        return cacheKey;
     }
 }

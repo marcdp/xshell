@@ -102,7 +102,8 @@ module-qualified equivalent—can resolve to the same URL and still occupy separ
 
 Loader caching applies only to ordinary XShell resources. Filesystem and Store provider URLs are owned by their domain Services and never become
 synthetic Loader resources. `Filesystems` and `Stores` each dispatch by URL scheme, import the configured implementation, validate its authored
-options, construct it with a lazy Services dependency proxy, and maintain their own provider-instance cache. Consequently, provider
+options, construct it with a lazy Services dependency proxy, and maintain their own provider-instance cache using the implementation's optional
+static `getCacheKey(url)` policy. Consequently, provider
 construction does not create Loader registry entries or emit Loader resource events.
 
 ## Flow

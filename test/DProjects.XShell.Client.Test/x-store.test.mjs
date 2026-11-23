@@ -25,7 +25,7 @@ function createServices(values = {}) {
 }
 
 function createRuntime(providers, services = {}) {
-    // Build the local provider matcher and Loader over a global Resolver with no Store category.
+    // Build scheme-dispatched providers beside a global Resolver and Loader with no Store category.
     const jsonValidator = new JsonValidator();
     const serviceScope = createServices({jsonValidator, ...services});
     const config = {
@@ -111,12 +111,15 @@ test("Stores.open resolves and imports providers locally with final runtime iden
     const providerOptions = {tag: "configured", nested: {value: 1}, url: "authored:override"};
     const jsonValidator = new JsonValidator();
     const stores = new Stores({config: {app: {baseUrl: "https://example.test/"}}, jsonValidator, services: createServices({jsonValidator})}, {providers: {
-        mem: {implementation, cache: true, cacheMode: "path", options: providerOptions}
+        mem: {implementation, options: providerOptions}
     }});
     providerOptions.tag = "changed";
     providerOptions.nested.value = 2;
 
-    assert.deepEqual((await stores.open("mem:demo")).options, {tag: "configured", nested: {value: 99}, url: "mem:demo"});
+    const first = await stores.open("mem:demo");
+    const second = await stores.open("mem:demo");
+    assert.deepEqual(first.options, {tag: "configured", nested: {value: 99}, url: "mem:demo"});
+    assert.notStrictEqual(first, second);
     assert.deepEqual(providerOptions, {tag: "changed", nested: {value: 2}, url: "authored:override"});
     for (const value of [null, undefined, "", "   ", 0, false, {}, []]) {
         await assert.rejects(() => stores.open(value), {name: "TypeError", message: "Store URL must be a non-empty string."});
@@ -128,7 +131,7 @@ test("Stores.open resolves locally and caches each memory identity", async t => 
     // Exercise direct Store provider materialization without a global Store category.
     const providerUrl = new URL("../../src/DProjects.XShell/Resources/DProjects.XShell/x-store/providers/store-mem.js", import.meta.url).href;
     const {resolver, loader, stores} = createRuntime({
-        mem: {implementation: providerUrl, cache: true}
+        mem: {implementation: providerUrl}
     });
     const anonymousFirst = await stores.open("mem:");
     const anonymousAgain = await stores.open("mem:");
@@ -154,7 +157,7 @@ test("Stores owns sharing, failure eviction, and implementation option validatio
     const provider = await import(providerUrl);
     provider.reset();
     const {stores, loader} = createRuntime({test: {
-        implementation: providerUrl, cache: true, options: {tag: "configured"}
+        implementation: providerUrl, options: {tag: "configured"}
     }});
     const firstPromise = stores.open("test:demo");
     const secondPromise = stores.open("test:demo");
@@ -166,7 +169,7 @@ test("Stores owns sharing, failure eviction, and implementation option validatio
 
     provider.reset();
     provider.failOnce();
-    const retryRuntime = createRuntime({test: {implementation: providerUrl, cache: true}});
+    const retryRuntime = createRuntime({test: {implementation: providerUrl}});
     await assert.rejects(() => retryRuntime.stores.open("test:retry"), /Simulated Store provider failure/);
     assert.equal((await retryRuntime.stores.open("test:retry")).number, 2);
 
@@ -202,18 +205,35 @@ test("Stores requires valid schemas and resolves provider dependencies lazily", 
     delete globalThis.__storeConstructions;
 });
 
+test("Stores validates provider-defined cache identity before construction", async () => {
+    // Reject a cache policy that does not return a nonempty string or null.
+    globalThis.__storeCacheConstructions = 0;
+    const implementation = "data:text/javascript," + encodeURIComponent(`export default class Implementation {
+        static optionsSchema = {type: "object", additionalProperties: false};
+        static getCacheKey() { return 0; }
+        constructor() { globalThis.__storeCacheConstructions++; }
+    }`);
+    const jsonValidator = new JsonValidator();
+    const stores = new Stores({config: {app: {baseUrl: "https://example.test/"}}, jsonValidator, services: createServices({jsonValidator})}, {
+        providers: {test: {implementation}}
+    });
+    await assert.rejects(() => stores.open("test:demo"), /must return a non-empty string or null/);
+    assert.equal(globalThis.__storeCacheConstructions, 0);
+    delete globalThis.__storeCacheConstructions;
+});
+
 test("Stores options and manifest expose only the domain provider API", () => {
     // Validate the closed provider shape and the configured singleton Service boundary.
     const validator = new JsonValidator();
     const valid = {providers: {mem: {
-        implementation: "/providers/store-mem.js", cache: true, cacheMode: "path", options: {tag: "work"}
+        implementation: "/providers/store-mem.js", options: {tag: "work"}
     }}};
     assert.equal(validator.validate(valid, Stores.optionsSchema).valid, true);
     assert.equal(validator.validate({providers: {"mem:": valid.providers.mem}}, Stores.optionsSchema).valid, false);
     assert.equal(validator.validate({providers: {MEM: valid.providers.mem}}, Stores.optionsSchema).valid, false);
     for (const definition of [
-        {}, {implementation: ""}, {implementation: "/providers/store-mem.js", cache: "yes"},
-        {implementation: "/providers/store-mem.js", cacheMode: "identity"}, {implementation: "/providers/store-mem.js", options: null},
+        {}, {implementation: ""}, {implementation: "/providers/store-mem.js", cache: true},
+        {implementation: "/providers/store-mem.js", cacheMode: "path"}, {implementation: "/providers/store-mem.js", options: null},
         {implementation: "/providers/store-mem.js", options: []}, {implementation: "/providers/store-mem.js", loader: "custom-js"}
     ]) assert.equal(validator.validate({providers: {mem: definition}}, Stores.optionsSchema).valid, false);
 

@@ -42,15 +42,13 @@ every provider is cached.
 ## Providers
 
 `options.providers` is an object keyed by normalized URL scheme without the trailing colon. Each definition has a required `implementation` string
-and optional `cache`, `cacheAnonymous`, `cacheMode`, and `options` fields. The selected provider class must expose a static `optionsSchema`;
-Filesystems validates cloned authored options against that schema before adding runtime values and invoking the constructor.
+and optional `options` object. The selected provider class must expose a static `optionsSchema`; Filesystems validates cloned authored options
+against that schema before adding runtime values and invoking the constructor.
 
 ~~~jsonc
 "providers": {
     "mem": {
-        "implementation": "/providers/filesystem-mem.js",
-        "cache": true,
-        "cacheAnonymous": false
+        "implementation": "/providers/filesystem-mem.js"
     }
 }
 ~~~
@@ -62,7 +60,6 @@ the shape; it does not imply that WebDAV is implemented:
 "providers": {
     "webdav": {
         "implementation": "/providers/filesystem-webdav.js",
-        "cache": true,
         "options": {
             "credential": "work-webdav",
             "timeout": 30000
@@ -74,9 +71,17 @@ the shape; it does not imply that WebDAV is implemented:
 `url` is derived from the opened provider identity and is not authored inside `options`. Runtime-only constructor values such as a directly
 supplied `FileSystemDirectoryHandle` also remain outside declarative JSON configuration.
 
-`cacheMode` retains the compatible `full` and `path` meanings: `full` uses the complete provider URL, while `path` removes only the query and
-preserves any fragment. When `cache` is true, `cacheAnonymous: false` exempts the scheme-only identity such as `mem:` while named identities remain
-cached. Filesystems owns this cache and does not expose the provider table as mutable public API.
+Provider implementations decide whether instances are reused through an optional static method:
+
+~~~js
+static getCacheKey(url) {
+    return url === "mem:" ? null : url;
+}
+~~~
+
+A nonempty string is the provider-defined cache identity. Returning `null`, or omitting the method, constructs a new instance for every `open()`.
+Filesystems owns concurrent sharing, completed instances, and failed-entry eviction; the provider owns only the identity policy. The memory
+Filesystem therefore leaves anonymous `mem:` instances isolated while reusing named identities such as `mem:workspace`.
 
 Another module can contribute a provider through ordinary XShell configuration composition by adding a new scheme key under the same Service
 options object:

@@ -42,7 +42,7 @@
                         "iframe": {"page": "/pages/editor-iframe.js", "label": "Open", "icon": "x-preview", "extensions": ["pdf"]}
                     },
                     "providers": {
-                        "mem": {"implementation": "/providers/filesystem-mem.js", "cache": true, "cacheAnonymous": false},
+                        "mem": {"implementation": "/providers/filesystem-mem.js"},
                         "http": {"implementation": "/providers/filesystem-http.js"},
                         "https": {"implementation": "/providers/filesystem-http.js"},
                         "opfs": {"implementation": "/providers/filesystem-opfs.js"},
