@@ -10,7 +10,7 @@ export default class JsonValidator {
     }
 
     // vars
-    _validators = new WeakMap();
+    #validators = new WeakMap();
 
     // ctor
     constructor(services = {}, options = {}) {
@@ -19,10 +19,10 @@ export default class JsonValidator {
     // methods
     validate(data, schema, schemas) {
         // Compile a private mutable schema because the vendor validator annotates schema objects.
-        let validator = this._validators.get(schema);
+        let validator = this.#validators.get(schema);
         if (!validator) {
             validator = new Validator(structuredClone(schema), "2020-12");
-            this._validators.set(schema, validator);
+            this.#validators.set(schema, validator);
         }
 
         // Clone referenced schemas too because addSchema() may annotate them.

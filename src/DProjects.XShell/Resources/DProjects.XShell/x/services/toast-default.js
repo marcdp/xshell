@@ -9,9 +9,10 @@ export default class Toast extends EventTarget {
     };
 
     // fields
-    _containers = new Map();
-    _items = new Map();
-    _nextId = 1;
+    #containers = new Map();
+    #items = new Map();
+    #nextId = 1;
+    #noticeReady;
 
     // ctor
     constructor({ loader }, options) {
@@ -20,7 +21,7 @@ export default class Toast extends EventTarget {
         // x-notice owns the visual representation of a toast.
         // Creating an undefined custom element is valid; it will upgrade
         // when the component loader finishes registering it.
-        this._noticeReady = loader.load("component:x-notice");
+        this.#noticeReady = loader.load("component:x-notice");
     }
 
     // methods
@@ -29,9 +30,9 @@ export default class Toast extends EventTarget {
         duration = 4000,
         page = null
     } = {}) {
-        const id = String(this._nextId++);
+        const id = String(this.#nextId++);
         const owner = page ?? null;
-        const container = this._getContainer(owner);
+        const container = this.#getContainer(owner);
 
         const element = document.createElement("x-notice");
         element.className = "x-toast";
@@ -52,7 +53,7 @@ export default class Toast extends EventTarget {
             item.timer = setTimeout(() => this.close(id), duration);
         }
 
-        this._items.set(id, item);
+        this.#items.set(id, item);
 
         this.dispatchEvent(new CustomEvent("shown", {
             detail: { id }
@@ -62,7 +63,7 @@ export default class Toast extends EventTarget {
     }
 
     close(id) {
-        const item = this._items.get(id);
+        const item = this.#items.get(id);
         if (!item) return;
 
         if (item.timer) {
@@ -70,9 +71,9 @@ export default class Toast extends EventTarget {
         }
 
         item.element.remove();
-        this._items.delete(id);
+        this.#items.delete(id);
 
-        this._removeContainerIfEmpty(item.owner);
+        this.#removeContainerIfEmpty(item.owner);
 
         this.dispatchEvent(new CustomEvent("closed", {
             detail: { id }
@@ -80,7 +81,7 @@ export default class Toast extends EventTarget {
     }
 
     clear(page = undefined) {
-        for (const [id, item] of [...this._items]) {
+        for (const [id, item] of [...this.#items]) {
             if (page === undefined || item.owner === page) {
                 this.close(id);
             }
@@ -88,8 +89,8 @@ export default class Toast extends EventTarget {
     }
 
     // methods (private)
-    _getContainer(owner) {
-        const existing = this._containers.get(owner);
+    #getContainer(owner) {
+        const existing = this.#containers.get(owner);
         if (existing) return existing;
 
         const element = document.createElement("div");
@@ -140,17 +141,17 @@ export default class Toast extends EventTarget {
             document.body.append(element);
         }
 
-        this._containers.set(owner, container);
+        this.#containers.set(owner, container);
 
         return container;
     }
 
-    _removeContainerIfEmpty(owner) {
-        for (const item of this._items.values()) {
+    #removeContainerIfEmpty(owner) {
+        for (const item of this.#items.values()) {
             if (item.owner === owner) return;
         }
 
-        const container = this._containers.get(owner);
+        const container = this.#containers.get(owner);
         if (!container) return;
 
         if (container.host) {
@@ -164,6 +165,6 @@ export default class Toast extends EventTarget {
         }
 
         container.element.remove();
-        this._containers.delete(owner);
+        this.#containers.delete(owner);
     }
 }

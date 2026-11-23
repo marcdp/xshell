@@ -7,6 +7,14 @@ import Tasks from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/
 
 let instanceId = 0;
 
+function assertScopeActive(scope) {
+    assert.doesNotThrow(() => scope.has("__test__"));
+}
+
+function assertScopeDisposed(scope) {
+    assert.throws(() => scope.has("__test__"), /Services scope is disposed/);
+}
+
 function createRoot({disposed = [], scopedDispose} = {}) {
     const root = new Services({config: {xshell: {services: {}}}, bus: null});
     class Singleton {
@@ -102,7 +110,7 @@ test("Command instances own independent direct-root scopes and preserve controll
     assert.equal(commands[0].execute(7), 7);
     assert.equal(records.length, 2);
     assert.notStrictEqual(records[0].services, records[1].services);
-    assert.ok(records.every(record => record.services._parent === root));
+    assert.ok(records.every(record => record.services !== root && record.services.resolve("services") === root));
     assert.strictEqual(records[0].singleton, records[1].singleton);
     assert.strictEqual(records[0].session, records[0].repeatedSession);
     assert.notStrictEqual(records[0].session, records[1].session);
@@ -118,15 +126,15 @@ test("Command instances own independent direct-root scopes and preserve controll
         assert.strictEqual(record.tasks, ordinary.tasks);
         assert.equal(record.symbol, undefined);
     }
-    assert.equal(root._children.length, 2);
+    records.forEach(record => assertScopeActive(record.services));
     assert.equal(ordinary.tasks.list().length, 0);
 
     await commands[0].dispose();
-    assert.equal(root._children.length, 1);
-    assert.equal(records[1].services._lifecycleState, "active");
+    assertScopeDisposed(records[0].services);
+    assertScopeActive(records[1].services);
     await commands[1].dispose();
 
-    assert.equal(root._children.length, 0);
+    assertScopeDisposed(records[1].services);
     assert.equal(disposed.filter(item => item.startsWith("scoped:")).length, 2);
     assert.equal(disposed.filter(item => item.startsWith("transient:")).length, 4);
     assert.strictEqual(commands[0].controller, null);
@@ -154,7 +162,6 @@ test("Command constructor failure initiates owned-scope cleanup and preserves th
     assert.throws(() => new Command({task: {}}), error => error === constructionError);
     await new Promise(resolve => setTimeout(resolve, 0));
 
-    assert.equal(root._children.length, 0);
     assert.equal(disposed.filter(item => item.startsWith("scoped:")).length, 1);
     assert.equal(reported.length, 1);
     assert.match(reported[0][0], /Command 'Failure'.*construction failed/);
@@ -177,7 +184,6 @@ test("Command.dispose propagates cleanup failure while clearing owned references
 
     await assert.rejects(command.dispose(), error => error === disposalError);
 
-    assert.equal(root._children.length, 0);
     assert.strictEqual(command.controller, null);
     assert.strictEqual(command._servicesScope, null);
     await command.dispose();

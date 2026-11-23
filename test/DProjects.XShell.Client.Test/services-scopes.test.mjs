@@ -13,6 +13,22 @@ function createServices(bus = { emit() {} }) {
     });
 }
 
+test("Services scopes do not expose registry, ownership, context, or lifecycle internals", async () => {
+    const root = createServices();
+    const scope = root.beginScope({context: {owner: "test"}});
+    const internalNames = [
+        "_root", "_items", "_children", "_parent", "_scopedInstances", "_disposables", "_disposableSet",
+        "_creationPath", "_lifecycleState", "_disposalPromise", "_context"
+    ];
+
+    for (const name of internalNames) {
+        assert.equal(Object.hasOwn(scope, name), false, name);
+        assert.equal(scope[name], undefined, name);
+    }
+    assert.deepEqual(Object.getOwnPropertyNames(Services.prototype).filter(name => name.startsWith("_")), []);
+    await root.dispose();
+});
+
 test("beginScope creates distinct nested Services scopes without constructing services", async () => {
     const root = createServices();
     let constructions = 0;
@@ -162,15 +178,14 @@ test("scope disposal is isolated, reverse ordered, recursive, and detaches compl
     await firstChild.dispose();
 
     assert.deepEqual(order, ["first-child"]);
-    assert.equal(parent._children.includes(firstChild), false);
+    assert.throws(() => firstChild.has("example"), /Services scope is disposed/);
     assert.strictEqual(parent.resolve("example"), singleton);
     assert.equal(sibling.has("missing"), false);
 
     await parent.dispose();
 
     assert.deepEqual(order, ["first-child", "third-child", "second-child", "parent-second", "parent-first"]);
-    assert.equal(root._children.includes(parent), false);
-    assert.equal(root._children.includes(sibling), true);
+    assert.throws(() => parent.has("example"), /Services scope is disposed/);
     assert.equal(sibling.has("missing"), false);
 });
 
@@ -212,8 +227,8 @@ test("disposal continues after failures and aggregates multiple errors", async (
     });
 
     assert.deepEqual(order, ["third", "second", "first"]);
-    assert.equal(scope._disposables.length, 0);
-    assert.equal(root._children.includes(scope), false);
+    assert.throws(() => scope.has("missing"), /Services scope is disposed/);
+    assert.equal(root.has("missing"), false);
 });
 
 test("disposal is idempotent, concurrent, and immediately blocks descendant operations", async () => {

@@ -13,15 +13,15 @@ export default class Resolver {
 
 
     //vars
-    _definitions = [];
-    _appBasePath = "";
-    _appBaseUrl = "";
+    #definitions = [];
+    #appBasePath = "";
+    #appBaseUrl = "";
     
 
     //ctor
     constructor( { config }, options) {
-        this._appBasePath = config.app.basePath;
-        this._appBaseUrl = config.app.baseUrl;
+        this.#appBasePath = config.app.basePath;
+        this.#appBaseUrl = config.app.baseUrl;
         for(let type in config.xshell.resolver) {
             for(let pattern in config.xshell.resolver[type]) {
                 const value = config.xshell.resolver[type][pattern]; 
@@ -29,13 +29,13 @@ export default class Resolver {
             }
         }
         // sort definitions by definition.resource alphabetically
-        this._definitions.sort((a, b) => a.resource.localeCompare(b.resource));
+        this.#definitions.sort((a, b) => a.resource.localeCompare(b.resource));
     }
 
     // props
     get registry() {
         // expose rule metadata without sharing mutable definitions or regular expressions
-        return Object.freeze(this._definitions.map(definition => Object.freeze({
+        return Object.freeze(this.#definitions.map(definition => Object.freeze({
             resource: definition.resource,
             src: definition.src,
             loader: definition.loader,
@@ -102,13 +102,13 @@ export default class Resolver {
             regexp: regexpCompiled,
             ...value
         };
-        this._definitions.push(definition);
+        this.#definitions.push(definition);
     }
     has(resource) {
         if (resource.indexOf("#") != -1) resource = resource.split("#")[0];
         if (resource.indexOf("?") != -1) resource = resource.split("?")[0];
-        for(let i = 0; i < this._definitions.length ; i++) {
-            let definition = this._definitions[i];
+        for(let i = 0; i < this.#definitions.length ; i++) {
+            let definition = this.#definitions[i];
             let match = resource.match(definition.regexp);
             if (match && !Object.entries(match.groups ?? {}).some(([key, value]) =>
                 key === "name"
@@ -122,24 +122,24 @@ export default class Resolver {
     resolve(resource) {                
         if (resource.indexOf("#") != -1) resource = resource.split("#")[0];
         if (resource.indexOf("?") != -1) resource = resource.split("?")[0];        
-        for(let i = 0; i < this._definitions.length ; i++) {
-            const definition = this._definitions[i];
+        for(let i = 0; i < this.#definitions.length ; i++) {
+            const definition = this.#definitions[i];
             if (definition.resource === resource) {
                 const isAbsoluteUrl = /^[A-Za-z][A-Za-z0-9+.-]*:/.test(definition.src);
-                let url = isAbsoluteUrl ? definition.src : new URL(definition.src.replace(/^\/+/, ""), this._appBaseUrl).href;
+                let url = isAbsoluteUrl ? definition.src : new URL(definition.src.replace(/^\/+/, ""), this.#appBaseUrl).href;
                 let path = isAbsoluteUrl ? null : definition.src;
                 return { definition, url, path };
             }
         }
-        for(let i = this._definitions.length - 1; i >= 0 ; i--) {
-            const definition = this._definitions[i];
+        for(let i = this.#definitions.length - 1; i >= 0 ; i--) {
+            const definition = this.#definitions[i];
             const match = resource.match(definition.regexp);
             if (match && !Object.entries(match.groups ?? {}).some(([key, value]) =>
                 key === "name"
                     ? value === "." || value === ".." || /[/\\?#%]/.test(value)
                     : key === "path" && (/[\\?#%]/.test(value) || value.split("/").some(segment => !segment || segment === "." || segment === "..")))) {
                 const isAbsoluteUrl = /^[A-Za-z][A-Za-z0-9+.-]*:/.test(definition.src);
-                let url = isAbsoluteUrl ? definition.src : new URL(definition.src.replace(/^\/+/, ""), this._appBaseUrl).href.replaceAll("%7B", "{").replaceAll("%7D", "}");
+                let url = isAbsoluteUrl ? definition.src : new URL(definition.src.replace(/^\/+/, ""), this.#appBaseUrl).href.replaceAll("%7B", "{").replaceAll("%7D", "}");
                 let path = isAbsoluteUrl ? null : definition.src;
                 for(var key in match.groups) {
                     url = url.replaceAll("{" + key + "}", match.groups[key]);

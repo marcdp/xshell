@@ -4,59 +4,59 @@ import JsonValidator from "./services/json-validator.js";
 // class
 export default class Services {
 
-    static _lifetimes = new Set(["singleton", "scoped", "transient"]);
+    static #lifetimes = new Set(["singleton", "scoped", "transient"]);
 
     // vars
-    _config = null;
-    _loader = null;
-    _contracts = null;
-    _items = null;
-    _resolver = null;
-    _bus = null;
-    _creationPath = [];
-    _jsonValidator = null;
-    _parent = null;
-    _root = null;
-    _context = null;
-    _children = [];
-    _disposables = [];
-    _disposableSet = new Set();
-    _scopedInstances = new Map();
-    _lifecycleState = "active";
-    _disposalPromise = null;
+    #config = null;
+    #loader = null;
+    #contracts = null;
+    #items = null;
+    #resolver = null;
+    #bus = null;
+    #creationPath = [];
+    #jsonValidator = null;
+    #parent = null;
+    #root = null;
+    #context = null;
+    #children = [];
+    #disposables = [];
+    #disposableSet = new Set();
+    #scopedInstances = new Map();
+    #lifecycleState = "active";
+    #disposalPromise = null;
 
     // props
     get registry() {
         // expose the root registration metadata only while this scope is active
-        this._assertActive();
-        return this._root._getRegistrySnapshot();
+        this.#assertActive();
+        return this.#root.#getRegistrySnapshot();
     }
 
     // ctor
     constructor( {config, loader, contracts, resolver, bus, context} = {}, parent = null ) {
         // associate child scopes with their direct parent and shared root container
         if (parent) {
-            this._parent = parent;
-            this._root = parent._root;
-            this._context = context ?? null;
+            this.#parent = parent;
+            this.#root = parent.#root;
+            this.#context = context ?? null;
             return;
         }
 
         // initialize registration and singleton state only for the root container
-        this._root = this;
-        this._items = {};
-        this._jsonValidator = new JsonValidator();
-        this._config = config;
-        this._loader = loader;
-        this._contracts = contracts;
-        this._resolver = resolver;    
-        this._bus = bus;
+        this.#root = this;
+        this.#items = {};
+        this.#jsonValidator = new JsonValidator();
+        this.#config = config;
+        this.#loader = loader;
+        this.#contracts = contracts;
+        this.#resolver = resolver;
+        this.#bus = bus;
     }
 
     //methods
     beginScope(options = {}) {
         // create and track a distinct child without constructing any services
-        this._assertActive();
+        this.#assertActive();
         if (!options || typeof options !== "object" || Array.isArray(options)) throw new TypeError("Services scope options must be an object.");
         const unexpected = Object.keys(options).find(name => name !== "context");
         if (unexpected) throw new TypeError(`Unknown Services scope option '${unexpected}'.`);
@@ -64,58 +64,58 @@ export default class Services {
             throw new TypeError("Services scope context must be an object.");
         }
         const scope = new Services({context: options.context}, this);
-        this._children.push(scope);
+        this.#children.push(scope);
         return scope;
     }
     addDisposable(resource) {
         // retain each valid resource at most once within this scope
-        this._assertActive();
+        this.#assertActive();
         if (typeof resource?.dispose !== "function") throw new TypeError("Disposable resource must expose a callable dispose() method.");
-        if (!this._disposableSet.has(resource)) {
-            this._disposableSet.add(resource);
-            this._disposables.push(resource);
+        if (!this.#disposableSet.has(resource)) {
+            this.#disposableSet.add(resource);
+            this.#disposables.push(resource);
         }
         return resource;
     }
     dispose() {
         // mark synchronously and retain one shared cleanup operation
-        if (this._disposalPromise) return this._disposalPromise;
-        this._lifecycleState = "disposing";
-        this._disposalPromise = Promise.resolve().then(() => this._disposeScope());
-        return this._disposalPromise;
+        if (this.#disposalPromise) return this.#disposalPromise;
+        this.#lifecycleState = "disposing";
+        this.#disposalPromise = Promise.resolve().then(() => this.#disposeScope());
+        return this.#disposalPromise;
     }
     async init() {
         // restrict application registration initialization to the root container
-        if (this !== this._root) throw new Error("Only the root Services instance can initialize the service registry.");
-        this._assertActive();
+        if (this !== this.#root) throw new Error("Only the root Services instance can initialize the service registry.");
+        this.#assertActive();
 
         // validate contract references before loading any implementations
         const serviceContractItems = {};
-        for(const serviceName in this._config.xshell.services) {
-            const service = this._config.xshell.services[serviceName];
+        for(const serviceName in this.#config.xshell.services) {
+            const service = this.#config.xshell.services[serviceName];
             if (!Object.hasOwn(service, "lifetime")) throw new Error(`Configured service '${serviceName}' must declare a lifetime.`);
-            if (!Services._lifetimes.has(service.lifetime)) throw new Error(`Invalid lifetime '${service.lifetime}' for configured service '${serviceName}'.`);
-            const serviceContractItem = this._contracts.getContractItemById(service.contract);
+            if (!Services.#lifetimes.has(service.lifetime)) throw new Error(`Invalid lifetime '${service.lifetime}' for configured service '${serviceName}'.`);
+            const serviceContractItem = this.#contracts.getContractItemById(service.contract);
             if (!serviceContractItem) throw new Error(`Service '${serviceName}' references unknown contract '${service.contract}'.`);
             serviceContractItems[serviceName] = serviceContractItem;
         }
 
         // initialize services based on the config
         const tasks = [];
-        for(const serviceName in this._config.xshell.services) {
-            const service = this._config.xshell.services[serviceName];
+        for(const serviceName in this.#config.xshell.services) {
+            const service = this.#config.xshell.services[serviceName];
             const serviceContractItem = serviceContractItems[serviceName];
             tasks.push((async () => {
                 // resolve the implementation's module ownership from its resource definition
                 const resource = "esm:" + service.implementation;
-                const resolved = this._resolver.resolve(resource);
+                const resolved = this.#resolver.resolve(resource);
                 if (!resolved) throw new Error(`Service '${serviceName}' implementation could not be resolved: ${resource}`);
                 const moduleId = resolved.definition.moduleId;
                 if (!moduleId) throw new Error(`Service '${serviceName}' implementation has no module ownership: ${resource}`);
                 // load the service implementation and measure the time taken
                 const start = performance.now();
-                const serviceImplementation = await this._loader.load(resource);
-                const owner = moduleId === "xshell" ? this._config.xshell : this._config.modules[moduleId];
+                const serviceImplementation = await this.#loader.load(resource);
+                const owner = moduleId === "xshell" ? this.#config.xshell : this.#config.modules[moduleId];
                 const implementationFile = owner?.files?.find(file => file.path === service.implementation);
                 this.register(serviceName, null, {
                     contractItem: serviceContractItem, 
@@ -126,25 +126,25 @@ export default class Services {
                         size: implementationFile?.size ?? 0,
                         time: performance.now() - start,
                         path: service.implementation,
-                        url: new URL(service.implementation.replace(/^\/+/, ""), this._config.app.baseUrl).href
+                        url: new URL(service.implementation.replace(/^\/+/, ""), this.#config.app.baseUrl).href
                     }
                 });
-                this._items[serviceName].options = service.options ?? {};
+                this.#items[serviceName].options = service.options ?? {};
             })());
         }
         await Promise.all(tasks);
-        this._items = Object.freeze(this._items);
+        this.#items = Object.freeze(this.#items);
     }
     register(name, instance, { contractItem, implementationItem, lifetime = "singleton" } =  {}) {
         // keep registration topology exclusively owned by the root container
-        if (this !== this._root) throw new Error("Only the root Services instance can register services.");
-        this._assertActive();
-        if (Object.isFrozen(this._items)) throw new Error("Service registry is immutable after initialization.");
-        if (Object.hasOwn(this._items, name)) throw new Error(`Service already exists: ${name}`);
-        if (!Services._lifetimes.has(lifetime)) throw new Error(`Invalid lifetime '${lifetime}' for service '${name}'.`);
+        if (this !== this.#root) throw new Error("Only the root Services instance can register services.");
+        this.#assertActive();
+        if (Object.isFrozen(this.#items)) throw new Error("Service registry is immutable after initialization.");
+        if (Object.hasOwn(this.#items, name)) throw new Error(`Service already exists: ${name}`);
+        if (!Services.#lifetimes.has(lifetime)) throw new Error(`Invalid lifetime '${lifetime}' for service '${name}'.`);
         if (instance != null && lifetime !== "singleton") throw new Error(`Preconstructed service '${name}' must use the singleton lifetime.`);
-        if (instance != null && contractItem) this._validateImplementation(name, instance, contractItem);
-        this._items[name] = {
+        if (instance != null && contractItem) this.#validateImplementation(name, instance, contractItem);
+        this.#items[name] = {
             instance, contractItem, implementationItem, lifetime,
             state: instance == null ? "" : "created",
             initializationState: "not-initialized",
@@ -153,64 +153,64 @@ export default class Services {
     }
     has(name) {
         // check the shared root registry without constructing a configured service
-        this._assertActive();
-        return Object.hasOwn(this._root._items, name);
+        this.#assertActive();
+        return Object.hasOwn(this.#root.#items, name);
     }
     resolve(name) {
         // select root, scope-local, or per-resolution ownership by registration lifetime
-        this._assertActive();
-        return this._root._resolve(name, this);
+        this.#assertActive();
+        return this.#root.#resolve(name, this);
     }
     initialize(name) {
         // initialize cached singleton or scoped instances through their owning context
-        this._assertActive();
-        return this._root._initialize(name, this);
+        this.#assertActive();
+        return this.#root.#initialize(name, this);
     }
     getServiceInfo(id) {
         // project shared root metadata without exposing mutable registration records
-        this._assertActive();
-        return this._root._getServiceInfo(id);
+        this.#assertActive();
+        return this.#root.#getServiceInfo(id);
     }
 
     // methods (private)
-    _getRegistrySnapshot() {
+    #getRegistrySnapshot() {
         // project the current mutable records into independent inspection data
-        return Object.freeze(Object.entries(this._items).map(([id, item]) => this._projectServiceInfo(id, item)));
+        return Object.freeze(Object.entries(this.#items).map(([id, item]) => this.#projectServiceInfo(id, item)));
     }
-    _resolve(name, context) {
-        const result = this._items[name];
+    #resolve(name, context) {
+        const result = this.#items[name];
         if (result == undefined) {
             debugger;
             throw new Error(`Service not found: ${name}`); 
         }
-        this._validateLifetimeResolution(name, result, context);
+        this.#validateLifetimeResolution(name, result, context);
 
         // return or construct the instance through its lifetime owner
         switch (result.lifetime) {
             case "singleton":
-                return this._resolveCached(name, result, result, this);
+                return this.#resolveCached(name, result, result, this);
             case "scoped": {
-                const scopedRecord = context._getScopedRecord(name);
-                return this._resolveCached(name, result, scopedRecord, context);
+                const scopedRecord = context.#getScopedRecord(name);
+                return this.#resolveCached(name, result, scopedRecord, context);
             }
             case "transient":
-                return this._construct(name, result, null, context);
+                return this.#construct(name, result, null, context);
         }
     }
-    _initialize(name, context) {
-        const registration = this._items[name];
-        if (registration == undefined) return this._resolve(name, context);
+    #initialize(name, context) {
+        const registration = this.#items[name];
+        if (registration == undefined) return this.#resolve(name, context);
         if (registration.lifetime === "transient") {
             throw new Error(`Transient service '${name}' cannot be initialized by name; resolve and initialize a specific instance instead.`);
         }
 
         // resolve and select the lifetime-owned initialization record
-        const instance = this._resolve(name, context);
-        const result = registration.lifetime === "singleton" ? registration : context._scopedInstances.get(name);
+        const instance = this.#resolve(name, context);
+        const result = registration.lifetime === "singleton" ? registration : context.#scopedInstances.get(name);
 
-        return this._initializeRecord(name, instance, result);
+        return this.#initializeRecord(name, instance, result);
     }
-    _initializeRecord(name, instance, result) {
+    #initializeRecord(name, instance, result) {
         // Reuse the completed result or the single in-flight/failed operation
         if (result.initializationState === "initialized") return Promise.resolve(instance);
         if (result.initializationPromise) return result.initializationPromise;
@@ -229,39 +229,39 @@ export default class Services {
         });
         return result.initializationPromise;
     }
-    _resolveCached(name, registration, runtime, context) {
+    #resolveCached(name, registration, runtime, context) {
         // reuse a completed lifetime-owned instance or construct it once
         if (runtime.instance != null || !registration.implementationItem) return runtime.instance;
-        return this._construct(name, registration, runtime, context);
+        return this.#construct(name, registration, runtime, context);
     }
-    _construct(name, registration, runtime, context) {
+    #construct(name, registration, runtime, context) {
         // detect cycles coherently across singleton, scoped, and transient construction
-        const cycleStart = this._creationPath.findIndex(frame => frame.name === name);
+        const cycleStart = this.#creationPath.findIndex(frame => frame.name === name);
         if (cycleStart !== -1) {
-            const cycle = [...this._creationPath.slice(cycleStart).map(frame => frame.name), name].join(" -> ");
+            const cycle = [...this.#creationPath.slice(cycleStart).map(frame => frame.name), name].join(" -> ");
             throw new Error(`Circular service dependency detected: ${cycle}`);
         }
         if (!registration.implementationItem) return null;
 
         // validate and construct with dependencies resolving through the owning context
         if (runtime) runtime.state = "creating";
-        this._creationPath.push({ name, lifetime: registration.lifetime });
+        this.#creationPath.push({ name, lifetime: registration.lifetime });
         try {
             const dependencies = new Proxy({}, {
                 get: (target, prop) => prop === "services" ? context
-                    : prop === "scopeContext" ? context._context
+                    : prop === "scopeContext" ? context.#context
                     : typeof prop === "string" ? context.resolve(prop) : undefined
             });
             const options = registration.options ?? {};
-            this._validateOptions(name, registration.implementationItem.class, options);
+            this.#validateOptions(name, registration.implementationItem.class, options);
             const instance = new registration.implementationItem.class(dependencies, options);
-            this._validateImplementation(name, instance, registration.contractItem);
+            this.#validateImplementation(name, instance, registration.contractItem);
             if (runtime) {
                 runtime.instance = instance;
                 runtime.state = "created";
             }
             if (registration.lifetime !== "singleton" && typeof instance?.dispose === "function") context.addDisposable(instance);
-            this._bus?.emit("xshell:service:created", { id: name });
+            this.#bus?.emit("xshell:service:created", { id: name });
             return instance;
         } catch (error) {
             if (runtime) {
@@ -270,53 +270,53 @@ export default class Services {
             }
             throw error;
         } finally {
-            this._creationPath.pop();
+            this.#creationPath.pop();
         }
     }
-    _validateLifetimeResolution(name, registration, context) {
+    #validateLifetimeResolution(name, registration, context) {
         if (registration.lifetime !== "scoped") return;
 
         // reject scoped capture anywhere beneath an active singleton construction
-        const singleton = this._creationPath.find(frame => frame.lifetime === "singleton");
-        const chain = [...this._creationPath.map(frame => frame.name), name].join(" -> ");
+        const singleton = this.#creationPath.find(frame => frame.lifetime === "singleton");
+        const chain = [...this.#creationPath.map(frame => frame.name), name].join(" -> ");
         if (singleton) {
             throw new Error(`Invalid service lifetime dependency: singleton service '${singleton.name}' cannot depend on scoped service '${name}' (dependency chain: ${chain}).`);
         }
 
         // require an explicit child scope for every scoped instance
         if (context === this) {
-            const suffix = this._creationPath.length ? ` (dependency chain: ${chain})` : "";
+            const suffix = this.#creationPath.length ? ` (dependency chain: ${chain})` : "";
             throw new Error(`Scoped service '${name}' requires an explicit child Services scope${suffix}.`);
         }
     }
-    _getScopedRecord(name) {
+    #getScopedRecord(name) {
         // create only scope-local runtime state while definitions remain root-owned
-        let record = this._scopedInstances.get(name);
+        let record = this.#scopedInstances.get(name);
         if (!record) {
             record = { instance: null, state: "registered", initializationState: "not-initialized", initializationPromise: null };
-            this._scopedInstances.set(name, record);
+            this.#scopedInstances.set(name, record);
         }
         return record;
     }
-    _getServiceInfo(id) {
-        return Object.hasOwn(this._items, id) ? this._projectServiceInfo(id, this._items[id]) : undefined;
+    #getServiceInfo(id) {
+        return Object.hasOwn(this.#items, id) ? this.#projectServiceInfo(id, this.#items[id]) : undefined;
     }
-    _assertActive() {
+    #assertActive() {
         // reject operations when this scope or any ancestor has begun disposal
         let current = this;
         while (current) {
-            if (current._lifecycleState !== "active") {
+            if (current.#lifecycleState !== "active") {
                 const owner = current === this ? "Services scope" : "Ancestor Services scope";
-                throw new Error(`${owner} is ${current._lifecycleState}.`);
+                throw new Error(`${owner} is ${current.#lifecycleState}.`);
             }
-            current = current._parent;
+            current = current.#parent;
         }
     }
-    async _disposeScope() {
+    async #disposeScope() {
         // continue reverse-order cleanup while retaining every failure
         const errors = [];
         try {
-            for (const child of [...this._children].reverse()) {
+            for (const child of [...this.#children].reverse()) {
                 try {
                     await child.dispose();
                 } catch (error) {
@@ -325,7 +325,7 @@ export default class Services {
             }
 
             // wait for scope-owned initialization before disposing its instances
-            for (const record of this._scopedInstances.values()) {
+            for (const record of this.#scopedInstances.values()) {
                 if (record.initializationState === "initializing" && record.initializationPromise) {
                     try {
                         await record.initializationPromise;
@@ -334,7 +334,7 @@ export default class Services {
                     }
                 }
             }
-            for (const resource of [...this._disposables].reverse()) {
+            for (const resource of [...this.#disposables].reverse()) {
                 try {
                     await resource.dispose();
                 } catch (error) {
@@ -343,25 +343,25 @@ export default class Services {
             }
         } finally {
             // release owned references and detach this completed scope from its parent
-            this._children.length = 0;
-            this._disposables.length = 0;
-            this._disposableSet.clear();
-            this._scopedInstances.clear();
-            this._context = null;
-            this._parent?._removeChild(this);
-            this._lifecycleState = "disposed";
+            this.#children.length = 0;
+            this.#disposables.length = 0;
+            this.#disposableSet.clear();
+            this.#scopedInstances.clear();
+            this.#context = null;
+            this.#parent?.#removeChild(this);
+            this.#lifecycleState = "disposed";
         }
 
         // preserve a single failure and aggregate independent cleanup failures
         if (errors.length === 1) throw errors[0];
         if (errors.length > 1) throw new AggregateError(errors, "Multiple errors occurred while disposing a Services scope.");
     }
-    _removeChild(child) {
+    #removeChild(child) {
         // remove only the completed direct child while preserving sibling order
-        const index = this._children.indexOf(child);
-        if (index !== -1) this._children.splice(index, 1);
+        const index = this.#children.indexOf(child);
+        if (index !== -1) this.#children.splice(index, 1);
     }
-    _projectServiceInfo(id, item) {
+    #projectServiceInfo(id, item) {
         // expose scalar metadata without retaining references to runtime objects
         const contractId = item.contractItem?.id;
         const contractUrl = item.contractItem?.url;
@@ -389,7 +389,7 @@ export default class Services {
             time: item.implementationItem?.time ?? null
         });
     }
-    _validateOptions(serviceName, implementation, options) {
+    #validateOptions(serviceName, implementation, options) {
         let schema;
         try {
             schema = implementation?.optionsSchema;
@@ -405,23 +405,23 @@ export default class Services {
 
         let optionsResult;
         try {
-            optionsResult = this._jsonValidator.validate(options, schema);
+            optionsResult = this.#jsonValidator.validate(options, schema);
         } catch (cause) {
             throw new Error(`Service '${serviceName}' has an invalid static optionsSchema: ${cause.message}`, { cause });
         }
         if (!optionsResult.valid) {
-            throw new Error(`Invalid options for service '${serviceName}'${this._formatValidationFailure(optionsResult.errors)}.`, {
+            throw new Error(`Invalid options for service '${serviceName}'${this.#formatValidationFailure(optionsResult.errors)}.`, {
                 cause: optionsResult.errors
             });
         }
     }
-    _formatValidationFailure(errors) {
+    #formatValidationFailure(errors) {
         const wrappers = new Set(["$ref", "anyOf", "oneOf", "allOf", "properties", "items", "false"]);
         const detail = errors?.findLast(error => error.instanceLocation && error.error && !wrappers.has(error.keyword)) ?? errors?.at(-1);
         if (!detail) return "";
         return ` at '${detail.instanceLocation ?? "#"}': ${detail.error}`;
     }
-    _validateImplementation(serviceName, instance, contractItem) {
+    #validateImplementation(serviceName, instance, contractItem) {
         // validate the reliable callable surface declared by the contract
         for (const methodName of Object.keys(contractItem?.contract?.methods || {})) {
             if (typeof instance?.[methodName] !== "function") {
@@ -430,12 +430,12 @@ export default class Services {
         }
         // validate declared properties without reading values or invoking accessors
         for (const propertyName of Object.keys(contractItem?.contract?.properties || {})) {
-            if (!this._findPropertyDescriptor(instance, propertyName)) {
+            if (!this.#findPropertyDescriptor(instance, propertyName)) {
                 throw new Error(`Service '${serviceName}' does not implement required property '${propertyName}'.`);
             }
         }
     }
-    _findPropertyDescriptor(instance, propertyName) {
+    #findPropertyDescriptor(instance, propertyName) {
         // walk the instance and prototype chain so getters remain unexecuted
         let current = instance;
         while (current && current !== Object.prototype) {

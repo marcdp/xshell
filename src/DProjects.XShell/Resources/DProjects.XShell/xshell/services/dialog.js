@@ -15,22 +15,22 @@ export default class Dialog {
     };
 
     // vars
-    _navigation = null;
-    _i18n = null;
-    _options = null;
+    #navigation = null;
+    #i18n = null;
+    #options = null;
 
     // ctor
     constructor({ navigation, i18n }, options = {}) {
         // Initialize injected dependencies and service configuration
-        this._navigation = navigation;
-        this._i18n = i18n;
-        this._options = options;
+        this.#navigation = navigation;
+        this.#i18n = i18n;
+        this.#options = options;
     }
 
     // methods
     async confirm({ title, message, variant, classes }) {
-        const href = this._options.confirm;
-        return await this._navigation.navigate({
+        const href = this.#options.confirm;
+        return await this.#navigation.navigate({
             href,
             open:"dialog",
             context: {
@@ -42,8 +42,8 @@ export default class Dialog {
         });
     }
     async message({ type, title, message, classes }) {
-        const href = this._options.message;
-        return await this._navigation.navigate({
+        const href = this.#options.message;
+        return await this.#navigation.navigate({
             href,
             open:"dialog",
             context: {
@@ -55,8 +55,8 @@ export default class Dialog {
         });
     }
     async prompt({ title, message, value, inputType, placeholder, required, classes }) {
-        const href = this._options.prompt;
-        return await this._navigation.navigate({
+        const href = this.#options.prompt;
+        return await this.#navigation.navigate({
             href,
             open:"dialog",
             context: {
@@ -71,8 +71,8 @@ export default class Dialog {
         });
     }
     async picker({ title, message, value, inputType, placeholder, domain, multiple, required, classes }) {
-        const href = this._options.picker;
-        return await this._navigation.navigate({
+        const href = this.#options.picker;
+        return await this.#navigation.navigate({
             href,
             open:"dialog",
             context: {
@@ -90,7 +90,7 @@ export default class Dialog {
     }
     async language({ title = "Select language", message = "Language", value, required=true, current=[], classes } =  {}) {
         let domain = [];
-        for (let item of this._i18n.config.langs) {
+        for (let item of this.#i18n.config.langs) {
             if (current.indexOf(item.id) != -1) continue;
             domain.push({
                 value: item.id,
@@ -102,7 +102,7 @@ export default class Dialog {
     }
     async open({ href, params, title, breadcrumb, icon, context, classes }) {
         // Add presentation classes without modifying the caller's Page context.
-        return await this._navigation.navigate({
+        return await this.#navigation.navigate({
             href,
             params,
             open:"dialog",

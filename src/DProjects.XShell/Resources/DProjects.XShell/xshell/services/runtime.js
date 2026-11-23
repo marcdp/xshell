@@ -7,12 +7,12 @@ export default class Runtime {
     };
 
     // vars    
-    _timings = null;
+    #timings = null;
 
     // ctor
     constructor({ bus, timings }) {
         // constructor
-        this._timings = timings;
+        this.#timings = timings;
         // record first navigation end timing
         const onFirstPageLoaded = () => {
             this.record("xshell:navigation:end");
@@ -29,23 +29,23 @@ export default class Runtime {
 
     // props
     get startTimeMs() {
-        return this._timings.startTimeMs;
+        return this.#timings.startTimeMs;
     }
     get startupDurationMs() {
-        return this._timings.checkpoints.find(
+        return this.#timings.checkpoints.find(
             item => item.phase === "first page rendered"
         )?.totalMs ?? null;
     }
     get uptimeMs() {
-        return performance.now() - this._timings.started;
+        return performance.now() - this.#timings.started;
     }
     get timings() {
-        return this._timings.checkpoints.map(item => ({ ...item }));
+        return this.#timings.checkpoints.map(item => ({ ...item }));
     }
 
     // methods
     record(phase) {
-        this._timings.record(phase);
+        this.#timings.record(phase);
     }
 
 }

@@ -180,12 +180,12 @@ export default class Tasks {
     }
 
     // vars
-    _bus;
-    _tasks = [];
+    #bus;
+    #tasks = [];
 
     // ctor
     constructor({bus}) {
-        this._bus = bus;
+        this.#bus = bus;
     }
 
     // methods
@@ -200,11 +200,11 @@ export default class Tasks {
             title,
             description,
             background,
-            onChange: task => this._bus?.emit("xshell:tasks:updated", {id: task.id, status: task.status})
+            onChange: task => this.#bus?.emit("xshell:tasks:updated", {id: task.id, status: task.status})
         });
 
-        this._tasks.unshift(task);
-        this._bus?.emit("xshell:tasks:added", {id: task.id});
+        this.#tasks.unshift(task);
+        this.#bus?.emit("xshell:tasks:added", {id: task.id});
 
         // Start asynchronously so run() returns the task immediately.
         Promise.resolve().then(async () => {
@@ -234,28 +234,28 @@ export default class Tasks {
     }
 
     get(id) {
-        return this._tasks.find(task => task.id === id);
+        return this.#tasks.find(task => task.id === id);
     }
 
     list() {
-        return [...this._tasks];
+        return [...this.#tasks];
     }
 
     clear() {
-        for (const task of this._tasks.filter(task => TERMINAL_STATUSES.has(task.status))) {
+        for (const task of this.#tasks.filter(task => TERMINAL_STATUSES.has(task.status))) {
             this.remove(task.id);
         }
     }
 
     remove(id) {
-        const index = this._tasks.findIndex(task => task.id === id);
+        const index = this.#tasks.findIndex(task => task.id === id);
         if (index < 0) return;
 
-        if (!TERMINAL_STATUSES.has(this._tasks[index].status)) {
+        if (!TERMINAL_STATUSES.has(this.#tasks[index].status)) {
             throw new Error("Cannot remove a task that is not finished");
         }
 
-        this._tasks.splice(index, 1);
-        this._bus?.emit("xshell:tasks:removed", {id});
+        this.#tasks.splice(index, 1);
+        this.#bus?.emit("xshell:tasks:removed", {id});
     }
 }

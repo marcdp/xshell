@@ -11,21 +11,21 @@ export default class Theme {
     };
 
     // fields
-    _bus = null;
-    _preferences = null;
-    _mode = "system";
-    _revision = 0;
-    _pendingWrite = Promise.resolve();
+    #bus = null;
+    #preferences = null;
+    #mode = "system";
+    #revision = 0;
+    #pendingWrite = Promise.resolve();
 
     // props
-    get mode() { return this._mode; }
+    get mode() { return this.#mode; }
 
     // ctor
     constructor({ bus, preferences }, options) {
-        this._bus = bus;
-        this._preferences = preferences;
-        this._applyMode();
-        this._restoreMode();
+        this.#bus = bus;
+        this.#preferences = preferences;
+        this.#applyMode();
+        this.#restoreMode();
     }
 
     // methods
@@ -33,36 +33,36 @@ export default class Theme {
         return [...MODES];
     }
     setMode(mode) {
-        if (!MODES.includes(mode) || mode === this._mode) return;
+        if (!MODES.includes(mode) || mode === this.#mode) return;
 
-        this._mode = mode;
-        this._revision++;
-        this._applyMode();
+        this.#mode = mode;
+        this.#revision++;
+        this.#applyMode();
         // Serialize writes so rapid selections leave the latest mode in storage.
-        this._pendingWrite = this._pendingWrite.then(() => this._preferences.set("xshell.theme", mode)).catch(() => {});
-        this._bus.emit("x:theme:changed", { mode });
+        this.#pendingWrite = this.#pendingWrite.then(() => this.#preferences.set("xshell.theme", mode)).catch(() => {});
+        this.#bus.emit("x:theme:changed", { mode });
     }
     toggleMode() {
-        const index = MODES.indexOf(this._mode);
+        const index = MODES.indexOf(this.#mode);
         this.setMode(MODES[(index + 1) % MODES.length]);
     }
 
     // methods (private)
-    async _restoreMode() {
+    async #restoreMode() {
         // Ignore a delayed read if a user has already selected a newer mode.
         try {
-            const saved = await this._preferences.get("xshell.theme", "system");
-            if (this._revision || !MODES.includes(saved) || saved === this._mode) return;
-            this._mode = saved;
-            this._applyMode();
-            this._bus.emit("x:theme:changed", { mode: saved });
+            const saved = await this.#preferences.get("xshell.theme", "system");
+            if (this.#revision || !MODES.includes(saved) || saved === this.#mode) return;
+            this.#mode = saved;
+            this.#applyMode();
+            this.#bus.emit("x:theme:changed", { mode: saved });
         } catch { }
     }
-    _applyMode() {
-        if (this._mode === "system") {
+    #applyMode() {
+        if (this.#mode === "system") {
             document.documentElement.removeAttribute("data-theme");
         } else {
-            document.documentElement.setAttribute("data-theme", this._mode);
+            document.documentElement.setAttribute("data-theme", this.#mode);
         }
     }
 }

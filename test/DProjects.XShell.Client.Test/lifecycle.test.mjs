@@ -561,7 +561,6 @@ test("component preserves its instance lifetime across reconnects and unloads on
     assert.equal(component._renderEngine, null);
     assert.equal(firstRenderEngine.unmountCount, 1);
     assert.equal(disposable.disposeCount, 0);
-    assert.equal(servicesScope._disposables.length, 1);
     assert.equal(mutationObserver.disconnectCount, 0);
 
     component.connectedCallback();
@@ -583,7 +582,6 @@ test("component preserves its instance lifetime across reconnects and unloads on
     assert.deepEqual(commands, ["load", "mount", "unmount", "mount", "unmount", "unload"]);
     assert.equal(mutationObserver.disconnectCount, 1);
     assert.equal(disposable.disposeCount, 1);
-    assert.deepEqual(servicesScope._disposables, []);
 });
 
 test("component explicit unload while mounted unmounts before final cleanup", async () => {
@@ -666,7 +664,6 @@ test("Component final cleanup survives a throwing controller unmount", async () 
     assert.equal(component._renderEngine, null);
     assert.equal(observer.disconnectCount, 1);
     assert.equal(disposable.count, 1);
-    assert.deepEqual(servicesScope._disposables, []);
     await component.unload();
     assert.equal(disposable.count, 1);
 });
@@ -694,7 +691,6 @@ test("Component final cleanup survives throwing and rejecting controller unload"
         assert.equal(component._renderEngine, null);
         assert.equal(observer.disconnectCount, 1);
         assert.equal(disposable.count, 1);
-        assert.deepEqual(servicesScope._disposables, []);
     }
 });
 
@@ -735,7 +731,6 @@ test("page preserves state and disposables until its final unload", async () => 
     assert.equal(page._state.value, 2);
     assert.equal(page._renderEngine, null);
     assert.equal(disposable.disposeCount, 0);
-    assert.equal(servicesScope._disposables.length, 1);
 
     await page.mount({ host });
     const secondRenderEngine = page._renderEngine;
@@ -752,7 +747,6 @@ test("page preserves state and disposables until its final unload", async () => 
     await page.unload();
     assert.deepEqual(commands, ["load", "mount", "unmount", "mount", "unmount", "unmount", "unload"]);
     assert.equal(disposable.disposeCount, 1);
-    assert.deepEqual(servicesScope._disposables, []);
 });
 
 function createLoadableXPage(load, navigation = {}) {

@@ -17,24 +17,24 @@ export default class Contracts {
     
     
     //vars
-    _config = null;
-    _loader = null;
-    _items = null;
-    _options = null;
+    #config = null;
+    #loader = null;
+    #items = null;
+    #options = null;
     
     
     // ctor
     constructor( { config, loader }, options ) {
-        this._config = config;
-        this._loader = loader;
-        this._options = options;
+        this.#config = config;
+        this.#loader = loader;
+        this.#options = options;
     }   
 
 
     // props
     get registry() {
         // expose contract metadata without returning mutable contract documents
-        return Object.freeze(Object.values(this._items || {}).map(item => Object.freeze({
+        return Object.freeze(Object.values(this.#items || {}).map(item => Object.freeze({
             id: item.id,
             url: item.url,
             path: item.path,
@@ -54,25 +54,25 @@ export default class Contracts {
     async init() {
         // process framework and module contracts
         let tasks = [];
-        const frameworkAssetsPath = this._options.xshellAssetsPath;
+        const frameworkAssetsPath = this.#options.xshellAssetsPath;
         if (frameworkAssetsPath) {
             const frameworkContractsPath = frameworkAssetsPath + "/contracts";
-            for (const file of this._options.xshellFiles ?? []) {
+            for (const file of this.#options.xshellFiles ?? []) {
                 if (file.path.startsWith(frameworkContractsPath + "/") && file.path.endsWith(".json")) {
                     const contractId = file.path.substring(frameworkContractsPath.length + 1, file.path.length - ".json".length);
-                    const fileUrl = new URL(file.path.replace(/^\/+/, ""),this._config.app.baseUrl).href;
-                    tasks.push(this._processContractFile(contractId, fileUrl, file, "xshell", file.size));
+                    const fileUrl = new URL(file.path.replace(/^\/+/, ""),this.#config.app.baseUrl).href;
+                    tasks.push(this.#processContractFile(contractId, fileUrl, file, "xshell", file.size));
                 }
             }
         }
-        for (const moduleId of Object.keys(this._config.modules)) {
-            const module = this._config.modules[moduleId];
+        for (const moduleId of Object.keys(this.#config.modules)) {
+            const module = this.#config.modules[moduleId];
             const moduleContractsPath = module.assets.path + "/contracts";
             for (const file of Object.values(module.files)) {
                 if (file.path.startsWith(moduleContractsPath + "/") && file.path.endsWith(".json")) {
                     const contractId = file.path.substring(moduleContractsPath.length + 1, file.path.length - ".json".length);
-                    const fileUrl = new URL(file.path.replace(/^\/+/, ""),this._config.app.baseUrl).href;
-                    tasks.push(this._processContractFile(contractId, fileUrl, file, moduleId, file.size));
+                    const fileUrl = new URL(file.path.replace(/^\/+/, ""),this.#config.app.baseUrl).href;
+                    tasks.push(this.#processContractFile(contractId, fileUrl, file, moduleId, file.size));
                 }
             }
         }
@@ -86,10 +86,10 @@ export default class Contracts {
             }
             items[contractFile.id] = Object.freeze(contractFile);
         }
-        this._items = Object.freeze(items);
+        this.#items = Object.freeze(items);
     }
     getContractItemById(id) {
-        return this._items ? this._items[id] : undefined;
+        return this.#items ? this.#items[id] : undefined;
     }
     getContractById(id){
         const item = this.getContractItemById(id);
@@ -98,10 +98,10 @@ export default class Contracts {
 
 
     // process a single contract file
-    async _processContractFile(id, url, file, moduleId, size) {
+    async #processContractFile(id, url, file, moduleId, size) {
         const start = performance.now();
-        const contract = await this._loader.load("contract:" + id);
-        await this._validateServiceContract(url, contract);
+        const contract = await this.#loader.load("contract:" + id);
+        await this.#validateServiceContract(url, contract);
         deepFreeze(contract);
         return {
             id: id,
@@ -114,9 +114,9 @@ export default class Contracts {
             time: performance.now() - start
         };
     }
-    async _validateServiceContract(src, definition) {
+    async #validateServiceContract(src, definition) {
         // use loader to load schema
-        const contractServiceSchema = await this._loader.load("schema:service");
+        const contractServiceSchema = await this.#loader.load("schema:service");
         // validate
         const definitionObject = Object.fromEntries(Object.entries(definition).map(([key, value]) => [key, typeof value === "function" ? {} : value]));
         const result = new JsonValidator().validate(definitionObject, contractServiceSchema);

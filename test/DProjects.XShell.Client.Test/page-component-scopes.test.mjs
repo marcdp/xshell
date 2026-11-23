@@ -61,6 +61,14 @@ class RenderEngineFactory {
 
 let runtimeId = 0;
 
+function assertScopeActive(scope) {
+    assert.doesNotThrow(() => scope.has("__test__"));
+}
+
+function assertScopeDisposed(scope) {
+    assert.throws(() => scope.has("__test__"), /Services scope is disposed/);
+}
+
 function delay(milliseconds) {
     return new Promise(resolve => setTimeout(resolve, milliseconds));
 }
@@ -139,14 +147,12 @@ test("definition-based Pages create one direct root scope with lifetime-aware in
         controller: ownerController
     });
 
-    assert.equal(root._children.length, 0);
     const first = createPage(PageClass, "/pages/first.js");
     const second = createPage(PageClass, "/pages/second.js");
 
-    assert.equal(root._children.length, 2);
     assert.notStrictEqual(first._servicesScope, second._servicesScope);
-    assert.strictEqual(first._servicesScope._parent, root);
-    assert.strictEqual(second._servicesScope._parent, root);
+    assert.strictEqual(first._servicesScope.resolve("services"), root);
+    assert.strictEqual(second._servicesScope.resolve("services"), root);
     assert.strictEqual(first._controller.services, first._servicesScope);
     assert.strictEqual(first._controller.singleton, second._controller.singleton);
     assert.strictEqual(first._controller.session, first._servicesScope.resolve("session"));
@@ -164,8 +170,8 @@ test("definition-based Pages create one direct root scope with lifetime-aware in
 
     await first.unload();
     await first.unload();
-    assert.equal(scope._lifecycleState, "disposed");
-    assert.equal(second._servicesScope._lifecycleState, "active");
+    assertScopeDisposed(scope);
+    assertScopeActive(second._servicesScope);
     assert.strictEqual(second._servicesScope.resolve("singleton"), second._controller.singleton);
 });
 
@@ -176,14 +182,12 @@ test("definition-based Components create independent scopes before attachment an
         controller: ownerController
     });
 
-    assert.equal(root._children.length, 0);
     const parent = new Component();
     const nested = new Component();
     const sibling = new Component();
     parent.shadowRoot.appendChild(nested);
 
-    assert.equal(root._children.length, 3);
-    for (const component of [parent, nested, sibling]) assert.strictEqual(component._servicesScope._parent, root);
+    for (const component of [parent, nested, sibling]) assert.strictEqual(component._servicesScope.resolve("services"), root);
     assert.notStrictEqual(parent._servicesScope, nested._servicesScope);
     assert.notStrictEqual(parent._controller.session, nested._controller.session);
     assert.notStrictEqual(nested._controller.session, sibling._controller.session);
@@ -202,9 +206,9 @@ test("definition-based Components create independent scopes before attachment an
 
     await parent.unload();
     await parent.unload();
-    assert.equal(scope._lifecycleState, "disposed");
-    assert.equal(nested._servicesScope._lifecycleState, "active");
-    assert.equal(sibling._servicesScope._lifecycleState, "active");
+    assertScopeDisposed(scope);
+    assertScopeActive(nested._servicesScope);
+    assertScopeActive(sibling._servicesScope);
     await nested.unload();
     await sibling.unload();
 });
@@ -223,14 +227,14 @@ test("Page and Component scopes are independent even when the Component is rende
     host.appendChild = node => { node.parentNode = host; return node; };
     host.getRootNode().appendChild(component);
 
-    assert.strictEqual(page._servicesScope._parent, root);
-    assert.strictEqual(component._servicesScope._parent, root);
+    assert.strictEqual(page._servicesScope.resolve("services"), root);
+    assert.strictEqual(component._servicesScope.resolve("services"), root);
     assert.notStrictEqual(page._servicesScope, component._servicesScope);
     assert.notStrictEqual(page._controller.session, component._controller.session);
     assert.strictEqual(page._controller.singleton, component._controller.singleton);
 
     await page.unload();
-    assert.equal(component._servicesScope._lifecycleState, "active");
+    assertScopeActive(component._servicesScope);
     assert.strictEqual(component._servicesScope.resolve("session"), component._controller.session);
     await component.unload();
 });
@@ -300,8 +304,8 @@ test("Page and Component controllers resolve transient Events and Timer services
     componentTarget.dispatchEvent(new Event("run"));
     assert.equal(pageController.calls, pageCalls);
     assert.equal(componentController.calls, componentCalls);
-    assert.equal(pageController.events._handler, null);
-    assert.equal(componentController.events._handler, null);
+    assert.throws(() => pageController.events.on(pageTarget, "after-dispose", "run"), /require a Services scope controller context/);
+    assert.throws(() => componentController.events.on(componentTarget, "after-dispose", "run"), /require a Services scope controller context/);
 });
 
 test("controller unload precedes helper and scope cleanup and repeated unload is idempotent", async () => {
@@ -336,13 +340,14 @@ test("Page cleanup and scope disposal continue when controller unload fails", as
     });
     const events = [];
     const page = new PageClass({ src: "/pages/failing.js", context: {}, bus: { emit(name) { events.push(name); } }, navigation: {} });
+    const scope = page._servicesScope;
     page._servicesScope.addDisposable({ dispose() { order.push("helper-dispose"); } });
 
     await assert.rejects(page.unload(), error => error === controllerFailure);
 
     assert.deepEqual(events, ["xshell:page:unload"]);
     assert.deepEqual(order.slice(0, 2), ["controller-unload", "helper-dispose"]);
-    assert.equal(root._children.length, 0);
+    assertScopeDisposed(scope);
     assert.equal(page._host, null);
     assert.equal(page._refs, null);
     await page.unload();
@@ -369,9 +374,11 @@ test("constructor failures asynchronously dispose created scopes without replaci
     assert.throws(() => new Component(), /declares public method 'execute'.*controller\.execute is not a function/);
     await new Promise(resolve => setTimeout(resolve, 0));
 
-    assert.equal(root._children.length, 0);
     assert.equal(order.filter(item => item.startsWith("scoped-dispose:")).length, 2);
-    assert.ok(failedHelpers.every(helper => helper._handler === null));
+    for (const helper of failedHelpers) {
+        if (helper instanceof Events) assert.throws(() => helper.on(new EventTarget(), "after-dispose", "run"), /require a Services scope controller context/);
+        else assert.throws(() => helper.setTimeout("run", 0), /require a Services scope controller context/);
+    }
     assert.deepEqual(cleanupErrors, []);
 });
 
@@ -389,7 +396,6 @@ test("constructor cleanup reports scope disposal failures without an unhandled r
     assert.throws(() => createPage(PageClass), error => error === constructionFailure);
     await new Promise(resolve => setTimeout(resolve, 0));
 
-    assert.equal(root._children.length, 0);
     assert.equal(reported.length, 1);
     assert.match(reported[0][0], /Failed to dispose Services scope for Page 'cleanup-reporting-page'/);
     assert.strictEqual(reported[0][1], cleanupFailure);

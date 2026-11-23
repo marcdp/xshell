@@ -8,6 +8,10 @@ import Resolver from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshe
 import Events from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/events.js";
 import Timer from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/timer.js";
 
+function assertScopeDisposed(scope) {
+    assert.throws(() => scope.has("__test__"), /Services scope is disposed/);
+}
+
 function freeze(value) {
     if (value && typeof value === "object" && !Object.isFrozen(value)) {
         for (const child of Object.values(value)) freeze(child);
@@ -197,10 +201,6 @@ test("module controllers own independent direct-root scopes with scoped dispatch
 
     const first = captures.get("first");
     const second = captures.get("second");
-    assert.strictEqual(first.scope, root._children[1]);
-    assert.strictEqual(second.scope, root._children[2]);
-    assert.strictEqual(first.scope._parent, root);
-    assert.strictEqual(second.scope._parent, root);
     assert.notStrictEqual(first.scope, unrelatedScope);
     assert.notStrictEqual(second.scope, unrelatedScope);
     assert.strictEqual(first.singleton, singleton);
@@ -213,7 +213,6 @@ test("module controllers own independent direct-root scopes with scoped dispatch
     assert.equal(first.moduleAssetsPath, "/_assets/first");
     assert.deepEqual(first.moduleConfig, {id: "first", ...config.modules.first});
     assert.deepEqual(dispatches, ["first:events", "first:timer", "second:events", "second:timer"]);
-    assert.equal(root._children.length, 3);
     assert.equal(Object.hasOwn(modules.getModuleById("first"), "services"), false);
     assert.equal(Object.hasOwn(modules.getModuleById("metadata"), "services"), false);
     assert.equal(modules._controllerScopes.has("metadata"), false);
@@ -221,11 +220,12 @@ test("module controllers own independent direct-root scopes with scoped dispatch
     await unrelatedScope.dispose();
     await modules.stop();
 
-    assert.equal(root._children.length, 0);
+    assertScopeDisposed(first.scope);
+    assertScopeDisposed(second.scope);
     assert.equal(disposals.filter(item => item.startsWith("scoped:")).length, 2);
     assert.equal(disposals.filter(item => item.startsWith("transient:")).length, 4);
-    assert.equal(first.events._handler, null);
-    assert.equal(first.timer._handler, null);
+    assert.throws(() => first.events.on(first.target, "after-dispose", "onScopedEvent"), /require a Services scope controller context/);
+    assert.throws(() => first.timer.setTimeout("onScopedTimer", 0), /require a Services scope controller context/);
     first.target.dispatchEvent(new Event("module-event"));
     assert.deepEqual(dispatches, ["first:events", "first:timer", "second:events", "second:timer"]);
     assert.equal(modules._controllerScopes.size, 0);
@@ -262,7 +262,6 @@ test("controller construction failure disposes all created Module scopes and pre
     await assert.rejects(() => modules.init(), error => error === constructionError);
 
     assert.deepEqual(disposed, [2, 1]);
-    assert.equal(root._children.length, 0);
     assert.equal(modules._controllerScopes.size, 0);
     assert.equal(reported.length, 1);
     assert.match(reported[0][0], /controller initialization failed/);
@@ -413,7 +412,6 @@ test("startup failure disposes every Module scope after rollback and reports cle
     assert.deepEqual(events.filter(event => event.endsWith(".dispose")), ["later.dispose", "app.dispose", "feature.dispose", "base.dispose"]);
     assert.equal(events.includes("app.stop"), false);
     assert.equal(events.includes("later.start"), false);
-    assert.equal(root._children.length, 0);
     assert.equal(modules._controllerScopes.size, 0);
     assert.equal(reported.length, 1);
     assert.ok(reported[0][1] instanceof AggregateError);
@@ -457,7 +455,6 @@ test("normal stop keeps each Module scope active through stop, continues cleanup
     });
 
     assert.deepEqual(order, ["second.stop", "second.dispose", "first.stop", "first.dispose"]);
-    assert.equal(root._children.length, 0);
     assert.equal(modules._controllerScopes.size, 0);
     await modules.stop();
     assert.deepEqual(order, ["second.stop", "second.dispose", "first.stop", "first.dispose"]);

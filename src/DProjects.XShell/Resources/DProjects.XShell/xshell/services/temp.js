@@ -18,11 +18,11 @@ export default class Temp {
     };
 
     // vars
-    _url = null;
+    #url = null;
 
     // ctor
     constructor(services, options) {
-        this._url = toAbsoluteUrl(options.url.replace(/\/+$/, ""));
+        this.#url = toAbsoluteUrl(options.url.replace(/\/+$/, ""));
     }
 
     // methods
@@ -30,17 +30,17 @@ export default class Temp {
         if (files instanceof File) files = [files];
         const tasks = [];
         for (const file of files) {
-            tasks.push(this._upload(file, onProgress).catch(error => "error: " + error.message));
+            tasks.push(this.#upload(file, onProgress).catch(error => "error: " + error.message));
         }
         return await Promise.all(tasks);
     }
     getAbsoluteUrl(url) {
         // replace urls like "temp:/folder/filename.txt?size=123" to real urls like "https://example.com/temp/folder/filename.txt"
-        return this._url + "/" + url.substring(6); // remove "temp:/" prefix        
+        return this.#url + "/" + url.substring(6); // remove "temp:/" prefix
     }
 
     // methods (private)
-    async _upload(file, onProgress) {
+    async #upload(file, onProgress) {
         return new Promise((resolve, reject) => {
 
             // prepare request
@@ -69,7 +69,7 @@ export default class Temp {
             });
 
             // set up form data and send the request
-            xhr.open("POST", this._url);
+            xhr.open("POST", this.#url);
             const formData = new FormData();
             formData.append("file", file);
             xhr.send(formData);

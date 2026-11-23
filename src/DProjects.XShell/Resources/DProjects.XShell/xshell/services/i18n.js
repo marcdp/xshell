@@ -62,7 +62,7 @@ export default class I18n {
     };
     
     //var
-    _config = {
+    #config = {
         lang: "en",
         langs: [
             { id: 'en', label: 'English'},
@@ -95,28 +95,28 @@ export default class I18n {
         strings: {
         }
     };
-    _cache = {};
+    #cache = {};
     
     //ctor
     constructor( {}, options ){
-        this._config = options;
+        this.#config = options;
     }
 
     //props
     get config() { 
-        return this._config; 
+        return this.#config;
     }
 
     //methods
     async init(config) { 
-        this._config = config;
-        Object.freeze(this._config);
+        this.#config = config;
+        Object.freeze(this.#config);
     }
     getMainLangs() {
-        let result = this._cache.mainLangs;
+        let result = this.#cache.mainLangs;
         if (!result) {
             result = this.config.langs.filter( (lang) => lang.main).map( (lang) => lang.id);
-            this._cache.mainLangs = result;
+            this.#cache.mainLangs = result;
         }
         return [...result];
         
@@ -125,10 +125,10 @@ export default class I18n {
         return this.config.lang;
     }
     getLang(id) {
-        let result = this._cache[id];
+        let result = this.#cache[id];
         if (!result) {
             result = this.config.langs.filter( (lang) => lang.id == id)[0] || null;
-            this._cache[id] = result;
+            this.#cache[id] = result;
         }
         return result;
     }
@@ -173,11 +173,11 @@ export default class I18n {
                 String(datetime.getUTCMilliseconds()).padStart(3, "0") + "Z";
             return result;
         } else if (format) {
-            options = Object.assign(options, this._config.datetime.formats[format]);
+            options = Object.assign(options, this.#config.datetime.formats[format]);
             let dateTimeFormat = new Intl.DateTimeFormat(lang, options);
             return dateTimeFormat.format(datetime);
         } else {
-            options = Object.assign(options, this._config.datetime.options);
+            options = Object.assign(options, this.#config.datetime.options);
             let dateTimeFormat = new Intl.DateTimeFormat(lang, options);
             return dateTimeFormat.format(datetime);
         }        

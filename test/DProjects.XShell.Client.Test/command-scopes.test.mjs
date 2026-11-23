@@ -11,6 +11,14 @@ import Tasks from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/
 
 let instanceId = 0;
 
+function assertScopeActive(scope) {
+    assert.doesNotThrow(() => scope.has("__test__"));
+}
+
+function assertScopeDisposed(scope) {
+    assert.throws(() => scope.has("__test__"), /Services scope is disposed/);
+}
+
 function deferred() {
     let resolve;
     const promise = new Promise(done => { resolve = done; });
@@ -85,7 +93,7 @@ test("each concurrent Command invocation owns an independent direct-root lifetim
         contract: {label: "Scoped command", execute: {parameters: [{name: "value", type: "integer", required: true}]}},
         controller(provider) {
             const session = provider.session;
-            provider.hooks.invocations.push({task: provider.task, services: provider.services, singleton: provider.singleton, session,
+            provider.hooks.invocations.push({task: provider.task, services: provider.services, rootServices: provider.services.resolve("services"), singleton: provider.singleton, session,
                 repeated: provider.session, transients: [provider.formatter, provider.formatter]});
             return {execute(value) { return value; }};
         }
@@ -98,11 +106,11 @@ test("each concurrent Command invocation owns an independent direct-root lifetim
         commands.run({id: "scoped", args: {value: 1}, background: false}),
         commands.run({id: "scoped", args: {value: 2}, background: true})
     ]);
-    assert.deepEqual(await Promise.all([foreground.getResult(), background.getResult()]), [1, 2]);
 
     assert.equal(invocations.length, 2);
     assert.notStrictEqual(invocations[0].services, invocations[1].services);
-    assert.ok(invocations.every(invocation => invocation.services._parent === root));
+    assert.ok(invocations.every(invocation => invocation.services !== root && invocation.rootServices === root));
+    assert.deepEqual(await Promise.all([foreground.getResult(), background.getResult()]), [1, 2]);
     assert.strictEqual(invocations[0].singleton, invocations[1].singleton);
     assert.strictEqual(invocations[0].session, invocations[0].repeated);
     assert.notStrictEqual(invocations[0].session, invocations[1].session);
@@ -110,7 +118,7 @@ test("each concurrent Command invocation owns an independent direct-root lifetim
     assert.strictEqual(invocations[0].task.signal, foreground._signal);
     assert.equal(foreground.background, false);
     assert.equal(background.background, true);
-    assert.equal(root._children.length, 0);
+    invocations.forEach(invocation => assertScopeDisposed(invocation.services));
     assert.equal(disposed.filter(item => item.startsWith("scoped:")).length, 2);
     assert.equal(disposed.filter(item => item.startsWith("transient:")).length, 4);
 });
@@ -124,13 +132,11 @@ test("loading and argument validation finish before Task or scope creation", asy
 
     await assert.rejects(commands.run({id: "invalid", args: {}}), /Missing required argument/);
     assert.equal(tasks.list().length, 0);
-    assert.equal(root._children.length, 0);
 
     const loadFailure = new Error("load failed");
     const failed = createRuntime(Command, {loader: {async load() { throw loadFailure; }}});
     await assert.rejects(failed.commands.run({id: "missing"}), error => error === loadFailure);
     assert.equal(failed.tasks.list().length, 0);
-    assert.equal(failed.root._children.length, 0);
 });
 
 test("scope creation occurs inside the Task handler immediately before Command construction", async () => {
@@ -146,12 +152,10 @@ test("scope creation occurs inside the Task handler immediately before Command c
 
     const task = await commands.run({id: "deferred"});
     assert.deepEqual(task, {marker: "task"});
-    assert.equal(root._children.length, 0);
 
     const result = await taskOptions.handler({signal: new AbortController().signal});
     assert.equal(result, "done");
-    assert.equal(constructedScope._parent, root);
-    assert.equal(root._children.length, 0);
+    assertScopeDisposed(constructedScope);
 });
 
 test("canceling a pending Task before its handler starts creates no Command scope", async () => {
@@ -171,16 +175,16 @@ test("canceling a pending Task before its handler starts creates no Command scop
 
     assert.equal(task.status, "canceled");
     assert.equal(constructed, false);
-    assert.equal(root._children.length, 0);
     assert.equal(typeof taskOptions.handler, "function");
 });
 
 test("Task completion waits for invocation scope disposal and preserves the result", async () => {
     const cleanup = deferred();
     const cleanupStarted = deferred();
+    let scope;
     class Command extends OwnedCommand {
         static contract = {execute: {parameters: []}};
-        constructor(context) { super(context); this.session = this.services.resolve("session"); }
+        constructor(context) { super(context); scope = this.services; this.session = this.services.resolve("session"); }
         execute() { return {value: 42}; }
     }
     const {commands, root} = createRuntime(Command, {dispose: async () => { cleanupStarted.resolve(); await cleanup.promise; }});
@@ -188,12 +192,12 @@ test("Task completion waits for invocation scope disposal and preserves the resu
 
     await cleanupStarted.promise;
     assert.equal(task.status, "running");
-    assert.equal(root._children.length, 1);
+    assert.throws(() => scope.has("__test__"), /Services scope is disposing/);
     cleanup.resolve();
 
     assert.deepEqual(await task.getResult(), {value: 42});
     assert.equal(task.status, "finished");
-    assert.equal(root._children.length, 0);
+    assertScopeDisposed(scope);
 });
 
 test("execution, disposal, and combined failures dispose exactly once", async () => {
@@ -206,7 +210,7 @@ test("execution, disposal, and combined failures dispose exactly once", async ()
     const executed = createRuntime(ExecutionFailure);
     const executionTask = await executed.commands.run({id: "execution-failure"});
     await assert.rejects(executionTask.getResult(), error => error === executionFailure);
-    assert.equal(executed.root._children.length, 0);
+    assert.equal(executed.disposed.length, 1);
 
     const disposalFailure = new Error("disposal failed");
     const combined = createRuntime(ExecutionFailure, {dispose() { throw disposalFailure; }});
@@ -216,7 +220,7 @@ test("execution, disposal, and combined failures dispose exactly once", async ()
         assert.deepEqual(error.errors, [executionFailure, disposalFailure]);
         return true;
     });
-    assert.equal(combined.root._children.length, 0);
+    assert.equal(combined.disposed.length, 1);
 
     class Successful extends OwnedCommand {
         static contract = {execute: {parameters: []}};
@@ -244,14 +248,13 @@ test("cancellation keeps a non-cooperative Command scope alive until execution s
 
     await task.cancel();
     assert.equal(task.status, "running");
-    assert.equal(scope._lifecycleState, "active");
-    assert.equal(root._children.length, 1);
+    assertScopeActive(scope);
 
     release.resolve("ignored");
     await task.wait();
     assert.equal(task.status, "canceled");
     await assert.rejects(task.getResult(), error => error?.name === "AbortError");
-    assert.equal(root._children.length, 0);
+    assertScopeDisposed(scope);
     assert.equal(disposed.length, 1);
 });
 
@@ -276,16 +279,17 @@ test("Command scopes own transient Events and Timer helpers without implicit con
     assert.equal(await task.getResult(), 1);
     target.dispatchEvent(new Event("run"));
     assert.equal(calls, 1);
-    assert.equal(helpers.events._handler, null);
-    assert.equal(helpers.timer._handler, null);
+    assert.throws(() => helpers.events.on(target, "after-dispose", "refresh"), /require a Services scope controller context/);
+    assert.throws(() => helpers.timer.setTimeout("refresh", 0), /require a Services scope controller context/);
 });
 
 test("cancellation during asynchronous disposal waits for uninterrupted cleanup", async () => {
     const cleanupStarted = deferred();
     const releaseCleanup = deferred();
+    let scope;
     class Command extends OwnedCommand {
         static contract = {execute: {parameters: []}};
-        constructor(context) { super(context); this.session = this.services.resolve("session"); }
+        constructor(context) { super(context); scope = this.services; this.session = this.services.resolve("session"); }
         execute() { return "complete"; }
     }
     const {commands, root} = createRuntime(Command, {dispose: async () => { cleanupStarted.resolve(); await releaseCleanup.promise; }});
@@ -294,21 +298,22 @@ test("cancellation during asynchronous disposal waits for uninterrupted cleanup"
 
     await task.cancel();
     assert.equal(task.status, "running");
-    assert.equal(root._children.length, 1);
+    assert.throws(() => scope.has("__test__"), /Services scope is disposing/);
     releaseCleanup.resolve();
 
     await task.wait();
     assert.equal(task.status, "canceled");
-    assert.equal(root._children.length, 0);
+    assertScopeDisposed(scope);
 });
 
 test("disposal failures during cancellation are handled and reported without changing canceled status", async t => {
     const cleanupFailure = new Error("canceled cleanup failed");
     const executing = deferred();
     const release = deferred();
+    let scope;
     class Command extends OwnedCommand {
         static contract = {execute: {parameters: []}};
-        constructor(context) { super(context); this.session = this.services.resolve("session"); }
+        constructor(context) { super(context); scope = this.services; this.session = this.services.resolve("session"); }
         async execute() { executing.resolve(); await release.promise; }
     }
     const reported = [];
@@ -322,7 +327,7 @@ test("disposal failures during cancellation are handled and reported without cha
     await task.wait();
 
     assert.equal(task.status, "canceled");
-    assert.equal(root._children.length, 0);
+    assertScopeDisposed(scope);
     assert.equal(reported.length, 1);
     assert.match(reported[0][0], /canceled Command 'canceled-cleanup-failure'/);
     assert.strictEqual(reported[0][1], cleanupFailure);

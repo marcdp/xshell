@@ -274,5 +274,5 @@ test("Command loader exposes the same examples on the class and instance", async
     assert.equal(command.contract, Command.contract);
     assert.equal(command.execute(), "executed");
     await command.dispose();
-    assert.equal(root._children.length, 0);
+    assert.strictEqual(command._servicesScope, null);
 });

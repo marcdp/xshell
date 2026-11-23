@@ -10,35 +10,35 @@ export default class Events {
     }
 
     //vars
-    _handler = null;
-    _eventListeners =  [];
+    #handler = null;
+    #eventListeners =  [];
 
     //Ctor
     constructor(dependencies = {}, options = {}) {
         // preserve supported direct construction while accepting standard Services dependencies
-        this._handler = typeof dependencies === "function" ? dependencies : dependencies.scopeContext?.invokeController ?? null;
+        this.#handler = typeof dependencies === "function" ? dependencies : dependencies.scopeContext?.invokeController ?? null;
     }   
     dispose(){
-        for (const { element, event, listener } of this._eventListeners) {
+        for (const { element, event, listener } of this.#eventListeners) {
             element.removeEventListener(event, listener);
         }
-        this._eventListeners = [];
-        this._handler = null;
+        this.#eventListeners = [];
+        this.#handler = null;
     }
 
     //methods
     on(element, event, listener) {
         if (typeof(listener) == "string") {
-            if (typeof this._handler !== "function") throw new Error("Events string listeners require a Services scope controller context.");
+            if (typeof this.#handler !== "function") throw new Error("Events string listeners require a Services scope controller context.");
             const command = listener;
-            listener = () => {this._handler(command);}
+            listener = () => {this.#handler(command);}
         }
         if (typeof(event) == "string") {
             event = [event];
         }
         for (let ev of event) {
             element.addEventListener(ev, listener);
-            this._eventListeners.push({ element, event: ev, listener });
+            this.#eventListeners.push({ element, event: ev, listener });
         }   
     }
     

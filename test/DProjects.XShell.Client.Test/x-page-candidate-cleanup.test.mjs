@@ -76,6 +76,14 @@ function deferred() {
     return { promise, resolve };
 }
 
+function assertScopeActive(scope) {
+    assert.doesNotThrow(() => scope.has("__test__"));
+}
+
+function assertScopeDisposed(scope) {
+    assert.throws(() => scope.has("__test__"), /Services scope is disposed/);
+}
+
 function createRuntime() {
     const config = {
         app: { baseUrl: "https://example.test/" },
@@ -161,9 +169,8 @@ test("x-page unloads a definition-based candidate whose asynchronous load fails"
     await assert.rejects(host.load(), error => error === loadFailure);
 
     assert.equal(unloads, 1);
-    assert.equal(capture.scope._lifecycleState, "disposed");
+    assertScopeDisposed(capture.scope);
     assert.deepEqual(disposed, ["helper", "session"]);
-    assert.equal(runtime.root._children.length, 0);
     assert.equal(host.page, null);
 });
 
@@ -186,9 +193,8 @@ test("x-page unloads a candidate when navigation metadata preparation fails", as
 
     assert.equal(loads, 0);
     assert.equal(unloads, 1);
-    assert.equal(capture.scope._lifecycleState, "disposed");
+    assertScopeDisposed(capture.scope);
     assert.deepEqual(disposed, ["session"]);
-    assert.equal(runtime.root._children.length, 0);
 });
 
 test("failed candidate preparation preserves the active Page and its scope", async () => {
@@ -208,10 +214,9 @@ test("failed candidate preparation preserves the active Page and its scope", asy
 
     assert.strictEqual(host.page, activePage);
     assert.equal(activeUnloads, 0);
-    assert.equal(activeCapture.scope._lifecycleState, "active");
+    assertScopeActive(activeCapture.scope);
     assert.equal(failedUnloads, 1);
-    assert.equal(failedCapture.scope._lifecycleState, "disposed");
-    assert.deepEqual(runtime.root._children, [activeCapture.scope]);
+    assertScopeDisposed(failedCapture.scope);
     await host.unload();
 });
 
@@ -239,11 +244,10 @@ test("overlapping navigation unloads a stale candidate exactly once", async () =
 
     assert.ok(host.page instanceof Active);
     assert.equal(staleUnloads, 1);
-    assert.equal(staleCapture.scope._lifecycleState, "disposed");
+    assertScopeDisposed(staleCapture.scope);
     assert.equal(activeUnloads, 0);
-    assert.equal(activeCapture.scope._lifecycleState, "active");
+    assertScopeActive(activeCapture.scope);
     assert.strictEqual(activeCapture.scope.resolve("services"), runtime.root);
-    assert.deepEqual(runtime.root._children, [activeCapture.scope]);
     await host.unload();
 });
 
@@ -266,10 +270,9 @@ test("queued transition failure unloads the candidate and propagates the transit
 
     assert.strictEqual(host.page, activePage);
     assert.equal(activeUnloads, 0);
-    assert.equal(activeCapture.scope._lifecycleState, "active");
+    assertScopeActive(activeCapture.scope);
     assert.equal(failedUnloads, 1);
-    assert.equal(failedCapture.scope._lifecycleState, "disposed");
-    assert.deepEqual(runtime.root._children, [activeCapture.scope]);
+    assertScopeDisposed(failedCapture.scope);
     await host.unload();
 });
 
@@ -291,6 +294,5 @@ test("x-page reports both candidate preparation and cleanup failures", async () 
         return true;
     });
 
-    assert.equal(capture.scope._lifecycleState, "disposed");
-    assert.equal(runtime.root._children.length, 0);
+    assertScopeDisposed(capture.scope);
 });

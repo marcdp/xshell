@@ -57,7 +57,12 @@ test("scope context is explicit, isolated, released, and unavailable to singleto
         static optionsSchema = {type: "object", additionalProperties: false};
         constructor({scopeContext}) { this.scopeContext = scopeContext; }
     }
+    class ContextScoped {
+        static optionsSchema = {type: "object", additionalProperties: false};
+        constructor({scopeContext}) { this.scopeContext = scopeContext; }
+    }
     root.register("contextSingleton", null, {implementationItem: {class: ContextSingleton}});
+    root.register("contextScoped", null, {lifetime: "scoped", implementationItem: {class: ContextScoped}});
     const firstHandler = () => {};
     const secondHandler = () => {};
     const firstContext = {id: "first", invokeController: firstHandler};
@@ -66,16 +71,14 @@ test("scope context is explicit, isolated, released, and unavailable to singleto
     const second = root.beginScope({context: secondContext});
     const withoutContext = root.beginScope();
 
-    assert.strictEqual(first._context, firstContext);
-    assert.strictEqual(second._context, secondContext);
-    assert.equal(withoutContext._context, null);
+    assert.strictEqual(first.resolve("contextScoped").scopeContext, firstContext);
+    assert.strictEqual(second.resolve("contextScoped").scopeContext, secondContext);
+    assert.equal(withoutContext.resolve("contextScoped").scopeContext, null);
     assert.equal(first.resolve("contextSingleton").scopeContext, null);
-    assert.strictEqual(first.resolve("events")._handler, firstHandler);
-    assert.strictEqual(second.resolve("events")._handler, secondHandler);
 
     await first.dispose();
-    assert.equal(first._context, null);
-    assert.strictEqual(second._context, secondContext);
+    assert.throws(() => first.resolve("contextScoped"), /Services scope is disposed/);
+    assert.strictEqual(second.resolve("contextScoped").scopeContext, secondContext);
     await second.dispose();
     await withoutContext.dispose();
 });
@@ -108,8 +111,8 @@ test("Events resolutions are independent and scope disposal removes function and
     assert.equal(calls.length, 3);
     await scope.dispose();
     assert.equal(target.removed.length, 3);
-    assert.equal(first._handler, null);
-    assert.equal(second._handler, null);
+    assert.throws(() => first.on(target, "after-dispose", "refresh"), /require a Services scope controller context/);
+    assert.throws(() => second.on(target, "after-dispose", "refresh"), /require a Services scope controller context/);
 });
 
 test("Events without owner context support functions and reject string listeners clearly", async () => {
@@ -151,8 +154,8 @@ test("Timer resolutions preserve function and controller callbacks and cancel ow
     await delay(20);
     assert.equal(controller.calls, callsAfterDispose);
     assert.equal(canceledCalls, 0);
-    assert.equal(first._handler, null);
-    assert.equal(second._handler, null);
+    assert.throws(() => first.setTimeout("tick", 0), /require a Services scope controller context/);
+    assert.throws(() => second.setInterval("tick", 0), /require a Services scope controller context/);
     await scope.dispose();
 });
 

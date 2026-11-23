@@ -13,26 +13,26 @@ export default class Bus {
 
     //vars
     _channel = new MessageChannel();
-    _events = {};
+    #events = {};
 
 
     //ctor
     constructor( {}, options) {
         this._channel.port1.onmessage = (e) => {
-            this._processEvent(e.data);
+            this.#processEvent(e.data);
         };
     }
 
     //methods
     addEventListener(event, listener) {
-        if (!this._events[event]) {
-            this._events[event] = [];
+        if (!this.#events[event]) {
+            this.#events[event] = [];
         }
-        this._events[event].push(listener);
+        this.#events[event].push(listener);
     }
     removeEventListener(event, listener) {
-        if (!this._events[event]) return;
-        this._events[event] = this._events[event].filter(l => l !== listener);
+        if (!this.#events[event]) return;
+        this.#events[event] = this.#events[event].filter(l => l !== listener);
     }
     emit(event, detail) {
         let data = {
@@ -46,22 +46,22 @@ export default class Bus {
 
 
     // private methods
-    _processEvent(event) {
+    #processEvent(event) {
         // invoke
-        if (this._events[event.type]) {
-            for(let listener of this._events[event.type]){
-                this._dispatchToListener(listener, event);
+        if (this.#events[event.type]) {
+            for(let listener of this.#events[event.type]){
+                this.#dispatchToListener(listener, event);
             }
         };
         // broadcast
-        if (this._events["*"]) {
-            for(let listener of this._events["*"]){
-                this._dispatchToListener(listener, event);
+        if (this.#events["*"]) {
+            for(let listener of this.#events["*"]){
+                this.#dispatchToListener(listener, event);
             }
         }
     }
     // isolate listener failures without waiting for completion
-    _dispatchToListener(listener, event) {
+    #dispatchToListener(listener, event) {
         try {
             const result = listener(event);
             if (result && typeof result.then === "function") {

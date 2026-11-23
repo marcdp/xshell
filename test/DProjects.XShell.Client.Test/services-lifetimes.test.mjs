@@ -217,7 +217,6 @@ test("non-disposable transients are not retained by scope ownership", async () =
     scope.resolve("transient");
     scope.resolve("transient");
 
-    assert.equal(scope._disposables.length, 0);
     await scope.dispose();
 });
 
@@ -399,8 +398,7 @@ test("dynamic resolution through injected services preserves circular dependency
     const scope = services.beginScope();
 
     assert.throws(() => scope.resolve("first"), /Circular service dependency detected: first -> second -> first/);
-    assert.equal(scope._scopedInstances.get("first")?.instance ?? null, null);
-    assert.equal(scope._scopedInstances.get("second")?.instance ?? null, null);
+    assert.throws(() => scope.resolve("first"), /Circular service dependency detected: first -> second -> first/);
 });
 
 test("circular dependencies are detected across every lifetime combination without corrupting caches", () => {
@@ -428,8 +426,7 @@ test("circular dependencies are detected across every lifetime combination witho
         assert.throws(() => owner.resolve("first"), /Circular service dependency detected: first -> second -> first/);
         assert.equal(services.getServiceInfo("first").state, "registered");
         assert.equal(services.getServiceInfo("second").state, "registered");
-        assert.equal(scope._scopedInstances.get("first")?.instance ?? null, null);
-        assert.equal(scope._scopedInstances.get("second")?.instance ?? null, null);
+        assert.throws(() => owner.resolve("first"), /Circular service dependency detected: first -> second -> first/);
     }
 });
 
@@ -536,7 +533,6 @@ test("scope disposal waits for scoped initialization and follows reverse depende
     await disposal;
 
     assert.deepEqual(order, ["init-start", "init-end", "consumer", "dependency"]);
-    assert.equal(scope._scopedInstances.size, 0);
     assert.throws(() => scope.resolve("consumer"), /disposed/);
 });
 
