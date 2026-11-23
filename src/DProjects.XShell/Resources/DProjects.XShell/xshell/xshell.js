@@ -5,7 +5,7 @@ import Page from "./page.js";
 import Resolver from "./services/resolver.js";
 import Runtime from "./services/runtime.js";
 import Services from "./services.js";
-import XPage from "./x-page.js";
+import { createXPageClass } from "./x-page.js";
 import JsonValidator from "./services/json-validator.js";
 import { compileRoute } from "./utils/route.js";
 
@@ -20,6 +20,7 @@ class XShell {
     _loader = null;
     _contracts = null;
     _services = null;
+    _servicesInitialized = false;
     
     //ctor
     constructor() {
@@ -38,6 +39,7 @@ class XShell {
 
     //methods
     async init(config, timings) {
+        this._servicesInitialized = false;
         // config
         this._config = config;        
         // bus
@@ -93,6 +95,7 @@ class XShell {
         this._services.register("services", this._services, { contractItem: this._contracts.getContractItemById("services")});
         this._services.register("runtime", this._runtime, { contractItem: this._contracts.getContractItemById("runtime")});
         await this._services.init();
+        this._servicesInitialized = true;
         // Construct and validate Areas before module controllers execute
         const areas = this._services.resolve("areas");
         // Resolve and initialize Modules and their controllers
@@ -130,6 +133,17 @@ class XShell {
 
 // creates a default instance
 let xshell = new XShell();
+
+// Bind x-page to the runtime and register it before application initialization.
+const XPage = createXPageClass({
+    get config() { return xshell.config; },
+    get loader() { return xshell.loader; },
+    get bus() { return xshell.bus; },
+    get navigation() { return xshell._servicesInitialized ? xshell.navigation : null; },
+    get areas() { return xshell._servicesInitialized ? xshell.areas : null; },
+    get modules() { return xshell._servicesInitialized ? xshell.modules : null; }
+});
+customElements.define("x-page", XPage);
 
 // export default instance
 export default xshell;

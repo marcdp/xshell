@@ -89,6 +89,7 @@ export default class Loader {
             const cacheKey = this._getCacheKey(resource, definition);
             urls.push(url);
             paths.push(path);
+            //if (url.indexOf("x-page") != -1) debugger;
             // get or load handler
             let loader = loaders[definition.loader];
             if (!loader) {                
@@ -109,7 +110,7 @@ export default class Loader {
             if (cacheItem) {
                 tasks.push({index: result.length, promise: cacheItem.promise ?? Promise.resolve(cacheItem.value)});
                 result.push(null);
-            } else if (loader == loaders.component && window.customElements.get(name)) {
+            } else if (loader == loaders["component-js"] && window.customElements.get(name)) {
                 result.push(window.customElements.get(name));
             } else {
                 // load

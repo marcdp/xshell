@@ -33,10 +33,10 @@ globalThis.requestAnimationFrame = () => 0;
 
 const { createComponentClassFromJsDefinition } = await import("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/loaders/component-js.js");
 const { createPageClassFromJsDefinition } = await import("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/loaders/page-js.js");
-const { default: xshell } = await import("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/xshell.js");
-const { default: XPage } = await import("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/x-page.js");
+const { createXPageClass } = await import("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/x-page.js");
 
 let sharedShadowStyleSheets = [];
+let definitionServices;
 
 function bundleSchema(schema) {
     const bundled = structuredClone(schema);
@@ -68,7 +68,7 @@ class RenderEngineFactory {
 
 function configureDefinitionLoaders() {
     sharedShadowStyleSheets = [];
-    xshell._config = {
+    const config = {
         modules: {
             test: {
                 defaults: {
@@ -78,14 +78,14 @@ function configureDefinitionLoaders() {
             }
         }
     };
-    xshell._loader = {
+    const loader = {
         async load(resource) {
             if (resource === "schema:component") return bundleSchema(ComponentSchema);
             if (resource === "schema:page") return bundleSchema(PageSchema);
             return resource.startsWith("state-engine:") ? StateEngineFactory : RenderEngineFactory;
         }
     };
-    xshell._bus = { emit() {} };
+    definitionServices = { config, loader };
 }
 
 function withServicesScope(services) {
@@ -108,8 +108,7 @@ function createContext() {
     return {
         resourceDefinition: { moduleId: "test", modulePath: "/_assets/test" },
         services: withServicesScope({
-            config: xshell._config,
-            loader: xshell._loader,
+            ...definitionServices,
             modules: { shadowStyleSheets: sharedShadowStyleSheets }
         })
     };
@@ -170,18 +169,17 @@ test("Components adopt shared module sheets before their definition sheet and re
 test("native x-page adopts shared module sheets before its local stylesheet without reconnect duplication", () => {
     const firstShared = new TestStyleSheet();
     const secondShared = new TestStyleSheet();
-    xshell._services = { resolve(name) {
-        assert.equal(name, "modules");
-        return { shadowStyleSheets: [firstShared, secondShared] };
-    } };
+    const XPage = createXPageClass({ modules: { shadowStyleSheets: [firstShared, secondShared] } });
 
     const page = new XPage();
     assert.deepEqual(page.shadowRoot.adoptedStyleSheets.slice(0, 2), [firstShared, secondShared]);
     assert.equal(page.shadowRoot.adoptedStyleSheets.length, 3);
     const adopted = [...page.shadowRoot.adoptedStyleSheets];
+    assert.strictEqual(adopted[0], firstShared);
+    assert.strictEqual(adopted[1], secondShared);
     page.disconnectedCallback();
+    page.connectedCallback();
     assert.deepEqual(page.shadowRoot.adoptedStyleSheets, adopted);
-    xshell._services = null;
 });
 
 test("Page CSS strings create scoped stylesheets", async () => {

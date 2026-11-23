@@ -16,7 +16,7 @@
         // resolver
         "resolver": {
             "component": {
-                "x-page": {"src": "/x-page.js", "loader": "esm-js", "cache": true}
+                "x-page": {"src": "/x-page.js", "loader": "component-js", "cache": true}
             },
             "dataset": {
                 "static:{definition}": {"src": "static:{definition}", "loader": "dataset-static"},

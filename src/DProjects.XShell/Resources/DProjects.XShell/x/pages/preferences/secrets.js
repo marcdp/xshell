@@ -15,7 +15,6 @@ export default {
 
     template: `
         <x-notice x-if="state.error" type="error" label="Error" x-attr:message="state.error"></x-notice>
-        <x-notice x-if="!state.ready || state.busy" type="working" label="Working"></x-notice>
 
         <x-toolbar slot="header-actions" x-if="state.ready">
             <x-button x-if="state.status == 'locked'" label="Unlock vault" icon="x-key" command="openUnlock" x-attr:disabled="state.busy"></x-button>

@@ -21,11 +21,11 @@ export default {
                 <x-datafield type="select" label="Type" x-prop:domain="state.valueTypes" x-model="state.valueType" required x-attr:disabled="state.busy"></x-datafield>
                 <x-datafield x-if="state.valueType == 'text'" type="password" label="Secret" autocomplete="off" x-model="state.editorValue" x-attr:required="!state.editing" x-attr:disabled="state.busy"></x-datafield>
                 <x-datafield x-if="state.valueType == 'json'" type="textarea" label="JSON value" spellcheck="false" x-model="state.editorValue" required x-attr:disabled="state.busy"></x-datafield>
-                <x-datafield type="text" label="Label" x-model="state.label" description="Optional friendly display name" x-attr:disabled="state.busy"></x-datafield>
-                <x-datafield type="text" label="Description" x-model="state.description" x-attr:disabled="state.busy"></x-datafield>
             </x-datafields>
             <x-details label="Metadata" x-if="state.editing">
                 <x-datafields columns="2">
+                    <x-datafield type="text" label="Label" x-model="state.label" description="Optional friendly display name" x-attr:disabled="state.busy" columns="2"></x-datafield>
+                    <x-datafield type="text" label="Description" x-model="state.description" x-attr:disabled="state.busy" columns="2"></x-datafield>
                     <x-datafield type="text" label="Created" readonly x-prop:value="state.createdDisplay"></x-datafield>
                     <x-datafield type="text" label="Modified" readonly x-prop:value="state.modifiedDisplay"></x-datafield>
                     <x-datafield type="number" label="Revision" readonly x-prop:value="state.revision"></x-datafield>

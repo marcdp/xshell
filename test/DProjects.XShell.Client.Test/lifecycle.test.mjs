@@ -1,11 +1,14 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import ComponentContractSchema from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/schemas/component.contract.schema.json" with { type: "json" };
+import ComponentSchema from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/schemas/component.schema.json" with { type: "json" };
+import ContractSchema from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/schemas/contract.schema.json" with { type: "json" };
+import Services from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services.js";
 import { Validator } from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/vendor/json-schema/4.1.1/json-schema.js";
 import Dialog from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/dialog.js";
-import { contract as pickerContract } from "../../src/DProjects.XShell/Resources/DProjects.XShell/x/pages/dialog-picker.js";
+import pickerDefinition from "../../src/DProjects.XShell/Resources/DProjects.XShell/x/pages/dialog-picker.js";
 
 const animationFrames = [];
+const bus = { emit() {} };
 
 class FakeNode {
     adoptedStyleSheets = [];
@@ -153,12 +156,15 @@ globalThis.requestAnimationFrame = callback => {
 const { createComponentClassFromJsDefinition } = await import("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/loaders/component-js.js");
 const { RenderEngineHtml } = await import("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/render-engines/html.js");
 const { createPageClassFromJsDefinition } = await import("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/loaders/page-js.js");
-const { default: XPage } = await import("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/x-page.js");
+const { createXPageClass } = await import("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/x-page.js");
 const { default: Navigation } = await import("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/navigation.js");
-const { default: xshell } = await import("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/xshell.js");
 const { default: Page } = await import("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/page.js");
 const { default: LoaderPageMd } = await import("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/loaders/page-md.js");
 const { default: Resolver } = await import("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/resolver.js");
+
+// Register the test class for Navigation paths that construct a host through the DOM.
+const XPage = createXPageClass({});
+customElements.define("x-page", XPage);
 
 test("x-page treats nullish and removed src as empty without loading it", () => {
     const cases = [
@@ -185,16 +191,19 @@ test("x-page treats nullish and removed src as empty without loading it", () => 
     }
 });
 
+function markdownContext(loader) {
+    const config = { xshell: { ui: { components: { markdown: "x-markdown" } } } };
+    return { services: { config, loader } };
+}
+
 test("Markdown adapter loads its component without fetching, and follows the Page lifecycle across mounts", async (t) => {
     const resources = [];
     t.mock.method(globalThis, "fetch", () => { throw new Error("page-md must not fetch Markdown"); });
-    xshell._config = { xshell: { ui: { component: { markdown: "x-markdown" } } } };
-    xshell._loader = { async load(resource) { resources.push(resource); } };
-    xshell._bus = { emit() {} };
+    const loader = { async load(resource) { resources.push(resource); } };
     const source = "/_assets/xshell-docs/pages/10-architecture/100-services.md";
-    const MarkdownPage = await new LoaderPageMd().load(source, {});
+    const MarkdownPage = await new LoaderPageMd().load(source, markdownContext(loader));
     assert.deepEqual(resources, ["component:x-markdown"]);
-    const page = new MarkdownPage({ src: source + "?view=one#section", context: {} });
+    const page = new MarkdownPage({ src: source + "?view=one#section", context: {}, bus });
     assert.ok(page instanceof Page);
     assert.equal(page.src, source + "?view=one#section");
     assert.equal(page.label, null); // menu/navigation metadata can supply the label
@@ -220,9 +229,7 @@ test("Markdown adapter loads its component without fetching, and follows the Pag
 });
 
 test("Markdown adapter passes the resolved resource URL instead of the Area-qualified navigation source", async () => {
-    xshell._config = { xshell: { ui: { component: { markdown: "x-markdown" } } } };
-    xshell._loader = { async load() {} };
-    xshell._bus = { emit() {} };
+    const loader = { async load() {} };
     const config = {
         app: { basePath: "/prefix/xshell-docs", baseUrl: "https://example.test/prefix/xshell-docs/" },
         xshell: { resolver: { page: {
@@ -235,9 +242,9 @@ test("Markdown adapter passes the resolved resource URL instead of the Area-qual
         } } }
     };
     const resolved = new Resolver({ config }).resolve("page:/_assets/xshell-docs/1.0.0.dev/pages/index.md");
-    const MarkdownPage = await new LoaderPageMd().load(resolved.url, {});
+    const MarkdownPage = await new LoaderPageMd().load(resolved.url, markdownContext(loader));
     const navigationSrc = "/xshell-docs/_assets/xshell-docs/1.0.0.dev/pages/index.md?view=all#section";
-    const page = new MarkdownPage({ src: navigationSrc, context: {} });
+    const page = new MarkdownPage({ src: navigationSrc, context: {}, bus });
     const host = new FakeNode();
     await page.load();
     await page.mount({ host });
@@ -246,9 +253,8 @@ test("Markdown adapter passes the resolved resource URL instead of the Area-qual
 });
 
 test("Markdown adapter propagates component resolution/loading failure", async () => {
-    xshell._config = { xshell: { ui: { component: { markdown: "x-markdown" } } } };
-    xshell._loader = { async load() { throw new Error("component unavailable"); } };
-    await assert.rejects(new LoaderPageMd().load("/guide.md", {}), /component unavailable/);
+    const loader = { async load() { throw new Error("component unavailable"); } };
+    await assert.rejects(new LoaderPageMd().load("/guide.md", markdownContext(loader)), /component unavailable/);
 });
 
 test("x-page intercepts only application anchors and preserves native clicks", async (t) => {
@@ -295,7 +301,7 @@ test("x-page intercepts only application anchors and preserves native clicks", a
                 }, { mode }, { container: {} });
                 const calls = [];
                 navigation.navigate = item => calls.push(item);
-                xshell._services = { resolve() { return navigation; } };
+                const XPage = createXPageClass({ navigation });
                 const xpage = new XPage();
                 xpage._page = new Page({ src: "/pages/current.js", context: {} });
                 const anchor = document.createElement("a");
@@ -374,7 +380,7 @@ test("x-page native anchors and x-anchor targets reach the same JavaScript and M
                 browserUrls.push(navigation.buildUrlAbsolute(stack[0]));
                 return Promise.resolve();
             };
-            xshell._services = { resolve() { return navigation; } };
+            const XPage = createXPageClass({ navigation });
             const xpage = new XPage();
             xpage._page = new Page({ src: scenario.pageSrc, context: {} });
             const anchor = document.createElement("a");
@@ -401,7 +407,8 @@ test("x-page native anchors and x-anchor targets reach the same JavaScript and M
 
 test("x-page finds native anchors through a composed Shadow DOM click path", () => {
     const calls = [];
-    xshell._services = { resolve() { return { navigate(item) { calls.push(item); } }; } };
+    const navigation = { navigate(item) { calls.push(item); } };
+    const XPage = createXPageClass({ navigation });
     const xpage = new XPage();
     xpage._page = new Page({ src: "/demo/_assets/example/pages/current.js", context: {} });
     const anchor = document.createElement("a");
@@ -462,8 +469,10 @@ class RenderEngineFactory {
     }
 }
 
+let definitionServices;
+
 function configureDefinitionLoaders() {
-    xshell._config = {
+    const config = {
         modules: {
             test: {
                 defaults: {
@@ -473,17 +482,19 @@ function configureDefinitionLoaders() {
             }
         }
     };
-    xshell._loader = {
+    const loader = {
         async load(resource) {
+            if (resource.startsWith("schema:")) return {};
             return resource.startsWith("state-engine:") ? StateEngineFactory : RenderEngineFactory;
         }
     };
-    xshell._services = { resolve(name) { return name === "modules" ? { getModuleById() { return { controller: {} }; } } : null; } };
-    xshell._bus = { emit() {} };
+    const modules = { getModuleById() { return { controller: {} }; } };
+    const services = new Services({ config, loader, contracts: {}, resolver: {}, bus });
+    definitionServices = { config, loader, modules, services };
 }
 
 function createContext() {
-    return { resourceDefinition: { moduleId: "test" } };
+    return { resourceDefinition: { moduleId: "test" }, services: definitionServices };
 }
 
 function flushAnimationFrames() {
@@ -704,7 +715,7 @@ test("page preserves state and disposables until its final unload", async () => 
             };
         }
     }, {});
-    const page = new PageClass({ src: "/pages/lifecycle.js", context: {} });
+    const page = new PageClass({ src: "/pages/lifecycle.js", context: {}, bus });
     const controller = page._controller;
     const disposable = { disposeCount: 0, dispose() { this.disposeCount += 1; } };
     const servicesScope = page._servicesScope;
@@ -744,6 +755,13 @@ test("page preserves state and disposables until its final unload", async () => 
     assert.deepEqual(servicesScope._disposables, []);
 });
 
+function createLoadableXPage(load, navigation = {}) {
+    const config = { xshell: { ui: { layouts: { embed: "x-layout-test" }, components: { error: "x-test-error" } } } };
+    const areas = { resolveAreaId() { return ""; }, getArea() { return null; }, getMenuitemBreadcrumb() { return []; } };
+    const modules = { resolveModuleId() { return "test"; } };
+    return createXPageClass({ config, loader: { load }, bus, navigation, areas, modules });
+}
+
 test("x-page unmounts then unloads a replaced page and only unmounts on disconnection", async () => {
     const commands = [];
     const oldPage = {
@@ -762,23 +780,7 @@ test("x-page unmounts then unloads a replaced page and only unmounts on disconne
 
         async mount() { commands.push("new mount"); }
     }
-    xshell._debug = { log() {} };
-    xshell._config = { xshell: { ui: { layout: { embed: "x-layout-test" } } } };
-    const areas = {
-        resolveAreaId() { return ""; },
-        getArea() { return null; },
-        getMenuitemBreadcrumb() { return []; }
-    };
-    xshell._services = { resolve(name) {
-        if (name === "areas") return areas;
-        if (name === "modules") return { resolveModuleId() { return "test"; } };
-        throw new Error(`Unexpected service: ${name}`);
-    } };
-    xshell._loader = {
-        async load(resource) {
-            return resource.startsWith("page:") ? NewPage : class {};
-        }
-    };
+    const XPage = createLoadableXPage(async resource => resource.startsWith("page:") ? NewPage : class {});
     const xpage = new XPage();
     xpage._src = "/pages/new.js";
     xpage._page = oldPage;
@@ -823,15 +825,7 @@ test("x-page discards an older load without disturbing the newer active Page", a
         async unmount() { commands.push("B unmount"); }
         async unload() { commands.push("B unload"); }
     }
-    xshell._debug = { log() {} };
-    xshell._config = { xshell: { ui: { layout: { embed: "x-layout-test" } } } };
-    const areas = { resolveAreaId() { return ""; }, getArea() { return null; }, getMenuitemBreadcrumb() { return []; } };
-    xshell._services = { resolve(name) {
-        if (name === "areas") return areas;
-        if (name === "modules") return { resolveModuleId() { return "test"; } };
-        throw new Error(`Unexpected service: ${name}`);
-    } };
-    xshell._loader = { async load(resource) { return resource === "page:/pages/a.js" ? PageA : PageB; } };
+    const XPage = createLoadableXPage(async resource => resource === "page:/pages/a.js" ? PageA : PageB);
     const xpage = new XPage();
     xpage._src = "/pages/a.js";
     const loadA = xpage.load();
@@ -913,7 +907,7 @@ test("navigation stack changes close dialogs through final Page cleanup", async 
     container.querySelectorAll = () => container.childNodes;
     const navigation = new Navigation({
         areas: {},
-        bus: {},
+        bus,
         config: { app: { basePath: "", baseUrl: "https://example.test/" }, xshell: {} }
     }, { mode: "path" }, { container });
     navigation._buildUrlFinal = item => item.href;
@@ -925,10 +919,11 @@ test("navigation stack changes close dialogs through final Page cleanup", async 
         async unload() { commands.push("unload"); }
     };
 
-    navigation._stackToDom();
+    navigation._stack = [{ href: "/pages/main.js" }];
+    await navigation._stackToDom();
     assert.equal(await resultPromise, null);
     assert.deepEqual(commands, ["unmount", "unload"]);
-    assert.equal(container.firstChild, null);
+    assert.deepEqual(container.childNodes.map(host => host.getAttribute("src")), ["/pages/main.js"]);
 });
 
 test("navigation shrinks three stack Pages to one after asynchronous final unloads", async () => {
@@ -971,26 +966,47 @@ test("navigation shrinks three stack Pages to one after asynchronous final unloa
 
 test("x-page loads URLs containing error through the normal Page loader", async () => {
     const loaded = [];
-    xshell._config = { xshell: { ui: { layout: { embed: "x-layout-test" } } } };
-    const areas = { resolveAreaId() { return ""; }, getArea() { return null; }, getMenuitemBreadcrumb() { return []; } };
-    xshell._services = { resolve(name) {
-        if (name === "areas") return areas;
-        if (name === "modules") return { resolveModuleId() { return "test"; } };
-        throw new Error(`Unexpected service: ${name}`);
-    } };
-    xshell._loader = { async load(resource) {
+    const XPage = createLoadableXPage(async resource => {
         if (resource.startsWith("page:")) {
             loaded.push(resource);
             return class { async load() {} async mount() {} };
         }
         return class {};
-    } };
+    });
     for (const src of ["/pages/error-report.js", "/pages/errors/index.js", "/pages/orders.js?status=error"]) {
         const host = new XPage();
         host._src = src;
         await host.load();
     }
     assert.deepEqual(loaded, ["page:/pages/error-report.js", "page:/pages/errors/index.js", "page:/pages/orders.js?status=error"]);
+});
+
+test("x-page renders a failed Page through the configured error Component", async () => {
+    const resources = [];
+    const navigation = {};
+    const failure = Object.assign(new Error("Page unavailable"), { code: 404, details: "missing definition" });
+    class ErrorComponent {}
+    const XPage = createLoadableXPage(async resource => {
+        resources.push(resource);
+        if (resource === "page:/pages/missing.js") throw failure;
+        if (resource === "component:x-test-error") return ErrorComponent;
+        return class {};
+    }, navigation);
+    const host = new XPage();
+    host.src = "/pages/missing.js";
+
+    await host.load();
+
+    assert.deepEqual(resources, ["layout:x-layout-test", "page:/pages/missing.js", "component:x-test-error"]);
+    assert.equal(host.page.constructor, Page);
+    assert.equal(host.page._bus, bus);
+    assert.equal(host.page._navigation, navigation);
+    assert.ok(host.firstChild instanceof ErrorComponent);
+    assert.deepEqual(
+        { code: host.firstChild.code, message: host.firstChild.message, src: host.firstChild.src,
+            moduleId: host.firstChild.moduleId, details: host.firstChild.details },
+        { code: 404, message: "Page unavailable", src: "/pages/missing.js", moduleId: "test", details: "missing definition" }
+    );
 });
 
 test("x-page and dialog preserve falsy results", async () => {
@@ -1010,22 +1026,24 @@ test("x-page and dialog preserve falsy results", async () => {
     }
 });
 
+function validateComponentContract(contract) {
+    const schema = { ...ComponentSchema, $defs: { [ContractSchema.$id]: ContractSchema } };
+    return new Validator(schema, "2020-12").validate({ contract });
+}
+
 test("Component contract accepts boolean attribute observation and rejects string aliases", () => {
-    const validator = new Validator(ComponentContractSchema, "2020-12");
     for (const attribute of [true, false]) {
-        assert.equal(validator.validate({ properties: { item: { type: "string", attribute } } }).valid, true);
+        assert.equal(validateComponentContract({ properties: { item: { type: "string", attribute } } }).valid, true);
     }
-    assert.equal(validator.validate({ properties: { item: { type: "string", attribute: "item-name" } } }).valid, false);
+    assert.equal(validateComponentContract({ properties: { item: { type: "string", attribute: "item-name" } } }).valid, false);
 });
 
 test("Component contract accepts the JSON attribute parser and rejects unknown parsers", () => {
-    const validator = new Validator(ComponentContractSchema, "2020-12");
-    assert.equal(validator.validate({ properties: { item: { type: "any", attribute: true, attributeParser: "json" } } }).valid, true);
-    assert.equal(validator.validate({ properties: { item: { type: "any", attribute: true, attributeParser: "custom" } } }).valid, false);
+    assert.equal(validateComponentContract({ properties: { item: { type: "any", attribute: true, attributeParser: "json" } } }).valid, true);
+    assert.equal(validateComponentContract({ properties: { item: { type: "any", attribute: true, attributeParser: "custom" } } }).valid, false);
 });
 
 test("Component value descriptors keep type required and accept optional JSON Schema", () => {
-    const validator = new Validator(ComponentContractSchema, "2020-12");
     const contracts = {
         property: descriptor => ({ properties: { value: descriptor } }),
         eventDetailProperty: descriptor => ({ events: { changed: { detail: { value: descriptor } } } }),
@@ -1042,21 +1060,21 @@ test("Component value descriptors keep type required and accept optional JSON Sc
     // check compact, structured, and boolean schemas on every value descriptor
     for (const [name, createContract] of Object.entries(contracts)) {
         for (const descriptor of [{ type: "string" }, { type: "object", schema: nestedSchema }, { type: "array", schema: { items: { type: "object", properties: { name: { type: "string" } } } } }, { type: "any", schema: true }, { type: "any", schema: false }]) {
-            assert.equal(validator.validate(createContract(descriptor)).valid, true, `${name}: ${JSON.stringify(descriptor)}`);
+            assert.equal(validateComponentContract(createContract(descriptor)).valid, true, `${name}: ${JSON.stringify(descriptor)}`);
         }
         for (const descriptor of [{ schema: true }, { type: "string", schema: null }, { type: "string", schema: [] }, { type: "string", schema: "object" }, { type: "string", schema: 123 }, { type: "object", properties: {} }, { type: "array", items: {} }]) {
-            assert.equal(validator.validate(createContract(descriptor)).valid, false, `${name}: ${JSON.stringify(descriptor)}`);
+            assert.equal(validateComponentContract(createContract(descriptor)).valid, false, `${name}: ${JSON.stringify(descriptor)}`);
         }
     }
 
     // keep void exclusive to method returns
     for (const [name, createContract] of Object.entries(contracts)) {
-        assert.equal(validator.validate(createContract({ type: "void" })).valid, name === "returnValue", name);
+        assert.equal(validateComponentContract(createContract({ type: "void" })).valid, name === "returnValue", name);
     }
 
     // preserve component-specific metadata outside the optional schema
-    assert.equal(validator.validate({ properties: { value: {
-        type: "object", description: "Value", default: {}, state: true, query: false, context: true, reflect: true,
+    assert.equal(validateComponentContract({ properties: { value: {
+        type: "object", description: "Value", default: {}, state: true, reflect: true,
         required: true, readonly: false, enum: ["one"], attribute: false, schema: { type: "object" }
     } } }).valid, true);
 });
@@ -1064,8 +1082,9 @@ test("Component value descriptors keep type required and accept optional JSON Sc
 test("Component public-method diagnostic uses its canonical name", async () => {
     configureDefinitionLoaders();
     const Component = await createComponentClassFromJsDefinition("missing-method.js", createContext(), {
-        meta: { id: "x-missing-method" }, controller() { return {}; }
-    }, { methods: { submit: { description: "Submit" } } });
+        meta: { id: "x-missing-method" }, controller() { return {}; },
+        contract: { methods: { submit: { description: "Submit" } } }
+    });
     assert.throws(() => new Component(), /Component 'x-missing-method'.*public method 'submit'/);
 });
 
@@ -1081,5 +1100,5 @@ test("dialog.language forwards value to a radios picker", async () => {
 });
 
 test("picker Page contract includes radios", () => {
-    assert.deepEqual(pickerContract.properties.inputType.enum, ["select", "radios"]);
+    assert.deepEqual(pickerDefinition.contract.properties.inputType.enum, ["select", "radios"]);
 });

@@ -56,8 +56,7 @@ globalThis.document = {
 globalThis.requestAnimationFrame = callback => { callback(); return 1; };
 
 const { createPageClassFromJsDefinition } = await import("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/loaders/page-js.js");
-const { default: XPage } = await import("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/x-page.js");
-const { default: xshell } = await import("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/xshell.js");
+const { createXPageClass } = await import("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/x-page.js");
 
 class StateEngineFactory {
     constructor(state) { this.state = state; }
@@ -125,26 +124,18 @@ async function createTrackedPageClass(runtime, id, controller, capture) {
     };
 }
 
-function configureXPage(resolvePage, getBreadcrumb = () => []) {
+function createHost(src, resolvePage) {
     const areas = {
         resolveAreaId() { return ""; },
         getArea() { return null; },
-        getMenuitemBreadcrumb: getBreadcrumb
+        getMenuitemBreadcrumb() { return []; }
     };
     const modules = { shadowStyleSheets: [], resolveModuleId() { return "test"; } };
     const navigation = {};
-    xshell._config = { xshell: { ui: { layouts: { embed: "x-layout-test" } } } };
-    xshell._bus = { emit() {} };
-    xshell._services = { resolve(name) {
-        if (name === "areas") return areas;
-        if (name === "modules") return modules;
-        if (name === "navigation") return navigation;
-        throw new Error(`Unexpected service: ${name}`);
-    } };
-    xshell._loader = { async load(resource) { return resource.startsWith("layout:") ? class {} : resolvePage(resource); } };
-}
-
-function createHost(src) {
+    const config = { xshell: { ui: { layouts: { embed: "x-layout-test" } } } };
+    const bus = { emit() {} };
+    const loader = { async load(resource) { return resource.startsWith("layout:") ? class {} : resolvePage(resource); } };
+    const XPage = createXPageClass({ config, loader, bus, navigation, areas, modules });
     const host = new XPage();
     host._src = src;
     host.setAttribute("src", src);
@@ -163,8 +154,7 @@ test("x-page unloads a definition-based candidate whose asynchronous load fails"
         async load() { throw loadFailure; },
         unload() { unloads++; }
     }), capture);
-    configureXPage(() => Candidate);
-    const host = createHost("/pages/failed.js");
+    const host = createHost("/pages/failed.js", () => Candidate);
 
     await assert.rejects(host.load(), error => error === loadFailure);
 
@@ -187,9 +177,8 @@ test("x-page unloads a candidate when navigation metadata preparation fails", as
         load() { loads++; },
         unload() { unloads++; }
     }), capture);
-    configureXPage(() => Candidate);
     const malformedNav = btoa("{");
-    const host = createHost(`/pages/preparation.js?nav=${malformedNav}`);
+    const host = createHost(`/pages/preparation.js?nav=${malformedNav}`, () => Candidate);
 
     await assert.rejects(host.load(), error => error instanceof SyntaxError);
 
@@ -208,8 +197,7 @@ test("failed candidate preparation preserves the active Page and its scope", asy
     let failedUnloads = 0;
     const Active = await createTrackedPageClass(runtime, "active", () => ({ unload() { activeUnloads++; } }), activeCapture);
     const Failed = await createTrackedPageClass(runtime, "failed-replacement", () => ({ unload() { failedUnloads++; } }), failedCapture);
-    configureXPage(resource => resource.includes("active.js") ? Active : Failed);
-    const host = createHost("/pages/active.js");
+    const host = createHost("/pages/active.js", resource => resource.includes("active.js") ? Active : Failed);
     await host.load();
     const activePage = host.page;
 
@@ -238,8 +226,7 @@ test("overlapping navigation unloads a stale candidate exactly once", async () =
         unload() { staleUnloads++; }
     }), staleCapture);
     const Active = await createTrackedPageClass(runtime, "overlap-active", () => ({ unload() { activeUnloads++; } }), activeCapture);
-    configureXPage(resource => resource.includes("stale.js") ? Stale : Active);
-    const host = createHost("/pages/stale.js");
+    const host = createHost("/pages/stale.js", resource => resource.includes("stale.js") ? Stale : Active);
     const staleLoad = host.load();
     await started.promise;
 
@@ -267,8 +254,7 @@ test("queued transition failure unloads the candidate and propagates the transit
     let failedUnloads = 0;
     const Active = await createTrackedPageClass(runtime, "transition-active", () => ({ unload() { activeUnloads++; } }), activeCapture);
     const Failed = await createTrackedPageClass(runtime, "transition-failed", () => ({ unload() { failedUnloads++; } }), failedCapture);
-    configureXPage(resource => resource.includes("active.js") ? Active : Failed);
-    const host = createHost("/pages/active.js");
+    const host = createHost("/pages/active.js", resource => resource.includes("active.js") ? Active : Failed);
     await host.load();
     const activePage = host.page;
     host.unmount = async () => { throw transitionFailure; };
@@ -294,8 +280,7 @@ test("x-page reports both candidate preparation and cleanup failures", async () 
         load() { throw loadFailure; },
         unload() { throw cleanupFailure; }
     }), capture);
-    configureXPage(() => Candidate);
-    const host = createHost("/pages/combined.js");
+    const host = createHost("/pages/combined.js", () => Candidate);
 
     await assert.rejects(host.load(), error => {
         assert.ok(error instanceof AggregateError);

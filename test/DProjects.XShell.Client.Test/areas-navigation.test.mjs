@@ -785,26 +785,28 @@ test("Navigation keeps canonical asset destinations Area-aware in top, stack, au
 test("x-page resolves embed resources and supplies stack classes before connecting the layout", async t => {
     // Supply the DOM operations used by x-page and forward src changes through its attribute callback.
     globalThis.HTMLElement = class extends EventTarget {
+        attributes = new Map();
         attachShadow() {
             this.shadowRoot = { appendChild(node) {
                 this.initialStackClasses = node.stackClasses;
                 this.firstChild = node;
             } };
         }
-        setAttribute(name, value) { if (name === "src") this.attributeChangedCallback(name, null, value); }
+        setAttribute(name, value) {
+            this.attributes.set(name, value);
+            if (name === "src") this.attributeChangedCallback(name, null, value);
+        }
     };
     globalThis.CSSStyleSheet = class { replaceSync() {} };
-    globalThis.customElements = { define() {} };
     globalThis.document = { createElement(localName) { return { localName, setAttribute() {}, removeAttribute() {} }; } };
     t.after(() => {
-        for (const key of ["HTMLElement", "CSSStyleSheet", "customElements", "document"]) delete globalThis[key];
+        for (const key of ["HTMLElement", "CSSStyleSheet", "document"]) delete globalThis[key];
     });
-    const { default: XPage } = await import("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/x-page.js");
-    const { default: xshell } = await import("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/xshell.js");
+    const { createXPageClass } = await import("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/x-page.js");
 
     // Resolve real resource URLs and replace only the concrete layout and Page implementations.
     const asset = "/_assets/customer/pages/detail.js";
-    const loader = `data:text/javascript,${encodeURIComponent("export default class { async load() { return class { async load() {} async mount() {} }; } }")}`;
+    const loader = `data:text/javascript,${encodeURIComponent("export default class { async load() { return class { constructor(options) { this.options = options; } async load() {} async mount() {} }; } }")}`;
     const config = {
         app: { basePath: "/app", baseUrl: "https://example.test/app/" },
         xshell: {
@@ -820,8 +822,8 @@ test("x-page resolves embed resources and supplies stack classes before connecti
     const resolver = new Resolver({ config });
     const navigation = createNavigation({ areas, resolver, basePath: config.app.basePath });
     const resourceLoader = new Loader({ bus, resolver }, {});
-    const services = { areas, navigation, modules: { resolveModuleId: href => areas.getModuleId(href) } };
-    Object.assign(xshell, { _config: config, _bus: bus, _loader: resourceLoader, _services: { resolve: name => services[name] } });
+    const modules = { resolveModuleId: href => areas.getModuleId(href) };
+    const XPage = createXPageClass({ config, loader: resourceLoader, bus, navigation, areas, modules });
 
     for (const [prefix, breadcrumbPath] of [["", null], ["/sales", "/sales/detail"]]) {
         const outlet = new XPage();
@@ -831,6 +833,8 @@ test("x-page resolves embed resources and supplies stack classes before connecti
         assert.equal(outlet.src, href);
         await outlet.load();
         assert.equal(outlet.status, "loaded");
+        assert.equal(outlet.attributes.get("module"), "customer");
+        assert.deepEqual(outlet.page.options, { src: href, context: outlet.context, bus, navigation });
         assert.equal(outlet.breadcrumb?.at(-1)?.path ?? null, breadcrumbPath);
         const { resource, path, url, status } = resourceLoader.registry.at(-1);
         assert.deepEqual({ resource, path, url, status }, {
@@ -844,6 +848,7 @@ test("x-page resolves embed resources and supplies stack classes before connecti
     stacked.stackClasses = ["size-narrow"];
     await stacked.load();
     assert.deepEqual(stacked.shadowRoot.initialStackClasses, ["size-narrow"]);
+    assert.ok(resourceLoader.registry.some(({ resource, status }) => resource === "layout:test-layout" && status === "loaded"));
 
     const loadedPage = stacked.page;
     stacked.stackClasses = ["size-wide"];
