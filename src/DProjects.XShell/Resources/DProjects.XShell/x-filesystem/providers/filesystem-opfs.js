@@ -1,42 +1,9 @@
 
-import Filesystem, {EntryType, GetModes, joinPath, pathName, validatePath} from "./filesystem.js";
+import Filesystem, {EntryType, GetModes, checkAbort, joinPath, matchesPattern, parentPath, pathName, validatePath} from "./filesystem.js";
 
 // constants
 const READONLY_FLAG = 1;
 
-
-// utils
-function checkAbort(signal) {
-    if (!signal?.aborted) return;
-    if (typeof signal.throwIfAborted === "function") signal.throwIfAborted();
-    const error = new Error("Filesystem operation aborted");
-    error.name = "AbortError";
-    throw error;
-}
-
-function parentPath(path) {
-    const index = path.lastIndexOf("/");
-    return index === 0 ? "/" : path.slice(0, index);
-}
-
-function isNotFound(error) {
-    return error?.name === "NotFoundError" || error?.name === "TypeMismatchError";
-}
-
-function matchesPattern(name, pattern) {
-    if (pattern == null) return true;
-    if (typeof pattern !== "string") {
-        throw new TypeError("pattern must be a string or null");
-    }
-    let expression = "^";
-    for (const char of pattern) {
-        if (char === "*") expression += ".*";
-        else if (char === "?") expression += ".";
-        else if (char === "#") expression += "[0-9]";
-        else expression += char.replace(/[\\^$.*+?()[\]{}|]/g, "\\$&");
-    }
-    return new RegExp(expression + "$").test(name);
-}
 
 const MIME_TYPES = Object.freeze({
     png: "image/png",
@@ -98,21 +65,21 @@ export default class FilesystemOpfs extends Filesystem {
         validatePath(path);
         checkAbort(signal);
         if (path === "/") {
-            return this._snapshot(path, await this._root(signal), signal);
+            return this.#snapshot(path, await this.#root(signal), signal);
         }
         try {
-            const parent = await this._directory(parentPath(path), { signal });
+            const parent = await this.#directory(parentPath(path), { signal });
             const name = pathName(path);
             let handle;
             try {
                 handle = await parent.getFileHandle(name);
             } catch (error) {
-                if (!isNotFound(error)) throw error;
+                if (!this.#isNotFound(error)) throw error;
                 handle = await parent.getDirectoryHandle(name);
             }
-            return this._snapshot(path, handle, signal);
+            return this.#snapshot(path, handle, signal);
         } catch (error) {
-            if (isNotFound(error)) return null;
+            if (this.#isNotFound(error)) return null;
             throw error;
         }
     }
@@ -129,9 +96,9 @@ export default class FilesystemOpfs extends Filesystem {
 
         let directory;
         try {
-            directory = await this._directory(path, { signal });
+            directory = await this.#directory(path, { signal });
         } catch (error) {
-            if (!isNotFound(error)) throw error;
+            if (!this.#isNotFound(error)) throw error;
             const entry = await this.getEntry(path, { signal });
             throw new Error(entry ? `Not a directory: ${path}` : `Path not found: ${path}`);
         }
@@ -151,7 +118,7 @@ export default class FilesystemOpfs extends Filesystem {
                 if ((mode !== GetModes.Files || isFile) &&
                     (mode !== GetModes.Directories || !isFile) &&
                     matchesPattern(name, pattern)) {
-                    yield await owner._snapshot(childPath, handle, signal);
+                    yield await owner.#snapshot(childPath, handle, signal);
                 }
                 if (mode === GetModes.Descendants && !isFile) {
                     yield* walk(owner, handle, childPath);
@@ -168,7 +135,7 @@ export default class FilesystemOpfs extends Filesystem {
             !Number.isSafeInteger(length) || length < -1) {
             throw new RangeError("Invalid read range");
         }
-        const handle = await this._file(path, { signal });
+        const handle = await this.#file(path, { signal });
         const file = await handle.getFile();
         checkAbort(signal);
         const start = Math.min(offset, file.size);
@@ -179,7 +146,7 @@ export default class FilesystemOpfs extends Filesystem {
     async getReadUrl(path, { contentType = null, signal } = {}) {
         validatePath(path);
         checkAbort(signal);
-        const handle = await this._file(path, { signal });
+        const handle = await this.#file(path, { signal });
         const file = await handle.getFile();
         checkAbort(signal);
         const extension = pathName(path).split(".").pop().toLowerCase();
@@ -214,7 +181,7 @@ export default class FilesystemOpfs extends Filesystem {
             throw new TypeError("File data must be a string, Blob, ArrayBuffer, typed array, or ReadableStream");
         }
 
-        const handle = await this._file(path, { create: true, signal });
+        const handle = await this.#file(path, { create: true, signal });
         checkAbort(signal);
         const writable = await handle.createWritable({ keepExistingData: append });
         let reader = null;
@@ -252,15 +219,15 @@ export default class FilesystemOpfs extends Filesystem {
             if (abortReader) signal?.removeEventListener("abort", abortReader);
             if (reader) reader.releaseLock();
         }
-        return this._snapshot(path, handle, signal);
+        return this.#snapshot(path, handle, signal);
     }
 
     async createDirectory(path, { signal } = {}) {
         validatePath(path);
         this._ensureWritable();
         checkAbort(signal);
-        const directory = await this._directory(path, { create: true, signal });
-        return this._snapshot(path, directory, signal);
+        const directory = await this.#directory(path, { create: true, signal });
+        return this.#snapshot(path, directory, signal);
     }
 
     async delete(path, { signal } = {}) {
@@ -269,11 +236,11 @@ export default class FilesystemOpfs extends Filesystem {
         checkAbort(signal);
         if (path === "/") return; // never delete the origin's storage root
         try {
-            const parent = await this._directory(parentPath(path), { signal });
+            const parent = await this.#directory(parentPath(path), { signal });
             checkAbort(signal);
             await parent.removeEntry(pathName(path), { recursive: true });
         } catch (error) {
-            if (!isNotFound(error)) throw error;
+            if (!this.#isNotFound(error)) throw error;
         }
     }
 
@@ -281,8 +248,12 @@ export default class FilesystemOpfs extends Filesystem {
     // The base class provides copy/move through the stream API.
 
     
-    // privatemethods
-    async _root(signal) {
+    // private methods
+    #isNotFound(error) {
+        return error?.name === "NotFoundError" || error?.name === "TypeMismatchError";
+    }
+
+    async #root(signal) {
         checkAbort(signal);
         if (!globalThis.navigator?.storage?.getDirectory) {
             throw new Error("Origin Private File System is unavailable (requires browser support and a secure context)");
@@ -300,9 +271,9 @@ export default class FilesystemOpfs extends Filesystem {
         }
     }
 
-    async _directory(path, { create = false, signal } = {}) {
+    async #directory(path, { create = false, signal } = {}) {
         validatePath(path);
-        let directory = await this._root(signal);
+        let directory = await this.#root(signal);
         if (path === "/") return directory;
         for (const name of path.slice(1).split("/")) {
             checkAbort(signal);
@@ -312,15 +283,15 @@ export default class FilesystemOpfs extends Filesystem {
         return directory;
     }
 
-    async _file(path, { create = false, signal } = {}) {
+    async #file(path, { create = false, signal } = {}) {
         validatePath(path);
         if (path === "/") throw new Error("Cannot access the filesystem root as a file");
-        const parent = await this._directory(parentPath(path), { signal });
+        const parent = await this.#directory(parentPath(path), { signal });
         checkAbort(signal);
         return parent.getFileHandle(pathName(path), { create });
     }
 
-    async _snapshot(path, handle, signal) {
+    async #snapshot(path, handle, signal) {
         checkAbort(signal);
         const file = handle.kind === "file" ? await handle.getFile() : null;
         checkAbort(signal);

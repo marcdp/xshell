@@ -46,7 +46,7 @@ export const SyncModes = Object.freeze({
     Bidirectional: "Bidirectional"
 });
 
-function aborted(signal) {
+export function checkAbort(signal) {
     if (!signal?.aborted) return;
     if (typeof signal.throwIfAborted === "function") signal.throwIfAborted();
     const error = new Error("Filesystem operation aborted");
@@ -89,6 +89,25 @@ export function pathName(path) {
     return path === "/" ? "" : path.slice(path.lastIndexOf("/") + 1);
 }
 
+export function parentPath(path) {
+    validatePath(path);
+    const index = path.lastIndexOf("/");
+    return index <= 0 ? "/" : path.slice(0, index);
+}
+
+export function matchesPattern(name, pattern) {
+    if (pattern == null) return true;
+    if (typeof pattern !== "string") throw new TypeError("pattern must be a string or null");
+    let expression = "^";
+    for (const char of pattern) {
+        if (char === "*") expression += ".*";
+        else if (char === "?") expression += ".";
+        else if (char === "#") expression += "[0-9]";
+        else expression += char.replace(/[\\^$.*+?()[\]{}|]/g, "\\$&");
+    }
+    return new RegExp(expression + "$").test(name);
+}
+
 function isDirectory(entry) {
     return entry?.type?.toLowerCase?.() === EntryType.Directory || entry?.entryType?.toLowerCase?.() === EntryType.Directory || entry?.isDirectory?.() === true;
 }
@@ -108,7 +127,7 @@ function log(logger, level, message, error) {
 }
 
 async function delay(ms, signal) {
-    aborted(signal);
+    checkAbort(signal);
     await new Promise((resolve, reject) => {
         const timer = setTimeout(() => { cleanup(); resolve(); }, ms);
         function onAbort() { 
@@ -158,30 +177,30 @@ export default class Filesystem {
 
     // LEVEL 0: provider primitives
     async getEntry(path, { signal } = {}) {
-        validatePath(path); aborted(signal);
+        validatePath(path); checkAbort(signal);
         throw new Error("getEntry() must be implemented by a filesystem provider");
     }
 
     async *getEntries(path, { mode = GetModes.All, pattern = null, signal } = {}) {
-        validatePath(path); aborted(signal);
+        validatePath(path); checkAbort(signal);
         void mode; void pattern;
         throw new Error("getEntries() must be implemented by a filesystem provider");
     }
 
     async exists(path, { signal } = {}) {
-        validatePath(path); aborted(signal);
+        validatePath(path); checkAbort(signal);
         return (await this.getEntry(path, { signal })) != null;
     }
 
     async loadReadStream(path, { offset = 0, length = -1, signal } = {}) {
-        validatePath(path); aborted(signal);
+        validatePath(path); checkAbort(signal);
         if (!Number.isSafeInteger(offset) || offset < 0 || !Number.isSafeInteger(length) || length < -1) {
             throw new RangeError("Invalid read range");
         }
         throw new Error("loadReadStream() must be implemented by a filesystem provider");
     }
     async getReadUrl(path, { expiresIn = 300, disposition = "inline", signal } = {}) {
-        validatePath(path); aborted(signal);
+        validatePath(path); checkAbort(signal);
         throw new Error("getReadUrl() must be implemented by a filesystem provider");
     }
 
@@ -191,7 +210,7 @@ export default class Filesystem {
      * The stream writes on close; abort drops buffered data.
      */
     async loadWriteStream(path, { append = false, truncate = false, signal } = {}) {
-        validatePath(path); this._ensureWritable(); aborted(signal);
+        validatePath(path); this._ensureWritable(); checkAbort(signal);
         if (truncate) {
             await this.saveFile(path, new Blob([]), { signal });
         } else if (append && !await this.exists(path, { signal })) {
@@ -200,7 +219,7 @@ export default class Filesystem {
         const parts = [];
         return new WritableStream({
             write(chunk) {
-                aborted(signal);
+                checkAbort(signal);
                 if (!(chunk instanceof Uint8Array) && !(chunk instanceof ArrayBuffer) && !(typeof Blob !== "undefined" && chunk instanceof Blob)) {
                     throw new TypeError("WritableStream chunks must be binary data");
                 }
@@ -208,7 +227,7 @@ export default class Filesystem {
                 parts.push(chunk instanceof Uint8Array ? chunk.slice() : chunk instanceof ArrayBuffer ? chunk.slice(0) : chunk);
             },
             close: async () => {
-                aborted(signal);
+                checkAbort(signal);
                 if (parts.length) {
                     await this.saveFile(path, new Blob(parts), { append, signal });
                 }
@@ -219,34 +238,34 @@ export default class Filesystem {
 
     // LEVEL 1: derived checks
     async existsFile(path, { signal } = {}) {
-        validatePath(path); aborted(signal);
+        validatePath(path); checkAbort(signal);
         return isFile(await this.getEntry(path, { signal }));
     }
 
     async existsDirectory(path, { signal } = {}) {
-        validatePath(path); aborted(signal);
+        validatePath(path); checkAbort(signal);
         return isDirectory(await this.getEntry(path, { signal }));
     }
 
     // LEVEL 2: provider mutation primitives
     async saveFile(path, data, { append = false, signal } = {}) {
-        validatePath(path); this._ensureWritable(); aborted(signal);
+        validatePath(path); this._ensureWritable(); checkAbort(signal);
         void data; void append;
         throw new Error("saveFile() must be implemented by a filesystem provider");
     }
 
     async createDirectory(path, { signal } = {}) {
-        validatePath(path); this._ensureWritable(); aborted(signal);
+        validatePath(path); this._ensureWritable(); checkAbort(signal);
         throw new Error("createDirectory() must be implemented by a filesystem provider");
     }
 
     async delete(path, { signal } = {}) {
-        validatePath(path); this._ensureWritable(); aborted(signal);
+        validatePath(path); this._ensureWritable(); checkAbort(signal);
         throw new Error("delete() must be implemented by a filesystem provider");
     }
 
     async touch(path, modified = new Date(), { signal } = {}) {
-        validatePath(path); this._ensureWritable(); aborted(signal);
+        validatePath(path); this._ensureWritable(); checkAbort(signal);
         void modified;
         throw new Error("Touch is not supported by this filesystem");
     }
@@ -266,7 +285,7 @@ export default class Filesystem {
         tries = 1, logger = null, signal
     } = {}) {
         validatePath(source); validatePath(destination);
-        this._ensureWritable(); aborted(signal); assertTries(tries);
+        this._ensureWritable(); checkAbort(signal); assertTries(tries);
         if (source === destination) return;
         const sourceEntry = await this.getEntry(source, { signal });
         if (!sourceEntry) throw new Error(`Unable to copy: not found ${source}`);
@@ -279,7 +298,7 @@ export default class Filesystem {
 
     async _copyEntry(source, destination, options) {
         const { recursive, overwrite, ignoreErrors, tries, logger, signal } = options;
-        aborted(signal);
+        checkAbort(signal);
         const entry = await this.getEntry(source, { signal });
         if (!entry) throw new Error(`Unable to copy: not found ${source}`);
         const target = await this.getEntry(destination, { signal });
@@ -294,7 +313,7 @@ export default class Filesystem {
             await this._copyMetadata(source, destination, signal);
             if (!recursive) return;
             for await (const child of this.getEntries(source, { mode: GetModes.All, signal })) {
-                aborted(signal);
+                checkAbort(signal);
                 // A provider returns immediate children for mode='all'.
                 const childName = child.name ?? pathName(child.path);
                 try {
@@ -315,7 +334,7 @@ export default class Filesystem {
         }
         if (fileTarget && !overwrite) return;
         for (let attempt = 1; attempt <= tries; attempt++) {
-            aborted(signal);
+            checkAbort(signal);
             let stream;
             try {
                 log(logger, "info", `Copy ${source} to ${fileDestination}`);
@@ -353,7 +372,7 @@ export default class Filesystem {
     /** Move is copy-then-delete. Providers should override if atomic rename exists. */
     async move(source, destination, { logger = null, signal } = {}) {
         validatePath(source); validatePath(destination);
-        this._ensureWritable(); aborted(signal);
+        this._ensureWritable(); checkAbort(signal);
         if (source === destination) return;
         // Never delete the source after a partially successful ignored copy.
         // This is intentionally safer than the C# default move fallback.
@@ -371,31 +390,31 @@ export default class Filesystem {
      * those algorithms must be ported and tested independently before use.
      */
     async sync(source, destination, { mode = SyncModes.LeftToRight, signal } = {}) {
-        validatePath(source); validatePath(destination); this._ensureWritable(); aborted(signal);
+        validatePath(source); validatePath(destination); this._ensureWritable(); checkAbort(signal);
         if (!Object.values(SyncModes).includes(mode)) throw new RangeError(`Unknown sync mode: ${mode}`);
         throw new Error("sync() is not implemented in the browser base; override in a provider or add a tested sync implementation");
     }
 
     // LEVEL 4: optional capabilities
     async createWatcher(path, { filter = "", excludes = [], recursive = false, signal } = {}) {
-        validatePath(path); aborted(signal);
+        validatePath(path); checkAbort(signal);
         void filter; void excludes; void recursive;
         throw new Error("Watchers are not supported by this filesystem");
     }
 
     async getMetadata(path, { signal } = {}) {
-        validatePath(path); aborted(signal);
+        validatePath(path); checkAbort(signal);
         throw new Error("Metadata is not supported by this filesystem");
     }
 
     async setMetadata(path, metadata, { signal } = {}) {
-        validatePath(path); this._ensureWritable(); aborted(signal);
+        validatePath(path); this._ensureWritable(); checkAbort(signal);
         void metadata;
         throw new Error("Metadata is not supported by this filesystem");
     }
 
     async supports(path, feature, { signal } = {}) {
-        validatePath(path); aborted(signal);
+        validatePath(path); checkAbort(signal);
         void feature;
         return false;
     }

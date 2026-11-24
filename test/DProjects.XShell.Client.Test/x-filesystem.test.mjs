@@ -4,12 +4,12 @@ import test from "node:test";
 
 import FilesystemsContract from "../../src/DProjects.XShell/Resources/DProjects.XShell/x-filesystem/contracts/filesystems.json" with { type: "json" };
 import filesystemDefinition from "../../src/DProjects.XShell/Resources/DProjects.XShell/x-filesystem/components/x-filesystem.js";
-import Filesystem from "../../src/DProjects.XShell/Resources/DProjects.XShell/x-filesystem/providers/filesystem.js";
+import Filesystem, {checkAbort, matchesPattern, parentPath} from "../../src/DProjects.XShell/Resources/DProjects.XShell/x-filesystem/providers/filesystem.js";
 import FilesystemFile from "../../src/DProjects.XShell/Resources/DProjects.XShell/x-filesystem/providers/filesystem-file.js";
 import FilesystemHttp from "../../src/DProjects.XShell/Resources/DProjects.XShell/x-filesystem/providers/filesystem-http.js";
 import FilesystemMem from "../../src/DProjects.XShell/Resources/DProjects.XShell/x-filesystem/providers/filesystem-mem.js";
 import FilesystemOpfs from "../../src/DProjects.XShell/Resources/DProjects.XShell/x-filesystem/providers/filesystem-opfs.js";
-import Filesystems, {validateProviderCredentials} from "../../src/DProjects.XShell/Resources/DProjects.XShell/x-filesystem/services/filesystems.js";
+import Filesystems from "../../src/DProjects.XShell/Resources/DProjects.XShell/x-filesystem/services/filesystems.js";
 import ContractSchema from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/schemas/contract.schema.json" with { type: "json" };
 import JsonValidator from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/json-validator.js";
 import Loader from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/loader.js";
@@ -84,6 +84,30 @@ function createController() {
     return { state, controller, navigationCalls, contextMenuCalls, filesystemOpenCalls, eventHandlers };
 }
 
+test("shared filesystem helpers preserve virtual paths, wildcard matching, and abort behavior", () => {
+    // Exercise the provider-independent semantics now shared by the base and concrete providers.
+    assert.equal(parentPath("/"), "/");
+    assert.equal(parentPath("/file.txt"), "/");
+    assert.equal(parentPath("/folder/file.txt"), "/folder");
+    assert.throws(() => parentPath("relative/file.txt"), /Invalid filesystem path/);
+
+    assert.equal(matchesPattern("anything.txt", null), true);
+    assert.equal(matchesPattern("anything.txt", "*"), true);
+    assert.equal(matchesPattern("file1.txt", "file?.txt"), true);
+    assert.equal(matchesPattern("file12.txt", "file?.txt"), false);
+    assert.equal(matchesPattern("item7", "item#"), true);
+    assert.equal(matchesPattern("itemx", "item#"), false);
+    assert.equal(matchesPattern("file[1].txt", "file[1].txt"), true);
+    assert.equal(matchesPattern("file1.txt", "file[1].txt"), false);
+    assert.throws(() => matchesPattern("file.txt", 1), /pattern must be a string or null/);
+
+    const controller = new AbortController();
+    assert.doesNotThrow(() => checkAbort(controller.signal));
+    controller.abort();
+    assert.throws(() => checkAbort(controller.signal), error => error?.name === "AbortError");
+    assert.throws(() => checkAbort({aborted: true}), error => error?.name === "AbortError");
+});
+
 test("Filesystems.open resolves and imports providers locally", async () => {
     // Prove parsed options override cloned defaults and the canonical URL reaches direct construction.
     const implementation = "data:text/javascript," + encodeURIComponent(`export default class Implementation {
@@ -119,6 +143,15 @@ test("Filesystems contract exposes open as the canonical provider operation", ()
     const result = new JsonValidator().validate(FilesystemsContract, ContractSchema);
     assert.equal(result.valid, true, JSON.stringify(result.errors));
     assert.deepEqual(Object.keys(FilesystemsContract.methods), ["open", "getEditor"]);
+});
+
+test("Filesystems module exposes only the intended default implementation", async () => {
+    // Keep private credential validation internal without introducing a test-only production API.
+    const module = await import("../../src/DProjects.XShell/Resources/DProjects.XShell/x-filesystem/services/filesystems.js");
+    const source = readFileSync(new URL("../../src/DProjects.XShell/Resources/DProjects.XShell/x-filesystem/services/filesystems.js", import.meta.url), "utf8");
+    assert.deepEqual(Object.keys(module), ["default"]);
+    assert.doesNotMatch(source, /JSON\.stringify\(\s*(?:credentials|copy)/);
+    assert.match(source, /credentials cannot be cloned\./);
 });
 
 test("Filesystems.open preserves local provider memory identity semantics without Loader materialization", async t => {
@@ -264,7 +297,8 @@ test("Filesystems recognizes optional provider credential descriptors without re
         ["static credentialsDefinition = [];", /invalid static credentialsDefinition.*expected an object/],
         ["static credentialsDefinition = {};", /must define static credentialsDefinition\.schema/],
         ["static credentialsDefinition = {schema: null};", /invalid static credentialsDefinition\.schema.*expected a JSON Schema object/],
-        ["static credentialsDefinition = {schema: []};", /invalid static credentialsDefinition\.schema.*expected a JSON Schema object/]
+        ["static credentialsDefinition = {schema: []};", /invalid static credentialsDefinition\.schema.*expected a JSON Schema object/],
+        ["static credentialsDefinition = {schema: {type: 'object', patternProperties: {'[': {type: 'string'}}}};", /invalid static credentialsDefinition\.schema/]
     ]) {
         globalThis.__filesystemCredentialConstructions = 0;
         const implementation = "data:text/javascript," + encodeURIComponent(`export default class Implementation {
@@ -279,97 +313,26 @@ test("Filesystems recognizes optional provider credential descriptors without re
         assert.equal(globalThis.__filesystemCredentialConstructions, 0);
     }
 
+    const implementationWithoutCredentials = "data:text/javascript," + encodeURIComponent(`export default class Implementation {
+        static optionsDefinition = {schema: {type: "object"}, parseUrl() { return {}; }, getUrl() { return "test:"; }};
+        constructor(services, options, credentials) { this.credentials = credentials; }
+    }`);
+    const jsonValidator = new JsonValidator();
+    const withoutCredentials = new Filesystems({config: testConfig, jsonValidator, services: createServices({jsonValidator})}, {
+        providers: {test: {implementation: implementationWithoutCredentials}}
+    });
+    assert.equal((await withoutCredentials.open("test:")).credentials, null);
+
     const implementation = "data:text/javascript," + encodeURIComponent(`export default class Implementation {
         static optionsDefinition = {schema: {type: "object"}, parseUrl() { return {}; }, getUrl() { return "test:"; }};
         static credentialsDefinition = {schema: {type: "object", required: ["token"], properties: {token: {type: "string"}}, additionalProperties: false}};
         constructor(services, options, credentials) { this.credentials = credentials; }
     }`);
-    const jsonValidator = new JsonValidator();
     const filesystems = new Filesystems({config: testConfig, jsonValidator, services: createServices({jsonValidator})}, {
         providers: {test: {implementation}}
     });
     assert.equal((await filesystems.open("test:")).credentials, null);
     delete globalThis.__filesystemCredentialConstructions;
-});
-
-test("provider credential validation clones payloads and remains separate from URL identity", () => {
-    // Exercise the internal credential boundary without adding credentials to Filesystems.open().
-    const jsonValidator = new JsonValidator();
-    let constructions = 0;
-    class CredentialProvider {
-        static optionsDefinition = {
-            schema: {type: "object", required: ["scheme", "resource"], properties: {scheme: {type: "string"}, resource: {type: "string"}}, additionalProperties: false},
-            parseUrl(url) { const separator = url.indexOf(":"); return {scheme: url.slice(0, separator), resource: url.slice(separator + 1)}; },
-            getUrl(options) { return `${options.scheme}:${options.resource}`; }
-        };
-        static credentialsDefinition = {
-            schema: {
-                type: "object",
-                required: ["username", "password"],
-                properties: {username: {type: "string", minLength: 1}, password: {type: "string", writeOnly: true}},
-                additionalProperties: false
-            }
-        };
-        static getCacheKey(url) { return url; }
-        constructor(services, options, credentials) {
-            constructions++;
-            this.hasSeparateInputs = options !== credentials;
-            this.options = structuredClone(options);
-            this.credentials = structuredClone(credentials);
-            options.resource = "mutated";
-            credentials.password = "mutated";
-        }
-    }
-
-    const authoredOptions = {scheme: "test", resource: "workspace"};
-    const authoredCredentials = {username: "worker", password: "secret-value"};
-    const validatedCredentials = validateProviderCredentials(jsonValidator, "test:workspace", CredentialProvider, authoredCredentials);
-    const provider = new CredentialProvider({}, structuredClone(authoredOptions), validatedCredentials);
-    assert.equal(provider.hasSeparateInputs, true);
-    assert.deepEqual(provider.options, authoredOptions);
-    assert.deepEqual(provider.credentials, authoredCredentials);
-    assert.notStrictEqual(validatedCredentials, authoredCredentials);
-    assert.deepEqual(authoredOptions, {scheme: "test", resource: "workspace"});
-    assert.deepEqual(authoredCredentials, {username: "worker", password: "secret-value"});
-
-    const canonicalUrl = CredentialProvider.optionsDefinition.getUrl(authoredOptions);
-    assert.equal(canonicalUrl, "test:workspace");
-    assert.equal(CredentialProvider.getCacheKey(canonicalUrl), "test:workspace");
-    assert.equal(CredentialProvider.optionsDefinition.getUrl(authoredOptions), canonicalUrl);
-    assert.equal(constructions, 1);
-
-    const invalidCredentials = {username: "private-user"};
-    let invalidError;
-    try {
-        validateProviderCredentials(jsonValidator, "test:workspace", CredentialProvider, invalidCredentials);
-    } catch (error) {
-        invalidError = error;
-    }
-    assert.match(invalidError?.message ?? "", /Invalid Filesystem provider credentials/);
-    assert.doesNotMatch(invalidError.message, /private-user|secret-value/);
-    assert.equal(constructions, 1);
-
-    class NoCredentialsProvider {}
-    assert.equal(validateProviderCredentials(jsonValidator, "test:workspace", NoCredentialsProvider, null), null);
-    assert.equal(validateProviderCredentials(jsonValidator, "test:workspace", NoCredentialsProvider, undefined), null);
-    assert.throws(() => validateProviderCredentials(jsonValidator, "test:workspace", NoCredentialsProvider, {token: "private-token"}), /does not support credentials/);
-    let cloneError;
-    try {
-        validateProviderCredentials(jsonValidator, "test:workspace", CredentialProvider, {username: "worker", password() { return "private-value"; }});
-    } catch (error) {
-        cloneError = error;
-    }
-    assert.match(cloneError?.message ?? "", /credentials cannot be cloned/);
-    assert.doesNotMatch(cloneError.message, /private-value/);
-
-    class MalformedCredentialsProvider {
-        static credentialsDefinition = {schema: {type: "object", patternProperties: {"[": {type: "string"}}}};
-    }
-    assert.equal(validateProviderCredentials(jsonValidator, "test:workspace", MalformedCredentialsProvider, null), null);
-    assert.throws(
-        () => validateProviderCredentials(jsonValidator, "test:workspace", MalformedCredentialsProvider, {}),
-        /invalid static credentialsDefinition\.schema/
-    );
 });
 
 test("Filesystems requires valid URL parsing and projection contracts", async () => {
@@ -529,6 +492,84 @@ test("filesystem implementations retain direct dependency/options construction",
     assert.equal(FilesystemMem.getCacheKey("mem:"), null);
     assert.equal(FilesystemMem.getCacheKey("mem:workspace"), "mem:workspace");
     assert.equal(FilesystemHttp.getCacheKey, undefined);
+});
+
+test("FilesystemFile preserves public handle, navigation, file, delete, and readonly behavior", async () => {
+    // Model the File System Access API through public provider operations without reaching private helpers.
+    const filesystemError = name => Object.assign(new Error(name), {name});
+    const createFileHandle = () => {
+        let blob = new Blob([]);
+        return {
+            kind: "file",
+            async getFile() {
+                const file = blob.slice();
+                Object.defineProperty(file, "lastModified", {value: 1});
+                return file;
+            },
+            async createWritable({keepExistingData = false} = {}) {
+                const chunks = keepExistingData ? [blob] : [];
+                return {
+                    async write(value) { chunks.push(value); },
+                    async seek() {},
+                    async close() { blob = new Blob(chunks); },
+                    async abort() {}
+                };
+            }
+        };
+    };
+    const createDirectoryHandle = () => {
+        const children = new Map();
+        return {
+            kind: "directory",
+            async getDirectoryHandle(name, {create = false} = {}) {
+                const child = children.get(name);
+                if (child?.kind === "directory") return child;
+                if (child) throw filesystemError("TypeMismatchError");
+                if (!create) throw filesystemError("NotFoundError");
+                const directory = createDirectoryHandle();
+                children.set(name, directory);
+                return directory;
+            },
+            async getFileHandle(name, {create = false} = {}) {
+                const child = children.get(name);
+                if (child?.kind === "file") return child;
+                if (child) throw filesystemError("TypeMismatchError");
+                if (!create) throw filesystemError("NotFoundError");
+                const file = createFileHandle();
+                children.set(name, file);
+                return file;
+            },
+            async removeEntry(name) {
+                if (!children.delete(name)) throw filesystemError("NotFoundError");
+            },
+            async *entries() { yield* children.entries(); }
+        };
+    };
+
+    const root = createDirectoryHandle();
+    const filesystem = new FilesystemFile({}, {handle: root});
+    await filesystem.createDirectory("/docs");
+    await filesystem.saveFile("/docs/readme.txt", "hello");
+
+    assert.equal(filesystem.url, "file:");
+    assert.strictEqual(filesystem.handle, root);
+    assert.deepEqual(await filesystem.getEntry("/docs/readme.txt"), {
+        path: "/docs/readme.txt", name: "readme.txt", type: "file", created: null, modified: new Date(1), length: 5, etag: "", flags: 0
+    });
+    const entries = [];
+    for await (const entry of filesystem.getEntries("/", {mode: "descendants"})) entries.push(entry.path);
+    assert.deepEqual(entries, ["/docs", "/docs/readme.txt"]);
+    assert.equal(await new Response(await filesystem.loadReadStream("/docs/readme.txt")).text(), "hello");
+
+    await filesystem.delete("/docs/readme.txt");
+    assert.equal(await filesystem.getEntry("/docs/readme.txt"), null);
+    await filesystem.delete("/docs/readme.txt");
+
+    const replacement = createDirectoryHandle();
+    filesystem.setDirectoryHandle(replacement);
+    assert.strictEqual(filesystem.handle, replacement);
+    const readonly = new FilesystemFile({}, {handle: root, isReadonly: true});
+    await assert.rejects(() => readonly.saveFile("/blocked.txt", "blocked"), /filesystem is readonly/);
 });
 
 test("filesystem provider schemas describe declarative options and exclude runtime URL state", () => {

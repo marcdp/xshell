@@ -1,5 +1,5 @@
 
-import Filesystem, { EntryType, GetModes, joinPath, pathName, validatePath } from "./filesystem.js";
+import Filesystem, { EntryType, GetModes, checkAbort, joinPath, matchesPattern, parentPath, pathName, validatePath } from "./filesystem.js";
 
 const READONLY_FLAG = 1;
 const MIME_TYPES = {
@@ -8,28 +8,6 @@ const MIME_TYPES = {
     txt:"text/plain", json:"application/json", html:"text/html",
     mp4:"video/mp4", webm:"video/webm", mp3:"audio/mpeg", wav:"audio/wav"
 };
-
-function checkAbort(signal) {
-    if (!signal?.aborted) return;
-    signal.throwIfAborted?.();
-    throw new DOMException("Filesystem operation aborted", "AbortError");
-}
-
-function isNotFound(error) { return error?.name === "NotFoundError" || error?.name === "TypeMismatchError"; }
-function parentPath(path) { const i = path.lastIndexOf("/"); return i <= 0 ? "/" : path.slice(0, i); }
-
-function matchesPattern(name, pattern) {
-    if (pattern == null) return true;
-    if (typeof pattern !== "string") throw new TypeError("pattern must be a string or null");
-    let expression = "^";
-    for (const char of pattern) {
-        if (char === "*") expression += ".*";
-        else if (char === "?") expression += ".";
-        else if (char === "#") expression += "[0-9]";
-        else expression += char.replace(/[\\^$.*+?()[\]{}|]/g, "\\$&");
-    }
-    return new RegExp(expression + "$").test(name);
-}
 
 export default class FilesystemFile extends Filesystem {
 
@@ -99,10 +77,10 @@ export default class FilesystemFile extends Filesystem {
         validatePath(path);
         checkAbort(signal);
         try {
-            const handle = path === "/" ? await this._root(signal) : await this._entry(path, signal);
-            return this._snapshot(path, handle, signal);
+            const handle = path === "/" ? await this.#root(signal) : await this.#entry(path, signal);
+            return this.#snapshot(path, handle, signal);
         } catch (error) {
-            if (isNotFound(error)) return null;
+            if (this.#isNotFound(error)) return null;
             throw error;
         }
     }
@@ -113,7 +91,7 @@ export default class FilesystemFile extends Filesystem {
         if (!Object.values(GetModes).includes(mode)) throw new RangeError(`Invalid entries mode: ${mode}`);
         if (pattern !== null && typeof pattern !== "string") throw new TypeError("pattern must be a string or null");
 
-        const directory = await this._directory(path, { signal });
+        const directory = await this.#directory(path, { signal });
         const walk = async function* (owner, dir, currentPath) {
             checkAbort(signal);
             const children = [];
@@ -130,7 +108,7 @@ export default class FilesystemFile extends Filesystem {
                 if ((mode !== GetModes.Files || isFile) &&
                     (mode !== GetModes.Directories || !isFile) &&
                     matchesPattern(name, pattern)) {
-                    yield await owner._snapshot(childPath, handle, signal);
+                    yield await owner.#snapshot(childPath, handle, signal);
                 }
                 if (mode === GetModes.Descendants && !isFile) yield* walk(owner, handle, childPath);
             }
@@ -144,7 +122,7 @@ export default class FilesystemFile extends Filesystem {
         if (!Number.isSafeInteger(offset) || offset < 0 || !Number.isSafeInteger(length) || length < -1) {
             throw new RangeError("Invalid read range");
         }
-        const handle = await this._file(path, { signal });
+        const handle = await this.#file(path, { signal });
         const file = await handle.getFile();
         checkAbort(signal);
         const start = Math.min(offset, file.size);
@@ -155,7 +133,7 @@ export default class FilesystemFile extends Filesystem {
     async getReadUrl(path, { contentType = null, signal } = {}) {
         validatePath(path);
         checkAbort(signal);
-        const handle = await this._file(path, { signal });
+        const handle = await this.#file(path, { signal });
         const file = await handle.getFile();
         checkAbort(signal);
         const extension = pathName(path).split(".").pop().toLowerCase();
@@ -189,7 +167,7 @@ export default class FilesystemFile extends Filesystem {
             data instanceof ArrayBuffer || ArrayBuffer.isView(data) || isStream;
         if (!isValid) throw new TypeError("Unsupported file content");
 
-        const handle = await this._file(path, { create:true, signal });
+        const handle = await this.#file(path, { create:true, signal });
         checkAbort(signal);
         const writable = await handle.createWritable({ keepExistingData:append });
         let reader = null;
@@ -224,15 +202,15 @@ export default class FilesystemFile extends Filesystem {
             if (reader) reader.releaseLock();
         }
 
-        return this._snapshot(path, handle, signal);
+        return this.#snapshot(path, handle, signal);
     }
 
     async createDirectory(path, { signal } = {}) {
         validatePath(path);
         this._ensureWritable();
         checkAbort(signal);
-        const handle = await this._directory(path, { create:true, signal });
-        return this._snapshot(path, handle, signal);
+        const handle = await this.#directory(path, { create:true, signal });
+        return this.#snapshot(path, handle, signal);
     }
 
     async delete(path, { signal } = {}) {
@@ -241,24 +219,28 @@ export default class FilesystemFile extends Filesystem {
         checkAbort(signal);
         if (path === "/") return;
         try {
-            const parent = await this._directory(parentPath(path), { signal });
+            const parent = await this.#directory(parentPath(path), { signal });
             checkAbort(signal);
             await parent.removeEntry(pathName(path), { recursive:true });
         } catch (error) {
-            if (!isNotFound(error)) throw error;
+            if (!this.#isNotFound(error)) throw error;
         }
     }
 
     // Private helpers
-    async _root(signal) {
+    #isNotFound(error) {
+        return error?.name === "NotFoundError" || error?.name === "TypeMismatchError";
+    }
+
+    async #root(signal) {
         checkAbort(signal);
         if (!this._rootHandle) throw new Error("No local directory selected");
         return this._rootHandle;
     }
 
-    async _directory(path, { create = false, signal } = {}) {
+    async #directory(path, { create = false, signal } = {}) {
         validatePath(path);
-        let directory = await this._root(signal);
+        let directory = await this.#root(signal);
         if (path === "/") return directory;
         for (const name of path.slice(1).split("/")) {
             checkAbort(signal);
@@ -268,26 +250,26 @@ export default class FilesystemFile extends Filesystem {
         return directory;
     }
 
-    async _file(path, { create = false, signal } = {}) {
+    async #file(path, { create = false, signal } = {}) {
         validatePath(path);
         if (path === "/") throw new Error("Cannot access root as a file");
-        const parent = await this._directory(parentPath(path), { signal });
+        const parent = await this.#directory(parentPath(path), { signal });
         checkAbort(signal);
         return parent.getFileHandle(pathName(path), { create });
     }
 
-    async _entry(path, signal) {
-        const parent = await this._directory(parentPath(path), { signal });
+    async #entry(path, signal) {
+        const parent = await this.#directory(parentPath(path), { signal });
         checkAbort(signal);
         try {
             return await parent.getFileHandle(pathName(path));
         } catch (error) {
-            if (!isNotFound(error)) throw error;
+            if (!this.#isNotFound(error)) throw error;
             return parent.getDirectoryHandle(pathName(path));
         }
     }
 
-    async _snapshot(path, handle, signal) {
+    async #snapshot(path, handle, signal) {
         checkAbort(signal);
         const file = handle.kind === "file" ? await handle.getFile() : null;
         checkAbort(signal);

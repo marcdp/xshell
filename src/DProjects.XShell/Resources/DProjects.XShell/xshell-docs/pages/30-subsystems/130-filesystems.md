@@ -36,7 +36,7 @@ new Implementation(injectedServices, options, credentials)
 
 The first constructor argument is a lazy proxy over the owning Services context. The second contains only validated provider options; it never contains `url`.
 The optional third argument is the provider `credentials` object and defaults to `null` for raw URL opening. Each provider derives its diagnostic `filesystem.url`
-from the same options projection used by Filesystems. The actual domain URL is the provider identity; no synthetic `filesystem:` Loader identity is created.
+from the same options projection used by Filesystems. The domain URL identifies the current raw-open request; no synthetic `filesystem:` Loader identity is created.
 
 The resulting Filesystem is a runtime provider instance, not an individually registered XShell Service. Filesystems owns result caching,
 in-flight promise sharing, and failed-creation eviction. Provider construction does not create Loader registry diagnostics or Bus events.
@@ -169,10 +169,11 @@ Filesystem provider
 `filesystem.url`, or cache identity, and they must never be encoded in provider URLs. In particular, the HTTP provider continues to reject embedded usernames
 and passwords.
 
-Filesystems recognizes and can validate the optional descriptor internally, but `open(url)` does not currently accept, acquire, or persist credential payloads.
-Raw URL opening therefore supplies `null`, and providers remain unaware of any persistence mechanism. A future management UI may use
-`optionsDefinition.schema` for non-secret configuration and `credentialsDefinition.schema` for secret configuration, but no Filesystems Preferences Page or
-Secrets-backed credential registry is implemented.
+When a provider is opened, Filesystems validates the optional descriptor and compiles `credentialsDefinition.schema` to reject malformed JSON Schema before
+construction. This schema check does not validate required credential properties when no payload exists. `open(url)` does not currently accept, acquire, or
+persist credential payloads, so raw URL opening supplies `null`; credential payload validation remains private infrastructure for future orchestration.
+Providers remain unaware of persistence. A future management UI may use `optionsDefinition.schema` for non-secret configuration and
+`credentialsDefinition.schema` for secret configuration, but no Filesystems Preferences Page or Secrets-backed credential registry is implemented.
 
 For raw URL opening, the round trip prevents the URL from becoming an independent configuration source:
 
@@ -185,8 +186,8 @@ https://example.test/files/
 https://example.test/files
 ~~~
 
-Filesystems uses the canonical result for diagnostics and provider cache identity. The provider constructor independently derives the same URL from its validated
-options rather than receiving that projection as construction input.
+Filesystems uses the canonical result for diagnostics and as the input to the current raw-open cache policy. The provider constructor independently derives the
+same URL from its validated options rather than receiving that projection as construction input.
 
 Another module can contribute a provider through ordinary XShell configuration composition by adding a new scheme key under the same Service
 options object:
@@ -219,10 +220,14 @@ static getCacheKey(url) {
 }
 ~~~
 
-A nonempty string is the provider-defined cache identity. Filesystems calls this method with the canonical projected URL, never the raw input. Returning
-`null`, or omitting the method, constructs a new instance for every `open()`.
-Filesystems owns concurrent sharing, completed instances, and failed-entry eviction; the provider owns only the identity policy. The memory
-Filesystem therefore leaves anonymous `mem:` instances isolated while reusing named identities such as `mem:workspace`.
+A nonempty string is the provider-defined cache identity for the current raw `open(url)` flow. Filesystems calls this method with the canonical projected URL,
+never the raw input. Returning `null`, or omitting the method, constructs a new instance for every `open()`. Filesystems owns concurrent sharing, completed
+instances, and failed-entry eviction; the provider owns only this raw-open identity policy. The memory Filesystem therefore leaves anonymous `mem:` instances
+isolated while reusing named identities such as `mem:workspace`.
+
+Named filesystem registrations are not implemented. A future registration flow may require non-secret registration identity because registrations could share
+one endpoint while differing in non-URL options or credentials. The current hook does not generalize canonical URL identity to that future flow, and credential
+values are never cache-key material.
 
 ## Commands
 

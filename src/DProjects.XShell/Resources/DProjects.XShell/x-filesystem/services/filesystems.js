@@ -18,8 +18,8 @@ function getDiagnosticUrl(url) {
     }
 }
 
-// Resolve the optional provider-owned credentials descriptor without validating absent payloads.
-function getProviderCredentialsDefinition(url, Implementation) {
+// Resolve the optional provider-owned credentials descriptor and compile its schema.
+function getProviderCredentialsDefinition(jsonValidator, url, Implementation) {
     let credentialsDefinition;
     try {
         credentialsDefinition = Implementation?.credentialsDefinition;
@@ -40,6 +40,13 @@ function getProviderCredentialsDefinition(url, Implementation) {
     if (schema === undefined) throw new Error(`Filesystem provider '${url}' must define static credentialsDefinition.schema.`);
     if (!schema || typeof schema !== "object" || Array.isArray(schema)) {
         throw new Error(`Filesystem provider '${url}' has an invalid static credentialsDefinition.schema: expected a JSON Schema object.`);
+    }
+
+    // Compile the schema without treating absent raw-open credentials as a payload validation failure.
+    try {
+        jsonValidator.validate({}, schema);
+    } catch (cause) {
+        throw new Error(`Filesystem provider '${url}' has an invalid static credentialsDefinition.schema: ${cause.message}`, {cause});
     }
     return credentialsDefinition;
 }
@@ -67,11 +74,6 @@ function validateCredentials(jsonValidator, url, credentialsDefinition, credenti
         throw new Error(`Invalid Filesystem provider credentials for '${url}'${formatValidationFailure(result.errors)}.`, {cause: result.errors});
     }
     return copy;
-}
-
-// Expose the narrow internal validation boundary for provider contract tests and future Filesystems orchestration.
-export function validateProviderCredentials(jsonValidator, url, Implementation, credentials) {
-    return validateCredentials(jsonValidator, url, getProviderCredentialsDefinition(url, Implementation), credentials);
 }
 
 export default class Filesystems {
@@ -187,7 +189,7 @@ export default class Filesystems {
 
         const Implementation = await this.#importProvider(diagnosticUrl, definition);
         const optionsDefinition = this.#getProviderOptionsDefinition(diagnosticUrl, Implementation);
-        const credentialsDefinition = getProviderCredentialsDefinition(diagnosticUrl, Implementation);
+        const credentialsDefinition = getProviderCredentialsDefinition(this.#jsonValidator, diagnosticUrl, Implementation);
         const parsedOptions = this.#parseProviderUrl(url, diagnosticUrl, optionsDefinition);
         const options = this.#mergeProviderOptions(definition, parsedOptions);
         this.#validateProviderOptions(diagnosticUrl, optionsDefinition, options);
@@ -339,7 +341,7 @@ export default class Filesystems {
         return url.match(/^([A-Za-z][A-Za-z0-9+.-]*):/)?.[1].toLowerCase() ?? null;
     }
     #getCacheKey(url, Implementation) {
-        // Let the provider opt into caching and define its semantic identity.
+        // Raw URL opening uses provider-defined canonical URL identity; future named registrations may require separate registration identity.
         let getCacheKey;
         try {
             getCacheKey = Implementation?.getCacheKey;

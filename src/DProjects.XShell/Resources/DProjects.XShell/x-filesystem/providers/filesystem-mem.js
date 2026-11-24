@@ -1,41 +1,7 @@
-import Filesystem, { EntryType, Features, GetModes, pathName, validatePath } from "./filesystem.js";
+import Filesystem, { EntryType, Features, GetModes, checkAbort, matchesPattern, parentPath, pathName, validatePath } from "./filesystem.js";
 
 // constants
 const READONLY_FLAG = 1;
-
-// utils
-function checkAbort(signal) {
-    if (!signal?.aborted) return;
-    if (typeof signal.throwIfAborted === "function") {
-        signal.throwIfAborted();
-    }
-    const error = new Error("Filesystem operation aborted");
-    error.name = "AbortError";
-    throw error;
-}
-
-function parentPath(path) {
-    const index = path.lastIndexOf("/");
-    return index === 0 ? "/" : path.slice(0, index);
-}
-
-function matchesPattern(name, pattern) {
-    if (pattern == null) return true;
-    if (typeof pattern !== "string") {
-        throw new TypeError("pattern must be a string or null");
-    }
-
-    let expression = "^";
-    for (let i = 0; i < pattern.length; i++) {
-        const char = pattern[i];
-        if (char === "*") expression += ".*";
-        else if (char === "?") expression += ".";
-        else if (char === "#") expression += "[0-9]";
-        else expression += char.replace(/[\\^$.*+?()[\]{}|]/g, "\\$&");
-    }
-
-    return new RegExp(expression + "$").test(name);
-}
 
 function toBytes(chunk) {
     if (chunk instanceof ArrayBuffer) {
@@ -168,11 +134,11 @@ export default class FilesystemMem extends Filesystem {
         this._entries = new Map();
         this._revision = 0;
 
-        this._entries.set("/", this._newEntry("/", EntryType.Directory));
+        this._entries.set("/", this.#newEntry("/", EntryType.Directory));
     }
 
     // methods (private)
-    _newEntry(path, type) {
+    #newEntry(path, type) {
         const now = new Date();
 
         return {
@@ -188,7 +154,7 @@ export default class FilesystemMem extends Filesystem {
         };
     }
 
-    _snapshot(entry) {
+    #snapshot(entry) {
         return {
             path: entry.path,
             name: pathName(entry.path),
@@ -201,7 +167,7 @@ export default class FilesystemMem extends Filesystem {
         };
     }
 
-    _markModified(entry, modified = new Date()) {
+    #markModified(entry, modified = new Date()) {
         entry.modified = new Date(modified);
 
         if (entry.type === EntryType.File) {
@@ -216,7 +182,7 @@ export default class FilesystemMem extends Filesystem {
 
         const entry = this._entries.get(path);
 
-        return entry ? this._snapshot(entry) : null;
+        return entry ? this.#snapshot(entry) : null;
     }
 
     async *getEntries(path, { mode = GetModes.All, pattern = null, signal } = {}) {
@@ -263,7 +229,7 @@ export default class FilesystemMem extends Filesystem {
                 continue;
             }
 
-            result.push(this._snapshot(entry));
+            result.push(this.#snapshot(entry));
         }
 
         result.sort((a, b) => a.path < b.path ? -1 : a.path > b.path ? 1 : 0);
@@ -388,7 +354,7 @@ export default class FilesystemMem extends Filesystem {
             throw new Error(`Cannot overwrite a directory: ${path}`);
         }
 
-        const entry = current ?? this._newEntry(path, EntryType.File);
+        const entry = current ?? this.#newEntry(path, EntryType.File);
 
         if (append && current) {
             const combined = new Uint8Array(entry.content.length + bytes.length);
@@ -403,10 +369,10 @@ export default class FilesystemMem extends Filesystem {
 
         entry.length = entry.content.length;
 
-        this._markModified(entry);
+        this.#markModified(entry);
         this._entries.set(path, entry);
 
-        return this._snapshot(entry);
+        return this.#snapshot(entry);
     }
 
     async createDirectory(path, { signal } = {}) {
@@ -415,7 +381,7 @@ export default class FilesystemMem extends Filesystem {
         checkAbort(signal);
 
         if (path === "/") {
-            return this._snapshot(this._entries.get("/"));
+            return this.#snapshot(this._entries.get("/"));
         }
 
         let current = "";
@@ -432,11 +398,11 @@ export default class FilesystemMem extends Filesystem {
                     throw new Error(`Path is a file, not a directory: ${current}`);
                 }
             } else {
-                this._entries.set(current, this._newEntry(current, EntryType.Directory));
+                this._entries.set(current, this.#newEntry(current, EntryType.Directory));
             }
         }
 
-        return this._snapshot(this._entries.get(path));
+        return this.#snapshot(this._entries.get(path));
     }
 
     async delete(path, { signal } = {}) {
@@ -469,7 +435,7 @@ export default class FilesystemMem extends Filesystem {
 
         const entry = this._entries.get(path);
 
-        if (entry) this._markModified(entry, date);
+        if (entry) this.#markModified(entry, date);
     }
 
     // methods LEVEL 4

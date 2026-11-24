@@ -1,4 +1,4 @@
-import Filesystem, { Features, GetModes, SyncModes, pathName, validatePath } from "./filesystem.js";
+import Filesystem, { Features, GetModes, SyncModes, checkAbort, pathName, validatePath } from "./filesystem.js";
 
 // MIME types defined by DProjects.Fs.Http.FilesystemHttp
 const MIME = Object.freeze({
@@ -15,19 +15,6 @@ const MIME = Object.freeze({
 
 const PATH_PREFIX_HEADER = "X-DPROJECTS-FS-PATH-PREFIX";
 const IF_ENTRY_TYPE_HEADER = "X-DPROJECTS-IF-ENTRY-TYPE";
-
-// utils
-function checkAbort(signal) {
-    if (!signal?.aborted) return;
-
-    if (typeof signal.throwIfAborted === "function") {
-        signal.throwIfAborted();
-    }
-
-    const error = new Error("Filesystem operation aborted");
-    error.name = "AbortError";
-    throw error;
-}
 
 // class
 export default class FilesystemHttp extends Filesystem {
@@ -97,13 +84,13 @@ export default class FilesystemHttp extends Filesystem {
     }
     // methods LEVEL 0
     async getEntry(path, { signal } = {}) {
-        const response = await this._request("GET", path, { accept: MIME.entry, signal });
+        const response = await this.#request("GET", path, { accept: MIME.entry, signal });
 
         if (response.status === 404) return null;
 
-        this._assertOk(response, "get entry");
+        this.#assertOk(response, "get entry");
 
-        return this._readEntry(response);
+        return this.#readEntry(response);
     }
 
     async *getEntries(path, { mode = GetModes.All, pattern = null, signal } = {}) {
@@ -114,11 +101,11 @@ export default class FilesystemHttp extends Filesystem {
         const query = { mode };
         if (pattern !== null) query.pattern = pattern;
 
-        const response = await this._request("GET", path, { accept: MIME.entries, query, signal });
+        const response = await this.#request("GET", path, { accept: MIME.entries, query, signal });
 
-        this._assertOk(response, "get entries");
+        this.#assertOk(response, "get entries");
 
-        const prefix = this._entryPathPrefix(response);
+        const prefix = this.#entryPathPrefix(response);
 
         if (!response.body) throw new Error("Filesystem entries response has no body");
 
@@ -145,13 +132,13 @@ export default class FilesystemHttp extends Filesystem {
 
                     buffer = buffer.slice(end + 1);
 
-                    if (line) yield this._parseEntry(JSON.parse(line), prefix);
+                    if (line) yield this.#parseEntry(JSON.parse(line), prefix);
                 }
             }
 
             buffer += decoder.decode();
 
-            if (buffer.trim()) yield this._parseEntry(JSON.parse(buffer), prefix);
+            if (buffer.trim()) yield this.#parseEntry(JSON.parse(buffer), prefix);
         } finally {
             try {
                 await reader.cancel();
@@ -164,7 +151,7 @@ export default class FilesystemHttp extends Filesystem {
     }
 
     async exists(path, { signal } = {}) {
-        const response = await this._request("HEAD", path, { signal });
+        const response = await this.#request("HEAD", path, { signal });
 
         if (response.status === 404) return false;
 
@@ -172,7 +159,7 @@ export default class FilesystemHttp extends Filesystem {
             return true;
         }
 
-        this._assertOk(response, "check existence");
+        this.#assertOk(response, "check existence");
 
         return true;
     }
@@ -199,10 +186,10 @@ export default class FilesystemHttp extends Filesystem {
             headers.Range = `bytes=${offset}-${end}`;
         }
 
-        const response = await this._request("GET", path, { accept: "*/*", headers, signal });
+        const response = await this.#request("GET", path, { accept: "*/*", headers, signal });
 
         if (response.status !== 200 && response.status !== 206) {
-            this._assertOk(response, "read file");
+            this.#assertOk(response, "read file");
         }
 
         if (ranged && response.status !== 206) {
@@ -239,7 +226,7 @@ export default class FilesystemHttp extends Filesystem {
         validatePath(path);
         checkAbort(signal);
         return {
-            url: this._requestUrl(path).href,
+            url: this.#requestUrl(path).href,
             expiresAt: null,
             dispose: null
         };
@@ -252,43 +239,43 @@ export default class FilesystemHttp extends Filesystem {
     async saveFile(path, data, { append = false, signal } = {}) {
         this._ensureWritable();
 
-        const body = this._uploadBody(data);
+        const body = this.#uploadBody(data);
 
-        const response = await this._request("PUT", path, {
+        const response = await this.#request("PUT", path, {
             accept: MIME.entry,
             contentType: append ? MIME.append : "application/octet-stream",
             body,
             signal
         });
 
-        this._assertOk(response, "save file");
+        this.#assertOk(response, "save file");
 
-        return this._readEntry(response);
+        return this.#readEntry(response);
     }
 
     async createDirectory(path, { signal } = {}) {
         this._ensureWritable();
 
-        const response = await this._request("PUT", path, {
+        const response = await this.#request("PUT", path, {
             accept: MIME.entry,
             contentType: MIME.directory,
             body: "",
             signal
         });
 
-        this._assertOk(response, "create directory");
+        this.#assertOk(response, "create directory");
 
-        return this._readEntry(response);
+        return this.#readEntry(response);
     }
 
     async delete(path, { signal } = {}) {
         this._ensureWritable();
 
-        const response = await this._request("DELETE", path, { signal });
+        const response = await this.#request("DELETE", path, { signal });
 
         if (response.status === 404) return;
 
-        this._assertOk(response, "delete entry");
+        this.#assertOk(response, "delete entry");
     }
 
     async touch(path, modified = new Date(), { signal } = {}) {
@@ -300,14 +287,14 @@ export default class FilesystemHttp extends Filesystem {
             throw new TypeError("Invalid modified date");
         }
 
-        const response = await this._request("PATCH", path, {
+        const response = await this.#request("PATCH", path, {
             accept: MIME.entry,
             contentType: MIME.entry,
             body: JSON.stringify({ modified: date.toISOString() }),
             signal
         });
 
-        this._assertOk(response, "touch entry");
+        this.#assertOk(response, "touch entry");
     }
 
     // methods LEVEL 3
@@ -315,33 +302,33 @@ export default class FilesystemHttp extends Filesystem {
     async deleteFile(path, { signal } = {}) {
         this._ensureWritable();
 
-        const response = await this._request("DELETE", path, {
+        const response = await this.#request("DELETE", path, {
             headers: { [IF_ENTRY_TYPE_HEADER]: "file" },
             signal
         });
 
-        if (response.status !== 404) this._assertOk(response, "delete file");
+        if (response.status !== 404) this.#assertOk(response, "delete file");
     }
 
     async deleteDirectory(path, { signal } = {}) {
         this._ensureWritable();
 
-        const response = await this._request("DELETE", path, {
+        const response = await this.#request("DELETE", path, {
             headers: { [IF_ENTRY_TYPE_HEADER]: "dir" },
             signal
         });
 
-        if (response.status !== 404) this._assertOk(response, "delete directory");
+        if (response.status !== 404) this.#assertOk(response, "delete directory");
     }
 
     async copy(source, destination, { overwrite = true, recursive = true, ignoreErrors = false, tries = 1, signal } = {}) {
         this._ensureWritable();
         validatePath(source);
 
-        const response = await this._request("PUT", destination, {
+        const response = await this.#request("PUT", destination, {
             contentType: MIME.copy,
             body: JSON.stringify({
-                Source: this._httpPath(source),
+                Source: this.#httpPath(source),
                 Overwrite: overwrite,
                 Recursive: recursive,
                 IgnoreErrors: ignoreErrors,
@@ -350,23 +337,23 @@ export default class FilesystemHttp extends Filesystem {
             signal
         });
 
-        this._assertOk(response, "copy entry");
+        this.#assertOk(response, "copy entry");
     }
 
     async move(source, destination, { ignoreErrors = false, signal } = {}) {
         this._ensureWritable();
         validatePath(source);
 
-        const response = await this._request("PUT", destination, {
+        const response = await this.#request("PUT", destination, {
             contentType: MIME.move,
             body: JSON.stringify({
-                Source: this._httpPath(source),
+                Source: this.#httpPath(source),
                 IgnoreErrors: ignoreErrors
             }),
             signal
         });
 
-        this._assertOk(response, "move entry");
+        this.#assertOk(response, "move entry");
     }
 
     async sync(source, destination, { mode = SyncModes.LeftToRight, sourceExcludes = [], destinationExcludes = [], ignoreErrors = false, tries = 1, signal } = {}) {
@@ -377,10 +364,10 @@ export default class FilesystemHttp extends Filesystem {
             throw new RangeError(`Unsupported sync mode: ${mode}`);
         }
 
-        const response = await this._request("PUT", destination, {
+        const response = await this.#request("PUT", destination, {
             contentType: MIME.sync,
             body: JSON.stringify({
-                Source: this._httpPath(source),
+                Source: this.#httpPath(source),
                 Mode: mode,
                 SourceExcludes: sourceExcludes,
                 DestinationExcludes: destinationExcludes,
@@ -390,7 +377,7 @@ export default class FilesystemHttp extends Filesystem {
             signal
         });
 
-        this._assertOk(response, "sync entries");
+        this.#assertOk(response, "sync entries");
     }
 
     // methods LEVEL 4
@@ -400,9 +387,9 @@ export default class FilesystemHttp extends Filesystem {
     }
 
     async getMetadata(path, { signal } = {}) {
-        const response = await this._request("GET", path, { accept: MIME.metadata, signal });
+        const response = await this.#request("GET", path, { accept: MIME.metadata, signal });
 
-        this._assertOk(response, "get metadata");
+        this.#assertOk(response, "get metadata");
 
         return response.json();
     }
@@ -416,29 +403,29 @@ export default class FilesystemHttp extends Filesystem {
             throw new TypeError("metadata must be an object or Map");
         }
 
-        const response = await this._request("PATCH", path, {
+        const response = await this.#request("PATCH", path, {
             accept: MIME.entry,
             contentType: MIME.entry,
             body: JSON.stringify({ metadata: properties }),
             signal
         });
 
-        this._assertOk(response, "set metadata");
+        this.#assertOk(response, "set metadata");
     }
 
     async supports(path, feature, { signal } = {}) {
         if (feature === Features.CreateWatcher) return false;
 
-        const response = await this._request("GET", path, { accept: MIME.supports, query: { feature }, signal });
+        const response = await this.#request("GET", path, { accept: MIME.supports, query: { feature }, signal });
 
-        this._assertOk(response, "check feature support");
+        this.#assertOk(response, "check feature support");
 
         return response.json();
     }
 
     // HTTP helpers
 
-    _requestUrl(path, query = null) {
+    #requestUrl(path, query = null) {
         validatePath(path);
 
         const url = new URL(this._baseUrl);
@@ -457,13 +444,13 @@ export default class FilesystemHttp extends Filesystem {
 
     // The middleware expects an absolute HTTP path
     // in the Source property of copy/move/sync requests.
-    _httpPath(path) {
+    #httpPath(path) {
         validatePath(path);
 
         return (this._basePath === "/" ? "" : this._basePath) + (path === "/" ? "" : path) || "/";
     }
 
-    async _request(method, path, { accept, contentType, headers, body, query, signal } = {}) {
+    async #request(method, path, { accept, contentType, headers, body, query, signal } = {}) {
         checkAbort(signal);
 
         const requestHeaders = new Headers(headers);
@@ -486,10 +473,10 @@ export default class FilesystemHttp extends Filesystem {
             if (body instanceof ReadableStream) init.duplex = "half";
         }
 
-        return fetch(this._requestUrl(path, query), init);
+        return fetch(this.#requestUrl(path, query), init);
     }
 
-    _uploadBody(data) {
+    #uploadBody(data) {
         if (typeof data === "string" || data instanceof Blob || data instanceof ArrayBuffer ||
             ArrayBuffer.isView(data) || data instanceof ReadableStream) {
             return data;
@@ -498,7 +485,7 @@ export default class FilesystemHttp extends Filesystem {
         throw new TypeError("File data must be a string, Blob, ArrayBuffer, typed array, or ReadableStream");
     }
 
-    _assertOk(response, operation) {
+    #assertOk(response, operation) {
         if (response.ok) return;
 
         if (response.status === 405) {
@@ -508,7 +495,7 @@ export default class FilesystemHttp extends Filesystem {
         throw new Error(`Unable to ${operation}: HTTP ${response.status} ${response.statusText}`);
     }
 
-    _entryPathPrefix(response) {
+    #entryPathPrefix(response) {
         const prefix = response.headers.get(PATH_PREFIX_HEADER) || "";
 
         if (prefix && prefix !== "/" && this._basePath !== prefix && !this._basePath.startsWith(prefix + "/")) {
@@ -518,7 +505,7 @@ export default class FilesystemHttp extends Filesystem {
         return prefix === "/" ? "" : prefix;
     }
 
-    _parseEntry(dto, prefix) {
+    #parseEntry(dto, prefix) {
         if (!dto || typeof dto.path !== "string") throw new Error("Invalid filesystem entry response");
 
         // Translate paths relative to the HTTP endpoint.
@@ -554,9 +541,9 @@ export default class FilesystemHttp extends Filesystem {
         };
     }
 
-    async _readEntry(response) {
-        const prefix = this._entryPathPrefix(response);
+    async #readEntry(response) {
+        const prefix = this.#entryPathPrefix(response);
 
-        return this._parseEntry(await response.json(), prefix);
+        return this.#parseEntry(await response.json(), prefix);
     }
 }
