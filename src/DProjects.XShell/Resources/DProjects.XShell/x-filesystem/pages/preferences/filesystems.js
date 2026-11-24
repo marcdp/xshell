@@ -25,8 +25,7 @@ export default {
                         </x-listview-column>
                     </x-listview-head>
                     <x-listview-body>
-                        <x-listview-item x-for="item in state.items" x-key="name" x-prop:value="item.name"
-                            x-attr:label="item.label" icon="x-folder">
+                        <x-listview-item x-for="item in state.items" x-key="name" x-prop:value="item.name" icon="x-filesystem" x-attr:label="item.label">
                             <span x-text="item.name"></span>
                             <span x-text="item.provider"></span>
                             <div style="text-align:right">

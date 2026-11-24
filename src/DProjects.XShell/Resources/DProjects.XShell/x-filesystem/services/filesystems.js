@@ -155,26 +155,29 @@ export default class Filesystems {
         const validatedCredentials = credentials === undefined || credentials === null
             ? credentials : this.#validateCredentials(resolved.definition.provider, credentialsDefinition, credentials);
 
-        // Persist only authored options, then apply the explicitly requested credential operation.
-        await this.#preferences.set(DEFINITION_PREFIX + resolved.definition.name, structuredClone(resolved.definition));
-        this.#namedInstances.delete(resolved.definition.name);
+        // Establish interactive vault access before applying an explicitly requested credential operation.
         if (validatedCredentials !== undefined) {
             const credentialName = CREDENTIAL_PREFIX + resolved.definition.name;
+            await this.#secrets.get(credentialName);
             if (validatedCredentials === null) await this.#secrets.delete(credentialName);
             else await this.#secrets.set(credentialName, validatedCredentials, {
                 label: `${resolved.definition.label} credentials`,
                 description: `Credentials for filesystem '${resolved.definition.name}'.`
             });
         }
+
+        // Persist only authored options and invalidate the runtime identity after every requested write succeeds.
+        await this.#preferences.set(DEFINITION_PREFIX + resolved.definition.name, structuredClone(resolved.definition));
+        this.#namedInstances.delete(resolved.definition.name);
     }
     async removeDefinition(name) {
-        // Remove only credentials belonging to an existing credential-bearing definition.
+        // Remove deterministic credentials for an existing definition without resolving its provider.
         this.#validateDefinitionName(name);
         const stored = await this.#preferences.get(DEFINITION_PREFIX + name, null);
         if (stored !== null) {
-            const resolved = await this.#resolveDefinition(stored);
-            const credentialsDefinition = this.#getProviderCredentialsDefinition(resolved.definition.provider, resolved.Implementation);
-            if (credentialsDefinition !== undefined) await this.#secrets.delete(CREDENTIAL_PREFIX + name);
+            const credentialName = CREDENTIAL_PREFIX + name;
+            const storedCredentials = await this.#secrets.get(credentialName);
+            if (storedCredentials !== undefined) await this.#secrets.delete(credentialName);
         }
 
         // Delete the registration and invalidate its separate runtime identity.

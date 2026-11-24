@@ -330,7 +330,7 @@ x-page[layout='stack'] + x-page[layout='stack'] + x-page[layout='stack'] + x-pag
     --x-loading-background:light-dark(#CCCCCC, #3A3A3A);
     --x-loading-height: .4em;
     --x-loading-duration: 4s;
-    --x-loading-delay: .250ms;
+    --x-loading-delay: 250ms;
 
     /* x-object */
     --x-object-row-background-hover:var(--x-color-background-alt);

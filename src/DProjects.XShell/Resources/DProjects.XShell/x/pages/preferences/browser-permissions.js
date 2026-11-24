@@ -33,28 +33,30 @@ export default {
         <x-notice x-if="!state.secure" type="warning" label="Secure connection required" message="Most browser permission APIs require HTTPS or a trusted local origin."></x-notice>
         <x-notice x-if="state.loading" type="working" label="Checking permissions"></x-notice>
 
-        <x-datafield label="Current origin" type="text" x-attr:value="state.origin" disabled></x-datafield>
-        <x-datafield label="Secure connection" type="checkbox" x-attr:value="state.secure" disabled></x-datafield>
-        <x-datafield label="Permissions" class="no-padding">
-            <x-listview view="details" x-on:activate="request">
-                <x-listview-head>
-                    <x-listview-column label="Permission" width="12em"></x-listview-column>
-                    <x-listview-column label="Description"></x-listview-column>
-                    <x-listview-column label="Status" width="7em" style="text-align:center;"></x-listview-column>
-                </x-listview-head>
-                <x-listview-body>
-                    <x-listview-item x-for="permission in state.permissions" x-attr:key="permission.name" x-attr:label="permission.label" x-attr:data-permission="permission.name">
-                        <span x-text="permission.description"></span>
-                        <span style="text-align:center;">
-                            <x-icon x-if="permission.status == 'denied'" icon="x-close"></x-icon>
-                            <x-icon x-if="permission.status == 'granted'" icon="x-check"></x-icon>
-                            <x-icon x-if="permission.status == 'prompt'" icon="x-empty"></x-icon>
-                            {{permission.statusLabel}}
-                        </span>
-                    </x-listview-item>
-                </x-listview-body>
-            </x-listview>
-        </x-datafield>
+        <x-datafields>
+            <x-datafield label="Current origin" type="text" x-attr:value="state.origin" disabled></x-datafield>
+            <x-datafield label="Secure connection" type="checkbox" x-attr:value="state.secure" disabled></x-datafield>
+            <x-datafield label="Permissions" class="no-padding">
+                <x-listview view="details" x-on:activate="request">
+                    <x-listview-head>
+                        <x-listview-column label="Permission" width="12em"></x-listview-column>
+                        <x-listview-column label="Description"></x-listview-column>
+                        <x-listview-column label="Status" width="7em" style="text-align:center;"></x-listview-column>
+                    </x-listview-head>
+                    <x-listview-body>
+                        <x-listview-item x-for="permission in state.permissions" x-attr:key="permission.name" x-attr:label="permission.label" x-attr:data-permission="permission.name">
+                            <span x-text="permission.description"></span>
+                            <span style="text-align:center;">
+                                <x-icon x-if="permission.status == 'denied'" icon="x-close"></x-icon>
+                                <x-icon x-if="permission.status == 'granted'" icon="x-check"></x-icon>
+                                <x-icon x-if="permission.status == 'prompt'" icon="x-empty"></x-icon>
+                                {{permission.statusLabel}}
+                            </span>
+                        </x-listview-item>
+                    </x-listview-body>
+                </x-listview>
+            </x-datafield>
+        </x-datafields>
     `,
     state: {
         origin: null,

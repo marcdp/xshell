@@ -12,10 +12,11 @@ export default {
     },
     style: `
         :scope {display:block;}
-        x-datafield {margin-top: .25em;}
     `,
     template: `
-        <x-datafield type="select" label="Language" x-prop:domain="state.languages" x-model="state.language"></x-datafield>
+        <x-datafields>
+            <x-datafield type="select" label="Language" x-prop:domain="state.languages" x-model="state.language"></x-datafield>
+        </x-datafields>
     `,
     state: {
         language: "en",

@@ -40,9 +40,9 @@ export default {
         
         
         x-loading {
+            position:absolute;
             width:var(--x-loading-width);
             left:50%;
-            transform:translateX(-50%);
             z-index:10;
         }        
     `,

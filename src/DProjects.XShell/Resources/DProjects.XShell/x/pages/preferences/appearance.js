@@ -12,10 +12,11 @@ export default {
     },
     style: `
         :scope {display:block;}
-        x-datafield {margin-top: .25em;}
     `,
     template: `
-        <x-datafield type="radios" label="Theme" x-prop:domain="state.themes" x-model="state.theme"></x-datafield>
+        <x-datafields>
+            <x-datafield type="radios" label="Theme" x-prop:domain="state.themes" x-model="state.theme"></x-datafield>
+        </x-datafields>
     `,
     state: {
         theme: "system",

@@ -98,8 +98,10 @@ Filesystems Service
 
 `getDefinition(name)` returns one defensive definition plus its optional credentials for editing. `saveDefinition(definition, credentials)` preserves existing
 credentials when the second argument is omitted, replaces them when it is an object, and removes them when it is `null`. `openNamed()` retrieves and validates
-stored credentials before passing them separately to the provider constructor. Removing a credential-bearing definition also removes its associated Secret.
-Credential payloads never enter provider URLs or cache keys.
+stored credentials before passing them separately to the provider constructor. Credential-bearing saves establish Secrets access before changing either
+persistence boundary, so cancelled or failed vault access leaves the definition unchanged. Removal derives the credential key from the definition name and does
+not require the provider to remain installed; stale named definitions and any associated Secret therefore remain removable. Credential payloads never enter
+provider URLs or cache keys.
 
 Runtime-only values such as a local `FileSystemDirectoryHandle` are not persisted, so a named `file:` Filesystem may still need a handle attached through the
 existing provider API.
@@ -224,7 +226,8 @@ and passwords.
 When a provider is opened, Filesystems validates the optional descriptor and compiles `credentialsDefinition.schema` to reject malformed JSON Schema before
 construction. This schema check does not validate required credential properties when no payload exists. Raw `open(url)` continues to supply `null` because
 credentials belong only to named definitions. The generic detail Page uses `optionsDefinition.schema` and `credentialsDefinition.schema`; Filesystems validates
-both payloads authoritatively and keeps providers unaware of persistence.
+both payloads authoritatively and keeps providers unaware of persistence. Providers intended to be editable through the generic Filesystems Preferences Page
+should expose schemas compatible with the supported `x-schema` form subset; this management UI capability does not restrict broader provider validation schemas.
 
 For raw URL opening, the round trip prevents the URL from becoming an independent configuration source:
 
