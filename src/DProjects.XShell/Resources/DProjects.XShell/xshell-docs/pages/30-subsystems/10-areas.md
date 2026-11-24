@@ -17,7 +17,6 @@ This composition fragment omits module metadata/defaults and other effective con
                     "label": "Reports",
                     "items": [{ "label": "Reports", "path": "reports", "href": "/pages/report.js", "default": true }]
                 },
-                "tools": { "items": [{ "label": "Export", "href": "/pages/export.js" }] },
                 "shortcuts": { "scope": "global", "items": [{ "label": "About", "href": "/pages/about.js" }] }
             }
         }

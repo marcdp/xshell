@@ -42,7 +42,7 @@ export default {
             z-index:10;
         }
 
-        /* x */
+        /* x-app-menu */
         x-app-menu {
             position:sticky;
             top:0;
@@ -51,68 +51,54 @@ export default {
         }
 
         /* dock-container */
-        .dock-container {flex:1;}
+        .dock-container {flex:1; }
+        .dock-container .docked-main {display:flex; }
+        .dock-container .docked-main .body {flex:1;}
         .dock-container .docked-page {position:relative;}
 
         .dock-container x-splitter x-toolbar {transform: translateZ(90);}
         .dock-container x-splitter x-toolbar span {flex:1;}
 
-        .dock-container.bottom {display:flex; flex-direction:column;height:100vh; overflow:hidden;}
-        .dock-container.bottom .docked-main {display:block; flex:1; min-height:10em; overflow-y:auto;  scrollbar-width:thin; scrollbar-gutter: stable;}
-        .dock-container.bottom .docked-page {flex:0 0 25em; min-height:10em;  overflow-y:auto; scrollbar-width:thin; background:var(--x-color-background-page);}  
+        .dock-container.bottom {display:flex; flex-direction:column;height:100vh; overflow:hidden; height:100vh;}
+        .dock-container.bottom .docked-main {overflow-y:auto;  scrollbar-width:thin; scrollbar-gutter: stable; }
+        .dock-container.bottom .docked-main x-app-area-menu {position:block; height:100%;}
+        .dock-container.bottom .docked-page {flex:0 0 25em; min-height:10em; overflow-y:auto; scrollbar-width:thin; background:var(--x-color-background-page);}  
         .dock-container.bottom .docked-page x-page {height:100%;}
-        
-        .dock-container.right {display:flex; flex-direction:row; height:100vh; width:100vw; }
-        .dock-container.right .docked-main {display:block; flex:1; min-width:10em; overflow:auto; scrollbar-width:thin; height:100vh; }
+
+        .dock-container.right {display:flex; flex-direction:row; height:100vh; width:100vw; overflow:hidden;}
+        .dock-container.right .docked-main { overflow-y:auto; scrollbar-width:thin; scrollbar-gutter: stable; flex:1;}
         .dock-container.right .docked-page {flex:0 0 25em; min-width:10em; overflow-y:auto; scrollbar-width:thin; background:var(--x-color-background-page);}  
         .dock-container.right .docked-page x-page {height:100%;}
 
-        /* header */
-        .header {
-            display:flex;
-            align-items:center;
-            padding-left:1.2em;
-            padding-right:1.5em;
-            border-bottom:var(--x-layout-main-border);
-            background:var(--x-layout-main-header-background);
-            min-height:3.15em;
-            position:relative;
-        }
-        .header .logo {display:block; }
-        .header .logo img {display:block; width:3em; height:1.9em; object-fit:contain; border-right:var(--x-layout-main-border);}
-        .header .spacer {flex:1}
-        .header x-dropdown {margin-left:.5em; }        
-        .header.shell {z-index:6; padding-left:.65em;}
-        .header.breadcrumb {z-index:5; padding-right:1.5em;}
-        .header-actions {display:flex; gap:.5em;}
-
-        /* breadcrumb */
-        .breadcrumb {position:sticky; top:0; user-select: none; flex:1;}
-        .breadcrumb x-icon.toggle {border-radius:50%; font-size:1.225em; width:1.75em; height:1.75em; display:inline-flex; align-items:center; justify-content:center;line-height:1em; background:var(--x-color-primary); color:var(--x-color-white); margin-right:.25em; cursor:pointer; margin-right:.5em}
-        .breadcrumb x-icon.toggle:hover {background:var(--x-color-primary-dark); }
-        .breadcrumb x-icon.toggle:active {background:var(--x-color-primary-x-dark)}
-        .breadcrumb x-icon.toggle.toggled {background:none; color:var(--x-color-text)}
-        .breadcrumb x-icon.toggle.toggled:hover {background:var(--x-color-xxxxx-gray); }
-        .breadcrumb x-icon.toggle.toggled:active {background:var(--x-color-xxxx-gray)}
-
-        /* menu */
-        .body .menu {
+        /* x-app-area-menu */
+        x-app-area-menu {
+            height:100vh; 
+            position:sticky; 
+            top:0; 
+            bottom:0;
+            overflow:auto;
             width: var(--x-layout-main-drawer-width);
             box-sizing: border-box;
             flex-shrink:0;            
             padding:1.3em;
             padding-left:2em;
+            background:var(--x-layout-main-drawer-background);
+            scrollbar-width:none; 
+            scrollbar-gutter: stable;
         }
-        .body .menu div x-button {
-            position:absolute; 
-            right: 1em;
-        }
+        x-app-area-menu:hover {
+            scrollbar-width:thin; 
+        } 
+        
+
 
         /* main */
-        .body main {
+        main {
             position:relative;
             box-sizing:border-box;
             padding: var(--x-layout-main-page-padding-vertical) var(--x-layout-main-page-padding-horizontal) var(--x-layout-main-page-padding-vertical) var(--x-layout-main-page-padding-horizontal);            
+            border-left:var(--x-layout-main-border);
+            
         }
         .title {display:flex}
         .title > div:first-child {flex:1; }
@@ -123,10 +109,40 @@ export default {
             line-height:125%;
             font-weight:700;
         }
-        .title x-page-description {
+        .title x-page-breadcrumb {
             font-size:var(--x-font-size-small);
-            transform:translateY(-1.2em);
+            transform:translateY(-1em);
             display:block;
+        }
+        main:before {
+            content: '';
+            display: block;
+            border-right: var(--x-layout-main-border);
+            border-bottom: var(--x-layout-main-border);
+            width:.75em;
+            height:.75em;
+            background:var(--x-layout-main-header-background);
+            border-radius:0 0 .75em 0;
+            position: fixed;
+            top: 0em;
+            margin-left:-1.75em;
+            z-index:10;
+            corner-shape: scoop;
+        }
+        main:after {
+            content: '';
+            display: block;
+            border-right: var(--x-layout-main-border);
+            border-top: var(--x-layout-main-border);
+            width:.75em;
+            height:.75em;
+            background:var(--x-layout-main-header-background);
+            border-radius:0 .75em 0 0;
+            position: fixed;
+            bottom: 0em;
+            margin-left:-1.75em;
+            z-index:10;
+            corner-shape: scoop;
         }
 
         /* desktop */
@@ -138,42 +154,15 @@ export default {
             }
             .body {
                 display:flex;
-                transition:margin var(--x-transition-duration);
-                
-            }
-            .body .menu {
-                position:sticky;
-                top:3.2em;
-                height:calc(100vh - 6.5em);
-                overflow-y:auto;
-                align-self: flex-start;
-                z-index:1;
-                background:var(--x-layout-main-drawer-background);
-            }
-            .body .menu {overflow:auto; scrollbar-width: none;}
-            .body .menu::-webkit-scrollbar {width: 0;height: 0;}
-            .body .menu:hover {scrollbar-width: thin;}
-            .body .menu:hover::-webkit-scrollbar {width: 8px;height: 8px;}
-            .body.toggled {
-                margin-left: calc(var(--x-layout-main-drawer-width) * -1);	
-            }
-            .body .menu div x-button {
-                right: unset;
-                left:calc(var(--x-layout-main-drawer-width) - 2.5em);
-            }
-
-            .body .menu x-button[icon='x-close'] {
-                display:none;
-            }
+                transition:margin var(--x-transition-duration);                
+            } 
+            
             .body .divider {
                 position:fixed; 
                 top:0; 
                 bottom:0;
                 left: var(--x-layout-main-drawer-width);;
                 transition:transform var(--x-transition-duration);
-            }
-            .body.toggled .divider {
-                transform: translateX(calc(var(--x-layout-main-drawer-width) * -1));	
             }
             .body main { 
                 flex:1;                
@@ -200,7 +189,6 @@ export default {
                     --x-layout-main-page-max-width: unset;
                     --x-layout-main-page-max-width
                 }
-                .body:is(.layout-fill, .main-layout-fill).toggled > main {left:0;}
                 .body:is(.layout-fill, .main-layout-fill) main > div {
                     max-width: unset;
                     margin-left:unset;
@@ -238,10 +226,6 @@ export default {
             .header .spacer  {display:none}
             .header .input-dropdown {flex:1;}
 
-            .breadcrumb x-icon.toggle {background:none; color:var(--x-color-text)}
-            .breadcrumb x-icon.toggle:hover {background:var(--x-color-xxxxx-gray); }
-            .breadcrumb x-icon.toggle:active {background:var(--x-color-xxxx-gray)}
-
             .body {
                 --x-fill-height: calc(100vh - 6.5em);
             }
@@ -268,10 +252,6 @@ export default {
             .body .menu x-button:not([icon='x-close']) {
                 display:none;
             }
-            .body.toggled .menu {
-                transform:translateX(0);
-                overflow-y:auto;
-            }
             .body .divider {display:none;}
 
             }
@@ -289,28 +269,11 @@ export default {
 
             <div class="docked-main" x-on:scroll="onScroll">
 
-
-                <!-- breadcrumb -->
-                <nav class="header breadcrumb">
-                    <div x-if="state.menuNavigation">
-                        <x-icon icon="x-menu" x-on:click="onToggleMenu" class="toggle" x-class:toggled="state.toggled"></x-icon>
-                    </div>
-                    <x-page-breadcrumb></x-page-breadcrumb>
-
-                    <div class="spacer"></div>
-
-                    <x-menu x-prop:menu="state.menuTools" class="horizontal"></x-menu>            
-                </nav>
+                <!-- x-app-area-menu -->
+                <x-app-area-menu></x-app-area-menu>
 
                 <!-- body -->
-                <div x-attr:class="'body' + (state.pageClasses ? ' ' + state.pageClasses : '') + (state.toggled ? ' toggled' : '')">
-                    <nav class="menu">
-                        <div>
-                            <x-button class="anchor" icon="x-close" x-on:click="onToggleMenu"></x-button>
-                            <x-area-menu></x-area-menu>
-                        </div>
-                    </nav>
-                    <div class="divider"></div>
+                <div x-attr:class="'body' + (state.pageClasses ? ' ' + state.pageClasses : '')">
                     <main>           
                         <div>   
                             <div class="title">
@@ -318,14 +281,15 @@ export default {
                                     <h1>
                                         <x-page-title></x-page-title>
                                     </h1>
-                                    <x-page-description></x-page-description>                            
+                                    <x-page-breadcrumb></x-page-breadcrumb>
+                                    
                                 </div>
                                 <div class="header-actions">
                                     <slot name="header-actions"></slot>
                                     <x-page-info></x-page-info>
                                 </div>
-                            </div>                                                          
-                            
+                            </div>              
+                            <x-page-description></x-page-description>
                             <slot></slot>
                         </div>
                     </main>
@@ -349,7 +313,6 @@ export default {
     `,
     state: {
         menuNavigation:  null,
-        menuTools:       null,
         pageClasses:     "",
         dockPosition:    "bottom",
         dockSrc:         ""
@@ -368,13 +331,6 @@ export default {
                 const savedPromise = Promise.allSettled(keys.map(key => preferences.get(key)));
                 events.on(state, "change:toggled", () => { if (!restoring) menuChanged = true; });
                 // auto close menu on navigation start (mobile)
-                events.on(bus, "xshell:navigation:start", (e) => {
-                    if (probablyPhone()) {
-                        if (state.toggled) {
-                            state.toggled = false;
-                        }
-                    }
-                });
                 events.on(bus, "xshell:navigation:end", "refresh");
                 // bind refresh
                 events.on(bus, "xshell:menus:change", "refresh")
@@ -402,13 +358,11 @@ export default {
                     else this.deletePreference("x-layout-main.dockSrc");
                     this.savePreference("x-layout-main.dockPosition", state.dockPosition);
                     postRender("restoreDockSize");
-                    postRender("refreshMenuHeight");
                 });
                 // Apply only fields that remained untouched while IndexedDB was loading.
                 const saved = await savedPromise;
                 restoring = true;
                 try {
-                    if (!menuChanged) state.toggled = saved[0].status === "fulfilled" && saved[0].value === "true";
                     if (!dockSrcChanged) state.dockSrc = saved[1].status === "fulfilled" ? saved[1].value || "" : "";
                     if (!dockPositionChanged) state.dockPosition = saved[2].status === "fulfilled" ? saved[2].value || "bottom" : "bottom";
                     if (state.dockSrc) document.documentElement.setAttribute("data-scrollbar", "none");
@@ -426,25 +380,8 @@ export default {
                 this.refresh();
 
                 // Initialize menu and update its height on scroll and resize
-                window.addEventListener("scroll", () => this.refreshMenuHeight(), { passive: true });
-                window.addEventListener("resize", () => this.refreshMenuHeight());
-                this.refreshMenuHeight();
                 if (state.dockSrc) {
                     postRender("restoreDockSize");
-                    postRender("refreshMenuHeight");
-                }
-            },
-
-            refreshMenuHeight() {
-                const menu = host.shadowRoot.querySelector(".body > .menu");
-                const dockedMain = host.shadowRoot.querySelector(".docked-main");
-                if (!menu) return;
-                const top = menu.getBoundingClientRect().top;
-                if (state.dockSrc && state.dockPosition === "bottom") {
-                    const dockedMainRect = dockedMain.getBoundingClientRect();
-                    menu.style.height = `${dockedMainRect.height - top}px`;
-                } else {
-                    menu.style.height = `${window.innerHeight - top}px`;
                 }
             },
 
@@ -465,14 +402,12 @@ export default {
                     } else if (page.breadcrumb && page.breadcrumb.length){
                         //get module
                         moduleId = page.host?.getAttribute("module");
-                        //show menu main and tools
+                        //show menu main 
                         state.menuNavigation = areas.getMenu("navigation")?.items || [];
-                        state.menuTools = areas.getMenu("tools")?.items || [];
                     } else {
                         // not found breadcrumb in page
-                        // show menu main and tools
+                        // show menu main 
                         state.menuNavigation = areas.getMenu("navigation")?.items || [];
-                        state.menuTools = areas.getMenu("tools")?.items || [];
                         //breadcrumb
                         if (state.menuNavigation) {
                             let menuitems = findObjectsPath(state.menuNavigation, 'href', page.href);
@@ -482,11 +417,6 @@ export default {
             },
 
             // events
-            async onToggleMenu(params) {
-                //toggle-menu
-                state.toggled = !state.toggled;
-                this.savePreference("xshell.toggled", String(state.toggled));
-            },
             savePreference(key, value) {
                 // Keep writes ordered and absorb storage failures without blocking interaction.
                 pendingWrite = pendingWrite.then(() => preferences.set(key, value)).catch(() => {});
@@ -501,7 +431,6 @@ export default {
                 if (page) {
                     state.pageClasses = page.meta?.classes?.join(" ") || "";
                 }
-                this.refreshMenuHeight();
             },
             onDockClose() {
                 // dock close
@@ -513,7 +442,6 @@ export default {
             },
             onDockResize({ event }) {
                 // Keep menu sizing current throughout splitter changes.
-                this.refreshMenuHeight();
                 if (event.type !== "resize") return;
 
                 // Persist the measured dock dimension only when resizing finishes.
@@ -560,11 +488,6 @@ export default {
                 }
                 panel.style.flex = `0 0 ${Math.min(Math.max(size, panelMin), maximum)}px`;
             },
-            onScroll() {
-                // handle scroll
-                this.refreshMenuHeight();
-            }
-
         };
     }
 }

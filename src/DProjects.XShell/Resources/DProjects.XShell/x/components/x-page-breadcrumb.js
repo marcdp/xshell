@@ -24,11 +24,11 @@ export default {
         ul {margin:0; padding:0; display: flex; align-items:center; box-sizing: border-box;}
         ul li {list-style:none; margin-right:.5em; display:flex; }
         ul li.empty {display:none;}
-        ul li x-anchor {position:relative; font-weight:500; }
-        ul li x-anchor.selected:after {content:""; border-bottom:.1em var(--x-color-primary) solid; bottom:.1em; left:0; right:0; position:absolute;}
-        x-icon.separator {color:var(--x-color-text-x-gray); margin-left:.35em; width:1em;}
-        ul li:last-child {flex:1;}
-        ul li:last-child x-icon.separator {visibility:hidden}
+        ul li x-anchor {position:relative; font-weight:400; }
+        ul li x-icon.separator {color:var(--x-color-text-x-gray); margin-left:.15em; width:.7em;}
+        ul li:not(.last) x-anchor { font-weight:500;}
+        ul li.last {}
+        ul li.last x-icon.separator {display:none}
 
         @media (max-width: 768px) {
             ul {overflow:hidden; white-space: nowrap; flex:1;}
@@ -40,20 +40,15 @@ export default {
         }
     `,
     template: `
+        
         <ul x-if="state.breadcrumb">
-            <li x-for="item in state.breadcrumb" x-class:empty="!item.label">
-                <x-anchor 
-                    class="plain" 
-                    x-attr:href="item.path || item.href"  
-                    x-class:selected="(item!=state.breadcrumb[state.breadcrumb.length-1])" 
-                    x-class:gray="item==state.breadcrumb[state.breadcrumb.length-1]"
-                    open="auto"
-                >
+            <li x-for="item in state.breadcrumb" x-class:empty="!item.label" x-class:last="item==state.breadcrumb[state.breadcrumb.length-1]">
+                <x-anchor class="plain" x-attr:href="item.path || item.href">
                     {{ item.label }}
                 </x-anchor>
                 <x-icon icon="x-keyboard-arrow-right" class="separator"></x-icon>
             </li>
-        </ul>
+        </ul>        
     `,
     state: {
         breadcrumb: []

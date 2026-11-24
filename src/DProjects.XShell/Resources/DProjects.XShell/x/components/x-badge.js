@@ -38,6 +38,13 @@ export default {
             background-color: var(--x-color-background-page);
             border:.1em var(--x-color-primary) solid;
         }
+        :host(.animate) .message {
+            animation: zoom 1s ease-in-out infinite;
+        }
+        @keyframes zoom {
+            0%, 100% { transform: scale(.9); }
+            50% { transform: scale(1.1); }
+        }
     `,
     template: `
         <span class="message" x-text="state.value" ></span>

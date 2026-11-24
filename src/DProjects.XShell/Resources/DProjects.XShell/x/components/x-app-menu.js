@@ -18,72 +18,44 @@ export default {
         ]
     },
     style: `
-        :host {display:flex; flex-direction: row;}
-        :host > div {
-            display:flex; background:var(--x-layout-main-drawer-background); border-right: var(--x-layout-main-border); flex-direction: column;
+        :host {
+            display:flex;
+            background:var(--x-layout-main-drawer-background);
+            border-right: var(--x-layout-main-border); flex-direction: column;
             height:100%;
+            width:3.8em;
             box-sizing: border-box;
             padding:.5em;
         }
-        div span {flex: 1;}
+        div {display:flex; flex-direction: column; flex:1;}
+        x-menuitem.flex {flex:1; visibility:hidden;}
+        x-menuitem[label='-'] {padding-left:.75em; padding-right:.75em;}
     `,
     template: `
-        <div>
-            <div x-if="state.menuGlobal" >
-
-                <x-menuitem x-recursive="(menuitem,index,indexAbsolute,indent) in state.menuGlobal"
-                    x-key="id,href,path,command,order"
-                    x-attr:embedded="menuitem.embedded"
-                    x-attr:label="menuitem.label"
-                    x-attr:href="menuitem.href"
-                    x-attr:command="menuitem.command"
-                    x-attr:icon="menuitem.icon"
-                    x-attr:selected="(indent==0 && menuitem.href == state.selected)"
-                    x-attr:class="(indent==0 && !state.expanded ? 'icon ' : '') + menuitem.class"
-                    x-attr:tooltip="menuitem.tooltip"
-                    x-attr:open="menuitem.open"
-                    x-attr:outlet="menuitem.outlet"
-                    >
-                </x-menuitem>
-
-            </div>
-            <span></span>
-            <div x-if="state.menuShortcuts">
-
-                <x-dropdown class="tasks right up" collapse-on-click x-show="state.tasksRunning + state.tasksFinished > 0">
-                    <x-button class="round light" icon="x-tasks" tooltip="Background tasks"
-                        x-attr:badge="state.tasksFinished > 0 ? state.tasksFinished : (state.tasksRunning > 0 ? state.tasksRunning : '')"
-                        x-attr:badge-class="state.tasksFinished == 0 ? 'plain' : ''"
-                    ></x-button>
-                    <x-page slot="dropdown" src="/pages/tasks.js" loading="lazy"></x-page>
-                </x-dropdown>
-
-                <div>
-                    <x-menuitem x-recursive="(menuitem,index,indexAbsolute,indent) in state.menuShortcuts"
-                        x-key="id,href,path,command,order"
-                        x-attr:embedded="menuitem.embedded"
-                        x-attr:label="menuitem.label"
-                        x-attr:href="menuitem.href"
-                        x-attr:command="menuitem.command"
-                        x-attr:icon="menuitem.icon"
-                        x-attr:selected="(indent==0 && menuitem.href == state.selected)"
-                        x-attr:class="(indent==0 && !state.expanded ? 'icon ' : '') + menuitem.class"
-                        x-attr:tooltip="menuitem.tooltip"
-                        x-attr:open="menuitem.open"
-                        x-attr:outlet="menuitem.outlet"
-                        >
-                    </x-menuitem>
-                </div>
-            </div>
+        <div x-if="state.menu" >
+            <x-menuitem x-recursive="(menuitem,index,indexAbsolute,indent) in state.menu"
+                x-key="id,href,path,command,order"
+                x-attr:embedded="menuitem.embedded"
+                x-attr:label="menuitem.label"
+                x-attr:href="menuitem.href"
+                x-attr:command="menuitem.command"
+                x-attr:icon="menuitem.icon"
+                x-attr:expand-on="indent == 0 ? 'click' : 'hover'"
+                x-attr:selected="(indent==0 && menuitem.href == state.selected)"
+                x-attr:class="(indent==0 && !state.expanded ? 'icon ' : '') + menuitem.class"
+                x-attr:tooltip="menuitem.tooltip"
+                x-attr:open="menuitem.open"
+                x-attr:outlet="menuitem.outlet"
+                x-attr:badge="(menuitem.class == 'tasks' ? ((state.tasksRunning + state.tasksFinished) || '') : menuitem.badge)"
+                x-attr:badge-class="(menuitem.class == 'tasks' ? (state.tasksRunning ? 'animate ' : '') + ( state.tasksFinished ? '' : 'plain ' ) : '')"
+                >
+            </x-menuitem>
         </div>
-
-
     `,
     state: {
         expanded: false,
         selected: "",
-        menuGlobal: null,
-        menuShortcuts: null,
+        menu: null,
         tasksRunning:    0,
         tasksFinished:   0,
         tasksButtonVisible: false
@@ -102,8 +74,7 @@ export default {
 
             refresh() {
                 //refresh
-                state.menuGlobal = areas.getMenu("global").items;
-                state.menuShortcuts = areas.getMenu("shortcuts").items;
+                state.menu = areas.getMenu("global").items;
             },
             refreshSelected() {
                 // Resolve the Area home to its canonical href.
@@ -123,8 +94,8 @@ export default {
                 state.tasksRunning = allTasks.filter(task => task.background && (task.status === "pending" || task.status === "running")).length;
                 state.tasksFinished = allTasks.filter(task => task.background && task.status === "finished").length;
                 if (tasksRunningBefore == 0 && state.tasksRunning > 0) {
-                    const dropdown = host.shadowRoot.querySelector("x-dropdown.tasks");
-                    dropdown.expand();
+                    const menuitem = host.shadowRoot.querySelector(".tasks");
+                    menuitem.expand();
                 }
             },
         }

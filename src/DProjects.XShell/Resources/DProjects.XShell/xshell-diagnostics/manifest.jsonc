@@ -19,7 +19,7 @@
             },
             "menus": {
                 "navigation": { "source": "/pages" },
-                "shortcuts": {
+                "global": {
                     "items": [
                         {"id": "root", "children": [
                             {"label": "-", "order": 99},

@@ -16,12 +16,15 @@ export default {
             disabled:    {type:"boolean", default:false, attribute:true, state:true, description:""},
             embedded:    {type:"boolean", default:false, attribute:true, state:true, description:"Hosts the target Page inline instead of rendering a navigation anchor."},
             tooltip:     {type:"string", default:"", attribute:true, state:true, description:"Optional tooltip text shown on the navigation anchor."},
+            expandOn:    {type: "string", default: "auto", attribute: true, state: true, enum: ["auto", "click", "hover"], description: "Determines how child menu items are expanded."},
             open:        {type: "string",default: "",attribute: true,state: true,enum: ["auto", "stack", "top", "dialog", "dock", "embed"]},
-            outlet:      {type: "string",default: "",attribute: true,state: true}
+            outlet:      {type: "string",default: "",attribute: true,state: true},
+            badge:     {type:"string", default:"", attribute:true, state:true, description:""},
+            badgeClass: {type:"string", default:"plain", attribute:true, state:true, description:""},
         },
         methods: {
             focus: {description: "Focuses the menu item."},
-            expand: {description: "Handles click events on the menu item."}
+            expand: {description: "Expands the child menu items."}
         },
         slots: {
             "": {
@@ -36,9 +39,9 @@ export default {
             },
             {
                 name: "submenu",
-                description: "Toggle an inline submenu by clicking its parent item.",
+                description: "Toggle an inline submenu explicitly by clicking its parent item.",
                 template: `
-                    <x-menuitem class="inline" label="Tools">
+                    <x-menuitem class="inline" label="Tools" expand-on="click">
                         <x-menuitem label="Tasks" href="page:x:/pages/tasks.js" open="stack"></x-menuitem>
                     </x-menuitem>
                 `
@@ -133,14 +136,15 @@ export default {
         <div x-elseif="state.embedded">
             <x-page x-attr:src="state.href" loading="lazy"></x-page>
         </div>
-        <x-button x-elseif="state.command" class="menuitem" x-attr:command="state.command" x-attr:label="state.label" x-attr:icon="state.icon" x-attr:disabled="state.disabled" >
+        <x-button x-elseif="state.command" class="menuitem" x-attr:command="state.command" x-attr:label="state.label" x-attr:icon="state.icon" x-attr:disabled="state.disabled" x-attr:badge="state.badge" x-attr:badge-class="state.badgeClass">
         </x-button>
         <x-anchor x-else class="menuitem anchor" x-class:down="state.childsDown" x-attr:href="state.href" x-attr:disabled="state.disabled" x-attr:expanded="state.expanded" x-class:selected="state.selected" x-attr:tooltip="state.tooltip" x-attr:open="state.open" x-attr:outlet="state.outlet">
             <x-icon x-if="state.checked" icon="x-check"></x-icon>
             <x-icon x-if="!state.checked && state.icon" class="icon" x-attr:icon="state.icon"></x-icon>
+            <x-badge x-if="state.badge" x-attr:value="state.badge" x-attr:class="state.badgeClass"></x-badge>
             <span   x-if="state.label" class="label">{{ state.label + ' ' + state.command}}</span>
             <span   x-if="state.suffix" class="suffix">{{ state.suffix }}</span>
-            <x-icon x-if="state.hasChilds" class="has-childs" x-attr:icon="(state.childsDown ? 'x-keyboard-arrow-down' : 'x-keyboard-arrow-right')"></x-icon>
+            <x-icon x-if="state.hasChilds" class="has-childs" x-attr:icon="(state.childsDown ? 'x-keyboard-arrow-down' : 'x-keyboard-arrow-right')" x-on:click="expandTrigger"></x-icon>
         </x-anchor>
         <x-contextmenu x-if="state.hasChilds" x-show="state.expanded" submenu x-class:down="state.childsDown" x-class:left="state.childsLeft" x-class:inline="state.childsInline">
             <slot x-on:slotchange="refresh"></slot>
@@ -150,47 +154,129 @@ export default {
     controller({ state, host }) {
         return {
             mount() {
-                //load
-                host.addEventListener("mouseenter", ()=>{
-                    if (host.classList.contains("inline")) {
-                    } else {
-                        const horizontal = host.parentNode?.parentNode?.host?.classList.contains("horizontal");
-                        if (horizontal) {
-                        } else {
-                            state.expanded = true;
-                            this.refresh();
-                        }
-                    }
-                });
-                host.addEventListener("mouseleave", ()=>{
-                    if (host.classList.contains("inline")) {
-                    } else {
-                        const horizontal = host.parentNode?.parentNode?.host?.classList.contains("horizontal");
-                        if (horizontal) {
-                        } else {
-                            state.expanded = false;
-                            this.refresh();
-                        }
-                    }
-                });
-                host.addEventListener("click", (event) => {
-                    host.shadowRoot.querySelector("x-anchor")?.focus();
-                    const horizontal = host.parentNode?.parentNode?.host?.classList.contains("horizontal");
-                    if (host.classList.contains("inline") || horizontal) {
-                        state.expanded = !state.expanded;
-                        this.refresh();
-                    }
-                    event?.preventDefault();
-                    event?.stopPropagation();
-                });
+                // Bind interaction listeners once for the mounted Component.
+                this._mouseEnter = event => this.mouseEnter(event);
+                this._mouseLeave = event => this.mouseLeave(event);
+                this._click = event => this.click(event);
+                this._keydown = event => this.keydown(event);
+                this._commandActivated = event => this.commandActivated(event);
+                this._documentPointerDown = event => this.documentPointerDown(event);
+                this._siblingExpanded = event => this.siblingExpanded(event);
+                host.addEventListener("mouseenter", this._mouseEnter);
+                host.addEventListener("mouseleave", this._mouseLeave);
+                host.addEventListener("click", this._click, true);
+                host.addEventListener("keydown", this._keydown);
+                host.addEventListener("command", this._commandActivated);
                 this.refresh();
             },
 
-            expand(){
-                if (host.parentNode?.localName == "x-contextmenu") {
-                    state.expanded = true;
-                    this.refresh();
+            unmount() {
+                // Remove host and document listeners retained by this Component.
+                host.removeEventListener("mouseenter", this._mouseEnter);
+                host.removeEventListener("mouseleave", this._mouseLeave);
+                host.removeEventListener("click", this._click, true);
+                host.removeEventListener("keydown", this._keydown);
+                host.removeEventListener("command", this._commandActivated);
+                this.collapse();
+            },
+
+            expansionMode() {
+                // Resolve automatic behavior without coupling explicit modes to presentation.
+                if (state.expandOn !== "auto") return state.expandOn;
+                const horizontal = host.parentNode?.parentNode?.host?.classList.contains("horizontal");
+                return host.classList.contains("inline") || horizontal ? "click" : "hover";
+            },
+
+            mouseEnter() {
+                // Expand hover-driven items while the pointer is within the item or its submenu.
+                if (this.expansionMode() === "hover") this.expand();
+            },
+
+            mouseLeave() {
+                // Collapse hover-driven items after the pointer leaves the complete item subtree.
+                if (this.expansionMode() === "hover") this.collapse();
+            },
+
+            click(event) {
+                // Let nested items activate independently and dismiss this dropdown after activation.
+                const path = event.composedPath();
+                const item = path.find(element => element.localName === "x-menuitem");
+                if (item !== host) {
+                    if (state.expanded && !host.classList.contains("inline")) this.collapse();
+                    return;
                 }
+
+                // Let the dedicated indicator handler own indicator activation.
+                if (path.some(element => element.classList?.contains("has-childs"))) return;
+
+                // Focus the trigger and toggle click or touch-driven items without swallowing activation.
+                host.shadowRoot.querySelector("x-anchor")?.focus();
+                const touch = event.pointerType && event.pointerType !== "mouse" || event.sourceCapabilities?.firesTouchEvents;
+                const togglesItem = this.expansionMode() === "click" || touch;
+                if (!togglesItem || !state.hasChilds || state.disabled) return;
+                this.toggle();
+                if (!state.href && !state.command) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                }
+            },
+
+            expandTrigger({event}) {
+                // Use the submenu indicator without consuming an item's destination activation.
+                if (!state.hasChilds || state.disabled) return;
+                event.preventDefault();
+                event.stopPropagation();
+                this.toggle();
+            },
+
+            keydown(event) {
+                // Dismiss the nearest expanded dropdown with Escape.
+                if (event.key !== "Escape" || !state.expanded || host.classList.contains("inline")) return;
+                event.preventDefault();
+                event.stopPropagation();
+                this.collapse();
+                this.focus();
+            },
+
+            commandActivated(event) {
+                // Dismiss a dropdown after a command inside it is activated.
+                if (state.expanded && !host.classList.contains("inline") && event.target !== host) this.collapse();
+            },
+
+            documentPointerDown(event) {
+                // Dismiss a dropdown when pointer activation starts outside its subtree.
+                if (!event.composedPath().includes(host)) this.collapse();
+            },
+
+            siblingExpanded(event) {
+                // Keep only one dropdown expanded for sibling items in the same menu.
+                const item = event.detail?.item;
+                if (item && item !== host && item.parentNode === host.parentNode) this.collapse();
+            },
+
+            expand() {
+                // Expand only enabled items that currently contain child menu items.
+                this.refresh();
+                if (!state.hasChilds || state.disabled || state.expanded) return;
+                state.expanded = true;
+                if (!host.classList.contains("inline")) {
+                    document.addEventListener("pointerdown", this._documentPointerDown, true);
+                    document.addEventListener("x-menuitem-expand", this._siblingExpanded, true);
+                    host.dispatchEvent(new CustomEvent("x-menuitem-expand", {detail: {item: host}, bubbles: true, composed: true}));
+                }
+            },
+
+            collapse() {
+                // Collapse centrally and release dropdown dismissal listeners.
+                state.expanded = false;
+                document.removeEventListener("pointerdown", this._documentPointerDown, true);
+                document.removeEventListener("x-menuitem-expand", this._siblingExpanded, true);
+            },
+
+            toggle() {
+                // Toggle through the shared expansion and collapse paths.
+                if (state.expanded) this.collapse();
+                else this.expand();
             },
 
             refresh(args) {

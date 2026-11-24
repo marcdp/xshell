@@ -27,7 +27,18 @@
                     "icon": "x-settings",
                     "items":[
                         {"label": "-", "order":100},
-                        {"label": "Search", "icon":"x-search", "href": "/pages/search.js", "open":"stack"}
+                        {"label": "Search", "icon":"x-search", "children": [
+                            {"label": "Search Options", "href": "/pages/search.js", "embedded": true}
+                        ]},
+                        {"label": "Tasks", "icon":"x-tasks", "class": "tasks", "order":800, "children": [
+                            {"label": "Background Tasks", "href": "/pages/tasks.js", "embedded": true}
+                        ]},
+                        {"label": "-", "order":900, "class": "flex"},                        
+                        {"id": "root", "label": "Settings", "icon": "x-settings", "class": "top right", "children": [
+                            {"label": "Preferences", "href": "/pages/workspace.js?menu-name=preferences", "open":"stack"},
+                            {"label": "-", "order": 100},
+                            {"label": "About", "href": "/pages/about.js"}
+                        ]}
                     ]
                 },
                 "preferences": {
@@ -43,17 +54,6 @@
                         {"label": "Secrets", "href": "/pages/preferences/secrets.js"},
                         {"label": "-", "order": 100},
                         {"label": "About", "href": "/pages/about.js"}
-                    ]
-                },
-                "shortcuts": {
-                    "scope": "global",
-                    "label": "Shortcuts",
-                    "items": [
-                        {"id": "root", "label": "Settings", "icon": "x-settings", "class": "top right", "children": [
-                            {"label": "Preferences", "href": "/pages/workspace.js?menu-name=preferences", "open":"stack"},
-                            {"label": "-", "order": 100},
-                            {"label": "About", "href": "/pages/about.js"}
-                        ]}
                     ]
                 }
             }

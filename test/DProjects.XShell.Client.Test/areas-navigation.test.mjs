@@ -291,7 +291,6 @@ test("Area menu ordering includes inventory and named source contributions", () 
     ]);
     assert.deepEqual([items[3].module, items[3].icon, items[3].href], ["runtime", "x-link", "/main/_assets/runtime/pages/index.js"]);
     assert.deepEqual(items[2].children.map(item => [item.label, item.order]), [["Beta", 0], ["Alpha", 1], ["Zulu", 2]]);
-    assert.deepEqual(areas.getMenu("tools").items.map(item => item.order), [0, 1]);
 });
 
 test("Areas composition helpers are inaccessible through ordinary properties", () => {

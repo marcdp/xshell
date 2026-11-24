@@ -2,7 +2,7 @@
 // component
 export default {
     contract: {
-        description: "Displays the main menu for the current page.",
+        description: "Displays the main area menu for the current page.",
         tags: ["navigation", "menus", "pages"],
         events: {},
         properties: {},
@@ -11,7 +11,7 @@ export default {
             {
                 name: "basic",
                 description: "Place the effective navigation menu in a Page sidebar.",
-                template: `<aside aria-label="Navigation"><x-area-menu></x-area-menu></aside>`
+                template: `<x-app-area-menu></x-app-area-menu>`
             }
         ]
     },

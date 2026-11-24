@@ -68,7 +68,7 @@
     --x-layout-main-border: 1px light-dark(#B4B4BB, #313236) solid;
     --x-layout-main-drawer-width: 19em;
     --x-layout-main-page-max-width: 75em;
-    --x-layout-main-header-background:light-dark(#FFFFFF, #191A1B);
+    --x-layout-main-header-background:light-dark(#F9F9F9, #191A1B);
     --x-layout-main-drawer-background:light-dark(#F9F9F9, #191A1B);
     --x-layout-main-page-padding-vertical: 1.7em;
     --x-layout-main-page-padding-horizontal: 1.7em;
@@ -300,8 +300,8 @@ x-page[layout='stack'] + x-page[layout='stack'] + x-page[layout='stack'] + x-pag
     --x-menuitem-border-radius: .5em;
     --x-menuitem-separator-color: light-dark(#B4B4BB, #505058);
 
-    --x-menuitem-background-hover: var(--x-color-background-xx-gray);
-    --x-menuitem-background-active: var(--x-color-background-xxx-gray);
+    --x-menuitem-background-hover: var(--x-color-background-x-gray);
+    --x-menuitem-background-active: var(--x-color-background-xx-gray);
     --x-menuitem-background-selected: var(--x-color-background-xx-gray);
     
     /* x-notice */
