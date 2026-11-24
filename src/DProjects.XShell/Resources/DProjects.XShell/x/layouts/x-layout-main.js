@@ -31,7 +31,10 @@ export default {
     },
     style:`
         :host {
-            display:block;
+            display:flex;
+            flex-direction:row;
+            flex:1;
+            width:100%;
             min-height:100vh;
             background:var(--x-color-background-page);
         }
@@ -47,8 +50,16 @@ export default {
             z-index:10;
         }
 
+        /* x */
+        x-global-menu {
+            position:sticky;
+            top:0;
+            height:100vh;
+            z-index:2;
+        }
 
-        /* dock */
+        /* dock-container */
+        .dock-container {flex:1;}
         .dock-container .docked-page {position:relative;}
 
         .dock-container x-splitter x-toolbar {transform: translateZ(90);}
@@ -295,6 +306,9 @@ export default {
         <!-- loading -->
         <x-loading x-if="state.status=='loading'"></x-loading>        
 
+        <!-- global menu -->
+        <x-global-menu></x-global-menu>
+
         <!-- docked page -->
         <div x-attr:class="'dock-container ' + (state.dockSrc ? state.dockPosition : '')">
 
@@ -309,7 +323,7 @@ export default {
                     
                     <x-dropdown class="areas popover">
                         <x-icon tabindex="1" icon="x-apps" class="size-x2"></x-icon>
-                        <x-page slot="dropdown" src="/pages/areas.js" loading="lazy"></x-page>
+                        <x-page slot="dropdown" src="/pages/global.js" loading="lazy"></x-page>
                     </x-dropdown>
 
                     <x-dropdown class="input-dropdown">
@@ -361,7 +375,7 @@ export default {
                     <nav class="menu">
                         <div>
                             <x-button class="anchor" icon="x-close" x-on:click="onToggleMenu"></x-button>
-                            <x-page-menu></x-page-menu>
+                            <x-area-menu></x-area-menu>
                         </div>
                     </nav>
                     <div class="divider"></div>

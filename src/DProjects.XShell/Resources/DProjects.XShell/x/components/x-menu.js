@@ -13,7 +13,7 @@ export default {
                 name: "basic",
                 description: "Bind an array of navigation items to the menu.",
                 state: {items: [
-                    {label: "Areas", icon: "x-folder", href: "page:x:/pages/areas.js"},
+                    {label: "Global", icon: "x-folder", href: "page:x:/pages/global.js"},
                     {label: "Tasks", href: "page:x:/pages/tasks.js"}
                 ]},
                 template: `<x-menu x-prop:menu="state.items"></x-menu>`

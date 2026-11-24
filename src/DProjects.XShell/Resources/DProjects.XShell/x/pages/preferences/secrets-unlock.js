@@ -127,6 +127,7 @@ export default {
                 const fallback = secrets.options.rememberMinutes;
                 const durations = [
                     {value:0, label:"Do not keep unlocked"},
+                    {value:1, label:"1 minute"},
                     {value:15, label:"15 minutes"},
                     {value:480, label:"8 hours"},
                     {value:10080, label:"7 days"},

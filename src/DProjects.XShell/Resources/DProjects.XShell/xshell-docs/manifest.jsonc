@@ -18,6 +18,11 @@
                 }
             },
             "menus": {
+                "global": {
+                    "items":[
+                        {"label": "Docs", "icon":"xshell-docs", "href": "/pages/index.md"}
+                    ]
+                },
                 "navigation": { "source": "/pages" }
             },
             "dependencies": {

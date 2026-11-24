@@ -390,6 +390,62 @@ test("x-client supports nested positional loops, recursion, x-once, and opaque x
     assert.equal(second.at(-2).children.length, 0);
 });
 
+const recursiveIndentSource = '<article x-recursive="(item,index,indexAbsolute,depth) in state.trees" x-attr:data-depth="depth" x-class:nested="depth > 0" x-style:--depth="depth"><span x-if="depth == item.depth" x-text="depth"></span><b>{{ depth }}:{{ index }}:{{ indexAbsolute }}:{{ item.name }}</b><i x-for="value in item.values">{{ depth }}-{{ value }}</i></article><section x-recursive="item in state.other" x-attr:data-depth="indent">{{ item.name }}:{{ indent }}</section>';
+fixtures.set(recursiveIndentSource, () => [
+    element("article", { "x-recursive": "(item,index,indexAbsolute,depth) in state.trees", "x-attr:data-depth": "depth", "x-class:nested": "depth > 0", "x-style:--depth": "depth" }, [
+        element("span", { "x-if": "depth == item.depth", "x-text": "depth" }, []),
+        element("b", {}, [text("{{ depth }}:{{ index }}:{{ indexAbsolute }}:{{ item.name }}")]),
+        element("i", { "x-for": "value in item.values" }, [text("{{ depth }}-{{ value }}")])
+    ]),
+    element("section", { "x-recursive": "item in state.other", "x-attr:data-depth": "indent" }, [text("{{ item.name }}:{{ indent }}")])
+]);
+
+test("x-client binds explicit recursive depth across expression contexts and keeps the implicit default", () => {
+    const renderer = createClientTemplateRenderer(recursiveIndentSource, {});
+    const state = {
+        trees: [
+            { name: "A", depth: 0, values: ["a"], children: [{ name: "A1", depth: 1, values: ["b", "c"], children: [{ name: "A1a", depth: 2, values: [], children: [] }] }] },
+            { name: "B", depth: 0, values: [], children: [] }
+        ],
+        other: [{ name: "Other", depth: 0, values: ["z"], children: [] }]
+    };
+    const vdom = renderer.render(state, () => {}, () => {}, renderUtils, null, 0);
+    const textContent = node => node.tag === "#comment" ? "" : node.tag === "#text" ? node.children : Array.isArray(node.children) ? node.children.map(textContent).join("") : String(node.children ?? "");
+    const articles = [];
+    const visit = nodes => {
+        for (const node of nodes) {
+            if (node.tag === "article") articles.push(node);
+            if (Array.isArray(node.children)) visit(node.children);
+        }
+    };
+    visit(vdom);
+
+    assert.deepEqual(articles.map(node => node.attrs["data-depth"]), [0, 1, 2, 0]);
+    assert.deepEqual(articles.map(node => node.attrs.class ?? ""), ["", "nested", "nested", ""]);
+    assert.deepEqual(articles.map(node => node.styles["--depth"].value), ["0", "1", "2", "0"]);
+    assert.deepEqual(articles.map(node => textContent(node.children.find(child => child.tag === "span"))), ["0", "1", "2", "0"]);
+    assert.deepEqual(articles.map(node => textContent(node.children.find(child => child.tag === "b"))), ["0:0:0:A", "1:0:1:A1", "2:0:2:A1a", "0:1:3:B"]);
+    assert.deepEqual(articles.map(node => node.children.filter(child => child.tag === "i").map(textContent)), [["0-a"], ["1-b", "1-c"], [], []]);
+
+    const section = vdom.find(node => node.tag === "section");
+    assert.equal(section.attrs["data-depth"], 0);
+    assert.equal(textContent(section), "Other:0");
+});
+
+test("x-client validates explicit recursive tuple locals", () => {
+    const explicitIndentSource = '<li x-recursive="(item,index,indexAbsolute,indent) in state.items">{{ indent }}</li>';
+    fixtures.set(explicitIndentSource, () => [element("li", { "x-recursive": "(item,index,indexAbsolute,indent) in state.items" }, [text("{{ indent }}")])]);
+    assert.doesNotThrow(() => createClientTemplateRenderer(explicitIndentSource));
+
+    const indentSource = '<li x-recursive="(item,index,indent) in state.items"></li>';
+    fixtures.set(indentSource, () => [element("li", { "x-recursive": "(item,index,indent) in state.items" }, [])]);
+    assert.throws(() => createClientTemplateRenderer(indentSource), /'indent' must be declared in the fourth tuple position/);
+
+    const duplicateSource = '<li x-recursive="(item,item) in state.items"></li>';
+    fixtures.set(duplicateSource, () => [element("li", { "x-recursive": "(item,item) in state.items" }, [])]);
+    assert.throws(() => createClientTemplateRenderer(duplicateSource), /variable names must be unique/);
+});
+
 function keyedLoopSource(directive, key) {
     // Register the fixture DOM for a loop with the given key declaration.
     const collection = "item in state.items";

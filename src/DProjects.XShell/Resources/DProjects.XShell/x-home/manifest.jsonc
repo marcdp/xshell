@@ -14,6 +14,11 @@
                 "x": "module:x:latest"
             },
             "menus": {
+                "global": {
+                    "items":[
+                        {"label": "Home", "icon":"x-home", "href": "/pages/index.js"}
+                    ]
+                },
                 "navigation": {
                     "items": [
                         { "label": "Home", "icon": "x:x-home", "path": "home", "href": "/pages/index.js" }

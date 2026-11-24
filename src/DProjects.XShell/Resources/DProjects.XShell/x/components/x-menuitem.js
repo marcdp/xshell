@@ -32,7 +32,7 @@ export default {
             {
                 name: "basic",
                 description: "Display an icon and a link as a menu item.",
-                template: `<x-menuitem label="Areas" icon="x-folder" href="page:x:/pages/areas.js"></x-menuitem>`
+                template: `<x-menuitem label="Global" icon="x-folder" href="page:x:/pages/global.js"></x-menuitem>`
             },
             {
                 name: "submenu",
@@ -59,7 +59,7 @@ export default {
         :host x-anchor span.label {color:var(--x-color-text)!important; flex:1;  display:block; padding-top:.4em; padding-bottom:.4em; white-space:nowrap; padding-right:1.5em; padding-left: calc(var(--x-menuitem-indent) * 1em)!important;}
         :host x-anchor span.suffix {color:var(--x-color-text-gray)!important; padding-left:1em;}
         :host x-anchor x-icon.has-childs {width:unset; margin-left:.25em;}
-        :host x-anchor x-icon:first-child {}
+        :host x-anchor x-icon:first-child {width:2em; text-align:left;}
         :host x-anchor x-icon:first-child:last-child {align-self:flex-end;}
         :host x-anchor x-icon + .label {padding-left:.35em;}
         :host x-anchor.selected {font-weight: 500; background:var(--x-color-background-x-gray);}
@@ -73,6 +73,7 @@ export default {
         x-contextmenu.left {left:100%!important; margin-left:.1em; transform:translateX(-100%);}
 
         /* inline */
+        :host(.inline) {display:block;}
         :host(.inline) x-anchor .has-childs {transform:rotate(90deg); transition: transform var(--x-transition-duration);}
         :host(.inline) x-anchor[expanded] .has-childs {transform:rotate(-90deg)}
         :host(.inline) > x-contextmenu {
@@ -82,6 +83,14 @@ export default {
             margin:0; 
             margin-bottom: -.15em;
         }
+
+        /* icon */
+        :host(.icon) {}
+        :host(.icon) x-anchor {padding:0; }
+        :host(.icon) x-icon:first-child {text-align:center; width:unset; font-size:1.2em;}
+        :host(.icon) x-anchor span {display:none; padding-right:0}
+        :host(.icon) x-anchor::part(a) {height:2.6em;}
+        :host(.icon) x-icon.has-childs {display:none;}
         
     `,
     state: {

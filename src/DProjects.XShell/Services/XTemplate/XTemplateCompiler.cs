@@ -187,17 +187,19 @@ namespace DProjects.XShell.Services.XTemplate {
                     var recursiveLoop = ParseLoop(structuralDirective.Attribute!.Value, structuralDirective.Attribute.Name, true, element);
                     var recursiveForType = key == null ? "position" : "key";
                     var recursiveCollection = CompileExpression(recursiveLoop.Collection, structuralDirective.Attribute.Name, element.SourceOffset, scope);
-                    javascript.Add($"{indent}...(func = (_items, {recursiveLoop.AbsoluteIndex}, {recursiveLoop.Indent}, wrapper) => {{ let _itemsArray = utils.expr.collection(_items); let _result = [");
+                    var recursiveCounter = "_counter";
+                    while (new[] { recursiveLoop.Item, recursiveLoop.Index, recursiveLoop.AbsoluteIndex, recursiveLoop.Indent }.Contains(recursiveCounter, StringComparer.Ordinal)) recursiveCounter += "_";
+                    javascript.Add($"{indent}...(func = (_items, {recursiveLoop.Indent}, wrapper, {recursiveCounter}) => {{ let _itemsArray = utils.expr.collection(_items); let _result = [");
                     indent += "    ";
                     level++;
                     javascript.Add($"{indent}utils.createVDOM(\"#comment\", null, null, null, null, {{index: {index - 1}, forType:'{recursiveForType}'}}, 'x-for-start'),");
-                    line.Clear().Append(indent).Append($"...(_itemsArray.map(({recursiveLoop.Item}, {recursiveLoop.Index}) => {{ let _result = utils.createVDOM({elementTag}");
-                    postLine.Add($"; {recursiveLoop.AbsoluteIndex}++; return _result;}})),");
+                    line.Clear().Append(indent).Append($"...(_itemsArray.map(({recursiveLoop.Item}, {recursiveLoop.Index}) => {{ let {recursiveLoop.AbsoluteIndex} = {recursiveCounter}.value++; let _result = utils.createVDOM({elementTag}");
+                    postLine.Add("; return _result;})),");
                     if (key != null) options.Add($"\"key\":{key}");
                     post.Add($"{indent}utils.createVDOM(\"#comment\", null, null, null, null, {{index: {index - 1}, forType:'{recursiveForType}'}}, 'x-for-end'),");
                     var wrapper = element.GetAttribute("x-recursive-wrapper") ?? "";
-                    post.Add($"\n    {indent[..^4]}]; if (wrapper) _result = [utils.createVDOM(wrapper, null, null, null, null, {{index:1}}, _result)]; return _result;}})({recursiveCollection}, 0, 0),");
-                    childrenToAppend = $"func(utils.expr.member({recursiveLoop.Item}, \"children\"), {recursiveLoop.AbsoluteIndex} + 1, {recursiveLoop.Indent} + 1, {ToJavaScriptString(wrapper)})";
+                    post.Add($"\n    {indent[..^4]}]; if (wrapper) _result = [utils.createVDOM(wrapper, null, null, null, null, {{index:1}}, _result)]; return _result;}})({recursiveCollection}, 0, null, {{value:0}}),");
+                    childrenToAppend = $"func(utils.expr.member({recursiveLoop.Item}, \"children\"), {recursiveLoop.Indent} + 1, {ToJavaScriptString(wrapper)}, {recursiveCounter})";
                     break;
                 case StructuralDirectiveKind.Once:
                     if (!string.IsNullOrEmpty(structuralDirective.Attribute!.Value)) throw TemplateError("Directive 'x-once' cannot have a value.", element);
@@ -364,10 +366,12 @@ namespace DProjects.XShell.Services.XTemplate {
             var variables = variablesText.StartsWith('(') && variablesText.EndsWith(')')
                 ? variablesText[1..^1].Split(',').Select(item => item.Trim()).ToArray()
                 : new[] { variablesText };
-            if (variables.Length == 0 || variables.Length > (recursive ? 3 : 2) || variables.Any(item => !IsJavaScriptIdentifier(item))) {
+            if (variables.Length == 0 || variables.Length > (recursive ? 4 : 2) || variables.Any(item => !IsJavaScriptIdentifier(item))) {
                 throw TemplateError($"Invalid {directive} variables '{variablesText}'.", element);
             }
-            return new LoopDefinition(variables[0], variables.Length > 1 ? variables[1] : "index", variables.Length > 2 ? variables[2] : "indexAbsolute", "indent", collection);
+            if (recursive && variables.Distinct(StringComparer.Ordinal).Count() != variables.Length) throw TemplateError("x-recursive variable names must be unique.", element);
+            if (recursive && variables.Length < 4 && variables.Contains("indent", StringComparer.Ordinal)) throw TemplateError("x-recursive variable 'indent' must be declared in the fourth tuple position.", element);
+            return new LoopDefinition(variables[0], variables.Length > 1 ? variables[1] : "index", variables.Length > 2 ? variables[2] : "indexAbsolute", variables.Length > 3 ? variables[3] : "indent", collection);
         }
 
         private static void ValidateStructuralDirectives(ElementNode parent) {

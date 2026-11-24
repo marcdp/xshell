@@ -2032,7 +2032,7 @@ children
 Supported form:
 
 ```html
-<element x-recursive="(item,index,indexAbsolute) in expression">
+<element x-recursive="(item,index,indexAbsolute,indent) in expression">
 ```
 
 Variables:
@@ -2061,9 +2061,25 @@ indent
 
 are the reference names used by the compiler.
 
-The third tuple element may rename `indexAbsolute`.
+The third tuple element may rename `indexAbsolute`. The fourth tuple element explicitly declares the recursion-depth variable and may rename it.
+When the fourth element is omitted, the reference name remains `indent` for compatibility. The third position always names the absolute traversal
+index, so `(item,index,indent)` is invalid rather than a depth declaration.
 
-`indent` is currently implicit and is not renamed by tuple syntax.
+For example, a template can explicitly bind the zero-based depth as `depth`:
+
+```html
+<ul>
+    <li x-recursive="(item, index, indexAbsolute, depth) in state.menu"
+        x-key="id"
+        x-recursive-wrapper="ul"
+        x-attr:data-depth="depth">
+        {{ item.label }}
+    </li>
+</ul>
+```
+
+The value remains in scope for expressions on the recursive element and its descendants, including descendants rendered by nested `x-for`
+directives. Each independent `x-recursive` tree starts with the declared depth variable set to `0`.
 
 ---
 
@@ -2847,6 +2863,7 @@ recursive-expression =
       identifier, " in ", expression
     | "(", identifier, ",", identifier, ")", " in ", expression
     | "(", identifier, ",", identifier, ",", identifier, ")", " in ", expression
+    | "(", identifier, ",", identifier, ",", identifier, ",", identifier, ")", " in ", expression
     ;
 ```
 
@@ -2856,6 +2873,7 @@ Examples:
 item in state.items
 (item,index) in state.items
 (item,index,indexAbsolute) in state.items
+(item,index,indexAbsolute,indent) in state.items
 ```
 
 The recursive child property is currently fixed to:
@@ -3370,7 +3388,7 @@ The `id` property defines item identity across renders.
 ```html
 <ul>
     <li
-        x-recursive="(item,index,indexAbsolute) in state.items"
+        x-recursive="(item,index,indexAbsolute,indent) in state.items"
         x-key="id"
         x-recursive-wrapper="ul">
         <span x-text="item.label"></span>

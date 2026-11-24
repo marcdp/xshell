@@ -28,7 +28,7 @@ namespace DProjects.XShell.Services.XTemplate {
     internal sealed record XTemplateShowAttribute(XTemplateExpression Expression, int Offset) : XTemplateElementAttribute(Offset);
     internal abstract record XTemplateElementAttribute(int Offset);
     internal sealed record XTemplateForDefinition(string ItemName, string IndexName, XTemplateExpression Collection, int Offset);
-    internal sealed record XTemplateRecursiveDefinition(string ItemName, string IndexName, string AbsoluteIndexName, XTemplateExpression Collection, XTemplateExpression Children, string? WrapperName, int Offset);
+    internal sealed record XTemplateRecursiveDefinition(string ItemName, string IndexName, string AbsoluteIndexName, string IndentName, XTemplateExpression Collection, XTemplateExpression Children, string? WrapperName, int Offset);
     internal sealed record XTemplateSelectModel(object? Value, int Offset);
     internal sealed record XTemplateElementNode(string Name, List<XTemplateElementAttribute> Attributes, List<XTemplateNode> Children, int Offset, XTemplateExpression? If, XTemplateExpression? ElseIf, bool IsElse, XTemplateForDefinition? For, XTemplateRecursiveDefinition? Recursive, XTemplateExpression? Text, XTemplateExpression? Html, XTemplateExpression? Model, XTemplateExpression? ChildrenExpression, XTemplateExpression? ElementName) : XTemplateNode(Offset);
     internal sealed class OrderedAttributes {
@@ -170,7 +170,7 @@ namespace DProjects.XShell.Services.XTemplate {
             var siblingIndex = 0;
             foreach (var item in items) {
                 var currentAbsolute = indexAbsolute++;
-                var locals = new Dictionary<string, object?> { [definition.ItemName] = item, [definition.IndexName] = siblingIndex, [definition.AbsoluteIndexName] = currentAbsolute, ["indent"] = indent };
+                var locals = new Dictionary<string, object?> { [definition.ItemName] = item, [definition.IndexName] = siblingIndex, [definition.AbsoluteIndexName] = currentAbsolute, [definition.IndentName] = indent };
                 RenderElementOnce(element, context.With(locals), result, () => {
                     var childItems = NormalizeCollection(XTemplateExpressions.Evaluate(definition.Children, context.With(locals)), definition.Offset);
                     var descendants = new StringBuilder();

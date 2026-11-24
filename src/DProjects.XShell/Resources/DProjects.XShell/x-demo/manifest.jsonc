@@ -17,7 +17,12 @@
                 }
             },
             "menus": {
-                "navigation": { "source": "/pages" }
+                "navigation": { "source": "/pages" },
+                "global": {
+                    "items":[
+                        {"label": "Demo", "icon":"x-demo", "href": "/pages/index.js"}
+                    ]
+                }
             },
             "routes": {
                 "/hello/{name}": "/pages/02-pages/03-parameters.js"

@@ -92,6 +92,32 @@ namespace DProjects.XShell.Test {
         }
 
         [Fact]
+        public void CompilesExplicitRecursiveDepthAcrossItemAndDescendantExpressions() {
+            const string template = "<article x-recursive=\"(item,index,indexAbsolute,depth) in state.items\" x-attr:data-depth=\"depth\" x-class:nested=\"depth > 0\" x-style:--depth=\"depth\"><span x-if=\"depth == item.depth\" x-text=\"depth\"></span><b>{{ depth }}</b><i x-for=\"value in item.values\">{{ depth }}:{{ value }}</i></article>";
+
+            var javascript = new XTemplateCompiler().Compile(template);
+
+            Assert.Contains("(_items, depth, wrapper, _counter)", javascript, StringComparison.Ordinal);
+            Assert.Contains("let indexAbsolute = _counter.value++", javascript, StringComparison.Ordinal);
+            Assert.Contains("func(utils.expr.member(item, \"children\"), depth + 1", javascript, StringComparison.Ordinal);
+            Assert.Contains("\"data-depth\":depth", javascript, StringComparison.Ordinal);
+            Assert.Contains("utils.expr.style(\"--depth\", depth)", javascript, StringComparison.Ordinal);
+            Assert.Contains("utils.expr.greater(depth, 0)", javascript, StringComparison.Ordinal);
+            Assert.Contains("utils.expr.equal(depth, utils.expr.member(item, \"depth\"))", javascript, StringComparison.Ordinal);
+            Assert.Contains("(_items, indent, wrapper, _counter)", new XTemplateCompiler().Compile("<p x-recursive=\"(item,index,indexAbsolute,indent) in state.items\">{{ indent }}</p>"), StringComparison.Ordinal);
+            Assert.Throws<XTemplateExpressionSyntaxException>(() => new XTemplateCompiler().Compile("<p>{{ indent }}</p>"));
+            Assert.Throws<XTemplateExpressionSyntaxException>(() => new XTemplateCompiler().Compile("<p x-for=\"item in state.items\">{{ indent }}</p>"));
+
+            var renamedCounter = new XTemplateCompiler().Compile("<p x-recursive=\"(_counter,index,absolute) in state.items\">{{ _counter.name }}:{{ indent }}</p>");
+            Assert.Contains("(_items, indent, wrapper, _counter_)", renamedCounter, StringComparison.Ordinal);
+            Assert.Contains("let absolute = _counter_.value++", renamedCounter, StringComparison.Ordinal);
+
+            var indentDeclaration = Assert.Throws<InvalidOperationException>(() => new XTemplateCompiler().Compile("<p x-recursive=\"(item,index,indent) in state.items\"></p>"));
+            Assert.Contains("'indent' must be declared in the fourth tuple position", indentDeclaration.Message, StringComparison.Ordinal);
+            Assert.Throws<InvalidOperationException>(() => new XTemplateCompiler().Compile("<p x-recursive=\"(item,item) in state.items\"></p>"));
+        }
+
+        [Fact]
         public void CompilesDynamicElementNamesOnceInTheActiveScope() {
             var javascript = new XTemplateCompiler().Compile("<div x-is=\"item.tag\" x-for=\"item in state.items\" href=\"details\">{{ item.label }}</div>");
 

@@ -35,7 +35,7 @@ export default {
             {
                 name: "basic",
                 description: "Navigate to the Areas page using the default opening behavior.",
-                template: `<x-anchor href="page:x:/pages/areas.js">Browse areas</x-anchor>`
+                template: `<x-anchor href="page:x:/pages/global.js">Browse global</x-anchor>`
             },
             {
                 name: "stack",

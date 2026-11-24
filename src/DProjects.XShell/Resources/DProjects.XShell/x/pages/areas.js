@@ -12,7 +12,7 @@ export default {
                 language: "javascript",
                 code: `
                     await navigation.navigate({
-                        href: "page:x:/pages/areas.js",
+                        href: "page:x:/pages/global.js",
                         page,
                         open: "stack"
                     });
@@ -39,10 +39,13 @@ export default {
                 ></x-listview-item>
             </x-listview-body>
         </x-listview>
-    `,    
+        <x-divider></x-divider>
+        <x-menu x-prop:menu="state.menu"></x-menu>
+    `,
     state: {
         areas: [],
-        selected: ""
+        selected: "",
+        menu: null
     },
     controller({ state, events, bus, areas }) {
         return {
@@ -59,7 +62,9 @@ export default {
                 if (currentArea) {
                     state.selected = currentArea.id;
                 }
-            }
+                //refresh
+                state.menu = areas.getMenu("global").items;
+            },
         };
     }
 }

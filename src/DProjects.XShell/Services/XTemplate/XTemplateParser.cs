@@ -237,13 +237,15 @@ namespace DProjects.XShell.Services.XTemplate {
         private XTemplateRecursiveDefinition ParseRecursive(RawAttribute attribute) {
             if (!attribute.HasValue) throw Error("x-recursive requires a value", attribute.Offset);
             var separator = attribute.Value.IndexOf(" in ", StringComparison.Ordinal);
-            if (separator <= 0 || attribute.Value.IndexOf(" in ", separator + 4, StringComparison.Ordinal) >= 0) throw Error("x-recursive requires 'item in expression' or '(item,index,indexAbsolute) in expression'", attribute.Offset);
+            if (separator <= 0 || attribute.Value.IndexOf(" in ", separator + 4, StringComparison.Ordinal) >= 0) throw Error("x-recursive requires 'item in expression' or '(item,index,indexAbsolute,indent) in expression'", attribute.Offset);
             var variables = attribute.Value[..separator].Trim();
             var collection = attribute.Value[(separator + 4)..].Trim();
             var names = variables.StartsWith('(') && variables.EndsWith(')') ? variables[1..^1].Split(',').Select(name => name.Trim()).ToArray() : new[] { variables };
-            if (names.Length is < 1 or > 3 || names.Any(name => !IsIdentifier(name)) || collection.Length == 0) throw Error("Invalid x-recursive variables or collection", attribute.Offset);
+            if (names.Length is < 1 or > 4 || names.Any(name => !IsIdentifier(name)) || collection.Length == 0) throw Error("Invalid x-recursive variables or collection", attribute.Offset);
+            if (names.Distinct(StringComparer.Ordinal).Count() != names.Length) throw Error("x-recursive variable names must be unique", attribute.Offset);
+            if (names.Length < 4 && names.Contains("indent", StringComparer.Ordinal)) throw Error("x-recursive variable 'indent' must be declared in the fourth tuple position", attribute.Offset);
             var item = names[0];
-            return new(item, names.Length > 1 ? names[1] : "index", names.Length > 2 ? names[2] : "indexAbsolute", ParseExpressionSource(collection, attribute.Offset), new MemberAccessExpression(new IdentifierExpression(item, attribute.Offset), "children", attribute.Offset), null, attribute.Offset);
+            return new(item, names.Length > 1 ? names[1] : "index", names.Length > 2 ? names[2] : "indexAbsolute", names.Length > 3 ? names[3] : "indent", ParseExpressionSource(collection, attribute.Offset), new MemberAccessExpression(new IdentifierExpression(item, attribute.Offset), "children", attribute.Offset), null, attribute.Offset);
         }
         private void ValidateEvent(RawAttribute attribute) {
             var eventName = attribute.Name[5..];

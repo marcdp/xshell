@@ -75,7 +75,7 @@ public sealed class XTemplateDomRuntimeTests {
     public void CompiledLoopsResolveKeyFieldsInOrderAndKeepUndefinedKeys() {
         var compiler = new XTemplateCompiler();
         var flat = compiler.Compile("<li x-for=\"(item,index) in state.items\" x-key=\" id , href , path , command \">{{ item.label }}</li>");
-        var recursive = compiler.Compile("<li x-recursive=\"(item,index,indexAbsolute) in state.items\" x-key=\"id,href,path,command\" x-recursive-wrapper=\"ul\">{{ index }}:{{ indexAbsolute }}:{{ item.label }}</li>");
+        var recursive = compiler.Compile("<li x-recursive=\"(item,index,indexAbsolute,depth) in state.items\" x-key=\"id,href,path,command\" x-recursive-wrapper=\"ul\">{{ depth }}:{{ index }}:{{ indexAbsolute }}:{{ item.label }}</li>");
         var single = compiler.Compile("<li x-for=\"undefined in state.items\" x-key=\"id\">Single</li>");
         var runtimePath = Path.Combine(AppContext.BaseDirectory, "Resources", "DProjects.XShell", "xshell", "render-engines", "x.js");
         var modulePath = Path.Combine(Path.GetTempPath(), $"xtemplate-key-fields-{Guid.NewGuid():N}.mjs");
@@ -122,11 +122,17 @@ public sealed class XTemplateDomRuntimeTests {
                     ["one", 0, false, undefined, undefined, undefined]);
 
                 // Descendants use their own fields and keep their list region inside the wrapper.
-                const root = render(recursive, [{ id: "root", children: [{ href: "/child", label: "child" }, { label: "no key" }] }])[1];
+                const root = render(recursive, [{ id: "root", children: [{ href: "/child", label: "child", children: [{ path: "/grandchild", label: "grandchild" }] }, { label: "no key" }] }])[1];
                 assert.equal(root.options.key, "root");
                 const wrapper = root.children.find(node => node.tag === "ul");
                 assert.deepEqual(keys(wrapper.children), ["/child", undefined]);
-                assert.equal(wrapper.children[1].children.filter(node => node.tag === "#text").map(node => node.children).join(""), "0:1:child");
+                const child = wrapper.children[1];
+                const missing = wrapper.children[2];
+                assert.equal(child.children.filter(node => node.tag === "#text").map(node => node.children).join(""), "1:0:1:child");
+                assert.equal(missing.children.filter(node => node.tag === "#text").map(node => node.children).join(""), "1:1:3:no key");
+                const grandchildWrapper = child.children.find(node => node.tag === "ul");
+                assert.deepEqual(keys(grandchildWrapper.children), ["/grandchild"]);
+                assert.equal(grandchildWrapper.children[1].children.filter(node => node.tag === "#text").map(node => node.children).join(""), "2:0:2:grandchild");
                 """);
             using var process = NodeTestRuntime.Start(modulePath);
             var error = process.StandardError.ReadToEnd();

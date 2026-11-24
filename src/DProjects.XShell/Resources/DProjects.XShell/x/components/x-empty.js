@@ -24,7 +24,7 @@ export default {
                 description: "Explain an empty collection and offer a way to navigate elsewhere.",
                 template: `
                     <x-empty icon="x-folder" label="No projects" message="Projects you follow appear here.">
-                        <x-anchor slot="actions" href="page:x:/pages/areas.js">Browse areas</x-anchor>
+                        <x-anchor slot="actions" href="page:x:/pages/global.js">Browse global</x-anchor>
                     </x-empty>
                 `
             }

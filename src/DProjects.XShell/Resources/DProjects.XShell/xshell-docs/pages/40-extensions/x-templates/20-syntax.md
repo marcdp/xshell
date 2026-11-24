@@ -153,12 +153,20 @@ empty-string values. `0` and `false` are valid keys. If all fields are empty, th
 no fallback identity, so supply keys that distinguish siblings. Server HTML output omits `x-key`.
 
 ```html
-<li x-recursive="item in state.menu" x-key="href" x-recursive-wrapper="ul">
-    <span x-text="item.label"></span>
-</li>
+<ul>
+    <li x-recursive="(item, index, indexAbsolute, indent) in state.menu"
+        x-key="id"
+        x-recursive-wrapper="ul"
+        x-attr:data-depth="indent">
+        {{ item.label }}
+    </li>
+</ul>
 ```
 
-`x-recursive` repeats through a tree; `x-recursive-wrapper` supplies a wrapper for child levels.
+`x-recursive` repeats through a tree; `x-recursive-wrapper` supplies a wrapper for child levels. The fourth tuple variable is the current zero-based
+recursion depth: root items receive `0`, their children receive `1`, and each deeper level increments it. It may be renamed and is available to
+expressions throughout the recursive item's template subtree. When the fourth variable is omitted, its name defaults to `indent` for compatibility.
+The third tuple variable is always the absolute traversal index, so `(item,index,indent)` is invalid.
 
 ## Model and render controls
 

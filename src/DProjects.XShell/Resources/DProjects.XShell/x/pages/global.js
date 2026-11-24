@@ -1,0 +1,70 @@
+// page
+export default {
+    contract: {
+        description: "Shows the available areas for navigation.",
+        events: {},
+        properties: {},
+        methods: {},
+        examples: [
+            {
+                name: "browse-areas",
+                description: "Open the Global selector over the current Page.",
+                language: "javascript",
+                code: `
+                    await navigation.navigate({
+                        href: "page:x:/pages/global.js",
+                        page,
+                        open: "stack"
+                    });
+                `
+            }
+        ]
+    },
+    meta: {
+        title: "Global selector",
+        description: "Please select the global menu to navigate:"
+    },
+    template: `
+        <x-listview view="tiles">
+            <x-listview-head></x-listview-head>
+            <x-listview-body>
+                <x-listview-item
+                    x-for="area in state.areas"
+                    x-prop:selected="state.selected == area.id"
+                    x-attr:label="area.label"
+                    x-attr:description="area.description"
+                    x-attr:icon="area.icon"
+                    x-attr:href="area.home"
+                    open="top"
+                ></x-listview-item>
+            </x-listview-body>
+        </x-listview>
+        <x-divider></x-divider>
+        <x-menu x-prop:menu="state.menu"></x-menu>
+    `,
+    state: {
+        areas: [],
+        selected: "",
+        menu: null
+    },
+    controller({ state, events, bus, areas }) {
+        return {
+            load() {
+                // load
+                events.on(bus, "xshell:area:change", "refresh");
+                state.areas = areas.getAreas();
+                this.refresh();
+            },
+
+            refresh() {
+                // refresh selected area
+                let currentArea = areas.getCurrentArea();
+                if (currentArea) {
+                    state.selected = currentArea.id;
+                }
+                //refresh
+                state.menu = areas.getMenu("global").items;
+            },
+        };
+    }
+}

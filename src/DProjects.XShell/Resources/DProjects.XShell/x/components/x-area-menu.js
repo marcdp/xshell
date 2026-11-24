@@ -11,7 +11,7 @@ export default {
             {
                 name: "basic",
                 description: "Place the effective navigation menu in a Page sidebar.",
-                template: `<aside aria-label="Navigation"><x-page-menu></x-page-menu></aside>`
+                template: `<aside aria-label="Navigation"><x-area-menu></x-area-menu></aside>`
             }
         ]
     },

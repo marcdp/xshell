@@ -20,15 +20,14 @@
                 }
             },
             "menus": {
-                "shortcuts": {
+                "global": {
                     "scope": "global",
-                    "label": "Shortcuts",
-                    "items": [
-                        {"id": "root", "label": "", "icon": "x-more-vert", "class": "menu", "children": [
-                            {"label": "Preferences", "href": "/pages/workspace.js?menu-name=preferences", "open":"stack"},
-                            {"label": "-", "order": 100},
-                            {"label": "About", "href": "/pages/about.js"}
-                        ]}
+                    "label": "Preferences",
+                    "description": "Manage application preferences.",
+                    "icon": "x-settings",
+                    "items":[
+                        {"label": "-", "order":100},
+                        {"label": "Search", "icon":"x-search", "href": "/pages/search.js"}
                     ]
                 },
                 "preferences": {
@@ -44,6 +43,17 @@
                         {"label": "Secrets", "href": "/pages/preferences/secrets.js"},
                         {"label": "-", "order": 100},
                         {"label": "About", "href": "/pages/about.js"}
+                    ]
+                },
+                "shortcuts": {
+                    "scope": "global",
+                    "label": "Shortcuts",
+                    "items": [
+                        {"id": "root", "label": "Settings", "icon": "x-settings", "class": "menu", "children": [
+                            {"label": "Preferences", "href": "/pages/workspace.js?menu-name=preferences", "open":"stack"},
+                            {"label": "-", "order": 100},
+                            {"label": "About", "href": "/pages/about.js"}
+                        ]}
                     ]
                 }
             }

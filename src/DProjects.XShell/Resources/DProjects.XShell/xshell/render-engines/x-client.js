@@ -436,9 +436,11 @@ function parseFor(value, recursive, element, parse) {
     const collectionText = value.slice(separator + 4).trim();
     const variables = variablesText.startsWith("(") && variablesText.endsWith(")")
         ? variablesText.slice(1, -1).split(",").map(item => item.trim()) : [variablesText];
-    if (!collectionText || variables.length < 1 || variables.length > (recursive ? 3 : 2) || variables.some(item => !IDENTIFIER.test(item))) throw templateError(`Invalid ${recursive ? "x-recursive" : "x-for"} variables or collection.`, element);
+    if (!collectionText || variables.length < 1 || variables.length > (recursive ? 4 : 2) || variables.some(item => !IDENTIFIER.test(item))) throw templateError(`Invalid ${recursive ? "x-recursive" : "x-for"} variables or collection.`, element);
+    if (recursive && new Set(variables).size !== variables.length) throw templateError("x-recursive variable names must be unique.", element);
+    if (recursive && variables.length < 4 && variables.includes("indent")) throw templateError("x-recursive variable 'indent' must be declared in the fourth tuple position.", element);
     return {
-        item: variables[0], index: variables[1] ?? "index", absoluteIndex: variables[2] ?? "indexAbsolute", indent: "indent",
+        item: variables[0], index: variables[1] ?? "index", absoluteIndex: variables[2] ?? "indexAbsolute", indent: variables[3] ?? "indent",
         collection: parse(collectionText)
     };
 }
@@ -786,23 +788,25 @@ function renderRecursive(node, index, scope, environment) {
     const { utils, i18n } = environment;
     const loop = node.structural.loop;
     const forType = node.key ? "key" : "position";
-    const recurse = (items, absoluteIndex, indent, wrapper) => {
+    // Keep one depth-first absolute counter while each recursive call owns its zero-based depth.
+    let absoluteIndex = 0;
+    const recurse = (items, indent, wrapper) => {
         const result = [utils.createVDOM("#comment", null, null, null, null, { index: index - 1, forType }, "x-for-start")];
         const collection = utils.expr.collection(items);
         for (let itemIndex = 0; itemIndex < collection.length; itemIndex++) {
             const item = collection[itemIndex];
-            const local = childScope(scope, { [loop.item]: item, [loop.index]: itemIndex, [loop.absoluteIndex]: absoluteIndex, [loop.indent]: indent });
+            const itemAbsoluteIndex = absoluteIndex++;
+            const local = childScope(scope, { [loop.item]: item, [loop.index]: itemIndex, [loop.absoluteIndex]: itemAbsoluteIndex, [loop.indent]: indent });
             const recursiveChildren = node.children.length
-                ? recurse(utils.expr.member(item, "children"), absoluteIndex + 1, indent + 1, node.recursiveWrapper)
+                ? recurse(utils.expr.member(item, "children"), indent + 1, node.recursiveWrapper)
                 : null;
             const options = node.key ? { key: resolveKey(item, node.key, utils.expr) } : null;
             result.push(renderBasicElement(node, index, local, environment, options, recursiveChildren));
-            absoluteIndex++;
         }
         result.push(utils.createVDOM("#comment", null, null, null, null, { index: index - 1, forType }, "x-for-end"));
         return wrapper ? [utils.createVDOM(wrapper, null, null, null, null, { index: 1 }, result)] : result;
     };
-    return recurse(evaluateExpression(loop.collection, scope, utils, i18n), 0, 0, null);
+    return recurse(evaluateExpression(loop.collection, scope, utils, i18n), 0, null);
 }
 
 function renderElement(node, index, scope, environment, chain) {

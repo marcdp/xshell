@@ -30,7 +30,7 @@ export default {
                 template: `
                     <x-dropdown>
                         <x-button label="More"></x-button>
-                        <div slot="dropdown"><x-anchor href="page:x:/pages/areas.js">Browse areas</x-anchor></div>
+                        <div slot="dropdown"><x-anchor href="page:x:/pages/global.js">Browse global menu</x-anchor></div>
                     </x-dropdown>
                 `
             },

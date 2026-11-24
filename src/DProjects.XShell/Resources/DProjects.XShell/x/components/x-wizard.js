@@ -35,7 +35,6 @@ export default {
                     <x-wizard>
                         <x-wizard-panel label="Plan"><p>Check the project details.</p></x-wizard-panel>
                         <x-wizard-panel label="Complete"><p>The plan is ready.</p></x-wizard-panel>
-                        <x-anchor slot="buttons" href="page:x:/pages/areas.js">Back to Areas</x-anchor>
                     </x-wizard>
                 `
             }

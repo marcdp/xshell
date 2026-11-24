@@ -46,6 +46,23 @@ namespace DProjects.XShell.Test {
         }
 
         [Fact]
+        public void MakesExplicitRecursiveDepthAvailableAcrossExpressionContextsAndNestedLoops() {
+            var state = new {
+                trees = new[] {
+                    new DepthNode("A", 0, ["a"], [new DepthNode("A1", 1, ["b", "c"], [new DepthNode("A1a", 2, [], [])])]),
+                    new DepthNode("B", 0, [], [])
+                },
+                other = new[] { new DepthNode("Other", 0, ["z"], []) }
+            };
+            const string template = "<article x-recursive=\"(item,index,indexAbsolute,depth) in state.trees\" x-attr:data-depth=\"depth\" x-class:nested=\"depth > 0\" x-style:--depth=\"depth\"><span x-if=\"depth == item.depth\" x-text=\"depth\"></span><b>{{ depth }}:{{ index }}:{{ indexAbsolute }}:{{ item.name }}</b><i x-for=\"value in item.values\">{{ depth }}-{{ value }}</i></article><section x-recursive=\"item in state.other\" x-attr:data-depth=\"indent\">{{ item.name }}:{{ indent }}</section>";
+            var renderer = new XTemplateRenderer(new[] { new XTemplateReflectionObjectAdapter() }, options: new XTemplateRendererOptions { AllowStyleAttributes = true });
+
+            var html = renderer.Render(template, state);
+
+            Assert.Equal("<article data-depth=\"0\" style=\"--depth:0\"><span>0</span><b>0:0:0:A</b><i>0-a</i><article data-depth=\"1\" class=\"nested\" style=\"--depth:1\"><span>1</span><b>1:0:1:A1</b><i>1-b</i><i>1-c</i><article data-depth=\"2\" class=\"nested\" style=\"--depth:2\"><span>2</span><b>2:0:2:A1a</b></article></article></article><article data-depth=\"0\" style=\"--depth:0\"><span>0</span><b>0:1:3:B</b></article><section data-depth=\"0\">Other:0</section>", html);
+        }
+
+        [Fact]
         public void RendersNoRecursiveChildrenForNullCollection() {
             var html = Render("<li x-recursive=\"item in state.items\">{{ item.label }}</li>", new { items = new[] { new { label = "Root", children = (object?)null } } });
 
@@ -96,7 +113,12 @@ namespace DProjects.XShell.Test {
 
         [Fact]
         public void ValidatesRecursiveSyntaxWrapperAndKeyUse() {
-            Assert.Throws<XTemplateException>(() => Render("<li x-recursive=\"(item,index,absolute,extra) in state.items\"></li>", new { items = Array.Empty<object>() }));
+            Assert.Throws<XTemplateException>(() => Render("<li x-recursive=\"(item,index,absolute,depth,extra) in state.items\"></li>", new { items = Array.Empty<object>() }));
+            var indent = Assert.Throws<XTemplateException>(() => Render("<li x-recursive=\"(item,index,indent) in state.items\"></li>", new { items = Array.Empty<object>() }));
+            Assert.Contains("'indent' must be declared in the fourth tuple position", indent.Message, StringComparison.Ordinal);
+            Assert.Equal("<li>0</li>", Render("<li x-recursive=\"(item,index,indexAbsolute,depth) in state.items\">{{ depth }}</li>", new { items = new[] { new { children = Array.Empty<object>() } } }));
+            Assert.Equal("<li>0</li>", Render("<li x-recursive=\"(item,index,indexAbsolute,indent) in state.items\">{{ indent }}</li>", new { items = new[] { new { children = Array.Empty<object>() } } }));
+            Assert.Throws<XTemplateException>(() => Render("<li x-recursive=\"(item,item) in state.items\"></li>", new { items = Array.Empty<object>() }));
             Assert.Throws<XTemplateException>(() => Render("<li x-recursive-wrapper=\"ul\"></li>"));
             Assert.Throws<XTemplateException>(() => Render("<li x-key=\"id\"></li>"));
             Assert.Equal("<li>A</li>", Render("<li x-recursive=\"item in state.items\" x-key=\"id\">{{ item.name }}</li>", new { items = new[] { new { id = 1, name = "A", children = Array.Empty<object>() } } }));
@@ -290,6 +312,7 @@ namespace DProjects.XShell.Test {
             IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
         }
         private sealed record Node(string name, Node[] children);
+        private sealed record DepthNode(string name, int depth, string[] values, DepthNode[] children);
         private sealed record Menu(int id, string label, string href, Menu[] children);
     }
 }
