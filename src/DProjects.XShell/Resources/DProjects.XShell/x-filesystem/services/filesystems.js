@@ -1,80 +1,5 @@
-// Select the most specific validation detail using the same conventions as Services.
-function formatValidationFailure(errors) {
-    const wrappers = new Set(["$ref", "anyOf", "oneOf", "allOf", "properties", "items", "false"]);
-    const detail = errors?.findLast(error => error.instanceLocation && error.error && !wrappers.has(error.keyword)) ?? errors?.at(-1);
-    return detail ? ` at '${detail.instanceLocation ?? "#"}': ${detail.error}` : "";
-}
-
-// Remove URL user information before a provider identifier reaches diagnostics.
-function getDiagnosticUrl(url) {
-    try {
-        const parsed = new URL(url);
-        if (!parsed.username && !parsed.password) return url;
-        parsed.username = "";
-        parsed.password = "";
-        return parsed.href;
-    } catch {
-        return url;
-    }
-}
-
-// Resolve the optional provider-owned credentials descriptor and compile its schema.
-function getProviderCredentialsDefinition(jsonValidator, url, Implementation) {
-    let credentialsDefinition;
-    try {
-        credentialsDefinition = Implementation?.credentialsDefinition;
-    } catch (cause) {
-        throw new Error(`Filesystem provider '${url}' has an invalid static credentialsDefinition: ${cause.message}`, {cause});
-    }
-    if (credentialsDefinition === undefined) return undefined;
-    if (!credentialsDefinition || typeof credentialsDefinition !== "object" || Array.isArray(credentialsDefinition)) {
-        throw new Error(`Filesystem provider '${url}' has an invalid static credentialsDefinition: expected an object.`);
-    }
-
-    let schema;
-    try {
-        schema = credentialsDefinition.schema;
-    } catch (cause) {
-        throw new Error(`Filesystem provider '${url}' has an invalid static credentialsDefinition.schema: ${cause.message}`, {cause});
-    }
-    if (schema === undefined) throw new Error(`Filesystem provider '${url}' must define static credentialsDefinition.schema.`);
-    if (!schema || typeof schema !== "object" || Array.isArray(schema)) {
-        throw new Error(`Filesystem provider '${url}' has an invalid static credentialsDefinition.schema: expected a JSON Schema object.`);
-    }
-
-    // Compile the schema without treating absent raw-open credentials as a payload validation failure.
-    try {
-        jsonValidator.validate({}, schema);
-    } catch (cause) {
-        throw new Error(`Filesystem provider '${url}' has an invalid static credentialsDefinition.schema: ${cause.message}`, {cause});
-    }
-    return credentialsDefinition;
-}
-
-// Clone and validate supplied credentials at the internal provider-construction boundary.
-function validateCredentials(jsonValidator, url, credentialsDefinition, credentials) {
-    if (credentials === null || credentials === undefined) return null;
-    if (credentialsDefinition === undefined) throw new Error(`Filesystem provider '${url}' does not support credentials.`);
-
-    let copy;
-    try {
-        copy = structuredClone(credentials);
-    } catch {
-        // Do not surface clone diagnostics because they can contain credential material.
-        throw new Error(`Filesystem provider '${url}' credentials cannot be cloned.`);
-    }
-
-    let result;
-    try {
-        result = jsonValidator.validate(copy, credentialsDefinition.schema);
-    } catch (cause) {
-        throw new Error(`Filesystem provider '${url}' has an invalid static credentialsDefinition.schema: ${cause.message}`, {cause});
-    }
-    if (!result.valid) {
-        throw new Error(`Invalid Filesystem provider credentials for '${url}'${formatValidationFailure(result.errors)}.`, {cause: result.errors});
-    }
-    return copy;
-}
+const DEFINITION_PREFIX = "x-filesystem:filesystem:";
+const DEFINITION_NAME_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
 
 export default class Filesystems {
 
@@ -144,14 +69,16 @@ export default class Filesystems {
 
     // fields
     #jsonValidator;
+    #preferences;
     #services;
     #providers = new Map();
     #instances = new Map();
+    #namedInstances = new Map();
     #commands;
     #editors;
 
     // constructor
-    constructor({config, jsonValidator, services}, options = {}) {
+    constructor({config, jsonValidator, preferences, services}, options = {}) {
         // Normalize the scheme-keyed provider configuration and resolve implementation URLs once.
         for (const [scheme, provider] of Object.entries(options.providers ?? {})) {
             const isAbsoluteUrl = /^[A-Za-z][A-Za-z0-9+.-]*:/.test(provider.implementation);
@@ -163,6 +90,7 @@ export default class Filesystems {
 
         // Retain the owning Services context and snapshot configured Commands and editors.
         this.#jsonValidator = jsonValidator;
+        this.#preferences = preferences;
         this.#services = services;
         this.#commands = structuredClone(options.commands ?? []);
         this.#editors = structuredClone(options.editors ?? {});
@@ -177,6 +105,65 @@ export default class Filesystems {
     }
 
     // methods
+    async listProviders() {
+        // Import configured providers and expose only cloned schemas and authored defaults for management UI.
+        return await Promise.all([...this.#providers.keys()].sort().map(async id => {
+            const provider = this.#providers.get(id);
+            const Implementation = await this.#importProvider(id, provider);
+            const optionsDefinition = this.#getProviderOptionsDefinition(id, Implementation);
+            const optionsSchema = this.#getProviderOptionsSchema(id, optionsDefinition);
+            const credentialsDefinition = this.#getProviderCredentialsDefinition(id, Implementation);
+            return {
+                id,
+                label: id,
+                optionsSchema: structuredClone(optionsSchema),
+                credentialsSchema: credentialsDefinition === undefined ? null : structuredClone(credentialsDefinition.schema),
+                defaults: structuredClone(provider.options ?? {})
+            };
+        }));
+    }
+    async listDefinitions() {
+        // Project Preferences records into sorted domain definitions without exposing storage metadata.
+        const records = await this.#preferences.list(DEFINITION_PREFIX);
+        return records.map(record => {
+            const value = structuredClone(record.value);
+            return {name: value.name, label: value.label, provider: value.provider, options: value.options};
+        }).sort((left, right) => left.name < right.name ? -1 : left.name > right.name ? 1 : 0);
+    }
+    async saveDefinition(definition) {
+        // Validate the registration through its selected provider before persisting only authored options.
+        const resolved = await this.#resolveDefinition(definition);
+        await this.#preferences.set(DEFINITION_PREFIX + resolved.definition.name, structuredClone(resolved.definition));
+        this.#namedInstances.delete(resolved.definition.name);
+    }
+    async removeDefinition(name) {
+        // Delete one validated registration key and invalidate its separate runtime identity.
+        if (typeof name !== "string" || !DEFINITION_NAME_PATTERN.test(name)) throw new TypeError("Filesystem definition name is invalid.");
+        await this.#preferences.delete(DEFINITION_PREFIX + name);
+        this.#namedInstances.delete(name);
+    }
+    async openNamed(name) {
+        // Share all lookup and construction work by registration name, independently from raw URL cache identity.
+        if (typeof name !== "string" || !DEFINITION_NAME_PATTERN.test(name)) throw new TypeError("Filesystem definition name is invalid.");
+        if (this.#namedInstances.has(name)) return await this.#namedInstances.get(name);
+
+        const creation = (async () => {
+            const stored = await this.#preferences.get(DEFINITION_PREFIX + name, null);
+            if (stored === null) throw new Error(`Filesystem definition not found: ${name}`);
+            const resolved = await this.#resolveDefinition(stored);
+            const credentialsDefinition = this.#getProviderCredentialsDefinition(resolved.canonicalUrl, resolved.Implementation);
+            return await this.#createProvider(resolved.canonicalUrl, resolved.options, resolved.Implementation, credentialsDefinition);
+        })();
+        this.#namedInstances.set(name, creation);
+        try {
+            const instance = await creation;
+            if (this.#namedInstances.get(name) === creation) this.#namedInstances.set(name, instance);
+            return instance;
+        } catch (error) {
+            if (this.#namedInstances.get(name) === creation) this.#namedInstances.delete(name);
+            throw error;
+        }
+    }
     async open(url) {
         // Resolve and materialize the provider entirely within the Filesystems domain.
         if (typeof url !== "string" || !url.trim()) {
@@ -184,12 +171,12 @@ export default class Filesystems {
         }
         const scheme = this.#getScheme(url);
         const definition = scheme ? this.#providers.get(scheme) : null;
-        const diagnosticUrl = getDiagnosticUrl(url);
+        const diagnosticUrl = this.#getDiagnosticUrl(url);
         if (!definition) throw new Error(`Filesystem provider not found: ${diagnosticUrl}`);
 
         const Implementation = await this.#importProvider(diagnosticUrl, definition);
         const optionsDefinition = this.#getProviderOptionsDefinition(diagnosticUrl, Implementation);
-        const credentialsDefinition = getProviderCredentialsDefinition(this.#jsonValidator, diagnosticUrl, Implementation);
+        const credentialsDefinition = this.#getProviderCredentialsDefinition(diagnosticUrl, Implementation);
         const parsedOptions = this.#parseProviderUrl(url, diagnosticUrl, optionsDefinition);
         const options = this.#mergeProviderOptions(definition, parsedOptions);
         this.#validateProviderOptions(diagnosticUrl, optionsDefinition, options);
@@ -223,6 +210,80 @@ export default class Filesystems {
     }
 
     // private methods
+    #formatValidationFailure(errors) {
+        // Select the most specific validation detail using the same conventions as Services.
+        const wrappers = new Set(["$ref", "anyOf", "oneOf", "allOf", "properties", "items", "false"]);
+        const detail = errors?.findLast(error => error.instanceLocation && error.error && !wrappers.has(error.keyword)) ?? errors?.at(-1);
+        return detail ? ` at '${detail.instanceLocation ?? "#"}': ${detail.error}` : "";
+    }
+    #getDiagnosticUrl(url) {
+        // Remove URL user information before a provider identifier reaches diagnostics.
+        try {
+            const parsed = new URL(url);
+            if (!parsed.username && !parsed.password) return url;
+            parsed.username = "";
+            parsed.password = "";
+            return parsed.href;
+        } catch {
+            return url;
+        }
+    }
+    #getProviderCredentialsDefinition(url, Implementation) {
+        // Resolve the optional provider-owned credentials descriptor and compile its schema.
+        let credentialsDefinition;
+        try {
+            credentialsDefinition = Implementation?.credentialsDefinition;
+        } catch (cause) {
+            throw new Error(`Filesystem provider '${url}' has an invalid static credentialsDefinition: ${cause.message}`, {cause});
+        }
+        if (credentialsDefinition === undefined) return undefined;
+        if (!credentialsDefinition || typeof credentialsDefinition !== "object" || Array.isArray(credentialsDefinition)) {
+            throw new Error(`Filesystem provider '${url}' has an invalid static credentialsDefinition: expected an object.`);
+        }
+
+        let schema;
+        try {
+            schema = credentialsDefinition.schema;
+        } catch (cause) {
+            throw new Error(`Filesystem provider '${url}' has an invalid static credentialsDefinition.schema: ${cause.message}`, {cause});
+        }
+        if (schema === undefined) throw new Error(`Filesystem provider '${url}' must define static credentialsDefinition.schema.`);
+        if (!schema || typeof schema !== "object" || Array.isArray(schema)) {
+            throw new Error(`Filesystem provider '${url}' has an invalid static credentialsDefinition.schema: expected a JSON Schema object.`);
+        }
+
+        // Compile the schema without treating absent raw-open credentials as a payload validation failure.
+        try {
+            this.#jsonValidator.validate({}, schema);
+        } catch (cause) {
+            throw new Error(`Filesystem provider '${url}' has an invalid static credentialsDefinition.schema: ${cause.message}`, {cause});
+        }
+        return credentialsDefinition;
+    }
+    #validateCredentials(url, credentialsDefinition, credentials) {
+        // Clone and validate supplied credentials at the internal provider-construction boundary.
+        if (credentials === null || credentials === undefined) return null;
+        if (credentialsDefinition === undefined) throw new Error(`Filesystem provider '${url}' does not support credentials.`);
+
+        let copy;
+        try {
+            copy = structuredClone(credentials);
+        } catch {
+            // Do not surface clone diagnostics because they can contain credential material.
+            throw new Error(`Filesystem provider '${url}' credentials cannot be cloned.`);
+        }
+
+        let result;
+        try {
+            result = this.#jsonValidator.validate(copy, credentialsDefinition.schema);
+        } catch (cause) {
+            throw new Error(`Filesystem provider '${url}' has an invalid static credentialsDefinition.schema: ${cause.message}`, {cause});
+        }
+        if (!result.valid) {
+            throw new Error(`Invalid Filesystem provider credentials for '${url}'${this.#formatValidationFailure(result.errors)}.`, {cause: result.errors});
+        }
+        return copy;
+    }
     async #importProvider(url, definition) {
         // Import the implementation class before asking it to deserialize provider configuration.
         try {
@@ -244,6 +305,25 @@ export default class Filesystems {
             throw new Error(`Filesystem provider '${url}' has an invalid static optionsDefinition: expected an object.`);
         }
         return optionsDefinition;
+    }
+    #getProviderOptionsSchema(url, optionsDefinition) {
+        // Resolve and compile the provider-owned options schema without validating a partial defaults object.
+        let schema;
+        try {
+            schema = optionsDefinition.schema;
+        } catch (cause) {
+            throw new Error(`Filesystem provider '${url}' has an invalid static optionsDefinition.schema: ${cause.message}`, {cause});
+        }
+        if (schema === undefined) throw new Error(`Filesystem provider '${url}' must define static optionsDefinition.schema.`);
+        if (!schema || typeof schema !== "object" || Array.isArray(schema)) {
+            throw new Error(`Filesystem provider '${url}' has an invalid static optionsDefinition.schema: expected a JSON Schema object.`);
+        }
+        try {
+            this.#jsonValidator.validate({}, schema);
+        } catch (cause) {
+            throw new Error(`Filesystem provider '${url}' has an invalid static optionsDefinition.schema: ${cause.message}`, {cause});
+        }
+        return schema;
     }
     #parseProviderUrl(url, diagnosticUrl, optionsDefinition) {
         // Require provider-owned URL deserialization to return one declarative options object.
@@ -278,16 +358,7 @@ export default class Filesystems {
     }
     #validateProviderOptions(url, optionsDefinition, options) {
         // Require the definition-owned configuration schema before URL projection or construction.
-        let schema;
-        try {
-            schema = optionsDefinition.schema;
-        } catch (cause) {
-            throw new Error(`Filesystem provider '${url}' has an invalid static optionsDefinition.schema: ${cause.message}`, {cause});
-        }
-        if (schema === undefined) throw new Error(`Filesystem provider '${url}' must define static optionsDefinition.schema.`);
-        if (!schema || typeof schema !== "object" || Array.isArray(schema)) {
-            throw new Error(`Filesystem provider '${url}' has an invalid static optionsDefinition.schema: expected a JSON Schema object.`);
-        }
+        const schema = this.#getProviderOptionsSchema(url, optionsDefinition);
 
         // Validate the merged declarative configuration before projecting its canonical URL.
         let result;
@@ -297,7 +368,7 @@ export default class Filesystems {
             throw new Error(`Filesystem provider '${url}' has an invalid static optionsDefinition.schema: ${cause.message}`, {cause});
         }
         if (!result.valid) {
-            throw new Error(`Invalid Filesystem provider options for '${url}'${formatValidationFailure(result.errors)}.`, {cause: result.errors});
+            throw new Error(`Invalid Filesystem provider options for '${url}'${this.#formatValidationFailure(result.errors)}.`, {cause: result.errors});
         }
     }
     #getProviderUrl(url, optionsDefinition, options) {
@@ -324,7 +395,7 @@ export default class Filesystems {
     }
     async #createProvider(url, options, Implementation, credentialsDefinition, credentials = null) {
         // Validate credentials separately before resolving dependencies or constructing the provider.
-        const validatedCredentials = validateCredentials(this.#jsonValidator, url, credentialsDefinition, credentials);
+        const validatedCredentials = this.#validateCredentials(url, credentialsDefinition, credentials);
 
         // Resolve provider dependencies lazily and construct from cloned options plus cloned credentials.
         const services = this.#services;
@@ -361,5 +432,51 @@ export default class Filesystems {
             throw new Error(`Filesystem provider '${url}' static getCacheKey must return a non-empty string or null.`);
         }
         return cacheKey;
+    }
+    async #resolveDefinition(definition) {
+        // Normalize the persisted shape without mutating the caller or retaining non-domain fields.
+        if (!definition || typeof definition !== "object" || Array.isArray(definition)) {
+            throw new TypeError("Filesystem definition must be a non-null object.");
+        }
+        if (typeof definition.name !== "string" || !DEFINITION_NAME_PATTERN.test(definition.name)) {
+            throw new TypeError("Filesystem definition name is invalid.");
+        }
+        if (definition.label !== undefined && typeof definition.label !== "string") {
+            throw new TypeError("Filesystem definition label must be a string.");
+        }
+        if (typeof definition.provider !== "string" || !definition.provider.trim()) {
+            throw new TypeError("Filesystem definition provider must be a non-empty string.");
+        }
+        const sourceOptions = definition.options === undefined ? {} : definition.options;
+        if (!sourceOptions || typeof sourceOptions !== "object" || Array.isArray(sourceOptions)) {
+            throw new TypeError("Filesystem definition options must be a non-null object.");
+        }
+
+        let ownOptions;
+        try {
+            ownOptions = structuredClone(sourceOptions);
+        } catch (cause) {
+            throw new TypeError(`Filesystem definition options cannot be cloned: ${cause.message}`, {cause});
+        }
+        const provider = definition.provider.trim().toLowerCase();
+        const normalized = {
+            name: definition.name,
+            label: definition.label?.trim() ? definition.label : definition.name,
+            provider,
+            options: ownOptions
+        };
+
+        // Validate effective options and require the canonical URL to dispatch back to the selected provider.
+        const providerDefinition = this.#providers.get(provider);
+        if (!providerDefinition) throw new Error(`Filesystem provider not found: ${provider}`);
+        const Implementation = await this.#importProvider(provider, providerDefinition);
+        const optionsDefinition = this.#getProviderOptionsDefinition(provider, Implementation);
+        const options = this.#mergeProviderOptions(providerDefinition, ownOptions);
+        this.#validateProviderOptions(provider, optionsDefinition, options);
+        const canonicalUrl = this.#getProviderUrl(provider, optionsDefinition, options);
+        if (this.#getScheme(canonicalUrl) !== provider) {
+            throw new Error(`Filesystem provider '${provider}' generated a URL for a different provider: ${canonicalUrl}`);
+        }
+        return {definition: normalized, Implementation, options, canonicalUrl};
     }
 }

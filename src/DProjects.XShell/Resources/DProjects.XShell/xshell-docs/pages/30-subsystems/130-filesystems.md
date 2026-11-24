@@ -53,6 +53,39 @@ Different named identities, such as `mem:workspace` and `mem:preview`, remain di
 not a singleton, scoped, or transient Services lifetime. Other provider URLs follow their own provider definitions; `open()` does not imply that
 every provider is cached.
 
+## Named Filesystem definitions
+
+Filesystems persists non-secret named definitions through Preferences and keeps the private storage-key convention inside the Service. Callers use only the
+Filesystems domain API:
+
+~~~js
+await filesystems.listProviders();
+await filesystems.listDefinitions();
+await filesystems.saveDefinition({
+    name: "work",
+    label: "Work Files",
+    provider: "https",
+    options: {
+        scheme: "https",
+        host: "files.example.com",
+        path: "/documents"
+    }
+});
+const filesystem = await filesystems.openNamed("work");
+await filesystems.removeDefinition("work");
+~~~
+
+Each persisted definition contains only `name`, `label`, `provider`, and the definition's own `options`. Filesystems merges configured provider defaults,
+validates the effective options through `Implementation.optionsDefinition.schema`, and derives the canonical URL with
+`Implementation.optionsDefinition.getUrl()`. The selected provider ID must agree with the derived URL scheme; the URL itself is not persisted.
+
+Named runtime instances cache by registration name in a map separate from raw `open(url)` caching. Repeated and concurrent `openNamed(name)` calls share the
+same instance, while different names remain different identities even when their derived URLs match. Saving or removing a definition invalidates that name's
+cache entry.
+
+Credentials persistence and Secrets integration are not implemented; `openNamed()` passes `null` credentials. Runtime-only values such as a local
+`FileSystemDirectoryHandle` are also not persisted, so a named `file:` Filesystem may still need a handle attached through the existing provider API.
+
 ## Providers
 
 `options.providers` is an object keyed by normalized URL scheme without the trailing colon. Each definition has a required `implementation` string
@@ -125,6 +158,7 @@ static optionsDefinition = {
 
 The `http` and `https` implementations reject credentials, queries, and fragments. `isReadonly` is configuration rather than URL state, so it comes from
 provider defaults or the schema-described default used when configuration is authored, rather than `parseUrl()`.
+The bundled `http` and `https` provider entries supply their respective `scheme` as configured defaults; raw URL parsing still overrides that default.
 
 The memory provider represents its logical identity as the nullable string option `instance`. `mem:` parses as `{instance: null}`, while
 `mem:workspace` parses as `{instance: "workspace"}`; projecting those options returns the same canonical URLs.
@@ -224,10 +258,6 @@ A nonempty string is the provider-defined cache identity for the current raw `op
 never the raw input. Returning `null`, or omitting the method, constructs a new instance for every `open()`. Filesystems owns concurrent sharing, completed
 instances, and failed-entry eviction; the provider owns only this raw-open identity policy. The memory Filesystem therefore leaves anonymous `mem:` instances
 isolated while reusing named identities such as `mem:workspace`.
-
-Named filesystem registrations are not implemented. A future registration flow may require non-secret registration identity because registrations could share
-one endpoint while differing in non-URL options or credentials. The current hook does not generalize canonical URL identity to that future flow, and credential
-values are never cache-key material.
 
 ## Commands
 

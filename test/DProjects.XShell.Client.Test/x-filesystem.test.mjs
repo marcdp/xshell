@@ -33,6 +33,27 @@ function createServices(values = {}) {
     return services;
 }
 
+function createPreferences(initial = []) {
+    // Model Preferences records with structured-clone boundaries and observable writes for focused Service tests.
+    const values = new Map(initial.map(([key, value]) => [key, structuredClone(value)]));
+    const calls = {set: 0, delete: 0};
+    return {
+        calls,
+        async set(key, value) { calls.set++; values.set(key, structuredClone(value)); },
+        async get(key, defaultValue) { return values.has(key) ? structuredClone(values.get(key)) : defaultValue; },
+        async delete(key) { calls.delete++; values.delete(key); },
+        async list(prefix = "") {
+            return [...values].filter(([key]) => key.startsWith(prefix)).map(([name, value], index) => ({
+                id: `preference-${index}`,
+                name,
+                label: name,
+                revision: 1,
+                value: structuredClone(value)
+            }));
+        }
+    };
+}
+
 function createRuntime(providers, services = {}) {
     // Build scheme-dispatched providers beside a global Resolver and Loader with no Filesystem category.
     const jsonValidator = new JsonValidator();
@@ -48,7 +69,13 @@ function createRuntime(providers, services = {}) {
         xshellAssetsPath: "",
         componentLazy: null
     });
-    return { config, resolver, loader, serviceScope, filesystems: new Filesystems({config, jsonValidator, services: serviceScope}, {providers}) };
+    return {
+        config,
+        resolver,
+        loader,
+        serviceScope,
+        filesystems: new Filesystems({config, jsonValidator, preferences: services.preferences, services: serviceScope}, {providers})
+    };
 }
 
 function createController() {
@@ -138,11 +165,147 @@ test("Filesystems.open resolves and imports providers locally", async () => {
     await assert.rejects(() => filesystems.open("unknown:missing"), /Filesystem provider not found: unknown:missing/);
 });
 
-test("Filesystems contract exposes open as the canonical provider operation", () => {
-    // Validate the renamed public method through the shared Service contract vocabulary.
+test("Filesystems contract exposes the minimal named management API and existing operations", () => {
+    // Validate the public methods through the shared Service contract vocabulary.
     const result = new JsonValidator().validate(FilesystemsContract, ContractSchema);
     assert.equal(result.valid, true, JSON.stringify(result.errors));
-    assert.deepEqual(Object.keys(FilesystemsContract.methods), ["open", "getEditor"]);
+    assert.deepEqual(Object.keys(FilesystemsContract.methods), [
+        "listProviders", "listDefinitions", "saveDefinition", "removeDefinition", "openNamed", "open", "getEditor"
+    ]);
+});
+
+test("Filesystems.listProviders exposes sorted cloned management metadata only", async () => {
+    // Discover configured providers without leaking implementation details or mutable internal configuration.
+    const jsonValidator = new JsonValidator();
+    const httpImplementation = new URL("../../src/DProjects.XShell/Resources/DProjects.XShell/x-filesystem/providers/filesystem-http.js", import.meta.url).href;
+    const memImplementation = new URL("../../src/DProjects.XShell/Resources/DProjects.XShell/x-filesystem/providers/filesystem-mem.js", import.meta.url).href;
+    const filesystems = new Filesystems({config: testConfig, jsonValidator, services: createServices({jsonValidator})}, {
+        providers: {
+            https: {implementation: httpImplementation, options: {scheme: "https"}},
+            mem: {implementation: memImplementation}
+        }
+    });
+
+    const providers = await filesystems.listProviders();
+    assert.deepEqual(providers.map(provider => provider.id), ["https", "mem"]);
+    assert.deepEqual(providers.map(provider => provider.credentialsSchema), [null, null]);
+    assert.deepEqual(providers[0].defaults, {scheme: "https"});
+    assert.deepEqual(Object.keys(providers[0]).sort(), ["credentialsSchema", "defaults", "id", "label", "optionsSchema"]);
+    assert.equal(providers[0].optionsSchema.properties.scheme.enum.includes("https"), true);
+    assert.equal(Object.hasOwn(providers[0], "implementation"), false);
+
+    providers[0].defaults.scheme = "http";
+    providers[0].optionsSchema.properties.scheme.enum.push("ftp");
+    const again = await filesystems.listProviders();
+    assert.deepEqual(again[0].defaults, {scheme: "https"});
+    assert.equal(again[0].optionsSchema.properties.scheme.enum.includes("ftp"), false);
+});
+
+test("Filesystems saves, lists, replaces, and validates named definitions", async () => {
+    // Persist only the domain shape after provider validation while keeping caller and returned objects isolated.
+    const preferences = createPreferences();
+    const jsonValidator = new JsonValidator();
+    const implementation = new URL("../../src/DProjects.XShell/Resources/DProjects.XShell/x-filesystem/providers/filesystem-http.js", import.meta.url).href;
+    const filesystems = new Filesystems({config: testConfig, jsonValidator, preferences, services: createServices({jsonValidator})}, {
+        providers: {https: {implementation, options: {scheme: "https"}}}
+    });
+    const input = {
+        name: "work",
+        label: "Work Files",
+        provider: "HTTPS",
+        options: {host: "files.example.com", path: "/documents", isReadonly: true}
+    };
+    const inputSnapshot = structuredClone(input);
+
+    await filesystems.saveDefinition(input);
+    assert.deepEqual(input, inputSnapshot);
+    assert.equal(preferences.calls.set, 1);
+    assert.deepEqual(await filesystems.listDefinitions(), [{
+        name: "work",
+        label: "Work Files",
+        provider: "https",
+        options: {host: "files.example.com", path: "/documents", isReadonly: true}
+    }]);
+
+    const returned = await filesystems.listDefinitions();
+    returned[0].options.host = "changed.example.com";
+    assert.equal((await filesystems.listDefinitions())[0].options.host, "files.example.com");
+
+    await filesystems.saveDefinition({name: "work", provider: "https", options: {host: "updated.example.com", path: "/"}});
+    await filesystems.saveDefinition({name: "alpha", label: "Alpha", provider: "https", options: {host: "alpha.example.com"}});
+    const updated = await filesystems.listDefinitions();
+    assert.deepEqual(updated.map(definition => definition.name), ["alpha", "work"]);
+    assert.equal(updated[1].label, "work");
+    assert.equal(updated[1].options.host, "updated.example.com");
+
+    const writeCount = preferences.calls.set;
+    for (const invalidName of ["", "bad name", "-leading", "slash/name"]) {
+        await assert.rejects(() => filesystems.saveDefinition({name: invalidName, provider: "https", options: {host: "example.com"}}), /definition name is invalid/);
+    }
+    await assert.rejects(() => filesystems.saveDefinition({name: "unknown", provider: "missing", options: {}}), /provider not found: missing/);
+    await assert.rejects(() => filesystems.saveDefinition({name: "invalid", provider: "https", options: {path: "/missing-host"}}), /Invalid Filesystem provider options/);
+    await assert.rejects(() => filesystems.saveDefinition({name: "mismatch", provider: "https", options: {scheme: "http", host: "example.com"}}), /different provider/);
+    await assert.rejects(() => filesystems.saveDefinition({name: "null-options", provider: "https", options: null}), /options must be a non-null object/);
+    assert.equal(preferences.calls.set, writeCount);
+});
+
+test("Filesystems.openNamed preserves options and caches by registration name", async () => {
+    // Materialize named definitions directly so non-URL options survive and names remain independent identities.
+    const preferences = createPreferences();
+    const jsonValidator = new JsonValidator();
+    const implementation = new URL("../../src/DProjects.XShell/Resources/DProjects.XShell/x-filesystem/providers/filesystem-http.js", import.meta.url).href;
+    const filesystems = new Filesystems({config: testConfig, jsonValidator, preferences, services: createServices({jsonValidator})}, {
+        providers: {https: {implementation, options: {scheme: "https"}}}
+    });
+    const options = {host: "files.example.com", path: "/documents", isReadonly: true};
+    await filesystems.saveDefinition({name: "work", provider: "https", options});
+    await filesystems.saveDefinition({name: "mirror", provider: "https", options});
+    await filesystems.saveDefinition({name: "concurrent", provider: "https", options});
+
+    const work = await filesystems.openNamed("work");
+    assert.equal(work.url, "https://files.example.com/documents");
+    assert.equal(work.isReadonly, true);
+    assert.strictEqual(await filesystems.openNamed("work"), work);
+    assert.notStrictEqual(await filesystems.openNamed("mirror"), work);
+    const [concurrentFirst, concurrentSecond] = await Promise.all([
+        filesystems.openNamed("concurrent"),
+        filesystems.openNamed("concurrent")
+    ]);
+    assert.strictEqual(concurrentFirst, concurrentSecond);
+
+    await filesystems.saveDefinition({name: "work", provider: "https", options: {...options, isReadonly: false}});
+    const updated = await filesystems.openNamed("work");
+    assert.notStrictEqual(updated, work);
+    assert.equal(updated.isReadonly, false);
+
+    const mirror = await filesystems.openNamed("mirror");
+    await filesystems.removeDefinition("mirror");
+    assert.equal((await filesystems.listDefinitions()).some(definition => definition.name === "mirror"), false);
+    await preferences.set("x-filesystem:filesystem:mirror", {name: "mirror", label: "mirror", provider: "https", options});
+    assert.notStrictEqual(await filesystems.openNamed("mirror"), mirror);
+    await assert.rejects(() => filesystems.openNamed("missing"), /Filesystem definition not found: missing/);
+});
+
+test("Filesystems.openNamed evicts failed creation and retries with null credentials", async () => {
+    // Exercise named in-flight sharing and failed-entry eviction independently from raw provider cache keys.
+    const preferences = createPreferences();
+    const providerUrl = new URL("./fixtures/filesystem-provider.mjs?case=named", import.meta.url).href;
+    const provider = await import(providerUrl);
+    provider.reset();
+    const {filesystems} = createRuntime({test: {implementation: providerUrl}}, {preferences});
+    const definition = {name: "retry", provider: "test", options: {scheme: "test", resource: "same"}};
+    await filesystems.saveDefinition(definition);
+
+    provider.failOnce();
+    await assert.rejects(() => filesystems.openNamed("retry"), /Simulated Filesystem provider failure/);
+    const retried = await filesystems.openNamed("retry");
+    assert.equal(retried.number, 2);
+    assert.deepEqual(provider.getCalls().map(call => call.credentials), [null, null]);
+
+    await filesystems.saveDefinition({name: "shared", provider: "test", options: {scheme: "test", resource: "shared"}});
+    const [first, second] = await Promise.all([filesystems.openNamed("shared"), filesystems.openNamed("shared")]);
+    assert.strictEqual(first, second);
+    assert.equal(provider.getCalls().filter(call => call.url === "test:shared").length, 1);
 });
 
 test("Filesystems module exposes only the intended default implementation", async () => {
@@ -674,10 +837,12 @@ test("direct filesystem construction validates structured provider options", () 
 });
 
 test("x-filesystem manifest uses the providers directory for instance implementations", () => {
-    // Keep authored provider implementations separate from registered Services.
+    // Keep authored provider implementations separate from Services and give HTTP variants their scheme defaults.
     const manifest = readFileSync(new URL("../../src/DProjects.XShell/Resources/DProjects.XShell/x-filesystem/manifest.jsonc", import.meta.url), "utf8");
     assert.match(manifest, /"implementation"\s*:\s*"\/providers\/filesystem-mem\.js"/);
     assert.match(manifest, /"implementation"\s*:\s*"\/providers\/filesystem-http\.js"/);
+    assert.match(manifest, /"http"\s*:\s*\{[^\r\n]*"options"\s*:\s*\{\s*"scheme"\s*:\s*"http"\s*\}/);
+    assert.match(manifest, /"https"\s*:\s*\{[^\r\n]*"options"\s*:\s*\{\s*"scheme"\s*:\s*"https"\s*\}/);
     assert.doesNotMatch(manifest, /"implementation"\s*:\s*"\/js\/filesystem-/);
 });
 

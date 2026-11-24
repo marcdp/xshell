@@ -50,8 +50,8 @@
                     },
                     "providers": {
                         "mem": {"implementation": "/providers/filesystem-mem.js"},
-                        "http": {"implementation": "/providers/filesystem-http.js"},
-                        "https": {"implementation": "/providers/filesystem-http.js"},
+                        "http": {"implementation": "/providers/filesystem-http.js", "options": {"scheme": "http"}},
+                        "https": {"implementation": "/providers/filesystem-http.js", "options": {"scheme": "https"}},
                         "opfs": {"implementation": "/providers/filesystem-opfs.js"},
                         "file": {"implementation": "/providers/filesystem-file.js"}
                     }

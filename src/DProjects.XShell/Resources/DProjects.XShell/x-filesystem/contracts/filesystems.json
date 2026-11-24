@@ -2,7 +2,7 @@
 {
     "$schema": "../../xshell/schemas/contract.schema.json",
     "label": "Filesystems",
-    "description": "Opens or resolves Filesystem instances from provider URLs.",
+    "description": "Manages named Filesystem definitions and opens Filesystem instances from definitions or provider URLs.",
     "properties": {
         "commands": {
             "type": "array",
@@ -16,8 +16,67 @@
         }
     },
     "methods": {
+        "listProviders": {
+            "description": "Lists configured providers with cloned schemas and defaults suitable for management UI.",
+            "returns": {
+                "type": "array",
+                "description": "Promise resolving to provider metadata sorted by provider ID."
+            }
+        },
+        "listDefinitions": {
+            "description": "Lists persisted non-secret named Filesystem definitions sorted by name.",
+            "returns": {
+                "type": "array",
+                "description": "Promise resolving to defensive copies of the named definitions."
+            }
+        },
+        "saveDefinition": {
+            "description": "Validates and saves one named Filesystem definition, replacing a definition with the same name.",
+            "parameters": [
+                {
+                    "name": "definition",
+                    "type": "object",
+                    "required": true,
+                    "description": "Definition containing name, label, provider, and non-secret provider options."
+                }
+            ],
+            "returns": {
+                "type": "void",
+                "description": "Promise resolving after the definition has been saved."
+            }
+        },
+        "removeDefinition": {
+            "description": "Removes one named Filesystem definition and invalidates its named runtime cache entry.",
+            "parameters": [
+                {
+                    "name": "name",
+                    "type": "string",
+                    "required": true,
+                    "description": "Stable registration name."
+                }
+            ],
+            "returns": {
+                "type": "void",
+                "description": "Promise resolving after the definition has been removed."
+            }
+        },
+        "openNamed": {
+            "description": "Opens a persisted named Filesystem using its validated provider options and name-based runtime cache identity.",
+            "parameters": [
+                {
+                    "name": "name",
+                    "type": "string",
+                    "required": true,
+                    "description": "Stable registration name."
+                }
+            ],
+            "returns": {
+                "type": "object",
+                "description": "Promise resolving to an instance implementing the Filesystem contract."
+            }
+        },
         "open": {
-            "description": "Opens or resolves the Filesystem represented by a configured provider URL. Repeated calls share an instance only when the matching provider definition enables Loader caching.",
+            "description": "Opens the Filesystem represented by a configured provider URL. Repeated calls share an instance only when the provider supplies a raw-URL cache identity.",
             "parameters": [
                 {
                     "name": "url",
