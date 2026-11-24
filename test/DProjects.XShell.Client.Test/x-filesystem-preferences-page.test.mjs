@@ -129,6 +129,7 @@ test("Filesystem detail selects Memory for new definitions and switches provider
     // Initialize the preferred provider, then prove a provider change replaces schemas and defaults.
     const {state, calls, controller} = createDetail();
     await controller.load();
+    assert.equal(state.editing, false);
     assert.equal(calls.listProviders, 1);
     assert.deepEqual(calls.getDefinition, []);
     assert.equal(state.provider, "mem");
@@ -141,6 +142,7 @@ test("Filesystem detail selects Memory for new definitions and switches provider
     assert.deepEqual(state.optionsSchema, providers[0].optionsSchema);
     assert.deepEqual(state.credentialsSchema, providers[0].credentialsSchema);
     assert.deepEqual(state.options, providers[0].defaults);
+    assert.match(FilesystemDetailPage.template, /label="Name"[^>]*x-attr:readonly="state\.editing"[^>]*x-attr:disabled="state\.busy"/u);
     assert.match(FilesystemDetailPage.template, /x-prop:schema="state\.optionsSchema"/u);
     assert.match(FilesystemDetailPage.template, /x-if="state\.credentialsSchema"[\s\S]*x-prop:schema="state\.credentialsSchema"/u);
 });
@@ -156,7 +158,8 @@ test("Filesystem detail loads existing values, merges defaults, and locks identi
     assert.deepEqual(state.options, {path: "/documents", readonly: false});
     assert.deepEqual(state.credentials, {token: "private"});
     assert.deepEqual(providers[0].defaults, {path: "/default", readonly: false});
-    assert.equal((FilesystemDetailPage.template.match(/state\.busy \|\| state\.editing/gu) ?? []).length, 2);
+    assert.match(FilesystemDetailPage.template, /label="Name"[^>]*x-attr:readonly="state\.editing"/u);
+    assert.match(FilesystemDetailPage.template, /label="Provider"[^>]*x-attr:disabled="state\.busy \|\| state\.editing"/u);
 });
 
 test("Filesystem detail validates generated schemas before saving", async () => {
@@ -172,6 +175,7 @@ test("Filesystem detail saves through Filesystems and clears credentials on ever
     // Pass detached provider data, close without a dialog result, and discard sensitive Page state.
     const saved = createDetail({filesystemName: "work"});
     await saved.controller.load();
+    saved.state.name = "other";
     saved.controller.optionsChanged({event: {detail: {newValue: {path: "/updated", readonly: true}}}});
     saved.controller.credentialsChanged({event: {detail: {newValue: {token: "replacement"}}}});
     await saved.controller.save();

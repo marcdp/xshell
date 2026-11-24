@@ -21,7 +21,7 @@ export default {
             <x-datafields columns="1">
                 <x-datafield type="text" label="Name" required x-model="state.name"
                     description="Stable identifier used by the application."
-                    x-attr:disabled="state.busy || state.editing"></x-datafield>
+                    x-attr:readonly="state.editing" x-attr:disabled="state.busy"></x-datafield>
 
                 <x-datafield type="text" label="Label" x-model="state.label"
                     description="Optional human-readable name."
@@ -150,7 +150,8 @@ export default {
                 // Validate basic identity and both generated schemas before calling the Service.
                 if (state.busy) return;
 
-                const name = state.name.trim();
+                if (state.editing && !state.filesystemName) return void (state.error = "Filesystem registration identity is missing.");
+                const name = state.editing ? state.filesystemName : state.name.trim();
                 if (!name) return void (state.error = "Name is required.");
                 if (!state.provider) return void (state.error = "Provider is required.");
 

@@ -11,22 +11,21 @@ export default {
 
     template: `
         <x-notice x-if="state.error" type="error" label="Filesystems" x-attr:message="state.error"></x-notice>
-        <x-notice x-if="state.busy" type="working" label="Working"></x-notice>
 
         <x-datafields x-if="state.ready">
             <x-datafield label="Filesystems" class="no-padding">
                 <x-listview view="details" x-on:activate="edit">
                     <x-listview-head>
-                        <x-listview-column label="Label" width="14em"></x-listview-column>
                         <x-listview-column label="Name" width="12em"></x-listview-column>
+                        <x-listview-column label="Label" width="14em"></x-listview-column>
                         <x-listview-column label="Provider"></x-listview-column>
                         <x-listview-column label="Actions" width="5em" style="text-align:right">
                             <x-button class="anchor" icon="x-add" tooltip="Add filesystem" command="add" x-attr:disabled="state.busy"></x-button>
                         </x-listview-column>
                     </x-listview-head>
                     <x-listview-body>
-                        <x-listview-item x-for="item in state.items" x-key="name" x-prop:value="item.name" icon="x-filesystem" x-attr:label="item.label">
-                            <span x-text="item.name"></span>
+                        <x-listview-item x-for="item in state.items" x-key="name" x-prop:value="item.name" icon="x-filesystem" x-attr:label="item.name">
+                            <span x-text="item.label"></span>
                             <span x-text="item.provider"></span>
                             <div style="text-align:right">
                                 <x-button class="anchor" icon="x-edit" tooltip="Edit"
