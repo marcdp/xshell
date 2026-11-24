@@ -1,4 +1,5 @@
 const DEFINITION_PREFIX = "x-filesystem:filesystem:";
+const CREDENTIAL_PREFIX = "x-filesystem:credentials:";
 const DEFINITION_NAME_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
 
 export default class Filesystems {
@@ -70,6 +71,7 @@ export default class Filesystems {
     // fields
     #jsonValidator;
     #preferences;
+    #secrets;
     #services;
     #providers = new Map();
     #instances = new Map();
@@ -78,7 +80,7 @@ export default class Filesystems {
     #editors;
 
     // constructor
-    constructor({config, jsonValidator, preferences, services}, options = {}) {
+    constructor({config, jsonValidator, preferences, secrets, services}, options = {}) {
         // Normalize the scheme-keyed provider configuration and resolve implementation URLs once.
         for (const [scheme, provider] of Object.entries(options.providers ?? {})) {
             const isAbsoluteUrl = /^[A-Za-z][A-Za-z0-9+.-]*:/.test(provider.implementation);
@@ -91,6 +93,7 @@ export default class Filesystems {
         // Retain the owning Services context and snapshot configured Commands and editors.
         this.#jsonValidator = jsonValidator;
         this.#preferences = preferences;
+        this.#secrets = secrets;
         this.#services = services;
         this.#commands = structuredClone(options.commands ?? []);
         this.#editors = structuredClone(options.editors ?? {});
@@ -130,21 +133,57 @@ export default class Filesystems {
             return {name: value.name, label: value.label, provider: value.provider, options: value.options};
         }).sort((left, right) => left.name < right.name ? -1 : left.name > right.name ? 1 : 0);
     }
-    async saveDefinition(definition) {
-        // Validate the registration through its selected provider before persisting only authored options.
+    async getDefinition(name) {
+        // Load one definition and its separately stored credentials for management editing.
+        this.#validateDefinitionName(name);
+        const stored = await this.#preferences.get(DEFINITION_PREFIX + name, null);
+        if (stored === null) return null;
+
+        const resolved = await this.#resolveDefinition(stored);
+        const credentialsDefinition = this.#getProviderCredentialsDefinition(resolved.definition.provider, resolved.Implementation);
+        let credentials = null;
+        if (credentialsDefinition !== undefined) {
+            const storedCredentials = await this.#secrets.get(CREDENTIAL_PREFIX + name);
+            credentials = this.#validateCredentials(resolved.definition.provider, credentialsDefinition, storedCredentials);
+        }
+        return {...structuredClone(resolved.definition), credentials};
+    }
+    async saveDefinition(definition, credentials = undefined) {
+        // Validate the registration and optional credentials before changing either persistence boundary.
         const resolved = await this.#resolveDefinition(definition);
+        const credentialsDefinition = this.#getProviderCredentialsDefinition(resolved.definition.provider, resolved.Implementation);
+        const validatedCredentials = credentials === undefined || credentials === null
+            ? credentials : this.#validateCredentials(resolved.definition.provider, credentialsDefinition, credentials);
+
+        // Persist only authored options, then apply the explicitly requested credential operation.
         await this.#preferences.set(DEFINITION_PREFIX + resolved.definition.name, structuredClone(resolved.definition));
         this.#namedInstances.delete(resolved.definition.name);
+        if (validatedCredentials !== undefined) {
+            const credentialName = CREDENTIAL_PREFIX + resolved.definition.name;
+            if (validatedCredentials === null) await this.#secrets.delete(credentialName);
+            else await this.#secrets.set(credentialName, validatedCredentials, {
+                label: `${resolved.definition.label} credentials`,
+                description: `Credentials for filesystem '${resolved.definition.name}'.`
+            });
+        }
     }
     async removeDefinition(name) {
-        // Delete one validated registration key and invalidate its separate runtime identity.
-        if (typeof name !== "string" || !DEFINITION_NAME_PATTERN.test(name)) throw new TypeError("Filesystem definition name is invalid.");
+        // Remove only credentials belonging to an existing credential-bearing definition.
+        this.#validateDefinitionName(name);
+        const stored = await this.#preferences.get(DEFINITION_PREFIX + name, null);
+        if (stored !== null) {
+            const resolved = await this.#resolveDefinition(stored);
+            const credentialsDefinition = this.#getProviderCredentialsDefinition(resolved.definition.provider, resolved.Implementation);
+            if (credentialsDefinition !== undefined) await this.#secrets.delete(CREDENTIAL_PREFIX + name);
+        }
+
+        // Delete the registration and invalidate its separate runtime identity.
         await this.#preferences.delete(DEFINITION_PREFIX + name);
         this.#namedInstances.delete(name);
     }
     async openNamed(name) {
         // Share all lookup and construction work by registration name, independently from raw URL cache identity.
-        if (typeof name !== "string" || !DEFINITION_NAME_PATTERN.test(name)) throw new TypeError("Filesystem definition name is invalid.");
+        this.#validateDefinitionName(name);
         if (this.#namedInstances.has(name)) return await this.#namedInstances.get(name);
 
         const creation = (async () => {
@@ -152,7 +191,9 @@ export default class Filesystems {
             if (stored === null) throw new Error(`Filesystem definition not found: ${name}`);
             const resolved = await this.#resolveDefinition(stored);
             const credentialsDefinition = this.#getProviderCredentialsDefinition(resolved.canonicalUrl, resolved.Implementation);
-            return await this.#createProvider(resolved.canonicalUrl, resolved.options, resolved.Implementation, credentialsDefinition);
+            const storedCredentials = credentialsDefinition === undefined ? undefined : await this.#secrets.get(CREDENTIAL_PREFIX + name);
+            const credentials = this.#validateCredentials(resolved.canonicalUrl, credentialsDefinition, storedCredentials);
+            return await this.#createProvider(resolved.canonicalUrl, resolved.options, resolved.Implementation, credentialsDefinition, credentials);
         })();
         this.#namedInstances.set(name, creation);
         try {
@@ -210,6 +251,10 @@ export default class Filesystems {
     }
 
     // private methods
+    #validateDefinitionName(name) {
+        // Keep the storage-key suffix constrained by the public definition naming rule.
+        if (typeof name !== "string" || !DEFINITION_NAME_PATTERN.test(name)) throw new TypeError("Filesystem definition name is invalid.");
+    }
     #formatValidationFailure(errors) {
         // Select the most specific validation detail using the same conventions as Services.
         const wrappers = new Set(["$ref", "anyOf", "oneOf", "allOf", "properties", "items", "false"]);

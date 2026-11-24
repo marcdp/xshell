@@ -30,14 +30,37 @@
                 "description": "Promise resolving to defensive copies of the named definitions."
             }
         },
+        "getDefinition": {
+            "description": "Gets one named Filesystem definition and its optional provider credentials for management editing.",
+            "parameters": [
+                {
+                    "name": "name",
+                    "type": "string",
+                    "required": true,
+                    "description": "Stable registration name."
+                }
+            ],
+            "returns": {
+                "type": "any",
+                "schema": {"type": ["object", "null"]},
+                "description": "Promise resolving to a defensive definition with optional credentials, or null when the definition is missing."
+            }
+        },
         "saveDefinition": {
-            "description": "Validates and saves one named Filesystem definition, replacing a definition with the same name.",
+            "description": "Validates and saves one named Filesystem definition and optionally replaces or removes its provider credentials.",
             "parameters": [
                 {
                     "name": "definition",
                     "type": "object",
                     "required": true,
                     "description": "Definition containing name, label, provider, and non-secret provider options."
+                },
+                {
+                    "name": "credentials",
+                    "type": "any",
+                    "schema": {"type": ["object", "null"]},
+                    "required": false,
+                    "description": "Optional provider credentials. Omission preserves existing credentials, an object replaces them, and null removes them."
                 }
             ],
             "returns": {

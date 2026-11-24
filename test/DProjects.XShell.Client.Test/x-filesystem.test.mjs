@@ -54,6 +54,18 @@ function createPreferences(initial = []) {
     };
 }
 
+function createSecrets(initial = []) {
+    // Model the Secrets value boundary without exposing its storage convention to callers.
+    const values = new Map(initial.map(([key, value]) => [key, structuredClone(value)]));
+    const calls = {get: [], set: [], delete: []};
+    return {
+        calls,
+        async get(name) { calls.get.push(name); return values.has(name) ? structuredClone(values.get(name)) : undefined; },
+        async set(name, value, options) { calls.set.push([name, structuredClone(value), structuredClone(options)]); values.set(name, structuredClone(value)); },
+        async delete(name) { calls.delete.push(name); values.delete(name); }
+    };
+}
+
 function createRuntime(providers, services = {}) {
     // Build scheme-dispatched providers beside a global Resolver and Loader with no Filesystem category.
     const jsonValidator = new JsonValidator();
@@ -74,7 +86,7 @@ function createRuntime(providers, services = {}) {
         resolver,
         loader,
         serviceScope,
-        filesystems: new Filesystems({config, jsonValidator, preferences: services.preferences, services: serviceScope}, {providers})
+        filesystems: new Filesystems({config, jsonValidator, preferences: services.preferences, secrets: services.secrets, services: serviceScope}, {providers})
     };
 }
 
@@ -170,7 +182,7 @@ test("Filesystems contract exposes the minimal named management API and existing
     const result = new JsonValidator().validate(FilesystemsContract, ContractSchema);
     assert.equal(result.valid, true, JSON.stringify(result.errors));
     assert.deepEqual(Object.keys(FilesystemsContract.methods), [
-        "listProviders", "listDefinitions", "saveDefinition", "removeDefinition", "openNamed", "open", "getEditor"
+        "listProviders", "listDefinitions", "getDefinition", "saveDefinition", "removeDefinition", "openNamed", "open", "getEditor"
     ]);
 });
 
@@ -247,6 +259,106 @@ test("Filesystems saves, lists, replaces, and validates named definitions", asyn
     await assert.rejects(() => filesystems.saveDefinition({name: "mismatch", provider: "https", options: {scheme: "http", host: "example.com"}}), /different provider/);
     await assert.rejects(() => filesystems.saveDefinition({name: "null-options", provider: "https", options: null}), /options must be a non-null object/);
     assert.equal(preferences.calls.set, writeCount);
+});
+
+test("Filesystems gets defensive definitions and persists credentials only when explicitly requested", async () => {
+    // Keep non-secret definitions in Preferences while validating and storing credential payloads through Secrets.
+    const preferences = createPreferences();
+    const secrets = createSecrets();
+    const jsonValidator = new JsonValidator();
+    const implementation = "data:text/javascript," + encodeURIComponent(`export default class Implementation {
+        static optionsDefinition = {
+            schema: {type: "object", required: ["scheme", "resource"], properties: {scheme: {const: "secure"}, resource: {type: "string"}}, additionalProperties: false},
+            parseUrl(url) { return {scheme: "secure", resource: url.slice(url.indexOf(":") + 1)}; },
+            getUrl(options) { return options.scheme + ":" + options.resource; }
+        };
+        static credentialsDefinition = {schema: {
+            type: "object", required: ["token"], properties: {token: {type: "string", minLength: 1, writeOnly: true}}, additionalProperties: false
+        }};
+        constructor(services, options, credentials) { this.url = Implementation.optionsDefinition.getUrl(options); this.credentials = credentials; }
+    }`);
+    const filesystems = new Filesystems({config: testConfig, jsonValidator, preferences, secrets, services: createServices({jsonValidator})}, {
+        providers: {secure: {implementation, options: {scheme: "secure"}}}
+    });
+    const definition = {name: "work", label: "Work Files", provider: "secure", options: {resource: "documents"}};
+
+    assert.equal(await filesystems.getDefinition("missing"), null);
+    await filesystems.saveDefinition(definition, {token: "first-private-token"});
+    assert.deepEqual(secrets.calls.set, [[
+        "x-filesystem:credentials:work", {token: "first-private-token"},
+        {label: "Work Files credentials", description: "Credentials for filesystem 'work'."}
+    ]]);
+
+    const loaded = await filesystems.getDefinition("work");
+    assert.deepEqual(loaded, {...definition, credentials: {token: "first-private-token"}});
+    loaded.options.resource = "changed";
+    loaded.credentials.token = "changed";
+    assert.deepEqual(await filesystems.getDefinition("work"), {...definition, credentials: {token: "first-private-token"}});
+
+    const secretWrites = secrets.calls.set.length;
+    const secretDeletes = secrets.calls.delete.length;
+    await filesystems.saveDefinition({...definition, label: "Updated"}, undefined);
+    assert.equal(secrets.calls.set.length, secretWrites);
+    assert.equal(secrets.calls.delete.length, secretDeletes);
+    assert.equal((await filesystems.getDefinition("work")).credentials.token, "first-private-token");
+
+    const preferenceWrites = preferences.calls.set;
+    let credentialError;
+    try {
+        await filesystems.saveDefinition(definition, {token: "", leaked: "never-show-this-value"});
+    } catch (error) {
+        credentialError = error;
+    }
+    assert.match(credentialError?.message ?? "", /Invalid Filesystem provider credentials/);
+    assert.doesNotMatch(credentialError.message, /never-show-this-value|first-private-token/);
+    assert.equal(preferences.calls.set, preferenceWrites);
+    assert.equal(secrets.calls.set.length, secretWrites);
+
+    await filesystems.saveDefinition(definition, null);
+    assert.deepEqual(secrets.calls.delete, ["x-filesystem:credentials:work"]);
+    assert.equal((await filesystems.getDefinition("work")).credentials, null);
+});
+
+test("Filesystems opens named definitions with stored credentials and invalidates credential-bearing instances", async () => {
+    // Reconstruct name-cached providers after credential updates and remove only the associated credential Secret.
+    const preferences = createPreferences();
+    const secrets = createSecrets();
+    const jsonValidator = new JsonValidator();
+    const implementation = "data:text/javascript," + encodeURIComponent(`export default class Implementation {
+        static optionsDefinition = {
+            schema: {type: "object", required: ["scheme", "resource"], properties: {scheme: {const: "secure"}, resource: {type: "string"}}, additionalProperties: false},
+            parseUrl(url) { return {scheme: "secure", resource: url.slice(url.indexOf(":") + 1)}; },
+            getUrl(options) { return options.scheme + ":" + options.resource; }
+        };
+        static credentialsDefinition = {schema: {
+            type: "object", required: ["token"], properties: {token: {type: "string", minLength: 1, writeOnly: true}}, additionalProperties: false
+        }};
+        constructor(services, options, credentials) { this.url = Implementation.optionsDefinition.getUrl(options); this.credentials = credentials; }
+    }`);
+    const filesystems = new Filesystems({config: testConfig, jsonValidator, preferences, secrets, services: createServices({jsonValidator})}, {
+        providers: {secure: {implementation, options: {scheme: "secure"}}}
+    });
+    const definition = {name: "work", label: "Work", provider: "secure", options: {resource: "documents"}};
+
+    await filesystems.saveDefinition(definition, {token: "first-private-token"});
+    const first = await filesystems.openNamed("work");
+    assert.equal(first.url, "secure:documents");
+    assert.deepEqual(first.credentials, {token: "first-private-token"});
+    assert.strictEqual(await filesystems.openNamed("work"), first);
+
+    await filesystems.saveDefinition(definition, {token: "second-private-token"});
+    const second = await filesystems.openNamed("work");
+    assert.notStrictEqual(second, first);
+    assert.deepEqual(second.credentials, {token: "second-private-token"});
+    assert.equal(second.url.includes("private-token"), false);
+
+    await filesystems.removeDefinition("work");
+    assert.deepEqual(secrets.calls.delete, ["x-filesystem:credentials:work"]);
+    assert.equal(await filesystems.getDefinition("work"), null);
+
+    const deletes = secrets.calls.delete.length;
+    await filesystems.removeDefinition("missing");
+    assert.equal(secrets.calls.delete.length, deletes);
 });
 
 test("Filesystems.openNamed preserves options and caches by registration name", async () => {

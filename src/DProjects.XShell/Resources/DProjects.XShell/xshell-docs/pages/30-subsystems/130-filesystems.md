@@ -61,6 +61,7 @@ Filesystems domain API:
 ~~~js
 await filesystems.listProviders();
 await filesystems.listDefinitions();
+await filesystems.getDefinition("work");
 await filesystems.saveDefinition({
     name: "work",
     label: "Work Files",
@@ -83,8 +84,25 @@ Named runtime instances cache by registration name in a map separate from raw `o
 same instance, while different names remain different identities even when their derived URLs match. Saving or removing a definition invalidates that name's
 cache entry.
 
-Credentials persistence and Secrets integration are not implemented; `openNamed()` passes `null` credentials. Runtime-only values such as a local
-`FileSystemDirectoryHandle` are also not persisted, so a named `file:` Filesystem may still need a handle attached through the existing provider API.
+The Filesystems Preferences Page lists named definitions and opens a generic provider-driven detail Page for add or edit operations. The detail Page renders
+non-secret options from `optionsSchema` and, when present, credentials from `credentialsSchema`. Providers without a credential schema show no credential form.
+Pages call only Filesystems domain methods; storage access remains inside the Service:
+
+~~~text
+Filesystems Preferences Page
+    ↓
+Filesystems Service
+    ├── Preferences → named non-secret definitions
+    └── Secrets     → provider credential payload
+~~~
+
+`getDefinition(name)` returns one defensive definition plus its optional credentials for editing. `saveDefinition(definition, credentials)` preserves existing
+credentials when the second argument is omitted, replaces them when it is an object, and removes them when it is `null`. `openNamed()` retrieves and validates
+stored credentials before passing them separately to the provider constructor. Removing a credential-bearing definition also removes its associated Secret.
+Credential payloads never enter provider URLs or cache keys.
+
+Runtime-only values such as a local `FileSystemDirectoryHandle` are not persisted, so a named `file:` Filesystem may still need a handle attached through the
+existing provider API.
 
 ## Providers
 
@@ -204,10 +222,9 @@ Filesystem provider
 and passwords.
 
 When a provider is opened, Filesystems validates the optional descriptor and compiles `credentialsDefinition.schema` to reject malformed JSON Schema before
-construction. This schema check does not validate required credential properties when no payload exists. `open(url)` does not currently accept, acquire, or
-persist credential payloads, so raw URL opening supplies `null`; credential payload validation remains private infrastructure for future orchestration.
-Providers remain unaware of persistence. A future management UI may use `optionsDefinition.schema` for non-secret configuration and
-`credentialsDefinition.schema` for secret configuration, but no Filesystems Preferences Page or Secrets-backed credential registry is implemented.
+construction. This schema check does not validate required credential properties when no payload exists. Raw `open(url)` continues to supply `null` because
+credentials belong only to named definitions. The generic detail Page uses `optionsDefinition.schema` and `credentialsDefinition.schema`; Filesystems validates
+both payloads authoritatively and keeps providers unaware of persistence.
 
 For raw URL opening, the round trip prevents the URL from becoming an independent configuration source:
 
