@@ -328,6 +328,7 @@ test("Filesystems saves, lists, replaces, and validates named definitions", asyn
     const input = {
         name: "work",
         label: "Work Files",
+        description: " Company documents ",
         provider: "HTTPS",
         options: {host: "files.example.com", path: "/documents", isReadonly: true}
     };
@@ -339,19 +340,25 @@ test("Filesystems saves, lists, replaces, and validates named definitions", asyn
     assert.deepEqual(await filesystems.listDefinitions(), [{
         name: "work",
         label: "Work Files",
+        description: "Company documents",
         provider: "https",
         options: {host: "files.example.com", path: "/documents", isReadonly: true}
     }]);
 
     const returned = await filesystems.listDefinitions();
+    returned[0].description = "changed";
     returned[0].options.host = "changed.example.com";
-    assert.equal((await filesystems.listDefinitions())[0].options.host, "files.example.com");
+    const unchanged = (await filesystems.listDefinitions())[0];
+    assert.equal(unchanged.description, "Company documents");
+    assert.equal(unchanged.options.host, "files.example.com");
 
     await filesystems.saveDefinition({name: "work", provider: "https", options: {host: "updated.example.com", path: "/"}});
-    await filesystems.saveDefinition({name: "alpha", label: "Alpha", provider: "https", options: {host: "alpha.example.com"}});
+    await filesystems.saveDefinition({name: "alpha", label: "Alpha", description: "   ", provider: "https", options: {host: "alpha.example.com"}});
     const updated = await filesystems.listDefinitions();
     assert.deepEqual(updated.map(definition => definition.name), ["alpha", "work"]);
+    assert.equal(updated[0].description, "");
     assert.equal(updated[1].label, "work");
+    assert.equal(updated[1].description, "");
     assert.equal(updated[1].options.host, "updated.example.com");
 
     const writeCount = preferences.calls.set;
@@ -362,6 +369,7 @@ test("Filesystems saves, lists, replaces, and validates named definitions", asyn
     await assert.rejects(() => filesystems.saveDefinition({name: "invalid", provider: "https", options: {path: "/missing-host"}}), /Invalid Filesystem provider options/);
     await assert.rejects(() => filesystems.saveDefinition({name: "mismatch", provider: "https", options: {scheme: "http", host: "example.com"}}), /different provider/);
     await assert.rejects(() => filesystems.saveDefinition({name: "null-options", provider: "https", options: null}), /options must be a non-null object/);
+    await assert.rejects(() => filesystems.saveDefinition({name: "invalid-description", description: 123, provider: "https", options: {host: "example.com"}}), /description must be a string/);
     assert.equal(preferences.calls.set, writeCount);
 });
 
@@ -384,7 +392,7 @@ test("Filesystems gets defensive definitions and persists credentials only when 
     const filesystems = new Filesystems({config: testConfig, jsonValidator, preferences, secrets, services: createServices({jsonValidator})}, {
         providers: {secure: {implementation, options: {scheme: "secure"}}}
     });
-    const definition = {name: "work", label: "Work Files", provider: "secure", options: {resource: "documents"}};
+    const definition = {name: "work", label: "Work Files", description: "Company documents", provider: "secure", options: {resource: "documents"}};
 
     assert.equal(await filesystems.getDefinition("missing"), null);
     await filesystems.saveDefinition(definition, {token: "first-private-token"});
@@ -459,7 +467,7 @@ test("Filesystems authenticates before credential saves and preserves persistenc
     assert.equal(preferences.calls.set, 0);
     assert.equal(secrets.calls.set.length, 0);
     assert.equal(secrets.calls.delete.length, 0);
-    assert.deepEqual(await filesystems.listDefinitions(), [original]);
+    assert.deepEqual(await filesystems.listDefinitions(), [{...original, description: ""}]);
     assert.strictEqual(await filesystems.openNamed("work"), cached);
 
     // Persist credentials before Preferences and invalidate the cache only after both writes succeed.
@@ -655,6 +663,7 @@ test("Filesystems.openNamed preserves options and caches by registration name", 
     await filesystems.removeDefinition("mirror");
     assert.equal((await filesystems.listDefinitions()).some(definition => definition.name === "mirror"), false);
     await preferences.set("x-filesystem:filesystem:mirror", {name: "mirror", label: "mirror", provider: "https", options});
+    assert.equal((await filesystems.listDefinitions()).find(definition => definition.name === "mirror").description, "");
     assert.notStrictEqual(await filesystems.openNamed("mirror"), mirror);
     await assert.rejects(() => filesystems.openNamed("missing"), /Filesystem definition not found: missing/);
 });

@@ -42,14 +42,14 @@
             }
         },
         "listDefinitions": {
-            "description": "Lists persisted non-secret named Filesystem definitions sorted by name.",
+            "description": "Lists persisted non-secret named Filesystem definitions, including registration metadata and provider options, sorted by name.",
             "returns": {
                 "type": "array",
                 "description": "Promise resolving to defensive copies of the named definitions."
             }
         },
         "getDefinition": {
-            "description": "Gets one named Filesystem definition and its optional provider credentials for management editing.",
+            "description": "Gets one named Filesystem definition with registration metadata, provider options, and optional provider credentials for management editing.",
             "parameters": [
                 {
                     "name": "name",
@@ -71,7 +71,7 @@
                     "name": "definition",
                     "type": "object",
                     "required": true,
-                    "description": "Definition containing name, label, provider, and non-secret provider options."
+                    "description": "Definition containing name, label, description, provider, and non-secret provider options."
                 },
                 {
                     "name": "credentials",

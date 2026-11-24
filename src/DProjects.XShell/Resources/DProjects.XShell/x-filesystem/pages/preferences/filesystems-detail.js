@@ -27,6 +27,10 @@ export default {
                     description="Optional human-readable name."
                     x-attr:disabled="state.busy"></x-datafield>
 
+                <x-datafield type="textarea" label="Description" x-model="state.description"
+                    description="Optional description of this filesystem registration."
+                    x-attr:disabled="state.busy"></x-datafield>
+
                 <x-datafield type="select" label="Provider" required x-model="state.provider"
                     x-prop:domain="state.providerDomain" x-on:change="providerChanged"
                     x-attr:disabled="state.busy || state.editing"></x-datafield>
@@ -55,6 +59,7 @@ export default {
         providerDomain: [],
         name: "",
         label: "",
+        description: "",
         provider: "",
         optionsSchema: null,
         credentialsSchema: null,
@@ -84,6 +89,7 @@ export default {
                         state.editing = true;
                         state.name = definition.name;
                         state.label = definition.label;
+                        state.description = definition.description ?? "";
                         this.selectProvider(definition.provider, definition.options, definition.credentials);
                     } else {
                         // Prefer Memory for a new definition when available.
@@ -100,6 +106,7 @@ export default {
             unload() {
                 // Discard potentially sensitive credentials when the editor closes.
                 alive = false;
+                state.description = "";
                 state.credentials = {};
                 state.options = {};
             },
@@ -168,6 +175,7 @@ export default {
                     const definition = {
                         name,
                         label: state.label.trim() || name,
+                        description: state.description.trim(),
                         provider: state.provider,
                         options: JSON.parse(JSON.stringify(state.options))
                     };

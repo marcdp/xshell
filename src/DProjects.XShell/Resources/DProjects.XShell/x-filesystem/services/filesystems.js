@@ -132,7 +132,7 @@ export default class Filesystems {
         const records = await this.#preferences.list(DEFINITION_PREFIX);
         return records.map(record => {
             const value = structuredClone(record.value);
-            return {name: value.name, label: value.label, provider: value.provider, options: value.options};
+            return {name: value.name, label: value.label, description: value.description ?? "", provider: value.provider, options: value.options};
         }).sort((left, right) => left.name < right.name ? -1 : left.name > right.name ? 1 : 0);
     }
     async getDefinition(name) {
@@ -509,6 +509,9 @@ export default class Filesystems {
         if (definition.label !== undefined && typeof definition.label !== "string") {
             throw new TypeError("Filesystem definition label must be a string.");
         }
+        if (definition.description !== undefined && typeof definition.description !== "string") {
+            throw new TypeError("Filesystem definition description must be a string.");
+        }
         if (typeof definition.provider !== "string" || !definition.provider.trim()) {
             throw new TypeError("Filesystem definition provider must be a non-empty string.");
         }
@@ -527,6 +530,7 @@ export default class Filesystems {
         const normalized = {
             name: definition.name,
             label: definition.label?.trim() ? definition.label : definition.name,
+            description: definition.description?.trim() || "",
             provider,
             options: ownOptions
         };

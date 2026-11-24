@@ -65,6 +65,7 @@ await filesystems.getDefinition("work");
 await filesystems.saveDefinition({
     name: "work",
     label: "Work Files",
+    description: "Company documents and shared project files.",
     provider: "https",
     options: {
         scheme: "https",
@@ -76,13 +77,15 @@ const filesystem = await filesystems.openNamed("work");
 await filesystems.removeDefinition("work");
 ~~~
 
-Each persisted definition contains only `name`, `label`, `provider`, and the definition's own `options`. Filesystems merges configured provider defaults,
+Each persisted definition contains `name`, `label`, `description`, `provider`, and the definition's own `options`. Filesystems merges configured provider defaults,
 validates the effective options through `Implementation.optionsDefinition.schema`, and derives the canonical URL with
 `Implementation.optionsDefinition.getUrl()`. The selected provider ID must agree with the derived URL scheme; the URL itself is not persisted.
 
 The `name` is the stable programmatic registration identity: it is chosen when the definition is created and is read-only during ordinary editing. The
-`label` is editable, human-readable presentation metadata. Changing a registration name would require an explicit rename operation across its persisted
-definition, credentials, named runtime cache identity, and callers of `openNamed(name)`; the current management Page does not support that operation.
+`label` is the editable human-readable display name, while `description` is editable optional explanatory metadata. `provider` selects the implementation and
+`options` contains its declarative configuration. Label and description do not affect provider options, credentials, the provider URL, or runtime cache identity.
+Changing a registration name would require an explicit rename operation across its persisted definition, credentials, named runtime cache identity, and callers
+of `openNamed(name)`; the current management Page does not support that operation.
 
 Named runtime instances cache by registration name in a map separate from raw `open(url)` caching. Repeated and concurrent `openNamed(name)` calls share the
 same instance, while different names remain different identities even when their derived URLs match. Saving or removing a definition invalidates that name's
