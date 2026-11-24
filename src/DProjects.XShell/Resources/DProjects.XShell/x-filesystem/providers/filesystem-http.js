@@ -60,12 +60,11 @@ export default class FilesystemHttp extends Filesystem {
                 throw new TypeError("The filesystem base URL must not contain credentials, query or fragment");
             }
             normalizedUrl.pathname = normalizedUrl.pathname.replace(/\/+$/, "") || "/";
-            return {options: {scheme: normalizedUrl.protocol.slice(0, -1), host: normalizedUrl.host, path: normalizedUrl.pathname}};
+            return {scheme: normalizedUrl.protocol.slice(0, -1), host: normalizedUrl.host, path: normalizedUrl.pathname};
         },
 
-        getUrl(options, context = {}) {
-            // Project validated structured options without relying on constructor-only context.
-            void context;
+        getUrl(options) {
+            // Project validated structured options into the complete canonical URL.
             const scheme = options?.scheme;
             if (!["http", "https"].includes(scheme)) throw new TypeError(`Unsupported HTTP filesystem scheme: ${scheme}`);
             if (!options || typeof options !== "object" || typeof options.host !== "string" || !options.host) {

@@ -75,13 +75,12 @@ export default class FilesystemOpfs extends Filesystem {
         parseUrl(url) {
             // Accept the existing local forms and deserialize their option-free identity.
             if (url !== "opfs" && url !== "opfs:") throw new TypeError(`Unsupported OPFS filesystem URL: ${url}`);
-            return {options: {}};
+            return {};
         },
 
-        getUrl(options, context = {}) {
+        getUrl(options) {
             // OPFS has one origin-scoped canonical identity.
             void options;
-            void context;
             return "opfs:";
         }
     };

@@ -27,12 +27,11 @@ export default class TestFilesystemProvider {
         parseUrl(url) {
             // Deserialize the opaque test resource so Filesystems can validate and re-project it.
             const separator = url.indexOf(":");
-            return {options: {scheme: url.slice(0, separator).toLowerCase(), resource: url.slice(separator + 1)}};
+            return {scheme: url.slice(0, separator).toLowerCase(), resource: url.slice(separator + 1)};
         },
 
-        getUrl(options, context = {}) {
+        getUrl(options) {
             // Normalize trailing slashes while preserving query variants for provider-owned cache policy.
-            void context;
             return `${options.scheme}:${options.resource.replace(/\/+$/, "")}`;
         }
     };

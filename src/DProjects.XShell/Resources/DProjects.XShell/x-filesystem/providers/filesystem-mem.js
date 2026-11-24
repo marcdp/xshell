@@ -144,7 +144,7 @@ export default class FilesystemMem extends Filesystem {
             if (typeof url !== "string") throw new TypeError("Memory filesystem URL must be a string");
             const match = url.match(/^mem:(.*)$/i);
             if (!match || /[\x00-\x20]/.test(match[1])) throw new TypeError(`Unsupported memory filesystem URL: ${url}`);
-            return {options: {instance: match[1] || null}};
+            return {instance: match[1] || null};
         },
         getUrl(options) {
             if (options.instance === null || options.instance === undefined) return "mem:";

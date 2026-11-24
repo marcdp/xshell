@@ -9,7 +9,7 @@ import FilesystemFile from "../../src/DProjects.XShell/Resources/DProjects.XShel
 import FilesystemHttp from "../../src/DProjects.XShell/Resources/DProjects.XShell/x-filesystem/providers/filesystem-http.js";
 import FilesystemMem from "../../src/DProjects.XShell/Resources/DProjects.XShell/x-filesystem/providers/filesystem-mem.js";
 import FilesystemOpfs from "../../src/DProjects.XShell/Resources/DProjects.XShell/x-filesystem/providers/filesystem-opfs.js";
-import Filesystems from "../../src/DProjects.XShell/Resources/DProjects.XShell/x-filesystem/services/filesystems.js";
+import Filesystems, {validateProviderCredentials} from "../../src/DProjects.XShell/Resources/DProjects.XShell/x-filesystem/services/filesystems.js";
 import ContractSchema from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/schemas/contract.schema.json" with { type: "json" };
 import JsonValidator from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/json-validator.js";
 import Loader from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/loader.js";
@@ -89,7 +89,7 @@ test("Filesystems.open resolves and imports providers locally", async () => {
     const implementation = "data:text/javascript," + encodeURIComponent(`export default class Implementation {
         static optionsDefinition = {
             schema: {type: "object", required: ["scheme", "resource"], properties: {scheme: {type: "string"}, tag: {type: "string"}, resource: {type: "string"}}, additionalProperties: false},
-            parseUrl(url) { if (!this.schema) throw new Error("missing descriptor context"); const separator = url.indexOf(":"); return {options: {scheme: url.slice(0, separator).toLowerCase(), resource: url.slice(separator + 1)}}; },
+            parseUrl(url) { if (!this.schema) throw new Error("missing descriptor context"); const separator = url.indexOf(":"); return {scheme: url.slice(0, separator).toLowerCase(), resource: url.slice(separator + 1)}; },
             getUrl(options) { if (!this.schema) throw new Error("missing descriptor context"); return options.scheme + ":" + options.resource.toLowerCase(); }
         };
         constructor(services, options, credentials = null) { this.options = structuredClone(options); this.url = Implementation.optionsDefinition.getUrl(options); this.credentials = credentials; options.tag = "provider mutation"; }
@@ -220,9 +220,9 @@ test("Filesystems requires valid provider options definitions and resolves depen
         ["static optionsDefinition = null;", /invalid static optionsDefinition.*expected an object/],
         ["static optionsDefinition = [];", /invalid static optionsDefinition.*expected an object/],
         ["static optionsDefinition = {};", /must define static optionsDefinition\.parseUrl\(\)/],
-        ["static optionsDefinition = {parseUrl() { return {options: {}}; }, getUrl() { return 'test:demo'; }};", /must define static optionsDefinition\.schema/],
-        ["static optionsDefinition = {schema: [], parseUrl() { return {options: {}}; }, getUrl() { return 'test:demo'; }};", /invalid static optionsDefinition\.schema.*expected a JSON Schema object/],
-        ["static optionsDefinition = {schema: {type: 'object', patternProperties: {'[': {type: 'string'}}}, parseUrl() { return {options: {}}; }, getUrl() { return 'test:demo'; }};", /invalid static optionsDefinition\.schema/]
+        ["static optionsDefinition = {parseUrl() { return {}; }, getUrl() { return 'test:demo'; }};", /must define static optionsDefinition\.schema/],
+        ["static optionsDefinition = {schema: [], parseUrl() { return {}; }, getUrl() { return 'test:demo'; }};", /invalid static optionsDefinition\.schema.*expected a JSON Schema object/],
+        ["static optionsDefinition = {schema: {type: 'object', patternProperties: {'[': {type: 'string'}}}, parseUrl() { return {}; }, getUrl() { return 'test:demo'; }};", /invalid static optionsDefinition\.schema/]
     ]) {
         globalThis.__filesystemConstructions = 0;
         const implementation = "data:text/javascript," + encodeURIComponent(`export default class Implementation {
@@ -239,7 +239,7 @@ test("Filesystems requires valid provider options definitions and resolves depen
     const implementation = "data:text/javascript," + encodeURIComponent(`export default class Implementation {
         static optionsDefinition = {
             schema: {type: "object", properties: {scheme: {type: "string"}, timeout: {type: "integer"}, resource: {type: "string"}}, additionalProperties: false},
-            parseUrl(url) { const separator = url.indexOf(":"); return {options: {scheme: url.slice(0, separator), resource: url.slice(separator + 1)}}; },
+            parseUrl(url) { const separator = url.indexOf(":"); return {scheme: url.slice(0, separator), resource: url.slice(separator + 1)}; },
             getUrl(options) { return options.scheme + ":" + options.resource; }
         };
         constructor({secrets, services}, options, credentials = null) { this.secrets = secrets; this.services = services; this.options = options; this.credentials = credentials; }
@@ -257,20 +257,134 @@ test("Filesystems requires valid provider options definitions and resolves depen
     delete globalThis.__filesystemConstructions;
 });
 
+test("Filesystems recognizes optional provider credential descriptors without requiring a payload", async () => {
+    // Validate descriptor structure during ordinary opening while leaving required credential fields dormant when no payload is supplied.
+    for (const [credentialsSource, expected] of [
+        ["static credentialsDefinition = null;", /invalid static credentialsDefinition.*expected an object/],
+        ["static credentialsDefinition = [];", /invalid static credentialsDefinition.*expected an object/],
+        ["static credentialsDefinition = {};", /must define static credentialsDefinition\.schema/],
+        ["static credentialsDefinition = {schema: null};", /invalid static credentialsDefinition\.schema.*expected a JSON Schema object/],
+        ["static credentialsDefinition = {schema: []};", /invalid static credentialsDefinition\.schema.*expected a JSON Schema object/]
+    ]) {
+        globalThis.__filesystemCredentialConstructions = 0;
+        const implementation = "data:text/javascript," + encodeURIComponent(`export default class Implementation {
+            static optionsDefinition = {schema: {type: "object"}, parseUrl() { return {}; }, getUrl() { return "test:"; }};
+            ${credentialsSource} constructor() { globalThis.__filesystemCredentialConstructions++; }
+        }`);
+        const jsonValidator = new JsonValidator();
+        const filesystems = new Filesystems({config: testConfig, jsonValidator, services: createServices({jsonValidator})}, {
+            providers: {test: {implementation}}
+        });
+        await assert.rejects(() => filesystems.open("test:"), expected);
+        assert.equal(globalThis.__filesystemCredentialConstructions, 0);
+    }
+
+    const implementation = "data:text/javascript," + encodeURIComponent(`export default class Implementation {
+        static optionsDefinition = {schema: {type: "object"}, parseUrl() { return {}; }, getUrl() { return "test:"; }};
+        static credentialsDefinition = {schema: {type: "object", required: ["token"], properties: {token: {type: "string"}}, additionalProperties: false}};
+        constructor(services, options, credentials) { this.credentials = credentials; }
+    }`);
+    const jsonValidator = new JsonValidator();
+    const filesystems = new Filesystems({config: testConfig, jsonValidator, services: createServices({jsonValidator})}, {
+        providers: {test: {implementation}}
+    });
+    assert.equal((await filesystems.open("test:")).credentials, null);
+    delete globalThis.__filesystemCredentialConstructions;
+});
+
+test("provider credential validation clones payloads and remains separate from URL identity", () => {
+    // Exercise the internal credential boundary without adding credentials to Filesystems.open().
+    const jsonValidator = new JsonValidator();
+    let constructions = 0;
+    class CredentialProvider {
+        static optionsDefinition = {
+            schema: {type: "object", required: ["scheme", "resource"], properties: {scheme: {type: "string"}, resource: {type: "string"}}, additionalProperties: false},
+            parseUrl(url) { const separator = url.indexOf(":"); return {scheme: url.slice(0, separator), resource: url.slice(separator + 1)}; },
+            getUrl(options) { return `${options.scheme}:${options.resource}`; }
+        };
+        static credentialsDefinition = {
+            schema: {
+                type: "object",
+                required: ["username", "password"],
+                properties: {username: {type: "string", minLength: 1}, password: {type: "string", writeOnly: true}},
+                additionalProperties: false
+            }
+        };
+        static getCacheKey(url) { return url; }
+        constructor(services, options, credentials) {
+            constructions++;
+            this.hasSeparateInputs = options !== credentials;
+            this.options = structuredClone(options);
+            this.credentials = structuredClone(credentials);
+            options.resource = "mutated";
+            credentials.password = "mutated";
+        }
+    }
+
+    const authoredOptions = {scheme: "test", resource: "workspace"};
+    const authoredCredentials = {username: "worker", password: "secret-value"};
+    const validatedCredentials = validateProviderCredentials(jsonValidator, "test:workspace", CredentialProvider, authoredCredentials);
+    const provider = new CredentialProvider({}, structuredClone(authoredOptions), validatedCredentials);
+    assert.equal(provider.hasSeparateInputs, true);
+    assert.deepEqual(provider.options, authoredOptions);
+    assert.deepEqual(provider.credentials, authoredCredentials);
+    assert.notStrictEqual(validatedCredentials, authoredCredentials);
+    assert.deepEqual(authoredOptions, {scheme: "test", resource: "workspace"});
+    assert.deepEqual(authoredCredentials, {username: "worker", password: "secret-value"});
+
+    const canonicalUrl = CredentialProvider.optionsDefinition.getUrl(authoredOptions);
+    assert.equal(canonicalUrl, "test:workspace");
+    assert.equal(CredentialProvider.getCacheKey(canonicalUrl), "test:workspace");
+    assert.equal(CredentialProvider.optionsDefinition.getUrl(authoredOptions), canonicalUrl);
+    assert.equal(constructions, 1);
+
+    const invalidCredentials = {username: "private-user"};
+    let invalidError;
+    try {
+        validateProviderCredentials(jsonValidator, "test:workspace", CredentialProvider, invalidCredentials);
+    } catch (error) {
+        invalidError = error;
+    }
+    assert.match(invalidError?.message ?? "", /Invalid Filesystem provider credentials/);
+    assert.doesNotMatch(invalidError.message, /private-user|secret-value/);
+    assert.equal(constructions, 1);
+
+    class NoCredentialsProvider {}
+    assert.equal(validateProviderCredentials(jsonValidator, "test:workspace", NoCredentialsProvider, null), null);
+    assert.equal(validateProviderCredentials(jsonValidator, "test:workspace", NoCredentialsProvider, undefined), null);
+    assert.throws(() => validateProviderCredentials(jsonValidator, "test:workspace", NoCredentialsProvider, {token: "private-token"}), /does not support credentials/);
+    let cloneError;
+    try {
+        validateProviderCredentials(jsonValidator, "test:workspace", CredentialProvider, {username: "worker", password() { return "private-value"; }});
+    } catch (error) {
+        cloneError = error;
+    }
+    assert.match(cloneError?.message ?? "", /credentials cannot be cloned/);
+    assert.doesNotMatch(cloneError.message, /private-value/);
+
+    class MalformedCredentialsProvider {
+        static credentialsDefinition = {schema: {type: "object", patternProperties: {"[": {type: "string"}}}};
+    }
+    assert.equal(validateProviderCredentials(jsonValidator, "test:workspace", MalformedCredentialsProvider, null), null);
+    assert.throws(
+        () => validateProviderCredentials(jsonValidator, "test:workspace", MalformedCredentialsProvider, {}),
+        /invalid static credentialsDefinition\.schema/
+    );
+});
+
 test("Filesystems requires valid URL parsing and projection contracts", async () => {
     // Reject missing, malformed, and throwing provider URL methods before construction.
     const cases = [
         ["static optionsDefinition = {schema: {}, getUrl() { return 'test:demo'; }};", /must define static optionsDefinition\.parseUrl\(\)/],
         ["static optionsDefinition = {schema: {}, parseUrl: true, getUrl() { return 'test:demo'; }};", /invalid static optionsDefinition\.parseUrl.*expected a function/],
         ["static optionsDefinition = {schema: {}, parseUrl() { throw new Error('parse failed'); }, getUrl() { return 'test:demo'; }};", /static optionsDefinition\.parseUrl\(\) failed: parse failed/],
-        ["static optionsDefinition = {schema: {}, parseUrl() { return null; }, getUrl() { return 'test:demo'; }};", /static optionsDefinition\.parseUrl\(\) must return an object/],
-        ["static optionsDefinition = {schema: {}, parseUrl() { return {options: {}, handle: {}}; }, getUrl() { return 'test:demo'; }};", /may only return options and optional name/],
-        ["static optionsDefinition = {schema: {}, parseUrl() { return {options: []}; }, getUrl() { return 'test:demo'; }};", /must return a non-null options object/],
-        ["static optionsDefinition = {schema: {}, parseUrl() { return {options: {}, name: ''}; }, getUrl() { return 'test:demo'; }};", /name must be a non-empty string or null/],
-        ["static optionsDefinition = {schema: {}, parseUrl() { return {options: {}}; }};", /must define static optionsDefinition\.getUrl\(\)/],
-        ["static optionsDefinition = {schema: {}, parseUrl() { return {options: {}}; }, getUrl: true};", /invalid static optionsDefinition\.getUrl.*expected a function/],
-        ["static optionsDefinition = {schema: {}, parseUrl() { return {options: {}}; }, getUrl() { throw new Error('projection failed'); }};", /static optionsDefinition\.getUrl\(\) failed: projection failed/],
-        ["static optionsDefinition = {schema: {}, parseUrl() { return {options: {}}; }, getUrl() { return ''; }};", /static optionsDefinition\.getUrl\(\) must return a non-empty string/]
+        ["static optionsDefinition = {schema: {}, parseUrl() { return null; }, getUrl() { return 'test:demo'; }};", /static optionsDefinition\.parseUrl\(\) must return a non-null options object/],
+        ["static optionsDefinition = {schema: {}, parseUrl() { return []; }, getUrl() { return 'test:demo'; }};", /static optionsDefinition\.parseUrl\(\) must return a non-null options object/],
+        ["static optionsDefinition = {schema: {}, parseUrl() { return 'invalid'; }, getUrl() { return 'test:demo'; }};", /static optionsDefinition\.parseUrl\(\) must return a non-null options object/],
+        ["static optionsDefinition = {schema: {}, parseUrl() { return {}; }};", /must define static optionsDefinition\.getUrl\(\)/],
+        ["static optionsDefinition = {schema: {}, parseUrl() { return {}; }, getUrl: true};", /invalid static optionsDefinition\.getUrl.*expected a function/],
+        ["static optionsDefinition = {schema: {}, parseUrl() { return {}; }, getUrl() { throw new Error('projection failed'); }};", /static optionsDefinition\.getUrl\(\) failed: projection failed/],
+        ["static optionsDefinition = {schema: {}, parseUrl() { return {}; }, getUrl() { return ''; }};", /static optionsDefinition\.getUrl\(\) must return a non-empty string/]
     ];
     for (const [optionsSource, expected] of cases) {
         globalThis.__filesystemContractConstructions = 0;
@@ -294,7 +408,7 @@ test("Filesystems validates parsed and merged options before canonical projectio
     const implementation = "data:text/javascript," + encodeURIComponent(`export default class Implementation {
         static optionsDefinition = {
             schema: {type: "object", required: ["count"], properties: {count: {type: "integer"}}, additionalProperties: false},
-            parseUrl() { return {options: {count: "invalid"}}; },
+            parseUrl() { return {count: "invalid"}; },
             getUrl() { globalThis.__filesystemProjectionCalls++; return "test:canonical"; }
         };
         constructor() { globalThis.__filesystemValidationConstructions++; }
@@ -324,7 +438,7 @@ test("Filesystems validates provider-defined cache identity before construction"
         const implementation = "data:text/javascript," + encodeURIComponent(`export default class Implementation {
             static optionsDefinition = {
                 schema: {type: "object", properties: {scheme: {type: "string"}, resource: {type: "string"}}, additionalProperties: false},
-                parseUrl(url) { const separator = url.indexOf(":"); return {options: {scheme: url.slice(0, separator), resource: url.slice(separator + 1)}}; },
+                parseUrl(url) { const separator = url.indexOf(":"); return {scheme: url.slice(0, separator), resource: url.slice(separator + 1)}; },
                 getUrl(options) { return options.scheme + ":" + options.resource; }
             };
             ${cacheSource} constructor() { globalThis.__filesystemCacheConstructions++; }
@@ -410,6 +524,7 @@ test("filesystem implementations retain direct dependency/options construction",
         assert.equal(Object.hasOwn(Implementation, "parseUrl"), false);
         assert.equal(Object.hasOwn(Implementation, "getUrl"), false);
         assert.equal(Object.hasOwn(Implementation, "create"), false);
+        assert.equal(Object.hasOwn(Implementation, "credentialsDefinition"), false);
     }
     assert.equal(FilesystemMem.getCacheKey("mem:"), null);
     assert.equal(FilesystemMem.getCacheKey("mem:workspace"), "mem:workspace");
@@ -440,19 +555,28 @@ test("filesystem provider schemas describe declarative options and exclude runti
 test("filesystem providers parse and canonically project their URL-represented configuration", () => {
     // Exercise provider round trips independently from Filesystems orchestration.
     const validator = new JsonValidator();
-    const anonymous = FilesystemMem.optionsDefinition.parseUrl(FilesystemMem.optionsDefinition.getUrl({instance: null}, {scheme: "mem"}));
-    const named = FilesystemMem.optionsDefinition.parseUrl(FilesystemMem.optionsDefinition.getUrl({instance: "nameOfTheInstance", isReadonly: true}, {scheme: "mem"}));
-    assert.deepEqual(anonymous, {options: {instance: null}});
-    assert.deepEqual(named, {options: {instance: "nameOfTheInstance"}});
+    const anonymous = FilesystemMem.optionsDefinition.parseUrl(FilesystemMem.optionsDefinition.getUrl({instance: null}));
+    const named = FilesystemMem.optionsDefinition.parseUrl(FilesystemMem.optionsDefinition.getUrl({instance: "nameOfTheInstance", isReadonly: true}));
+    assert.deepEqual(anonymous, {instance: null});
+    assert.deepEqual(named, {instance: "nameOfTheInstance"});
+    assert.equal(Object.hasOwn(anonymous, "options"), false);
+    assert.equal(Object.hasOwn(anonymous, "name"), false);
+
+    for (const Implementation of [FilesystemMem, FilesystemHttp, FilesystemOpfs, FilesystemFile]) {
+        assert.equal(Implementation.optionsDefinition.parseUrl.length, 1);
+        assert.equal(Implementation.optionsDefinition.getUrl.length, 1);
+    }
 
     for (const [raw, canonical, expectedOptions] of [
         ["http://example.test:8080/files/", "http://example.test:8080/files", {scheme: "http", host: "example.test:8080", path: "/files"}],
         ["https://example.test/", "https://example.test/", {scheme: "https", host: "example.test", path: "/"}]
     ]) {
         const parsed = FilesystemHttp.optionsDefinition.parseUrl(raw);
-        assert.deepEqual(parsed, {options: expectedOptions});
-        assert.equal(validator.validate(parsed.options, FilesystemHttp.optionsDefinition.schema).valid, true);
-        assert.equal(FilesystemHttp.optionsDefinition.getUrl(parsed.options), canonical);
+        assert.deepEqual(parsed, expectedOptions);
+        assert.equal(Object.hasOwn(parsed, "options"), false);
+        assert.equal(Object.hasOwn(parsed, "name"), false);
+        assert.equal(validator.validate(parsed, FilesystemHttp.optionsDefinition.schema).valid, true);
+        assert.equal(FilesystemHttp.optionsDefinition.getUrl(parsed), canonical);
         assert.deepEqual(FilesystemHttp.optionsDefinition.parseUrl(canonical), parsed);
     }
 
@@ -461,8 +585,11 @@ test("filesystem providers parse and canonically project their URL-represented c
         [FilesystemFile, "file", "file:"]
     ]) {
         const parsed = Implementation.optionsDefinition.parseUrl(input);
-        assert.equal(validator.validate(parsed.options, Implementation.optionsDefinition.schema).valid, true);
-        assert.equal(Implementation.optionsDefinition.getUrl(parsed.options), canonical);
+        assert.deepEqual(parsed, {});
+        assert.equal(Object.hasOwn(parsed, "options"), false);
+        assert.equal(Object.hasOwn(parsed, "name"), false);
+        assert.equal(validator.validate(parsed, Implementation.optionsDefinition.schema).valid, true);
+        assert.equal(Implementation.optionsDefinition.getUrl(parsed), canonical);
         assert.deepEqual(Implementation.optionsDefinition.parseUrl(canonical), parsed);
     }
 });
@@ -478,6 +605,15 @@ test("HTTP opening overlays URL fields on provider defaults without encoding rea
     assert.equal(filesystem.url, "https://example.test:8443/files");
     assert.equal(filesystem.isReadonly, true);
     assert.deepEqual(defaults, {scheme: "http", host: "configured.test", path: "/configured", isReadonly: true});
+
+    let credentialUrlError;
+    try {
+        await filesystems.open("https://private-user:private-password@example.test/files");
+    } catch (error) {
+        credentialUrlError = error;
+    }
+    assert.match(credentialUrlError?.message ?? "", /must not contain credentials/);
+    assert.doesNotMatch(credentialUrlError.message, /private-user|private-password/);
 });
 
 test("direct filesystem construction validates structured provider options", () => {

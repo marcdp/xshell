@@ -25,7 +25,7 @@ Filesystems directly imports the implementation and applies the provider-owned c
 ~~~text
 raw URL
     ↓ Implementation.optionsDefinition.parseUrl(url)
-parsed options + optional provider identity
+provider options
     ↓ merge cloned provider defaults
 Implementation.optionsDefinition.schema validation
     ↓ Implementation.optionsDefinition.getUrl(options)
@@ -59,8 +59,17 @@ every provider is cached.
 and optional `options` object containing provider-level defaults. Every selected provider class must expose one static provider options definition:
 
 - `optionsDefinition.schema` is the authoritative JSON Schema for non-secret, declarative, user-editable provider options.
-- `optionsDefinition.parseUrl(url)` returns `{options}` or `{options, name}` and deserializes a raw provider URL into options plus optional logical identity.
-- `optionsDefinition.getUrl(options, context)` projects validated options into one canonical URL. The optional context is not required by the bundled providers.
+- `optionsDefinition.parseUrl(url)` returns the provider options object directly.
+- `optionsDefinition.getUrl(options)` projects validated options into one canonical URL.
+
+The mapping is deliberately reversible and has no secondary name or context channel:
+
+~~~text
+URL ──parseUrl──► options
+URL ◄──getUrl──── options
+~~~
+
+If a value affects the canonical Filesystem URL, it belongs in the options object and must be described by `optionsDefinition.schema`.
 
 Filesystems clones provider defaults, overlays URL-derived options, validates the merged object against `Implementation.optionsDefinition.schema`, and only then
 calls `Implementation.optionsDefinition.getUrl()`. URL-derived fields win when the URL represents them directly. The authored provider definition is never mutated.
@@ -103,7 +112,7 @@ static optionsDefinition = {
 
     parseUrl(url) {
         const parsed = new URL(url);
-        return {options: {scheme: parsed.protocol.slice(0, -1), host: parsed.host, path: parsed.pathname}};
+        return {scheme: parsed.protocol.slice(0, -1), host: parsed.host, path: parsed.pathname};
     },
 
     getUrl(options) {
@@ -117,14 +126,53 @@ static optionsDefinition = {
 The `http` and `https` implementations reject credentials, queries, and fragments. `isReadonly` is configuration rather than URL state, so it comes from
 provider defaults or the schema-described default used when configuration is authored, rather than `parseUrl()`.
 
-The memory provider represents its logical identity as the nullable string option `instance`. `mem:` parses as `{options: {instance: null}}`, while
-`mem:workspace` parses as `{options: {instance: "workspace"}}`; projecting those options returns the same canonical URLs.
+The memory provider represents its logical identity as the nullable string option `instance`. `mem:` parses as `{instance: null}`, while
+`mem:workspace` parses as `{instance: "workspace"}`; projecting those options returns the same canonical URLs.
 OPFS and local-file URLs project to the constant canonical forms `opfs:` and `file:`.
 
 `url` is always derived and is not part of `Implementation.optionsDefinition.schema`, authored `options`, or constructor options. Runtime-only constructor values such as a
 directly supplied `FileSystemDirectoryHandle` also remain outside declarative JSON configuration. Configuration UIs can therefore consume
-`Implementation.optionsDefinition.schema` directly; there is no parallel `configurationSchema`. Credentials are separate constructor state, never an option or URL field.
-Credential acquisition and persistence are not implemented by Filesystems, so raw URL opening currently supplies `null`.
+`Implementation.optionsDefinition.schema` directly; there is no parallel `configurationSchema`.
+
+Providers that require sensitive configuration may additionally expose an optional `credentialsDefinition`:
+
+~~~js
+static credentialsDefinition = {
+    schema: {
+        type: "object",
+        required: ["username", "password"],
+        properties: {
+            username: {type: "string", minLength: 1},
+            password: {type: "string", writeOnly: true}
+        },
+        additionalProperties: false
+    }
+};
+~~~
+
+The provider metadata and construction responsibilities remain separate:
+
+~~~text
+Filesystem provider
+├── optionsDefinition
+│   ├── schema
+│   ├── parseUrl(url) → options
+│   └── getUrl(options) → URL
+├── credentialsDefinition?
+│   └── schema
+├── getCacheKey(url)?
+└── constructor(services, options, credentials)
+~~~
+
+`credentialsDefinition.schema` describes sensitive provider configuration passed separately as constructor argument three. Providers without credentials omit
+`credentialsDefinition`; the bundled memory, HTTP, OPFS, and local-file providers all omit it. Credentials never participate in `parseUrl()`, `getUrl()`,
+`filesystem.url`, or cache identity, and they must never be encoded in provider URLs. In particular, the HTTP provider continues to reject embedded usernames
+and passwords.
+
+Filesystems recognizes and can validate the optional descriptor internally, but `open(url)` does not currently accept, acquire, or persist credential payloads.
+Raw URL opening therefore supplies `null`, and providers remain unaware of any persistence mechanism. A future management UI may use
+`optionsDefinition.schema` for non-secret configuration and `credentialsDefinition.schema` for secret configuration, but no Filesystems Preferences Page or
+Secrets-backed credential registry is implemented.
 
 For raw URL opening, the round trip prevents the URL from becoming an independent configuration source:
 

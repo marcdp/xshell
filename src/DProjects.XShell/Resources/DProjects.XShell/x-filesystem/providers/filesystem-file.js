@@ -46,13 +46,12 @@ export default class FilesystemFile extends Filesystem {
         parseUrl(url) {
             // Accept the existing local forms without attempting to serialize a directory handle.
             if (url !== "file" && url !== "file:") throw new TypeError(`Unsupported local filesystem URL: ${url}`);
-            return {options: {}};
+            return {};
         },
 
-        getUrl(options, context = {}) {
+        getUrl(options) {
             // Local directory handles remain runtime-only behind one canonical URL.
             void options;
-            void context;
             return "file:";
         }
     };
