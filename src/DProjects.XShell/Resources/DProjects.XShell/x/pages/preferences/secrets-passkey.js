@@ -2,13 +2,14 @@ export default {
     contract: {
         description: "Add a passkey or edit its description.",
         properties: {
-            passkeyId: {type:"string", default:"", state:true, context:true}
+            passkeyId: {type:"string", default:"", state:true, query:true}
         }
     },
 
     meta: {
         title:"Passkey",
-        icon:"x-key"
+        icon:"x-key",
+        classes: ["size-narrow"]
     },
 
     template: `
@@ -48,7 +49,7 @@ export default {
 
         return {
             async load() {
-                // Require an unlocked vault and use the context to select a registration.
+                // Require an unlocked vault and use the query identity to select a registration.
                 const id = state.passkeyId;
                 state.editing = Boolean(id);
                 events.on(bus, "secrets:status-changed", event => this.onStatusChanged(event));
@@ -122,7 +123,7 @@ export default {
                         state.password = "";
                         await secrets.addPasskey(options);
                     }
-                    if (this.canAccessVault()) await this.close({saved:true});
+                    if (this.canAccessVault()) await this.close();
                 } catch (error) {
                     if (this.canAccessVault()) {
                         state.error = error?.message || (state.editing ? "Unable to update the passkey." : "Passkey enrollment failed.");
@@ -132,16 +133,16 @@ export default {
                 }
             },
 
-            async close(result) {
-                // Return only the dialog outcome after clearing form state.
+            async close() {
+                // Clear the form before closing its stack entry.
                 if (!alive || closing) return;
                 closing = true;
                 this.clear();
-                await page.close(result);
+                await page.close();
             },
 
             async cancel() {
-                await this.close(null);
+                await this.close();
             }
         };
     }

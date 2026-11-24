@@ -375,6 +375,9 @@ test("Secrets V2 contract validates against the service contract schema", () => 
     assert.deepEqual(contract.types.options.schema.required, ["rememberMinutes", "maxRememberMinutes", "pageUnlock", "pageManager"]);
     assert.equal(contract.types.options.schema.additionalProperties, false);
     assert.equal(contract.properties.options.readonly, true);
+    assert.deepEqual(Object.keys(contract.events), ["secrets:changed", "secrets:status-changed"]);
+    assert.deepEqual(contract.events["secrets:changed"].detail.kind.schema.enum, ["secret", "passkey"]);
+    assert.deepEqual(contract.events["secrets:changed"].detail.action.schema.enum, ["saved", "removed"]);
 });
 
 test("Secrets Service options schema accepts normalized Pages and rejects obsolete or invalid options", () => {
@@ -431,7 +434,7 @@ test("Secrets V2 initializes a random-DEK vault and preserves JSON CRUD across p
 
     secrets.lock();
     await assert.rejects(secrets.get("text"), /locked/u);
-    const reopened = new Secrets();
+    const reopened = new Secrets({ bus: { emit(name, detail) { events.push({ name, detail }); } } });
     assert.equal(await reopened.ready(), "locked");
     const metadataBeforeWrongPassword = database.records("metadata");
     await assert.rejects(reopened.unlock({ password: "wrong" }), /Invalid master password/u);
@@ -442,6 +445,55 @@ test("Secrets V2 initializes a random-DEK vault and preserves JSON CRUD across p
     await reopened.delete("text");
     assert.equal(await reopened.get("text"), undefined);
     assert.ok(events.some(event => event.name === "secrets:status-changed" && event.detail.status === "unlocked"));
+    assert.deepEqual(events.filter(event => event.name === "secrets:changed"), [
+        {name:"secrets:changed", detail:{kind:"secret", action:"saved"}},
+        {name:"secrets:changed", detail:{kind:"secret", action:"saved"}},
+        {name:"secrets:changed", detail:{kind:"secret", action:"removed"}}
+    ]);
+});
+
+test("Secrets mutation notifications cannot turn committed writes into failures", async () => {
+    // Preserve successful encrypted persistence when a mutation listener throws.
+    const database = createIndexedDB();
+    installEnvironment(database);
+    const secrets = new Secrets({bus:{emit(name) { if (name === "secrets:changed") throw new Error("Listener failed."); }}});
+    const originalError = console.error;
+    console.error = () => {};
+    try {
+        await secrets.ready();
+        await secrets.initialize({password:"master password"});
+        await secrets.set("token", "value");
+        assert.equal(await secrets.get("token"), "value");
+        await secrets.delete("token");
+        assert.equal(await secrets.has("token"), false);
+    } finally {
+        console.error = originalError;
+    }
+});
+
+test("has checks exact Secret names without decrypting, unlocking, or authenticating", async () => {
+    // Store one Secret, then verify boolean-only indexed lookup in every vault state.
+    const database = createIndexedDB();
+    installEnvironment(database);
+    let dialogCalls = 0;
+    const config = secretsConfig(0, 0, "page:x:/pages/preferences/secrets-unlock.js");
+    const secrets = createSecrets(config, {config, dialog:{async open() { dialogCalls++; throw new Error("must not authenticate"); }}});
+
+    assert.equal(await secrets.has("stored"), false);
+    assert.equal(secrets.status, "uninitialized");
+    await secrets.initialize({password:"master password"});
+    await secrets.set("stored", {token:"private-value"});
+    assert.strictEqual(await secrets.has("stored"), true);
+    assert.strictEqual(await secrets.has("missing"), false);
+
+    secrets.lock();
+    assert.strictEqual(await secrets.has("stored"), true);
+    assert.strictEqual(await secrets.has("missing"), false);
+    assert.equal(secrets.status, "locked");
+    assert.equal(dialogCalls, 0);
+    await assert.rejects(() => secrets.has(" "), /Secret name must be a non-empty string/u);
+    await assert.rejects(() => secrets.has(null), /Secret name must be a non-empty string/u);
+    assert.equal(dialogCalls, 0);
 });
 
 test("Secrets namespaces independent databases by normalized application base path", async () => {
@@ -734,7 +786,8 @@ test("concurrent creation uses one unique name and monotonic revisions", async (
 test("multiple PRF passkeys wrap the same DEK without re-encrypting secrets", async () => {
     const database = createIndexedDB();
     const webauthn = installEnvironment(database, createWebAuthn());
-    const secrets = new Secrets();
+    const events = [];
+    const secrets = new Secrets({bus:{emit(name, detail) { events.push({name, detail}); }}});
     await secrets.ready();
     await secrets.initialize({ password: "master password" });
     await secrets.set("token", { value: "unchanged" });
@@ -779,6 +832,12 @@ test("multiple PRF passkeys wrap the same DEK without re-encrypting secrets", as
     assert.equal(lastRequest.userVerification, "required");
 
     await secrets.removePasskey(laptop.id);
+    assert.deepEqual(events.filter(event => event.name === "secrets:changed" && event.detail.kind === "passkey"), [
+        {name:"secrets:changed", detail:{kind:"passkey", action:"saved"}},
+        {name:"secrets:changed", detail:{kind:"passkey", action:"saved"}},
+        {name:"secrets:changed", detail:{kind:"passkey", action:"saved"}},
+        {name:"secrets:changed", detail:{kind:"passkey", action:"removed"}}
+    ]);
     assert.deepEqual((await secrets.listPasskeys()).map(item => item.id), [phone.id]);
     assert.deepEqual(database.records("secrets")[0], encryptedSecret);
     secrets.lock();

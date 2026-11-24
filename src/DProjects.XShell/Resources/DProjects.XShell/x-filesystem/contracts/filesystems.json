@@ -15,6 +15,24 @@
             "description": "Configured file editors keyed by stable editor ID."
         }
     },
+    "events": {
+        "filesystems:definitions-changed": {
+            "description": "Emitted after a named Filesystem definition is successfully saved or removed.",
+            "detail": {
+                "name": {
+                    "type": "string",
+                    "required": true
+                },
+                "action": {
+                    "type": "string",
+                    "required": true,
+                    "schema": {
+                        "enum": ["saved", "removed"]
+                    }
+                }
+            }
+        }
+    },
     "methods": {
         "listProviders": {
             "description": "Lists configured providers with cloned schemas and defaults suitable for management UI.",

@@ -111,7 +111,7 @@ export default {
         passkeySupported: false
     },
 
-    controller({state, secrets, dialog, bus, events}) {
+    controller({state, secrets, dialog, bus, events, navigation, page}) {
         let alive = true;
         let refreshRevision = 0;
         let lockRevision = 0;
@@ -120,6 +120,7 @@ export default {
             async load() {
                 // Observe lifecycle changes and detect support for new registrations.
                 events.on(bus, "secrets:status-changed", event => this.onStatusChanged(event));
+                events.on(bus, "secrets:changed", "onChanged");
                 const credentials = globalThis.navigator?.credentials;
                 state.passkeySupported = globalThis.isSecureContext === true &&
                     typeof credentials?.get === "function" && typeof credentials?.create === "function";
@@ -153,6 +154,11 @@ export default {
                 }
                 this.syncStatus();
                 await this.refresh();
+            },
+
+            async onChanged() {
+                // Refresh metadata after successful Secret or passkey mutations from any caller.
+                if (alive && secrets.status === "unlocked") await this.refresh();
             },
 
             formatDate(value) {
@@ -225,40 +231,38 @@ export default {
                 await this.onStatusChanged();
             },
 
-            async openEditor(options) {
-                // Refresh only when the dedicated editor confirms a successful save.
-                await this.runAction(async () => {
-                    if (secrets.status !== "unlocked") throw new Error("Unlock the vault first.");
-                    const result = await dialog.open(options);
-                    if (alive && result?.saved === true) await this.refresh();
-                });
+            async openEditor(href, params = {}) {
+                // Open management editors as stacked Pages without waiting for close results.
+                if (!alive || secrets.status !== "unlocked") return void (state.error = "Unlock the vault first.");
+                state.error = "";
+                try {
+                    await navigation.navigate({href, page, open:"stack", params});
+                } catch (error) {
+                    if (alive) state.error = error?.message || "Unable to open the Secrets editor.";
+                }
             },
 
             async add() {
-                // An empty context opens the secret editor for creation.
-                await this.openEditor({href:"page:x:/pages/preferences/secrets-secret.js", title:"Add secret", context:{}});
+                // Omit the query identity when creating a Secret.
+                await this.openEditor("page:x:/pages/preferences/secrets-secret.js");
             },
 
             async edit({event}) {
                 // Accept activation from the list or the edit button.
                 const secretName = event.detail?.value ?? event.currentTarget.dataset.name;
-                if (secretName) await this.openEditor({
-                    href:"page:x:/pages/preferences/secrets-secret.js", title:"Edit secret", context:{secretName}
-                });
+                if (secretName) await this.openEditor("page:x:/pages/preferences/secrets-secret.js", {"secret-name":secretName});
             },
 
             async addPasskey() {
                 // Enrollment requires both WebAuthn credential operations.
                 if (!state.passkeySupported) return;
-                await this.openEditor({href:"page:x:/pages/preferences/secrets-passkey.js", title:"Add passkey", context:{}});
+                await this.openEditor("page:x:/pages/preferences/secrets-passkey.js");
             },
 
             async editPasskey({event}) {
-                // Pass the registration id as Page context.
+                // Pass the registration id through its canonical query parameter.
                 const passkeyId = event.detail?.value ?? event.currentTarget.dataset.id;
-                if (passkeyId) await this.openEditor({
-                    href:"page:x:/pages/preferences/secrets-passkey.js", title:"Edit passkey", context:{passkeyId}
-                });
+                if (passkeyId) await this.openEditor("page:x:/pages/preferences/secrets-passkey.js", {"passkey-id":passkeyId});
             },
 
             async confirmRemoval(options, remove) {
@@ -269,7 +273,6 @@ export default {
                     const result = await dialog.confirm(options);
                     if (result !== "yes" || !alive || revision !== lockRevision || secrets.status !== "unlocked") return;
                     await remove();
-                    if (alive) await this.refresh();
                 });
             },
 

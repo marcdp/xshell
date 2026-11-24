@@ -53,13 +53,14 @@ export default {
         items: []
     },
 
-    controller({state, filesystems, dialog}) {
+    controller({state, filesystems, dialog, bus, events, navigation, page}) {
         let alive = true;
         let refreshRevision = 0;
 
         return {
             async load() {
-                // Load the current named filesystem definitions.
+                // Subscribe to domain changes before loading the current definitions.
+                events.on(bus, "filesystems:definitions-changed", "onDefinitionsChanged");
                 await this.refresh();
             },
 
@@ -85,6 +86,11 @@ export default {
                 }
             },
 
+            async onDefinitionsChanged() {
+                // Refresh after any successful definition mutation, regardless of its caller.
+                await this.refresh();
+            },
+
             async runAction(action) {
                 // Serialize management mutations and dialogs.
                 if (!alive || state.busy) return;
@@ -100,15 +106,19 @@ export default {
             },
 
             async openEditor(filesystemName = "") {
-                // Refresh the list only after the detail Page confirms a successful save.
-                await this.runAction(async () => {
-                    const result = await dialog.open({
+                // Open the schema-driven editor as a normal stacked Page.
+                if (!alive) return;
+                state.error = "";
+                try {
+                    await navigation.navigate({
                         href: "page:x-filesystem:/pages/preferences/filesystems-detail.js",
-                        title: filesystemName ? "Edit filesystem" : "Add filesystem",
-                        context: filesystemName ? {filesystemName} : {}
+                        page,
+                        open: "stack",
+                        params: filesystemName ? {"filesystem-name": filesystemName} : {}
                     });
-                    if (alive && result?.saved === true) await this.refresh();
-                });
+                } catch (error) {
+                    if (alive) state.error = error?.message || "Unable to open the filesystem editor.";
+                }
             },
 
             async add() {
@@ -136,7 +146,6 @@ export default {
                     if (result !== "yes" || !alive) return;
 
                     await filesystems.removeDefinition(name);
-                    if (alive) await this.refresh();
                 });
             }
         };

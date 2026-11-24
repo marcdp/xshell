@@ -41,6 +41,7 @@ const expiration = secrets.sessionExpiresAt; // ISO 8601 UTC string or null
 const { rememberMinutes, maxRememberMinutes, pageUnlock, pageManager } = secrets.options;
 
 await secrets.set("api-token", "secret", { label: "Production token", description: "Production API token" });
+const exists = await secrets.has("api-token");
 const token = await secrets.get("api-token");
 const tokenWithoutPrompt = await secrets.get("api-token", { interactive: false });
 const info = await secrets.getInfo("api-token"); // includes immutable id, name, effective label, timestamps, and revision
@@ -61,6 +62,9 @@ locked or uninitialized, waits for initialization or unlocking, verifies the act
 secret still returns `undefined`, including after creating an empty vault. Cancellation rejects with an `AbortError`; it is never represented by
 `undefined`. Pass `{ interactive: false }` in automated Tasks, background work, or any call path where UI must not appear. Other methods retain their
 existing non-interactive unlock requirement.
+
+`has(name)` is a metadata-free existence check over the exact Secret name. It returns only a boolean, does not decrypt the record, does not require
+an unlocked vault, and never triggers authentication.
 
 Concurrent interactive `get()` calls share one authentication dialog and resume independently, so each caller receives the value for its own name.
 Cancellation rejects every caller waiting on that dialog. The pending attempt is cleared after success, cancellation, or load failure, and a later
@@ -97,15 +101,15 @@ restore an unlocked session. `secrets:status-changed` reports lifecycle changes 
 
 | Page | Responsibilities and context |
 | --- | --- |
-| `x/pages/preferences/secrets.js` | The Secrets entry in Preferences shows vault status, session expiration, and secret and passkey metadata. It opens the authentication and editor dialogs, confirms deletions and removals, and provides the explicit Lock action. |
+| `x/pages/preferences/secrets.js` | The Secrets entry in Preferences shows vault status, session expiration, and secret and passkey metadata. It opens authentication and confirmation dialogs, opens management editors as stacked Pages, and provides the explicit Lock action. |
 | `x/pages/preferences/secrets-secret.js` | An empty or omitted `secretName` adds a Text or JSON secret. A nonempty `secretName` opens the existing value and metadata for editing. The Page reads the value with `get(name, { interactive: false })`. |
 | `x/pages/preferences/secrets-passkey.js` | An empty or omitted `passkeyId` enrolls a passkey with master-password reauthentication. A nonempty `passkeyId` opens the registration for description editing and shows its read-only label and creation date. |
 | `x/pages/preferences/secrets-unlock.js` | Creates or unlocks a vault and offers optional initial passkey enrollment during creation. It returns `{ unlocked: true }` when authentication is complete. The service checks actual vault access before resuming an interactive read. |
 
-The management Page opens editors through the Dialog service and refreshes its lists when an editor returns `{ saved: true }`. Cancelling returns
-`null` and leaves the lists as they were. A successful removal or vault status change also refreshes the management view. Locking clears the
-management lists and invalidates open editors. Editors clear their value or password fields when they close or unload, and the vault remains unlocked
-until an explicit Lock or session expiration. Editor context and dialog results carry only identifiers or outcomes.
+The management Page opens Secret and passkey editors through Navigation as normal stack entries. Their identities use query parameters, and stack navigation
+does not return a child close result. Successful Secret and passkey mutations emit `secrets:changed`, which refreshes the manager while it remains underneath
+the editor. Save and Cancel clear sensitive editor state and close the stack entry. Authentication and destructive confirmation remain modal dialogs. A vault
+status change also refreshes the management view; locking clears the lists and invalidates open editors.
 
 A secret edit writes changed value or metadata first, then performs a requested rename. If the write succeeds and the rename fails, the editor
 reports the name under which the changes were saved and allows the user to retry the rename.
@@ -263,8 +267,8 @@ supported browser:
   `sessionExpiresAt`. Verify expiration and explicit Lock require authentication again in that tab.
 - Create text and structured secrets; edit values, labels, and descriptions; rename and delete them; and verify revision and `modifiedAt` changes
   while immutable ids and `createdAt` remain stable.
-- Add, edit, and remove a passkey through the Manager and verify its list refreshes after every successful dialog or removal.
-- Complete and cancel each editor dialog and verify the browser stays on the management Page. Confirm that a cancelled edit leaves the list unchanged.
+- Add, edit, and remove a passkey through the Manager and verify its list refreshes after every successful mutation.
+- Complete and cancel each stacked editor and verify it returns to the management Page. Confirm that a cancelled edit leaves the list unchanged.
 - Reload the application and verify vault discovery, remembered restoration when eligible, and locked password/passkey authentication otherwise.
 - Inspect IndexedDB and `sessionStorage`. Confirm they contain only the documented records and wrapping material—not passwords, plaintext secret
   values, raw DEKs, KEKs, or PRF outputs.

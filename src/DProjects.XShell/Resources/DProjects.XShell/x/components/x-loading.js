@@ -21,9 +21,10 @@ export default {
             display:block;
             position:relative;
             width:100%;            
-            background:var(--x-loading-background);
             height:var(--x-loading-height);
             border-radius:.25em;
+            background: transparent;
+            animation: showBackground 0s var(--x-loading-delay) forwards;
         }
         :host div {
             display:block;
@@ -44,6 +45,11 @@ export default {
             50% { left:0; width: 100%;}
             100% {left:100%; width: 0;}
         } 
+        @keyframes showBackground {
+            to {
+                background: var(--x-loading-background);
+            }
+        }
     `,
     template: `
         <div></div>

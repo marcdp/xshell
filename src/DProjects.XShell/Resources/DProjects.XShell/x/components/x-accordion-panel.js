@@ -48,11 +48,7 @@ export default {
         .header > label .label {font-weight:500;}
         .header > label .description {color: var(--x-color-text-x-gray); display:block; font-size:var(--x-font-size-small); margin-top:-.15em;}
         .header > .toolbar {margin-right:1em; }
-
         .header:hover {background: var(--x-color-background-x-gray); }
-
-        _.header:hover > label {color:var(--x-color-primary)!important; }
-        _.header:hover > x-icon:first-child {color:var(--x-color-primary)!important;}
         .header[expanded] x-icon:last-child {transform:rotate(-180deg); }
         
         .body {
@@ -70,6 +66,8 @@ export default {
         :host(:last-child) .body {border-bottom:none;}
         :host(:last-child) .header {border-radius: 0 0 var(--x-accordion-border-radius) var(--x-accordion-border-radius);}
         :host(:last-child) .header[expanded] {border-radius: 0;}
+        :host(:first-child:last-child) .header {border-radius: var(--x-accordion-border-radius);}
+        :host(:first-child:last-child) .header[expanded] {border-radius: var(--x-accordion-border-radius) var(--x-accordion-border-radius) 0 0;}
 
         ::slotted(*:first-child) {margin-top:0!important;}
     `,

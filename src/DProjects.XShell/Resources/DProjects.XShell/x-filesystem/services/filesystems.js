@@ -69,6 +69,7 @@ export default class Filesystems {
     };
 
     // fields
+    #bus;
     #jsonValidator;
     #preferences;
     #secrets;
@@ -80,7 +81,7 @@ export default class Filesystems {
     #editors;
 
     // constructor
-    constructor({config, jsonValidator, preferences, secrets, services}, options = {}) {
+    constructor({bus, config, jsonValidator, preferences, secrets, services}, options = {}) {
         // Normalize the scheme-keyed provider configuration and resolve implementation URLs once.
         for (const [scheme, provider] of Object.entries(options.providers ?? {})) {
             const isAbsoluteUrl = /^[A-Za-z][A-Za-z0-9+.-]*:/.test(provider.implementation);
@@ -91,6 +92,7 @@ export default class Filesystems {
         }
 
         // Retain the owning Services context and snapshot configured Commands and editors.
+        this.#bus = bus;
         this.#jsonValidator = jsonValidator;
         this.#preferences = preferences;
         this.#secrets = secrets;
@@ -158,17 +160,24 @@ export default class Filesystems {
         // Establish interactive vault access before applying an explicitly requested credential operation.
         if (validatedCredentials !== undefined) {
             const credentialName = CREDENTIAL_PREFIX + resolved.definition.name;
-            await this.#secrets.get(credentialName);
-            if (validatedCredentials === null) await this.#secrets.delete(credentialName);
-            else await this.#secrets.set(credentialName, validatedCredentials, {
-                label: `${resolved.definition.label} credentials`,
-                description: `Credentials for filesystem '${resolved.definition.name}'.`
-            });
+            if (validatedCredentials === null) {
+                if (await this.#secrets.has(credentialName)) {
+                    await this.#secrets.get(credentialName);
+                    await this.#secrets.delete(credentialName);
+                }
+            } else {
+                await this.#secrets.get(credentialName);
+                await this.#secrets.set(credentialName, validatedCredentials, {
+                    label: `${resolved.definition.label} credentials`,
+                    description: `Credentials for filesystem '${resolved.definition.name}'.`
+                });
+            }
         }
 
         // Persist only authored options and invalidate the runtime identity after every requested write succeeds.
         await this.#preferences.set(DEFINITION_PREFIX + resolved.definition.name, structuredClone(resolved.definition));
         this.#namedInstances.delete(resolved.definition.name);
+        this.#notifyDefinitionsChanged(resolved.definition.name, "saved");
     }
     async removeDefinition(name) {
         // Remove deterministic credentials for an existing definition without resolving its provider.
@@ -176,13 +185,16 @@ export default class Filesystems {
         const stored = await this.#preferences.get(DEFINITION_PREFIX + name, null);
         if (stored !== null) {
             const credentialName = CREDENTIAL_PREFIX + name;
-            const storedCredentials = await this.#secrets.get(credentialName);
-            if (storedCredentials !== undefined) await this.#secrets.delete(credentialName);
+            if (await this.#secrets.has(credentialName)) {
+                await this.#secrets.get(credentialName);
+                await this.#secrets.delete(credentialName);
+            }
         }
 
         // Delete the registration and invalidate its separate runtime identity.
         await this.#preferences.delete(DEFINITION_PREFIX + name);
         this.#namedInstances.delete(name);
+        if (stored !== null) this.#notifyDefinitionsChanged(name, "removed");
     }
     async openNamed(name) {
         // Share all lookup and construction work by registration name, independently from raw URL cache identity.
@@ -480,6 +492,11 @@ export default class Filesystems {
             throw new Error(`Filesystem provider '${url}' static getCacheKey must return a non-empty string or null.`);
         }
         return cacheKey;
+    }
+    #notifyDefinitionsChanged(name, action) {
+        // Keep committed persistence successful when a notification listener fails.
+        try { this.#bus?.emit("filesystems:definitions-changed", {name, action}); }
+        catch (error) { console.error("Filesystems change notification failed:", error); }
     }
     async #resolveDefinition(definition) {
         // Normalize the persisted shape without mutating the caller or retaining non-domain fields.

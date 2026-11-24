@@ -84,7 +84,8 @@ Named runtime instances cache by registration name in a map separate from raw `o
 same instance, while different names remain different identities even when their derived URLs match. Saving or removing a definition invalidates that name's
 cache entry.
 
-The Filesystems Preferences Page lists named definitions and opens a generic provider-driven detail Page for add or edit operations. The detail Page renders
+The Filesystems Preferences Page lists named definitions and opens a generic provider-driven detail Page as a normal Navigation stack entry for add or edit
+operations. The detail Page renders
 non-secret options from `optionsSchema` and, when present, credentials from `credentialsSchema`. Providers without a credential schema show no credential form.
 Pages call only Filesystems domain methods; storage access remains inside the Service:
 
@@ -100,8 +101,13 @@ Filesystems Service
 credentials when the second argument is omitted, replaces them when it is an object, and removes them when it is `null`. `openNamed()` retrieves and validates
 stored credentials before passing them separately to the provider constructor. Credential-bearing saves establish Secrets access before changing either
 persistence boundary, so cancelled or failed vault access leaves the definition unchanged. Removal derives the credential key from the definition name and does
-not require the provider to remain installed; stale named definitions and any associated Secret therefore remain removable. Credential payloads never enter
-provider URLs or cache keys.
+not require the provider to remain installed; stale named definitions and any associated Secret therefore remain removable. Removing a definition first checks
+for that deterministic Secret without unlocking the vault and requests authentication only when the Secret exists. Removing a non-secret filesystem therefore
+does not require Secrets authentication. Credential payloads never enter provider URLs or cache keys.
+
+Stack navigation is not a request/response dialog: the manager does not wait for a child close result. After `saveDefinition()` or `removeDefinition()` commits,
+Filesystems emits `filesystems:definitions-changed`; the manager refreshes from that domain event. Save and Cancel close the detail Page normally, revealing the
+already refreshed Preferences manager underneath. Deletion confirmation remains a modal dialog.
 
 Runtime-only values such as a local `FileSystemDirectoryHandle` are not persisted, so a named `file:` Filesystem may still need a handle attached through the
 existing provider API.

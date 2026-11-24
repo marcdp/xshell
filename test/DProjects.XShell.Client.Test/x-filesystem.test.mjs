@@ -57,11 +57,16 @@ function createPreferences(initial = [], events = []) {
 function createSecrets(initial = [], events = []) {
     // Model the Secrets value boundary without exposing its storage convention to callers.
     const values = new Map(initial.map(([key, value]) => [key, structuredClone(value)]));
-    const calls = {get: [], set: [], delete: []};
+    const calls = {has: [], get: [], set: [], delete: []};
     let getError = null;
     return {
         calls,
         failGet(error) { getError = error; },
+        async has(name) {
+            calls.has.push(name);
+            events.push(`secrets.has:${name}`);
+            return values.has(name);
+        },
         async get(name) {
             calls.get.push(name);
             events.push(`secrets.get:${name}`);
@@ -195,6 +200,94 @@ test("Filesystems contract exposes the minimal named management API and existing
     assert.deepEqual(Object.keys(FilesystemsContract.methods), [
         "listProviders", "listDefinitions", "getDefinition", "saveDefinition", "removeDefinition", "openNamed", "open", "getEditor"
     ]);
+    assert.deepEqual(Object.keys(FilesystemsContract.events), ["filesystems:definitions-changed"]);
+    assert.deepEqual(Object.keys(FilesystemsContract.events["filesystems:definitions-changed"].detail), ["name", "action"]);
+    assert.deepEqual(FilesystemsContract.events["filesystems:definitions-changed"].detail.action.schema.enum, ["saved", "removed"]);
+});
+
+test("Filesystems emits definition changes only after successful save and removal persistence", async () => {
+    // Publish exact domain-only payloads without announcing validation failures or missing removals.
+    const notifications = [];
+    const bus = {emit(type, detail) { notifications.push({type, detail:structuredClone(detail)}); }};
+    const preferences = createPreferences();
+    const secrets = createSecrets();
+    const jsonValidator = new JsonValidator();
+    const implementation = new URL("../../src/DProjects.XShell/Resources/DProjects.XShell/x-filesystem/providers/filesystem-http.js", import.meta.url).href;
+    const filesystems = new Filesystems({bus, config: testConfig, jsonValidator, preferences, secrets, services: createServices({jsonValidator})}, {
+        providers: {https: {implementation, options: {scheme: "https"}}}
+    });
+
+    await filesystems.saveDefinition({name: "work", provider: "https", options: {host: "example.test"}});
+    assert.deepEqual(notifications, [{type:"filesystems:definitions-changed", detail:{name:"work", action:"saved"}}]);
+
+    await assert.rejects(() => filesystems.saveDefinition({name: "invalid", provider: "https", options: {path: "/missing-host"}}), /Invalid Filesystem provider options/u);
+    assert.equal(notifications.length, 1);
+
+    const originalDelete = preferences.delete.bind(preferences);
+    preferences.delete = async () => { throw new Error("Preferences delete failed."); };
+    await assert.rejects(() => filesystems.removeDefinition("work"), /Preferences delete failed/u);
+    assert.equal(notifications.length, 1);
+    preferences.delete = originalDelete;
+
+    await filesystems.removeDefinition("work");
+    assert.deepEqual(notifications[1], {type:"filesystems:definitions-changed", detail:{name:"work", action:"removed"}});
+    await filesystems.removeDefinition("missing");
+    assert.equal(notifications.length, 2);
+});
+
+test("Filesystems suppresses failed-mutation events and isolates committed persistence from notification failures", async () => {
+    // Reject authentication, Secret writes, and Preferences writes before any domain event is published.
+    const notifications = [];
+    const bus = {emit(type, detail) { notifications.push({type, detail:structuredClone(detail)}); }};
+    const preferences = createPreferences();
+    const secrets = createSecrets();
+    const jsonValidator = new JsonValidator();
+    const implementation = "data:text/javascript," + encodeURIComponent(`export default class Implementation {
+        static optionsDefinition = {
+            schema: {type: "object", required: ["scheme", "resource"], properties: {scheme: {const: "secure"}, resource: {type: "string"}}, additionalProperties: false},
+            parseUrl(url) { return {scheme: "secure", resource: url.slice(url.indexOf(":") + 1)}; },
+            getUrl(options) { return options.scheme + ":" + options.resource; }
+        };
+        static credentialsDefinition = {schema: {type: "object", required: ["token"], properties: {token: {type: "string"}}, additionalProperties: false}};
+        constructor(services, options, credentials) { this.url = Implementation.optionsDefinition.getUrl(options); this.credentials = credentials; }
+    }`);
+    const options = {providers: {secure: {implementation, options: {scheme: "secure"}}}};
+    const filesystems = new Filesystems({bus, config: testConfig, jsonValidator, preferences, secrets, services: createServices({jsonValidator})}, options);
+    const definition = {name: "work", provider: "secure", options: {resource: "documents"}};
+
+    secrets.failGet(new Error("Vault access cancelled."));
+    await assert.rejects(() => filesystems.saveDefinition(definition, {token:"private"}), /Vault access cancelled/u);
+    assert.deepEqual(notifications, []);
+
+    secrets.failGet(null);
+    const originalSecretSet = secrets.set.bind(secrets);
+    secrets.set = async () => { throw new Error("Secret write failed."); };
+    await assert.rejects(() => filesystems.saveDefinition(definition, {token:"private"}), /Secret write failed/u);
+    assert.deepEqual(notifications, []);
+    secrets.set = originalSecretSet;
+
+    const originalPreferenceSet = preferences.set.bind(preferences);
+    preferences.set = async () => { throw new Error("Preferences write failed."); };
+    await assert.rejects(() => filesystems.saveDefinition(definition), /Preferences write failed/u);
+    assert.deepEqual(notifications, []);
+    preferences.set = originalPreferenceSet;
+
+    // A throwing listener is reported after commit without changing save, cache invalidation, or removal success.
+    const throwingPreferences = createPreferences();
+    const throwingBus = {emit() { throw new Error("Listener failed."); }};
+    const resilient = new Filesystems({bus:throwingBus, config:testConfig, jsonValidator, preferences:throwingPreferences, secrets, services:createServices({jsonValidator})}, options);
+    const originalError = console.error;
+    console.error = () => {};
+    try {
+        await resilient.saveDefinition(definition, {token:"first"});
+        const cached = await resilient.openNamed("work");
+        await resilient.saveDefinition(definition, {token:"second"});
+        assert.notStrictEqual(await resilient.openNamed("work"), cached);
+        await resilient.removeDefinition("work");
+        assert.deepEqual(await resilient.listDefinitions(), []);
+    } finally {
+        console.error = originalError;
+    }
 });
 
 test("Filesystems.listProviders exposes sorted cloned management metadata only", async () => {
@@ -400,9 +493,28 @@ test("Filesystems authenticates before credential removal and skips Secrets when
 
     await filesystems.saveDefinition(definition, undefined);
     assert.deepEqual(events, [`preferences.set:${definitionKey}`]);
+
+    // Preserve the Secret, Preferences, and cached instance when interactive access is cancelled.
+    const cached = await filesystems.openNamed("work");
+    events.length = 0;
+    secrets.failGet(new Error("Vault access cancelled."));
+    await assert.rejects(() => filesystems.saveDefinition(definition, null), /Vault access cancelled/);
+    assert.deepEqual(events, [`secrets.has:${credentialKey}`, `secrets.get:${credentialKey}`]);
+    assert.equal(preferences.calls.set, 1);
+    assert.equal(secrets.calls.delete.length, 0);
+    assert.strictEqual(await filesystems.openNamed("work"), cached);
+
+    // Authenticate and delete only when the deterministic credential Secret exists.
+    secrets.failGet(null);
     events.length = 0;
     await filesystems.saveDefinition(definition, null);
-    assert.deepEqual(events, [`secrets.get:${credentialKey}`, `secrets.delete:${credentialKey}`, `preferences.set:${definitionKey}`]);
+    assert.deepEqual(events, [`secrets.has:${credentialKey}`, `secrets.get:${credentialKey}`, `secrets.delete:${credentialKey}`, `preferences.set:${definitionKey}`]);
+
+    // Save normally without authentication when explicit removal finds no credential Secret.
+    events.length = 0;
+    secrets.failGet(new Error("must not authenticate"));
+    await filesystems.saveDefinition(definition, null);
+    assert.deepEqual(events, [`secrets.has:${credentialKey}`, `preferences.set:${definitionKey}`]);
 });
 
 test("Filesystems removes stale definitions and deterministic credentials without resolving providers", async () => {
@@ -424,7 +536,7 @@ test("Filesystems removes stale definitions and deterministic credentials withou
     // Preserve the stale definition when interactive vault access is cancelled.
     secrets.failGet(new Error("Vault access cancelled."));
     await assert.rejects(() => filesystems.removeDefinition("legacy"), /Vault access cancelled/);
-    assert.deepEqual(events, [`secrets.get:${removedCredentialKey}`]);
+    assert.deepEqual(events, [`secrets.has:${removedCredentialKey}`, `secrets.get:${removedCredentialKey}`]);
     assert.equal((await filesystems.listDefinitions()).some(definition => definition.name === "legacy"), true);
 
     // Remove the deterministic Secret before deleting the stale definition.
@@ -432,6 +544,7 @@ test("Filesystems removes stale definitions and deterministic credentials withou
     events.length = 0;
     await filesystems.removeDefinition("legacy");
     assert.deepEqual(events, [
+        `secrets.has:${removedCredentialKey}`,
         `secrets.get:${removedCredentialKey}`,
         `secrets.delete:${removedCredentialKey}`,
         `preferences.delete:${removedKey}`
@@ -440,11 +553,30 @@ test("Filesystems removes stale definitions and deterministic credentials withou
 
     events.length = 0;
     await filesystems.removeDefinition("broken");
-    assert.deepEqual(events, ["secrets.get:x-filesystem:credentials:broken", `preferences.delete:${brokenKey}`]);
+    assert.deepEqual(events, ["secrets.has:x-filesystem:credentials:broken", `preferences.delete:${brokenKey}`]);
 
     events.length = 0;
     await filesystems.removeDefinition("missing");
     assert.deepEqual(events, ["preferences.delete:x-filesystem:filesystem:missing"]);
+});
+
+test("Filesystems removes an ordinary non-secret definition without authenticating Secrets", async () => {
+    // Prove a normal provider definition does not trigger interactive access when no credential Secret exists.
+    const events = [];
+    const definitionKey = "x-filesystem:filesystem:memory";
+    const credentialKey = "x-filesystem:credentials:memory";
+    const preferences = createPreferences([[definitionKey, {name: "memory", provider: "mem", options: {instance: "workspace"}}]], events);
+    const secrets = createSecrets([], events);
+    secrets.failGet(new Error("must not authenticate"));
+    const jsonValidator = new JsonValidator();
+    const filesystems = new Filesystems({config: testConfig, jsonValidator, preferences, secrets, services: createServices({jsonValidator})});
+
+    await filesystems.removeDefinition("memory");
+
+    assert.deepEqual(events, [`secrets.has:${credentialKey}`, `preferences.delete:${definitionKey}`]);
+    assert.deepEqual(secrets.calls.get, []);
+    assert.deepEqual(secrets.calls.delete, []);
+    assert.deepEqual(await filesystems.listDefinitions(), []);
 });
 
 test("Filesystems opens named definitions with stored credentials and invalidates credential-bearing instances", async () => {

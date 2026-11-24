@@ -2,13 +2,14 @@ export default {
     contract: {
         description: "Add or edit an individual secret.",
         properties: {
-            secretName: {type:"string", default:"", state:true, context:true}
+            secretName: {type:"string", default:"", state:true, query:true}
         }
     },
 
     meta: {
         title:"Secret",
-        icon:"x-password"
+        icon:"x-password",
+        classes: ["size-narrow"]
     },
 
     template: `
@@ -61,7 +62,7 @@ export default {
 
         return {
             async load() {
-                // Read the context once and require an existing unlocked session.
+                // Read the query identity once and require an existing unlocked session.
                 const name = state.secretName;
                 state.editing = Boolean(name);
                 events.on(bus, "secrets:status-changed", event => this.onStatusChanged(event));
@@ -105,7 +106,7 @@ export default {
             },
 
             unload() {
-                // Discard editor data even when the dialog closes through its layout.
+                // Discard editor data when its stack Page unloads.
                 alive = false;
                 this.clear();
             },
@@ -156,7 +157,7 @@ export default {
                         }
                         if (name !== originalName) await secrets.rename(originalName, name);
                     }
-                    if (this.canAccessVault()) await this.close({saved:true});
+                    if (this.canAccessVault()) await this.close();
                 } catch (error) {
                     if (!this.canAccessVault()) return;
                     const message = error?.message || "Unable to save the secret.";
@@ -168,16 +169,16 @@ export default {
                 }
             },
 
-            async close(result) {
-                // Clear the editor before returning the dialog result.
+            async close() {
+                // Clear the editor before closing its stack entry.
                 if (!alive || closing) return;
                 closing = true;
                 this.clear();
-                await page.close(result);
+                await page.close();
             },
 
             async cancel() {
-                await this.close(null);
+                await this.close();
             }
         };
     }

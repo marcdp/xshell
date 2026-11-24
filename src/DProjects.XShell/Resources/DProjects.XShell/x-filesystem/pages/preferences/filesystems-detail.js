@@ -2,14 +2,15 @@ export default {
     contract: {
         description: "Add or edit one named Filesystem definition.",
         properties: {
-            filesystemName: {type: "string", default: "", state: true, context: true}
+            filesystemName: {type: "string", default: "", state: true, query: true}
         }
     },
 
     meta: {
         title: "Filesystem",
         description: "Configure a named filesystem connection.",
-        icon: "x-folder"
+        icon: "x-folder",
+        classes: ["size-narrow"]
     },
 
     template: `
@@ -31,17 +32,13 @@ export default {
                     x-attr:disabled="state.busy || state.editing"></x-datafield>
             </x-datafields>
 
-            <x-datafield x-if="state.optionsSchema" label="Options" class="no-padding">
-                <x-schema ref="optionsEditor" x-prop:schema="state.optionsSchema"
-                    x-prop:value="state.options" x-on:change="optionsChanged"
-                    x-attr:disabled="state.busy"></x-schema>
-            </x-datafield>
+            <x-schema x-if="state.optionsSchema" ref="optionsEditor" x-prop:schema="state.optionsSchema"
+                x-prop:value="state.options" x-on:change="optionsChanged"
+                x-attr:disabled="state.busy"></x-schema>
 
-            <x-datafield x-if="state.credentialsSchema" label="Credentials" class="no-padding">
-                <x-schema ref="credentialsEditor" x-prop:schema="state.credentialsSchema"
-                    x-prop:value="state.credentials" x-on:change="credentialsChanged"
-                    x-attr:disabled="state.busy"></x-schema>
-            </x-datafield>
+            <x-schema x-if="state.credentialsSchema" ref="credentialsEditor" x-prop:schema="state.credentialsSchema"
+                x-prop:value="state.credentials" x-on:change="credentialsChanged"
+                x-attr:disabled="state.busy"></x-schema>
 
             <x-button slot="footer" class="submit" label="Save" x-on:click="save" x-attr:disabled="state.busy"></x-button>
             <x-button slot="cancel" class="cancel" label="Cancel" x-on:click="cancel" x-attr:disabled="state.busy"></x-button>
@@ -180,7 +177,7 @@ export default {
                     await filesystems.saveDefinition(definition, credentials);
                     if (alive) {
                         state.credentials = {};
-                        await page.close({saved:true, name});
+                        await page.close();
                     }
                 } catch (error) {
                     if (alive) state.error = error?.message || "Unable to save the filesystem.";
@@ -192,7 +189,7 @@ export default {
             async cancel() {
                 // Clear sensitive state before closing without saving.
                 state.credentials = {};
-                await page.close(null);
+                await page.close();
             }
         };
     }

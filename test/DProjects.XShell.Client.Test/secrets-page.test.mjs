@@ -17,9 +17,16 @@ const secretButton = {event:{currentTarget:{dataset:{name:secret.name}}}};
 const passkeyButton = {event:{currentTarget:{dataset:{id:passkey.id}}}};
 
 function createPage({status = "locked", pageUnlock = "page:x:/pages/preferences/secrets-unlock.js", dialogResult = null, confirmResult = "yes"} = {}) {
-    // Record calls at the Secrets, Dialog, and Bus boundaries.
+    // Record calls at the Secrets, Navigation, Dialog, and Bus boundaries.
     const state = structuredClone(SecretsPage.state);
-    const calls = {list:0, listPasskeys:0, get:0, lock:0, delete:[], removePasskey:[], open:[], confirm:[]};
+    const calls = {list:0, listPasskeys:0, get:0, lock:0, delete:[], removePasskey:[], open:[], navigate:[], confirm:[], subscriptions:[]};
+    let controller;
+    let onStatusChanged;
+    let onChanged;
+    const dispatch = async (listener, detail) => {
+        if (typeof listener === "string") return await controller[listener]({detail});
+        return await listener?.({detail});
+    };
     const secrets = {
         status,
         options:{pageUnlock, pageManager:"page:x:/pages/preferences/secrets.js"},
@@ -28,8 +35,8 @@ function createPage({status = "locked", pageUnlock = "page:x:/pages/preferences/
         async list() { calls.list++; return [secret]; },
         async listPasskeys() { calls.listPasskeys++; return [passkey]; },
         async get() { calls.get++; throw new Error("Management must not load decrypted values."); },
-        async delete(name) { calls.delete.push(name); },
-        async removePasskey(id) { calls.removePasskey.push(id); },
+        async delete(name) { calls.delete.push(name); await dispatch(onChanged, {kind:"secret", action:"removed"}); },
+        async removePasskey(id) { calls.removePasskey.push(id); await dispatch(onChanged, {kind:"passkey", action:"removed"}); },
         lock() { calls.lock++; this.status = "locked"; this.sessionExpiresAt = null; }
     };
     const dialog = {
@@ -41,30 +48,38 @@ function createPage({status = "locked", pageUnlock = "page:x:/pages/preferences/
         async confirm(options) { calls.confirm.push(options); return confirmResult; }
     };
     const bus = {};
-    let onStatusChanged;
-    const controller = SecretsPage.controller({
-        state, secrets, dialog, bus,
+    const page = {id:"secrets-manager"};
+    const navigation = {async navigate(options) { calls.navigate.push(options); }};
+    controller = SecretsPage.controller({
+        state, secrets, dialog, bus, navigation, page,
         events:{on(target, event, listener) {
             assert.equal(target, bus);
-            assert.equal(event, "secrets:status-changed");
-            onStatusChanged = listener;
+            calls.subscriptions.push({event, listener});
+            if (event === "secrets:status-changed") onStatusChanged = listener;
+            else if (event === "secrets:changed") onChanged = listener;
+            else assert.fail(`Unexpected event '${event}'.`);
         }}
     });
     return {
-        state, secrets, dialog, calls, controller,
+        state, secrets, dialog, calls, controller, page,
         changeStatus(status, sessionExpiresAt = null) {
             Object.assign(secrets, {status, sessionExpiresAt});
-            return onStatusChanged({detail:{status, sessionExpiresAt}});
-        }
+            return dispatch(onStatusChanged, {status, sessionExpiresAt});
+        },
+        change(kind = "secret", action = "saved") { return dispatch(onChanged, {kind, action}); }
     };
 }
 
-test("Secrets Pages satisfy the Page schema and expose only dedicated editor context properties", () => {
+test("Secrets Pages satisfy the Page schema and expose query-backed editor identities", () => {
     for (const [definition, properties] of [[SecretsPage, []], [SecretPage, ["secretName"]], [PasskeyPage, ["passkeyId"]]]) {
         const result = new JsonValidator().validate({...definition, controller:{}}, PageSchema, {"./contract.schema.json":ContractSchema});
         assert.equal(result.valid, true, JSON.stringify(result.errors));
         assert.deepEqual(Object.keys(definition.contract.properties ?? {}), properties);
-        for (const property of properties) assert.equal(definition.contract.properties[property].context, true);
+        for (const property of properties) {
+            assert.equal(definition.contract.properties[property].state, true);
+            assert.equal(definition.contract.properties[property].query, true);
+            assert.equal(Object.hasOwn(definition.contract.properties[property], "context"), false);
+        }
     }
 });
 
@@ -118,8 +133,9 @@ test("management displays session expiration, secret metadata, and passkey metad
     }
 });
 
-test("management opens dedicated editors and refreshes after each successful save", async () => {
-    const {state, calls, controller} = createPage({status:"unlocked", dialogResult:{saved:true}});
+test("management opens stacked editors and refreshes from Secrets mutation events", async () => {
+    const manager = createPage({status:"unlocked"});
+    const {state, calls, controller} = manager;
     await controller.load();
     state.passkeySupported = true;
 
@@ -128,14 +144,17 @@ test("management opens dedicated editors and refreshes after each successful sav
     await controller.addPasskey();
     await controller.editPasskey({event:{detail:{value:passkey.id}}});
 
-    assert.deepEqual(calls.open, [
-        {href:"page:x:/pages/preferences/secrets-secret.js", title:"Add secret", context:{}},
-        {href:"page:x:/pages/preferences/secrets-secret.js", title:"Edit secret", context:{secretName:secret.name}},
-        {href:"page:x:/pages/preferences/secrets-passkey.js", title:"Add passkey", context:{}},
-        {href:"page:x:/pages/preferences/secrets-passkey.js", title:"Edit passkey", context:{passkeyId:passkey.id}}
+    assert.deepEqual(calls.navigate, [
+        {href:"page:x:/pages/preferences/secrets-secret.js", page:manager.page, open:"stack", params:{}},
+        {href:"page:x:/pages/preferences/secrets-secret.js", page:manager.page, open:"stack", params:{"secret-name":secret.name}},
+        {href:"page:x:/pages/preferences/secrets-passkey.js", page:manager.page, open:"stack", params:{}},
+        {href:"page:x:/pages/preferences/secrets-passkey.js", page:manager.page, open:"stack", params:{"passkey-id":passkey.id}}
     ]);
-    assert.equal(calls.list, 5);
-    assert.equal(calls.listPasskeys, 5);
+    assert.equal(calls.list, 1);
+    assert.equal(calls.listPasskeys, 1);
+    await manager.change("secret", "saved");
+    assert.equal(calls.list, 2);
+    assert.equal(calls.listPasskeys, 2);
     assert.equal(calls.get, 0);
 });
 
@@ -147,7 +166,7 @@ test("management keeps the lists when secret or passkey editing is cancelled", a
     await controller.edit({event:{detail:{value:secret.name}}});
     await controller.editPasskey(passkeyButton);
 
-    assert.equal(calls.open.length, 2);
+    assert.equal(calls.navigate.length, 2);
     assert.equal(calls.list, 1);
     assert.equal(calls.listPasskeys, 1);
     assert.equal(state.items, items);

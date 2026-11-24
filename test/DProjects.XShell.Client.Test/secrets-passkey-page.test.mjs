@@ -70,7 +70,7 @@ test("passkey editor enrolls with master-password reauthentication and clears th
     await save;
 
     assert.equal(state.password, "");
-    assert.deepEqual(calls.close, [{saved:true}]);
+    assert.deepEqual(calls.close, [undefined]);
 });
 
 test("passkey editor loads registration metadata and updates only the description", async () => {
@@ -87,7 +87,7 @@ test("passkey editor loads registration metadata and updates only the descriptio
 
     assert.deepEqual(calls.addPasskey, []);
     assert.deepEqual(calls.updatePasskey, [[registration.id, {description:"Primary workstation"}]]);
-    assert.deepEqual(calls.close, [{saved:true}]);
+    assert.deepEqual(calls.close, [undefined]);
 });
 
 for (const capabilities of [{secure:false}, {create:false}, {get:false}]) {
@@ -100,7 +100,7 @@ for (const capabilities of [{secure:false}, {create:false}, {get:false}]) {
         await controller.save();
         assert.deepEqual(calls.addPasskey, []);
         await controller.cancel();
-        assert.deepEqual(calls.close, [null]);
+        assert.deepEqual(calls.close, [undefined]);
     });
 }
 
@@ -149,7 +149,7 @@ test("passkey editor clears the form on lock and ignores a late enrollment resul
     assert.match(state.error, /reopen the editor/u);
     assert.deepEqual(calls.close, []);
     await controller.cancel();
-    assert.deepEqual(calls.close, [null]);
+    assert.deepEqual(calls.close, [undefined]);
 });
 
 test("passkey editor ignores a metadata update finishing after an external lock", async () => {
@@ -185,6 +185,6 @@ test("passkey editor clears the password on cancel or unload and ignores late co
 
         assert.equal(state.password, "");
         assert.equal(state.ready, false);
-        assert.deepEqual(calls.close, cancel ? [null] : []);
+        assert.deepEqual(calls.close, cancel ? [undefined] : []);
     }
 });

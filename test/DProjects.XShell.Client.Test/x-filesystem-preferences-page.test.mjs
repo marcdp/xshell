@@ -13,20 +13,43 @@ const providers = [
     {id: "mem", label: "Memory", defaults: {instance: null}, optionsSchema: {type: "object"}, credentialsSchema: null}
 ];
 
-function createManager({dialogResult = null, confirmResult = null} = {}) {
-    // Record only the Filesystems and Dialog boundaries used by the manager Page.
+function createManager({confirmResult = null, navigationError = null} = {}) {
+    // Record Filesystems, Navigation, Dialog, and lifecycle-owned event boundaries used by the manager Page.
     const state = structuredClone(FilesystemsPage.state);
-    const calls = {list: 0, remove: [], open: [], confirm: []};
+    const calls = {list: 0, remove: [], navigate: [], confirm: [], subscriptions: []};
+    const bus = {};
+    const page = {id: "filesystems-manager"};
+    let controller;
+    const emit = async (type, detail = {}) => {
+        for (const subscription of calls.subscriptions.filter(value => value.type === type)) {
+            if (typeof subscription.handler === "string") await controller[subscription.handler]({type, detail});
+            else await subscription.handler({type, detail});
+        }
+    };
     const filesystems = {
         async listDefinitions() { calls.list++; return [definition]; },
-        async removeDefinition(name) { calls.remove.push(name); }
+        async removeDefinition(name) {
+            calls.remove.push(name);
+            await emit("filesystems:definitions-changed", {name, action:"removed"});
+        }
     };
     const dialog = {
-        async open(options) { calls.open.push(options); return dialogResult; },
         async confirm(options) { calls.confirm.push(options); return confirmResult; }
     };
-    const controller = FilesystemsPage.controller({state, filesystems, dialog});
-    return {state, calls, controller};
+    const events = {
+        on(target, type, handler) {
+            assert.strictEqual(target, bus);
+            calls.subscriptions.push({type, handler});
+        }
+    };
+    const navigation = {
+        async navigate(options) {
+            calls.navigate.push(options);
+            if (navigationError) throw navigationError;
+        }
+    };
+    controller = FilesystemsPage.controller({state, filesystems, dialog, bus, events, navigation, page});
+    return {state, calls, controller, emit, page};
 }
 
 function createDetail({filesystemName = "", validationErrors = []} = {}) {
@@ -51,37 +74,47 @@ function createDetail({filesystemName = "", validationErrors = []} = {}) {
 }
 
 test("Filesystem preference Pages satisfy the Page schema and keep storage Services private", () => {
-    // Validate both definitions and ensure only the detail Page exposes editor context.
+    // Validate both definitions and ensure the detail identity comes from Page query parameters.
     for (const [page, properties] of [[FilesystemsPage, []], [FilesystemDetailPage, ["filesystemName"]]]) {
         const result = new JsonValidator().validate({...page, controller: {}}, PageSchema, {"./contract.schema.json": ContractSchema});
         assert.equal(result.valid, true, JSON.stringify(result.errors));
         assert.deepEqual(Object.keys(page.contract.properties ?? {}), properties);
     }
-    assert.match(FilesystemsPage.controller.toString(), /^controller\(\{state, filesystems, dialog\}\)/u);
+    assert.equal(FilesystemDetailPage.contract.properties.filesystemName.state, true);
+    assert.equal(FilesystemDetailPage.contract.properties.filesystemName.query, true);
+    assert.equal(Object.hasOwn(FilesystemDetailPage.contract.properties.filesystemName, "context"), false);
+    assert.match(FilesystemsPage.controller.toString(), /^controller\(\{state, filesystems, dialog, bus, events, navigation, page\}\)/u);
     assert.match(FilesystemDetailPage.controller.toString(), /^controller\(\{state, filesystems, page\}\)/u);
 });
 
-test("Filesystem manager loads, opens add and edit dialogs, and refreshes only after saves", async () => {
-    // Exercise list loading and the save-result refresh contract for both editor entry points.
-    const saved = createManager({dialogResult: {saved: true}});
-    await saved.controller.load();
-    await saved.controller.add();
-    await saved.controller.edit({event: {detail: {value: "work"}, currentTarget: {dataset: {}}}});
-    assert.deepEqual(saved.state.items, [definition]);
-    assert.deepEqual(saved.calls.open, [
-        {href: "page:x-filesystem:/pages/preferences/filesystems-detail.js", title: "Add filesystem", context: {}},
-        {href: "page:x-filesystem:/pages/preferences/filesystems-detail.js", title: "Edit filesystem", context: {filesystemName: "work"}}
-    ]);
-    assert.equal(saved.calls.list, 3);
+test("Filesystem manager opens stacked editors and refreshes from the Filesystems domain event", async () => {
+    // Subscribe before the initial list and keep stack navigation independent from child close results.
+    const manager = createManager();
+    await manager.controller.load();
+    assert.deepEqual(manager.calls.subscriptions, [{type: "filesystems:definitions-changed", handler: "onDefinitionsChanged"}]);
+    assert.equal(manager.calls.list, 1);
 
-    const cancelled = createManager();
-    await cancelled.controller.load();
-    await cancelled.controller.add();
-    assert.equal(cancelled.calls.list, 1);
+    await manager.controller.add();
+    await manager.controller.edit({event: {detail: {value: "work"}, currentTarget: {dataset: {}}}});
+    assert.deepEqual(manager.state.items, [definition]);
+    assert.deepEqual(manager.calls.navigate, [
+        {href: "page:x-filesystem:/pages/preferences/filesystems-detail.js", page: manager.page, open: "stack", params: {}},
+        {href: "page:x-filesystem:/pages/preferences/filesystems-detail.js", page: manager.page, open: "stack", params: {"filesystem-name": "work"}}
+    ]);
+    assert.equal(manager.calls.list, 1, "opening an editor must not refresh before a mutation event");
+
+    await manager.emit("filesystems:definitions-changed", {name: "work", action: "saved"});
+    assert.equal(manager.calls.list, 2);
+
+    const failed = createManager({navigationError:new Error("Navigation failed.")});
+    await failed.controller.load();
+    await failed.controller.add();
+    assert.equal(failed.state.error, "Navigation failed.");
+    assert.equal(failed.state.busy, false);
 });
 
-test("Filesystem manager confirms before removal and refreshes only after deletion", async () => {
-    // Keep cancellation side-effect free and route confirmed removal through Filesystems.
+test("Filesystem manager confirms removal and relies on the Filesystems event for one refresh", async () => {
+    // Keep cancellation side-effect free and use the same domain notification path as other callers.
     for (const [confirmResult, removed] of [[null, false], ["yes", true]]) {
         const {calls, controller} = createManager({confirmResult});
         await controller.load();
@@ -136,7 +169,7 @@ test("Filesystem detail validates generated schemas before saving", async () => 
 });
 
 test("Filesystem detail saves through Filesystems and clears credentials on every close path", async () => {
-    // Pass detached provider data, return the saved identity, and discard sensitive Page state.
+    // Pass detached provider data, close without a dialog result, and discard sensitive Page state.
     const saved = createDetail({filesystemName: "work"});
     await saved.controller.load();
     saved.controller.optionsChanged({event: {detail: {newValue: {path: "/updated", readonly: true}}}});
@@ -146,13 +179,13 @@ test("Filesystem detail saves through Filesystems and clears credentials on ever
         {name: "work", label: "Work Files", provider: "secure", options: {path: "/updated", readonly: true}},
         {token: "replacement"}
     ]]);
-    assert.deepEqual(saved.calls.close, [{saved: true, name: "work"}]);
+    assert.deepEqual(saved.calls.close, [undefined]);
     assert.deepEqual(saved.state.credentials, {});
 
     const cancelled = createDetail({filesystemName: "work"});
     await cancelled.controller.load();
     await cancelled.controller.cancel();
-    assert.deepEqual(cancelled.calls.close, [null]);
+    assert.deepEqual(cancelled.calls.close, [undefined]);
     assert.deepEqual(cancelled.state.credentials, {});
 
     const unloaded = createDetail({filesystemName: "work"});
@@ -171,5 +204,5 @@ test("Filesystem detail omits credentials for providers without a credential sch
         {name: "scratch", label: "scratch", provider: "mem", options: {instance: "scratch"}},
         undefined
     ]]);
-    assert.deepEqual(calls.close, [{saved: true, name: "scratch"}]);
+    assert.deepEqual(calls.close, [undefined]);
 });

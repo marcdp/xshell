@@ -54,7 +54,7 @@ test("secret editor creates Text and JSON secrets with optional metadata", async
         assert.deepEqual(calls.get, []);
         assert.deepEqual(calls.getInfo, ["github-token"]);
         assert.deepEqual(calls.set, [["github-token", value, {label:"GitHub token", description:"API authentication"}]]);
-        assert.deepEqual(calls.close, [{saved:true}]);
+        assert.deepEqual(calls.close, [undefined]);
         assert.equal(state.editorValue, "");
     }
 });
@@ -77,18 +77,18 @@ test("secret editor loads and updates a JSON value and its metadata", async () =
     await controller.save();
     assert.deepEqual(calls.set, [["token", {scope:"write"}, {label:"", description:"Rotated API credential"}]]);
     assert.deepEqual(calls.rename, []);
-    assert.deepEqual(calls.close, [{saved:true}]);
+    assert.deepEqual(calls.close, [undefined]);
 });
 
 test("secret editor renames by the original name without rewriting an unchanged value", async () => {
     const {state, calls, controller} = createPage({secretName:"token"});
     await controller.load();
     state.name = "token-prod";
-    assert.equal(state.secretName, "token", "editing the name leaves the original Page context intact");
+    assert.equal(state.secretName, "token", "editing the name leaves the original Page query identity intact");
     await controller.save();
     assert.deepEqual(calls.set, []);
     assert.deepEqual(calls.rename, [["token", "token-prod"]]);
-    assert.deepEqual(calls.close, [{saved:true}]);
+    assert.deepEqual(calls.close, [undefined]);
 });
 
 test("secret editor finishes an unchanged edit without writing", async () => {
@@ -97,7 +97,7 @@ test("secret editor finishes an unchanged edit without writing", async () => {
     await controller.save();
     assert.deepEqual(calls.set, []);
     assert.deepEqual(calls.rename, []);
-    assert.deepEqual(calls.close, [{saved:true}]);
+    assert.deepEqual(calls.close, [undefined]);
 });
 
 test("secret editor rejects blank names, empty Text, invalid JSON, and duplicate names", async () => {
@@ -143,7 +143,7 @@ test("secret editor reports partial save failures and retries only the rename", 
     await controller.save();
     assert.equal(calls.set.length, 1);
     assert.deepEqual(calls.rename[1], ["token", "available"]);
-    assert.deepEqual(calls.close, [{saved:true}]);
+    assert.deepEqual(calls.close, [undefined]);
 });
 
 test("secret editor requires an unlocked session and ignores a read finishing after a lock", async () => {
@@ -201,7 +201,7 @@ test("secret editor clears decrypted values and metadata on cancel or unload", a
         if (cancel) await controller.cancel();
         else controller.unload();
 
-        assert.deepEqual(calls.close, cancel ? [null] : []);
+        assert.deepEqual(calls.close, cancel ? [undefined] : []);
         assert.equal(state.ready, false);
         assert.equal(state.secretName, "");
         assert.equal(state.editorValue, "");
@@ -223,6 +223,6 @@ test("secret editor does not write when cancelled during the duplicate check", a
     lookup.resolve(undefined);
     await save;
     assert.deepEqual(calls.set, []);
-    assert.deepEqual(calls.close, [null]);
+    assert.deepEqual(calls.close, [undefined]);
     assert.equal(state.editorValue, "");
 });

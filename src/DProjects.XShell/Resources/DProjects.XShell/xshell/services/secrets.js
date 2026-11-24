@@ -564,6 +564,13 @@ export default class Secrets {
             .sort((left, right) => left.name.localeCompare(right.name));
     }
 
+    async has(name) {
+        // Check the plaintext name index without decrypting or unlocking the vault.
+        checkName(name);
+        await this.#ready;
+        return await this.#findSecret(name) !== undefined;
+    }
+
     async get(name, options) {
         // Retrieve and decrypt one named secret.
         checkName(name);
@@ -655,6 +662,7 @@ export default class Secrets {
             labelPlaintext?.fill(0);
         }
         this.#assertCurrent(epoch);
+        this.#notifyChanged("secret", "saved");
     }
 
     async delete(name) {
@@ -664,6 +672,7 @@ export default class Secrets {
         this.#assertCurrent(epoch);
         await this.#deleteSecret(name);
         this.#assertCurrent(epoch);
+        this.#notifyChanged("secret", "removed");
     }
 
     async rename(oldName, newName) {
@@ -674,6 +683,7 @@ export default class Secrets {
         this.#assertCurrent(epoch);
         await this.#renameSecret(oldName, newName, epoch);
         this.#assertCurrent(epoch);
+        if (oldName !== newName) this.#notifyChanged("secret", "saved");
     }
 
     async addPasskey(options) {
@@ -771,6 +781,7 @@ export default class Secrets {
         };
         await this.#request(PASSKEY_STORE, "readwrite", store => store.add(record));
         this.#assertCurrent(epoch);
+        this.#notifyChanged("passkey", "saved");
         return { id, label, description, createdAt: record.createdAt };
     }
 
@@ -801,6 +812,7 @@ export default class Secrets {
             return { ...existing, description };
         });
         this.#assertCurrent(epoch);
+        this.#notifyChanged("passkey", "saved");
     }
 
     async removePasskey(id) {
@@ -810,6 +822,7 @@ export default class Secrets {
         this.#assertCurrent(epoch);
         await this.#request(PASSKEY_STORE, "readwrite", store => store.delete(id));
         this.#assertCurrent(epoch);
+        this.#notifyChanged("passkey", "removed");
     }
 
     #validateSecretRecord(record) {
@@ -1301,6 +1314,12 @@ export default class Secrets {
         if (this.#status === status && !force) return;
         this.#status = status;
         this.#bus?.emit("secrets:status-changed", { status, sessionExpiresAt: this.#sessionExpiresAt });
+    }
+
+    #notifyChanged(kind, action) {
+        // Keep committed vault mutations successful when a notification listener fails.
+        try { this.#bus?.emit("secrets:changed", {kind, action}); }
+        catch (error) { console.error("Secrets change notification failed:", error); }
     }
 
     #request(name, mode, operation, trackWrite = true) {

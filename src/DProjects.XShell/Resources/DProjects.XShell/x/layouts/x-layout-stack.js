@@ -26,6 +26,10 @@ export default {
         stateEngine: "proxy"
     },
     style:`
+        :host {
+            position:relative;
+            z-index:10;
+        }
         x-loading {
             position:fixed;
             width:var(--x-loading-width);
@@ -42,6 +46,7 @@ export default {
             bottom:0;
             z-index:7;
             transition: background var(--x-transition-duration) ease;
+            cursor:pointer;
         }
         div.backdrop.expanded {
             background: var(--x-layout-stack-backdrop);
@@ -116,7 +121,7 @@ export default {
             /* Skip the common full-size rule when a different Stack size is present. */
             div.panel:has(> .body.size-full:not(:where(.stack-size-compact, .stack-size-narrow, .stack-size-medium, .stack-size-wide))),
             div.panel:has(> .body.stack-size-full) {--x-layout-stack-width:100vw; border-radius:0; border:none;}
-            
+
         }
         @media (max-width: 768px) {
             :host {
