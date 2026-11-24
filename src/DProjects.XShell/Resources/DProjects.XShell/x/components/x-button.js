@@ -18,6 +18,7 @@ export default {
             label:     {type:"string", default:"", attribute:true, state:true, description:""},
             message:   {type:"string", default:"", attribute:true, state:true, description:""},
             badge:     {type:"string", default:"", attribute:true, state:true, description:""},
+            badgeClass: {type:"string", default:"plain", attribute:true, state:true, description:""},
             command:   {type:"string", default:"", attribute:true, state:true, description:""},
             href:      {type:"string", default:"", attribute:true, state:true, description:""},
             autofocus: {type:"boolean", default:false, attribute:true, state:true, description:""},
@@ -178,7 +179,7 @@ export default {
                     <span class="message" x-if="state.message" x-text="state.message"></span>
                 </div>
                 <x-icon class="down" x-if="state.childs && !state.command" icon="x-arrow-down-fill"></x-icon>
-                <x-badge x-if="state.badge" x-attr:value="state.badge" class="plain"></x-badge>
+                <x-badge x-if="state.badge" x-attr:value="state.badge" x-attr:class="state.badgeClass"></x-badge>
             </button>
             <div class="more" tabindex="2" x-if="state.childs && state.command" x-on:click="expand" x-attr:expanded="state.expanded" x-on:keydown.enter="toggle">
                 <x-icon class="independent" icon="x-arrow-down-fill"></x-icon>

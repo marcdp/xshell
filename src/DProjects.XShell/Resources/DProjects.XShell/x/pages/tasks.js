@@ -22,16 +22,20 @@ export default {
         ]
     },
     meta: {
-        title: "Tasks"
+        title: "Tasks",
+        classes: ["no-title"]
     },
     style: `
+        x-progress {
+            width: 100%;
+            margin-top: 0.5em;
+        }
     `,
     template: `
         <x-empty x-if="state.tasks.length == 0" icon="x-tasks" label="No background tasks" message="No background tasks are currently running."></x-empty>
 
-        <x-form x-if="state.tasks.length > 0">
-
-            <x-listview view="tiles">
+        <x-form>
+            <x-listview view="tiles" x-if="state.tasks.length > 0">
                 <x-listview-head>
                     <x-listview-column>Name</x-listview-column>
                 </x-listview-head>
@@ -66,14 +70,7 @@ export default {
                     </x-listview-item>
                 </x-listview-body>
             </x-listview>
-
-            <x-button
-                slot="footer"
-                label="Clear completed"
-                icon="x-trash"
-                x-on:click="onClear"
-                x-attr:disabled="state.completed == 0">
-            </x-button>
+            <x-button slot="footer" tooltip="Clear completed" label="Clear completed" icon="x-close" x-on:click="onClear" x-attr:disabled="state.completed == 0"></x-button>
         </x-form>
     `,
     state: {

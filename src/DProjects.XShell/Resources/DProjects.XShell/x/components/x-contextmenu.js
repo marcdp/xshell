@@ -7,7 +7,6 @@ export default {
         events: {},
         properties: {
             submenu: {type: "boolean", default: false, attribute:true, state:true, description: "Whether the context menu is a submenu."},
-            position: {type: "string", default: null, attribute:true, state:true, description: "The position of the context menu."}
         },
         methods: {        
             open: {
@@ -79,6 +78,7 @@ export default {
             box-shadow:none;
             transform:none;
         }
+
     `,
     template: `
         <div x-if="state.visible || state.submenu" tabindex="0" x-style:left="state.x" x-style:top="state.y" x-on:keydown="keydown" x-on:command="command" part="container">

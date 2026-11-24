@@ -6,15 +6,7 @@ export default {
     contract: {
         description: "Main layout.",
         events: {},
-        properties: {
-            status: { type:"string", default: "", attribute: true, state: true, description: "" },
-            appIcon: { type: "string", default: "", state: true, description: "" },
-            appLabel: { type: "string", default: "", state: true, description: "" },
-            appBasePath: { type: "string", default: "", state: true, description: "" },
-            toggled: { type: "boolean", default: false, state: true, description: "" },
-            keyword: { type: "string", default: "", state: true, description: "" },
-            shellDebug: { type: "boolean", default: false, state: true, description: "" },
-        },
+        properties: {},
         methods: {},
         slots: {
             "": {
@@ -51,7 +43,7 @@ export default {
         }
 
         /* x */
-        x-global-menu {
+        x-app-menu {
             position:sticky;
             top:0;
             height:100vh;
@@ -93,22 +85,6 @@ export default {
         .header.shell {z-index:6; padding-left:.65em;}
         .header.breadcrumb {z-index:5; padding-right:1.5em;}
         .header-actions {display:flex; gap:.5em;}
-
-        /* areas */
-        .areas {color:var(--x-color-text); margin-left:.75em; margin-right:.5em; display:block;}
-        .areas:hover > x-icon {color:var(--x-color-primary);}
-        .areas:active > x-icon {color:var(--x-color-primary-dark);}
-
-        /* search */
-        .header .search {display:flex;}
-        .header .search x-datafield {width:30em;}
-        .header .search x-icon {transform:translate(.75em,.3em); position:absolute; color: var(--x-datafield-color-placeholder); position:0;}
-        .header .search-button {display:none;}
-
-        /* shortcuts */
-        .header .shortcuts {display:flex; align-items:center;}
-        .header .shortcuts x-dropdown {margin:0;}
-        .header .shortcuts > * {margin-left: 0.5em;}
 
         /* breadcrumb */
         .breadcrumb {position:sticky; top:0; user-select: none; flex:1;}
@@ -155,7 +131,7 @@ export default {
 
         /* desktop */
         @media (min-width: 769px) {
-            
+
             .docked-main {
                 --x-fill-top: 6.4em;
                 --x-fill-height: calc(100vh - 6.5em);
@@ -259,7 +235,6 @@ export default {
             }
             .header .logo img {width:4em;}
 
-            .header .search x-datafield {width:unset; flex:1;}
             .header .spacer  {display:none}
             .header .input-dropdown {flex:1;}
 
@@ -306,57 +281,14 @@ export default {
         <!-- loading -->
         <x-loading x-if="state.status=='loading'"></x-loading>        
 
-        <!-- global menu -->
-        <x-global-menu></x-global-menu>
+        <!-- app menu -->
+        <x-app-menu></x-app-menu>
 
         <!-- docked page -->
         <div x-attr:class="'dock-container ' + (state.dockSrc ? state.dockPosition : '')">
 
             <div class="docked-main" x-on:scroll="onScroll">
 
-                <!-- shell header -->
-                <nav class="header shell">
-
-                    <a class="logo" x-attr:href="state.appBasePath" x-if="state.appIcon">
-                        <img x-attr:src="state.appIcon" x-attr:title="state.appLabel">
-                    </a>
-                    
-                    <x-dropdown class="areas popover">
-                        <x-icon tabindex="1" icon="x-apps" class="size-x2"></x-icon>
-                        <x-page slot="dropdown" src="/pages/global.js" loading="lazy"></x-page>
-                    </x-dropdown>
-
-                    <x-dropdown class="input-dropdown">
-                        <div class="search">
-                            <x-datafield type="search" placeholder="Search" x-model="state.keyword" autocomplete="off"></x-datafield>
-                        </div>
-                        <x-page slot="dropdown" src="/pages/search.js" loading="lazy"></x-page>
-                    </x-dropdown>
-
-                    <div class="spacer"></div>
-
-                    <div class="shortcuts">
-
-                        <x-dropdown class="tasks popover left" collapse-on-click x-if="state.tasksButtonVisible">
-                            <x-button class="round light" icon="x-tasks" tooltip="Background tasks" x-attr:badge="state.tasksRunning > 0 ? state.tasksRunning : ''"></x-button>
-                            <x-page slot="dropdown" src="/pages/tasks.js" loading="lazy"></x-page>
-                        </x-dropdown>
-
-                        <div x-for="menuitem in state.menuShortcuts">
-                            <div x-if="menuitem.href">
-                                <x-anchor x-attr:href="menuitem.href" x-attr:title="menuitem.tooltip" x-attr:open="menuitem.open" class="round light" >
-                                    <x-icon x-attr:icon="menuitem.icon"></x-icon>
-                                    <label>{{ menuitem.label }}</label>
-                                </x-anchor>
-                            </div>
-                            <x-dropdown x-else x-attr:class="'popover left' + (menuitem.class ? ' ' + menuitem.class : '')" >
-                                <x-button x-attr:label="menuitem.label" x-attr:icon="menuitem.icon" x-attr:title="menuitem.tooltip" class="round light"></x-button>
-                                <x-menu slot="dropdown" x-prop:menu="menuitem.children"></x-menu>            
-                            </x-dropdown>
-                        </div>
-                    </div>
-
-                </nav>
 
                 <!-- breadcrumb -->
                 <nav class="header breadcrumb">
@@ -420,11 +352,9 @@ export default {
         menuTools:       null,
         pageClasses:     "",
         dockPosition:    "bottom",
-        dockSrc:         "",
-        tasksRunning:    0,
-        tasksButtonVisible: false
+        dockSrc:         ""
     },
-    controller({ state, events, areas, bus, getPage, host, tasks, postRender, preferences }) {
+    controller({ state, events, areas, bus, getPage, host, postRender, preferences }) {
         let pendingWrite = Promise.resolve();
         let dockSizeRevision = 0;
         let restoring = false;
@@ -448,10 +378,6 @@ export default {
                 events.on(bus, "xshell:navigation:end", "refresh");
                 // bind refresh
                 events.on(bus, "xshell:menus:change", "refresh")
-                // bind search
-                events.on(state, "change:keyword", "search");
-                // bind tasks change
-                events.on(bus, ["xshell:tasks:added", "xshell:tasks:updated", "xshell:tasks:removed"], "refreshTasks");
                 // bind page load event to update page classes
                 events.on(bus, "xshell:page:load", (event)=>{
                     if (event.detail.id == getPage()?.id) {
@@ -528,19 +454,6 @@ export default {
                 document.documentElement.style.setProperty('--x-scrollbar-width-pixels', `${Math.max(0,scrollbarWidth)}px`);
             },
             
-            refreshTasks() {
-                // refresh the count of pending and running background tasks
-                const tasksRunningBefore = state.tasksRunning;
-                const allTasks = tasks.list();
-                state.tasksButtonVisible = allTasks.filter(task => task.background).length > 0;
-                state.tasksRunning = allTasks.filter(task => task.background && (task.status === "pending" || task.status === "running")
-                ).length;
-                if (tasksRunningBefore == 0 && state.tasksRunning > 0) {
-                    const dropdown = host.shadowRoot.querySelector("x-dropdown.tasks");
-                    dropdown.expand();
-                }
-            },
-
             async refresh(params) {
                 //refresh
                 const page  = getPage();
@@ -555,24 +468,17 @@ export default {
                         //show menu main and tools
                         state.menuNavigation = areas.getMenu("navigation")?.items || [];
                         state.menuTools = areas.getMenu("tools")?.items || [];
-                        state.menuShortcuts = areas.getMenu("shortcuts")?.items || [];
                     } else {
                         // not found breadcrumb in page
                         // show menu main and tools
                         state.menuNavigation = areas.getMenu("navigation")?.items || [];
                         state.menuTools = areas.getMenu("tools")?.items || [];
-                        state.menuShortcuts = areas.getMenu("shortcuts")?.items || [];
                         //breadcrumb
                         if (state.menuNavigation) {
                             let menuitems = findObjectsPath(state.menuNavigation, 'href', page.href);
                         }
                     }
                 }
-            },
-
-            async search(params) {
-                //search
-                bus.emit("xshell:search", { keyword: state.keyword.trim() });
             },
 
             // events

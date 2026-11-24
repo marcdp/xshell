@@ -62,7 +62,9 @@ export default {
             border:var(--x-dropdown-border);
             border-radius:var(--x-dropdown-border-radius);
             box-shadow:var(--x-dropdown-shadow);
-            overflow: hidden
+            overflow: hidden;
+            max-width:90vw;
+            min-width: clamp(22em, 100%, 200%);
         }
         .body > div {
             display:block;
@@ -79,46 +81,18 @@ export default {
             max-width:95vw;
         }
 
-        /* popover */
-        :host(.popover) .body {            
-            margin-top: .5em;
-            margin-left:-.5em;
-            max-width:90vw;
-            min-width: clamp(22em, 100%, 200%);                        
+        /* left */
+        :host(.bottom.left) .body {
+            transform:translateX(calc(-100% + 2.5em));
+            margin-top:.5em;
         }
-        :host(.popover) .body .helper {
-            display: inline-block;
-            position:absolute;
-            z-index:10;
-            left: .75em;
-            top:-.9em;
-            width: 0;
-            height: 0;
-            border-left: .9em solid transparent;
-            border-right: .9em solid transparent;
-            border-bottom: .9em solid var(--x-dropdown-border-color); 
-        }                  
-        :host(.popover) .body .helper2 {
-            display: inline-block;
-            left: .75em;
-            position:absolute;
-            z-index:10;
-            top:-.8em;
-            width: 0;
-            height: 0;
-            border-left: .9em solid transparent;
-            border-right: .9em solid transparent;
-            border-bottom: .9em solid var(--x-dropdown-background); 
-        }      
 
-        /* popover left */
-        :host(.left) .body {transform:translateX(calc(-100% + 3em));}
-        :host(.popover.left) .body .helper {left:unset; right:1em;}
-        :host(.popover.left) .body .helper2 {left:unset; right:1em;}
+        /* right + up */
+        :host(.right.up) .body { transform:translateY(-100%); margin-left:calc(100% + 1em);}
 
         /* fixed */
         :host(.fixed) .body {
-        min-width:unset;
+            min-width:unset;
             position: fixed;
         }
             
@@ -149,8 +123,6 @@ export default {
             <slot></slot>
         </div>
         <div class="body" x-class:expanded="state.expanded" x-on:collapse.stop="collapse" x-on:mousedown.stop="mousedown-body" x-on:click="clickBody">
-            <span class="helper"></span>
-            <span class="helper2"></span>
             <div>
                 <slot name="dropdown"></slot>
             </div>

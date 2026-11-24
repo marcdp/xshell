@@ -299,6 +299,10 @@ x-page[layout='stack'] + x-page[layout='stack'] + x-page[layout='stack'] + x-pag
     --x-contextmenu-border-radius: .75em;
     --x-menuitem-border-radius: .5em;
     --x-menuitem-separator-color: light-dark(#B4B4BB, #505058);
+
+    --x-menuitem-background-hover: var(--x-color-background-xx-gray);
+    --x-menuitem-background-active: var(--x-color-background-xxx-gray);
+    --x-menuitem-background-selected: var(--x-color-background-xx-gray);
     
     /* x-notice */
     --x-notice-border-radius: .75em;
@@ -358,8 +362,9 @@ x-page[layout='stack'] + x-page[layout='stack'] + x-page[layout='stack'] + x-pag
     --x-splitter-background: light-dark(#B4B4BB, #45454D);
     
     /* x-tooltip */
-    --x-tooltip-background: light-dark(#303030, #E8EAED);
+    --x-tooltip-background: light-dark(#eeeeee, #303030);
     --x-tooltip-color: light-dark(#ffffff, #202124);
+    --x-tooltip-border: var(--x-contextmenu-border);
     --x-tooltip-border-radius: .35em;
     --x-tooltip-shadow: none;
     --x-tooltip-offset: .5em;

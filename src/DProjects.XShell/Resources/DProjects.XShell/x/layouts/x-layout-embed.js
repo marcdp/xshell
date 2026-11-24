@@ -37,6 +37,7 @@ export default {
         .header .title x-page-title {margin:0; font-weight:500;}
         .header .title x-page-description {margin:0; font-weight:normal; font-size:var(--x-font-size-small);}
         .header .header-actions {float:right}
+        .no-title .header {display:none;}
         
         
         x-loading {

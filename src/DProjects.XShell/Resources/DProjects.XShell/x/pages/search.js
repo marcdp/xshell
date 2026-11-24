@@ -8,10 +8,12 @@ export default {
     },
     meta: {
         title: "Page search",
-        description: "Enter at least 3 characters to search"
+        description: "Enter at least 3 characters to search",
+        classes: ["stack-size-narrow"]
     },
     template: `
         <x-datafields>
+            <x-datafield type="search" placeholder="Search" x-model="state.keyword" autocomplete="off" autofocus></x-datafield>
 
             <div x-if="state.results.length > 0">
                 <x-listview x-if="state.results.length > 0" view="tiles" title="Search results" x-on:activate="activate">
@@ -48,13 +50,10 @@ export default {
         keyword: "",
         results: []
     },
-    controller({ state, events, bus, areas, config }) {
+    controller({ state, events, areas, config }) {
         return {
             load() {
                 // load
-                events.on(bus, "xshell:search", (event) => {
-                    state.keyword = event.detail.keyword
-                });
                 events.on(state, "change:keyword", "search");
             },
 

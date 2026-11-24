@@ -27,7 +27,7 @@
                     "icon": "x-settings",
                     "items":[
                         {"label": "-", "order":100},
-                        {"label": "Search", "icon":"x-search", "href": "/pages/search.js"}
+                        {"label": "Search", "icon":"x-search", "href": "/pages/search.js", "open":"stack"}
                     ]
                 },
                 "preferences": {
@@ -49,7 +49,7 @@
                     "scope": "global",
                     "label": "Shortcuts",
                     "items": [
-                        {"id": "root", "label": "Settings", "icon": "x-settings", "class": "menu", "children": [
+                        {"id": "root", "label": "Settings", "icon": "x-settings", "class": "top right", "children": [
                             {"label": "Preferences", "href": "/pages/workspace.js?menu-name=preferences", "open":"stack"},
                             {"label": "-", "order": 100},
                             {"label": "About", "href": "/pages/about.js"}
