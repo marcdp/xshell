@@ -22,8 +22,8 @@ export default {
     },
     style: `
         :host {display:inline; }
-        :host svg {height:1.25em;width:1.25em; fill:currentcolor; vertical-align:var(--x-icon-vertical-align, middle); display:inline-block;}
-        :host(.size-x2) svg {height:2em;width:2em; fill:currentcolor}
+        :host svg {height:1.25em;width:1.25em;fill:none;stroke:currentcolor;vertical-align:var(--x-icon-vertical-align, middle);display:inline-block;}
+        :host(.size-x2) svg {height:2em;width:2em;}
     `,
     template: `
         <span x-if="state.svg" x-children="state.svg"></span>

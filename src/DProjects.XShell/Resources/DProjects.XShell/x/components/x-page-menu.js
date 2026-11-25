@@ -54,7 +54,7 @@ export default {
                     <x-anchor x-else x-attr:href="menuitem.path || menuitem.href" x-attr:target="menuitem.target" x-attr:icon="menuitem.icon" x-attr:tooltip="menuitem.tooltip || menuitem.description" class="plain block" x-class:selected="state.selected == menuitem.href || (menuitem.path && state.selected == menuitem.path)" >
                         <x-icon x-if="menuitem.icon" x-attr:icon="menuitem.icon"></x-icon>
                         <span x-text="menuitem.label"></span>
-                        <x-icon x-if="menuitem.target" class="new" icon="x-open_in_new"></x-icon>
+                        <x-icon x-if="menuitem.target" class="new" icon="x-open-in-new"></x-icon>
                     </x-anchor>
                     <span></span>
                     <span></span>
