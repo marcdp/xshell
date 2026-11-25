@@ -268,13 +268,20 @@ test("module schema validates named menu definitions and rejects obsolete format
     }
 });
 
-test("menu schema accepts embedded and rejects the pre-V0 embeded spelling", () => {
+test("menu schema accepts Page presentation fields and rejects removed embedded spellings", () => {
     const module = moduleDefinition();
-    module.menus = { navigation: { items: [{ label: "Inline report", href: "/pages/report.js", embedded: true }] } };
+    module.menus = { navigation: { items: [{ label: "Inline report", href: "/pages/report.js", open: "embed", outlet: "self" }] } };
     assertValid(module);
 
-    module.menus.navigation.items[0] = { label: "Inline report", href: "/pages/report.js", embeded: true };
-    assert.equal(validator.validate(configuration(module)).valid, false);
+    for (const property of ["embedded", "embeded"]) {
+        module.menus.navigation.items[0] = { label: "Inline report", href: "/pages/report.js", [property]: true };
+        assert.equal(validator.validate(configuration(module)).valid, false);
+    }
+
+    for (const open of ["auto", "top", "stack", "dialog", "dock", "embed", null]) {
+        module.menus.navigation.items[0] = { label: "Report", open, outlet: open === "embed" ? "content" : null };
+        assertValid(module);
+    }
 });
 
 test("effective schema requires app baseUrl", () => {

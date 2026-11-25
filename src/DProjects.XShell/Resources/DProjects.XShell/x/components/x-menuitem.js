@@ -12,13 +12,11 @@ export default {
             command:     {type:"string", default:"", attribute:true, state:true, description:""},
             selected:    {type:"boolean", default:false, attribute:true, state:true, description:""},
             checked:     {type:"boolean", default:false, attribute:true, state:true, description:""},
-            open:        {type:"string", default:"", attribute:true, state:true, description:"Indicates whether the menu item is open.", enum:["stack", "top", "dialog", "dock"]},
             disabled:    {type:"boolean", default:false, attribute:true, state:true, description:""},
-            embedded:    {type:"boolean", default:false, attribute:true, state:true, description:"Hosts the target Page inline instead of rendering a navigation anchor."},
             tooltip:     {type:"string", default:"", attribute:true, state:true, description:"Optional tooltip text shown on the navigation anchor."},
             expandOn:    {type: "string", default: "auto", attribute: true, state: true, enum: ["auto", "click", "hover"], description: "Determines how child menu items are expanded."},
-            open:        {type: "string",default: "",attribute: true,state: true,enum: ["auto", "stack", "top", "dialog", "dock", "embed"]},
-            outlet:      {type: "string",default: "",attribute: true,state: true},
+            open:        {type: "string", default: "auto", attribute: true, state: true, enum: ["auto", "top", "stack", "dialog", "dock", "embed"], description: "Determines how the target Page is presented."},
+            outlet:      {type: "string", default: "", attribute: true, state: true, description: "Names the destination outlet for embedded Page presentation; 'self' hosts the Page inside this item."},
             badge:     {type:"string", default:"", attribute:true, state:true, description:""},
             badgeClass: {type:"string", default:"plain", attribute:true, state:true, description:""},
         },
@@ -103,7 +101,6 @@ export default {
     state: {
         command:"",
         href:"",
-        embedded: false,
         expanded: false,
         childsInline: false,
         childsDown: false,
@@ -111,7 +108,7 @@ export default {
     },
     template: `
         <hr x-if="state.label=='-'" />
-        <div x-elseif="state.embedded">
+        <div x-elseif="state.open == 'embed' && state.outlet == 'self'">
             <x-page x-attr:src="state.href" layout="embed" loading="lazy"></x-page>
         </div>
         <x-button x-elseif="state.command" class="menuitem" x-attr:command="state.command" x-attr:label="state.label" x-attr:icon="state.icon" x-attr:disabled="state.disabled" x-attr:badge="state.badge" x-attr:badge-class="state.badgeClass" x-attr:tooltip="state.tooltip">

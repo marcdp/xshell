@@ -7,7 +7,7 @@ export default {
         events: {},
         properties: {
             href:       {type:"string", default:"", attribute:true, state:true, description:""},
-            open:       {type:"string", default:"auto", attribute:true, state:true, description:"", enum: ["auto","top","dialog","stack","embed"]},
+            open:       {type:"string", default:"auto", attribute:true, state:true, description:"", enum: ["auto","top","stack","dialog","dock","embed"]},
             query:      {type:"object", default:{}, attribute:true, state:true, description:""},
             classes:    {type:"array", default:[], state:true, description:"Presentation classes for the target stacked Page.", schema:{type:"array", items:{type:"string"}}},
             breadcrumb: {type:"boolean", default:false, attribute:true, state:true, description:""},

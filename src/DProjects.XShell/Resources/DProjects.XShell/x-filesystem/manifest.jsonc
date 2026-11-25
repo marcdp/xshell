@@ -24,7 +24,7 @@
                 "global": {
                     "items":[
                         {"label": "Filesystems", "icon":"x-filesystems", "order": 200, "children": [
-                            {"label": "Filesystems", "href": "/pages/global/filesystems.js", "embedded": true}
+                            {"label": "Filesystems", "href": "/pages/global/filesystems.js", "open": "embed", "outlet": "self"}
                         ]}
                     ]
                 },

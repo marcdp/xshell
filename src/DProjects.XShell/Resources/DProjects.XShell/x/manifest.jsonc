@@ -28,13 +28,13 @@
                     "items":[
                         {"label": "-", "order":100},
                         {"label": "Search", "icon":"x-search", "children": [
-                            {"label": "Search Options", "href": "/pages/search.js", "embedded": true}
+                            {"label": "Search Options", "href": "/pages/search.js", "open": "embed", "outlet": "self"}
                         ]},
                         {"label": "-", "order":900, "class": "flex"},                        
                         {"label": "Expand", "icon":"x-sidebar-off", "command": "expand", "class":"expand"},
                         {"label": "Collapse", "icon":"x-sidebar-on", "command": "collapse", "class":"collapse"},
                         {"label": "Tasks", "icon":"x-tasks", "class": "tasks top right", "children": [
-                            {"label": "Background Tasks", "href": "/pages/tasks.js", "embedded": true}
+                            {"label": "Background Tasks", "href": "/pages/tasks.js", "open": "embed", "outlet": "self"}
                         ]},
                         {"id": "root", "label": "Settings", "icon": "x-settings", "class": "top right", "children": [
                             {"label": "Preferences", "href": "/pages/workspace.js?menu-name=preferences", "open":"stack"},

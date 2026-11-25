@@ -39,7 +39,6 @@ export default {
         <div x-if="state.menu" >
             <x-menuitem x-recursive="(menuitem,index,indexAbsolute,indent) in state.menu"
                 x-key="id,href,path,order,command"
-                x-attr:embedded="menuitem.embedded"
                 x-attr:label="menuitem.label"
                 x-attr:href="menuitem.href"
                 x-attr:command="menuitem.command"

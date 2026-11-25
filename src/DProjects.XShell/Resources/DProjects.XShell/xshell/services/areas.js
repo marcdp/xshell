@@ -272,7 +272,8 @@ export default class Areas {
                     label: menuitem.label,
                     href: menuitem.href,
                     path: menuitem.path,
-                    embedded: menuitem.embedded,
+                    open: menuitem.open,
+                    outlet: menuitem.outlet,
                     ...(menuitem.icon ? { icon: menuitem.icon } : {}),
                     module: menuitem.module,
                     area: menuitem.area
@@ -436,13 +437,13 @@ export default class Areas {
             path: area ? this.#buildAreaHref(menuitem.path, area) : menuitem.path,
             command: menuitem.command ?? null,
             icon: menuitem.icon ?? null,
-            embedded: menuitem.embedded ?? false,
             open: menuitem.open ?? null,
+            outlet: menuitem.outlet ?? null,
             tooltip: menuitem.tooltip ?? null,
             default: menuitem.default ?? false,
             class: menuitem.class ?? "",
             module: moduleId,
-            ...(area ? { area: area.id } : { outlet: menuitem.outlet || null }),
+            ...(area ? { area: area.id } : {}),
             children: []
         };
         const staticItems = menuitem.children || [];

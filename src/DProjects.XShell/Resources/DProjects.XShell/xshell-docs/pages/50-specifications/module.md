@@ -237,6 +237,10 @@ Later supplied metadata overrides earlier values, and omitted metadata keeps its
 recursively by item ID, with explicit items processed before resolved source items. See [Areas](../30-subsystems/10-areas.md#menus-and-home) for
 ordering, normalization, and effective menu APIs.
 
+A menu item's canonical `href` identifies its Page. Its optional `open` value is `auto`, `top`, `stack`, `dialog`, `dock`, or `embed`, and `outlet`
+selects the named destination for embedded navigation. The reserved `outlet: "self"` value is interpreted only by `x-menuitem`, which composes the
+canonical `href` as a lazy embedded Page. Omitting `outlet` does not select self-embedding.
+
 `routes` maps Area-relative friendly Path patterns to module-relative Page targets:
 
 ```jsonc

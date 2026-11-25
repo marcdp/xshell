@@ -84,12 +84,15 @@ test("x-page-menu uses descriptions as tooltip fallbacks without overriding expl
     assert.match(pageMenuDefinition.template, /x-attr:tooltip="menuitem\.tooltip \|\| menuitem\.description"/);
 });
 
-test("x-menu passes canonical tooltip and embedded properties to x-menuitem", () => {
+test("x-menu passes Page presentation properties and uses the canonical href for self-embedding", () => {
     assert.match(menuDefinition.template, /x-attr:tooltip="menuitem\.tooltip"/);
-    assert.match(menuDefinition.template, /x-attr:embedded="menuitem\.embedded"/);
+    assert.match(menuDefinition.template, /menuitem\.open == 'embed' && menuitem\.outlet == 'self' \? menuitem\.href : menuitem\.path \|\| menuitem\.href/);
+    assert.match(menuDefinition.template, /x-attr:open="menuitem\.open"/);
+    assert.match(menuDefinition.template, /x-attr:outlet="menuitem\.outlet"/);
+    assert.doesNotMatch(menuDefinition.template, /embedded/);
 });
 
-test("x-menuitem exposes tooltip and embedded as public attributes", () => {
+test("x-menuitem exposes tooltip, open, and outlet as public attributes", () => {
     assert.deepEqual(menuItemContract.properties.tooltip, {
         type: "string",
         default: "",
@@ -97,13 +100,17 @@ test("x-menuitem exposes tooltip and embedded as public attributes", () => {
         state: true,
         description: "Optional tooltip text shown on the navigation anchor."
     });
-    assert.deepEqual(menuItemContract.properties.embedded, {
-        type: "boolean",
-        default: false,
+    assert.deepEqual(menuItemContract.properties.open, {
+        type: "string",
+        default: "auto",
         attribute: true,
         state: true,
-        description: "Hosts the target Page inline instead of rendering a navigation anchor."
+        enum: ["auto", "top", "stack", "dialog", "dock", "embed"],
+        description: "Determines how the target Page is presented."
     });
+    assert.equal(menuItemContract.properties.outlet.default, "");
+    assert.equal(Object.hasOwn(menuItemContract.properties, "embedded"), false);
+    assert.equal(Object.keys(menuItemContract.properties).filter(name => name === "open").length, 1);
 });
 
 test("x-menuitem exposes configurable expansion and x-app-menu assigns root and nested modes", () => {
@@ -217,18 +224,20 @@ test("x-menuitem preserves destination and command activation while providing an
     withMenuGlobals(commandParent.document, () => {
         commandParent.controller.mount();
         commandParent.controller.expand();
-        commandParent.controller.commandActivated({target: {}});
+        commandParent.controller.commandActivated({target: {}, composedPath: () => [commandParent.host]});
         assert.equal(commandParent.state.expanded, false);
         commandParent.controller.unmount();
     });
 });
 
 
-test("x-menuitem renders tooltip on a normal anchor and an embedded target as an inline Page", () => {
+test("x-menuitem renders tooltip on a normal anchor and self-embeds a lazy Page without an additional anchor", () => {
     assert.match(
         menuItemDefinition.template,
-        /<div x-elseif="state\.embedded">\s*<x-page\s+x-attr:src="state\.href"\s+loading="lazy"><\/x-page>\s*<\/div>/
+        /<div x-elseif="state\.open == 'embed' && state\.outlet == 'self'">\s*<x-page\s+x-attr:src="state\.href"\s+layout="embed"\s+loading="lazy"><\/x-page>\s*<\/div>/
     );
+    assert.match(menuItemDefinition.template, /<x-anchor x-else/);
+    assert.doesNotMatch(menuItemDefinition.template, /state\.embedded/);
 
     assert.match(
         menuItemDefinition.template,

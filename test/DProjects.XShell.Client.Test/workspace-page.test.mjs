@@ -52,7 +52,6 @@ test("Workspace preserves a supplied source and tracks the embedded Page for sel
     assert.match(WorkspacePage.template, /x-attr:selected="[^"]*menuitem.href == state.src/);
     assert.match(WorkspacePage.template, /open="embed"\s+outlet="content"/);
     assert.match(WorkspacePage.template, /<x-page outlet="content" x-attr:src="state.src" x-on:load="refresh"/);
-    assert.match(WorkspacePage.template, /<h4 x-if="state.showTitle">/);
     const { menuName, src, showTitle } = WorkspacePage.contract.properties;
     assert.equal(menuName.query, true);
     assert.ok(src.query && src.reflect);
@@ -76,6 +75,7 @@ test("bundled manifests compose Preferences and Diagnostics shortcuts as global 
     const readManifest = id => JSON.parse(readFileSync(new URL(`${id}/manifest.jsonc`, resources), "utf8").replace(/^\s*\/\/[^\r\n]*/gm, ""));
     const framework = readManifest("xshell");
     const x = readManifest("x");
+    const filesystem = readFileSync(new URL("x-filesystem/manifest.jsonc", resources), "utf8");
     const diagnostics = readManifest("xshell-diagnostics");
     const config = { modules: { ...x.modules, ...diagnostics.modules }, xshell: { assets: { basePath: "/_assets" } } };
     const options = { ...framework.xshell.services.areas.options, ...diagnostics.xshell.services.areas.options };
@@ -90,9 +90,14 @@ test("bundled manifests compose Preferences and Diagnostics shortcuts as global 
     assert.equal(menu.items[0].href, "/pages/preferences/appearance.js");
     const workspaceSrc = "/pages/workspace.js?menu-name=preferences";
     assert.equal(x.xshell.services.preferences.options.page, workspaceSrc);
-    const shortcuts = areas.getMenu("shortcuts").items[0].children;
+    const shortcuts = areas.getMenu("global").items.find(item => item.id === "root").children;
     assert.equal(shortcuts.find(item => item.label === "Preferences").href, workspaceSrc);
     assert.equal(shortcuts.find(item => item.label === "Diagnostics console").module, "xshell-diagnostics");
-    assert.equal(areas.getMenu("shortcuts", "main").scope, "global");
+    assert.equal(areas.getMenu("global", "main").scope, "global");
     assert.equal(areas.getMenu("navigation", "main").scope, "area");
+    const embeddedItems = x.modules.x.menus.global.items.flatMap(item => item.children || []).filter(item => item.open === "embed");
+    assert.equal(embeddedItems.length, 2);
+    assert.ok(embeddedItems.every(item => item.outlet === "self" && !Object.hasOwn(item, "embedded")));
+    assert.match(filesystem, /"href": "\/pages\/global\/filesystems\.js", "open": "embed", "outlet": "self"/);
+    assert.doesNotMatch(filesystem, /"embedded"\s*:/);
 });

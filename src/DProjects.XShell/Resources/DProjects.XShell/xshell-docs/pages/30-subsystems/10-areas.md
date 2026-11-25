@@ -77,10 +77,12 @@ the same contribution, up to the next explicit `order`. After merging by ID, Are
 block precedes explicit blocks at `0`, and other ties retain composition order. Effective item orders increment within each block, so blocks
 stay together even when those values overlap. Inferred values only appear on effective menu items.
 
-Menu items may also declare `tooltip` and `embedded`. `tooltip` supplies the navigation anchor's tooltip text. The Page sidebar uses an item's
-description as its tooltip when no explicit tooltip is present. When rendered by `x-menu`, an
-`embedded` menu item causes `x-menuitem` to host its target Page inline instead of rendering a navigation anchor. This presentation behavior belongs
-specifically to `x-menu` / `x-menuitem`; it is distinct from Navigation's dialog or embedded Page lifecycle and from `xshell.ui.layout.embed`.
+Menu items may also declare `tooltip`, `open`, and `outlet`. `tooltip` supplies the navigation anchor's tooltip text. The Page sidebar uses an item's
+description as its tooltip when no explicit tooltip is present. `open` selects automatic, top, stack, dialog, dock, or embedded Page presentation.
+For `open: "embed"`, a named `outlet` navigates into an existing Page outlet. The reserved `outlet: "self"` value instead causes `x-menuitem` to
+compose its canonical `href` directly as a lazy `x-page` with the embed layout and no additional navigation anchor. An omitted or empty outlet does
+not imply `self`. This local presentation behavior belongs to `x-menuitem`; Navigation continues to handle named outlets without special `self`
+semantics.
 
 `childrenSource` belongs on a menu item and adds dynamically resolved children to that item. A definition's `source` contributes root items:
 

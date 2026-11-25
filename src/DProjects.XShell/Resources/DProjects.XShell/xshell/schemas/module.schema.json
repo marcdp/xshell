@@ -128,11 +128,11 @@
         "href": {"type": ["string", "null"], "description": "Canonical XShell navigation target associated with the menu item."},
         "path": {"type": "string", "description": "Optional public navigation path used as a friendly alias for href."},
         "icon": {"type": ["string", "null"], "description": "Optional icon associated with the menu item."},
-        "embedded": {"type": "boolean", "description": "In x-menu, hosts the target Page inline instead of rendering a navigation anchor."},
         "default": {"type": "boolean", "description": "Whether this item is the default navigation target."},
         "tooltip": {"type": ["string", "null"], "description": "Optional tooltip text for the menu item."},
         "command": {"type": ["string", "null"], "description": "Optional command associated with the menu item."},
-        "open": {"type": ["string", "null"], "description": "Optional open mode for the menu item, e.g., 'stack', 'dialog', 'dock', 'top'.", "enum": ["stack","dialog","dock","top",null]},
+        "open": {"type": ["string", "null"], "description": "Optional Page presentation mode for the menu item.", "enum": ["auto", "top", "stack", "dialog", "dock", "embed", null]},
+        "outlet": {"type": ["string", "null"], "description": "Optional named Page outlet. The reserved 'self' value is interpreted locally by x-menuitem when open is 'embed'."},
         "class": {"type": "string", "description": "CSS class to apply to the menu item."},
         "children": {"type": "array","items": {"$ref": "#/$defs/menuItem"},"description": "Nested menu items."},
         "childrenSource": {"type": "string", "description": "Resource used to populate child menu items dynamically."}

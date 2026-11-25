@@ -34,14 +34,15 @@ test("Areas identifies modules under a normalized multi-segment assets.basePath"
     assert.equal(areas.getModuleId("/demo/_assets/x/pages/index.js"), null);
 });
 
-test("Areas preserve tooltip and embedded across effective menu projections", () => {
+test("Areas preserve tooltip, open, and outlet across Area, global, dynamic, and breadcrumb projections", () => {
     const bus = { addEventListener() {}, emit() {} };
     const globalItem = {
         label: "Global",
         href: "/_assets/menu/pages/global.js",
         tooltip: "Global tooltip",
-        embedded: true,
-        children: [{ label: "Global child", href: "/_assets/menu/pages/global-child.js", tooltip: "Global child tooltip", embedded: true }]
+        open: "embed",
+        outlet: "self",
+        children: [{ label: "Global child", href: "/_assets/menu/pages/global-child.js", tooltip: "Global child tooltip", open: "embed", outlet: "global-content" }]
     };
     const config = {
         modules: { menu: { menus: { shortcuts: { scope: "global", items: [globalItem] } } } },
@@ -56,36 +57,37 @@ test("Areas preserve tooltip and embedded across effective menu projections", ()
                     label: "Reports",
                     href: "/_assets/menu/pages/reports.js",
                     tooltip: "Reports tooltip",
-                    embedded: true,
-                    children: [{ label: "Detail", href: "/_assets/menu/pages/detail.js", tooltip: "Detail tooltip", embedded: true }]
+                    open: "embed",
+                    outlet: "self",
+                    children: [{ label: "Detail", href: "/_assets/menu/pages/detail.js", tooltip: "Detail tooltip", open: "embed", outlet: "content" }]
                 }] },
                 dynamic: { items: [{ label: "Dynamic parent", childrenSource: "dynamic-children" }] }
             }
         }
     };
-    const dynamicItems = [{ label: "Dynamic child", href: "/_assets/menu/pages/dynamic.js", tooltip: "Dynamic tooltip", embedded: true }];
+    const dynamicItems = [{ label: "Dynamic child", href: "/_assets/menu/pages/dynamic.js", tooltip: "Dynamic tooltip", open: "dock", outlet: "dynamic-content" }];
     const areas = new Areas({ config, bus }, { default: "main", definitions: { main: { prefix: "/main", modules: ["menu"] } } });
     areas.registerSource("dynamic-children", { resolve() { return dynamicItems; } });
     areas.init({ modules: { getModuleById(id) { return id === module.id ? module : null; } } });
 
     const report = areas.getMenu("navigation", "main").items[0];
     assert.equal(report.tooltip, "Reports tooltip");
-    assert.equal(report.embedded, true);
+    assert.deepEqual([report.open, report.outlet], ["embed", "self"]);
     assert.equal(report.children[0].tooltip, "Detail tooltip");
-    assert.equal(report.children[0].embedded, true);
+    assert.deepEqual([report.children[0].open, report.children[0].outlet], ["embed", "content"]);
 
     const dynamic = areas.getMenu("dynamic", "main").items[0].children[0];
     assert.equal(dynamic.tooltip, "Dynamic tooltip");
-    assert.equal(dynamic.embedded, true);
+    assert.deepEqual([dynamic.open, dynamic.outlet], ["dock", "dynamic-content"]);
 
     const global = areas.getMenu("shortcuts").items[0];
     assert.equal(global.tooltip, "Global tooltip");
-    assert.equal(global.embedded, true);
+    assert.deepEqual([global.open, global.outlet], ["embed", "self"]);
     assert.equal(global.children[0].tooltip, "Global child tooltip");
-    assert.equal(global.children[0].embedded, true);
+    assert.deepEqual([global.children[0].open, global.children[0].outlet], ["embed", "global-content"]);
 
     const breadcrumb = areas.getMenuitemBreadcrumb("/main/_assets/menu/pages/detail.js", "main");
-    assert.deepEqual(breadcrumb.map(item => item.embedded), [true, true]);
+    assert.deepEqual(breadcrumb.map(item => [item.open, item.outlet]), [["embed", "self"], ["embed", "content"]]);
 });
 
 function createMenuContext(modules, { moduleOrder = Object.keys(modules), definitions = { main: { prefix: "/main/", modules: moduleOrder } } } = {}) {
@@ -118,7 +120,7 @@ test("named menus expose merged metadata and distinguish empty definitions from 
     assert.deepEqual(globalMenu, { name: "preferences", scope: "global", label: "Preferences", description: "Manage your settings", icon: null, items: [item] });
     const { outlet, ...commonItem } = item;
     assert.deepEqual(areaMenu, { name: "settings", scope: "area", label: "Preferences", description: "Application preferences", icon: "x-settings",
-        items: [{ ...commonItem, path: "/main/appearance", href: "/main/_assets/base/appearance.js", area: "main" }] });
+        items: [{ ...commonItem, path: "/main/appearance", href: "/main/_assets/base/appearance.js", outlet, area: "main" }] });
     assert.equal(areaMenu.items[0].module, "base");
     assert.equal(areas.getArea("main").menus.settings, areaMenu);
     const mainMenus = [areaMenu, areas.getMenu("empty"), globalMenu, areas.getMenu("about")];
@@ -174,11 +176,11 @@ test("global menus merge raw sibling definitions in configuration order and keep
         Object.freeze({ id: "settings", label: "Settings", icon: "x-settings", href: "/_assets/base/settings.js" }),
         { label: "One" },
         { id: "", label: "Empty one" },
-        { id: "actions", label: "Actions", tooltip: "Old", embedded: true, default: true, open: "dock", class: "old", command: "old" }
+        { id: "actions", label: "Actions", tooltip: "Old", outlet: "old", default: true, open: "dock", class: "old", command: "old" }
     ]);
     const override = [
         { id: "settings", label: "Preferences" },
-        { id: "actions", tooltip: null, embedded: false, default: false, open: null, class: "", command: "" },
+        { id: "actions", tooltip: null, outlet: null, default: false, open: null, class: "", command: "" },
         { id: "new", label: "New" },
         { label: "Two" },
         { id: "", label: "Empty two" },
@@ -198,7 +200,7 @@ test("global menus merge raw sibling definitions in configuration order and keep
     assert.equal(settings.module, "base");
     assert.equal(Object.hasOwn(settings, "area"), false);
     assert.equal(newest.module, "addon");
-    assert.deepEqual([actions.tooltip, actions.embedded, actions.default, actions.open, actions.class, actions.command], [null, false, false, null, "", ""]);
+    assert.deepEqual([actions.tooltip, actions.outlet, actions.default, actions.open, actions.class, actions.command], [null, null, false, null, "", ""]);
     assert.ok(Object.isFrozen(items) && Object.isFrozen(settings) && Object.isFrozen(settings.children));
     assert.equal(base[0].label, "Settings");
     assert.deepEqual(override[0], { id: "settings", label: "Preferences" });
