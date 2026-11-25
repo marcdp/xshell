@@ -54,22 +54,23 @@ export default {
         }
         
         /* default */
-        :host x-anchor {display:flex; flex:1; flex-direction:row; align-items:center; cursor:pointer; border-radius:var(--x-menuitem-border-radius); user-select: none;  
-            
-        }
+        :host x-anchor {display:flex; flex:1; flex-direction:row; align-items:center; cursor:pointer; border-radius:var(--x-menuitem-border-radius); user-select: none;}
         :host x-anchor:hover {background:var(--x-menuitem-background-hover); z-index:1;}
-        :host x-anchor x-icon {color:var(--x-color-text)!important; text-align:center;}
+        :host x-anchor x-icon {color:var(--x-color-text)!important; text-align:center; width:2em;}
         :host x-anchor span.label {color:var(--x-color-text)!important; flex:1;  display:block; padding-top:.4em; padding-bottom:.4em; white-space:nowrap; padding-right:1.5em; padding-left: calc(var(--x-menuitem-indent) * 1em)!important;}
         :host x-anchor span.suffix {color:var(--x-color-text-gray)!important; padding-left:1em;}
         :host x-anchor x-icon.has-childs {width:unset; margin-left:.25em;}
-        :host x-anchor x-icon:first-child {width:2em; text-align:left;}
+        :host x-anchor x-icon:first-child {width:2em; text-align:center;}
         :host x-anchor x-icon:first-child:last-child {align-self:flex-end;}
-        :host x-anchor x-icon + .label {padding-left:.35em;}
+        :host x-anchor x-icon ~ .label {apadding-left:.35em!important;}
         :host x-anchor.selected {font-weight: 500; background:var(--x-menuitem-background-selected);}
         :host x-anchor:active {font-weight: normal; background:var(--x-menuitem-background-active);}
         :host .menuitem[disabled] {pointer-events:none; cursor:default; --x-color-text:var(--x-color-text-disabled);}
-
         :host HR {border:none; background:var(--x-menuitem-separator-color); height:.05em; margin-top:.15em; margin-bottom:.15em; display:block; box-sizing: border-box; width:100%;}
+
+        /* badge */
+        :host x-badge {position:absolute; right:-.25em; bottom:-.25em;}
+        :host x-page {padding:.75em;}
        
         /* dropdown */
         x-contextmenu {width: var(--x-contextmenu-width);position:absolute; left:100%;box-sizing:border-box; margin-left:0em;margin-top:-.2em;}
@@ -80,46 +81,23 @@ export default {
         :host(.inline) {display:block;}
         :host(.inline) x-anchor .has-childs {transform:rotate(90deg); transition: transform var(--x-transition-duration);}
         :host(.inline) x-anchor[expanded] .has-childs {transform:rotate(-90deg)}
-        :host(.inline) > x-contextmenu {
-            --x-menu-indent: var(--x-menuitem-indent);
-            position:unset; 
-            width:100%; 
-            margin:0; 
-            margin-bottom: -.15em;
-        }
+        :host(.inline) > x-contextmenu {--x-menu-indent: var(--x-menuitem-indent);position:unset; width:100%; margin:0; margin-bottom: -.15em;}
 
-        /* icon */
-        :host(.icon) {}
-        :host(.icon) x-anchor {padding:0;}
-        :host(.icon) x-icon:first-child {text-align:center; width:unset; font-size:1.2em;}
-        :host(.icon) x-anchor::part(a) {height:2.7em; }
-        :host(.icon) x-icon.has-childs {display:none;}
-        :host(.icon) x-anchor span {
-            position:absolute;
-            left:100%;
-            display:none;
-            z-index:10;
-            background:var(--x-menuitem-background);
-            margin-left:.3em;
-            padding:0;
-            padding-left:1em!important;
-            padding-right:1em!important;
-            line-height:2em;
-            background:var(--x-tooltip-background);
-            border:var(--x-tooltip-border);
-            color:var(--x-tooltip-color);
-            border-radius:var(--x-tooltip-border-radius, .35em);
-            box-shadow:var(--x-tooltip-shadow, none);
-        }
-        :host(.icon) x-anchor:hover span {display:block;animation: show-tooltip 0s var(--x-tooltip-delay) both;}
-        @keyframes show-tooltip {
-            from { display: none; }
-            to   { display: block; }
-        }
+        /* collapsible */
+        :host(.collapsible) x-anchor::part(a) {padding-left:.3em; padding-right:.3em;}
+        :host(.collapsible) x-anchor span {box-sizing:border-box; width:10em; transition: width var(--x-transition-duration); box-sizing:border-box; }
+        
+        :host(.collapsible.collapsed) x-anchor::part(a) {}
+        :host(.collapsible.collapsed) x-anchor span { width:0em; padding:0; overflow:hidden; }
+        :host(.collapsible.collapsed) x-anchor x-icon.has-childs {display:none;}
+        
+        :host(.collapsible.collapsed) x-button  {padding:0;}
+        :host(.collapsible.collapsed) x-button::part(button) {padding-right:.2em;}
+        :host(.collapsible.collapsed) x-button::part(label) { display:none; }
 
         /* top right */
         :host(.top.right) x-contextmenu {bottom:0!important;}
-        :host(.top.right) x-contextmenu::part(container) {transform:translateY(-100%);}
+        :host(.top.right) x-contextmenu::part(container) {transform:translateY(-100%); margin-left:.05em;}
         
     `,
     state: {
@@ -134,9 +112,9 @@ export default {
     template: `
         <hr x-if="state.label=='-'" />
         <div x-elseif="state.embedded">
-            <x-page x-attr:src="state.href" loading="lazy"></x-page>
+            <x-page x-attr:src="state.href" layout="embed" loading="lazy"></x-page>
         </div>
-        <x-button x-elseif="state.command" class="menuitem" x-attr:command="state.command" x-attr:label="state.label" x-attr:icon="state.icon" x-attr:disabled="state.disabled" x-attr:badge="state.badge" x-attr:badge-class="state.badgeClass">
+        <x-button x-elseif="state.command" class="menuitem" x-attr:command="state.command" x-attr:label="state.label" x-attr:icon="state.icon" x-attr:disabled="state.disabled" x-attr:badge="state.badge" x-attr:badge-class="state.badgeClass" x-attr:tooltip="state.tooltip">
         </x-button>
         <x-anchor x-else class="menuitem anchor" x-class:down="state.childsDown" x-attr:href="state.href" x-attr:disabled="state.disabled" x-attr:expanded="state.expanded" x-class:selected="state.selected" x-attr:tooltip="state.tooltip" x-attr:open="state.open" x-attr:outlet="state.outlet">
             <x-icon x-if="state.checked" icon="x-check"></x-icon>
@@ -198,8 +176,11 @@ export default {
             },
 
             click(event) {
-                // Let nested items activate independently and dismiss this dropdown after activation.
+                // Ignore interactions inside embedded Pages.
                 const path = event.composedPath();
+                if (path.slice(0, path.indexOf(host)).some(element => element.localName === "x-page")) return;
+                
+                // Let nested items activate independently and dismiss this dropdown after activation.
                 const item = path.find(element => element.localName === "x-menuitem");
                 if (item !== host) {
                     if (state.expanded && !host.classList.contains("inline")) this.collapse();
@@ -240,6 +221,10 @@ export default {
 
             commandActivated(event) {
                 // Dismiss a dropdown after a command inside it is activated.
+                const path = event.composedPath();
+                if (path.slice(0, path.indexOf(host)).some(element => element.localName === "x-page")) return;
+
+                // Dismiss the dropdown after menu command activation.
                 if (state.expanded && !host.classList.contains("inline") && event.target !== host) this.collapse();
             },
 

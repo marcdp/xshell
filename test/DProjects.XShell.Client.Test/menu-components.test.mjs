@@ -3,7 +3,7 @@ import test from "node:test";
 
 import menuDefinition from "../../src/DProjects.XShell/Resources/DProjects.XShell/x/components/x-menu.js";
 import menuItemDefinition from "../../src/DProjects.XShell/Resources/DProjects.XShell/x/components/x-menuitem.js";
-import pageMenuDefinition from "../../src/DProjects.XShell/Resources/DProjects.XShell/x/components/x-app-area-menu.js";
+import pageMenuDefinition from "../../src/DProjects.XShell/Resources/DProjects.XShell/x/components/x-page-menu.js";
 import appMenuDefinition from "../../src/DProjects.XShell/Resources/DProjects.XShell/x/components/x-app-menu.js";
 
 const menuItemContract = menuItemDefinition.contract;
@@ -68,7 +68,7 @@ function clickEvent(path, options = {}) {
     };
 }
 
-test("x-app-area-menu reads the effective navigation items and handles a missing menu", () => {
+test("x-page-menu reads the effective navigation items and handles a missing menu", () => {
     const state = {};
     const items = [{ label: "Home", href: "/pages/index.js" }];
     let menu = { name: "navigation", label: "Navigation", description: "", icon: null, items };
@@ -80,7 +80,7 @@ test("x-app-area-menu reads the effective navigation items and handles a missing
     assert.deepEqual(state.menu, []);
 });
 
-test("x-app-area-menu uses descriptions as tooltip fallbacks without overriding explicit tooltips", () => {
+test("x-page-menu uses descriptions as tooltip fallbacks without overriding explicit tooltips", () => {
     assert.match(pageMenuDefinition.template, /x-attr:tooltip="menuitem\.tooltip \|\| menuitem\.description"/);
 });
 

@@ -5,36 +5,46 @@ export default {
         description: "Displays the main area menu for the current page.",
         tags: ["navigation", "menus", "pages"],
         events: {},
-        properties: {},
+        properties: {
+        },
         methods: {},
         examples: [
             {
                 name: "basic",
                 description: "Place the effective navigation menu in a Page sidebar.",
-                template: `<x-app-area-menu></x-app-area-menu>`
+                template: `<x-page-menu></x-page-menu>`
             }
         ]
     },
     style: `
-        :host {display:block; }
+        :host {
+            display:block;
+            overflow-y:auto;
+            height:100%;
+            width: var(--x-layout-main-drawer-width);           
+            transition: width var(--x-transition-duration) ease;
+        }
+
+        nav {
+            border-left: var(--x-layout-main-border); 
+            padding:1.3em; 
+            min-height:100%;
+            box-sizing: border-box;
+            width: var(--x-layout-main-drawer-width);           
+        }
         ul {margin:0; padding:0;}
         li {list-style:none; }
         li > x-anchor {display:block; padding-bottom:.5em;}
         li > li > li  {padding-left:1.5em;}
         ul > li > ul > li > ul {padding-left:1.25em;}
         hr {border-top:var(--x-layout-main-border); margin-top:1.5em; margin-bottom:1.5em; display:block;}
-
         :host > nav > ul > li + li {margin-top:1.5em; }
         :host > nav > ul > li > x-anchor {font-size:var(--x-font-size-subtitle); font-weight:500!important; display:block; margin-bottom:.5em; }
-
         x-icon.new {padding-left:.15em; display:inline-block; transform: translateY(-.1em);}
-
         x-anchor.selected {font-weight:600; }     
 
-        :host(.horizontal) ul {display:flex; align-items:center;}
-        :host(.horizontal) li {display:flex; align-items:center;}
-        :host(.horizontal) li > x-anchor {margin-bottom:0; padding-left:.5em; padding-right:.5em;}
-        :host(.horizontal) nav > ul > li > x-anchor {margin:0!important; font-weight:normal!important; font-size:var(--x-font-size); }
+        :host(.collapsed) {width:0em!important; overflow-x:hidden;}
+        
     `,
     template: `
         <nav>
@@ -55,6 +65,7 @@ export default {
         </nav>
     `,
     state: {
+        collapsed: false,
         selected: "",
         menu: null
     },

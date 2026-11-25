@@ -7,13 +7,13 @@ export default {
         methods: {}
     },
     meta: {
-        title: "Modules"
+        title: "Modules",
+        description: "Shows loaded modules, their asset locations, build metadata, resource counts, and status."
     },
     style: `
         .tags { display: flex; flex-wrap: wrap; gap: .25em; align-items: center; }
     `,
     template: `
-        <p>Shows loaded modules, their asset locations, build metadata, resource counts, and status.</p>
         <x-listview view="details">
             <x-listview-head>
                 <x-listview-column width="12em"><x-datafield type="search" x-model="state.id" placeholder="Module"></x-datafield></x-listview-column>

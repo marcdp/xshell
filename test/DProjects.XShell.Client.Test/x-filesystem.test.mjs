@@ -4,6 +4,7 @@ import test from "node:test";
 
 import FilesystemsContract from "../../src/DProjects.XShell/Resources/DProjects.XShell/x-filesystem/contracts/filesystems.json" with { type: "json" };
 import filesystemDefinition from "../../src/DProjects.XShell/Resources/DProjects.XShell/x-filesystem/components/x-filesystem.js";
+import globalFilesystemsDefinition from "../../src/DProjects.XShell/Resources/DProjects.XShell/x-filesystem/pages/global/filesystems.js";
 import Filesystem, {checkAbort, matchesPattern, parentPath} from "../../src/DProjects.XShell/Resources/DProjects.XShell/x-filesystem/providers/filesystem.js";
 import FilesystemFile from "../../src/DProjects.XShell/Resources/DProjects.XShell/x-filesystem/providers/filesystem-file.js";
 import FilesystemHttp from "../../src/DProjects.XShell/Resources/DProjects.XShell/x-filesystem/providers/filesystem-http.js";
@@ -609,7 +610,7 @@ test("Filesystems opens named definitions with stored credentials and invalidate
     const definition = {name: "work", label: "Work", provider: "secure", options: {resource: "documents"}};
 
     await filesystems.saveDefinition(definition, {token: "first-private-token"});
-    const first = await filesystems.openNamed("work");
+    const first = await filesystems.open("named:work");
     assert.equal(first.url, "secure:documents");
     assert.deepEqual(first.credentials, {token: "first-private-token"});
     assert.strictEqual(await filesystems.openNamed("work"), first);
@@ -643,13 +644,13 @@ test("Filesystems.openNamed preserves options and caches by registration name", 
     await filesystems.saveDefinition({name: "mirror", provider: "https", options});
     await filesystems.saveDefinition({name: "concurrent", provider: "https", options});
 
-    const work = await filesystems.openNamed("work");
+    const work = await filesystems.open("named:work");
     assert.equal(work.url, "https://files.example.com/documents");
     assert.equal(work.isReadonly, true);
     assert.strictEqual(await filesystems.openNamed("work"), work);
     assert.notStrictEqual(await filesystems.openNamed("mirror"), work);
     const [concurrentFirst, concurrentSecond] = await Promise.all([
-        filesystems.openNamed("concurrent"),
+        filesystems.open("named:concurrent"),
         filesystems.openNamed("concurrent")
     ]);
     assert.strictEqual(concurrentFirst, concurrentSecond);
@@ -666,6 +667,10 @@ test("Filesystems.openNamed preserves options and caches by registration name", 
     assert.equal((await filesystems.listDefinitions()).find(definition => definition.name === "mirror").description, "");
     assert.notStrictEqual(await filesystems.openNamed("mirror"), mirror);
     await assert.rejects(() => filesystems.openNamed("missing"), /Filesystem definition not found: missing/);
+    await assert.rejects(() => filesystems.open("named:missing"), /Filesystem definition not found: missing/);
+    for (const reference of ["named:", "named:invalid name"]) {
+        await assert.rejects(() => filesystems.open(reference), {name: "TypeError", message: "Filesystem definition name is invalid."});
+    }
 });
 
 test("Filesystems.openNamed evicts failed creation and retries with null credentials", async () => {
@@ -985,6 +990,8 @@ test("Filesystems options validate commands, keyed editors, and closed provider 
     assert.equal(validator.validate({ commands, editors, providers }, Filesystems.optionsSchema).valid, true);
     assert.equal(validator.validate({providers: {"mem:": providers.mem}}, Filesystems.optionsSchema).valid, false);
     assert.equal(validator.validate({providers: {MEM: providers.mem}}, Filesystems.optionsSchema).valid, false);
+    assert.equal(validator.validate({providers: {named: providers.mem}}, Filesystems.optionsSchema).valid, false);
+    assert.throws(() => new Filesystems({config: testConfig}, {providers: {NAMED: providers.mem}}), /Filesystem provider scheme is reserved: named/);
     assert.equal(validator.validate({ commands, editors: [] }, Filesystems.optionsSchema).valid, false);
     assert.equal(validator.validate({ editors: { text: { label: "Open", extensions: ["txt"] } } }, Filesystems.optionsSchema).valid, false);
     assert.equal(validator.validate({ editors: { text: { page: "/editor.js", label: "Open", extensions: [".txt"] } } }, Filesystems.optionsSchema).valid, false);
@@ -1278,6 +1285,52 @@ test("filesystem opening uses editors for files and navigation for directories",
     assert.equal(state.pathList, "/notes");
     assert.deepEqual(state.history, ["/", "/notes"]);
     assert.equal(navigationCalls.length, 1);
+});
+
+test("filesystem navigation preserves named references across child Pages and Commands", () => {
+    // Keep the registration identity intact instead of replacing it with a provider's canonical URL.
+    const {state, controller, navigationCalls} = createController();
+    state.src = "named:documents";
+    const entry = {type: "file", path: "/notes/readme.txt"};
+
+    controller.open([entry]);
+    controller.properties([entry]);
+    controller.onContextMenuEntry({event: {detail: {entry, entries: [entry], x: 0, y: 0}}});
+    controller.onCommand({event: {detail: {command: "customCommand"}, target: {dataset: {command: commands[0].id}}}});
+
+    assert.deepEqual(navigationCalls.slice(0, 2).map(call => call.params.src), ["named:documents", "named:documents"]);
+    assert.equal(JSON.parse(navigationCalls[2].params.args).src, "named:documents");
+});
+
+test("global Filesystems Page builds named Explorer targets without opening registrations", async () => {
+    // List registrations for navigation without materializing providers or requesting credentials.
+    const state = structuredClone(globalFilesystemsDefinition.state);
+    const subscriptions = [];
+    let opens = 0;
+    const controller = globalFilesystemsDefinition.controller({
+        state,
+        events: {on(target, type, handler) { subscriptions.push({target, type, handler}); }},
+        bus: {},
+        filesystems: {
+            async listDefinitions() { return [{name: "documents", label: "Documents", description: "Shared files", provider: "https"}]; },
+            async open() { opens++; }
+        }
+    });
+
+    await controller.load();
+
+    assert.equal(opens, 0);
+    assert.equal(subscriptions[0].type, "filesystems:definitions-changed");
+    assert.equal(subscriptions[0].handler, "refresh");
+    assert.deepEqual(state.items, [{
+        name: "documents",
+        label: "Documents",
+        description: "Shared files",
+        provider: "https",
+        href: "page:x-filesystem:/pages/explorer.js?src=named%3Adocuments&path=%2F"
+    }]);
+    assert.match(globalFilesystemsDefinition.template, /open="top"/);
+    assert.match(globalFilesystemsDefinition.template, /pages\/preferences\/filesystems\.js/);
 });
 
 test("filesystem component opens its source through the Filesystems Service", async () => {

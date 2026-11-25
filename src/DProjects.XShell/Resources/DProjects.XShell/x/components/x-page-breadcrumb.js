@@ -29,6 +29,7 @@ export default {
         ul li:not(.last) x-anchor { font-weight:500;}
         ul li.last {}
         ul li.last x-icon.separator {display:none}
+        ul li.last x-anchor { pointer-events: none;}
 
         @media (max-width: 768px) {
             ul {overflow:hidden; white-space: nowrap; flex:1;}

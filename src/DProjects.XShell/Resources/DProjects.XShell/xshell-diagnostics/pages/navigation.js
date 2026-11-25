@@ -7,7 +7,8 @@ export default {
         methods: {}
     },
     meta: {
-        title: "Navigation"
+        title: "Navigation",
+        description: "Shows the Areas, menus, routes, and page hierarchy used by XShell navigation."
     },
     style: `
         .route-test {margin-bottom:1.5em;}
@@ -16,7 +17,6 @@ export default {
         .route-value {min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
     `,
     template: `
-        <p>Shows the Areas, menus, routes, and page hierarchy used by XShell navigation.</p>
         <x-tabs>
             <x-tab label="Areas">
                 <x-listview view="details">

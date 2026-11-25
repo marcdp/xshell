@@ -1,6 +1,7 @@
 const DEFINITION_PREFIX = "x-filesystem:filesystem:";
 const CREDENTIAL_PREFIX = "x-filesystem:credentials:";
 const DEFINITION_NAME_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
+const NAMED_SCHEME = "named";
 
 export default class Filesystems {
 
@@ -53,7 +54,7 @@ export default class Filesystems {
             },
             providers: {
                 type: "object",
-                propertyNames: { pattern: "^[a-z][a-z0-9+.-]*$" },
+                propertyNames: { pattern: "^(?!named$)[a-z][a-z0-9+.-]*$" },
                 additionalProperties: {
                     type: "object",
                     required: ["implementation"],
@@ -84,6 +85,7 @@ export default class Filesystems {
     constructor({bus, config, jsonValidator, preferences, secrets, services}, options = {}) {
         // Normalize the scheme-keyed provider configuration and resolve implementation URLs once.
         for (const [scheme, provider] of Object.entries(options.providers ?? {})) {
+            if (scheme.toLowerCase() === NAMED_SCHEME) throw new Error(`Filesystem provider scheme is reserved: ${NAMED_SCHEME}`);
             const isAbsoluteUrl = /^[A-Za-z][A-Za-z0-9+.-]*:/.test(provider.implementation);
             const definition = {implementation: isAbsoluteUrl ? provider.implementation
                 : new URL(provider.implementation.replace(/^\/+/, ""), config.app.baseUrl).href};
@@ -226,6 +228,10 @@ export default class Filesystems {
             throw new TypeError("Filesystem URL must be a non-empty string.");
         }
         const scheme = this.#getScheme(url);
+        if (scheme === NAMED_SCHEME) {
+            // Resolve named filesystem references through the existing registration boundary.
+            return this.openNamed(url.substring(url.indexOf(":") + 1));
+        }
         const definition = scheme ? this.#providers.get(scheme) : null;
         const diagnosticUrl = this.#getDiagnosticUrl(url);
         if (!definition) throw new Error(`Filesystem provider not found: ${diagnosticUrl}`);
@@ -472,7 +478,7 @@ export default class Filesystems {
         return url.match(/^([A-Za-z][A-Za-z0-9+.-]*):/)?.[1].toLowerCase() ?? null;
     }
     #getCacheKey(url, Implementation) {
-        // Raw URL opening uses provider-defined canonical URL identity; future named registrations may require separate registration identity.
+        // Raw URL opening uses provider-defined canonical URL identity independently from named registration identity.
         let getCacheKey;
         try {
             getCacheKey = Implementation?.getCacheKey;

@@ -21,6 +21,13 @@
                 "x": "module:x:latest"
             },
             "menus": {
+                "global": {
+                    "items":[
+                        {"label": "Filesystems", "icon":"x-filesystems", "order": 200, "children": [
+                            {"label": "Filesystems", "href": "/pages/global/filesystems.js", "embedded": true}
+                        ]}
+                    ]
+                },
                 "preferences": {
                     "items": [
                         {"label": "Filesystems", "href": "/pages/preferences/filesystems.js"},

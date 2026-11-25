@@ -163,6 +163,8 @@ x-page[layout='stack'] + x-page[layout='stack'] + x-page[layout='stack'] {--x-la
 x-page[layout='stack'] + x-page[layout='stack'] + x-page[layout='stack'] + x-page[layout='stack'] {--x-layout-stack-width: 69vw;}
 x-page[layout='stack'] + x-page[layout='stack'] + x-page[layout='stack'] + x-page[layout='stack'] + x-page[layout='stack'] {--x-layout-stack-width: 67vw;}
 
+
+
 :root {
 
     /* x-accordion */
@@ -299,10 +301,9 @@ x-page[layout='stack'] + x-page[layout='stack'] + x-page[layout='stack'] + x-pag
     --x-contextmenu-border-radius: .75em;
     --x-menuitem-border-radius: .5em;
     --x-menuitem-separator-color: light-dark(#B4B4BB, #505058);
-
-    --x-menuitem-background-hover: var(--x-color-background-x-gray);
-    --x-menuitem-background-active: var(--x-color-background-xx-gray);
-    --x-menuitem-background-selected: var(--x-color-background-xx-gray);
+    --x-menuitem-background-hover:    light-dark(#f2f2f2, #2c2c2c);
+    --x-menuitem-background-active:   light-dark(#e0e0e0, #404040);
+    --x-menuitem-background-selected: light-dark(#e8e8e8, #353535);
     
     /* x-notice */
     --x-notice-border-radius: .75em;
@@ -363,7 +364,7 @@ x-page[layout='stack'] + x-page[layout='stack'] + x-page[layout='stack'] + x-pag
     
     /* x-tooltip */
     --x-tooltip-background: light-dark(#eeeeee, #303030);
-    --x-tooltip-color: light-dark(#ffffff, #202124);
+    --x-tooltip-color: light-dark(#666666, #999999);
     --x-tooltip-border: var(--x-contextmenu-border);
     --x-tooltip-border-radius: .35em;
     --x-tooltip-shadow: none;

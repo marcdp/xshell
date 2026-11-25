@@ -7,11 +7,11 @@ export default {
         methods: {}
     },
     meta: {
-        title: "Service Worker"
+        title: "Service Worker",
+        description: "Shows the Service Worker mappings registered for virtual XShell and module asset paths."
     },
 
     template: `
-        <p>Shows the Service Worker mappings registered for virtual XShell and module asset paths.</p>
         <x-listview view="details">
             <x-listview-head>
                 <x-listview-column width="10em"><x-datafield type="search" x-model="state.name" placeholder="Name"></x-datafield></x-listview-column>

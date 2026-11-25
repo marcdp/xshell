@@ -4,7 +4,7 @@ export default {
         description: "Calculates and displays the total size of a file or directory recursively.",
         tags: ["filesystem", "files", "storage"],
         properties: {
-            src: {type:"string", default:"", attribute:true, state:true, description:"Filesystem source."},
+            src: {type:"string", default:"", attribute:true, state:true, description:"Raw provider URL or named:<name> filesystem reference."},
             path: {type:"string", default:"/", attribute:true, state:true, description:"File or directory path."}
         },
         methods: {

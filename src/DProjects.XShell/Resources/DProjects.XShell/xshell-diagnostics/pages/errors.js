@@ -9,7 +9,8 @@ export default {
     },
 
     meta: {
-        title: "Errors"
+        title: "Errors",
+        description: "Shows runtime errors and failure diagnostics."
     },
 
     style: `
@@ -19,8 +20,7 @@ export default {
     `,
 
     template: `
-        <p>Shows resource loading failures, XShell error events, JavaScript errors, and unhandled promise rejections.</p>
-
+        
         <x-listview view="details" auto-scroll>
             <x-listview-head>
                 <x-listview-column width="15em">

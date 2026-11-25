@@ -8,7 +8,7 @@ export default {
         description: "Creates a ZIP archive containing a filesystem file or directory.",
         execute: {
             parameters: [
-                {name:"src", label:"Filesystem", type:"string", description:"Filesystem source.", required:true},
+                {name:"src", label:"Filesystem", type:"string", description:"Raw provider URL or named:<name> filesystem reference.", required:true},
                 {name:"path", label:"Path", type:"string", description:"Path of the file or directory to archive.", required:true}
             ],
             returns: {

@@ -9,7 +9,7 @@ export default {
         events: {},
         properties: {
             path: {type: "string", default:"/", attribute: true, state:true, description: "Current path in the filesystem"},
-            src: {type: "string", default:null, attribute: true, state:true, description: "Source of the filesystem (e.g., 'mem:')"},
+            src: {type: "string", default:null, attribute: true, state:true, description: "Filesystem reference, such as 'named:documents' or 'mem:'"},
             filesystem: {type: "object", default:null, attribute: false, state:true, description: "Filesystem instance"},
             root: {type:"boolean", default:false, attribute: true, state: true, description: "Indicates if the root folder should be displayed"}
         },
@@ -20,6 +20,11 @@ export default {
                 name: "memory-explorer",
                 description: "Explore a fresh in-memory filesystem with its root visible.",
                 template: `<x-filesystem src="mem:" path="/" root></x-filesystem>`
+            },
+            {
+                name: "named-explorer",
+                description: "Explore a registered filesystem without exposing its provider configuration or credentials.",
+                template: `<x-filesystem src="named:documents" path="/"></x-filesystem>`
             }
         ]
     },

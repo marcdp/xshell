@@ -106,7 +106,7 @@ For an Area with prefix `/main`, the effective item uses Area-aware values for b
 { "label": "Components", "path": "/main/components", "href": "/main/_assets/x-demo/<generation>/pages/01-components/index.js" }
 ```
 
-Menu consumers read root entries from the effective definition's `items` array. `x-menu`, `x-app-area-menu`, and search results pass `path || href`
+Menu consumers read root entries from the effective definition's `items` array. `x-menu`, `x-page-menu`, and search results pass `path || href`
 to their generic navigation elements. `x-menuitem` and `x-anchor` receive only an
 `href`; neither knows about menu paths or performs path-to-href translation. Breadcrumb lookup starts with the canonical Area-aware `href`, and
 the returned breadcrumb entries carry their `path` for UIs that choose to expose the friendly link.

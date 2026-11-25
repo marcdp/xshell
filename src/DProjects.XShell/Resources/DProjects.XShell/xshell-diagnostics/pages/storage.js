@@ -49,11 +49,11 @@ export default {
     },
 
     meta: {
-        title: "Storage"
+        title: "Storage",
+        description: "Storage usage for this origin. IndexedDB sizes are estimates; cookie bytes cover only cookies visible to JavaScript"
     },
 
     template: `
-        <p>Storage usage for this origin. IndexedDB sizes are estimates; cookie bytes cover only cookies visible to JavaScript.</p>
 
         <x-notice x-if="state.busy" type="working" label="Working"></x-notice>
 

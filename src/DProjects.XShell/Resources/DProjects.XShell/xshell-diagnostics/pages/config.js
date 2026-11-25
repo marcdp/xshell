@@ -7,10 +7,10 @@ export default {
         methods: {}
     },
     meta: {
-        title: "Config"
+        title: "Config",
+        description: "Shows the complete effective XShell configuration used by the running application."
     },
     template: `
-        <p>Shows the complete effective XShell configuration used by the running application.</p>
         <x-object x-prop:value="state.config" expanded="true"></x-object>
     `,    
     state:{

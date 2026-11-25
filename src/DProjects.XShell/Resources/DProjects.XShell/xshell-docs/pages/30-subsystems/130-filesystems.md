@@ -18,9 +18,10 @@ controller({filesystems}) {
 }
 ~~~
 
-`filesystems.open(url)` extracts the URL scheme and selects it from the Service's configured `options.providers` table. Filesystem provider URLs are not global
-Resolver resources: ordinary `resolver.resolve("filesystem:...")` and `loader.load("filesystem:...")` calls cannot open them. After local matching,
-Filesystems directly imports the implementation and applies the provider-owned configuration round trip:
+`filesystems.open(src)` accepts either a raw provider URL or a `named:<name>` reference. The `named` scheme is reserved by Filesystems and delegates to
+`openNamed(name)`; it cannot be registered as a provider. All other schemes select a provider from the Service's configured `options.providers` table.
+Filesystem references are not global Resolver resources: ordinary `resolver.resolve("filesystem:...")` and `loader.load("filesystem:...")` calls cannot open
+them. After local provider matching, Filesystems directly imports the implementation and applies the provider-owned configuration round trip:
 
 ~~~text
 raw URL
@@ -74,6 +75,7 @@ await filesystems.saveDefinition({
     }
 });
 const filesystem = await filesystems.openNamed("work");
+const sameFilesystem = await filesystems.open("named:work");
 await filesystems.removeDefinition("work");
 ~~~
 
@@ -87,9 +89,10 @@ The `name` is the stable programmatic registration identity: it is chosen when t
 Changing a registration name would require an explicit rename operation across its persisted definition, credentials, named runtime cache identity, and callers
 of `openNamed(name)`; the current management Page does not support that operation.
 
-Named runtime instances cache by registration name in a map separate from raw `open(url)` caching. Repeated and concurrent `openNamed(name)` calls share the
-same instance, while different names remain different identities even when their derived URLs match. Saving or removing a definition invalidates that name's
-cache entry.
+Named runtime instances cache by registration name in a map separate from raw provider URL caching. `open("named:" + name)` and `openNamed(name)` share that
+same identity and in-flight creation, while different names remain different identities even when their derived URLs match. Saving or removing a definition
+invalidates that name's cache entry. Callers should retain the original `named:<name>` reference when navigating so the registration identity and its credentials
+are not replaced by the provider's canonical URL.
 
 The Filesystems Preferences Page lists named definitions and opens a generic provider-driven detail Page as a normal Navigation stack entry for add or edit
 operations. The detail Page renders
@@ -105,7 +108,8 @@ Filesystems Service
 ~~~
 
 `getDefinition(name)` returns one defensive definition plus its optional credentials for editing. `saveDefinition(definition, credentials)` preserves existing
-credentials when the second argument is omitted, replaces them when it is an object, and removes them when it is `null`. `openNamed()` retrieves and validates
+credentials when the second argument is omitted, replaces them when it is an object, and removes them when it is `null`. Named opening through either
+`openNamed(name)` or `open("named:" + name)` retrieves and validates
 stored credentials before passing them separately to the provider constructor. Credential-bearing saves establish Secrets access before changing either
 persistence boundary, so cancelled or failed vault access leaves the definition unchanged. Removal derives the credential key from the definition name and does
 not require the provider to remain installed; stale named definitions and any associated Secret therefore remain removable. Removing a definition first checks
@@ -118,6 +122,16 @@ already refreshed Preferences manager underneath. Deletion confirmation remains 
 
 Runtime-only values such as a local `FileSystemDirectoryHandle` are not persisted, so a named `file:` Filesystem may still need a handle attached through the
 existing provider API.
+
+Named references can be used anywhere a filesystem `src` is accepted, including Explorer Page URLs and Components:
+
+~~~text
+page:x-filesystem:/pages/explorer.js?src=named%3Adocuments&path=%2F
+~~~
+
+~~~html
+<x-filesystem src="named:documents" path="/"></x-filesystem>
+~~~
 
 ## Providers
 

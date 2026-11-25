@@ -7,13 +7,13 @@ export default {
         methods: {}
     },
     meta: {
-        title: "Components"
+        title: "Components",
+        description: "Shows discovered components, their owning modules, load status, size, and load time."
     },
     style: `
         .tags { display: flex; flex-wrap: wrap; gap: .25em; align-items: center; }
     `,
     template: `
-        <p>Shows discovered components, their owning modules, load status, size, and load time.</p>
         <x-listview view="details" x-on:activate="inspectContract">
             <x-listview-head>
                 <x-listview-column width="12em"><x-datafield type="search" x-model="state.id" placeholder="Component"></x-datafield></x-listview-column>

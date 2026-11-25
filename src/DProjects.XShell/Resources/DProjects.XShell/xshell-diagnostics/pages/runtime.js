@@ -8,12 +8,11 @@ export default {
     },
 
     meta: {
-        title: "Runtime"
+        title: "Runtime",
+        description: "Shows XShell runtime timing information."
     },
 
     template: `
-        <p>Shows XShell runtime timing information.</p>
-
         <x-datafields columns="3">
             <x-datafield label="Started at">
                 <x-datetime x-prop:value="state.startTimeMs"></x-datetime>    

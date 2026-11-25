@@ -7,13 +7,13 @@ export default {
         methods: {}
     },
     meta: {
-        title: "Services"
+        title: "Services",
+        description: "Shows registered services, their modules and contracts, resource metadata, and load status."
     },
     style: `
         .tags { display: flex; flex-wrap: wrap; gap: .25em; align-items: center; }
     `,
     template: `
-        <p>Shows registered services, their modules and contracts, resource metadata, and load status.</p>
         <x-listview view="details" x-on:activate="inspectService">
             <x-listview-head>
                 <x-listview-column width="10em"><x-datafield type="search" x-model="state.id" placeholder="Service"></x-datafield></x-listview-column>

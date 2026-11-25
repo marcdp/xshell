@@ -96,6 +96,10 @@ export default {
         div.panel .body {padding:0em var(--x-layout-stack-page-padding-horizontal);}    
         div.panel .body:focus {outline:none;}
         
+        /* custom */
+        .no-title .header {display:none;}
+        .stack-no-title .header {display:none;}
+
         @media (min-width: 769px) {
             :host {
                 --x-fill-top: 5em;

@@ -7,13 +7,13 @@ export default {
         methods: {}
     },
     meta: {
-        title: "Contracts"
+        title: "Contracts",
+        description: "Shows discovered contracts, their owning framework or module package, metadata, size, load time, and status."
     },
     style: `
         .tags { display: flex; flex-wrap: wrap; gap: .25em; align-items: center; }
     `,
     template: `
-        <p>Shows discovered contracts, their owning framework or module package, metadata, size, load time, and status.</p>
         <x-listview view="details" x-on:activate="inspectContract">
             <x-listview-head>
                 <x-listview-column width="12em"><x-datafield type="search" x-model="state.id" placeholder="Contract"></x-datafield></x-listview-column>

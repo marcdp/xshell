@@ -41,6 +41,10 @@ export default {
             scrollbar-width: thin;
             padding: var(--x-layout-dock-page-padding-vertical) var(--x-layout-dock-page-padding-horizontal) var(--x-layout-dock-page-padding-vertical) var(--x-layout-dock-page-padding-horizontal); 
         }
+
+        /* custom */
+        .no-title x-page-title {display:none;}
+        .dialog-no-title x-page-title {display:none;}
     `,
     template: `
         <x-loading x-if="state.status=='loading'"></x-loading>

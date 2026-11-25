@@ -8,10 +8,10 @@ export default {
         methods: {}
     },
     meta: {
-        title: "Schemas"
+        title: "Schemas",
+        description: "Shows discovered JSON schemas, their owning modules, and file sizes."
     },
     template: `
-        <p>Shows discovered JSON schemas, their owning modules, and file sizes.</p>
         <x-listview view="details">
             <x-listview-head>
                 <x-listview-column width="10em"><x-datafield type="search" x-model="state.id" placeholder="Schema"></x-datafield></x-listview-column>

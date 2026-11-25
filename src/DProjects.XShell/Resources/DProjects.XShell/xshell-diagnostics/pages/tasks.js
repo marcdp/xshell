@@ -8,7 +8,8 @@ export default {
     },
 
     meta: {
-        title: "Tasks"
+        title: "Tasks",
+        description: "List and monitor XShell runtime tasks."
     },
 
     style: `
@@ -18,8 +19,6 @@ export default {
     `,
 
     template: `
-        <p>Double-click a task or press Enter on a selected row to view its details.</p>
-
         <x-toolbar slot="header-actions">
             <x-button label="Refresh" icon="x-refresh" command="refresh"></x-button>
             <x-button label="Clear completed" icon="x-clear" command="clear"

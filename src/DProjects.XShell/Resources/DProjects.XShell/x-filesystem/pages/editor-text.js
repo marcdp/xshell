@@ -5,7 +5,7 @@ export default {
         description: "Filesystem file editor",
         events: {},
         properties: {
-            src: {type:"string", default:null, state:true, query:true},
+            src: {type:"string", default:null, state:true, query:true, description:"Raw provider URL or named:<name> filesystem reference."},
             path: {type:"string", default:null, state:true, query:true}
         },
         methods: {}

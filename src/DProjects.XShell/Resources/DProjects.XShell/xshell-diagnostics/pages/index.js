@@ -12,20 +12,20 @@ export default {
         }
     },
     meta: {
-        title: "Diagnostics console"
+        title: "Diagnostics console",
+        description: "Provides an overview and access to various diagnostics tools and information."
     },
     style: `
         x-page {height:100%; overflow:auto; padding:.1em;}
     `,
     template: `
-        <x-toolbar slot="header-actions">
-            <x-button x-for="(menuitem,index) in state.menuitems" 
-                command="selectTab" 
-                x-attr:label="menuitem.label" 
-                x-attr:class="'menuitem ' + (index == state.selectedIndex ? 'pressed' : '')"
-                x-attr:data-index="index" 
-            ></x-button>
-        </x-toolbar>
+        <x-button slot="header-actions" x-for="(menuitem,index) in state.menuitems" 
+            command="selectTab" 
+            x-attr:label="menuitem.label" 
+            x-attr:class="'menuitem ' + (index == state.selectedIndex ? 'pressed' : '')"
+            x-attr:data-index="index" 
+        ></x-button>
+        
         <x-tabs x-attr:selected-index="state.selectedIndex" class="no-header">
             <x-tab x-for="menuitem in state.menuitems" x-attr:label="menuitem.label" >
                 <x-page x-attr:src="menuitem.href" loading="lazy"></x-page>

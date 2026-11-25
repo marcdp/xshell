@@ -7,7 +7,7 @@ export default {
         events: {},
         properties: {
             message: { type: "string", description: "The message to display on the upload page", context:true},
-            src: { type: "string", description: "The filesystem src", context:true },
+            src: { type: "string", description: "Raw provider URL or named:<name> filesystem reference.", context:true },
             path: { type: "string", description: "The filesystem base path", context:true },
             filesPath: { type: "string", description: "The file path for the upload", context:true },
             files: { type: "array", description: "The files to upload", context:true },

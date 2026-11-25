@@ -7,10 +7,10 @@ export default {
         methods: {}
     },
     meta: {
-        title: "Loader"
+        title: "Loader",
+        description: "Shows resources processed by the XShell loader together with their module, size, load time, and status."
     },
     template: `
-        <p>Shows resources processed by the XShell loader together with their module, size, load time, and status.</p>
         <x-listview view="details" auto-scroll>
             <x-listview-head>
                 <x-listview-column><x-datafield type="search" x-model="state.query_resource" placeholder="Resource"></x-datafield></x-listview-column>

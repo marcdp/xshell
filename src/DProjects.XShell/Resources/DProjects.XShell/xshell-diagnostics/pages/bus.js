@@ -7,10 +7,10 @@ export default {
         methods: {}
     },
     meta: {
-        title: "Bus"
+        title: "Bus",
+        description: "Shows recent XShell bus events and their timestamps and detail payloads."
     },
     template: `
-        <p>Shows recent XShell bus events and their timestamps and detail payloads.</p>
         <x-listview ref="listview" view="details" auto-scroll="true">
             <x-listview-head>
                 <x-listview-column width="20%">

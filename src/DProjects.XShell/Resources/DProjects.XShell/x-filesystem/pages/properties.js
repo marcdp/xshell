@@ -31,7 +31,7 @@ export default {
         description: "Filesystem entry properties",
         events: {},
         properties: {
-            src: { type: "string", default: null, state: true, query: true },
+            src: { type: "string", default: null, state: true, query: true, description: "Raw provider URL or named:<name> filesystem reference." },
             path: { type: "string", default: null, state: true, query: true }
         },
         methods: {}

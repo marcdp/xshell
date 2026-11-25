@@ -2,7 +2,7 @@
 {
     "$schema": "../../xshell/schemas/contract.schema.json",
     "label": "Filesystems",
-    "description": "Manages named Filesystem definitions and opens Filesystem instances from definitions or provider URLs.",
+    "description": "Manages named Filesystem definitions and opens Filesystem instances from named references or provider URLs.",
     "properties": {
         "commands": {
             "type": "array",
@@ -102,7 +102,7 @@
             }
         },
         "openNamed": {
-            "description": "Opens a persisted named Filesystem using its validated provider options and name-based runtime cache identity.",
+            "description": "Opens a persisted named Filesystem using its validated provider options, stored credentials, and name-based runtime cache identity. Equivalent to open('named:' + name).",
             "parameters": [
                 {
                     "name": "name",
@@ -117,13 +117,13 @@
             }
         },
         "open": {
-            "description": "Opens the Filesystem represented by a configured provider URL. Repeated calls share an instance only when the provider supplies a raw-URL cache identity.",
+            "description": "Opens a Filesystem from a named:<name> reference or configured provider URL. Named references delegate to openNamed(); raw URLs share an instance only when the provider supplies a raw-URL cache identity.",
             "parameters": [
                 {
                     "name": "url",
                     "type": "string",
                     "required": true,
-                    "description": "Filesystem URL, such as mem:, opfs:, file:, or https://example.com/files."
+                    "description": "Filesystem reference, such as named:documents, mem:, opfs:, file:, or https://example.com/files. The named scheme is reserved by this Service."
                 }
             ],
             "returns": {

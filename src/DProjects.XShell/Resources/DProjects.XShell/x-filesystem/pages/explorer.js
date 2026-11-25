@@ -4,7 +4,7 @@ export default {
         description: "Explorer page",
         events: {},
         properties: {
-            src: {type: "string", default:null, state:true, query:true, description: "Source of the filesystem (e.g., 'mem:')"},
+            src: {type: "string", default:null, state:true, query:true, description: "Filesystem reference, such as 'named:documents' or 'mem:'"},
             path: {type: "string", default:null, state:true, query:true, description: "Path within the filesystem"}
         },
         methods: {}

@@ -4,7 +4,6 @@ import test from "node:test";
 
 const sourceRoot = new URL("../../src/DProjects.XShell/Resources/DProjects.XShell/", import.meta.url);
 const structureFiles = [
-    "x/pages/areas.js",
     "x/pages/search.js",
     "x-demo/pages/01-components/05-listviews.js",
     "xshell-diagnostics/pages/bus.js",
@@ -80,12 +79,6 @@ test("details listviews preserve expected column counts and interactive headers"
 });
 
 test("listview pages preserve dynamic items, navigation, selection, auto-scroll, and treeview", () => {
-    const areas = readSource("x/pages/areas.js");
-    assert.match(areas, /x-for="area in state\.areas"/);
-    assert.match(areas, /x-prop:selected="state\.selected == area\.id"/);
-    assert.match(areas, /x-attr:href="area\.home"/);
-    assert.match(areas, /open="top"/);
-
     const search = readSource("x/pages/search.js");
     assert.match(search, /x-if="state\.results\.length > 0"/);
     assert.match(search, /x-for="result in state\.results"/);

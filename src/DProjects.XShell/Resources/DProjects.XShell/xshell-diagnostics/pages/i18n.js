@@ -8,10 +8,10 @@ export default {
         methods: {}
     },
     meta: {
-        title: "Internationalization"
+        title: "Internationalization",
+        description: "Shows the active language, available languages, date/time formats, and translation dictionaries."
     },
     template: `
-        <p>Shows the active language, available languages, date/time formats, and translation dictionaries.</p>
 
         <x-tabs>
             <x-tab label="Configuration">

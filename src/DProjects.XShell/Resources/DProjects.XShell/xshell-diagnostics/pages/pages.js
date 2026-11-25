@@ -7,13 +7,13 @@ export default {
         methods: {}
     },
     meta: {
-        title: "Pages"
+        title: "Pages",
+        description: "Shows discovered pages, their owning modules, size, load time, and load status."
     },
     style: `
         .tags { display: flex; flex-wrap: wrap; gap: .25em; align-items: center; }
     `,
     template: `
-        <p>Shows discovered pages, their owning modules, size, load time, and load status.</p>
         <x-listview view="details" x-on:activate="inspectContract">
             <x-listview-head>
                 <x-listview-column ><x-datafield type="search" x-model="state.id" placeholder="Page"></x-datafield></x-listview-column>

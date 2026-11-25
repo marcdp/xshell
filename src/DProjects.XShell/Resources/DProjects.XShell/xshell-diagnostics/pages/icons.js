@@ -7,10 +7,10 @@ export default {
         methods: {}
     },
     meta: {
-        title: "Icons"
+        title: "Icons",
+        description: "Shows available icons by module together with their size, load time, and status."
     },
     template: `
-        <p>Shows available icons by module together with their size, load time, and status.</p>
         <x-listview view="details" views="list,details,tiles,icons">
             <x-listview-head>
                 <x-listview-column><x-datafield type="search" x-model="state.id" placeholder="Icon"></x-datafield></x-listview-column>

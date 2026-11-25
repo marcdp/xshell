@@ -7,13 +7,13 @@ export default {
         methods: {}
     },
     meta: {
-        title: "Commands"
+        title: "Commands",
+        description: "Shows Commands discovered from the effective framework and module file inventories without loading their implementations."
     },
     style: `
         .tags { display: flex; flex-wrap: wrap; gap: .25em; align-items: center; }
     `,
     template: `
-        <p>Shows Commands discovered from the effective framework and module file inventories without loading their implementations.</p>
         <x-listview view="details" x-on:activate="invokeCommand">
             <x-listview-head>
                 <x-listview-column width="14em"><x-datafield type="search" x-model="state.id" placeholder="Command"></x-datafield></x-listview-column>

@@ -60,6 +60,7 @@ export default {
         :host(.menuitem) a:hover {color:var(--x-color-primary); background:var(--x-menuitem-background-hover);}
         :host(.menuitem) a:active {color:var(--x-color-primary-dark); background:var(--x-menuitem-background-active);}
         :host(.menuitem) a:focus {outline:none; background:var(--x-menuitem-background-active);}
+        :host(.menuitem[expanded]) a {background:var(--x-menuitem-background-active);}
 
         :host(.block) {}
         :host(.block) a {display:block;}

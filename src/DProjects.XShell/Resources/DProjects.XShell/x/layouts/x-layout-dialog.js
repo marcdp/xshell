@@ -63,6 +63,10 @@ export default {
         .header x-page-info {margin-left:.5em; margin-right:.5em;}
         .header x-button {_transform:translateY(-0.2em);}
 
+        /* custom */
+        .no-title .header {display:none;}
+        .dialog-no-title .header {display:none;}
+
         /* layout-fill */
         @media (min-width: 769px) {
             dialog:is(.layout-fill, .dialog-layout-fill) {width:100%; height:100%; }

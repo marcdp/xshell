@@ -42,13 +42,6 @@ export default {
             z-index:10;
         }
 
-        /* x-app-menu */
-        x-app-menu {
-            position:sticky;
-            top:0;
-            height:100vh;
-            z-index:2;
-        }
 
         /* dock-container */
         .dock-container {flex:1; }
@@ -60,9 +53,11 @@ export default {
         .dock-container x-splitter x-toolbar span {flex:1;}
 
         .dock-container.bottom {display:flex; flex-direction:column;height:100vh; overflow:hidden; height:100vh;}
-        .dock-container.bottom .docked-main {overflow-y:auto;  scrollbar-width:thin; scrollbar-gutter: stable; }
-        .dock-container.bottom .docked-main x-app-area-menu {position:block; height:100%;}
-        .dock-container.bottom .docked-page {flex:0 0 25em; min-height:10em; overflow-y:auto; scrollbar-width:thin; background:var(--x-color-background-page);}  
+        .dock-container.bottom .docked-main {overflow-y:hidden;    }
+        .dock-container.bottom .docked-main x-app-menu {position:block; height:100%;}
+        .dock-container.bottom .docked-main x-page-menu {position:block; height:100%;}
+        .dock-container.bottom .docked-main main {height:100%; overflow-y:auto;  scrollbar-width:thin; scrollbar-gutter: stable; }
+        .dock-container.bottom .docked-page {flex:0 0 25em; min-height:10em; overflow-y:auto; scrollbar-width:thin; background:var(--x-color-background-page); }  
         .dock-container.bottom .docked-page x-page {height:100%;}
 
         .dock-container.right {display:flex; flex-direction:row; height:100vh; width:100vw; overflow:hidden;}
@@ -70,26 +65,30 @@ export default {
         .dock-container.right .docked-page {flex:0 0 25em; min-width:10em; overflow-y:auto; scrollbar-width:thin; background:var(--x-color-background-page);}  
         .dock-container.right .docked-page x-page {height:100%;}
 
-        /* x-app-area-menu */
-        x-app-area-menu {
+        
+        /* x-app-menu */
+        x-app-menu {
+            position:sticky;
+            top:0;
+            height:100vh;
+            z-index:2;
+        }
+
+        /* x-page-menu */
+        x-page-menu {
             height:100vh; 
             position:sticky; 
             top:0; 
-            bottom:0;
-            overflow:auto;
-            width: var(--x-layout-main-drawer-width);
+            bottom:0;            
             box-sizing: border-box;
-            flex-shrink:0;            
-            padding:1.3em;
-            padding-left:2em;
+            flex-shrink:0;         
             background:var(--x-layout-main-drawer-background);
             scrollbar-width:none; 
             scrollbar-gutter: stable;
         }
-        x-app-area-menu:hover {
+        x-page-menu:hover {
             scrollbar-width:thin; 
         } 
-        
 
 
         /* main */
@@ -109,12 +108,17 @@ export default {
             line-height:125%;
             font-weight:700;
         }
-        .title x-page-breadcrumb {
-            font-size:var(--x-font-size-small);
+        .title .breadcrumb {
             transform:translateY(-1em);
-            display:block;
+            display:flex;
+            align-items:baseline;
         }
-        main:before {
+        .title .breadcrumb x-page-breadcrumb {
+            margin-left:.5em;
+            font-size:var(--x-font-size-small);
+            
+        }
+        main:before {        
             content: '';
             display: block;
             border-right: var(--x-layout-main-border);
@@ -144,6 +148,12 @@ export default {
             z-index:10;
             corner-shape: scoop;
         }
+
+        
+
+        /* custom */
+        .no-title .title {display:none;}
+        .main-no-title .title {display:none;}
 
         /* desktop */
         @media (min-width: 769px) {
@@ -261,28 +271,30 @@ export default {
         <!-- loading -->
         <x-loading x-if="state.status=='loading'"></x-loading>        
 
-        <!-- app menu -->
-        <x-app-menu></x-app-menu>
-
         <!-- docked page -->
         <div x-attr:class="'dock-container ' + (state.dockSrc ? state.dockPosition : '')">
 
-            <div class="docked-main" x-on:scroll="onScroll">
+            <div class="docked-main" >
 
-                <!-- x-app-area-menu -->
-                <x-app-area-menu></x-app-area-menu>
+                <!-- app menu -->
+                <x-app-menu></x-app-menu>
+                
+                <!-- x-page-menu -->
+                <x-page-menu x-class:collapsed="state.menuCollapsed"></x-page-menu>
 
                 <!-- body -->
                 <div x-attr:class="'body' + (state.pageClasses ? ' ' + state.pageClasses : '')">
                     <main>           
                         <div>   
                             <div class="title">
-                                <div>
+                                <div>                                    
                                     <h1>
                                         <x-page-title></x-page-title>
                                     </h1>
-                                    <x-page-breadcrumb></x-page-breadcrumb>
-                                    
+                                    <div class="breadcrumb">
+                                        <x-button class="anchor" x-attr:icon="(state.menuCollapsed ? 'x-sidebar-off' : 'x-sidebar-on')" x-on:click="onToggleMenu" ></x-button>
+                                        <x-page-breadcrumb></x-page-breadcrumb>
+                                    </div>
                                 </div>
                                 <div class="header-actions">
                                     <slot name="header-actions"></slot>
@@ -313,6 +325,7 @@ export default {
     `,
     state: {
         menuNavigation:  null,
+        menuCollapsed:     false,
         pageClasses:     "",
         dockPosition:    "bottom",
         dockSrc:         ""
@@ -322,12 +335,13 @@ export default {
         let dockSizeRevision = 0;
         let restoring = false;
         let menuChanged = false;
+        let menuCollapsedChanged = false;
         let dockSrcChanged = false;
         let dockPositionChanged = false;
         return {
             async load(params) {
                 // Start restoration while listeners can still capture newer user changes.
-                const keys = ["x-layout-main.toggled", "x-layout-main.dockSrc", "x-layout-main.dockPosition"];
+                const keys = ["x-layout-main.menuCollapsed", "x-layout-main.dockSrc", "x-layout-main.dockPosition"];
                 const savedPromise = Promise.allSettled(keys.map(key => preferences.get(key)));
                 events.on(state, "change:toggled", () => { if (!restoring) menuChanged = true; });
                 // auto close menu on navigation start (mobile)
@@ -346,6 +360,7 @@ export default {
                 });
                 events.on(state, ["change:dockSrc", "change:dockPosition"], (event) => {
                     if (restoring) return;
+                    if (event.prop === "menuCollapsed") menuCollapsedChanged = true;
                     if (event.prop === "dockSrc") dockSrcChanged = true;
                     if (event.prop === "dockPosition") dockPositionChanged = true;
                     if (state.dockSrc) {
@@ -363,6 +378,7 @@ export default {
                 const saved = await savedPromise;
                 restoring = true;
                 try {
+                    if (!menuCollapsedChanged) state.menuCollapsed = saved[0].status === "fulfilled" ? saved[0].value || false : false;
                     if (!dockSrcChanged) state.dockSrc = saved[1].status === "fulfilled" ? saved[1].value || "" : "";
                     if (!dockPositionChanged) state.dockPosition = saved[2].status === "fulfilled" ? saved[2].value || "bottom" : "bottom";
                     if (state.dockSrc) document.documentElement.setAttribute("data-scrollbar", "none");
@@ -488,6 +504,10 @@ export default {
                 }
                 panel.style.flex = `0 0 ${Math.min(Math.max(size, panelMin), maximum)}px`;
             },
+            onToggleMenu() {
+                state.menuCollapsed = !state.menuCollapsed;
+                this.savePreference("x-layout-main.menuCollapsed", state.menuCollapsed);
+            }
         };
     }
 }

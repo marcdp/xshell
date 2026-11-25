@@ -172,9 +172,9 @@ export default {
     `,
     template: ` 
         <div>
-            <button class="button" tabindex="1" x-attr:expanded="(state.expanded && !state.command ? true : false)" x-on:click="command" x-attr:has-more="(state.childs && state.command ? true : false)" x-on:keydown.enter="command" x-attr:title="state.tooltip">
+            <button part="button" class="button" tabindex="1" x-attr:expanded="(state.expanded && !state.command ? true : false)" x-on:click="command" x-attr:has-more="(state.childs && state.command ? true : false)" x-on:keydown.enter="command" x-attr:title="state.tooltip">
                 <x-icon class="icon" x-if="state.icon" x-attr:icon="state.icon"></x-icon>
-                <div x-if="state.label">
+                <div x-if="state.label" part="label">
                     <span class="label"   x-if="state.label" x-text="state.label"></span>
                     <span class="message" x-if="state.message" x-text="state.message"></span>
                 </div>
