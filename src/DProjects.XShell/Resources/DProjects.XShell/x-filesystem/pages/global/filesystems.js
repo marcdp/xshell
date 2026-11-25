@@ -40,7 +40,7 @@ export default {
 
         <!--
         <x-menuitem label="-"></x-menuitem>
-        <x-menuitem label="Manage filesystems" icon="x-settings" href="page:x-filesystem:/pages/preferences/filesystems.js" open="stack">
+        <x-menuitem label="Manage filesystems" description="Lorem ipsum" icon="x-settings" href="page:x-filesystem:/pages/preferences/filesystems.js" open="stack">
         </x-menuitem>
         
         -->

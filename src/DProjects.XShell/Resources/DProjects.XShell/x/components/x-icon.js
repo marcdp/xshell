@@ -1,6 +1,4 @@
 
-// cache
-const svgCache = new Map(); // key: url, value: Promise<SVGElement>
 
 // component
 export default {

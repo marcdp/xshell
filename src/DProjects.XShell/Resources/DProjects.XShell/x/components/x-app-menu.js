@@ -27,7 +27,7 @@ export default {
             box-sizing: border-box;
             padding:.5em;
         }
-        .logo {text-align:center; height:2.2em}
+        .logo {display:block; text-align:center; margin-top:.25em; height:2.1em; opacity:.6}
         div {display:flex; flex-direction: column; flex:1;}
         x-menuitem.flex {flex:1; visibility:hidden;}
         x-menuitem[label='-'] {padding-left:.75em; padding-right:.75em;}
