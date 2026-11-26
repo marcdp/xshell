@@ -1,7 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import datafieldDefinition, { contract } from "../../src/DProjects.XShell/Resources/DProjects.XShell/x/components/x-datafield.js";
+import datafieldDefinition from "../../src/DProjects.XShell/Resources/DProjects.XShell/x/components/x-datafield.js";
+
+const { contract } = datafieldDefinition;
 
 globalThis.HTMLElement = class {};
 globalThis.CSSStyleSheet = class { replaceSync() {} };

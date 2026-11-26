@@ -160,8 +160,8 @@ export default {
         @media (min-width: 769px) {
 
             .docked-main {
-                --x-fill-top: 6.4em;
-                --x-fill-height: calc(100vh - 6.5em);
+                --x-fill-top: 0;
+                --x-fill-height: 100vh;
             }
             .body {
                 display:flex;
@@ -188,11 +188,13 @@ export default {
             @media (min-width: 769px) {
                 .body:is(.layout-fill, .main-layout-fill) > main {
                     max-width:unset;
-                    position:absolute;
-                    top: var(--x-fill-top);
-                    left:var(--x-layout-main-drawer-width); 
-                    right:0;
-                    bottom:0;
+                    __position:absolute;
+                    __top: var(--x-fill-top);
+                    __laeft:var(--x-layout-main-drawer-width); 
+                    __right:0;
+                    __bottom:0;
+                    outline:1px red solid;
+                    outline-offset: -1px;
                     padding:0;
                     display:flex;
                     transition: left var(--x-transition-duration);

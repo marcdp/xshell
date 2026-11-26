@@ -152,7 +152,8 @@ The `x-filesystem` module contributes the Filesystems provider. It calls `filesy
 `named:<name>` references. It does not open Filesystem instances, connect to providers, read credential storage, or unlock Secrets.
 
 The bundled Search Page requires at least three characters in the trimmed input. The Service accepts non-empty search text of any length.
-The Page shows the configured prefixes and sends the complete expression to the Service. It debounces changes, aborts the prior request,
+An empty field shows providers that declare prefixes. Choosing a prefix inserts it followed by a space and focuses the input. The Page waits
+for search text after a standalone prefix, then sends the complete expression to the Service. It debounces changes, aborts the prior request,
 ignores stale responses, and cancels work on unload. `x-listview-item` and `x-anchor` use each result's `href` and `open` mode for navigation.
 
 ## Lazy-loading limits

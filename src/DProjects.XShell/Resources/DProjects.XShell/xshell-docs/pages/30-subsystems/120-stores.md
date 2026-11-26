@@ -76,3 +76,10 @@ mutation. Failed validation leaves stored data unchanged. Returned documents are
 
 The Store Explorer Page is `page:x-store:/pages/store.js`. It discovers collections and display fields from Store metadata and opens the document
 editor on the Page stack. The editor uses `x-schema`; unsupported editor schema constructs are reported without changing the underlying Store.
+
+## Search
+
+Use `store:` followed by a collection name, label, or description, for example `store: customers`. Results open the Store Explorer with the
+matching collection selected. The Search provider reads collection metadata from the Store URLs configured in
+`xshell.services.search.options.providers.stores.options.sources`. The bundled configuration searches `mem:`. Store documents are loaded
+when the Explorer opens the selected collection.

@@ -24,8 +24,23 @@
     },
 
     "xshell": {
-        // The Stores Service owns provider matching. Loader caching gives each logical identity one application-lifetime instance.
         "services": {
+            "search": {
+                "options": {
+                    "providers": {
+                        "stores": {
+                            "label": "Stores",
+                            "description": "Find Store collections",
+                            "icon": "x-database",
+                            "implementation": "/providers/search-stores.js",
+                            "mode": "explicit",
+                            "prefixes": ["store:"],
+                            "options": {"sources": ["mem:"]}
+                        }
+                    }
+                }
+            },
+            // The Stores Service owns provider matching. Loader caching gives each logical identity one application-lifetime instance.
             "stores": {
                 "contract": "stores",
                 "implementation": "/services/stores.js",

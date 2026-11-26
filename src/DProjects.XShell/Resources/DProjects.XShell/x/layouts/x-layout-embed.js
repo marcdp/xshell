@@ -43,7 +43,7 @@ export default {
         .embed-no-title .header {display:none;}
 
         /* padding */
-        .embed-padding {padding: .5em;}
+        .embed-padding {padding: .75em;}
 
         /* size */
         .embed-size-medium {width:50vw}

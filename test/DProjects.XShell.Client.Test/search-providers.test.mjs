@@ -8,12 +8,15 @@ import ModulesSearchProvider from "../../src/DProjects.XShell/Resources/DProject
 import QueriesSearchProvider from "../../src/DProjects.XShell/Resources/DProjects.XShell/x/providers/search-queries.js";
 import ShortcutsSearchProvider from "../../src/DProjects.XShell/Resources/DProjects.XShell/x/providers/search-shortcuts.js";
 import FilesystemsSearchProvider from "../../src/DProjects.XShell/Resources/DProjects.XShell/x-filesystem/providers/search-filesystems.js";
+import StoresSearchProvider from "../../src/DProjects.XShell/Resources/DProjects.XShell/x-store/providers/search-stores.js";
+import SampleStore from "../../src/DProjects.XShell/Resources/DProjects.XShell/x-store/samples/store.json" with {type: "json"};
 import Search from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/search.js";
 
 test("module manifests resolve Search providers through the standard providers directory", () => {
     for (const [moduleName, expected] of [
         ["x", ["search-areas.js", "search-modules.js", "search-commands.js", "search-queries.js", "search-shortcuts.js"]],
-        ["x-filesystem", ["search-filesystems.js"]]
+        ["x-filesystem", ["search-filesystems.js"]],
+        ["x-store", ["search-stores.js"]]
     ]) {
         const moduleRoot = new URL(`../../src/DProjects.XShell/Resources/DProjects.XShell/${moduleName}/`, import.meta.url);
         const manifest = readFileSync(new URL("manifest.jsonc", moduleRoot), "utf8");
@@ -22,6 +25,46 @@ test("module manifests resolve Search providers through the standard providers d
         for (const implementation of implementations) assert.equal(existsSync(new URL(`providers/${implementation}`, moduleRoot)), true, implementation);
         assert.equal(existsSync(new URL("search/", moduleRoot)), false);
     }
+});
+
+test("Store expressions discover collections from the configured sources without reading documents", async t => {
+    // Exercise the authored prefix, explicit selection, and collection navigation through Search.
+    const manifestPath = new URL("../../src/DProjects.XShell/Resources/DProjects.XShell/x-store/manifest.jsonc", import.meta.url);
+    const manifest = JSON.parse(readFileSync(manifestPath, "utf8").replace(/^\s*\/\/.*$/gm, ""));
+    const {providers} = manifest.xshell.services.search.options;
+    const list = t.mock.fn();
+    const stores = {open: t.mock.fn(async () => ({schema: SampleStore.schema, list}))};
+    const loader = {load: t.mock.fn(async () => StoresSearchProvider)};
+    const search = new Search({loader, services: {resolve(name) { return name === "stores" ? stores : undefined; }}}, {providers});
+
+    assert.deepEqual(search.listProviders().map(provider => provider.prefixes), [["store:"]]);
+    assert.deepEqual(await search.query("customers"), {results: [], errors: []});
+    assert.equal(loader.load.mock.callCount(), 0);
+    const {results, errors} = await search.query("store: CUSTOMER RECORDS");
+    assert.deepEqual(errors, []);
+    assert.deepEqual(results.map(item => [item.providerId, item.label, item.description, item.href, item.open]), [
+        ["stores", "Customers", "Customer records", "page:x-store:/pages/store.js?src=mem%3A&collection=customers", "stack"]
+    ]);
+    assert.deepEqual(loader.load.mock.calls.map(call => call.arguments), [["esm:/providers/search-stores.js"]]);
+    assert.deepEqual(stores.open.mock.calls.map(call => call.arguments), [["mem:"]]);
+    assert.equal(list.mock.callCount(), 0);
+});
+
+test("Stores provider encodes collection coordinates and aborts before opening the next source", async t => {
+    const schema = {label: "Store", collections: {"pending & active": {label: "Pending Orders"}}};
+    const open = t.mock.fn(async () => ({schema}));
+    const provider = new StoresSearchProvider({stores: {open}}, {sources: ["mem:daily + weekly"]});
+    const [result] = await provider.query("pending", {});
+    assert.equal(result.href, "page:x-store:/pages/store.js?src=mem%3Adaily%20%2B%20weekly&collection=pending%20%26%20active");
+
+    const abort = new AbortController();
+    const openAndAbort = t.mock.fn(async () => {
+        abort.abort();
+        return {schema};
+    });
+    const canceled = new StoresSearchProvider({stores: {open: openAndAbort}}, {sources: ["mem:one", "mem:two"]});
+    await assert.rejects(canceled.query("pending", {signal: abort.signal}), {name: "AbortError"});
+    assert.deepEqual(openAndAbort.mock.calls.map(call => call.arguments), [["mem:one"]]);
 });
 
 test("bundled prefixes select their configured providers and discover Commands and Queries without executing them", async t => {

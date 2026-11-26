@@ -265,6 +265,19 @@ test("Store Explorer discovers collections and refreshes after Detail success", 
     assert.deepEqual(navigated.params, {src: "mem:", collection: "customers", id: "customer-1"});
 });
 
+test("Store Explorer opens the requested collection and falls back when it is missing", async () => {
+    assert.equal(StorePage.contract.properties.collection.query, true);
+    const store = createStore();
+    for (const [requested, selected, document] of [["products", "products", "product-1"], ["missing", "customers", "customer-1"]]) {
+        const state = {...structuredClone(StorePage.state), collection: requested};
+        const controller = StorePage.controller({state, stores: {async open() { return store; }}});
+        await controller.load();
+
+        assert.equal(state.collection, selected);
+        assert.equal(state.documents[0].id, document);
+    }
+});
+
 test("Store Detail uses add and edit modes and reports a saved stack result", async () => {
     // Cover both mutation paths while treating x-schema validation as an existing component responsibility.
     const store = createStore();

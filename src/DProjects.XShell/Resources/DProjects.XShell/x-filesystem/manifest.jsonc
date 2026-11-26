@@ -49,7 +49,8 @@
                             "description": "Search registered filesystems",
                             "icon": "x-filesystem",
                             "implementation": "/providers/search-filesystems.js",
-                            "mode": "default"
+                            "mode": "default",
+                            "prefixes": ["fs:", "filesystem:"]
                         }
                     }
                 }

@@ -2,7 +2,8 @@ export default {
     contract: {
         description: "Explores the collections and documents exposed by a Store resource.",
         properties: {
-            src: {type: "string", default: "mem:", state: true, query: true, description: "Store provider source, such as mem:demo."}
+            src: {type: "string", default: "mem:", state: true, query: true, description: "Store provider source, such as mem:demo."},
+            collection: {type: "string", default: "", state: true, query: true, description: "Collection to select in the Store Explorer."}
         }
     },
     meta: {

@@ -552,7 +552,7 @@ export default {
                 class="input"                
                 x-on:input="searchInput"
                 x-attr:autocomplete="state.autocomplete"
-                x-attr:value="state.value"
+                x-prop:value="state.value ?? ''"
                 x-attr:id="state.inputId"
                 x-attr:type="state.type" 
                 x-attr:placeholder="state.placeholder" 
