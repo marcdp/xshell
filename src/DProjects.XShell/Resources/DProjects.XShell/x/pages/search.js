@@ -10,7 +10,7 @@ export default {
     },
     meta: {
         title: "Search",
-        description: "Enter at least 3 characters to search",
+        description: "Search configured providers or list available results by prefix",
         classes: ["stack-size-narrow", "embed-size-medium", "embed-padding", "embed-no-title"]
     },
     style:`
@@ -24,10 +24,12 @@ export default {
     template: `
         <x-datafields columns="1">
             <x-datafield ref="search" label="Search" type="search" placeholder="Search pages, commands, queries..."
-                description="Enter at least 3 characters to search" x-model="state.keyword" autocomplete="off" autofocus></x-datafield>
+                description="Type at least 3 characters, or press Enter after a prefix." x-model="state.keyword" autocomplete="off" autofocus
+                x-on:keydown.enter="submitSearch" x-on:compositionstart="startComposition" x-on:compositionend="endComposition"></x-datafield>
 
             <section x-if="!(state.keyword | trim) && state.providers.length > 0" aria-label="Search expressions">
                 <b>Search expressions</b>
+                <div>Type a prefix followed by search text, or press Enter after a prefix to list available results.</div>
                 <div class="provider" x-for="provider in state.providers" x-key="id">
                     <div>
                         <!--<x-icon x-if="provider.icon" x-attr:icon="provider.icon" aria-hidden="true"></x-icon>-->
@@ -69,7 +71,7 @@ export default {
                         </x-listview-item>
                     </x-listview-body>
                 </x-listview>
-                <div><br><b>{{ state.results.length }}</b> results found for <b>{{state.searched}}</b></div>
+                <div><br>Results returned for <b>{{state.searched}}</b> ({{ state.results.length }})</div>
             </div>
 
             <x-empty x-if="!state.loading && state.noResults" icon="x-search" x-attr:label="'No results for ' + state.searched" message="No matching resources were found"></x-empty>
@@ -88,6 +90,7 @@ export default {
     },
     controller({page, state, events, search}) {
         let alive = true;
+        let composing = false;
         let debounceId = null;
         let request = null;
 
@@ -107,27 +110,53 @@ export default {
                 state.keyword = event.currentTarget.dataset.prefix + " ";
                 this.focus();
             },
-            isSearchable(expression) {
-                // Reject a standalone prefix with the same literal, case-insensitive comparison as Search.
-                return expression.length >= 3 && !state.providers.some(provider => provider.prefixes.some(prefix => {
+            isSearchable(expression, explicit = false) {
+                // Recognize only exact standalone prefixes for the Page's automatic and explicit search rules.
+                const standalone = state.providers.some(provider => provider.prefixes.some(prefix => {
                     const literal = prefix.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
                     return new RegExp("^" + literal + "$", "iu").test(expression);
                 }));
+                return standalone ? explicit : expression.length >= 3;
+            },
+            submitSearch({event}) {
+                // The native key event crosses the datafield's shadow root. Only the search input can submit.
+                if (composing || event.isComposing || event.keyCode === 229 || event.repeat || event.defaultPrevented ||
+                    !event.composedPath()[0]?.matches?.("input[type='search']")) return;
+                const keyword = state.keyword;
+                if (!this.isSearchable(keyword.trim(), true)) return;
+                event.preventDefault();
+                return this.search(keyword, true);
+            },
+            startComposition() {
+                // Suspend pending searches while the input method is assembling text.
+                composing = true;
+                this.queueSearch();
+            },
+            endComposition() {
+                // Resume debouncing with the committed input.
+                composing = false;
+                this.queueSearch();
+            },
+            cancelSearch() {
+                // Cancel both scheduled and in-flight work before accepting a new expression.
+                if (debounceId !== null) clearTimeout(debounceId);
+                debounceId = null;
+                request?.controller.abort();
+                request = null;
             },
             queueSearch() {
                 // Cancel active work immediately and schedule only the latest eligible keyword.
-                request?.abort();
-                request = null;
-                if (debounceId !== null) clearTimeout(debounceId);
+                if (!alive) return;
+                this.cancelSearch();
                 state.loading = false;
                 state.noResults = false;
+                if (composing) return;
                 const keyword = state.keyword;
                 if (!this.isSearchable(keyword.trim())) {
                     state.searched = "";
                     state.results = [];
                     state.errors = [];
                     state.errorMessage = "";
-                    debounceId = null;
                     return;
                 }
                 debounceId = setTimeout(() => {
@@ -135,28 +164,28 @@ export default {
                     this.search(keyword);
                 }, 200);
             },
-            async search(keyword = state.keyword) {
+            async search(keyword = state.keyword, explicit = false) {
                 // Publish only the response associated with the latest live Page request.
                 const expression = keyword.trim();
-                if (!alive || !this.isSearchable(expression)) return;
-                request?.abort();
-                request = new AbortController();
-                const currentRequest = request;
+                if (!alive || composing || !this.isSearchable(expression, explicit) || request?.expression === expression) return;
+                this.cancelSearch();
+                const currentRequest = {expression, controller: new AbortController()};
+                request = currentRequest;
+                const {signal} = currentRequest.controller;
                 state.loading = true;
                 state.noResults = false;
                 state.errors = [];
                 state.errorMessage = "";
                 try {
-                    debugger
-                    const response = await search.query(keyword, {signal: currentRequest.signal});
-                    if (!alive || currentRequest.signal.aborted) return;
+                    const response = await search.query(keyword, {signal});
+                    if (!alive || signal.aborted) return;
                     state.searched = expression;
                     state.results = response.results;
                     state.errors = response.errors;
                     state.errorMessage = response.errors.map(error => error.message).join(" ");
                     state.noResults = response.results.length === 0 && response.errors.length === 0;
                 } catch (error) {
-                    if (!alive || currentRequest.signal.aborted || error?.name === "AbortError") return;
+                    if (!alive || signal.aborted || error?.name === "AbortError") return;
                     state.searched = expression;
                     state.results = [];
                     state.errors = [{providerId: "search", message: "Search is temporarily unavailable."}];
@@ -171,9 +200,7 @@ export default {
             unload() {
                 // Stop timers and pending providers before the Page Services scope is disposed.
                 alive = false;
-                if (debounceId !== null) clearTimeout(debounceId);
-                request?.abort();
-                request = null;
+                this.cancelSearch();
             }
         };
     }

@@ -97,7 +97,7 @@ test("expressions select the longest leading prefix, support aliases, and preser
         plain: {label: "Plain", implementation: "/plain.js"}
     }, {"esm:/short.js": Echo, "esm:/commands.js": Echo, "esm:/shared.js": Echo, "esm:/plain.js": Echo});
 
-    for (const input of ["", "   ", " > ", "COMMAND:  "]) {
+    for (const input of ["", "   "]) {
         assert.deepEqual(await search.query(input), {results: [], errors: []});
     }
     assert.deepEqual(await search.query("command: Needle", {providers: ["short", "plain"]}), {results: [], errors: []});
@@ -121,12 +121,40 @@ test("expressions select the longest leading prefix, support aliases, and preser
     }
     assert.deepEqual(loads, ["esm:/commands.js", "esm:/shared.js"]);
 
-    for (const input of ["unknown: Needle", "Needle command: details", "https://Example.com"]) {
+    for (const input of ["unknown:", "unknown: Needle", "Needle command: details", "https://Example.com"]) {
         const {results} = await search.query(input);
         assert.deepEqual(results.map(item => [item.providerId, item.label]), ["short", "shared", "plain"].map(id => [id, input]));
     }
     const {results} = await search.query("Needle", {providers: ["plain", "commands"]});
     assert.deepEqual(results.map(item => item.providerId), ["plain", "commands"]);
+});
+
+test("standalone prefixes discover results in provider order within the aggregate limit", async t => {
+    // Return deliberately nonalphabetical results, including duplicates within and across providers.
+    const first = t.mock.fn(async () => [result("z"), result("z", "duplicate"), result("b")]);
+    const second = t.mock.fn(async () => [result("z"), result("a")]);
+    class First { query(...args) { return first(...args); } }
+    class Second { query(...args) { return second(...args); } }
+    const {loads, search} = createSearch({
+        shorter: {label: "Shorter", implementation: "/short.js", prefixes: ["list"]},
+        first: {label: "First", implementation: "/first.js", prefixes: ["list:", ">"], mode: "explicit"},
+        second: {label: "Second", implementation: "/second.js", prefixes: ["LIST:"]}
+    }, {"esm:/first.js": First, "esm:/second.js": Second});
+    const {signal} = new AbortController();
+
+    assert.deepEqual(await search.query("list:", {providers: ["shorter"]}), {results: [], errors: []});
+    assert.deepEqual(loads, []);
+    const {results, errors} = await search.query("  LiSt:\t ", {providers: ["second", "first"], limit: 3, signal});
+    assert.deepEqual(errors, []);
+    assert.deepEqual(results.map(({providerId, label}) => [providerId, label]), [
+        ["first", "z"], ["first", "b"], ["second", "z"]
+    ]);
+    assert.deepEqual(first.mock.calls[0].arguments, ["", {signal, limit: 3}]);
+    assert.deepEqual(second.mock.calls[0].arguments, ["", {signal, limit: 3}]);
+    assert.deepEqual(loads, ["esm:/first.js", "esm:/second.js"]);
+    assert.deepEqual((await search.query(" > ")).results.map(item => item.id), ["z", "b"]);
+    assert.equal(first.mock.calls[1].arguments[0], "");
+    assert.equal(second.mock.callCount(), 1);
 });
 
 test("query selects default and explicit providers lazily and skips loading for empty text", async () => {
@@ -138,6 +166,7 @@ test("query selects default and explicit providers lazily and skips loading for 
     }, {"esm:/providers/search-default.js": DefaultProvider, "esm:/providers/search-explicit.js": ExplicitProvider});
 
     assert.deepEqual(await search.query("   "), {results: [], errors: []});
+    assert.deepEqual(await search.query("", {providers: ["explicit"]}), {results: [], errors: []});
     assert.deepEqual(loads, []);
     assert.deepEqual((await search.query("item")).results.map(item => item.id), ["default"]);
     assert.deepEqual(loads, ["esm:/providers/search-default.js"]);
@@ -207,7 +236,7 @@ test("cancellation rejects before loading and during provider execution", async 
     assert.deepEqual(loads, []);
 
     const during = new AbortController();
-    const pending = search.query("local: value", {signal: during.signal});
+    const pending = search.query("local:", {signal: during.signal});
     await new Promise(resolve => setImmediate(resolve));
     during.abort();
     await assert.rejects(() => pending, error => error.name === "AbortError");
@@ -260,13 +289,15 @@ test("provider failures and invalid results are isolated while successful result
         invalid: {label: "Invalid", implementation: "/providers/search-invalid.js", prefixes: ["shared:"]}
     }, {"esm:/providers/search-good.js": Good, "esm:/providers/search-failed.js": Failed, "esm:/providers/search-invalid.js": Invalid});
 
-    const response = await search.query("shared: anything");
-    assert.deepEqual(response.results.map(item => item.id), ["good"]);
-    assert.deepEqual(response.errors, [
-        {providerId: "failed", message: "Unable to search Failed."},
-        {providerId: "invalid", message: "Unable to search Invalid."}
-    ]);
-    assert.equal(JSON.stringify(response).includes("secret.example"), false);
+    for (const expression of ["shared: anything", "shared:"]) {
+        const response = await search.query(expression);
+        assert.deepEqual(response.results.map(item => item.id), ["good"]);
+        assert.deepEqual(response.errors, [
+            {providerId: "failed", message: "Unable to search Failed."},
+            {providerId: "invalid", message: "Unable to search Invalid."}
+        ]);
+        assert.equal(JSON.stringify(response).includes("secret.example"), false);
+    }
 });
 
 test("Search assigns provider IDs, ranks deterministically, deduplicates, and applies the aggregate limit", async () => {

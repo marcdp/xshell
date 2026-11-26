@@ -98,9 +98,9 @@
       "returns": {"ref": "searchProviderDescriptorList"}
     },
     "query": {
-      "description": "Parses an optional leading provider prefix, searches the selected providers, and ranks and deduplicates results within the aggregate limit.",
+      "description": "Searches the selected providers and deduplicates results within the aggregate limit. A recognized prefix alone requests unfiltered discovery in provider order. Blank input returns an empty response.",
       "parameters": [
-        {"name": "text", "type": "string", "required": true, "description": "Search expression with an optional provider prefix."},
+        {"name": "text", "type": "string", "required": true, "description": "Search text with an optional provider prefix, or a recognized prefix alone to list available results."},
         {"name": "options", "ref": "searchOptions", "default": {}}
       ],
       "returns": {"ref": "searchResponse"}

@@ -66,7 +66,8 @@ export default class Search {
         this.#throwIfAborted(request.signal);
         const expression = this.#parseExpression(request.text);
         request.text = expression.text;
-        if (!request.text) return {results: [], errors: []};
+        // A standalone prefix selects providers for unfiltered discovery.
+        if (!request.text && expression.providers === null) return {results: [], errors: []};
 
         // Keep configuration order for prefix matches and caller order for direct ID selection.
         const selected = expression.providers !== null
@@ -226,6 +227,7 @@ export default class Search {
     }
     #getScore(result, text) {
         // Rank common result fields consistently while preserving provider order inside each relevance tier.
+        if (!text) return 0;
         const query = text.toLowerCase();
         const id = result.id.toLowerCase();
         const label = result.label.toLowerCase();

@@ -32,8 +32,8 @@ stable aggregate identity.
 ## Search expressions
 
 Enter ordinary text such as `customers` to search the default providers. Start with a configured prefix to target its providers. The bundled
-`command: customers`, `> customers`, and `>customers` expressions all search Commands. Other bundled prefixes include `page:`, `module:`,
-and `query:`.
+`command: customers`, `commands: customers`, `> customers`, and `>customers` expressions all search Commands. Other bundled prefixes include
+`page:`, `module:`, and `query:`.
 
 Search trims the input and matches a prefix only at the start, ignoring case. If several prefixes match, the longest wins. Search strips that one
 prefix and trims the remaining text, preserving its casing and content for providers and using it for relevance ranking. Whitespace after the
@@ -44,8 +44,9 @@ A recognized prefix selects every provider that declares it, regardless of mode,
 the supplied provider ID order, or selects all `default` providers when `options.providers` is omitted. Provider IDs must be unique and known, even
 when the search text is empty or the prefix selection would exclude them.
 
-A blank expression, a recognized prefix with no remaining text, or an empty provider selection returns empty `results` and `errors` arrays
-without loading providers.
+A recognized prefix with no remaining text lists available results from the selected providers. For example, `search.query("command:")`
+and `search.query(">")` both request unfiltered Command discovery. Blank input and an empty provider selection return empty `results` and
+`errors` arrays without loading providers.
 
 ## Provider configuration
 
@@ -113,9 +114,10 @@ transient dependency rules therefore remain in force; Search does not implement 
 One provider instance is cached by provider ID. Concurrent first queries share the same load and construction operation. Failed initialization is
 removed from the cache so a later query can retry. These instances are owned by the Search singleton and are not separately registered Services.
 
-Providers return an array of result objects without `providerId`. They should use metadata and inventory APIs that do not materialize destination
-resources. A provider receives `limit` as an advisory value for relevance-aware remote or expensive retrieval and must observe `signal` itself to
-interrupt domain work cooperatively. Bundled metadata providers return every matching candidate; the Search Service's aggregate limit is authoritative.
+Providers return an array of result objects without `providerId`. An empty `text` requests unfiltered discovery within the provider's existing
+scope. Providers should use metadata and inventory APIs that do not materialize destination resources. A provider receives `limit` as an advisory
+value for relevance-aware remote or expensive retrieval and must observe `signal` itself to interrupt domain work cooperatively. Bundled metadata
+providers return every matching candidate. The Search Service's aggregate limit is authoritative.
 
 ## Aggregation, cancellation, and failures
 
@@ -134,9 +136,10 @@ Search assigns these deterministic relevance tiers:
 4. description or tag substring;
 5. other provider-specific matches.
 
-Within a tier, effective provider order and provider-defined result order are retained. Duplicate `(providerId, id)` identities keep their first
-result. Distinct providers or distinct IDs are not merged merely because they share a label or destination. The authoritative aggregate limit is
-applied only after all bundled metadata candidates are ranked and deduplicated.
+Within a tier, effective provider order and provider-defined result order are retained. In a prefix-only search, every result has equal relevance,
+so results follow provider configuration order and each provider's own order. Duplicate `(providerId, id)` identities keep their first result.
+Distinct providers or distinct IDs are not merged merely because they share a label or destination. The aggregate limit applies after ordering
+and deduplication.
 
 ## Bundled providers and UI
 
@@ -151,10 +154,11 @@ hierarchical ancestor identities, with length-prefixed components preventing amb
 The `x-filesystem` module contributes the Filesystems provider. It calls `filesystems.listDefinitions()` and builds Explorer links with
 `named:<name>` references. It does not open Filesystem instances, connect to providers, read credential storage, or unlock Secrets.
 
-The bundled Search Page requires at least three characters in the trimmed input. The Service accepts non-empty search text of any length.
-An empty field shows providers that declare prefixes. Choosing a prefix inserts it followed by a space and focuses the input. The Page waits
-for search text after a standalone prefix, then sends the complete expression to the Service. It debounces changes, aborts the prior request,
-ignores stale responses, and cancels work on unload. `x-listview-item` and `x-anchor` use each result's `href` and `open` mode for navigation.
+An empty field shows providers that declare prefixes. Choosing a prefix inserts it followed by a space and focuses the input. Press Enter after
+a standalone prefix to list available results, including for one-character prefixes such as `>`. Other expressions require at least three
+characters in the trimmed input and search after a 200 ms pause or immediately on Enter. The Service accepts text of any length.
+The Page aborts superseded requests, ignores stale responses, and cancels work on unload. The result count shows how many results Search returned.
+`x-listview-item` and `x-anchor` use each result's `href` and `open` mode for navigation.
 
 ## Lazy-loading limits
 

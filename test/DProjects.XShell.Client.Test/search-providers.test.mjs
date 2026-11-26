@@ -47,6 +47,7 @@ test("Store expressions discover collections from the configured sources without
     ]);
     assert.deepEqual(loader.load.mock.calls.map(call => call.arguments), [["esm:/providers/search-stores.js"]]);
     assert.deepEqual(stores.open.mock.calls.map(call => call.arguments), [["mem:"]]);
+    assert.deepEqual((await search.query("store:")).results.map(item => item.label), ["Customers", "Products"]);
     assert.equal(list.mock.callCount(), 0);
 });
 
@@ -72,17 +73,20 @@ test("bundled prefixes select their configured providers and discover Commands a
     const manifestPath = new URL("../../src/DProjects.XShell/Resources/DProjects.XShell/x/manifest.jsonc", import.meta.url);
     const manifest = JSON.parse(readFileSync(manifestPath, "utf8").replace(/^\s*\/\/.*$/gm, ""));
     const {providers} = manifest.xshell.services.search.options;
-    const commands = {list: t.mock.fn(() => [{id: "customers"}]), run: t.mock.fn()};
-    const queries = {list: t.mock.fn(() => [{id: "customers"}]), run: t.mock.fn()};
+    const list = ({query}) => query ? [{id: "customers"}] : [{id: "products"}, {id: "customers"}];
+    const commands = {list: t.mock.fn(list), run: t.mock.fn()};
+    const queries = {list: t.mock.fn(list), run: t.mock.fn()};
     const dependencies = {
         commands, queries,
         areas: {
             getCurrentArea: () => null,
             getAreas: () => [{id: "shop"}],
-            getMenu: () => ({scope: "area", items: [{label: "Customers", href: "/customers", module: "shop"}]})
+            getMenu: () => ({scope: "area", items: [
+                {label: "Products", href: "/products", module: "shop"}, {label: "Customers", href: "/customers", module: "shop"}
+            ]})
         },
         config: {modules: {}},
-        modules: {registry: [{id: "customers"}]}
+        modules: {registry: [{id: "products"}, {id: "customers"}]}
     };
     const implementations = {
         "esm:/providers/search-areas.js": AreasSearchProvider,
@@ -90,8 +94,9 @@ test("bundled prefixes select their configured providers and discover Commands a
         "esm:/providers/search-modules.js": ModulesSearchProvider,
         "esm:/providers/search-queries.js": QueriesSearchProvider
     };
+    const load = t.mock.fn(async key => implementations[key]);
     const search = new Search({
-        loader: {async load(key) { return implementations[key]; }},
+        loader: {load},
         services: {resolve(name) { return dependencies[name]; }}
     }, {providers});
 
@@ -106,8 +111,17 @@ test("bundled prefixes select their configured providers and discover Commands a
         assert.deepEqual(errors, []);
         assert.deepEqual(results.map(item => [item.providerId, item.href]), [[providerId, href]]);
     }
-    assert.deepEqual(commands.list.mock.calls.map(call => call.arguments), [[{query: "customers"}], [{query: "customers"}]]);
-    assert.deepEqual(queries.list.mock.calls.map(call => call.arguments), [[{query: "customers"}]]);
+    assert.deepEqual(providers.commands.prefixes, ["command:", "commands:", ">"]);
+    for (const expression of ["command:", "commands:", ">", "query:", "module:", "page:"]) {
+        const {results, errors} = await search.query(expression);
+        assert.deepEqual(errors, []);
+        assert.deepEqual(results.map(item => item.label.toLowerCase()), ["products", "customers"]);
+    }
+    assert.deepEqual(commands.list.mock.calls.map(call => call.arguments[0].query), ["customers", "customers", "", "", ""]);
+    assert.deepEqual(queries.list.mock.calls.map(call => call.arguments[0].query), ["customers", ""]);
+    assert.deepEqual(load.mock.calls.map(call => call.arguments[0]), [
+        "esm:/providers/search-commands.js", "esm:/providers/search-queries.js", "esm:/providers/search-areas.js", "esm:/providers/search-modules.js"
+    ]);
     assert.equal(commands.run.mock.callCount(), 0);
     assert.equal(queries.run.mock.callCount(), 0);
 });
@@ -295,6 +309,7 @@ test("Filesystems provider preserves named registration identity without opening
     };
     const provider = new FilesystemsSearchProvider({filesystems});
     const results = await provider.query("documents", {limit: 1});
+    assert.deepEqual(await provider.query("", {}), results);
     assert.equal(opened, false);
     assert.equal(results[0].href, "page:x-filesystem:/pages/explorer.js?src=named%3Apersonal%20documents&path=%2F");
     assert.equal(results.length, 2);

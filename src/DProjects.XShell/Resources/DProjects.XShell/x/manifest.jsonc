@@ -152,7 +152,7 @@
                             "icon": "x-command",
                             "implementation": "/providers/search-commands.js",
                             "mode": "default",
-                            "prefixes": ["command:", ">"]
+                            "prefixes": ["command:", "commands:", ">"]
                         },
                         "queries": {
                             "label": "Queries",

@@ -10,6 +10,13 @@ function createController(search, page) {
     return {state, subscriptions, controller: SearchPage.controller({page, state, events, search})};
 }
 
+function searchEnter(overrides = {}) {
+    // Model a composed keyboard event retargeted to the datafield host.
+    const target = {localName: "x-datafield"};
+    const input = {matches: selector => selector === "input[type='search']"};
+    return {key: "Enter", target, composedPath: () => [input, target], preventDefault() { this.defaultPrevented = true; }, ...overrides};
+}
+
 test("Search Page shows configured provider metadata in order and omits providers without prefixes", () => {
     const catalog = {id: "catalog", label: "Catalog", description: "Find entries", icon: "x-folder", prefixes: ["catalog:", ">"]};
     const archive = {id: "archive", label: "Archive", prefixes: ["archive:", ">"]};
@@ -38,8 +45,12 @@ test("Search Page keeps empty guidance out of applications without any configure
     assert.equal(state.noResults, false);
 });
 
-test("Search Page inserts literal prefixes and focuses the input through its public focus method", () => {
-    const search = {listProviders: () => [{id: "catalog", label: "Catalog", prefixes: ["catalog:", ">"]}]};
+test("Search Page inserts literal prefixes and focuses the input without automatically searching", t => {
+    t.mock.timers.enable({apis: ["setTimeout"]});
+    const search = {
+        listProviders: () => [{id: "catalog", label: "Catalog", prefixes: ["catalog:", ">"]}],
+        query: t.mock.fn()
+    };
     let focused = 0;
     const page = {host: null, get refs() {
         assert.ok(this.host);
@@ -54,12 +65,101 @@ test("Search Page inserts literal prefixes and focuses the input through its pub
     assert.equal(state.keyword, "> ");
     assert.equal(focused, 1);
     controller.selectPrefix({event: {currentTarget: {dataset: {prefix: "catalog:"}}}});
+    controller.queueSearch();
+    t.mock.timers.tick(200);
     assert.equal(state.keyword, "catalog: ");
+    assert.equal(search.query.mock.callCount(), 0);
     assert.equal(focused, 2);
     controller.focus();
     assert.equal(focused, 3);
     assert.match(SearchPage.template, /<x-datafield ref="search"/);
     assert.match(SearchPage.template, /<button type="button" x-for="prefix in provider.prefixes" x-on:click="selectPrefix"/);
+});
+
+test("Search Page submits named and symbolic standalone prefixes only on Enter", async t => {
+    t.mock.timers.enable({apis: ["setTimeout"]});
+    const search = {
+        listProviders: () => [{id: "catalog", label: "Catalog", prefixes: ["catalog:", ">"]}],
+        query: t.mock.fn(async () => ({results: [], errors: []}))
+    };
+    const {state, controller} = createController(search);
+    controller.load();
+    assert.match(SearchPage.template, /<x-datafield\b[^>]*x-on:keydown.enter="submitSearch"/);
+
+    state.results = [{id: "old"}];
+    state.errors = [{message: "Earlier failure"}];
+    state.errorMessage = "Earlier failure";
+    for (const keyword of ["CaTaLoG: ", "> "]) {
+        state.keyword = keyword;
+        controller.queueSearch();
+        assert.deepEqual(state.results, []);
+        assert.deepEqual(state.errors, []);
+        assert.equal(state.errorMessage, "");
+        assert.equal(state.noResults, false);
+        const priorCalls = search.query.mock.callCount();
+        t.mock.timers.tick(200);
+        assert.equal(search.query.mock.callCount(), priorCalls);
+        const event = searchEnter();
+        await controller.submitSearch({event});
+        assert.equal(event.defaultPrevented, true);
+        assert.equal(state.noResults, true);
+        assert.equal(state.searched, keyword.trim());
+    }
+    for (const keyword of ["", "  ", "ab"]) {
+        state.keyword = keyword;
+        controller.queueSearch();
+        const event = searchEnter();
+        await controller.submitSearch({event});
+        assert.equal(event.defaultPrevented, undefined);
+        assert.equal(state.noResults, false);
+    }
+    assert.deepEqual(search.query.mock.calls.map(call => call.arguments[0]), ["CaTaLoG: ", "> "]);
+});
+
+test("Search Page submits eligible text immediately and avoids duplicate requests", async t => {
+    t.mock.timers.enable({apis: ["setTimeout"]});
+    const response = Promise.withResolvers();
+    const search = {query: t.mock.fn(() => response.promise)};
+    const {state, controller} = createController(search);
+    state.keyword = "customers";
+    controller.queueSearch();
+    t.mock.timers.tick(199);
+    assert.equal(search.query.mock.callCount(), 0);
+
+    const submitted = controller.submitSearch({event: searchEnter()});
+    assert.equal(state.loading, true);
+    assert.equal(search.query.mock.callCount(), 1);
+    t.mock.timers.tick(200);
+    await controller.submitSearch({event: searchEnter()});
+    assert.equal(search.query.mock.callCount(), 1);
+    response.resolve({results: [], errors: []});
+    await submitted;
+    await controller.submitSearch({event: searchEnter({repeat: true})});
+    assert.equal(search.query.mock.callCount(), 1);
+});
+
+test("Search Page ignores Enter from other controls and suspends searches during IME composition", async t => {
+    t.mock.timers.enable({apis: ["setTimeout"]});
+    const search = {query: t.mock.fn(async () => ({results: [], errors: []}))};
+    const {state, controller} = createController(search);
+    state.keyword = "initial";
+    controller.queueSearch();
+    controller.startComposition();
+    state.keyword = "顧客名";
+    controller.queueSearch();
+    await controller.submitSearch({event: searchEnter()});
+    t.mock.timers.tick(200);
+    assert.equal(search.query.mock.callCount(), 0);
+
+    controller.endComposition();
+    for (const event of [searchEnter({isComposing: true}), searchEnter({keyCode: 229}),
+        searchEnter({composedPath: () => [{matches: () => false}]})]) {
+        await controller.submitSearch({event});
+        assert.equal(event.defaultPrevented, undefined);
+    }
+    assert.equal(search.query.mock.callCount(), 0);
+    t.mock.timers.tick(200);
+    assert.deepEqual(search.query.mock.calls.map(call => call.arguments[0]), ["顧客名"]);
 });
 
 test("Search Page delegates to the Search Service and preserves result presentation modes", async () => {
@@ -141,7 +241,8 @@ test("Search Page aborts superseded requests and ignores stale asynchronous resp
     const {state, controller} = createController(search);
     const first = controller.search("first");
     await new Promise(resolve => setImmediate(resolve));
-    const second = controller.search("second");
+    state.keyword = "second";
+    const second = controller.submitSearch({event: searchEnter()});
     await new Promise(resolve => setImmediate(resolve));
     assert.equal(signals.get("first").aborted, true);
 
@@ -153,7 +254,16 @@ test("Search Page aborts superseded requests and ignores stale asynchronous resp
     assert.equal(state.searched, "second");
 });
 
-test("Search Page cancels outstanding requests on unload and does not publish their response", async () => {
+test("Search Page cancels pending timers and outstanding requests on unload", async t => {
+    t.mock.timers.enable({apis: ["setTimeout"]});
+    const queuedSearch = {query: t.mock.fn()};
+    const queued = createController(queuedSearch);
+    queued.state.keyword = "documents";
+    queued.controller.queueSearch();
+    queued.controller.unload();
+    t.mock.timers.tick(200);
+    assert.equal(queuedSearch.query.mock.callCount(), 0);
+
     let resolveQuery;
     let signal;
     const search = {query(text, options) {
