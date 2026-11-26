@@ -68,16 +68,29 @@ function clickEvent(path, options = {}) {
     };
 }
 
-test("x-page-menu reads the effective navigation items and handles a missing menu", () => {
+test("x-page-menu selects its owning Page's Area and skips menu lookup for global Pages", () => {
     const state = {};
-    const items = [{ label: "Home", href: "/pages/index.js" }];
+    const items = [{ label: "Home", href: "/docs/pages/index.js" }];
+    const page = { src: items[0].href + "?filter=all#intro" };
+    const lookups = [];
     let menu = { name: "navigation", label: "Navigation", description: "", icon: null, items };
-    const controller = pageMenuDefinition.controller({ state, areas: { getMenu: () => menu } });
+    const controller = pageMenuDefinition.controller({
+        state, getPage: () => page,
+        areas: {
+            resolveAreaId: src => src.startsWith("/docs/") ? "docs" : null,
+            getMenu: (...args) => { lookups.push(args); return menu; }
+        }
+    });
     controller.refresh();
     assert.equal(state.menu, items);
+    assert.equal(state.selected, items[0].href);
     menu = null;
     controller.refresh();
     assert.deepEqual(state.menu, []);
+    page.src = "/global/pages/index.js";
+    controller.refresh();
+    assert.deepEqual(state.menu, []);
+    assert.deepEqual(lookups, [["navigation", "docs"], ["navigation", "docs"]]);
 });
 
 test("x-page-menu uses descriptions as tooltip fallbacks without overriding explicit tooltips", () => {
@@ -109,6 +122,8 @@ test("x-menuitem exposes tooltip, open, and outlet as public attributes", () => 
         description: "Determines how the target Page is presented."
     });
     assert.equal(menuItemContract.properties.outlet.default, "");
+    assert.deepEqual(menuItemContract.properties.scope.enum, ["area", "global"]);
+    assert.match(menuItemDefinition.template, /<x-anchor[^>]*x-attr:scope="state\.scope"/);
     assert.equal(Object.hasOwn(menuItemContract.properties, "embedded"), false);
     assert.equal(Object.keys(menuItemContract.properties).filter(name => name === "open").length, 1);
 });

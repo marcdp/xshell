@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
+import Navigation from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/navigation.js";
+import JsonValidator from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/json-validator.js";
 
 import ConfigSchema from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/schemas/config.schema.json" with { type: "json" };
 
@@ -9,7 +11,7 @@ const frameworkUrl = new URL("../../src/DProjects.XShell/Resources/DProjects.XSh
 test("framework manifest registers Navigation declaratively with service options", async () => {
     const source = await readFile(new URL("manifest.jsonc", frameworkUrl), "utf8");
 
-    assert.match(source, /"navigation"\s*:\s*\{\s*"contract"\s*:\s*"navigation",\s*"implementation"\s*:\s*"\/services\/navigation\.js",\s*"lifetime"\s*:\s*"singleton",\s*"options"\s*:\s*\{\s*"mode"\s*:\s*"path"\s*\}/s);
+    assert.match(source, /"navigation"\s*:\s*\{\s*"contract"\s*:\s*"navigation",\s*"implementation"\s*:\s*"\/services\/navigation\.js",\s*"lifetime"\s*:\s*"singleton",\s*"options"\s*:\s*\{\s*"mode"\s*:\s*"path",\s*"globalPrefix"\s*:\s*"\/global"\s*\}/s);
     assert.equal((source.match(/"navigation"\s*:/g) ?? []).length, 1);
 });
 
@@ -17,6 +19,14 @@ test("global configuration delegates Navigation option validation to the service
     assert.equal(ConfigSchema.$defs.xshell.required.includes("navigation"), false);
     assert.equal(Object.hasOwn(ConfigSchema.$defs.xshell.properties, "navigation"), false);
     assert.equal(Object.hasOwn(ConfigSchema.$defs, "xshellNavigation"), false);
+});
+
+test("Navigation options accept an optional reserved prefix as a string", () => {
+    const validator = new JsonValidator();
+    for (const options of [{ mode: "path" }, { mode: "hash", globalPrefix: "/shared/tools" }]) {
+        assert.equal(validator.validate(options, Navigation.optionsSchema).valid, true);
+    }
+    assert.equal(validator.validate({ mode: "path", globalPrefix: 123 }, Navigation.optionsSchema).valid, false);
 });
 
 test("XShell resolves the configured Navigation singleton after Areas composition", async () => {

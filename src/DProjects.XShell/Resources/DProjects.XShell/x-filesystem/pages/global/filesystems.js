@@ -21,6 +21,7 @@ export default {
             x-attr:description="item.description || item.provider"
             x-attr:href="item.href"
             icon="x-filesystem"
+            scope="global"
             open="top"
         ></x-menuitem>
 

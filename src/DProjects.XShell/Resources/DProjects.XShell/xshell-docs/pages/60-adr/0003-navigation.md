@@ -14,6 +14,9 @@ Hash mode uses XShell's fixed #! fragment prefix, and needs no server path fallb
 requires server fallback for direct deep links. `Extensions.UseXShell()` supplies that fallback within the application base path. The checked-in
 framework configuration currently selects path mode. Both modes decode the same Page stack representation.
 
+Application-wide navigation reserves a configurable application-relative URL prefix (`/global` by default). The logical Page URL carries that prefix
+through both browser modes and the existing stack. Areas preserves its current selection when the main Page uses the reserved prefix.
+
 Public navigation intents should let modules request capabilities such as `customer.detail` without depending on another module's page URL or menu
 configuration. Intent registration and dispatch are not implemented yet.
 

@@ -1,4 +1,7 @@
+import { matchesPathPrefix, normalizeUrlPrefix } from "../utils/urls.js";
+
 const previousMenuitemIndex = Symbol("previousMenuitemIndex");
+const defaultGlobalPrefix = "/global";
 
 // class
 export default class Areas {
@@ -38,6 +41,7 @@ export default class Areas {
     #bus = null;
     #areas = [];
     #assetsBasePath = null;
+    #globalPrefix = null;
     #currentAreaId = null;
     #sources = Object.create(null);
     #sourceTargets = new Map();
@@ -50,6 +54,20 @@ export default class Areas {
         this.#config = config;
         this.#bus = bus;
         this.#assetsBasePath = config.xshell.assets.basePath;
+
+        // Navigation and Page loading share the prefix validated against the effective Areas.
+        const configuredPrefix = config.xshell.services?.navigation?.options?.globalPrefix;
+        const globalPrefix = configuredPrefix === undefined ? defaultGlobalPrefix : configuredPrefix;
+        if (typeof globalPrefix !== "string" || !globalPrefix.startsWith("/") || globalPrefix === "/" ||
+            globalPrefix.includes("//") || globalPrefix.includes("\\") || /%(?![0-9a-f]{2})/i.test(globalPrefix) ||
+            normalizeUrlPrefix(globalPrefix) !== globalPrefix.replace(/\/?$/, "/")) {
+            throw new Error("Navigation globalPrefix must be a non-empty rooted application-relative path.");
+        }
+        this.#globalPrefix = globalPrefix.replace(/\/$/, "");
+        const conflictsWithGlobal = prefix => matchesPathPrefix(prefix, this.#globalPrefix) || matchesPathPrefix(this.#globalPrefix, prefix);
+        if (conflictsWithGlobal(this.#assetsBasePath)) {
+            throw new Error(`Navigation globalPrefix '${this.#globalPrefix}' conflicts with the asset namespace '${this.#assetsBasePath}'.`);
+        }
         const definitions = options.definitions || {};
         const defaultAreaId = options.default;
 
@@ -58,6 +76,9 @@ export default class Areas {
         const prefixes = new Map();
         for (const [areaId, area] of Object.entries(definitions)) {
             const prefix = this.#normalizeAreaPrefix(area.prefix);
+            if (prefix && conflictsWithGlobal(prefix)) {
+                throw new Error(`Navigation globalPrefix '${this.#globalPrefix}' conflicts with Area '${areaId}' prefix '${prefix}'.`);
+            }
             if (prefixes.has(prefix)) throw new Error(`Areas '${prefixes.get(prefix)}' and '${areaId}' have duplicate normalized prefix '${prefix}'.`);
             prefixes.set(prefix, areaId);
             for (const moduleId of area.modules || []) {
@@ -130,6 +151,10 @@ export default class Areas {
         });
     }
 
+    get globalPrefix() {
+        return this.#globalPrefix;
+    }
+
     // methods
     init({ modules }) {
         // compose effective menus after canonical modules exist
@@ -199,10 +224,14 @@ export default class Areas {
     }
     resolveAreaId(href) {
         if (!href) return null;
+
+        // Reserve the global namespace before considering any Area, including the root Area.
+        const path = this.#getHrefIdentity(href);
+        if (matchesPathPrefix(path, this.#globalPrefix)) return null;
         // longest matching navigation prefix wins
         const areas = [...this.#areas].sort((a, b) => b.prefix.length - a.prefix.length);
         for (const area of areas) {
-            if (this.#matchesPrefix(href, area.prefix)) return area.id;
+            if (matchesPathPrefix(path, area.prefix) || (!area.prefix && path.startsWith("/"))) return area.id;
         }
         return null;
     }
@@ -497,10 +526,6 @@ export default class Areas {
         if (!area) throw new Error(`Unknown area '${areaId}'`);
         this.#currentAreaId = areaId;
         this.#bus.emit("xshell:area:change", { areaId });
-    }
-    #matchesPrefix(href, prefix) {
-        if (prefix === "") return href.startsWith("/");
-        return href === prefix || href.startsWith(prefix + "/") || href.startsWith(prefix + "?");
     }
     #findMenuitemPath(items, predicate, parents = []) {
         for (const item of items || []) {

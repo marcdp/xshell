@@ -324,7 +324,10 @@ async function main() {
                     // Search prefixes are literal text even when an alias looks like a URL.
                     const searchPrefixes = key === "prefixes" && manifestPath.length === 6 && manifestPath[0] === "xshell" &&
                         manifestPath[1] === "services" && manifestPath[2] === "search" && manifestPath[3] === "options" && manifestPath[4] === "providers";
-                    return [key, inventoryResource || searchPrefixes ? item : normalizeManifest(item, module, declaringPath, [...manifestPath, key])];
+                    // The global navigation prefix belongs to the application URL, independent of the declaring module.
+                    const globalPrefix = key === "globalPrefix" && manifestPath.length === 4 && manifestPath[0] === "xshell" &&
+                        manifestPath[1] === "services" && manifestPath[2] === "navigation" && manifestPath[3] === "options";
+                    return [key, inventoryResource || searchPrefixes || globalPrefix ? item : normalizeManifest(item, module, declaringPath, [...manifestPath, key])];
                 }));
             }
             return normalizeUrl(value, module, declaringPath);

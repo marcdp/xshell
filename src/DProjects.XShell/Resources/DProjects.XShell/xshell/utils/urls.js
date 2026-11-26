@@ -24,6 +24,10 @@ export function normalizeUrlPrefix(value) {
     const innerPath = pathname.replace(/^\/+|\/+$/g, "");
     return innerPath ? `/${innerPath}/` : "/";
 }
+export function matchesPathPrefix(path, prefix) {
+    // Match a complete path segment, or the prefix itself.
+    return Boolean(prefix) && (path === prefix || path.startsWith(prefix + "/"));
+}
 export function indexedDBName(service, prefix) {
     // Encode path segments before the service name without leading or repeated database-name separators.
     const path = normalizeUrlPrefix(prefix).slice(1, -1);

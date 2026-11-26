@@ -96,7 +96,8 @@
                 "implementation": "/services/navigation.js",
                 "lifetime": "singleton",
                 "options": {
-                    "mode": "path"
+                    "mode": "path",
+                    "globalPrefix": "/global"
                 }
             },
             "preferences": {

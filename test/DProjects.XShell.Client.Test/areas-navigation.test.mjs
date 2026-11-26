@@ -15,6 +15,26 @@ test("Areas construction rejects an unknown configured module", () => {
     assert.throws(() => new Areas({ config, bus: { addEventListener() {} } }, options), /Area 'admin' references unknown module 'missing'/);
 });
 
+test("Areas rejects malformed global prefixes and segment collisions with Areas or assets", () => {
+    // Validate against the effective asset namespace and normalized Area paths.
+    const construct = (globalPrefix, areaPrefix = "/area") => new Areas({
+        config: { modules: {}, xshell: { assets: { basePath: "/resources/assets" }, services: { navigation: { options: { globalPrefix } } } } },
+        bus: { addEventListener() {} }
+    }, { default: "main", definitions: { main: { prefix: areaPrefix } } });
+    for (const prefix of [null, "", "/", "global", "//elsewhere", "/path//tools", "/space in path", "/global?x", "/global#x",
+        "/global/%", "/global/../tools", "/global/%2e", "/global\\tools"]) {
+        assert.throws(() => construct(prefix), /globalPrefix must be a non-empty rooted/);
+    }
+    for (const prefix of ["/area", "/area/tools", "/area/tools/other"]) {
+        assert.throws(() => construct("/area/tools/", prefix), /conflicts with Area 'main'/);
+    }
+    for (const prefix of ["/resources", "/resources/assets", "/resources/assets/global"]) {
+        assert.throws(() => construct(prefix), /conflicts with the asset namespace/);
+    }
+    assert.equal(construct("/area-tools/").globalPrefix, "/area-tools");
+    assert.equal(construct(undefined).globalPrefix, "/global");
+});
+
 test("documentation inventory menus keep Markdown page and index destinations", () => {
     const root = "/_assets/xshell-docs/pages";
     const files = ["index.md", "10-architecture/index.md", "10-architecture/100-services.md"].map(path => ({ path: `${root}/${path}` }));
@@ -477,19 +497,22 @@ test("menu schema permits identified partial contributions and composition requi
     assert.throws(() => createMenuContext({ invalid }), /Global menu item 'settings'.*requires a string label/);
 });
 
-function createAreas() {
-    const bus = {
+function createAreas({ globalPrefix, root = false, bus = {
         addEventListener() {},
         emit() {}
+    } } = {}) {
+    const config = {
+        modules: { customer: {}, shell: {}, "x-demo": {} },
+        xshell: { assets: { basePath: "/_assets" }, services: { navigation: { options: { globalPrefix } } } }
     };
-    const config = { modules: { customer: {}, shell: {}, "x-demo": {} }, xshell: { assets: { basePath: "/_assets" } } };
     const options = {
         default: "sales",
         definitions: {
             sales: { prefix: "/sales", modules: ["customer"] },
             admin: { prefix: "/admin", modules: ["customer"] },
             main: { prefix: "/main", modules: ["shell"] },
-            demo: { prefix: "/demo", modules: ["x-demo"] }
+            demo: { prefix: "/demo", modules: ["x-demo"] },
+            ...(root ? { root: { prefix: "", modules: ["customer"] } } : {})
         }
     };
     const module = {
@@ -604,6 +627,55 @@ test("Navigation rejects unresolved Page references before generating a browser 
     const navigation = createNavigation({ resolver: createPageResolver() });
     assert.throws(() => navigation.buildUrlAbsolute({ href: "page:missing:/pages/index.js" }), /unable to resolve Page reference/);
     assert.throws(() => navigation.buildUrlAbsolute({ href: "page:x-demo:/../index.js" }), /unable to resolve Page reference/);
+});
+
+test("Global Page URLs bypass aliases and routes in both modes, even with a root Area", async () => {
+    const bus = new EventTarget();
+    bus.emit = (type, detail) => bus.dispatchEvent(new CustomEvent(type, { detail }));
+    const areas = createAreas({ globalPrefix: "/shared/tools/", root: true, bus });
+    const prefix = areas.globalPrefix;
+    const asset = "/_assets/customer/pages/detail.js";
+    const page = { src: "/admin" + asset };
+    const changes = [];
+    bus.addEventListener("xshell:area:change", event => changes.push(event.detail.areaId));
+    bus.emit("xshell:navigation:end", { src: page.src });
+    bus.emit("xshell:navigation:end", { src: prefix + asset });
+    assert.equal(areas.getCurrentArea().id, "admin");
+    assert.deepEqual(changes, ["admin"]);
+    assert.deepEqual(areas.getAreas().map(area => area.id).sort(), ["admin", "demo", "main", "root", "sales"]);
+    assert.equal(areas.resolveAreaId(prefix + asset), null);
+    assert.equal(areas.resolveAreaId(prefix + "?tab=one#test"), null);
+    assert.equal(areas.resolveAreaId(prefix + "#test"), null);
+    assert.equal(areas.resolveAreaId(prefix + "-extra" + asset), "root");
+    assert.equal(areas.resolveAreaId(page.src), "admin");
+
+    for (const [mode, base] of [["path", "/app"], ["hash", "/app/#!"]]) {
+        const resolver = { resolve: reference => reference === "page:customer:/pages/detail.js" ? { path: asset } : null };
+        const navigation = createNavigation({ areas, mode, basePath: "/app", resolver });
+        const globalSource = prefix + asset + "?tab=one&count=2#summary";
+        const globalPage = { src: globalSource };
+        assert.equal(navigation.buildUrlAbsolute({
+            href: "page:customer:/pages/detail.js?tab=one#summary", page, scope: "global", params: { count: 2 }
+        }), base + globalSource);
+        for (const href of [globalSource, base + globalSource]) {
+            assert.equal(navigation.buildUrlAbsolute({ href, page }), base + globalSource);
+        }
+        assert.equal(navigation.buildUrlAbsolute({ href: asset, page: globalPage }), base + prefix + asset);
+        assert.equal(navigation.buildUrlAbsolute({ href: "./detail.js?tab=other#details", page: globalPage }),
+            base + prefix + asset + "?tab=other#details");
+        assert.equal(navigation.buildUrlAbsolute({ href: asset, page: globalPage, scope: "area" }), base + "/admin/detail");
+        assert.equal(navigation.buildUrlAbsolute({ href: "/sales/detail", page: globalPage }), base + "/sales/detail");
+        assert.equal(navigation.buildUrlAbsolute({ href: "/detail", page: globalPage }), base + "/detail");
+        assert.equal(navigation.buildUrlAbsolute({ href: "/detail", page: globalPage, scope: "area" }), base + "/detail");
+        assert.equal(navigation.buildUrlAbsolute({ href: asset, page }), base + "/admin/detail");
+        assert.equal(navigation.resolveRoute(prefix + "/customer/42"), null);
+        assert.equal(resolveNavigationTarget(navigation, prefix + "/detail", page), prefix + "/detail");
+
+        // A named embed retains the same resolved global URL.
+        const embedded = createEmbedPage(page.src);
+        await navigation.navigate({ href: asset, page: embedded.page, scope: "global", open: "embed", outlet: "content" });
+        assert.equal(embedded.outlet.src, prefix + asset);
+    }
 });
 
 test("Navigation opens resolved Page resources through public auto and embed behavior", async () => {
@@ -817,7 +889,7 @@ test("x-page resolves embed resources and supplies stack classes before connecti
     const modules = { resolveModuleId: href => areas.getModuleId(href) };
     const XPage = createXPageClass({ config, loader: resourceLoader, bus, navigation, areas, modules });
 
-    for (const [prefix, breadcrumbPath] of [["", null], ["/sales", "/sales/detail"]]) {
+    for (const [prefix, breadcrumbPath] of [["", null], ["/sales", "/sales/detail"], ["/global", null]]) {
         const outlet = new XPage();
         const page = { src: "/sales/_assets/customer/pages/origin.js", host: { querySelector() { return outlet; } } };
         const href = `${prefix}${asset}?view=all#summary`;
@@ -833,6 +905,13 @@ test("x-page resolves embed resources and supplies stack classes before connecti
             resource: `page:${asset}?view=all#summary`, path: asset, url: `https://example.test/app${asset}`, status: "loaded"
         });
     }
+
+    // An explicit title and breadcrumb still accompany a global Page invocation.
+    const globalPage = new XPage();
+    globalPage.src = navigation.buildUrl({ href: "/global" + asset, nav: { title: "Tool", breadcrumb: [{ label: "Tools", href: "/global" }] } });
+    await globalPage.load();
+    assert.equal(globalPage.label, "Tool");
+    assert.deepEqual(globalPage.breadcrumb.map(item => item.label), ["Tools", "Tool"]);
 
     const stacked = new XPage();
     stacked.layout = "stack";

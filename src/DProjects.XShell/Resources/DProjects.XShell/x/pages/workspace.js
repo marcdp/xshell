@@ -4,6 +4,7 @@ export default {
         description: "Workspace menu and pages.",
         properties: {
             menuName: {type:"string", default:"", state:true, query:true},
+            areaName: {type:"string", default:"", state:true, query:true},
             item: {type:"string", default:null, state:true, query:true, reflect:true},
             showTitle: {type:"boolean", default:true, state:true, query:true}
         },
@@ -90,11 +91,13 @@ export default {
 
         return {
             load() {
-                // Use the named menu for the outer Page metadata and sidebar items.
-                const menu = areas.getMenu(state.menuName);
+                // Resolve the menu from the requested Area or current Area.
+                const menu = areas.getMenu(state.menuName, state.areaName || null);
                 state.menu = menu?.items || [];
+
                 this.collectItems(state.menu);
                 if (!menu) return;
+
                 page.label = menu.label;
                 page.description = menu.description;
                 page.icon = menu.icon;

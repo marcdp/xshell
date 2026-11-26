@@ -19,6 +19,43 @@ Navigation
   └─ reverse: canonical Page href → public route → x-anchor
 ```
 
+## Global navigation
+
+The reserved `xshell.services.navigation.options.globalPrefix` defaults to `/global`. The prefix identifies application-wide Pages directly in the URL.
+Global URLs use canonical Page resource paths and bypass Area menu aliases and routes. `x-page` retains the prefix in the Page source and removes it
+for loading. The Main layout keeps the application menu visible and hides the Area sidebar and its toggle. The active Area and saved sidebar preference
+remain available when the user returns to Area navigation.
+
+`navigation.navigate(options)` and `navigation.buildUrlAbsolute(options)` accept an optional `scope: "global"` or `scope: "area"`. Scope selects the
+destination URL during resolution. The resolved URL alone records the context for history, bookmarks, and stack entries.
+Internal navigation from a global Page inherits that context unless the destination names an Area or the caller requests `scope: "area"`.
+When an explicit Area scope has no other Area to use, Navigation can use the retained active Area.
+
+```js
+await navigation.navigate({
+    href: "page:x-filesystem:/pages/explorer.js",
+    params: { src: "named:opfs", path: "/" },
+    scope: "global",
+    open: "top",
+    page
+});
+```
+
+`x-anchor` and `x-menuitem` both accept the `scope` attribute. Native link actions such as copying the URL or opening a new tab use the same prefix
+as an intercepted click.
+
+```html
+<x-menuitem label="Filesystem Explorer" href="page:x-filesystem:/pages/explorer.js?src=named:opfs" scope="global" open="top"></x-menuitem>
+```
+
+With `App.BasePath` set to `/prefix`, the Explorer's path-mode URL starts with `/prefix/global/_assets/`. In hash mode it starts with
+`/prefix/#!/global/_assets/`. Both modes preserve query parameters and fragments.
+
+Choose a rooted application-relative prefix with at least one path segment. A trailing slash is normalized away. Prefixes match on segment boundaries,
+so `/global-tools` remains eligible for an Area. Global prefixes may not equal, contain, or sit below a non-empty Area prefix or the effective asset
+namespace. In path mode, a custom prefix must also reach the host's SPA fallback. Check reserved endpoints and bypass prefixes such as `/_` and `/api`
+in the default ASP.NET configuration.
+
 ## Menus, routes, and canonical targets
 
 Areas also expose an ordered `area.routes` collection composed from their participating modules. These route declarations remain separate from menus:
@@ -124,7 +161,7 @@ matching item, including items materialized from dynamic menu sources. The origi
 target module's participating Areas determine the public path. Query parameters and fragments remain attached to the public path. When no matching
 item or friendly `path` exists, the Area-aware canonical href remains the browser-facing fallback.
 
-`x-page` receives that canonical Area-aware href, identifies its Area, and removes only the Area prefix before asking the loader/resolver for the
+`x-page` receives that canonical Area-aware href, identifies its Area, and removes the Area prefix before asking the loader/resolver for the
 module resource. The loader/resolver therefore sees `/_assets/x-demo/<generation>/pages/01-components/index.js`; it does not know about menu `path` values or
 perform path-to-href translation.
 
@@ -199,7 +236,7 @@ After reverse route generation, path mode prepends `App.BasePath` directly. With
                 "contract": "navigation",
                 "implementation": "/services/navigation.js",
                 "lifetime": "singleton",
-                "options": { "mode": "path" }
+                "options": { "mode": "path", "globalPrefix": "/global" }
             }
         }
     }
@@ -207,8 +244,8 @@ After reverse route generation, path mode prepends `App.BasePath` directly. With
 ```
 
 The nested names match `manifest.jsonc`; its checked-in default is currently `path`. Navigation is a declaratively configured service, and its
-implementation-owned static `optionsSchema` validates `xshell.services.navigation.options.mode` as either `hash` or `path` immediately before lazy
-construction through `Services.initialize("navigation")`.
+implementation-owned static `optionsSchema` validates `mode` and the type of `globalPrefix` before lazy construction through
+`Services.initialize("navigation")`. Areas validates the reserved prefix against the effective Area definitions and asset namespace during startup.
 
 XShell still coordinates Navigation's asynchronous `init()` explicitly through the once-only service initialization API. Startup loads configured
 service classes, initializes Modules, composes Areas, and only then initializes Navigation. The `xshell.navigation` compatibility accessor
@@ -217,8 +254,8 @@ delegates to the service registry and returns that configured singleton; it does
 On a fresh load at the mode's empty/root URL, Navigation uses the default Area's `home`, derived from the first depth-first navigation item marked
 `default: true`, with a fallback to the first depth-first item having `path || href`. No visibility flag is tested.
 Startup fails clearly if that home is absent. With an existing URL, Navigation restores the encoded page stack. When the root page
-finishes loading, it emits `xshell:navigation:end`; Areas resolves the current Area from the longest matching prefix. `x-page` selects its
-breadcrumb Area from the URL itself so lookup does not depend on the later navigation-end event.
+finishes loading, it emits `xshell:navigation:end` and Areas updates the current Area if the URL belongs to an Area. `x-page` selects its breadcrumb
+Area from the URL itself, independently of the later navigation-end event.
 
 A non-empty Area prefix wraps both friendly paths and canonical hrefs. For example, the browser can show `#!/customers/reports` in hash mode or
 `/customers/reports` in path mode, while `x-page` receives `/customers/_assets/reports/<generation>/pages/report.js`. `x-page` removes the Area prefix before
@@ -229,7 +266,7 @@ The query portion of a Page destination remains part of its canonical Page `src`
 
 ## Page invocations and browser history
 
-Explicit navigation compares each stack entry's resolved Page path, including its Area prefix, with the destination selected by its `x-page` host.
+Explicit navigation compares each stack entry's resolved Page path, including any Area or global prefix, with the destination selected by its `x-page` host.
 The comparison includes the decoded query names and values after menu or route resolution. A different path, an added or removed query parameter,
 or a different query value starts a new Page invocation through the existing host's load lifecycle. Reordering query parameters with distinct names
 preserves the existing invocation. Explicit navigation to a different fragment also loads the Page. Stack presentation classes and navigation metadata

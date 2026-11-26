@@ -17,6 +17,7 @@ export default {
             tooltip:     {type:"string", default:"", attribute:true, state:true, description:"Optional tooltip text shown on the navigation anchor."},
             expandOn:    {type: "string", default: "auto", attribute: true, state: true, enum: ["auto", "click", "hover"], description: "Determines how child menu items are expanded."},
             open:        {type: "string", default: "auto", attribute: true, state: true, enum: ["auto", "top", "stack", "dialog", "dock", "embed"], description: "Determines how the target Page is presented."},
+            scope:       {type: "string", attribute: true, state: true, enum: ["area", "global"], description: "Optional navigation scope used to resolve the link URL."},
             outlet:      {type: "string", default: "", attribute: true, state: true, description: "Names the destination outlet for embedded Page presentation; 'self' hosts the Page inside this item."},
             badge:     {type:"string", default:"", attribute:true, state:true, description:""},
             badgeClass: {type:"string", default:"plain", attribute:true, state:true, description:""},
@@ -109,7 +110,7 @@ export default {
         </div>
         <x-button x-elseif="state.command" class="menuitem" x-attr:command="state.command" x-attr:label="state.label" x-attr:icon="state.icon" x-attr:disabled="state.disabled" x-attr:badge="state.badge" x-attr:badge-class="state.badgeClass" x-attr:tooltip="state.tooltip">
         </x-button>
-        <x-anchor x-else class="menuitem anchor" x-class:down="state.childsDown" x-attr:href="state.href" x-attr:disabled="state.disabled" x-attr:expanded="state.expanded" x-class:selected="state.selected" x-attr:tooltip="state.tooltip" x-attr:open="state.open" x-attr:outlet="state.outlet">
+        <x-anchor x-else class="menuitem anchor" x-class:down="state.childsDown" x-attr:href="state.href" x-attr:disabled="state.disabled" x-attr:expanded="state.expanded" x-class:selected="state.selected" x-attr:tooltip="state.tooltip" x-attr:open="state.open" x-attr:scope="state.scope" x-attr:outlet="state.outlet">
             <x-icon x-if="state.checked" icon="x-check"></x-icon>
             <x-icon x-if="!state.checked && state.icon" class="icon" x-attr:icon="state.icon"></x-icon>
             <x-badge x-if="state.badge" x-attr:value="state.badge" x-attr:class="state.badgeClass"></x-badge>

@@ -1,5 +1,4 @@
-import { probablyPhone, getScrollbarWidth } from "../utils/dom.js";
-import { findObjectsPath } from "../utils/object.js";
+import { getScrollbarWidth } from "../utils/dom.js";
 
 // layout
 export default {
@@ -283,7 +282,7 @@ export default {
                 <x-app-menu></x-app-menu>
                 
                 <!-- x-page-menu -->
-                <x-page-menu x-class:collapsed="state.menuCollapsed"></x-page-menu>
+                <x-page-menu x-if="state.hasArea" x-class:collapsed="state.menuCollapsed"></x-page-menu>
 
                 <!-- body -->
                 <div x-attr:class="'body' + (state.pageClasses ? ' ' + state.pageClasses : '')">
@@ -295,7 +294,7 @@ export default {
                                         <x-page-title></x-page-title>
                                     </h1>
                                     <div class="breadcrumb">
-                                        <x-button class="anchor" x-attr:icon="(state.menuCollapsed ? 'x-sidebar-off' : 'x-sidebar-on')" x-on:click="onToggleMenu" ></x-button>
+                                        <x-button x-if="state.hasArea" class="anchor" x-attr:icon="(state.menuCollapsed ? 'x-sidebar-off' : 'x-sidebar-on')" x-on:click="onToggleMenu" ></x-button>
                                         <x-page-breadcrumb></x-page-breadcrumb>
                                     </div>
                                 </div>
@@ -327,7 +326,7 @@ export default {
 
     `,
     state: {
-        menuNavigation:  null,
+        hasArea:         false,
         menuCollapsed:     false,
         pageClasses:     "",
         dockPosition:    "bottom",
@@ -340,18 +339,9 @@ export default {
         let dockPositionChanged = false;
         let restoringProperty = null;
         let dockSizeGeneration = 0;
+        let pageLoadListener = null;
         return {
             async load(params) {
-                // auto close menu on navigation start (mobile)
-                events.on(bus, "xshell:navigation:end", "refresh");
-                // bind refresh
-                events.on(bus, "xshell:menus:change", "refresh")
-                // bind page load event to update page classes
-                events.on(bus, "xshell:page:load", (event)=>{
-                    if (event.detail.id == getPage()?.id) {
-                        this.onPageLoaded({event});
-                    }
-                });
                 // listen for dock changes
                 events.on(bus, "xshell:navigation:dock:changed", (event) => {
                     state.dockSrc = event.detail.src;
@@ -408,13 +398,20 @@ export default {
                 // refresh css variables
                 this.refreshCssVariables();
 
-                // refresh
-                this.refresh();
+                // Update when the owning host adopts another Page and read any Page already loaded.
+                pageLoadListener = new AbortController();
+                host.getRootNode().host?.addEventListener("load", () => this.onPageLoaded(), { signal: pageLoadListener.signal });
+                this.onPageLoaded();
 
                 // Initialize menu and update its height on scroll and resize
                 if (state.dockSrc) {
                     postRender("restoreDockSize");
                 }
+            },
+
+            unmount() {
+                // Detach the Page host listener when the layout leaves the DOM.
+                pageLoadListener?.abort();
             },
 
             async refreshCssVariables() {
@@ -423,38 +420,12 @@ export default {
                 document.documentElement.style.setProperty('--x-scrollbar-width-pixels', `${Math.max(0,scrollbarWidth)}px`);
             },
             
-            async refresh(params) {
-                //refresh
-                const page  = getPage();
-                if (page) {
-                    let moduleId = page.host?.getAttribute("module");
-                    if (!moduleId) {
-                        //no module defined
-                        state.menuNavigation = null;
-                    } else if (page.breadcrumb && page.breadcrumb.length){
-                        //get module
-                        moduleId = page.host?.getAttribute("module");
-                        //show menu main 
-                        state.menuNavigation = areas.getMenu("navigation")?.items || [];
-                    } else {
-                        // not found breadcrumb in page
-                        // show menu main 
-                        state.menuNavigation = areas.getMenu("navigation")?.items || [];
-                        //breadcrumb
-                        if (state.menuNavigation) {
-                            let menuitems = findObjectsPath(state.menuNavigation, 'href', page.href);
-                        }
-                    }
-                }
-            },
-
             // events
-            onPageLoaded({ event }) {
-                // page loaded
+            onPageLoaded() {
+                // Keep menu availability independent of the saved collapse preference.
                 const page = getPage();
-                if (page) {
-                    state.pageClasses = page.meta?.classes?.join(" ") || "";
-                }
+                state.hasArea = Boolean(page?.src && areas.resolveAreaId(page.src));
+                state.pageClasses = page?.meta?.classes?.join(" ") || "";
             },
             onDockClose() {
                 // dock close

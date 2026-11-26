@@ -123,6 +123,8 @@ function createRouteAreas() {
 let AnchorClass = null;
 const services = {
     config: { modules: { test: { defaults: { component: { stateEngine: "test", renderEngine: "test" } } } } },
+    modules: {},
+    services: { beginScope: () => ({ resolve: name => services[name], async dispose() {} }) },
     loader: {
         async load(resource) {
             if (resource === "schema:component") return {};
@@ -158,6 +160,9 @@ async function createAnchor(attributes = {}, navigation = createNavigation()) {
     initialAttributes = attributes;
     const anchor = new AnchorClass();
     initialAttributes = {};
+    for (const name of AnchorClass.observedAttributes) {
+        if (Object.hasOwn(attributes, name)) anchor.attributeChangedCallback(name, null, attributes[name]);
+    }
 
     anchor.parentNode = {
         tagName: "X-PAGE",
@@ -221,7 +226,8 @@ test("x-anchor retains its canonical href while exposing and navigating the frie
         getCurrentArea() { return area; },
         getDefaultArea() { return area; },
         resolveHref(href, areaId) {
-            return areaId === "demo" && href === "/demo/_assets/x-demo/pages/basic.js" ? { path: "/demo/navigation/basic" } : null;
+            return areaId === "demo" && href === "/demo/_assets/x-demo/pages/basic.js"
+                ? { path: "/demo/navigation/basic", href } : null;
         },
         resolvePath() { return null; }
     };
@@ -332,6 +338,23 @@ test("x-anchor renders a resolved Page URL and delegates normal clicks with navi
         anchor.onCommand("click", { event: targetEvent });
         assert.equal(targetEvent.defaultPrevented, false);
         assert.equal(navigateCalls.length, 2);
+    }
+});
+
+test("x-anchor preserves declarative global scope in its native URL and intercepted clicks", async () => {
+    for (const [mode, base] of [["path", "/app"], ["hash", "/app/#!"]]) {
+        const navigation = createNavigation({ areas: createRouteAreas(), mode, basePath: "/app", resolver: createPageResolver() });
+        const { anchor, navigateCalls } = await createAnchor({ scope: "global" }, navigation);
+        anchor.parentNode.page.src = "/demo/_assets/x-demo/pages/origin.js";
+        anchor.href = "page:x-demo:/pages/items.js?repositoryId=12#summary";
+        anchor.onCommand("stateChange", {});
+        assert.equal(anchor._state.hrefReal, base + "/global/_assets/x-demo/pages/items.js?repositoryId=12#summary");
+
+        const event = { button: 0, ctrlKey: true, defaultPrevented: false, preventDefault() { this.defaultPrevented = true; } };
+        anchor.onCommand("click", { event });
+        assert.equal(event.defaultPrevented, false);
+        anchor.onCommand("click", { event: { ...event, ctrlKey: false } });
+        assert.equal(navigateCalls[0].scope, "global");
     }
 });
 

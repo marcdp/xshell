@@ -88,6 +88,19 @@ namespace DProjects.XShell.Test {
             Assert.Equal(routeBody, queriedBody);
         }
         [Theory]
+        [InlineData("")]
+        [InlineData("/prefix")]
+        public async Task GlobalPageUrl_FallsBackToIndex(string appBasePath) {
+            // A global Page URL names an asset but uses the same bootstrap as an Area route.
+            await using var host = await HostingApplication.StartAsync(appBasePath: appBasePath);
+            using var index = await host.Client.GetAsync(appBasePath + "/index.html", TestContext.Current.CancellationToken);
+            using var page = await host.Client.GetAsync(
+                appBasePath + "/global/_assets/x-filesystem/0.9.0.dev/pages/explorer.js?src=named%3Aopfs", TestContext.Current.CancellationToken);
+            var body = await page.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
+            AssertBootstrap(page, body);
+            Assert.Equal(await index.Content.ReadAsStringAsync(TestContext.Current.CancellationToken), body);
+        }
+        [Theory]
         [InlineData("/app/index.html", "text/html")]
         [InlineData("/app/sw.js", "application/javascript")]
         [InlineData("/app/customers/42", "text/html")]

@@ -1,4 +1,5 @@
 import Page from "./page.js";
+import { matchesPathPrefix } from "./utils/urls.js";
 
 // stylesheet
 const stylesheet = new CSSStyleSheet();
@@ -239,8 +240,11 @@ export function createXPageClass(runtime) {
             this._layout = layoutName;
 
             // remove navigation context before resolving the module resource
+            const globalPrefix = runtime.areas.globalPrefix;
+            const isGlobal = matchesPathPrefix(src.split(/[?#]/, 1)[0], globalPrefix);
             const area = runtime.areas.getArea(runtime.areas.resolveAreaId(src));
-            const resourceSrc = area?.prefix ? src.substring(area.prefix.length) : src;
+            const prefix = isGlobal ? globalPrefix : area?.prefix;
+            const resourceSrc = prefix ? src.substring(prefix.length) : src;
             let moduleId = runtime.modules.resolveModuleId(resourceSrc);
             this.setAttribute("module", moduleId ?? "");
 
@@ -283,7 +287,7 @@ export function createXPageClass(runtime) {
                 }
 
                 // breadcrumb
-                let breadcrumb = runtime.areas.getMenuitemBreadcrumb(src.split("?")[0], area?.id);
+                let breadcrumb = isGlobal ? null : runtime.areas.getMenuitemBreadcrumb(src, area?.id);
                 if (nav && nav.breadcrumb) {
                     breadcrumb = nav.breadcrumb;
                 }

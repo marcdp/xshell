@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 import vm from "node:vm";
+import Areas from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/areas.js";
 
 const bootstrapPath = new URL("../../src/DProjects.XShell/Resources/DProjects.XShell/bootstrap/index.js", import.meta.url);
 const bootstrapSource = readFileSync(bootstrapPath, "utf8");
@@ -134,6 +135,29 @@ test("menu configuration follows generic value-driven path semantics", () => {
         metadata: { path: "/_assets/x/1.0.0.dev/metadata" },
         sample: { href: "/_assets/x/1.0.0.dev/sample", url: "ordinary-url" }
     });
+});
+
+test("manifest normalization keeps Navigation's global prefix application-relative", () => {
+    const normalize = bootstrapSource.match(/^        function normalizeUrl\([\s\S]*?^        \}\r?\n        function normalizeManifest\([\s\S]*?^        \}/m)[0];
+    for (const [name, globalPrefix] of [["xshell", "/global"], ["x-demo", "/tools/workbench"]]) {
+        const assetPath = `/_assets/${name}/0.9.0.dev`;
+        const owner = { assetsPath: assetPath, manifestUrl: `https://example.test/modules/${name}/manifest.json` };
+        const definition = { xshell: { services: {
+            navigation: { implementation: "/services/navigation.js", options: { globalPrefix } },
+            other: { options: { globalPrefix: "/resource.js" } }
+        } } };
+        const config = vm.runInNewContext(`${normalize}\nnormalizeManifest(definition, owner)`, {
+            URL, definition, owner, appBaseUrl: "https://example.test/prefix/"
+        });
+
+        // Construct Areas with the namespace supplied by bootstrap before XShell starts.
+        config.xshell.assets = { basePath: "/_assets" };
+        config.modules = {};
+        const areas = new Areas({ config, bus: new EventTarget() }, { default: null, definitions: {} });
+        assert.equal(areas.globalPrefix, globalPrefix);
+        assert.equal(config.xshell.services.navigation.implementation, assetPath + "/services/navigation.js");
+        assert.equal(config.xshell.services.other.options.globalPrefix, assetPath + "/resource.js");
+    }
 });
 
 test("generated resource metadata and Search provider prefixes remain literal", () => {

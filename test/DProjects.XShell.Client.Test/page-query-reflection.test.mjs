@@ -147,7 +147,7 @@ function createNavigation(mode, xpages) {
         }
     };
     const navigation = new Navigation({
-        areas: { resolvePath() { return null; } },
+        areas: { globalPrefix: "/global", resolvePath() { return null; } },
         bus: { emit() {} },
         config: {
             app: { basePath: "", baseUrl: "https://example.test/" },
@@ -207,6 +207,29 @@ function createXPage(src, layout = "main") {
             this.src = value;
         }
     };
+}
+
+for (const mode of ["path", "hash"]) {
+    test(`Global Page reflects query and fragment without loading in ${mode} mode`, async () => {
+        const resource = "/global/_assets/test/pages/tool.js";
+        const host = createXPage(resource + "?item=one#before");
+        const { navigation, initialize, replaceCalls, pushCalls, locationReplacements } = createNavigation(mode, [host]);
+        await initialize();
+        const PageClass = await createPageClass({ item: { type: "string", state: true, query: true, reflect: true } });
+        const page = createPageInstance(PageClass, host.src);
+        page._host = host;
+
+        // A query or fragment change synchronizes the mounted source through replaceState.
+        page._state.item = "two";
+        page.replaceHash("after");
+        const source = resource + "?item=two#after";
+        assert.equal(page.src, source);
+        assert.equal(host.src, source);
+        assert.deepEqual(navigation.stack[0].params, { item: "two" });
+        assert.equal(navigation.stack[0].href, resource + "#after");
+        assert.deepEqual(pushCalls, []);
+        assert.equal((mode === "path" ? replaceCalls : locationReplacements).at(-1), (mode === "path" ? "" : "#!") + source);
+    });
 }
 
 test("reflected Page state patches only its own query and removes contract defaults", async () => {

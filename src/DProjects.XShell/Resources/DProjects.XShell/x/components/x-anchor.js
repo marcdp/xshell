@@ -8,6 +8,7 @@ export default {
         properties: {
             href:       {type:"string", default:"", attribute:true, state:true, description:""},
             open:       {type:"string", default:"auto", attribute:true, state:true, description:"", enum: ["auto","top","stack","dialog","dock","embed"]},
+            scope:      {type:"string", attribute:true, state:true, enum:["area","global"], description:"Optional navigation scope used to resolve the destination URL."},
             query:      {type:"object", default:{}, attribute:true, state:true, description:""},
             classes:    {type:"array", default:[], state:true, description:"Presentation classes for the target stacked Page.", schema:{type:"array", items:{type:"string"}}},
             breadcrumb: {type:"boolean", default:false, attribute:true, state:true, description:""},
@@ -98,6 +99,7 @@ export default {
                     const href = navigation.buildUrlAbsolute({
                         href:       state.href,
                         params:     state.query,
+                        scope:      state.scope,
                         open:       state.open,
                         replace:    state.replace,
                         page:       page,
@@ -124,11 +126,12 @@ export default {
                 const event = params.event;
                 if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || state.target) return;
                 if (!state.href) return;
-                if (!state.href.startsWith("page:") && /^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(state.href)) return;
+                if (!state.href.startsWith("page:") && (/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(state.href) || state.href.startsWith("//"))) return;
                 const page = getPage();
                 navigation.navigate( {
                     href: state.href,
                     params: state.query,
+                    scope: state.scope,
                     open: state.open,
                     ...(state.open === "stack" && state.classes?.length ? { classes: state.classes } : {}),
                     replace: state.replace,

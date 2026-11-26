@@ -184,7 +184,11 @@ longest prefix first. Navigation resolves a friendly path through `Areas.resolve
 breadcrumbs.
 
 When Navigation emits `xshell:navigation:end`, Areas resolves the current Area from the URL. A change emits `xshell:area:change`.
-Menu UIs should refresh on that event; `xshell:menus:change` is reserved for dynamic menu-content updates.
+The Main sidebar reads the Area associated with its owning Page and refreshes on Area and dynamic menu changes.
+
+`areas.globalPrefix` exposes the effective [global navigation prefix](../10-architecture/120-navigation.md#global-navigation).
+`areas.resolveAreaId(href)` returns `null` for this namespace before testing any Area, including an empty-prefix Area. A global Page therefore
+leaves the active Area intact and has no Area menu or Area-derived breadcrumb. `areas.getAreas()` lists the configured Areas only.
 
 ## Current implementation limits
 

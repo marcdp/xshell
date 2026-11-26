@@ -76,7 +76,7 @@ test("XShell resolves Areas before Modules and composes it before Navigation", a
     assert.doesNotMatch(source, /import Areas from/);
     assert.doesNotMatch(source, /new Areas\s*\(/);
     assert.doesNotMatch(source, /register\("areas"/);
-    assert.match(source, /get areas\(\) \{ return this\._services\.resolve\("areas"\); \}/);
+    assert.match(source, /const services = this\._services;\s+const XPage = createXPageClass\(\{[\s\S]*?get areas\(\) \{ return services\.resolve\("areas"\); \}/);
     assert.ok(servicesIndex < resolveAreasIndex && resolveAreasIndex < resolveModulesIndex &&
         resolveModulesIndex < initAreasIndex && initAreasIndex < navigationIndex);
 });

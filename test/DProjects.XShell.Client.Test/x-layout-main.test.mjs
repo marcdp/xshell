@@ -4,12 +4,6 @@ import layout from "../../src/DProjects.XShell/Resources/DProjects.XShell/x/layo
 
 const settle = () => new Promise(resolve => setImmediate(resolve));
 
-test("Main layout retrieves navigation through the unified menu API", () => {
-    const source = layout.controller.toString();
-    assert.match(source, /areas\.getMenu\("navigation"\)/);
-    assert.doesNotMatch(source, /getGlobalMenu/);
-});
-
 function setup(getPage = () => null) {
     const values = new Map(), writes = [], listeners = new Map();
     const style = {flex:"", removeProperty() { this.flex = ""; }};
@@ -19,7 +13,8 @@ function setup(getPage = () => null) {
         ".docked-page":panel, ".docked-main":{getBoundingClientRect: () => ({width:600, height:500})},
         ".dock-container":{getBoundingClientRect: () => viewport}, "x-splitter":{getBoundingClientRect: () => ({width:2, height:2})}
     };
-    const host = {shadowRoot:{querySelector: selector => elements[selector] || null}};
+    const pageHost = new EventTarget();
+    const host = {getRootNode: () => ({host: pageHost}), shadowRoot:{querySelector: selector => elements[selector] || null}};
     const state = new Proxy({menuCollapsed:false, dockPosition:"bottom", dockSrc:"/dock.js"}, {set(target, prop, value) {
         const oldValue = target[prop];
         target[prop] = value;
@@ -40,14 +35,34 @@ function setup(getPage = () => null) {
     globalThis.document = {documentElement:{setAttribute() {}, removeAttribute() {}}};
     const controller = layout.controller({
         state, host, preferences, bus:{}, getPage, postRender() {},
+        areas: { resolveAreaId: src => src.startsWith("/main/") ? "main" : null },
         events:{on(target, names, callback) { listeners.set(String(names), callback); }}
     });
     controller.refreshMenuHeight = () => {};
-    return {controller, state, style, viewport, elements, values, writes, listeners, preferences, restore() {
+    return {controller, pageHost, state, style, viewport, elements, values, writes, listeners, preferences, restore() {
         if (originalStyle === undefined) delete globalThis.getComputedStyle; else globalThis.getComputedStyle = originalStyle;
         if (originalDocument === undefined) delete globalThis.document; else globalThis.document = originalDocument;
     }};
 }
+
+test("Main layout follows the Page adopted by its host while preserving the collapse setting", async () => {
+    let page = { src: "/main/home.js" };
+    const ui = setup(() => page);
+    try {
+        ui.values.set("x-layout-main.menuCollapsed", true);
+        await ui.controller.load();
+        ui.controller.refreshCssVariables = () => {};
+        await ui.controller.mount();
+        for (const [src, hasArea] of [["/main/home.js", true], ["/global/tool.js", false], ["/main/home.js", true]]) {
+            page = { src };
+            ui.pageHost.dispatchEvent(new Event("load"));
+            assert.equal(ui.state.hasArea, hasArea);
+            assert.equal(ui.state.menuCollapsed, true);
+        }
+        ui.controller.unmount();
+        assert.deepEqual(ui.writes, []);
+    } finally { ui.restore(); }
+});
 
 test("Main layout preserves common and prefixed Page class names", () => {
     const classes = Object.freeze(["size-medium", "main-size-narrow", "main-layout-fill", "dialog-size-full"]);

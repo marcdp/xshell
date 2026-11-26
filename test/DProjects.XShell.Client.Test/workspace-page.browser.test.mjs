@@ -166,19 +166,24 @@ async function verifyFilesystems() {
         { default: menuitem }, { default: anchor }, { default: Navigation }, { default: Services },
         { default: Events }, { default: JsonValidator }, { default: Filesystems },
         { createXPageClass }, { createPageClassFromJsDefinition }, { createComponentClassFromJsDefinition },
-        { default: renderEngine }, { default: stateEngine }
+        { default: renderEngine }, { default: stateEngine }, { default: Areas }, { default: mainLayout }, { default: pageMenu }
     ] = await Promise.all([
         "x-filesystem/pages/global/filesystems.js", "x-filesystem/pages/explorer.js",
         "x-filesystem/components/x-filesystem.js", "x-filesystem/components/x-filesystem-list.js",
         "x/components/x-listview-item.js", "x/components/x-menuitem.js", "x/components/x-anchor.js",
         "xshell/services/navigation.js", "xshell/services.js", "xshell/services/events.js",
         "xshell/services/json-validator.js", "x-filesystem/services/filesystems.js", "xshell/x-page.js",
-        "xshell/loaders/page-js.js", "xshell/loaders/component-js.js", "xshell/render-engines/x-client.js", "xshell/state-engines/proxy.js"
+        "xshell/loaders/page-js.js", "xshell/loaders/component-js.js", "xshell/render-engines/x-client.js", "xshell/state-engines/proxy.js",
+        "xshell/services/areas.js", "x/layouts/x-layout-main.js", "x/components/x-page-menu.js"
     ].map(path => import("/resources/" + path)));
 
     // Mount the real popup, Explorer, and Filesystem components with two in-memory registrations.
-    const mode = new URLSearchParams(location.search).get("mode");
+    const params = new URLSearchParams(location.search);
+    const mode = params.get("mode");
+    const direct = params.has("direct");
+    const browserBase = mode === "hash" ? "/app/#!" : "/app";
     const explorerPath = "/_assets/x-filesystem/pages/explorer.js";
+    const globalPath = "/global" + explorerPath;
     const check = (condition, message) => { if (!condition) throw new Error(message); };
     const waitFor = async (callback, message) => {
         for (let attempt = 0; attempt < 80; attempt++) {
@@ -193,12 +198,16 @@ async function verifyFilesystems() {
     const config = {
         app: { basePath: "/app", baseUrl: location.origin + "/app/", label: "Test" },
         modules: { x: { defaults: { page: defaults, component: defaults } } },
-        xshell: { assets: { basePath: "/_assets" }, ui: { layouts: { main: "test-layout", embed: "test-layout" } } }
+        xshell: { assets: { basePath: "/_assets" }, ui: { layouts: { main: "x-layout-main", embed: "test-layout" } } }
     };
     const bus = new EventTarget();
     bus.emit = (type, detail) => bus.dispatchEvent(new CustomEvent(type, { detail }));
-    const areas = { getArea() {}, resolveAreaId() {}, resolvePath() {}, getMenuitemBreadcrumb() { return []; } };
-    const modules = { resolveModuleId: () => "x", getModuleById: () => ({ controller: {} }) };
+    const areas = new Areas({ config, bus }, {
+        default: "root", definitions: { root: { prefix: "", modules: ["x"] }, cookbook: { prefix: "/cookbook", modules: ["x"] } }
+    });
+    const module = { id: "x", config: { menus: { navigation: { items: [{ label: "Home", href: "/home.js", path: "/home" }] } } }, controller: {} };
+    const modules = { resolveModuleId: () => "x", getModuleById: () => module };
+    areas.init({ modules });
     const resolver = { resolve: () => ({ path: explorerPath }) };
     const navigation = new Navigation({ areas, bus, config, resolver }, { mode });
     const pages = new Map();
@@ -216,7 +225,8 @@ async function verifyFilesystems() {
         async set(key, value) { values.set(key, value); },
         async list() { return [...values.values()].map(value => ({ value })); }
     } }, { providers: { mem: { implementation: location.origin + "/resources/x-filesystem/providers/filesystem-mem.js" } } });
-    for (const [name, value] of Object.entries({ bus, config, loader, resolver, modules, navigation, filesystems, services: root, i18n: {} })) {
+    const preferences = new Map([["x-layout-main.menuCollapsed", true]]);
+    for (const [name, value] of Object.entries({ bus, config, loader, resolver, modules, areas, navigation, filesystems, preferences, services: root, i18n: {} })) {
         root.register(name, value);
     }
     for (const name of ["dialog", "tasks"]) root.register(name, {});
@@ -229,7 +239,7 @@ async function verifyFilesystems() {
     customElements.define("x-page", createXPageClass({ areas, bus, config, loader, modules, navigation }));
     for (const [name, definition] of [
         ["x-menuitem", menuitem], ["x-anchor", anchor], ["x-filesystem", filesystem],
-        ["x-filesystem-list", list], ["x-listview-item", row]
+        ["x-filesystem-list", list], ["x-listview-item", row], ["x-layout-main", mainLayout], ["x-page-menu", pageMenu]
     ]) {
         await createComponentClassFromJsDefinition("/" + name + ".js", context, {
             ...definition, meta: { ...definition.meta, id: name, renderEngine: "x-client" }
@@ -246,17 +256,21 @@ async function verifyFilesystems() {
         await (await filesystems.openNamed(name)).saveFile("/" + name + ".txt", name);
     }
     document.body.appendChild(document.createElement("aside")).innerHTML = '<x-page src="/popup.js"></x-page>';
-    history.replaceState(null, "", mode === "hash" ? "/app/#!/home.js" : "/app/home.js");
+    const target = name => globalPath + "?src=named%3A" + name + "&path=%2F";
+    history.replaceState(null, "", browserBase + (direct ? target("filesystem1") : "/cookbook/home"));
     await navigation.init();
     const host = navigation.getXPage();
-    await waitFor(() => host.page?.src === "/home.js", "Home did not mount");
 
     // Click the popup's real links and wait for the bound Filesystem list rows to render.
     const click = async name => {
         const link = await waitFor(() => document.querySelector(`aside x-menuitem[label="${name}"]`)?.shadowRoot
             .querySelector("x-anchor")?.shadowRoot.querySelector("a"), "Filesystem link did not render");
+        check(link.getAttribute("href") === browserBase + target(name), "Native anchor did not retain the global URL");
         link.click();
     };
+    const layout = () => host.shadowRoot.querySelector("x-layout-main")?.shadowRoot;
+    const sidebar = () => layout()?.querySelector("x-page-menu");
+    const toggle = () => layout()?.querySelector(".breadcrumb x-button");
     async function verifyExplorer(name) {
         const component = await waitFor(() => {
             const component = host.querySelector("x-filesystem");
@@ -267,10 +281,23 @@ async function verifyFilesystems() {
         }, "Explorer did not render " + name + ".txt");
         check(navigation.getXPage() === host, "Navigation replaced the Page host");
         check(component.src === "named:" + name && component.path === "/", "Explorer did not bind the new query properties");
-        check(location.href.includes("src=named%3A" + name), "Browser destination did not change");
+        check(host.page.src === target(name), "Explorer lost the global source");
+        check(location.href.endsWith(browserBase + target(name)), "Browser destination lost the global URL");
+        check(!host.page.breadcrumb, "Global Page derived an Area breadcrumb");
+        check(areas.getCurrentArea().id === (direct ? "root" : "cookbook"), "Global destination changed the active Area");
+        check(layout()?.querySelector("x-app-menu") && !sidebar() && !toggle(), "Global layout still displays Area navigation");
+        check(!("scope" in navigation.stack[0]) && !("scope" in navigation.stack[0].nav), "Scope was serialized separately");
         return host.page;
     }
-    await click("filesystem1");
+    async function verifyArea() {
+        await waitFor(() => host.page?.src === "/cookbook/home.js" && sidebar()?.shadowRoot?.querySelector("x-anchor.selected"), "Area menu did not restore");
+        check(sidebar().classList.contains("collapsed") && toggle(), "Area layout lost its collapse preference");
+        check(sidebar().shadowRoot.querySelector("x-anchor.selected").href === "/cookbook/home", "Sidebar selected the wrong Area Page");
+    }
+    if (!direct) {
+        await verifyArea();
+        await click("filesystem1");
+    }
     const first = await verifyExplorer("filesystem1");
     const scope = first._servicesScope;
     await click("filesystem2");
@@ -281,6 +308,12 @@ async function verifyFilesystems() {
     check(disposed, "The first Page's Services scope was not disposed");
     history.back();
     check(await verifyExplorer("filesystem1") !== first, "Back did not reconstruct the earlier invocation");
+    if (!direct) {
+        history.back();
+        await verifyArea();
+        history.forward();
+        await verifyExplorer("filesystem1");
+    }
     history.forward();
     check(await verifyExplorer("filesystem2") !== second, "Forward did not reconstruct the later invocation");
 }
@@ -339,5 +372,5 @@ test("Workspace reflects IDs and reuses its outlet across selection and embedded
     "mode=path&generation=old&item=filesystems"
 ]));
 
-test("Filesystems popup renders the selected Explorer and restores its contents through browser history", chromiumOnly,
-    () => runInChromium(verifyFilesystems, ["mode=path", "mode=hash"]));
+test("Global Filesystem links work on direct access and history and preserve Area layout preferences", chromiumOnly,
+    () => runInChromium(verifyFilesystems, ["mode=path", "mode=hash", "mode=path&direct", "mode=hash&direct"]));

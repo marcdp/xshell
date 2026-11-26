@@ -69,10 +69,10 @@ export default {
         selected: "",
         menu: null
     },
-    controller({ events, bus, state, getPage, areas, navigation }) {
+    controller({ events, bus, state, getPage, areas }) {
         return {
             load() {
-                // load
+                // Refresh the owning Page's menu after navigation or menu composition changes.
                 events.on(bus, "xshell:area:change", "refresh");
                 events.on(bus, "xshell:menus:change", "refresh");
                 events.on(bus, "xshell:page:load", (event)=>{
@@ -80,17 +80,7 @@ export default {
                         this.refresh();
                     }
                 });
-                events.on(bus, "xshell:navigation:end", (event) => {
-                    let href = event.detail.src;
-                    if (href.indexOf("#")!=-1) href = href.substring(0, href.indexOf("#"));
-                    if (href.indexOf("?")!=-1) href = href.substring(0, href.indexOf("?"));
-                    state.selected = href;
-                })
-
-                let href = navigation.src;
-                if (href.indexOf("#")!=-1) href = href.substring(0, href.indexOf("#"));
-                if (href.indexOf("?")!=-1) href = href.substring(0, href.indexOf("?"));
-                state.selected = href;
+                events.on(bus, "xshell:navigation:end", "refresh");
             },
 
             mount() {
@@ -99,8 +89,11 @@ export default {
             },
 
             refresh() {
-                //refresh
-                state.menu = areas.getMenu("navigation")?.items || [];
+                // Resolve the menu and selection from the same Page source.
+                const src = getPage()?.src || "";
+                const areaId = areas.resolveAreaId(src);
+                state.menu = areaId ? areas.getMenu("navigation", areaId)?.items || [] : [];
+                state.selected = src.split(/[?#]/, 1)[0];
             }
         }
     }

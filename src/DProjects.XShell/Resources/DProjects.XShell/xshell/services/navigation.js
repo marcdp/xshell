@@ -1,7 +1,6 @@
-import {combineUrls} from "../utils/urls.js";
+import { combineUrls, HASH_PREFIX, matchesPathPrefix } from "../utils/urls.js";
 import { base64UrlEncode, base64UrlDecode } from "../utils/base64.js";
 import { compileRoute } from "../utils/route.js";
-import { HASH_PREFIX } from "../utils/urls.js";
 
 function withStackClasses(item, classes) {
     // Snapshot caller classes and keep entries without classes in the existing format.
@@ -21,6 +20,11 @@ export default class Navigation {
                 type: "string",
                 enum: ["hash", "path"],
                 description: "Navigation strategy used by the application."
+            },
+            globalPrefix: {
+                type: "string",
+                minLength: 2,
+                description: "Reserved application-relative path prefix for global navigation. Defaults to /global."
             }
         },
         additionalProperties: false,
@@ -158,7 +162,7 @@ export default class Navigation {
     }
     buildUrlAbsolute(params){
         let href = this.#buildUrlPublic(params);
-        if (/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(href)) return href;
+        if (/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(href) || href.startsWith("//")) return href;
         if (this.#mode == "hash") {
             href = this.#appBasePath + "/" + HASH_PREFIX + href;
         } else {
@@ -178,7 +182,7 @@ export default class Navigation {
         }) {
         // produces real, navigable URLS
         if (!href || typeof href !== "string") throw new Error("buildUrl: href must be a non-empty string");
-        if (/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(href)) return href;
+        if (/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(href) || href.startsWith("//")) return href;
         if (href.startsWith("#!")) href = href.substring(2);
         // resolve relative urls
         if (!href.startsWith("/")) href = combineUrls(page ? page.src : "/", href);
@@ -269,6 +273,7 @@ export default class Navigation {
                 icon: null,       // nav.icon
                 breadcrumb: null},// nav.breadcrumb
             page,
+            scope,          // area | global
             outlet,         // target outlet for embed mode (outlet name or element)
             open = "auto",  // auto | top | stack | dialog | embed 
             context = {},   // additional context to be passed to the page (e.g. dialog parameters)
@@ -278,12 +283,12 @@ export default class Navigation {
         // Preserve explicit asset targets for embeds while retaining ordinary relative resolution.
         if (!open) open = "auto";
         const preserveAssetPath = open === "embed" && (href.startsWith("/") || href.startsWith(HASH_PREFIX + "/") || href.startsWith("page:"));
-        const hrefResolved = this.#resolveCanonicalHref(href, page, { preserveAssetPath });
+        const hrefResolved = this.#resolveCanonicalHref(href, page, { preserveAssetPath, scope });
         const hrefAbsolute = this.buildUrl({ href: hrefResolved, params, nav, page });
         // open
         if (open == "auto") {
             // auto
-            const xpage = page.host;
+            const xpage = page?.host;
             const xpages = this.getXPages();
             const indexPage = xpages.indexOf(xpage);
             if  (xpage == null) {
@@ -578,10 +583,13 @@ export default class Navigation {
     #buildUrlFinal(item, { preserveAssetPath = false } = {}) {
         const { identity, suffix } = this.#splitHref(item.href);
 
+        // Global URLs already address the Page and bypass Area aliases and routes.
+        if (matchesPathPrefix(identity, this.#areas.globalPrefix)) return this.buildUrl(item);
+
         // Keep explicit embedded resources out of friendly menu and route matching.
         if (preserveAssetPath) {
             const area = this.#areas.getArea?.(this.#areas.resolveAreaId?.(identity));
-            if (this.#isAssetPath(identity) || this.#isAssetPath(this.#removeAreaPrefix(identity, area))) return this.buildUrl(item);
+            if (this.#isAssetPath(identity) || this.#isAssetPath(this.#removePathPrefix(identity, area?.prefix))) return this.buildUrl(item);
         }
         const menuitem = this.#areas.resolvePath(identity);
         if (menuitem) {
@@ -602,17 +610,20 @@ export default class Navigation {
         });
     }
     #buildUrlPublic(params) {
-        const target = this.#resolvePublicTarget(params.href, params.params || {}, params.page);
+        const target = this.#resolvePublicTarget(params.href, params.params || {}, params.page, params.scope);
         return this.buildUrl({ ...params, href: target.href, params: target.params });
     }
     #resolvePublicHref(href, page) {
         return this.#resolvePublicTarget(href, {}, page).href;
     }
-    #resolvePublicTarget(href, params, page) {
+    #resolvePublicTarget(href, params, page, scope) {
         // leave external targets under native browser control
-        if (!href.startsWith("page:") && /^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(href)) return { href, params };
-        const canonicalHref = this.#resolveCanonicalHref(href, page);
+        if (!href.startsWith("page:") && (/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(href) || href.startsWith("//"))) return { href, params };
+        const canonicalHref = this.#resolveCanonicalHref(href, page, { scope });
         const { identity, suffix } = this.#splitHref(canonicalHref);
+        if (matchesPathPrefix(identity, this.#areas.globalPrefix)) return { href: canonicalHref, params };
+
+        // Prefer an Area alias, then try reverse routing.
         const areaId = this.#areas.resolveAreaId?.(identity);
         const area = this.#areas.getArea?.(areaId);
         const menuitem = area ? this.#areas.resolveHref?.(identity, area.id) : null;
@@ -633,29 +644,50 @@ export default class Navigation {
         }
         return { href: canonicalHref, params };
     }
-    #resolveCanonicalHref(href, page, { preserveAssetPath = false } = {}) {
-        // resolve relative targets and apply the originating navigation context
+    #resolveCanonicalHref(href, page, { preserveAssetPath = false, scope } = {}) {
+        // Resolve Page references and relative targets before selecting a navigation prefix.
         if (href.startsWith("page:")) {
             const { identity, suffix } = this.#splitHref(href);
             const resolved = this.#resolver.resolve(identity);
             if (!resolved?.path) throw new Error(`Navigation: unable to resolve Page reference '${identity}' to a browser path.`);
             href = resolved.path + suffix;
         }
-        if (/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(href)) return href;
-        if (href.startsWith("#!")) href = href.substring(2);
-        href = this.#removeAppBasePathFromAssetHref(href);
-        if (!href.startsWith("/")) href = combineUrls(page ? page.src : "/", href);
-        const { identity, suffix } = this.#splitHref(href);
+        if (/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(href) || href.startsWith("//")) return href;
+        href = this.#toLogicalHref(href);
+        const origin = this.#splitHref(page?.src || "/").identity;
+        let { identity, suffix } = this.#splitHref(href);
+        if (!identity.startsWith("/")) identity = identity ? combineUrls(origin, identity) : origin;
+
+        // The URL carries global context after resolution. An explicit scope can change it.
+        const globalPrefix = this.#areas.globalPrefix;
+        if (matchesPathPrefix(identity, globalPrefix)) {
+            if (scope !== "area") return identity + suffix;
+            identity = this.#removePathPrefix(identity, globalPrefix);
+        }
         const targetArea = this.#areas.getArea?.(this.#areas.resolveAreaId?.(identity));
+        if (scope === "global") {
+            const resource = this.#isAssetPath(identity) ? identity : this.#removePathPrefix(identity, targetArea?.prefix);
+            return globalPrefix + resource + suffix;
+        }
         if (targetArea?.prefix) return identity + suffix;
 
+        // A global Page can follow a declared root-Area path as well as a prefixed Area URL.
+        const fromGlobal = matchesPathPrefix(origin, globalPrefix);
+        if (fromGlobal) {
+            if (targetArea && !this.#isAssetPath(identity) && (this.#areas.resolvePath(identity) || this.#findRouteMatch(identity))) {
+                return identity + suffix;
+            }
+            if (scope !== "area") return globalPrefix + identity + suffix;
+        }
+
         // Preserve an explicit canonical asset path before looking up the originating Area or menu.
-        if (preserveAssetPath && this.#isAssetPath(identity)) return identity + suffix;
-        const pageAreaId = page?.src ? this.#areas.resolveAreaId?.(page.src) : null;
+        if (preserveAssetPath && scope !== "area" && this.#isAssetPath(identity)) return identity + suffix;
+        const pageAreaId = scope === "area" && fromGlobal ? this.#areas.getCurrentArea?.()?.id
+            : page?.src ? this.#areas.resolveAreaId?.(page.src) : null;
         const menuitem = this.#areas.resolveHref?.(identity, pageAreaId) || this.#areas.resolveHref?.(identity);
         if (menuitem) return this.#splitHref(menuitem.href).identity + suffix;
-        const area = page ? this.#areas.getArea?.(pageAreaId) : this.#areas.getCurrentArea?.() || this.#areas.getDefaultArea?.();
-        if (!area) return href;
+        const area = page && scope !== "area" ? this.#areas.getArea?.(pageAreaId)
+            : this.#areas.getArea?.(pageAreaId) || this.#areas.getCurrentArea?.() || this.#areas.getDefaultArea?.();
         const canonicalHref = this.#applyAreaPrefix(identity, area);
         return canonicalHref + suffix;
     }
@@ -663,7 +695,7 @@ export default class Navigation {
         // select the Area from the public path and match against Area-relative declarations
         const area = this.#areas.getArea?.(this.#areas.resolveAreaId?.(identity));
         if (!area) return null;
-        const match = this.#matchAreaRoutes(this.#removeAreaPrefix(identity, area), area);
+        const match = this.#matchAreaRoutes(this.#removePathPrefix(identity, area.prefix), area);
         return match ? { area, ...match } : null;
     }
     #compileRoute(path) {
@@ -737,7 +769,7 @@ export default class Navigation {
         const canonical = this.parseUrl(canonicalHref);
         const canonicalParts = this.#splitHref(canonical.href);
         const canonicalArea = this.#areas.getArea?.(this.#areas.resolveAreaId?.(canonicalParts.identity));
-        const canonicalIdentity = this.#removeAreaPrefix(canonicalParts.identity, canonicalArea);
+        const canonicalIdentity = this.#removePathPrefix(canonicalParts.identity, canonicalArea?.prefix);
         const canonicalParams = { ...canonical.params, ...suppliedParams };
         for (const route of area.routes || []) {
             const target = this.parseUrl(route.href);
@@ -771,31 +803,35 @@ export default class Navigation {
         }
         return null;
     }
-    #removeAreaPrefix(path, area) {
-        // derive the Area-relative identity without modifying route declarations
-        if (!area?.prefix) return path;
-        if (path === area.prefix) return "/";
-        return path.startsWith(area.prefix + "/") ? path.substring(area.prefix.length) : path;
+    #removePathPrefix(path, prefix) {
+        // Derive the path relative to its navigation context.
+        return matchesPathPrefix(path, prefix) ? path.substring(prefix.length) || "/" : path;
     }
     #applyAreaPrefix(path, area) {
         // apply the public navigation context exactly once
-        if (!area?.prefix || path === area.prefix || path.startsWith(area.prefix + "/")) return path;
+        if (!area?.prefix || matchesPathPrefix(path, area.prefix)) return path;
         return area.prefix + path;
     }
-    #removeAppBasePathFromAssetHref(href) {
-        // Rendered native links may already contain App.BasePath. Convert only
-        // structural application asset URLs back to Navigation's logical namespace.
-        if (!this.#appBasePath || !this.#assetsBasePath) return href;
+    #toLogicalHref(href) {
+        // Rendered native links may already contain App.BasePath.
+        if (href.startsWith(HASH_PREFIX)) return href.substring(HASH_PREFIX.length);
+        const hashBase = this.#appBasePath + "/" + HASH_PREFIX;
+        if (this.#mode === "hash" && href.startsWith(hashBase)) return href.substring(hashBase.length);
         const { identity, suffix } = this.#splitHref(href);
-        if (identity !== this.#appBasePath && !identity.startsWith(this.#appBasePath + "/")) return href;
+        if (!matchesPathPrefix(identity, this.#appBasePath)) return href;
         const applicationIdentity = identity.substring(this.#appBasePath.length) || "/";
+        const globalPrefix = this.#areas.globalPrefix;
+        if (matchesPathPrefix(applicationIdentity, globalPrefix)) return applicationIdentity + suffix;
+        if (matchesPathPrefix(identity, globalPrefix)) return href;
+
+        // Outside the global namespace, only strip App.BasePath from structural asset URLs.
         if (this.#isAssetPath(applicationIdentity)) return applicationIdentity + suffix;
         const area = this.#areas.getArea?.(this.#areas.resolveAreaId?.(applicationIdentity));
-        return this.#isAssetPath(this.#removeAreaPrefix(applicationIdentity, area)) ? applicationIdentity + suffix : href;
+        return this.#isAssetPath(this.#removePathPrefix(applicationIdentity, area?.prefix)) ? applicationIdentity + suffix : href;
     }
     #isAssetPath(path) {
         // Require a namespace boundary so similarly named friendly paths still resolve normally.
-        return Boolean(this.#assetsBasePath) && (path === this.#assetsBasePath || path.startsWith(this.#assetsBasePath + "/"));
+        return matchesPathPrefix(path, this.#assetsBasePath);
     }
     #splitHref(href) {
         const queryIndex = href.indexOf("?");

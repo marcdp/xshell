@@ -158,6 +158,9 @@ Bootstrap recursively normalizes recognized string forms in each selected manife
 `url:` therefore normally creates an absolute physical URL, while `/`, `./`, and `../` create application-relative virtual Paths. Object property
 names are not normalized.
 
+`xshell.services.navigation.options.globalPrefix` is preserved as a literal application-relative path. For example, `/global` remains `/global`
+when declared by the framework or overridden by an application manifest.
+
 ## Merge and precedence
 
 Objects merge recursively, and later scalar values replace earlier values. At each array path, elements append in merge order. When objects in the
