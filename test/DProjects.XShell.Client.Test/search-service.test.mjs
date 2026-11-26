@@ -233,6 +233,26 @@ test("Search assigns provider IDs, ranks deterministically, deduplicates, and ap
     assert.equal(response.results.filter(item => item.id === "duplicate").length, 1);
 });
 
+test("Search ranks and deduplicates all provider candidates before enforcing the aggregate limit", async () => {
+    class Provider {
+        async query() {
+            return [
+                result("duplicate", "Export customer documents"),
+                result("duplicate", "Export customer documents later"),
+                result("import", "Import documents"),
+                result("documents", "Documents")
+            ];
+        }
+    }
+    const {search} = createSearch({local: {label: "Local", implementation: "/providers/search-local.js"}}, {
+        "esm:/providers/search-local.js": Provider
+    });
+
+    const response = await search.query("documents", {limit: 2});
+    assert.deepEqual(response.results.map(item => item.id), ["documents", "duplicate"]);
+    assert.equal(response.results.length, 2);
+});
+
 test("a provider-supplied providerId is rejected instead of trusted", async () => {
     class Provider { async query() { return [{...result("item"), providerId: "spoofed"}]; } }
     const {search} = createSearch({real: {label: "Real", implementation: "/providers/search-real.js"}}, {"esm:/providers/search-real.js": Provider});

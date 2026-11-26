@@ -45,7 +45,7 @@ export default class Commands {
         const items = this.#discover().filter(item => {
             if (options.moduleId !== undefined && item.moduleId !== options.moduleId) return false;
             if (options.category !== undefined && item.category !== options.category) return false;
-            return !query || [item.id, item.label, item.description].some(value => value.toLowerCase().includes(query));
+            return !query || [item.id, item.label, item.description, ...item.tags].some(value => value.toLowerCase().includes(query));
         });
         return Object.freeze(items);
     }

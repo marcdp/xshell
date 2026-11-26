@@ -33,13 +33,13 @@
     },
     "commandListOptions": {
       "type": "object",
-      "description": "Optional exact ownership filters and case-insensitive text query for Command discovery.",
+      "description": "Optional exact ownership filters and case-insensitive text query across Command metadata.",
       "schema": {
         "type": "object",
         "properties": {
           "moduleId": {"type": "string", "description": "Exact owning module ID."},
           "category": {"type": "string", "description": "Exact effective category."},
-          "query": {"type": "string", "description": "Case-insensitive substring matched against ID, label, and description."}
+          "query": {"type": "string", "description": "Case-insensitive substring matched against ID, label, description, and tags."}
         },
         "additionalProperties": false
       }
@@ -67,7 +67,7 @@
   "events": {},
   "methods": {
     "list": {
-      "description": "Synchronously lists Commands from effective framework and module file inventories without loading implementations.",
+      "description": "Synchronously lists Commands from effective framework and module file inventories, optionally matching ID, label, description, and tags without loading implementations.",
       "parameters": [{"name": "options", "ref": "commandListOptions", "default": {}}],
       "returns": {"ref": "commandDescriptorList", "description": "Frozen descriptors sorted by Command ID."}
     },

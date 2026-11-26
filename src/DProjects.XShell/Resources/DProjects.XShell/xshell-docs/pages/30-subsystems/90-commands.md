@@ -17,7 +17,7 @@ const available = commands.list({ moduleId: "x-filesystem", query: "encrypt" });
 const command = commands.getInfo("filesystem.entry.encrypt.aes");
 ```
 
-The optional `moduleId` and `category` filters are exact. `query` is a case-insensitive substring search across ID, label, and description.
+The optional `moduleId` and `category` filters are exact. `query` is a case-insensitive substring search across ID, label, description, and tags.
 `commands.getInfo(id)` returns the same descriptor shape for an exact ID, or `null` when the Command is unknown. IDs follow bootstrap's existing
 rule: the path below the owning `/commands/` directory with only the final `.js` removed, so nested paths retain `/` and dotted filenames retain
 their dots.
@@ -54,7 +54,8 @@ the values according to the declared parameter list. Load and argument-validatio
 
 Command definitions can also declare optional [usage examples](../20-components/10-manifest.md#usage-examples) in `contract.examples`.
 They may declare lowercase kebab-case classification identifiers in `contract.tags`; generated inventory metadata copies those values to
-`file.resource.tags` without loading the Command. Tags do not alter discovery filters, argument validation, Task handling, or execution.
+`file.resource.tags` without loading the Command. Tags participate in the `query` discovery filter but do not alter argument validation, Task
+handling, or execution.
 
 The Task handler constructs a fresh Command instance with `{ task: taskContext }` and calls `execute(...args)`. During construction, the Command
 creates and owns one independent Services scope directly from the application root. Scope creation therefore happens only after Task execution

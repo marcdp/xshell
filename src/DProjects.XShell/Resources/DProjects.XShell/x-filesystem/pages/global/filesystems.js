@@ -38,12 +38,9 @@ export default {
 
         <hr>
 
-        <!--
         <x-menuitem label="-"></x-menuitem>
-        <x-menuitem label="Manage filesystems" description="Lorem ipsum" icon="x-settings" href="page:x-filesystem:/pages/preferences/filesystems.js" open="stack">
-        </x-menuitem>
+        <x-menuitem label="Manage filesystems" description="Lorem ipsum" icon="x-settings" href="page:x-filesystem:/pages/preferences/filesystems.js" open="stack"></x-menuitem>
         
-        -->
 
         <x-listview view="tiles">
             <x-listview-body>

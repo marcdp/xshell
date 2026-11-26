@@ -7,7 +7,7 @@ export default class ModulesSearchProvider {
     }
 
     // methods
-    async query(text, {signal, limit}) {
+    async query(text, {signal}) {
         // Project matching module metadata to the existing installed-modules inspection Page.
         const query = text.toLowerCase();
         const results = [];
@@ -25,7 +25,6 @@ export default class ModulesSearchProvider {
                 href: "page:x:/pages/preferences/modules.js",
                 open: "stack"
             });
-            if (results.length === limit) break;
         }
         return results;
     }

@@ -7,7 +7,7 @@ export default class FilesystemsSearchProvider {
     }
 
     // methods
-    async query(text, {signal, limit}) {
+    async query(text, {signal}) {
         // Search non-secret named definition metadata and preserve the named registration identity in navigation.
         signal?.throwIfAborted();
         const definitions = await this.filesystems.listDefinitions();
@@ -26,7 +26,6 @@ export default class FilesystemsSearchProvider {
                 href: `page:x-filesystem:/pages/explorer.js?src=${encodeURIComponent(`named:${item.name}`)}&path=%2F`,
                 open: "top"
             });
-            if (results.length === limit) break;
         }
         return results;
     }

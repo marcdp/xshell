@@ -31,6 +31,7 @@ test("commands contract declares discovery and the asynchronous Task-backed run 
     assert.equal(commandsContract.methods.run.parameters[0].ref, "commandRunOptions");
     assert.equal(commandsContract.methods.run.returns.ref, "task");
     assert.equal(commandsContract.types.commandRunOptions.schema.properties.background.default, true);
+    assert.match(commandsContract.types.commandListOptions.schema.properties.query.description, /tags/);
 });
 
 test("commands discovers framework and module inventories without loading implementations", () => {
@@ -82,6 +83,9 @@ test("commands discovers framework and module inventories without loading implem
     assert.deepEqual(commands.list({moduleId: "filesystem"}).map(item => item.id), ["filesystem.entry.encrypt.aes", "nested/cleanup"]);
     assert.deepEqual(commands.list({category: "runtime"}).map(item => item.id), ["runtime.inspect"]);
     assert.deepEqual(commands.list({query: "AES"}).map(item => item.id), ["filesystem.entry.encrypt.aes"]);
+    assert.deepEqual(commands.list({query: "SECURITY"}).map(item => item.id), ["filesystem.entry.encrypt.aes"]);
+    assert.deepEqual(commands.list({moduleId: "filesystem", category: "filesystem", query: "FILES"}).map(item => item.id), ["filesystem.entry.encrypt.aes"]);
+    assert.deepEqual(commands.list({moduleId: "filesystem", category: "runtime", query: "security"}), []);
     assert.deepEqual(commands.getInfo("filesystem.entry.encrypt.aes").tags, ["security", "files"]);
     assert.equal(commands.getInfo("nested/cleanup").path, "/_assets/filesystem/1.0.0.dev/commands/nested/cleanup.js");
     assert.equal(commands.getInfo("missing"), null);

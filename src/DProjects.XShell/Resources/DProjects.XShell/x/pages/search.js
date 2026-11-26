@@ -16,6 +16,7 @@ export default {
             <x-datafield type="search" placeholder="Search" x-model="state.keyword" autocomplete="off" autofocus></x-datafield>
 
             <x-loading x-if="state.loading" role="status" aria-label="Loading search results"></x-loading>
+            
             <x-notice x-if="state.errors.length > 0" type="warning" label="Some results are unavailable" x-attr:message="state.errorMessage"></x-notice>
 
             <div x-if="state.results.length > 0">

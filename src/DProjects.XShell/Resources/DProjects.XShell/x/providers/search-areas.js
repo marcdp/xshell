@@ -8,7 +8,7 @@ export default class AreasSearchProvider {
     }
 
     // methods
-    async query(text, {signal, limit}) {
+    async query(text, {signal}) {
         // Search the current Area first, then the remaining effective Area navigation menus.
         const query = text.toLowerCase();
         const current = this.areas.getCurrentArea();
@@ -18,22 +18,22 @@ export default class AreasSearchProvider {
             signal?.throwIfAborted();
             const menu = this.areas.getMenu("navigation", area.id);
             if (!menu || menu.scope !== "area") continue;
-            this.collect(menu.items, area, query, results, limit);
-            if (results.length >= limit) break;
+            this.collect(menu.items, area, query, results, signal);
         }
         signal?.throwIfAborted();
         return results;
     }
-    collect(items, area, query, results, limit) {
+    collect(items, area, query, results, signal) {
         // Traverse effective items depth-first while excluding groups, separators, and unsupported embedded destinations.
         for (const item of items || []) {
-            if (results.length >= limit) return;
-            const href = item.path || item.href;
+            signal?.throwIfAborted();
+            const label = typeof item.label === "string" ? item.label.trim() : "";
+            const href = [item.path, item.href].find(value => typeof value === "string" && value.trim())?.trim() || "";
             const searchable = [item.label, item.description, item.path, item.href].filter(value => typeof value === "string").join(" ").toLowerCase();
-            if (href && item.label !== "-" && item.open !== "embed" && searchable.includes(query)) {
+            if (href && label && label !== "-" && item.open !== "embed" && searchable.includes(query)) {
                 results.push({
                     id: `${area.id}:${href}`,
-                    label: item.label,
+                    label,
                     ...(item.description ? {description: item.description} : {}),
                     icon: item.icon || this.config.modules[item.module]?.icon || area.icon || "x-page",
                     category: area.label || area.id,
@@ -41,7 +41,7 @@ export default class AreasSearchProvider {
                     open: ["top", "stack", "dialog", "dock"].includes(item.open) ? item.open : "top"
                 });
             }
-            this.collect(item.children, area, query, results, limit);
+            this.collect(item.children, area, query, results, signal);
         }
     }
 }

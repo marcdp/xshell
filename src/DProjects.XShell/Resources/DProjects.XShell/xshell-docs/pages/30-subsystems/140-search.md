@@ -94,7 +94,8 @@ One provider instance is cached by provider ID. Concurrent first queries share t
 removed from the cache so a later query can retry. These instances are owned by the Search singleton and are not separately registered Services.
 
 Providers return an array of result objects without `providerId`. They should use metadata and inventory APIs that do not materialize destination
-resources. A provider receives the aggregate limit as a useful upper bound and must observe `signal` itself to interrupt domain work cooperatively.
+resources. A provider receives `limit` as an advisory value for relevance-aware remote or expensive retrieval and must observe `signal` itself to
+interrupt domain work cooperatively. Bundled metadata providers return every matching candidate; the Search Service's aggregate limit is authoritative.
 
 ## Aggregation, cancellation, and failures
 
@@ -114,15 +115,17 @@ Search assigns these deterministic relevance tiers:
 5. other provider-specific matches.
 
 Within a tier, effective provider order and provider-defined result order are retained. Duplicate `(providerId, id)` identities keep their first
-result. Distinct providers or distinct IDs are not merged merely because they share a label or destination. The aggregate limit is applied after
-ranking and deduplication.
+result. Distinct providers or distinct IDs are not merged merely because they share a label or destination. The authoritative aggregate limit is
+applied only after all bundled metadata candidates are ranked and deduplicated.
 
 ## Bundled providers and UI
 
 The `x` module contributes providers for Area navigation Pages, application module metadata, Commands, and global menu shortcuts. The Area provider
 searches the current Area first and preserves friendly `path || href` destinations. The Command provider uses `commands.list({query})` and opens the
 existing invocation Page in a stack; it never loads or executes a Command. The shortcut provider omits embedded menu entries because Search results
-cannot represent `open: "embed"` or the local `outlet: "self"` composition behavior.
+cannot represent `open: "embed"` or the local `outlet: "self"` composition behavior. Menu providers also omit separators, targetless groups, empty
+destinations, and empty or whitespace-only labels while continuing to traverse valid descendants. Shortcut result IDs use the effective menu and
+hierarchical ancestor identities, with length-prefixed components preventing ambiguous concatenation when sibling-scoped item IDs are reused.
 
 The `x-filesystem` module contributes the Filesystems provider. It calls `filesystems.listDefinitions()` and builds Explorer links with
 `named:<name>` references. It does not open Filesystem instances, connect to providers, read credential storage, or unlock Secrets.
