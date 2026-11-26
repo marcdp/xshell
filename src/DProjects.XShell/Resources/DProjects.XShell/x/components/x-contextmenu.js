@@ -57,7 +57,7 @@ export default {
             position:fixed;
             z-index:10;
             flex-direction:column; 
-            width:var(--x-contextmenu-width); 
+            min-width:var(--x-contextmenu-width); 
             border-radius:var(--x-contextmenu-border-radius); 
             padding: var(--x-contextmenu-padding); 
             box-shadow:var(--x-contextmenu-shadow); 

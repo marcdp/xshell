@@ -38,14 +38,23 @@ export default {
         .header .title x-page-description {margin:0; font-weight:normal; font-size:var(--x-font-size-small);}
         .header .header-actions {float:right}
         .no-title .header {display:none;}
+
+        /* no title */
         .embed-no-title .header {display:none;}
-        
-        x-loading {
-            position:absolute;
-            width:var(--x-loading-width);
-            left:50%;
-            z-index:10;
-        }        
+
+        /* size */
+        .embed-size-medium {width:50vw}
+        .size-compact {width:24rem; min-width:0;}
+        .size-narrow {width:34rem; min-width:0;}
+        .size-medium {width:48rem; min-width:0;}
+        .size-wide {width:64rem; min-width:0;}
+        .embed-size-compact {width:24rem; min-width:0;}
+        .embed-size-narrow {width:34rem; min-width:0;}
+        .embed-size-medium {width:48rem; min-width:0;}
+        .embed-size-wide {width:64rem; min-width:0;}
+
+        /* loading indicator */
+        x-loading {position:absolute;width:var(--x-loading-width);left:50%;z-index:10;}        
     `,
     template: `
         <x-loading x-if="state.status=='loading'"></x-loading>        

@@ -4,7 +4,7 @@
         "x-demo": {
             "label": "XShell Cookbook",
             "version": "0.9.0",
-            "icon": "x-demo",
+            "icon": "",
             "copyright": "",
             "defaults": {
                 "component": {
@@ -20,6 +20,8 @@
                 "navigation": { "source": "/pages" },
                 "global": {
                     "items":[
+                        {"label": "Home", "icon":"x-home", "href": "/pages/index.js?home=1", "order": -1},
+                        {"label": "-"},
                         {"label": "Demo", "icon":"x-demo", "href": "/pages/index.js"}
                     ]
                 }

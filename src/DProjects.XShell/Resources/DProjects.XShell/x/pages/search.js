@@ -1,15 +1,15 @@
 // page
 export default {
     contract: {
-        description: "Shows a search page.",
+        description: "Search.",
         events: {},
         properties: {},
         methods: {}
     },
     meta: {
-        title: "Page search",
+        title: "Search",
         description: "Enter at least 3 characters to search",
-        classes: ["stack-size-narrow"]
+        classes: ["stack-size-narrow", "embed-size-medium"]
     },
     template: `
         <x-datafields>

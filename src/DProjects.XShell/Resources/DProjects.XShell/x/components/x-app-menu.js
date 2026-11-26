@@ -27,7 +27,6 @@ export default {
             box-sizing: border-box;
             padding:.5em;
         }
-        .logo {display:block; text-align:center; margin-top:.25em; height:2.1em; opacity:.6}
         div {display:flex; flex-direction: column; flex:1;}
         x-menuitem.flex {flex:1; visibility:hidden;}
         x-menuitem[label='-'] {padding-left:.75em; padding-right:.75em;}
@@ -35,7 +34,6 @@ export default {
 
     `,
     template: `
-        <x-icon class="logo" x-attr:icon="state.appIcon" x-attr:title="state.appLabel + ' ' + state.appVersion"></x-icon>            
         <div x-if="state.menu" >
             <x-menuitem x-recursive="(menuitem,index,indexAbsolute,indent) in state.menu"
                 x-key="id,href,path,order,command"
@@ -58,9 +56,6 @@ export default {
         </div>
     `,
     state: {
-        appIcon: null,
-        appLabel: null,
-        appVersion: null,
         expanded: false,
         selected: "",
         menu: null,
@@ -75,9 +70,6 @@ export default {
                 events.on(bus, "xshell:menus:change", "refresh");
                 events.on(bus, "xshell:navigation:end", "refreshSelected");
                 events.on(bus, ["xshell:tasks:added", "xshell:tasks:updated", "xshell:tasks:removed"], "refreshTasks");
-                state.appIcon = config.app.icon || null;
-                state.appLabel = config.app.label || null;
-                state.appVersion = config.app.version || null;
                 this.refresh();
                 this.refreshSelected();
                 this.refreshTasks();
