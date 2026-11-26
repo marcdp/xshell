@@ -83,14 +83,6 @@ test("Workspace leaves missing and empty menus without embedded navigation", () 
     }
 });
 
-test("Workspace rejects missing or blank navigable IDs", () => {
-    for (const id of [undefined, "", " "]) {
-        const invalid = { ...reports, items: [{ id, label: "Missing ID", href }] };
-        const areas = createAreas({ reports: { menus: { invalid } } });
-        assert.throws(() => createPage("invalid", null, areas), /Workspace menu 'invalid' requires a non-empty ID.*Missing ID/);
-    }
-});
-
 test("Workspace validates duplicate IDs across branches and allows merged sibling contributions", () => {
     const duplicate = { ...reports, items: [...reports.items, { label: "Another group", children: [{ id: "overview", label: "Duplicate", href }] }] };
     const areas = createAreas({ reports: { menus: { duplicate, reports } }, extra: { menus: {

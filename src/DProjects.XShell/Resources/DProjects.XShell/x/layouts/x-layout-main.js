@@ -193,8 +193,8 @@ export default {
                     __right:0;
                     __bottom:0;
                     
-                    __outline:1px red solid;
-                    __outline-offset: -1px;
+                    outline:1px red solid;
+                    outline-offset: -1px;
 
                     padding:0;
                     display:flex;
