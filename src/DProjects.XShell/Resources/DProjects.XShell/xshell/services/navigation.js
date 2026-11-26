@@ -41,6 +41,7 @@ export default class Navigation {
 
     #stack = [];
     #stackToDomTask = Promise.resolve();
+    #browserHash = "";
     
     // ctor
     constructor( { areas, bus, config, resolver }, options = {}, { container = document.body } = {} ) {
@@ -78,13 +79,17 @@ export default class Navigation {
     async init() {
         if (this.#mode == "hash") {
             // hash mode
-            window.addEventListener("hashchange", async () => {
-                this.#stack = this.#browserUrlToStack(document.location.hash);
-                await this.#stackToDom();
+            this.#browserHash = document.location.hash;
+            window.addEventListener("hashchange", () => {
+                // Ignore echoes of changes already applied by Navigation.
+                const hash = document.location.hash;
+                if (hash === this.#browserHash) return;
+                this.#browserHash = hash;
+                return this.#restoreBrowserStack(hash || this.#areas.getDefaultArea()?.home);
             });
             // init
-            if (document.location.hash) {
-                this.#stack = this.#browserUrlToStack(document.location.hash);
+            if (this.#browserHash) {
+                this.#stack = this.#browserUrlToStack(this.#browserHash);
                 await this.#stackToDom();
             } else {
                 let defaultArea = this.#areas.getDefaultArea();
@@ -93,11 +98,10 @@ export default class Navigation {
             }
         } else if (this.#mode == "path") {
             // path mode
-            window.addEventListener("popstate", async () => {
+            window.addEventListener("popstate", () => {
                 let url = document.location.pathname + document.location.search;
                 if (url.startsWith(this.#appBasePath)) url = url.substring(this.#appBasePath.length);
-                this.#stack = this.#browserUrlToStack(url + document.location.hash);
-                await this.#stackToDom();
+                return this.#restoreBrowserStack(url + document.location.hash);
             });
             // init
             let url = document.location.pathname + document.location.search;
@@ -142,19 +146,7 @@ export default class Navigation {
         if (!changes || typeof(changes) !== "object" || Array.isArray(changes)) {
             throw new TypeError("Navigation.replacePageQuery: changes must be an object.");
         }
-        const xpage = page?.host || null;
-        const xpages = xpage ? this.getXPages() : [];
-        const index = xpages.indexOf(xpage);
-        if (index < 0 || index >= this.#stack.length) {
-            return this.#replacePageSrcQuery(page?.src || null, changes);
-        }
-        const item = this.#stack[index];
-        const params = { ...(item.params || {}) };
-        this.#applyQueryChanges(params, changes);
-        const stack = [...this.#stack];
-        stack[index] = { ...item, params };
-        this.#stackToBrowser(stack, { replace: true });
-        return this.#buildUrlFinal(stack[index]);
+        return this.#replacePageUrl(page, src => this.#replacePageSrcQuery(src, changes));
     }
     replacePageHash(page, hash) {
         // replace one Page fragment without navigating or reloading the Page
@@ -162,17 +154,7 @@ export default class Navigation {
             throw new TypeError("Navigation.replacePageHash: hash must be a string or null.");
         }
         const fragment = hash ? `#${hash.replace(/^#+/, "")}` : "";
-        const xpage = page?.host || null;
-        const xpages = xpage ? this.getXPages() : [];
-        const index = xpages.indexOf(xpage);
-        if (index < 0 || index >= this.#stack.length) {
-            return this.#replacePageSrcHash(page?.src || null, fragment);
-        }
-        const item = this.#stack[index];
-        const stack = [...this.#stack];
-        stack[index] = { ...item, href: this.#replacePageSrcHash(item.href, fragment) };
-        this.#stackToBrowser(stack, { replace: true });
-        return this.#buildUrlFinal(stack[index]);
+        return this.#replacePageUrl(page, src => this.#replacePageSrcHash(src, fragment));
     }
     buildUrlAbsolute(params){
         let href = this.#buildUrlPublic(params);
@@ -353,7 +335,38 @@ export default class Navigation {
 
 
     // private methods
-    #stackToBrowser(stack, { replace }) {
+    async #stackToBrowser(stack, { replace }) {
+        // Explicit navigation updates the browser and reconciles the stack.
+        this.#writeBrowserStack(stack, { replace });
+        return this.#stackToDom();
+    }
+    #replacePageUrl(page, replaceSource) {
+        // Ignore an outgoing Page, even before a queued reconciliation updates its host.
+        const xpage = page?.host;
+        if (xpage?.canSynchronizePageSrc?.(page) === false) return null;
+        const index = xpage ? this.getXPages().indexOf(xpage) : -1;
+        if (index < 0) return replaceSource(page?.src);
+        const item = this.#stack[index];
+        if (!item || !this.#isPageDestination(xpage, item)) return null;
+
+        // Keep the friendly route when it can represent the requested change.
+        const stack = [...this.#stack];
+        const { href, params } = this.parseUrl(replaceSource(this.buildUrl(item)));
+        stack[index] = { ...item, href, params };
+        let src = this.#buildUrlFinal(stack[index]);
+        const updatedSource = replaceSource(this.#buildUrlFinal(item));
+        if (!this.#sameDestination(this.#pageDestination(src), this.#pageDestination(updatedSource))) {
+            // Store the canonical destination when a route or menu default would mask the change.
+            const canonical = this.parseUrl(updatedSource);
+            stack[index] = { ...item, href: canonical.href, params: canonical.params };
+            src = this.#buildUrlFinal(stack[index]);
+        }
+
+        // Replace one history entry and let Page synchronize its own and its host's source.
+        this.#writeBrowserStack(stack, { replace: true });
+        return src;
+    }
+    #writeBrowserStack(stack, { replace }) {
         let url = "";
         if (stack.length) {
             // root page
@@ -384,7 +397,8 @@ export default class Navigation {
                 location.replace(HASH_PREFIX + url);
             } else {
                 location.hash = HASH_PREFIX + url;
-            }            
+            }
+            this.#browserHash = location.hash;
         } else if (this.#mode === "path") {
             if (replace) {
                 history.replaceState(null, "", this.#appBasePath + url);
@@ -392,8 +406,15 @@ export default class Navigation {
                 history.pushState(null, "", this.#appBasePath + url);
             }
         }
-        // keep the live Page elements and the logical stack aligned without reloading href-identical Pages
-        return this.#stackToDom();
+    }
+    async #restoreBrowserStack(url) {
+        // History traversal uses the same reconciliation as explicit navigation.
+        try {
+            this.#stack = this.#browserUrlToStack(url);
+            await this.#stackToDom();
+        } catch (error) {
+            console.error("Navigation: could not restore the browser location.", error);
+        }
     }
     #browserUrlToStack(url) {
         if (!url || typeof url !== "string") {
@@ -421,16 +442,16 @@ export default class Navigation {
         return task;
     }
     async #reconcileStackToDom() {
-        //navigate
+        // Resolve a snapshot before reconciling so pending cleanup cannot mix stack revisions.
+        const stack = this.#stack;
+        const sources = stack.map(item => this.#buildUrlFinal(item));
         const xpages = this.getXPages();
-        const domStack = xpages.map(xpage => this.parseUrl(xpage.src));
+        const domStack = xpages.map(xpage => this.#pageDestination(xpage.src));
+        const destinations = sources.map(src => this.#pageDestination(src));
 
         // Detect structural navigation, ignoring query parameters and URL fragments.
-        const structuralChange = domStack.length !== this.#stack.length ||
-            domStack.some((before, index) => {
-                const targetHref = this.parseUrl(this.#buildUrlFinal(this.#stack[index])).href;
-                return this.#splitHref(before.href).identity !== this.#splitHref(targetHref).identity;
-            });
+        const structuralChange = domStack.length !== stack.length ||
+            domStack.some((before, index) => before.identity !== destinations[index].identity);
 
         // Close dialogs only when the navigation stack changes structurally.
         if (structuralChange) {
@@ -443,14 +464,13 @@ export default class Navigation {
         }
 
         //process stack
-        for (let i = 0; i < Math.max(this.#stack.length, domStack.length); i++) {
+        for (let i = 0; i < Math.max(stack.length, domStack.length); i++) {
             let itemBefore = domStack[i];
-            let itemAfter = this.#stack[i];
+            let itemAfter = stack[i];
             if (!itemBefore && itemAfter) {
                 //add page
                 let xpage = document.createElement("x-page");
-                const hrefFinal = this.#buildUrlFinal(itemAfter);
-                xpage.setAttribute("src", hrefFinal);
+                xpage.setAttribute("src", sources[i]);
                 if (i == 0) {
                     xpage.setAttribute("layout", "main");
                     //emit event navigation-start
@@ -459,11 +479,13 @@ export default class Navigation {
                     xpage.setAttribute("layout", "stack");
                     xpage.stackClasses = itemAfter.classes;
                     xpage.addEventListener("close", async (event) => {
-                        //page close
-                        let xpages = this.getXPages();
-                        let index = xpages.indexOf(event.target);
-                        this.#stack.splice(index, 1);
-                        await this.#stackToBrowser(this.#stack, { replace: false });
+                        // Close only a host that still represents the selected stack entry.
+                        const index = this.getXPages().indexOf(event.target);
+                        const item = this.#stack[index];
+                        if (!item || !this.#isPageDestination(event.target, item)) return;
+                        const nextStack = [...this.#stack];
+                        nextStack.splice(index, 1);
+                        await this.#stackToBrowser(nextStack, { replace: false }).catch(error => console.error("Navigation: could not close the stacked Page.", error));
                     });
                 }
                 xpage.addEventListener("change", (event) => {
@@ -501,13 +523,8 @@ export default class Navigation {
                 // Apply presentation updates even when the existing Page can stay mounted.
                 const xpage = xpages[i];
                 if (i > 0) xpage.stackClasses = itemAfter.classes;
-                if (itemBefore.href === itemAfter.href) continue;
-
-                //change page
-                const hrefFinal = itemAfter ? this.#buildUrlFinal(itemAfter) : null;
-                const itemFinal = hrefFinal ? this.parseUrl(hrefFinal) : null;
-                if (itemBefore.href != itemFinal.href) {
-                    xpage.src = hrefFinal;
+                if (!this.#sameDestination(itemBefore, destinations[i])) {
+                    xpage.src = sources[i];
                     //emit event navigation-start
                     if (i == 0) {
                         this.#bus.emit("xshell:navigation:start", { src: xpage.src });
@@ -515,6 +532,24 @@ export default class Navigation {
                 }
             }
         }
+    }
+    #pageDestination(src) {
+        // Compare decoded query values in key order, preserving the order of repeated values.
+        const { identity, suffix } = this.#splitHref(src);
+        const hashIndex = suffix.indexOf("#");
+        const hash = hashIndex < 0 ? "" : suffix.substring(hashIndex);
+        const params = new URLSearchParams(hashIndex < 0 ? suffix : suffix.substring(0, hashIndex));
+        params.delete("nav");
+        params.sort();
+        return { identity, hash, query: params.toString() };
+    }
+    #sameDestination(before, after) {
+        // Keep explicit fragment navigation on the normal Page loading path.
+        return before.identity === after.identity && before.query === after.query && before.hash === after.hash;
+    }
+    #isPageDestination(host, item) {
+        // Check whether the host still represents the latest requested stack entry.
+        return this.#sameDestination(this.#pageDestination(host.src), this.#pageDestination(this.#buildUrlFinal(item)));
     }
     async #showDialog({ href, context }) {
         //show page dialog
@@ -550,9 +585,13 @@ export default class Navigation {
         }
         const menuitem = this.#areas.resolvePath(identity);
         if (menuitem) {
+            // Apply an alias's defaults before the invocation's explicit query and fragment.
+            const target = this.parseUrl(menuitem.href);
+            const targetParts = this.#splitHref(target.href);
             return this.buildUrl({
                 ...item,
-                href: menuitem.href + suffix
+                href: targetParts.identity + (suffix || targetParts.suffix),
+                params: { ...target.params, ...item.params }
             });
         }
         const match = this.#findRouteMatch(identity);
@@ -577,7 +616,17 @@ export default class Navigation {
         const areaId = this.#areas.resolveAreaId?.(identity);
         const area = this.#areas.getArea?.(areaId);
         const menuitem = area ? this.#areas.resolveHref?.(identity, area.id) : null;
-        if (menuitem) return { href: (menuitem.path || identity) + suffix, params };
+        if (menuitem) {
+            // Use the friendly path only when resolving it can reproduce the invocation.
+            if (!menuitem.path) return { href: canonicalHref, params };
+            const target = this.parseUrl(menuitem.href);
+            const supplied = { ...this.parseUrl(canonicalHref).params, ...params };
+            const targetFragment = this.#splitHref(target.href).suffix;
+            if (Object.keys(target.params).every(key => Object.hasOwn(supplied, key)) && (!targetFragment || suffix.includes("#"))) {
+                return { href: menuitem.path + suffix, params };
+            }
+            return { href: canonicalHref, params };
+        }
         for (const routeArea of this.#getPublicRouteAreas(href.startsWith("page:") ? canonicalHref : href, page)) {
             const routeTarget = this.#resolvePublicRouteTarget(canonicalHref, params, routeArea);
             if (routeTarget) return routeTarget;
@@ -604,7 +653,7 @@ export default class Navigation {
         if (preserveAssetPath && this.#isAssetPath(identity)) return identity + suffix;
         const pageAreaId = page?.src ? this.#areas.resolveAreaId?.(page.src) : null;
         const menuitem = this.#areas.resolveHref?.(identity, pageAreaId) || this.#areas.resolveHref?.(identity);
-        if (menuitem) return menuitem.href + suffix;
+        if (menuitem) return this.#splitHref(menuitem.href).identity + suffix;
         const area = page ? this.#areas.getArea?.(pageAreaId) : this.#areas.getCurrentArea?.() || this.#areas.getDefaultArea?.();
         if (!area) return href;
         const canonicalHref = this.#applyAreaPrefix(identity, area);
@@ -692,8 +741,8 @@ export default class Navigation {
         const canonicalParams = { ...canonical.params, ...suppliedParams };
         for (const route of area.routes || []) {
             const target = this.parseUrl(route.href);
-            const targetIdentity = this.#splitHref(target.href).identity;
-            if (targetIdentity !== canonicalIdentity) continue;
+            const targetParts = this.#splitHref(target.href);
+            if (targetParts.identity !== canonicalIdentity || (targetParts.suffix && !canonicalParts.suffix)) continue;
             let applicable = true;
             for (const [key, value] of Object.entries(target.params)) {
                 if (!Object.hasOwn(canonicalParams, key) || String(canonicalParams[key]) !== value) {

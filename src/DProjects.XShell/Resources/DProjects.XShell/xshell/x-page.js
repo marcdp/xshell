@@ -27,7 +27,8 @@ export function createXPageClass(runtime) {
         _stackClasses;
 
         _loadRevision  = 0;
-        _loadCommit = Promise.resolve();
+        _pageLoadRevision = 0;
+        _loadCommit = null;
 
         _loading = "";
         _loadingObserver = null;
@@ -96,7 +97,7 @@ export function createXPageClass(runtime) {
             }
             this._src = value;
             if (changed){
-                if (this._src && this._connected) this.load();
+                if (this._src && this._connected) this.#loadSource();
             }
         }
         get status() {return this._status;}
@@ -173,7 +174,7 @@ export function createXPageClass(runtime) {
                     entries.forEach(entry => {
                         if (entry.isIntersecting) {
                             if (this.loading == "lazy" && this._status == "") {
-                                this.load();
+                                this.#loadSource();
                             }
                         }
                     });
@@ -184,7 +185,7 @@ export function createXPageClass(runtime) {
 
             } else if (this._src) {
                 // load
-                this.load();
+                this.#loadSource();
             }
         }
         disconnectedCallback() {
@@ -198,6 +199,14 @@ export function createXPageClass(runtime) {
 
 
         //methods
+        async #loadSource() {
+            // Report automatic load failures while keeping explicit load() calls awaitable.
+            try {
+                await this.load();
+            } catch (error) {
+                console.error("x-page: could not load the Page.", error);
+            }
+        }
         async load() {
             console.log(`x-page: load '${this.src} ...`);
             let src = this.src;
@@ -217,6 +226,7 @@ export function createXPageClass(runtime) {
             if (!layoutName) layoutName = "embed";
             let layout = runtime.config.xshell.ui.layouts[layoutName];
             let layoutClass = await runtime.loader.load("layout:" + layout);
+            if (loadRevision !== this._loadRevision) return;
             if (layoutElement == null || layoutElement.localName != layout) {
                 if (layoutElement) layoutElement.remove();
                 layoutElement = document.createElement(layout);
@@ -308,14 +318,16 @@ export function createXPageClass(runtime) {
                 // prepare the candidate before entering the serialized replacement queue
                 await page.load();
                 if (loadRevision === this._loadRevision) {
-                    const loadCommit = this._loadCommit.then(async () => {
+                    const loadCommit = (this._loadCommit ?? Promise.resolve()).then(async () => {
                         // abandon a candidate that became stale while waiting in the queue
                         if (loadRevision !== this._loadRevision) return;
 
                         // replace the current Page before transferring ownership of the candidate
                         await this.unmount();
                         await this.unload();
+                        if (loadRevision !== this._loadRevision) return;
                         this._page = page;
+                        this._pageLoadRevision = loadRevision;
                         pageAdopted = true;
 
                         // mount the adopted Page through the ordinary host lifecycle
@@ -356,6 +368,10 @@ export function createXPageClass(runtime) {
                 await this._page.unmount();
             }
         }
+        canSynchronizePageSrc(page) {
+            // Only the current Page can update the source selected by this host.
+            return this._page === page && this._pageLoadRevision === this._loadRevision;
+        }
         synchronizePageSrc(value) {
             // update reflected Page source state without invoking the resource-loading setter
             this._src = value;
@@ -387,6 +403,9 @@ export function createXPageClass(runtime) {
             this.dispatchEvent(new CustomEvent("close", { composed: true }));
         }
         async removePage() {
+            // Invalidate pending candidates and let an in-progress replacement finish cleanup.
+            this._loadRevision++;
+            if (this._loadCommit) await this._loadCommit;
             // try to close the layout if it exists
             let layoutElement = this.shadowRoot.firstChild;
             if (layoutElement && layoutElement.controller.close) {

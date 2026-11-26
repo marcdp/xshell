@@ -30,7 +30,7 @@ test("XShell resolves the configured Navigation singleton after Areas compositio
     assert.doesNotMatch(source, /import Navigation from/);
     assert.doesNotMatch(source, /new Navigation\s*\(/);
     assert.doesNotMatch(source, /register\("navigation"/);
-    assert.match(source, /get navigation\(\) \{ return this\._services\.resolve\("navigation"\); \}/);
+    assert.match(source, /const services = this\._services;\s+const XPage = createXPageClass\(\{[\s\S]*?get navigation\(\) \{ return services\.resolve\("navigation"\); \}/);
     assert.ok(servicesIndex < areasResolveIndex && areasResolveIndex < resolveModulesIndex && resolveModulesIndex < areasIndex && areasIndex < navigationIndex);
 });
 

@@ -266,8 +266,10 @@ Each supplied value sets or replaces that query parameter, `null` removes it, an
 are preserved. Navigation owns stack mutation and browser URL serialization. Only Pages represented in the navigation stack affect the browser URL; dialog
 and embedded Pages may update their local `Page.src` query without changing the main browser navigation.
 
-Query reflection changes query state, not the Page resource. The navigation DOM synchronizer continues to compare stack item `href` values, so a
-query-only change keeps the same Page instance and lifecycle alive.
+Query reflection synchronizes the active invocation's URL and preserves its Page instance, controller, and Services scope. `Page.replaceHash(hash)`
+updates its fragment with the same lifecycle behavior. Explicit navigation and browser history restoration create a new invocation when the resolved
+query changes, and the new Page initializes its query-bound properties from the destination. See
+[Page invocations and browser history](120-navigation.md#page-invocations-and-browser-history).
 
 Generated Page resolver rules use `cache: true` with `cacheMode: "path"`. This makes Page implementation identity path-based: Page URLs that differ
 only by query reuse the same cached implementation/class. Page instance and navigation identity remain the complete path plus query. `x-page`

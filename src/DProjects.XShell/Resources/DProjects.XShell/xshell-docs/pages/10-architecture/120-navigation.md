@@ -171,8 +171,8 @@ An absent/empty target or `_self` permits interception of an internal link. `x-a
 
 ## Hash mode
 
-Navigation listens for hash changes, decodes the page stack, and updates `x-page` elements.  Because the
-destination is in the fragment, the server needs no path fallback for deep links.
+Navigation listens for hash changes, decodes the page stack, and updates `x-page` elements. Hash changes from Navigation's own writes are already
+accounted for. Because the destination is in the fragment, the server needs no path fallback for deep links.
 
 After reverse route generation, hash mode wraps the public application path with `App.BasePath` and `#!`. With `App.BasePath` `/app`, Area prefix
 `/demo`, and public route `/repository/12/items`, the browser href is `/app/#!/demo/repository/12/items`.
@@ -224,15 +224,26 @@ A non-empty Area prefix wraps both friendly paths and canonical hrefs. For examp
 `/customers/reports` in path mode, while `x-page` receives `/customers/_assets/reports/<generation>/pages/report.js`. `x-page` removes the Area prefix before
 resolving the module resource; the structural `/_assets/reports/...` prefix still denotes the resource owner.
 
-The query portion of a Page destination remains part of its canonical Page `src`. Navigation preserves that input, while `page-js` exposes raw
-query access to a definition-based Page controller as `controller({ query })` and separately interprets query parameters for contract properties
-explicitly marked `query: true`. Navigation parses or owns neither mechanism; see [Pages](70-pages.md#controller-services).
+The query portion of a Page destination remains part of its canonical Page `src`. The `page-js` loader exposes raw query access as
+`controller({ query })` and initializes contract properties marked `query: true`. See [Pages](70-pages.md#controller-services).
+
+## Page invocations and browser history
+
+Explicit navigation compares each stack entry's resolved Page path, including its Area prefix, with the destination selected by its `x-page` host.
+The comparison includes the decoded query names and values after menu or route resolution. A different path, an added or removed query parameter,
+or a different query value starts a new Page invocation through the existing host's load lifecycle. Reordering query parameters with distinct names
+preserves the existing invocation. Explicit navigation to a different fragment also loads the Page. Stack presentation classes and navigation metadata
+do not affect the comparison. The `replace` option controls which browser history entry is written.
+
+Back and Forward apply the same comparison in path and hash mode. Each affected Page initializes its query-bound properties from the restored
+destination. Equivalent stack entries keep their Page instances and Services scopes. Dialogs close when the stack's length or resolved Page paths
+change. Query and fragment changes alone preserve open dialogs.
 
 ## Query-only Page updates
 
 Despite its name, `Page.replaceQuery(query)` patches only that Page's existing query parameters; it does not replace the complete query map. The Page
-delegates to `Navigation.replacePageQuery(page, changes)`, which locates the Page's `x-page` host in the current stack, clones only the matching stack
-item's `params`, preserves its `href` and `nav` metadata, and calls `_stackToBrowser(stack, { replace: true })`.
+delegates to `Navigation.replacePageQuery(page, changes)`, which locates the Page's `x-page` host in the current stack, patches the matching entry,
+and replaces the browser history entry.
 
 ```js
 page.replaceQuery({
@@ -241,13 +252,12 @@ page.replaceQuery({
 });
 ```
 
-Each value sets or replaces that query parameter, `null` removes it, and `undefined` leaves it unchanged; unrelated existing query parameters are
-preserved. The Page and its host synchronize their logical source internally without invoking the normal `src` loading setter.
+Each value sets or replaces that query parameter. `null` removes it and `undefined` leaves it unchanged. Unrelated parameters and navigation metadata
+are preserved. The Page and its host synchronize their logical source without invoking the normal `src` loading setter. This preserves the current
+Page, controller, and Services scope. Dialog and embedded Pages update their local source. The `page-js` loader reflects properties marked with both
+`query: true` and `reflect: true` using the property's declared query serialization.
 
-Because `_stackToDom()` compares `href` rather than query parameters, a query-only reflection does not recreate, reload, unmount, or mount the Page.
-Pages opened as dialogs or embeds are outside the browser navigation stack; their local query may be patched, but they do not rewrite the main browser
-URL. Contract-property reflection is decided by `page-js`: only `query: true` plus `reflect: true` participates, and query values use the property's
-declared scalar contract type.
+Navigation uses the canonical Page destination when a friendly route or menu default would override the URL update.
 
 ## Page fragment updates
 
