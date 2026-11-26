@@ -4,7 +4,9 @@ export default {
         description: "Search configured providers.",
         events: {},
         properties: {},
-        methods: {}
+        methods: {
+            focus: {description: "Focuses the search input."}
+        }
     },
     meta: {
         title: "Search",
@@ -65,6 +67,10 @@ export default {
             load() {
                 // Debounce reactive text changes while keeping the three-character threshold as Page policy.
                 events.on(state, "change:keyword", "queueSearch");
+            },
+            focus() {
+                alert("FOCUSSS")
+                page.refs.search?.focus();
             },
             queueSearch() {
                 // Cancel active work immediately and schedule only the latest eligible keyword.

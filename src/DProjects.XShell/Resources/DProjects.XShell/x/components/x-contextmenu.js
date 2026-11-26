@@ -122,6 +122,7 @@ export default {
                 state.visible = true;
                 // focus the menu after opening
                 postRender("focus");
+                
             },
             command({ event }) {
                 if (!host.classList.contains("inline")) {

@@ -7,6 +7,7 @@ export default {
         properties: {
             icon:        {type:"string", default:"", attribute:true, state:true, description:""},
             label:       {type:"string", default:"", attribute:true, state:true, description:""},
+            description: {type:"string", default:"", attribute:true, state:true, description:""},
             href:        {type:"string", default:"", attribute:true, state:true, description:""},
             suffix:      {type:"string", default:"", attribute:true, state:true, description:""},
             command:     {type:"string", default:"", attribute:true, state:true, description:""},
@@ -47,15 +48,15 @@ export default {
         ]
     },
     style: `
-        :host {display:flex; position:relative; box-sizing:border-box; flex-direction:column; margin-bottom:.15em;
-            --x-menuitem-indent: calc(var(--x-menu-indent, -1) + 1);
-        }
+        :host {display:flex; position:relative; box-sizing:border-box; flex-direction:column; margin-bottom:.15em;--x-menuitem-indent: calc(var(--x-menu-indent, -1) + 1);}
+        :host(:last-child) {margin-bottom:0;}
         
         /* default */
-        :host x-anchor {display:flex; flex:1; flex-direction:row; align-items:center; cursor:pointer; border-radius:var(--x-menuitem-border-radius); user-select: none;}
+        :host x-anchor {display:flex; flex:1; flex-direction:row; align-items:center; cursor:pointer; border-radius:var(--x-menuitem-border-radius); user-select: none; }
         :host x-anchor:hover {background:var(--x-menuitem-background-hover); z-index:1;}
         :host x-anchor x-icon {color:var(--x-color-text)!important; text-align:center; width:2em;}
-        :host x-anchor span.label {color:var(--x-color-text)!important; flex:1;  display:block; padding-top:.4em; padding-bottom:.4em; white-space:nowrap; padding-right:1.5em; padding-left: calc(var(--x-menuitem-indent) * 1em)!important;}
+        :host x-anchor span.label {color:var(--x-color-text)!important; flex:1;  display:block; padding-top:.4em; padding-bottom:.4em; white-space:nowrap; padding-right:1.5em; padding-left: calc(var(--x-menuitem-indent) * 1em)!important; }
+        :host x-anchor span.label .description {display:block; font-size:var(--x-font-size-small); color:var(--x-color-text-gray)!important; }
         :host x-anchor span.suffix {color:var(--x-color-text-gray)!important; padding-left:1em;}
         :host x-anchor x-icon.has-childs {width:unset; margin-left:.25em;}
         :host x-anchor x-icon:first-child {width:2em; text-align:center;}
@@ -66,9 +67,10 @@ export default {
         :host .menuitem[disabled] {pointer-events:none; cursor:default; --x-color-text:var(--x-color-text-disabled);}
         :host HR {border:none; background:var(--x-menuitem-separator-color); height:.05em; margin-top:.15em; margin-bottom:.15em; display:block; box-sizing: border-box; width:100%;}
 
+        :host:has(.description) x-anchor::part(a) {align-items: baseline;}
+
         /* badge */
         :host x-badge {position:absolute; right:-.25em; bottom:-.25em;}
-        :host x-page {padding:.75em;}
        
         /* dropdown */
         x-contextmenu {width: var(--x-contextmenu-width);position:absolute; left:100%;box-sizing:border-box; margin-left:0em;margin-top:-.2em;}
@@ -117,10 +119,15 @@ export default {
             <x-icon x-if="state.checked" icon="x-check"></x-icon>
             <x-icon x-if="!state.checked && state.icon" class="icon" x-attr:icon="state.icon"></x-icon>
             <x-badge x-if="state.badge" x-attr:value="state.badge" x-attr:class="state.badgeClass"></x-badge>
-            <span   x-if="state.label" class="label">{{ state.label + ' ' + state.command}}</span>
+            <span x-if="state.label" class="label">
+                {{ state.label + ' ' + state.command}}
+                <span x-if="state.description" class="description">{{ state.description }}</span>
+             </span>
             <span   x-if="state.suffix" class="suffix">{{ state.suffix }}</span>
             <x-icon x-if="state.hasChilds" class="has-childs" x-attr:icon="(state.childsDown ? 'x-keyboard-arrow-down' : 'x-keyboard-arrow-right')" x-on:click="expandTrigger"></x-icon>
+            
         </x-anchor>
+        
         <x-contextmenu x-if="state.hasChilds" x-show="state.expanded" submenu x-class:down="state.childsDown" x-class:left="state.childsLeft" x-class:inline="state.childsInline">
             <slot x-on:slotchange="refresh"></slot>
         </x-contextmenu>

@@ -56,7 +56,7 @@ export default {
         :host a[disabled] { pointer-events: none; color:var(--x-color-gray);}
         
         :host(.menuitem) {}
-        :host(.menuitem) a {display:flex; padding-left:.6em; padding-right:.6em; text-decoration:none; height:2.1em; border-radius:var(--x-menuitem-border-radius); }
+        :host(.menuitem) a {display:flex; padding-left:.6em; padding-right:.6em; text-decoration:none; min-height:2.1em; border-radius:var(--x-menuitem-border-radius); }
         :host(.menuitem) a:hover {color:var(--x-color-primary); background:var(--x-menuitem-background-hover);}
         :host(.menuitem) a:active {color:var(--x-color-primary-dark); background:var(--x-menuitem-background-active);}
         :host(.menuitem) a:focus {outline:none; background:var(--x-menuitem-background-active);}

@@ -17,6 +17,9 @@ export default {
             }
         ]
     },
+    meta: {
+        awaitLoad: true
+    },
     style: `
         :host {
             display:flex;
@@ -70,10 +73,10 @@ export default {
                 events.on(bus, "xshell:menus:change", "refresh");
                 events.on(bus, "xshell:navigation:end", "refreshSelected");
                 events.on(bus, ["xshell:tasks:added", "xshell:tasks:updated", "xshell:tasks:removed"], "refreshTasks");
+                state.expanded = await preferences.get("x-app-menu:expanded", false);
                 this.refresh();
                 this.refreshSelected();
                 this.refreshTasks();
-                state.expanded = await preferences.get("x-app-menu:expanded", false);
             },
 
             refresh() {
