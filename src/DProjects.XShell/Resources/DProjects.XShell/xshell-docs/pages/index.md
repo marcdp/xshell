@@ -12,6 +12,7 @@ virtualizes assets, initializes services/modules, and activates Pages through Ar
 - [Resolvers](10-architecture/80-resolvers.md) and [Loaders](10-architecture/90-loaders.md) — Resource meaning versus obtaining concrete resources.
 - [DataSets](10-architecture/95-datasets.md) — Static, URL, and module-owned tabular JSON resources.
 - [Services and service Contracts](10-architecture/100-services.md) — Fixed registry, eager class loading, lazy singletons.
+- [Search](30-subsystems/140-search.md) — Extensible federated discovery without a central index.
 - [Areas](30-subsystems/10-areas.md) and [Navigation](10-architecture/120-navigation.md) — Menus, routes, homes, browser URLs, and Page stacks.
 - [State](20-components/30-state.md) and [Rendering Engines](20-components/70-rendering.md) — Separate engines coordinated by loaders.
 - [Service Worker](10-architecture/110-service-worker.md) — `/_assets`, expanded-directory mapping, and immutable ZIP-backed loading.

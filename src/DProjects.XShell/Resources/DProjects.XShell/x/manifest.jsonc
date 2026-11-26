@@ -127,6 +127,40 @@
                     "pageManager": "/pages/preferences/secrets.js"
                 }
             },
+            "search": {
+                "options": {
+                    "providers": {
+                        "areas": {
+                            "label": "Pages",
+                            "description": "Search effective Area navigation Pages",
+                            "icon": "x-page",
+                            "implementation": "/providers/search-areas.js",
+                            "mode": "default"
+                        },
+                        "modules": {
+                            "label": "Modules",
+                            "description": "Search application module metadata",
+                            "icon": "x-module",
+                            "implementation": "/providers/search-modules.js",
+                            "mode": "default"
+                        },
+                        "commands": {
+                            "label": "Commands",
+                            "description": "Search discovered Commands",
+                            "icon": "x-command",
+                            "implementation": "/providers/search-commands.js",
+                            "mode": "default"
+                        },
+                        "shortcuts": {
+                            "label": "Shortcuts",
+                            "description": "Search effective global menu destinations",
+                            "icon": "x-link",
+                            "implementation": "/providers/search-shortcuts.js",
+                            "mode": "default"
+                        }
+                    }
+                }
+            },
             "theme": {
                 "contract": "theme",
                 "implementation": "/services/theme-default.js",

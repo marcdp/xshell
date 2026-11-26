@@ -82,7 +82,9 @@ test("listview pages preserve dynamic items, navigation, selection, auto-scroll,
     const search = readSource("x/pages/search.js");
     assert.match(search, /x-if="state\.results\.length > 0"/);
     assert.match(search, /x-for="result in state\.results"/);
-    assert.match(search, /x-attr:target="result\.target"/);
+    assert.match(search, /x-attr:href="result\.href"/);
+    assert.match(search, /x-attr:open="result\.open"/);
+    assert.doesNotMatch(search, /x-on:activate=/);
 
     assert.match(readSource("xshell-diagnostics/pages/bus.js"), /<x-listview[^>]*ref="listview"[^>]*auto-scroll="true"/);
     assert.match(readSource("xshell-diagnostics/pages/loader.js"), /<x-listview[^>]*auto-scroll/);

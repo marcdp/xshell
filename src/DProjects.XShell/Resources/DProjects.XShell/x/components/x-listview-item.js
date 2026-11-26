@@ -12,7 +12,7 @@ export default {
             path:        {type:"string", default:"", attribute:true, state:true, description:"Item path within the list."},
             href:        {type:"string", default:"", attribute:true, state:true, description:"Optional navigation target."},
             target:      {type:"string", default:"", attribute:true, state:true, description:"Optional browser target for navigation."},
-            open:        {type:"string", default:"auto", attribute:true, state:true, enum:["auto", "top", "dialog", "stack", "embed"], description:"XShell navigation presentation."},
+            open:        {type:"string", default:"auto", attribute:true, state:true, enum:["auto", "top", "dialog", "stack", "dock", "embed"], description:"XShell navigation presentation."},
             breadcrumb:  {type:"boolean", default:false, attribute:true, state:true, description:"Whether navigation contributes the current breadcrumb."},
             category:    {type:"string", default:"", attribute:true, state:true, description:"Grouping label used in list and details views."},
             selected:    {type:"boolean", default:false, attribute:true, state:true, description:"Whether the item is selected."},

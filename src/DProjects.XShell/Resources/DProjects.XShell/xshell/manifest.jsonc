@@ -113,6 +113,14 @@
                     "pageManager": null
                 }
             },
+            "search": {
+                "contract": "search",
+                "implementation": "/services/search.js",
+                "lifetime": "singleton",
+                "options": {
+                    "providers": {}
+                }
+            },
             "tasks":{
                 "contract": "tasks",
                 "implementation": "/services/tasks.js",

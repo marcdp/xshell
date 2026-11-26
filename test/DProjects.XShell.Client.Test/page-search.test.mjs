@@ -3,23 +3,99 @@ import test from "node:test";
 
 import SearchPage from "../../src/DProjects.XShell/Resources/DProjects.XShell/x/pages/search.js";
 
-test("Page search matches nested menu descriptions case-insensitively and keeps target metadata", () => {
-    const shared = { label: "Orders", description: "Manage customer invoices", href: "/orders", target: "_blank", module: "orders" };
-    const areas = {
-        getCurrentArea: () => ({ id: "main" }),
-        getAreas: () => [{ id: "main" }, { id: "admin" }],
-        getMenu(name, areaId) {
-            return areaId === "main"
-                ? { items: [{ label: "Commerce", children: [shared] }] }
-                : { items: [{ ...shared, label: "Duplicate" }, { label: "Audit", description: "INVOICE history", href: "/audit", module: "admin" }] };
-        }
-    };
-    const state = { keyword: "invoice", results: [] };
+function createController(search) {
+    const state = structuredClone(SearchPage.state);
+    const subscriptions = [];
+    const events = {on(target, name, handler) { subscriptions.push({target, name, handler}); }};
+    return {state, subscriptions, controller: SearchPage.controller({state, events, search})};
+}
 
-    SearchPage.controller({ state, areas, config: { modules: { orders: { icon: "x-orders" }, admin: { icon: "x-admin" } } } }).search();
+test("Search Page delegates to the Search Service and preserves result presentation modes", async () => {
+    const calls = [];
+    const search = {async query(text, options) {
+        calls.push({text, options});
+        return {results: [{id: "logs", providerId: "shortcuts", label: "Logs", href: "/logs", open: "dock"}], errors: []};
+    }};
+    const {state, subscriptions, controller} = createController(search);
+    controller.load();
+    await controller.search("logs");
 
-    assert.deepEqual(state.results.map(({ label, href, target, category, icon }) => ({ label, href, target, category, icon })), [
-        { label: "Orders", href: "/orders", target: "_blank", category: "main", icon: "x-orders" },
-        { label: "Audit", href: "/audit", target: undefined, category: "admin", icon: "x-admin" }
-    ]);
+    assert.deepEqual(subscriptions.map(item => [item.name, item.handler]), [["change:keyword", "queueSearch"]]);
+    assert.equal(calls[0].text, "logs");
+    assert.equal(calls[0].options.signal instanceof AbortSignal, true);
+    assert.equal(state.results[0].open, "dock");
+    assert.equal(state.searched, "logs");
+    assert.equal(state.loading, false);
+    assert.equal(SearchPage.template.includes("x-on:activate"), false);
+    assert.equal(SearchPage.template.includes('x-attr:open="result.open"'), true);
+});
+
+test("Search Page debounces text changes and keeps the three-character minimum in the UI", async () => {
+    const calls = [];
+    const search = {async query(text) { calls.push(text); return {results: [], errors: []}; }};
+    const {state, controller} = createController(search);
+    state.keyword = "ab";
+    controller.queueSearch();
+    state.keyword = "first";
+    controller.queueSearch();
+    state.keyword = "second";
+    controller.queueSearch();
+    await new Promise(resolve => setTimeout(resolve, 250));
+
+    assert.deepEqual(calls, ["second"]);
+    assert.equal(state.searched, "second");
+    controller.unload();
+});
+
+test("Search Page aborts superseded requests and ignores stale asynchronous responses", async () => {
+    const pending = new Map();
+    const signals = new Map();
+    const search = {query(text, {signal}) {
+        signals.set(text, signal);
+        return new Promise(resolve => pending.set(text, resolve));
+    }};
+    const {state, controller} = createController(search);
+    const first = controller.search("first");
+    await new Promise(resolve => setImmediate(resolve));
+    const second = controller.search("second");
+    await new Promise(resolve => setImmediate(resolve));
+    assert.equal(signals.get("first").aborted, true);
+
+    pending.get("second")({results: [{id: "second", providerId: "test", label: "Second", href: "/second", open: "top"}], errors: []});
+    await second;
+    pending.get("first")({results: [{id: "first", providerId: "test", label: "First", href: "/first", open: "top"}], errors: []});
+    await first;
+    assert.deepEqual(state.results.map(item => item.id), ["second"]);
+    assert.equal(state.searched, "second");
+});
+
+test("Search Page cancels outstanding requests on unload and does not publish their response", async () => {
+    let resolveQuery;
+    let signal;
+    const search = {query(text, options) {
+        signal = options.signal;
+        return new Promise(resolve => { resolveQuery = resolve; });
+    }};
+    const {state, controller} = createController(search);
+    const pending = controller.search("documents");
+    await new Promise(resolve => setImmediate(resolve));
+    controller.unload();
+    assert.equal(signal.aborted, true);
+    resolveQuery({results: [{id: "documents", providerId: "test", label: "Documents", href: "/documents"}], errors: []});
+    await pending;
+    assert.deepEqual(state.results, []);
+});
+
+test("Search Page displays successful results together with sanitized partial failures", async () => {
+    const search = {async query() { return {
+        results: [{id: "good", providerId: "good", label: "Good", href: "/good", open: "dialog"}],
+        errors: [{providerId: "failed", message: "Unable to search Failed."}]
+    }; }};
+    const {state, controller} = createController(search);
+    await controller.search("good");
+    assert.deepEqual(state.results.map(item => item.id), ["good"]);
+    assert.equal(state.errorMessage, "Unable to search Failed.");
+    assert.equal(SearchPage.template.includes("x-loading"), true);
+    assert.equal(SearchPage.template.includes("x-notice"), true);
+    assert.equal(SearchPage.template.includes("x-empty"), true);
 });

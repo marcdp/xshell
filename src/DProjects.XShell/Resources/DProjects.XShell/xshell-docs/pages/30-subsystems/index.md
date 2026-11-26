@@ -15,6 +15,7 @@ Implemented V0 runtime capabilities:
 - [Preferences](110-preferences.md) — Browser-local structured-clone settings persisted with IndexedDB.
 - [Stores](120-stores.md) — Provider-independent, schema-described JSON document collections.
 - [Filesystems](130-filesystems.md) — Filesystem actions, file editor selection, and declarative editor contributions.
+- [Search](140-search.md) — Lazy federated provider discovery, ranking, cancellation, and failure isolation.
 
 Authentication and identity are supplied by the optional `x-identity` module; they do not introduce an `xshell.identity` Core configuration section.
 

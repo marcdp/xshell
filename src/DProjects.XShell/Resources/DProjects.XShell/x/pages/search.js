@@ -1,7 +1,7 @@
 // page
 export default {
     contract: {
-        description: "Search.",
+        description: "Search configured providers.",
         events: {},
         properties: {},
         methods: {}
@@ -15,95 +15,115 @@ export default {
         <x-datafields>
             <x-datafield type="search" placeholder="Search" x-model="state.keyword" autocomplete="off" autofocus></x-datafield>
 
+            <x-loading x-if="state.loading" role="status" aria-label="Loading search results"></x-loading>
+            <x-notice x-if="state.errors.length > 0" type="warning" label="Some results are unavailable" x-attr:message="state.errorMessage"></x-notice>
+
             <div x-if="state.results.length > 0">
-                <x-listview x-if="state.results.length > 0" view="tiles" title="Search results" x-on:activate="activate">
+                <x-listview view="details" title="Search results">
                     <x-listview-head></x-listview-head>
                     <x-listview-body>
                         <x-listview-item
                             x-for="result in state.results"
+                            x-attr:key="result.providerId + ':' + result.id"
                             x-attr:label="result.label"
-                            x-attr:description="result.description || result.path"
+                            x-attr:description="result.description"
                             x-attr:icon="result.icon"
-                            x-attr:href="result.path || result.href"
-                            x-attr:target="result.target"
+                            x-attr:href="result.href"
                             x-attr:category="result.category"
-                            x-attr:tooltip="result.tooltip || result.description"
-                            open="top"
+                            x-attr:tooltip="result.description"
+                            x-attr:open="result.open"
                         ></x-listview-item>
                     </x-listview-body>
                 </x-listview>
-                <div>
-                    <br>
-                    <b>{{ state.results.length }}</b> results found for <b>{{state.keyword}}</b>
-                </div>
+                <div><br><b>{{ state.results.length }}</b> results found for <b>{{state.searched}}</b></div>
             </div>
 
-            <div x-else>
-                <div x-if="state.keyword.length > 2">
-                    <x-empty icon="x-search" label="No results" message="No matching pages were found."></x-empty>
-                </div>
-            </div>
-            
-        </x-datafields>    
-    `,    
+            <x-empty
+                x-if="!state.loading && state.searched.length > 2 && state.results.length == 0"
+                icon="x-search"
+                label="No results"
+                message="No matching resources were found."
+            ></x-empty>
+        </x-datafields>
+    `,
     state: {
         keyword: "",
-        results: []
+        searched: "",
+        results: [],
+        errors: [],
+        errorMessage: "",
+        loading: false
     },
-    controller({ state, events, areas, config }) {
+    controller({state, events, search}) {
+        let alive = true;
+        let debounceId = null;
+        let request = null;
+        let revision = 0;
+
         return {
             load() {
-                // load
-                events.on(state, "change:keyword", "search");
+                // Debounce reactive text changes while keeping the three-character threshold as Page policy.
+                events.on(state, "change:keyword", "queueSearch");
             },
-
-            search() {
-                // Search labels and generated descriptions while retaining the effective menu item as the result target.
-                const keyword = state.keyword.toLowerCase();
-                const results = [];
-                const seen = new Set();
-                if (keyword.length > 2) {
-                    const searchRecursive = function(menuitem, category) {
-                        const label = String(menuitem.label || "").toLowerCase();
-                        const description = String(menuitem.description || "").toLowerCase();
-                        if ((label.includes(keyword) || description.includes(keyword)) && menuitem.href && !seen.has(menuitem.href)) {
-                            seen.add(menuitem.href);
-                            results.push({ 
-                                ...menuitem, 
-                                icon: menuitem.icon || config.modules[menuitem.module]?.icon,
-                                category: category });
-                        }
-                        if (menuitem.children) {
-                            for (let child of menuitem.children) {
-                                searchRecursive(child, category);
-                            }
-                        }
-                    }
-                    // search current area
-                    const currentArea = areas.getCurrentArea();
-                    const menu = areas.getMenu("navigation", currentArea.id);
-                    for(let menuitem of menu?.items || []) {
-                        searchRecursive(menuitem, currentArea.id);
-                    }
-                    // search other areas
-                    for(const area of areas.getAreas()) {
-                        if (area.id === currentArea.id) continue;
-                        const menu = areas.getMenu("navigation", area.id);
-                        for(let menuitem of menu?.items || []) {
-                            searchRecursive(menuitem, area.id);
-                        }
+            queueSearch() {
+                // Cancel active work immediately and schedule only the latest eligible keyword.
+                revision++;
+                request?.abort();
+                request = null;
+                if (debounceId !== null) clearTimeout(debounceId);
+                const keyword = state.keyword.trim();
+                if (keyword.length < 3) {
+                    state.searched = "";
+                    state.results = [];
+                    state.errors = [];
+                    state.errorMessage = "";
+                    state.loading = false;
+                    debounceId = null;
+                    return;
+                }
+                const currentRevision = revision;
+                debounceId = setTimeout(() => {
+                    debounceId = null;
+                    this.search(keyword, currentRevision);
+                }, 200);
+            },
+            async search(keyword = state.keyword.trim(), currentRevision = ++revision) {
+                // Publish only the response associated with the latest live Page request.
+                if (!alive || keyword.length < 3) return;
+                request?.abort();
+                request = new AbortController();
+                const currentRequest = request;
+                state.loading = true;
+                state.errors = [];
+                state.errorMessage = "";
+                try {
+                    const response = await search.query(keyword, {signal: currentRequest.signal});
+                    if (!alive || currentRevision !== revision || currentRequest.signal.aborted) return;
+                    state.searched = keyword;
+                    state.results = response.results;
+                    state.errors = response.errors;
+                    state.errorMessage = response.errors.map(error => error.message).join(" ");
+                } catch (error) {
+                    if (!alive || currentRevision !== revision || currentRequest.signal.aborted || error?.name === "AbortError") return;
+                    state.searched = keyword;
+                    state.results = [];
+                    state.errors = [{providerId: "search", message: "Search is temporarily unavailable."}];
+                    state.errorMessage = "Search is temporarily unavailable.";
+                } finally {
+                    if (alive && currentRevision === revision && request === currentRequest) {
+                        state.loading = false;
+                        request = null;
                     }
                 }
-                state.results = results;
             },
-
-            activate({event}) {
-                const item = event.detail.item;
-                if (item && item.href) {
-                    window.location.href = item.href;
-                }
+            unload() {
+                // Stop timers and pending providers before the Page Services scope is disposed.
+                alive = false;
+                revision++;
+                if (debounceId !== null) clearTimeout(debounceId);
+                request?.abort();
+                request = null;
             }
-
         };
     }
-}
+};

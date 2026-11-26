@@ -41,6 +41,19 @@
 
         // XShell specific configuration for the x-filesystem module
         "services": {
+            "search": {
+                "options": {
+                    "providers": {
+                        "filesystems": {
+                            "label": "Filesystems",
+                            "description": "Search registered filesystems",
+                            "icon": "x-filesystem",
+                            "implementation": "/providers/search-filesystems.js",
+                            "mode": "default"
+                        }
+                    }
+                }
+            },
             "filesystems": {
                 "contract": "filesystems",
                 "implementation": "/services/filesystems.js",

@@ -106,8 +106,8 @@ labels and friendly path segments. When a Page inventory entry has generated `re
 and its description and icon are copied to the generated menu item. A nested directory's `index` Page supplies that directory item's metadata.
 Missing metadata retains the filename fallback, and the module label continues to name the root menu item. This is a menu-generation convention
 over the generated inventory, not a parallel authored menu catalog. Registered runtime sources and `childrenSource` remain separate mechanisms.
-The Page search traverses these effective nested menus across Areas and matches both labels and descriptions case-insensitively; duplicate href
-targets retain their first result, including the original target and Area category.
+The `x` module's Area Search provider traverses these effective nested navigation menus across Areas, searching the current Area first. It preserves
+each result's friendly `path || href`, Area category, and supported Page presentation mode; the core Search Service owns aggregate ranking and identity.
 
 Bootstrap first maps module-relative menu hrefs into `/_assets/<module-id>/<generation>/...`. Areas then applies the Area prefix to both local `path` and local
 `href`, leaving external scheme URLs unchanged. For example, authored `components` and normalized

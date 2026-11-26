@@ -1,0 +1,98 @@
+{
+  "$schema": "../schemas/contract.schema.json",
+  "label": "Search",
+  "description": "Discovers declaratively contributed Search providers and aggregates their results without maintaining a central index.",
+  "types": {
+    "searchProviderDescriptor": {
+      "type": "object",
+      "description": "Frozen lightweight metadata for one configured Search provider; listing it does not load the provider implementation.",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "id": {"type": "string", "minLength": 1},
+          "label": {"type": "string", "minLength": 1},
+          "description": {"type": "string"},
+          "icon": {"type": "string"},
+          "mode": {"type": "string", "enum": ["default", "explicit"]}
+        },
+        "required": ["id", "label", "mode"],
+        "additionalProperties": false
+      }
+    },
+    "searchProviderDescriptorList": {
+      "type": "array",
+      "description": "Frozen Search provider descriptors in effective configuration order.",
+      "schema": {"type": "array", "items": {"type": "object", "description": "Item conforming to searchProviderDescriptor."}}
+    },
+    "searchResult": {
+      "type": "object",
+      "description": "Serializable navigation result uniquely identified by providerId and id.",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "id": {"type": "string", "minLength": 1},
+          "providerId": {"type": "string", "minLength": 1},
+          "label": {"type": "string", "minLength": 1},
+          "description": {"type": "string"},
+          "icon": {"type": "string"},
+          "category": {"type": "string"},
+          "href": {"type": "string", "minLength": 1},
+          "open": {"type": "string", "enum": ["top", "stack", "dialog", "dock"], "default": "top"},
+          "tags": {"type": "array", "items": {"type": "string"}}
+        },
+        "required": ["id", "providerId", "label", "href"],
+        "additionalProperties": false
+      }
+    },
+    "searchOptions": {
+      "type": "object",
+      "description": "Provider selection, aggregate limit, and cooperative cancellation options.",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "providers": {"type": "array", "items": {"type": "string", "minLength": 1}, "uniqueItems": true},
+          "limit": {"type": "integer", "minimum": 1, "maximum": 200, "default": 50},
+          "signal": {"description": "Optional AbortSignal used for cooperative cancellation."}
+        },
+        "additionalProperties": false
+      }
+    },
+    "searchResponse": {
+      "type": "object",
+      "description": "Aggregated successful results and sanitized provider failures.",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "results": {"type": "array", "items": {"type": "object", "description": "Item conforming to searchResult."}},
+          "errors": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {"providerId": {"type": "string"}, "message": {"type": "string"}},
+              "required": ["providerId", "message"],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": ["results", "errors"],
+        "additionalProperties": false
+      }
+    }
+  },
+  "properties": {},
+  "events": {},
+  "methods": {
+    "listProviders": {
+      "description": "Synchronously lists defensive provider metadata without loading or constructing provider implementations.",
+      "returns": {"ref": "searchProviderDescriptorList"}
+    },
+    "query": {
+      "description": "Asynchronously queries selected providers, isolates provider failures, ranks and deduplicates results, and applies the aggregate limit.",
+      "parameters": [
+        {"name": "text", "type": "string", "required": true},
+        {"name": "options", "ref": "searchOptions", "default": {}}
+      ],
+      "returns": {"ref": "searchResponse"}
+    }
+  }
+}
