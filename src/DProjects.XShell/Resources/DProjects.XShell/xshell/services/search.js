@@ -1,4 +1,4 @@
-const PROVIDER_RESULT_PROPERTIES = new Set(["id", "label", "description", "icon", "category", "href", "open", "tags"]);
+const PROVIDER_RESULT_PROPERTIES = new Set(["id", "type", "label", "description", "icon", "category", "href", "open", "tags"]);
 const OPEN_MODES = new Set(["top", "stack", "dialog", "dock"]);
 
 export default class Search {
@@ -206,7 +206,7 @@ export default class Search {
         }
         const unexpected = Object.keys(value).find(name => !PROVIDER_RESULT_PROPERTIES.has(name));
         if (unexpected) throw new TypeError(`Search provider '${providerId}' returned unknown result property '${unexpected}'.`);
-        for (const name of ["id", "label", "href"]) {
+        for (const name of ["id", "type", "label", "href"]) {
             if (typeof value[name] !== "string" || !value[name].trim()) throw new TypeError(`Search provider '${providerId}' result '${name}' must be a non-empty string.`);
         }
         for (const name of ["description", "icon", "category"]) {
@@ -217,7 +217,7 @@ export default class Search {
             throw new TypeError(`Search provider '${providerId}' result tags must be an array of strings.`);
         }
         return {
-            id: value.id.trim(), providerId, label: value.label.trim(), href: value.href.trim(),
+            id: value.id.trim(), providerId, type: value.type.trim(), label: value.label.trim(), href: value.href.trim(),
             ...(value.description !== undefined ? {description: value.description} : {}),
             ...(value.icon !== undefined ? {icon: value.icon} : {}),
             ...(value.category !== undefined ? {category: value.category} : {}),

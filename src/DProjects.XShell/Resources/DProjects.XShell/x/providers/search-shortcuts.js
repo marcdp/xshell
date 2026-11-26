@@ -34,6 +34,7 @@ export default class ShortcutsSearchProvider {
             if (href && label && label !== "-" && item.open !== "embed" && searchable.includes(query)) {
                 results.push({
                     id: this.encodeIdentity(["menu", menu.name, ...identity]),
+                    type: "shortcut",
                     label,
                     ...(item.description || item.tooltip ? {description: item.description || item.tooltip} : {}),
                     icon: item.icon || menu.icon || "x-link",

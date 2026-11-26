@@ -14,6 +14,7 @@ export default class CommandsSearchProvider {
         signal?.throwIfAborted();
         return items.map(item => ({
             id: item.id,
+            type: "command",
             label: item.label || item.id,
             ...(item.description ? {description: item.description} : {}),
             icon: item.icon || "x-command",

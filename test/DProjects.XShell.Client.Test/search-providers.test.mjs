@@ -42,8 +42,8 @@ test("Store expressions discover collections from the configured sources without
     assert.equal(loader.load.mock.callCount(), 0);
     const {results, errors} = await search.query("store: CUSTOMER RECORDS");
     assert.deepEqual(errors, []);
-    assert.deepEqual(results.map(item => [item.providerId, item.label, item.description, item.href, item.open]), [
-        ["stores", "Customers", "Customer records", "page:x-store:/pages/store.js?src=mem%3A&collection=customers", "stack"]
+    assert.deepEqual(results.map(item => [item.providerId, item.type, item.label, item.description, item.href, item.open]), [
+        ["stores", "collection", "Customers", "Customer records", "page:x-store:/pages/store.js?src=mem%3A&collection=customers", "stack"]
     ]);
     assert.deepEqual(loader.load.mock.calls.map(call => call.arguments), [["esm:/providers/search-stores.js"]]);
     assert.deepEqual(stores.open.mock.calls.map(call => call.arguments), [["mem:"]]);
@@ -82,7 +82,8 @@ test("bundled prefixes select their configured providers and discover Commands a
             getCurrentArea: () => null,
             getAreas: () => [{id: "shop"}],
             getMenu: () => ({scope: "area", items: [
-                {label: "Products", href: "/products", module: "shop"}, {label: "Customers", href: "/customers", module: "shop"}
+                {label: "Products", path: "/products", href: "page:shop:/pages/products.js", module: "shop"},
+                {label: "Customers", path: "/customers", href: "page:shop:/pages/customers.js", module: "shop"}
             ]})
         },
         config: {modules: {}},
@@ -100,16 +101,16 @@ test("bundled prefixes select their configured providers and discover Commands a
         services: {resolve(name) { return dependencies[name]; }}
     }, {providers});
 
-    for (const [expression, providerId, href] of [
-        [">customers", "commands", "page:x:/pages/invoke.js?type=command&id=customers"],
-        ["command: customers", "commands", "page:x:/pages/invoke.js?type=command&id=customers"],
-        ["query: customers", "queries", "page:x:/pages/invoke.js?type=query&id=customers&method=query"],
-        ["page: customers", "areas", "/customers"],
-        ["module: customers", "modules", "page:x:/pages/preferences/modules.js"]
+    for (const [expression, providerId, type, href] of [
+        [">customers", "commands", "command", "page:x:/pages/invoke.js?type=command&id=customers"],
+        ["command: customers", "commands", "command", "page:x:/pages/invoke.js?type=command&id=customers"],
+        ["query: customers", "queries", "query", "page:x:/pages/invoke.js?type=query&id=customers&method=query"],
+        ["page: customers", "areas", "page", "/customers"],
+        ["module: customers", "modules", "module", "page:x:/pages/preferences/modules.js"]
     ]) {
         const {results, errors} = await search.query(expression);
         assert.deepEqual(errors, []);
-        assert.deepEqual(results.map(item => [item.providerId, item.href]), [[providerId, href]]);
+        assert.deepEqual(results.map(item => [item.providerId, item.type, item.href]), [[providerId, type, href]]);
     }
     assert.deepEqual(providers.commands.prefixes, ["command:", "commands:", ">"]);
     for (const expression of ["command:", "commands:", ">", "query:", "module:", "page:"]) {
@@ -126,22 +127,37 @@ test("bundled prefixes select their configured providers and discover Commands a
     assert.equal(queries.run.mock.callCount(), 0);
 });
 
-test("Areas provider searches current Area first and preserves friendly destinations and presentation", async () => {
+test("Areas provider distinguishes known Pages from shortcuts while preserving destinations and order", async () => {
     const definitions = {
-        main: {scope: "area", items: [{label: "Reports", description: "Annual reports", path: "/main/reports", href: "/main/_assets/reports.js", module: "reports", open: "dock", children: []}]},
-        admin: {scope: "area", items: [{label: "Reports Admin", href: "/admin/reports", module: "reports", children: []}]}
+        main: {scope: "area", items: [
+            {label: "Reports", path: "/main/reports", href: "/main/_assets/reports/build/pages/reports.js?year=2026#summary", module: "reports", open: "dock"},
+            {label: "Reports Help", href: "/main/_assets/reports/build/pages/help.md"},
+            {label: "Reports Export", href: "/main/_assets/reports/build/utils/export.js"},
+            {label: "Reports Status", href: "https://example.test/pages/reports.js"},
+            {label: "Reports Route", path: "/main/reports-route"}
+        ]},
+        admin: {scope: "area", items: [{label: "Reports Admin", href: "page:reports:/pages/admin.js?tab=year"}]}
     };
     const areas = {
         getCurrentArea: () => ({id: "main"}),
-        getAreas: () => [{id: "admin", label: "Admin"}, {id: "main", label: "Main", icon: "main"}],
+        getAreas: () => [{id: "admin", label: "Admin", prefix: "/admin"}, {id: "main", label: "Main", prefix: "/main"}],
         getMenu: (name, id) => definitions[id]
     };
-    const provider = new AreasSearchProvider({areas, config: {modules: {reports: {icon: "reports"}}}});
+    const provider = new AreasSearchProvider({areas, config: {modules: {reports: {icon: "reports", files: [
+        {path: "/_assets/reports/build/pages/reports.html", resource: {type: "page"}},
+        {path: "/_assets/reports/build/pages/help.md", resource: {type: "page"}},
+        {path: "/_assets/reports/build/utils/export.js"}
+    ]}}}});
     const results = await provider.query("reports", {limit: 1});
-    assert.deepEqual(results.map(item => [item.id, item.href, item.open, item.category]), [
-        ["main:/main/reports", "/main/reports", "dock", "Main"],
-        ["admin:/admin/reports", "/admin/reports", "top", "Admin"]
+    assert.deepEqual(results.map(item => [item.type, item.href, item.open, item.category]), [
+        ["page", "/main/reports", "dock", "Main"],
+        ["page", "/main/_assets/reports/build/pages/help.md", "top", "Main"],
+        ["shortcut", "/main/_assets/reports/build/utils/export.js", "top", "Main"],
+        ["shortcut", "https://example.test/pages/reports.js", "top", "Main"],
+        ["shortcut", "/main/reports-route", "top", "Main"],
+        ["page", "page:reports:/pages/admin.js?tab=year", "top", "Admin"]
     ]);
+    assert.equal(results[0].id, "main:/main/reports");
 });
 
 test("Shortcuts provider preserves supported modes and excludes self-embedded menu items", async () => {
@@ -152,7 +168,7 @@ test("Shortcuts provider preserves supported modes and excludes self-embedded me
     ]}]};
     const provider = new ShortcutsSearchProvider({areas});
     assert.deepEqual((await provider.query("search", {limit: 10})), []);
-    assert.deepEqual((await provider.query("settings", {limit: 10})).map(item => [item.href, item.open]), [["/settings", "dialog"]]);
+    assert.deepEqual((await provider.query("settings", {limit: 10})).map(item => [item.type, item.href, item.open]), [["shortcut", "/settings", "dialog"]]);
     assert.deepEqual((await provider.query("logs", {limit: 10})).map(item => [item.href, item.open]), [["/logs", "dock"]]);
 });
 
@@ -244,7 +260,7 @@ test("Modules provider searches all registry metadata without loading resources"
     const provider = new ModulesSearchProvider({modules: {registry}});
     const results = await provider.query("finance", {limit: 1});
     assert.deepEqual(results[0], {
-        id: "reports", label: "Reports", description: "Business analytics", icon: "x-module", category: "Modules", tags: ["finance"],
+        id: "reports", type: "module", label: "Reports", description: "Business analytics", icon: "x-module", category: "Modules", tags: ["finance"],
         href: "page:x:/pages/preferences/modules.js", open: "stack"
     });
     assert.equal(results.length, 2);
@@ -289,7 +305,7 @@ test("Queries provider returns discovery metadata and opens the exact Query ID i
     assert.deepEqual(queries.list.mock.calls[0].arguments, [{query: "customers"}]);
     assert.equal(queries.run.mock.callCount(), 0);
     assert.deepEqual(count, {
-        id, label: "Count active customers", description: "Counts matching customers", icon: "x-people", category: "catalog", tags,
+        id, type: "query", label: "Count active customers", description: "Counts matching customers", icon: "x-people", category: "catalog", tags,
         href: "page:x:/pages/invoke.js?type=query&id=customers%2Factive.count&method=query", open: "stack"
     });
     assert.notStrictEqual(count.tags, tags);
@@ -311,6 +327,7 @@ test("Filesystems provider preserves named registration identity without opening
     const results = await provider.query("documents", {limit: 1});
     assert.deepEqual(await provider.query("", {}), results);
     assert.equal(opened, false);
+    assert.equal(results[0].type, "filesystem");
     assert.equal(results[0].href, "page:x-filesystem:/pages/explorer.js?src=named%3Apersonal%20documents&path=%2F");
     assert.equal(results.length, 2);
 });

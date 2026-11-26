@@ -24,10 +24,14 @@ is empty when a provider has no configured prefixes. Implementation paths and pr
 `query(text, options = {})` accepts a search expression and returns `{results, errors}`. The default aggregate limit is 50 and the accepted range
 is 1 through 200.
 
-Each result requires `id`, `providerId`, `label`, and `href`. Optional fields are `description`, `icon`, `category`, `tags`, and `open`; `open`
-defaults to `top` and supports `top`, `stack`, `dialog`, and `dock`. Results are plain navigation data: callbacks, DOM nodes, Service instances, and
-other executable values are not valid. The Service attaches `providerId`; providers do not author or control it. The pair `(providerId, id)` is the
-stable aggregate identity.
+Each result requires `id`, `providerId`, `type`, `label`, and `href`. Optional fields are `description`, `icon`, `category`, `tags`, and `open`.
+`open` defaults to `top` and supports `top`, `stack`, `dialog`, and `dock`. Results are plain data. Callbacks, DOM nodes, Service instances,
+and other executable values are invalid.
+
+The Service attaches `providerId` to identify the provider that discovered a result. The pair `(providerId, id)` is the stable aggregate identity.
+The provider supplies a non-empty `type` string for the kind of resource represented by each result. The Service trims surrounding whitespace.
+`category` is an optional functional grouping. Providers can return several types, several providers can share a type, and modules can introduce
+additional types without changing XShell Core. Navigation uses `href` and `open`.
 
 ## Search expressions
 
@@ -102,7 +106,7 @@ export default class CatalogSearchProvider {
 
     async query(text, {signal, limit}) {
         signal?.throwIfAborted();
-        return [{id: "products", label: "Products", href: "page:catalog:/pages/products.js"}];
+        return [{id: "products", type: "catalog-entry", label: "Products", href: "page:catalog:/pages/products.js"}];
     }
 }
 ```
@@ -114,10 +118,12 @@ transient dependency rules therefore remain in force; Search does not implement 
 One provider instance is cached by provider ID. Concurrent first queries share the same load and construction operation. Failed initialization is
 removed from the cache so a later query can retry. These instances are owned by the Search singleton and are not separately registered Services.
 
-Providers return an array of result objects without `providerId`. An empty `text` requests unfiltered discovery within the provider's existing
-scope. Providers should use metadata and inventory APIs that do not materialize destination resources. A provider receives `limit` as an advisory
-value for relevance-aware remote or expensive retrieval and must observe `signal` itself to interrupt domain work cooperatively. Bundled metadata
-providers return every matching candidate. The Search Service's aggregate limit is authoritative.
+Providers return an array of result objects without `providerId`. Existing third-party providers must add an explicit non-blank `type` to every
+result. If any result omits `type` or supplies an invalid value, Search discards that provider's results and returns a sanitized provider error.
+An empty `text` requests unfiltered discovery within the provider's existing scope. Providers should use metadata and inventory APIs that do not
+materialize destination resources. A provider receives `limit` as an advisory value for relevance-aware remote or expensive retrieval and must
+observe `signal` itself to interrupt domain work cooperatively. Bundled metadata providers return every matching candidate. The Search Service's
+aggregate limit is authoritative.
 
 ## Aggregation, cancellation, and failures
 
@@ -143,22 +149,25 @@ and deduplication.
 
 ## Bundled providers and UI
 
-The `x` module contributes providers for Area navigation Pages, application module metadata, Commands, Queries, and global menu shortcuts. The Area
-provider searches the current Area first and preserves friendly `path || href` destinations. The Command and Query providers use
+The `x` module contributes providers for Area navigation, application modules, Commands, Queries, and global menu shortcuts. The Area
+provider searches the current Area first and preserves friendly `path || href` destinations. It returns `page` for explicit `page:` references
+or destinations identified by Page inventory metadata, and `shortcut` for other navigation entries. The Module, Command, Query, and global shortcut
+providers return `module`, `command`, `query`, and `shortcut` respectively. The Command and Query providers use
 `commands.list({query})` and `queries.list({query})` for metadata-only discovery. Activating a result opens the corresponding invocation Page in the
 stack. The shortcut provider omits embedded menu entries because Search results
 cannot represent `open: "embed"` or the local `outlet: "self"` composition behavior. Menu providers also omit separators, targetless groups, empty
 destinations, and empty or whitespace-only labels while continuing to traverse valid descendants. Shortcut result IDs use the effective menu and
 hierarchical ancestor identities, with length-prefixed components preventing ambiguous concatenation when sibling-scoped item IDs are reused.
 
-The `x-filesystem` module contributes the Filesystems provider. It calls `filesystems.listDefinitions()` and builds Explorer links with
-`named:<name>` references. It does not open Filesystem instances, connect to providers, read credential storage, or unlock Secrets.
+The `x-filesystem` module contributes the Filesystems provider. It returns `filesystem` results from `filesystems.listDefinitions()` and builds
+Explorer links with `named:<name>` references. It does not open Filesystem instances, connect to providers, read credential storage, or unlock Secrets.
+The `x-store` module returns `collection` results from configured [Store sources](120-stores.md#search).
 
 An empty field shows providers that declare prefixes. Choosing a prefix inserts it followed by a space and focuses the input. Press Enter after
 a standalone prefix to list available results, including for one-character prefixes such as `>`. Other expressions require at least three
 characters in the trimmed input and search after a 200 ms pause or immediately on Enter. The Service accepts text of any length.
-The Page aborts superseded requests, ignores stale responses, and cancels work on unload. The result count shows how many results Search returned.
-`x-listview-item` and `x-anchor` use each result's `href` and `open` mode for navigation.
+The Page aborts superseded requests, ignores stale responses, and cancels work on unload. Each result shows its resource type, and the count shows
+how many results Search returned. `x-listview-item` and `x-anchor` use each result's `href` and `open` mode for navigation.
 
 ## Lazy-loading limits
 

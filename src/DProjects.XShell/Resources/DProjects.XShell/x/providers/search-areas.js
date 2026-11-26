@@ -5,6 +5,11 @@ export default class AreasSearchProvider {
         // Retain metadata-only Services used to inspect effective Area navigation.
         this.areas = areas;
         this.config = config;
+
+        // Include both inventoried Page paths and the runtime JS paths used for HTML Pages.
+        const files = [...(config.xshell?.files || []), ...Object.values(config.modules).flatMap(module => module.files || [])];
+        this.pagePaths = new Set(files.filter(file => file.resource?.type === "page")
+            .flatMap(file => [file.path, file.path.replace(/\.html$/, ".js")]));
     }
 
     // methods
@@ -33,6 +38,7 @@ export default class AreasSearchProvider {
             if (href && label && label !== "-" && item.open !== "embed" && searchable.includes(query)) {
                 results.push({
                     id: `${area.id}:${href}`,
+                    type: this.isPage(item.href, area.prefix) ? "page" : "shortcut",
                     label,
                     ...(item.description ? {description: item.description} : {}),
                     icon: item.icon || this.config.modules[item.module]?.icon || area.icon || "x-page",
@@ -43,5 +49,12 @@ export default class AreasSearchProvider {
             }
             this.collect(item.children, area, query, results, signal);
         }
+    }
+    isPage(href, areaPrefix) {
+        // Classify the canonical destination separately from the optional friendly navigation path.
+        if (typeof href !== "string") return false;
+        const identity = href.trim().split(/[?#]/, 1)[0];
+        if (identity.startsWith("page:") || this.pagePaths.has(identity)) return true;
+        return Boolean(areaPrefix && identity.startsWith(areaPrefix + "/") && this.pagePaths.has(identity.slice(areaPrefix.length)));
     }
 }

@@ -22,6 +22,7 @@ export default class StoresSearchProvider {
                 const collection = encodeURIComponent(name);
                 results.push({
                     id: `${source}:${collection}`,
+                    type: "collection",
                     label,
                     ...(description ? {description} : {}),
                     icon: "x-database",

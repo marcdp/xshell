@@ -38,6 +38,7 @@
         "properties": {
           "id": {"type": "string", "minLength": 1},
           "providerId": {"type": "string", "minLength": 1},
+          "type": {"type": "string", "minLength": 1, "pattern": "\\S", "description": "Semantic resource type supplied by the provider for this result."},
           "label": {"type": "string", "minLength": 1},
           "description": {"type": "string"},
           "icon": {"type": "string"},
@@ -46,7 +47,7 @@
           "open": {"type": "string", "enum": ["top", "stack", "dialog", "dock"], "default": "top"},
           "tags": {"type": "array", "items": {"type": "string"}}
         },
-        "required": ["id", "providerId", "label", "href"],
+        "required": ["id", "providerId", "type", "label", "href"],
         "additionalProperties": false
       }
     },

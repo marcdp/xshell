@@ -86,7 +86,7 @@ test("Search Page submits named and symbolic standalone prefixes only on Enter",
     controller.load();
     assert.match(SearchPage.template, /<x-datafield\b[^>]*x-on:keydown.enter="submitSearch"/);
 
-    state.results = [{id: "old"}];
+    state.results = [{id: "old", providerId: "test", type: "page", label: "Old result", href: "/old", open: "top"}];
     state.errors = [{message: "Earlier failure"}];
     state.errorMessage = "Earlier failure";
     for (const keyword of ["CaTaLoG: ", "> "]) {
@@ -168,7 +168,7 @@ test("Search Page delegates to the Search Service and preserves result presentat
         listProviders() { return []; },
         async query(text, options) {
             calls.push({text, options});
-            return {results: [{id: "logs", providerId: "shortcuts", label: "Logs", href: "/logs", open: "dock"}], errors: []};
+            return {results: [{id: "logs", providerId: "shortcuts", type: "shortcut", label: "Logs", href: "/logs", open: "dock"}], errors: []};
         }
     };
     const {state, controller} = createController(search);
@@ -178,12 +178,16 @@ test("Search Page delegates to the Search Service and preserves result presentat
     assert.equal(calls[0].text, "logs");
     assert.equal(calls[0].options.signal instanceof AbortSignal, true);
     assert.equal(state.results[0].open, "dock");
+    assert.equal(state.results[0].type, "shortcut");
     assert.equal(state.searched, "logs");
     assert.equal(state.loading, false);
     assert.equal(state.noResults, false);
     assert.equal(SearchPage.template.includes("x-on:activate"), false);
     assert.equal(SearchPage.template.includes('x-attr:href="result.href"'), true);
     assert.equal(SearchPage.template.includes('x-attr:open="result.open"'), true);
+    assert.match(SearchPage.template, /<x-chip x-attr:label="result.type">/);
+    assert.doesNotMatch(SearchPage.template, /<x-chip x-attr:label="result.providerId">/);
+    assert.ok(SearchPage.template.includes('x-attr:key="result.providerId + \':\' + result.id"'));
 });
 
 test("Search Page debounces text changes and keeps the three-character minimum in the UI", async () => {
@@ -246,9 +250,9 @@ test("Search Page aborts superseded requests and ignores stale asynchronous resp
     await new Promise(resolve => setImmediate(resolve));
     assert.equal(signals.get("first").aborted, true);
 
-    pending.get("second")({results: [{id: "second", providerId: "test", label: "Second", href: "/second", open: "top"}], errors: []});
+    pending.get("second")({results: [{id: "second", providerId: "test", type: "page", label: "Second", href: "/second", open: "top"}], errors: []});
     await second;
-    pending.get("first")({results: [{id: "first", providerId: "test", label: "First", href: "/first", open: "top"}], errors: []});
+    pending.get("first")({results: [{id: "first", providerId: "test", type: "page", label: "First", href: "/first", open: "top"}], errors: []});
     await first;
     assert.deepEqual(state.results.map(item => item.id), ["second"]);
     assert.equal(state.searched, "second");
@@ -275,7 +279,7 @@ test("Search Page cancels pending timers and outstanding requests on unload", as
     await new Promise(resolve => setImmediate(resolve));
     controller.unload();
     assert.equal(signal.aborted, true);
-    resolveQuery({results: [{id: "documents", providerId: "test", label: "Documents", href: "/documents"}], errors: []});
+    resolveQuery({results: [{id: "documents", providerId: "test", type: "page", label: "Documents", href: "/documents", open: "top"}], errors: []});
     await pending;
     assert.deepEqual(state.results, []);
 });
@@ -310,7 +314,7 @@ test("Search Page restores guidance when cleared during a request and discards t
 
 test("Search Page displays successful results together with sanitized partial failures", async () => {
     const search = {async query() { return {
-        results: [{id: "good", providerId: "good", label: "Good", href: "/good", open: "dialog"}],
+        results: [{id: "good", providerId: "good", type: "page", label: "Good", href: "/good", open: "dialog"}],
         errors: [{providerId: "failed", message: "Unable to search Failed."}]
     }; }};
     const {state, controller} = createController(search);

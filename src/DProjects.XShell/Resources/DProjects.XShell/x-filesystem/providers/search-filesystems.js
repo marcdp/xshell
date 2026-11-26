@@ -19,6 +19,7 @@ export default class FilesystemsSearchProvider {
             if (![item.name, item.label, item.description].some(value => String(value || "").toLowerCase().includes(query))) continue;
             results.push({
                 id: item.name,
+                type: "filesystem",
                 label: item.label || item.name,
                 ...(item.description ? {description: item.description} : {}),
                 icon: "x-filesystem",

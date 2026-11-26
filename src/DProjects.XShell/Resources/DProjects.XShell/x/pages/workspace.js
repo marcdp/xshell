@@ -4,8 +4,7 @@ export default {
         description: "Workspace menu and pages.",
         properties: {
             menuName: {type:"string", default:"", state:true, query:true},
-            src: {type:"string", default:null, state:true, query:true, reflect:true},
-            showTitle: {type:"boolean", default:true, state:true, query:true}
+            src: {type:"string", default:null, state:true, query:true, reflect:true}
         },
         examples: [
             {

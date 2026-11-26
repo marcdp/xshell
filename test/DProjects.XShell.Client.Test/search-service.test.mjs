@@ -22,7 +22,7 @@ function createSearch(providers, implementations, dependencies = {}) {
     return {loads, search: new Search({loader, services}, {providers})};
 }
 
-const result = (id, label = id, extra = {}) => ({id, label, href: `/pages/${id}.js`, ...extra});
+const result = (id, label = id, extra = {}) => ({id, type: "page", label, href: `/pages/${id}.js`, ...extra});
 
 test("Search public contract validates with local named type references", () => {
     const validation = new JsonValidator().validate(SearchContract, ServiceSchema, {"./contract.schema.json": ContractSchema});
@@ -279,10 +279,54 @@ test("independent concurrent queries publish their own provider results", async 
     assert.equal((await second).results[0].id, "second");
 });
 
+test("Search preserves custom and heterogeneous result types without changing identity", async () => {
+    class First {
+        async query() {
+            return [
+                result("shared", "Shared", {type: " catalog-entry "}),
+                result("shared", "Duplicate of shared", {type: "command"}),
+                result("other", "Other", {type: "command"})
+            ];
+        }
+    }
+    class Second { async query() { return [result("shared", "Shared", {type: "catalog-entry"})]; } }
+    const {search} = createSearch({
+        first: {label: "First", implementation: "/first.js", prefixes: ["catalog:"]},
+        second: {label: "Second", implementation: "/second.js", prefixes: ["catalog:"]}
+    }, {"esm:/first.js": First, "esm:/second.js": Second});
+
+    const {results, errors} = await search.query("catalog:");
+    assert.deepEqual(errors, []);
+    assert.deepEqual(results.map(({providerId, id, type}) => [providerId, id, type]), [
+        ["first", "shared", "catalog-entry"], ["first", "other", "command"], ["second", "shared", "catalog-entry"]
+    ]);
+    const validator = new JsonValidator();
+    for (const item of results) assert.equal(validator.validate(item, SearchContract.types.searchResult.schema).valid, true);
+});
+
+test("Search rejects missing, blank, and non-string resource types and isolates the provider failure", async () => {
+    let invalid;
+    class Good { async query() { return [result("good")]; } }
+    class Invalid { async query() { return [result("discarded"), invalid]; } }
+    const {search} = createSearch({
+        good: {label: "Good", implementation: "/good.js"},
+        invalid: {label: "Invalid", implementation: "/invalid.js"}
+    }, {"esm:/good.js": Good, "esm:/invalid.js": Invalid});
+    const validator = new JsonValidator();
+
+    for (const fields of [{}, {type: ""}, {type: " \t\n "}, {type: 4}, {type: null}, {type: ["page"]}]) {
+        invalid = {id: "bad", label: "Bad", category: "Documents", href: "page:x:/pages/search.js", ...fields};
+        assert.equal(validator.validate({...invalid, providerId: "invalid"}, SearchContract.types.searchResult.schema).valid, false);
+        const {results, errors} = await search.query("documents");
+        assert.deepEqual(results.map(({type, providerId}) => [type, providerId]), [["page", "good"]]);
+        assert.deepEqual(errors, [{providerId: "invalid", message: "Unable to search Invalid."}]);
+    }
+});
+
 test("provider failures and invalid results are isolated while successful results survive", async () => {
     class Good { async query() { return [result("good")]; } }
     class Failed { async query() { throw new Error("credential=https://secret.example"); } }
-    class Invalid { async query() { return [{id: "invalid", label: "Invalid", href: "/invalid", callback() {}}]; } }
+    class Invalid { async query() { return [{...result("invalid"), callback() {}}]; } }
     const {search} = createSearch({
         good: {label: "Good", implementation: "/providers/search-good.js", prefixes: ["shared:"]},
         failed: {label: "Failed", implementation: "/providers/search-failed.js", prefixes: ["shared:"]},

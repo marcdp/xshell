@@ -66,7 +66,7 @@ export default {
                             x-attr:open="result.open"
                         >
                             <div class="tags">
-                                <x-chip x-attr:label="result.providerId"></x-chip>
+                                <x-chip x-attr:label="result.type"></x-chip>
                             </div>
                         </x-listview-item>
                     </x-listview-body>

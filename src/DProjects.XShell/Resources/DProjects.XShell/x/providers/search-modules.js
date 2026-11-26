@@ -17,6 +17,7 @@ export default class ModulesSearchProvider {
             if (!searchable.includes(query)) continue;
             results.push({
                 id: module.id,
+                type: "module",
                 label: module.label || module.id,
                 ...(module.description ? {description: module.description} : {}),
                 icon: module.icon || "x-module",
