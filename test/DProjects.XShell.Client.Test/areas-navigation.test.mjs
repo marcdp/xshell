@@ -586,7 +586,8 @@ function createPageResolver() {
         app: { basePath: "/app", baseUrl: "https://example.test/app/" },
         xshell: { resolver: { page: {
             "x-demo:/{path}": { src: "/_assets/x-demo/{path}", loader: "page-js" },
-            "x:/{path}": { src: "/_assets/x/{path}", loader: "page-js" }
+            "x:/{path}": { src: "/_assets/x/{path}", loader: "page-js" },
+            "/_assets/x-demo/{path}.js": { src: "/_assets/x-demo/{path}.js", loader: "page-js" }
         } } }
     }});
 }
@@ -650,7 +651,10 @@ test("Global Page URLs bypass aliases and routes in both modes, even with a root
     assert.equal(areas.resolveAreaId(page.src), "admin");
 
     for (const [mode, base] of [["path", "/app"], ["hash", "/app/#!"]]) {
-        const resolver = { resolve: reference => reference === "page:customer:/pages/detail.js" ? { path: asset } : null };
+        const resolver = new Resolver({ config: { app: { baseUrl: "https://example.test/app/" }, xshell: { resolver: { page: {
+            "customer:/pages/detail.js": { src: asset, loader: "page-js" },
+            "/_assets/customer/{path}.js": { src: "/_assets/customer/{path}.js", loader: "page-js" }
+        } } } } });
         const navigation = createNavigation({ areas, mode, basePath: "/app", resolver });
         const globalSource = prefix + asset + "?tab=one&count=2#summary";
         const globalPage = { src: globalSource };
@@ -663,19 +667,68 @@ test("Global Page URLs bypass aliases and routes in both modes, even with a root
         assert.equal(navigation.buildUrlAbsolute({ href: asset, page: globalPage }), base + prefix + asset);
         assert.equal(navigation.buildUrlAbsolute({ href: "./detail.js?tab=other#details", page: globalPage }),
             base + prefix + asset + "?tab=other#details");
+        assert.equal(navigation.buildUrlAbsolute({ href: "./editor.js", page: globalPage }), base + prefix + "/_assets/customer/pages/editor.js");
+        assert.equal(navigation.buildUrlAbsolute({ href: "/_assets/customer/pages/editor.js", page: globalPage }),
+            base + prefix + "/_assets/customer/pages/editor.js");
+        assert.equal(navigation.buildUrlAbsolute({ href: page.src, scope: "global", page: globalPage }), base + prefix + asset);
+        assert.equal(navigation.buildUrlAbsolute({ href: prefix + asset, scope: "area", page: globalPage }), base + "/admin/detail");
         assert.equal(navigation.buildUrlAbsolute({ href: asset, page: globalPage, scope: "area" }), base + "/admin/detail");
         assert.equal(navigation.buildUrlAbsolute({ href: "/sales/detail", page: globalPage }), base + "/sales/detail");
         assert.equal(navigation.buildUrlAbsolute({ href: "/detail", page: globalPage }), base + "/detail");
         assert.equal(navigation.buildUrlAbsolute({ href: "/detail", page: globalPage, scope: "area" }), base + "/detail");
         assert.equal(navigation.buildUrlAbsolute({ href: asset, page }), base + "/admin/detail");
         assert.equal(navigation.resolveRoute(prefix + "/customer/42"), null);
-        assert.equal(resolveNavigationTarget(navigation, prefix + "/detail", page), prefix + "/detail");
+        assert.throws(() => navigation.buildUrlAbsolute({ href: prefix + "/detail", page }), /must identify a canonical Page resource/);
 
         // A named embed retains the same resolved global URL.
         const embedded = createEmbedPage(page.src);
         await navigation.navigate({ href: asset, page: embedded.page, scope: "global", open: "embed", outlet: "content" });
         assert.equal(embedded.outlet.src, prefix + asset);
     }
+});
+
+test("Global validation uses the effective asset namespace and the Page Resolver", () => {
+    const assetsBasePath = "/content/assets";
+    const asset = assetsBasePath + "/tool/pages/editor.js";
+    const config = { app: { baseUrl: "https://example.test/app/" }, xshell: { resolver: { page: {
+        "tool:/pages/editor.js": { src: asset, loader: "page-js" },
+        [asset]: { src: asset, loader: "page-js" }
+    } } } };
+    const navigation = createNavigation({ assetsBasePath, resolver: new Resolver({ config }) });
+    const error = /must identify a canonical Page resource under '\/content\/assets'/;
+    assert.equal(navigation.buildUrlAbsolute({ href: "page:tool:/pages/editor.js", scope: "global" }), "/global" + asset);
+    assert.equal(navigation.buildUrlAbsolute({ href: "/global" + asset + "?mode=edit#details" }), "/global" + asset + "?mode=edit#details");
+    for (const href of ["/customers", assetsBasePath, assetsBasePath + "-other/tool.js", "/_assets/tool/pages/editor.js",
+        assetsBasePath + "/tool/styles/editor.css", assetsBasePath + "/tool/pages/unrecognized.js", "/global/customers"]) {
+        assert.throws(() => navigation.buildUrlAbsolute({ href, scope: "global" }), error);
+    }
+    assert.equal(navigation.buildUrlAbsolute({ href: "https://example.test/customers", scope: "global" }), "https://example.test/customers");
+});
+
+test("A unique root-Area home keeps its native URL when another Area includes the same Page", async t => {
+    const rootHome = "/_assets/x-demo/pages/index.js";
+    const config = { xshell: { assets: { basePath: "/_assets" } }, modules: { shell: {}, "x-demo": {} } };
+    config.modules.shell.menus = { navigation: { items: [{ label: "Team", path: "/home", href: "/_assets/x/pages/home.js" }] } };
+    config.modules["x-demo"].menus = { navigation: { items: [{ label: "Welcome", path: "/welcome", href: rootHome }] } };
+    const areas = new Areas({ config, bus: new EventTarget() }, { default: "team", definitions: {
+        team: { prefix: "/team", modules: ["shell", "x-demo"] },
+        root: { prefix: "", modules: ["x-demo"] }
+    } });
+    areas.init({ modules: { getModuleById: id => ({ id, config: config.modules[id] }) } });
+
+    // An explicit navigation should write the same URL that the native link advertised.
+    const host = { src: "/global/_assets/x-demo/pages/editor.js", getAttribute: () => "main" };
+    const page = { src: host.src, host };
+    const historyUrls = [];
+    const previousHistory = globalThis.history;
+    globalThis.history = { pushState: (_, title, url) => historyUrls.push(url) };
+    t.after(() => { globalThis.history = previousHistory; });
+    const navigation = createNavigation({ areas, basePath: "/app", resolver: createPageResolver(), container: { querySelectorAll: () => [host] } });
+    const nativeHref = navigation.buildUrlAbsolute({ href: rootHome, page });
+    assert.equal(nativeHref, "/app/welcome");
+    await navigation.navigate({ href: rootHome, page, open: "top" });
+    assert.equal(host.src, rootHome);
+    assert.deepEqual(historyUrls, [nativeHref]);
 });
 
 test("Navigation opens resolved Page resources through public auto and embed behavior", async () => {
@@ -796,6 +849,23 @@ for (const mode of ["hash", "path"]) {
         await restored.navigate({ href: origin.src, page: origin, open: "top", classes: ["size-full"] });
         assert.equal(restored.stack.length, 1);
         assert.equal(Object.hasOwn(restored.stack[0], "classes"), false);
+
+        // Invalid requests leave the existing Page, stack, and history entry intact.
+        const before = { position, url: urls[position].href, stack: restored.stack, src: mounted[0].src };
+        const error = /must identify a canonical Page resource/;
+        await assert.rejects(restored.navigate({ href: "/customers", scope: "global", open: "top" }), error);
+        await assert.rejects(restored.navigate({ href: "/global/customers", open: "stack" }), error);
+        assert.deepEqual({ position, url: urls[position].href, stack: restored.stack, src: mounted[0].src }, before);
+
+        // Invalid browser destinations cannot replace the valid mounted stack.
+        const logged = t.mock.method(console, "error", () => {});
+        setUrl(mode === "hash" ? "/app/#!/global/customers" : "/app/global/customers", true);
+        await listeners[mode === "hash" ? "hashchange" : "popstate"]();
+        assert.match(logged.mock.calls[0].arguments[1].message, error);
+        assert.deepEqual(restored.stack, before.stack);
+        assert.equal(mounted[0].src, before.src);
+        await assert.rejects(startNavigation(), error);
+        assert.equal(mounted[0].src, before.src);
     });
 }
 

@@ -93,7 +93,7 @@ function createNavigation({ areas = null, mode = "path", basePath = "", baseUrl 
         bus: {},
         config: {
             app: { basePath, baseUrl },
-            xshell: {}
+            xshell: { assets: { basePath: "/_assets" } }
         },
         resolver
     }, { mode }, { container: {} });
@@ -102,7 +102,10 @@ function createNavigation({ areas = null, mode = "path", basePath = "", baseUrl 
 function createPageResolver() {
     return new Resolver({ config: {
         app: { basePath: "/app", baseUrl: "https://example.test/app/" },
-        xshell: { resolver: { page: { "x-demo:/{path}": { src: "/_assets/x-demo/{path}", loader: "page-js" } } } }
+        xshell: { resolver: { page: {
+            "x-demo:/{path}": { src: "/_assets/x-demo/{path}", loader: "page-js" },
+            "/_assets/x-demo/{path}.js": { src: "/_assets/x-demo/{path}.js", loader: "page-js" }
+        } } }
     }});
 }
 

@@ -21,9 +21,9 @@ function createAreas(modules, definitions = {}) {
     return areas;
 }
 
-function createPage(menuName, item = null, areas = createAreas({ reports: { menus: { reports, empty: { scope: "global" } } } })) {
+function createPage(menuName, item = null, areas = createAreas({ reports: { menus: { reports, empty: { scope: "global" } } } }), src) {
     const state = { ...structuredClone(WorkspacePage.state), menuName, item };
-    const page = {};
+    const page = src ? { src } : {};
     const navigations = [];
     const navigation = { navigate: request => navigations.push(request) };
     const pending = [];
@@ -51,6 +51,15 @@ test("Workspace resolves an Area item's friendly path via Navigation", () => {
     const { state, page, navigations } = createPage("reports", "overview", areas);
     assert.equal(state.menu, areas.getMenu("reports").items);
     assert.equal(state.menu[0].href, "/main" + href);
+    assert.deepEqual(navigations, [{ href: "/main/overview", page, open: "embed", outlet: "content" }]);
+});
+
+test("A global Workspace reads the retained Area's effective menu", () => {
+    const localReports = { ...reports, scope: "area", items: [{ id: "overview", label: "Overview", href, path: "/overview" }] };
+    const areas = createAreas({ reports: { menus: { reports: localReports } } }, { main: { prefix: "/main", modules: ["reports"] } });
+    const { page, state, navigations } = createPage("reports", null, areas, "/global/_assets/x/0.9.0.dev/pages/workspace.js");
+    assert.equal(Object.hasOwn(WorkspacePage.contract.properties, "areaName"), false);
+    assert.equal(state.item, "overview");
     assert.deepEqual(navigations, [{ href: "/main/overview", page, open: "embed", outlet: "content" }]);
 });
 

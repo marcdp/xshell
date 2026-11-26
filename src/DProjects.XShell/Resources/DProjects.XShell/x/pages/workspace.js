@@ -4,7 +4,6 @@ export default {
         description: "Workspace menu and pages.",
         properties: {
             menuName: {type:"string", default:"", state:true, query:true},
-            areaName: {type:"string", default:"", state:true, query:true},
             item: {type:"string", default:null, state:true, query:true, reflect:true},
             showTitle: {type:"boolean", default:true, state:true, query:true}
         },
@@ -91,8 +90,8 @@ export default {
 
         return {
             load() {
-                // Resolve the menu from the requested Area or current Area.
-                const menu = areas.getMenu(state.menuName, state.areaName || null);
+                // Read the effective menu through the current Area.
+                const menu = areas.getMenu(state.menuName);
                 state.menu = menu?.items || [];
 
                 this.collectItems(state.menu);
@@ -110,13 +109,12 @@ export default {
                 // Validate effective IDs in depth-first menu order, after Areas merges contributions.
                 for (const item of items) {
                     if (item.label !== "-" && !item.command && (item.path || item.href)) {
-                        if (typeof item.id !== "string" || !item.id.trim()) {
-                            throw new Error(`Workspace menu '${state.menuName}' requires a non-empty ID for navigable item '${item.label}'.`);
+                        if (item.id) {
+                            if (result.has(item.id)) {
+                                throw new Error(`Workspace menu '${state.menuName}' has duplicate navigable item ID '${item.id}'.`);
+                            }
+                            result.set(item.id, item);
                         }
-                        if (result.has(item.id)) {
-                            throw new Error(`Workspace menu '${state.menuName}' has duplicate navigable item ID '${item.id}'.`);
-                        }
-                        result.set(item.id, item);
                     }
                     if (item.children?.length) this.collectItems(item.children, result);
                 }

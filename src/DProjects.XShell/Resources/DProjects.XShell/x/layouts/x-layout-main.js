@@ -53,7 +53,7 @@ export default {
         .dock-container x-splitter x-toolbar span {flex:1;}
 
         .dock-container.bottom {display:flex; flex-direction:column;height:100vh; overflow:hidden; height:100vh;}
-        .dock-container.bottom .docked-main {overflow-y:hidden;    }
+        .dock-container.bottom .docked-main {overflow-y:hidden; flex:1; min-height:10em;}
         .dock-container.bottom .docked-main x-app-menu {position:block; height:100%;}
         .dock-container.bottom .docked-main x-page-menu {position:block; height:100%;}
         .dock-container.bottom .docked-main main {height:100%; overflow-y:auto;  scrollbar-width:thin; scrollbar-gutter: stable; }
@@ -192,8 +192,10 @@ export default {
                     __laeft:var(--x-layout-main-drawer-width); 
                     __right:0;
                     __bottom:0;
-                    outline:1px red solid;
-                    outline-offset: -1px;
+                    
+                    __outline:1px red solid;
+                    __outline-offset: -1px;
+
                     padding:0;
                     display:flex;
                     transition: left var(--x-transition-duration);

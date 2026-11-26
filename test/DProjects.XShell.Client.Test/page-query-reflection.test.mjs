@@ -149,9 +149,10 @@ function createNavigation(mode, xpages) {
     const navigation = new Navigation({
         areas: { globalPrefix: "/global", resolvePath() { return null; } },
         bus: { emit() {} },
+        resolver: { has: href => href === "page:/_assets/test/pages/tool.js" },
         config: {
             app: { basePath: "", baseUrl: "https://example.test/" },
-            xshell: {}
+            xshell: { assets: { basePath: "/_assets" } }
         }
     }, { mode }, { container });
     activeNavigation = navigation;

@@ -380,7 +380,7 @@ export default class Navigation {
                 href: root.href,
                 params: root.params,
                 nav: (stack.length == 1 ? root.nav : null)
-            })
+            }, { preserveArea: true });
             // Store the root navigation metadata and the child entries, including their presentation classes.
             if (stack.length > 1) {
                 let aux = {};
@@ -437,6 +437,12 @@ export default class Navigation {
         const stack = [{ href, params, nav: { title, description, icon, breadcrumb } }];
         if (Array.isArray(children)) {
             for (const { classes, ...item } of children) stack.push(withStackClasses(item, classes));
+        }
+
+        // Validate restored global destinations before replacing the stack or touching the DOM.
+        for (const item of stack) {
+            const { identity } = this.#splitHref(item.href);
+            if (matchesPathPrefix(identity, this.#areas.globalPrefix)) this.#validateGlobalDestination(identity);
         }
         return stack;
     }
@@ -609,23 +615,24 @@ export default class Navigation {
             href: identity + suffix
         });
     }
-    #buildUrlPublic(params) {
-        const target = this.#resolvePublicTarget(params.href, params.params || {}, params.page, params.scope);
+    #buildUrlPublic(params, { preserveArea = false } = {}) {
+        const target = this.#resolvePublicTarget(params.href, params.params || {}, params.page, params.scope, preserveArea);
         return this.buildUrl({ ...params, href: target.href, params: target.params });
     }
     #resolvePublicHref(href, page) {
         return this.#resolvePublicTarget(href, {}, page).href;
     }
-    #resolvePublicTarget(href, params, page, scope) {
+    #resolvePublicTarget(href, params, page, scope, preserveArea) {
         // leave external targets under native browser control
         if (!href.startsWith("page:") && (/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(href) || href.startsWith("//"))) return { href, params };
-        const canonicalHref = this.#resolveCanonicalHref(href, page, { scope });
+        // An existing stack URL already fixes its Area, including an empty-prefix Area.
+        const stackArea = preserveArea ? this.#areas.getArea?.(this.#areas.resolveAreaId?.(href)) : null;
+        const canonicalHref = stackArea ? href : this.#resolveCanonicalHref(href, page, { scope });
         const { identity, suffix } = this.#splitHref(canonicalHref);
         if (matchesPathPrefix(identity, this.#areas.globalPrefix)) return { href: canonicalHref, params };
 
         // Prefer an Area alias, then try reverse routing.
-        const areaId = this.#areas.resolveAreaId?.(identity);
-        const area = this.#areas.getArea?.(areaId);
+        const area = stackArea || this.#areas.getArea?.(this.#areas.resolveAreaId?.(identity));
         const menuitem = area ? this.#areas.resolveHref?.(identity, area.id) : null;
         if (menuitem) {
             // Use the friendly path only when resolving it can reproduce the invocation.
@@ -638,7 +645,10 @@ export default class Navigation {
             }
             return { href: canonicalHref, params };
         }
-        for (const routeArea of this.#getPublicRouteAreas(href.startsWith("page:") ? canonicalHref : href, page)) {
+        // Keep an Area chosen from a global Page when generating the browser URL.
+        const fromGlobal = page?.src && matchesPathPrefix(this.#splitHref(page.src).identity, this.#areas.globalPrefix);
+        const routeAreas = area && (stackArea || fromGlobal) ? [area] : this.#getPublicRouteAreas(href.startsWith("page:") ? canonicalHref : href, page);
+        for (const routeArea of routeAreas) {
             const routeTarget = this.#resolvePublicRouteTarget(canonicalHref, params, routeArea);
             if (routeTarget) return routeTarget;
         }
@@ -661,23 +671,25 @@ export default class Navigation {
         // The URL carries global context after resolution. An explicit scope can change it.
         const globalPrefix = this.#areas.globalPrefix;
         if (matchesPathPrefix(identity, globalPrefix)) {
-            if (scope !== "area") return identity + suffix;
+            if (scope !== "area") return this.#validateGlobalDestination(identity) + suffix;
             identity = this.#removePathPrefix(identity, globalPrefix);
         }
         const targetArea = this.#areas.getArea?.(this.#areas.resolveAreaId?.(identity));
         if (scope === "global") {
             const resource = this.#isAssetPath(identity) ? identity : this.#removePathPrefix(identity, targetArea?.prefix);
-            return globalPrefix + resource + suffix;
+            return this.#validateGlobalDestination(globalPrefix + resource) + suffix;
         }
         if (targetArea?.prefix) return identity + suffix;
 
-        // A global Page can follow a declared root-Area path as well as a prefixed Area URL.
+        // A global Page can follow a declared root-Area path or a unique canonical Area home.
         const fromGlobal = matchesPathPrefix(origin, globalPrefix);
         if (fromGlobal) {
             if (targetArea && !this.#isAssetPath(identity) && (this.#areas.resolvePath(identity) || this.#findRouteMatch(identity))) {
                 return identity + suffix;
             }
-            if (scope !== "area") return globalPrefix + identity + suffix;
+            const entryArea = this.#isAssetPath(identity) ? this.#findAreaHome(identity) : null;
+            if (entryArea) return this.#applyAreaPrefix(identity, entryArea) + suffix;
+            if (scope !== "area") return this.#validateGlobalDestination(globalPrefix + identity) + suffix;
         }
 
         // Preserve an explicit canonical asset path before looking up the originating Area or menu.
@@ -690,6 +702,27 @@ export default class Navigation {
             : this.#areas.getArea?.(pageAreaId) || this.#areas.getCurrentArea?.() || this.#areas.getDefaultArea?.();
         const canonicalHref = this.#applyAreaPrefix(identity, area);
         return canonicalHref + suffix;
+    }
+    #findAreaHome(identity) {
+        // Compare canonical home identities, ignoring invocation parameters and fragments.
+        let match = null;
+        for (const area of this.#areas.getAreas()) {
+            if (!area.home) continue;
+            const home = this.#splitHref(area.home).identity;
+            const href = this.#areas.resolvePath(home)?.href ?? home;
+            if (this.#removePathPrefix(this.#splitHref(href).identity, area.prefix) !== identity) continue;
+            if (match) return null;
+            match = area;
+        }
+        return match;
+    }
+    #validateGlobalDestination(identity) {
+        // Only a canonical Page resource can follow the reserved prefix.
+        const resource = this.#removePathPrefix(identity, this.#areas.globalPrefix);
+        if (resource === this.#assetsBasePath || !this.#isAssetPath(resource) || !this.#resolver.has("page:" + resource)) {
+            throw new Error(`Navigation: global destination '${identity}' must identify a canonical Page resource under '${this.#assetsBasePath}'.`);
+        }
+        return identity;
     }
     #findRouteMatch(identity) {
         // select the Area from the public path and match against Area-relative declarations

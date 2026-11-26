@@ -26,10 +26,16 @@ Global URLs use canonical Page resource paths and bypass Area menu aliases and r
 for loading. The Main layout keeps the application menu visible and hides the Area sidebar and its toggle. The active Area and saved sidebar preference
 remain available when the user returns to Area navigation.
 
-`navigation.navigate(options)` and `navigation.buildUrlAbsolute(options)` accept an optional `scope: "global"` or `scope: "area"`. Scope selects the
-destination URL during resolution. The resolved URL alone records the context for history, bookmarks, and stack entries.
-Internal navigation from a global Page inherits that context unless the destination names an Area or the caller requests `scope: "area"`.
-When an explicit Area scope has no other Area to use, Navigation can use the retained active Area.
+`navigation.navigate(options)` and `navigation.buildUrlAbsolute(options)` accept an optional `scope: "global"` or `scope: "area"`. The resolved URL
+records the context for history, bookmarks, and stack entries. Navigation honors an explicit scope first, then an explicit destination prefix.
+From a global Page, an Area URL or a canonical destination matching exactly one Area's home opens in that Area. This lets application-menu
+shortcuts such as Docs and Demo return to their Areas. A home shared by multiple Areas needs a prefixed destination to select a specific Area.
+Ordinary internal links from a global Page inherit global navigation. An explicit `scope: "area"` can use the retained active Area.
+
+A global destination must resolve to a canonical Page path recognized by the Page Resolver under `config.xshell.assets.basePath`. This includes
+`page:` references, canonical asset paths with or without the global prefix, and relative links that resolve to a canonical Page from a global
+Page source. A friendly path such as `/customers` raises an error under global scope before Navigation updates history or the mounted Page.
+Direct global URLs and Back or Forward destinations follow the same validation.
 
 ```js
 await navigation.navigate({

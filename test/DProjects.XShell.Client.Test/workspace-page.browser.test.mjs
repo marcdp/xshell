@@ -166,7 +166,8 @@ async function verifyFilesystems() {
         { default: menuitem }, { default: anchor }, { default: Navigation }, { default: Services },
         { default: Events }, { default: JsonValidator }, { default: Filesystems },
         { createXPageClass }, { createPageClassFromJsDefinition }, { createComponentClassFromJsDefinition },
-        { default: renderEngine }, { default: stateEngine }, { default: Areas }, { default: mainLayout }, { default: pageMenu }
+        { default: renderEngine }, { default: stateEngine }, { default: Areas }, { default: mainLayout }, { default: pageMenu },
+        { default: appMenu }, { default: Resolver }
     ] = await Promise.all([
         "x-filesystem/pages/global/filesystems.js", "x-filesystem/pages/explorer.js",
         "x-filesystem/components/x-filesystem.js", "x-filesystem/components/x-filesystem-list.js",
@@ -174,7 +175,8 @@ async function verifyFilesystems() {
         "xshell/services/navigation.js", "xshell/services.js", "xshell/services/events.js",
         "xshell/services/json-validator.js", "x-filesystem/services/filesystems.js", "xshell/x-page.js",
         "xshell/loaders/page-js.js", "xshell/loaders/component-js.js", "xshell/render-engines/x-client.js", "xshell/state-engines/proxy.js",
-        "xshell/services/areas.js", "x/layouts/x-layout-main.js", "x/components/x-page-menu.js"
+        "xshell/services/areas.js", "x/layouts/x-layout-main.js", "x/components/x-page-menu.js",
+        "x/components/x-app-menu.js", "xshell/services/resolver.js"
     ].map(path => import("/resources/" + path)));
 
     // Mount the real popup, Explorer, and Filesystem components with two in-memory registrations.
@@ -195,20 +197,47 @@ async function verifyFilesystems() {
     };
     window.requestAnimationFrame = callback => setTimeout(callback, 0);
     const defaults = { renderEngine: "x-client", stateEngine: "proxy" };
+    // Use the actual manifest shortcuts and inventory-derived Area homes.
+    const readEntry = async (id, areaId, extension) => {
+        const response = await fetch(`/resources/${id}/manifest.jsonc`);
+        const source = (await response.text()).replace(/^\s*\/\/[^\r\n]*/gm, "").replace(/,(?=\s*[}\]])/g, "");
+        const manifest = JSON.parse(source);
+        const definition = manifest.modules[id];
+        const assetsPath = `/_assets/${id}/${definition.version}.dev`;
+        const home = assetsPath + "/pages/index." + extension;
+        const area = manifest.xshell.services.areas.options.definitions[areaId];
+        const navigation = { source: assetsPath + definition.menus.navigation.source };
+        const items = definition.menus.global.items.map(item => item.href ? { ...item, href: assetsPath + item.href } : item);
+        return { id, areaId, area, home, module: { label: definition.label, files: [{ path: home }], menus: { navigation, global: { items } } } };
+    };
+    const cookbook = await readEntry("x-demo", "cookbook", "js");
+    const docs = await readEntry("xshell-docs", "xshell-docs", "md");
+    const entries = [cookbook, docs];
     const config = {
         app: { basePath: "/app", baseUrl: location.origin + "/app/", label: "Test" },
-        modules: { x: { defaults: { page: defaults, component: defaults } } },
-        xshell: { assets: { basePath: "/_assets" }, ui: { layouts: { main: "x-layout-main", embed: "test-layout" } } }
+        modules: {
+            x: { defaults: { page: defaults, component: defaults }, menus: { global: { scope: "global", items: [] } } },
+            ...Object.fromEntries(entries.map(entry => [entry.id, entry.module]))
+        },
+        xshell: {
+            assets: { basePath: "/_assets" },
+            ui: { layouts: { main: "x-layout-main", embed: "test-layout" } },
+            resolver: { page: {
+                "x-filesystem:/pages/explorer.js": { src: explorerPath, loader: "page-js" },
+                [explorerPath]: { src: explorerPath, loader: "page-js" }
+            } }
+        }
     };
     const bus = new EventTarget();
     bus.emit = (type, detail) => bus.dispatchEvent(new CustomEvent(type, { detail }));
     const areas = new Areas({ config, bus }, {
-        default: "root", definitions: { root: { prefix: "", modules: ["x"] }, cookbook: { prefix: "/cookbook", modules: ["x"] } }
+        default: "root", definitions: {
+            root: { prefix: "", modules: ["x"] }, ...Object.fromEntries(entries.map(entry => [entry.areaId, entry.area]))
+        }
     });
-    const module = { id: "x", config: { menus: { navigation: { items: [{ label: "Home", href: "/home.js", path: "/home" }] } } }, controller: {} };
-    const modules = { resolveModuleId: () => "x", getModuleById: () => module };
+    const modules = { resolveModuleId: href => areas.getModuleId(href) || "x", getModuleById: id => ({ id, config: config.modules[id], controller: {} }) };
     areas.init({ modules });
-    const resolver = { resolve: () => ({ path: explorerPath }) };
+    const resolver = new Resolver({ config });
     const navigation = new Navigation({ areas, bus, config, resolver }, { mode });
     const pages = new Map();
     const loader = { async load(resource) {
@@ -229,7 +258,8 @@ async function verifyFilesystems() {
     for (const [name, value] of Object.entries({ bus, config, loader, resolver, modules, areas, navigation, filesystems, preferences, services: root, i18n: {} })) {
         root.register(name, value);
     }
-    for (const name of ["dialog", "tasks"]) root.register(name, {});
+    root.register("dialog", {});
+    root.register("tasks", { list: () => [] });
     root.register("events", null, { lifetime: "transient", implementationItem: { class: Events } });
     const services = new Proxy({}, { get: (_, name) => root.resolve(name) });
     const context = { resourceDefinition: { moduleId: "x" }, appBasePath: "/app", services };
@@ -239,14 +269,14 @@ async function verifyFilesystems() {
     customElements.define("x-page", createXPageClass({ areas, bus, config, loader, modules, navigation }));
     for (const [name, definition] of [
         ["x-menuitem", menuitem], ["x-anchor", anchor], ["x-filesystem", filesystem],
-        ["x-filesystem-list", list], ["x-listview-item", row], ["x-layout-main", mainLayout], ["x-page-menu", pageMenu]
+        ["x-filesystem-list", list], ["x-listview-item", row], ["x-layout-main", mainLayout], ["x-page-menu", pageMenu], ["x-app-menu", appMenu]
     ]) {
         await createComponentClassFromJsDefinition("/" + name + ".js", context, {
             ...definition, meta: { ...definition.meta, id: name, renderEngine: "x-client" }
         });
     }
     for (const [path, definition] of [
-        ["/home.js", { template: "<p>Home</p>", controller: () => ({}) }],
+        ...entries.map(entry => [entry.home, { template: "<p>Area home</p>", controller: () => ({}) }]),
         ["/popup.js", popup], [explorerPath, explorer]
     ]) {
         pages.set(path, await createPageClassFromJsDefinition(path, context, definition));
@@ -257,7 +287,7 @@ async function verifyFilesystems() {
     }
     document.body.appendChild(document.createElement("aside")).innerHTML = '<x-page src="/popup.js"></x-page>';
     const target = name => globalPath + "?src=named%3A" + name + "&path=%2F";
-    history.replaceState(null, "", browserBase + (direct ? target("filesystem1") : "/cookbook/home"));
+    history.replaceState(null, "", browserBase + (direct ? target("filesystem1") : areas.getArea(cookbook.areaId).home));
     await navigation.init();
     const host = navigation.getXPage();
 
@@ -271,7 +301,7 @@ async function verifyFilesystems() {
     const layout = () => host.shadowRoot.querySelector("x-layout-main")?.shadowRoot;
     const sidebar = () => layout()?.querySelector("x-page-menu");
     const toggle = () => layout()?.querySelector(".breadcrumb x-button");
-    async function verifyExplorer(name) {
+    async function verifyExplorer(name, retainedArea = direct ? "root" : "cookbook") {
         const component = await waitFor(() => {
             const component = host.querySelector("x-filesystem");
             const list = component?.shadowRoot?.querySelector("x-filesystem-list");
@@ -284,15 +314,17 @@ async function verifyFilesystems() {
         check(host.page.src === target(name), "Explorer lost the global source");
         check(location.href.endsWith(browserBase + target(name)), "Browser destination lost the global URL");
         check(!host.page.breadcrumb, "Global Page derived an Area breadcrumb");
-        check(areas.getCurrentArea().id === (direct ? "root" : "cookbook"), "Global destination changed the active Area");
+        check(areas.getCurrentArea().id === retainedArea, "Global destination changed the active Area");
         check(layout()?.querySelector("x-app-menu") && !sidebar() && !toggle(), "Global layout still displays Area navigation");
         check(!("scope" in navigation.stack[0]) && !("scope" in navigation.stack[0].nav), "Scope was serialized separately");
         return host.page;
     }
-    async function verifyArea() {
-        await waitFor(() => host.page?.src === "/cookbook/home.js" && sidebar()?.shadowRoot?.querySelector("x-anchor.selected"), "Area menu did not restore");
+    async function verifyArea(entry = cookbook) {
+        const area = areas.getArea(entry.areaId);
+        await waitFor(() => host.page?.src === area.prefix + entry.home && areas.getCurrentArea().id === area.id &&
+            sidebar()?.shadowRoot?.querySelector("x-anchor.selected"), "Area menu did not restore for " + area.id);
         check(sidebar().classList.contains("collapsed") && toggle(), "Area layout lost its collapse preference");
-        check(sidebar().shadowRoot.querySelector("x-anchor.selected").href === "/cookbook/home", "Sidebar selected the wrong Area Page");
+        check(sidebar().shadowRoot.querySelector("x-anchor.selected").href === area.home, "Sidebar selected the wrong Area Page");
     }
     if (!direct) {
         await verifyArea();
@@ -316,6 +348,21 @@ async function verifyFilesystems() {
     }
     history.forward();
     check(await verifyExplorer("filesystem2") !== second, "Forward did not reconstruct the later invocation");
+
+    // Check that native hrefs and ordinary clicks on the real app menu enter the same Area.
+    async function openAreaShortcut(label, entry) {
+        const areaHome = areas.getArea(entry.areaId).home;
+        const link = await waitFor(() => layout().querySelector("x-app-menu")?.shadowRoot?.querySelector(`x-menuitem[label="${label}"]`)
+            ?.shadowRoot?.querySelector("x-anchor")?.shadowRoot?.querySelector("a"), "App menu shortcut did not render");
+        check(link.getAttribute("href") === browserBase + areaHome, "Native " + label + " link did not enter its Area");
+        link.click();
+        await verifyArea(entry);
+        check(location.href.endsWith(browserBase + areaHome), "Intercepted " + label + " click differed from the native link");
+    }
+    await openAreaShortcut("Docs", docs);
+    await click("filesystem1");
+    await verifyExplorer("filesystem1", docs.areaId);
+    await openAreaShortcut("Demo", cookbook);
 }
 
 const browser = process.env.XSHELL_TEST_BROWSER;
@@ -337,10 +384,10 @@ async function runInChromium(verify, scenarios) {
         const path = new URL(request.url, "http://localhost").pathname;
         if (path === "/app/test") {
             response.writeHead(200, { "Content-Type": "text/html" }).end(html);
-        } else if (/^\/resources\/[\w./-]+\.js$/.test(path)) {
+        } else if (/^\/resources\/[\w./-]+\.(?:js|jsonc)$/.test(path)) {
             try {
                 const script = await readFile(new URL("./" + path.slice(11), root));
-                response.writeHead(200, { "Content-Type": "text/javascript" }).end(script);
+                response.writeHead(200, { "Content-Type": path.endsWith(".js") ? "text/javascript" : "application/json" }).end(script);
             } catch {
                 response.writeHead(404).end();
             }
