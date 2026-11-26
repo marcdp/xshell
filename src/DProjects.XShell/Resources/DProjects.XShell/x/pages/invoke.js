@@ -158,6 +158,24 @@ async function resolveInvocation({type, id, method}, loader, services, contracts
         };
     }
 
+    if (type === "query") {
+        // Inspect the loaded Query contract and delegate execution to the Queries service.
+        if (method !== "query") throw new Error("Queries only expose the 'query' method.");
+        const Query = await loader.load(`query:${id}`);
+        const contract = Query.contract;
+        if (!contract?.query?.returns) throw new Error(`Query '${id}' has no return contract.`);
+        const queries = services.resolve("queries");
+        return {
+            type: "query",
+            label: contract.label || id,
+            description: contract.description || contract.query.description || "",
+            parameters: contract.query.parameters || [],
+            types: contract.types || {},
+            returns: contract.query.returns,
+            invoke: args => queries.run({id, args})
+        };
+    }
+
     if (type === "service") {
         const info = services.getServiceInfo(id);
         if (!info) throw new Error(`Service '${id}' not found.`);
@@ -213,7 +231,7 @@ export default {
 
     meta: {
         title: "Invoke",
-        description: "Lorem ipsum dolor sit amet.",
+        description: "Run a Command, Query, or service method.",
         classes: ["size-narrow"]
     },
 
@@ -229,18 +247,23 @@ export default {
 
         <x-form command="submit" x-prop:errors="state.errors">
 
-            <x-details label="Command" x-attr:open="state.phase == 'arguments'">
+            <x-details x-attr:label="state.type == 'query' ? 'Query' : 'Command'" x-attr:open="state.phase == 'arguments'">
                 <x-datafields>
                     <x-datafield>{{state.type}}:{{ state.id }}<span x-if="state.method">:{{ state.method }}</span></x-datafield>
-                    <x-datafield type="checkbox" label-secondary="Run in background" x-model="state.background" x-attr:disabled="state.phase != 'arguments'"></x-datafield>
+                    <x-datafield x-if="state.type != 'query'" type="checkbox" label-secondary="Run in background"
+                        x-model="state.background" x-attr:disabled="state.phase != 'arguments'"></x-datafield>
                 </x-datafields>
             </x-details>
         
             <x-details label="Arguments" x-attr:open="state.phase == 'arguments'">
-                <x-schema ref="arguments" x-prop:schema="state.schema" x-model="state.args" x-attr:disabled="state.phase != 'arguments'"></x-schema>
+                <x-datafield x-if="state.type == 'query' && state.ready && !state.schema" type="textarea" label="JSON arguments" spellcheck="false"
+                    x-model="state.jsonArgs" x-attr:disabled="state.phase != 'arguments'"></x-datafield>
+                <x-schema x-else ref="arguments" x-prop:schema="state.schema" x-model="state.args" x-attr:disabled="state.phase != 'arguments'"></x-schema>
             </x-details>
         
-            <x-details x-if="state.phase == 'execution'" label="Execution" x-attr:open="state.phase == 'execution' && !state.completed">
+            <x-notice x-if="state.type == 'query' && state.running" type="working" label="Running Query"></x-notice>
+
+            <x-details x-if="state.type != 'query' && state.phase == 'execution'" label="Execution" x-attr:open="state.phase == 'execution' && !state.completed">
                 <x-notice x-attr:type="(state.taskStatus =='error' ? 'error' : 'working')" x-attr:icon="(state.completed ? 'x-file' : null)" x-attr:label="state.taskNoticeLabel" x-attr:message="state.taskError ? state.taskError.message : state.taskDescription">
                     <div x-if="state.running" class="progress-container">
                         <x-progress x-attr:unknown="state.taskProgress ? false : true" x-attr:value="state.taskProgress.value" x-attr:max="state.taskProgress.max"></x-progress>
@@ -273,17 +296,19 @@ export default {
 
             <x-details x-if="state.phase == 'execution' && state.completed" label="Result" open>
                 <x-notice type="success" >
-                    <x-object x-if="state.hasResult && !state.resultFormat && (!state.resultType || state.resultType == 'object' || state.resultType == 'array' || state.resultType == 'any' || state.resultType == 'function' || state.resultType == 'date')" x-prop:value="state.result" expanded></x-object>
+                    <span x-if="state.type == 'query' && !state.hasResult">Query completed.</span>
+                    <x-object x-if="state.hasResult && !state.resultFormat && (state.type == 'query' || !state.resultType || state.resultType == 'object' || state.resultType == 'array' || state.resultType == 'any' || state.resultType == 'function' || state.resultType == 'date')" x-prop:value="state.result" expanded></x-object>
                     <x-code x-if="state.hasResult && state.resultFormat == 'text'" x-prop:value="state.result" wrap></x-code>
                     <x-anchor class="plain" x-if="state.hasResult && (state.resultFormat == 'url' || state.resultFormat == 'blob-url')" x-prop:href="state.result" target="_blank" rel="noopener noreferrer">                   
                         <x-icon icon="x-open-in-new"></x-icon>
                         <span x-text="state.result"></span>
                     </x-anchor>
-                    <span x-if="state.hasResult && !state.resultFormat && state.resultType && state.resultType != 'object' && state.resultType != 'array' && state.resultType != 'any' && state.resultType != 'function' && state.resultType != 'date' && state.resultType != 'void'" class="result-value" x-text="state.result"></span>
+                    <span x-if="state.type != 'query' && state.hasResult && !state.resultFormat && state.resultType && state.resultType != 'object' && state.resultType != 'array' && state.resultType != 'any' && state.resultType != 'function' && state.resultType != 'date' && state.resultType != 'void'" class="result-value" x-text="state.result"></span>
                 </x-notice>
             </x-details>
 
-            <x-button slot="footer" x-if="state.ready && state.phase == 'arguments'" label="Execute" icon="x-play" command="submit" class="submit"></x-button>
+            <x-button slot="footer" x-if="state.ready && state.phase == 'arguments'" x-attr:label="state.type == 'query' ? 'Run Query' : 'Execute'"
+                icon="x-play" command="submit" class="submit"></x-button>
             <x-button slot="footer" x-if="state.ready && state.phase == 'execution' && !state.running" label="Back" icon="x-arrow-back" command="editArguments"></x-button>
             
         </x-form>
@@ -295,6 +320,7 @@ export default {
         phase: "arguments",
         description: "",
         schema: null,
+        jsonArgs: "",
         ready: false,
         running: false,
         background: false,
@@ -425,13 +451,21 @@ export default {
                     state.description = invocation.description;
                     state.resultType = invocation.returns?.type || invocation.types[invocation.returns?.ref]?.type || "";
                     state.resultFormat = invocation.returns?.format || "";
-                    state.schema = methodToJsonSchema({parameters:invocation.parameters}, invocation.types);
+                    // Use the generated form for supported fields and a JSON editor for other Query shapes.
+                    try {
+                        state.schema = methodToJsonSchema({parameters:invocation.parameters}, invocation.types);
+                        if (invocation.type === "query" && Object.values(state.schema.properties).some(definition => definition.type === "object")) {
+                            state.schema = null;
+                        }
+                    } catch (error) {
+                        if (invocation.type !== "query") throw error;
+                        state.schema = null;
+                    }
 
-                    const defaults = Object.entries(state.schema.properties)
-                        .filter(([, definition]) => Object.hasOwn(definition, "default"))
-                        .map(([name, definition]) => [name, structuredClone(definition.default)]);
-
+                    const defaults = invocation.parameters.filter(parameter => Object.hasOwn(parameter, "default"))
+                        .map(parameter => [parameter.name, structuredClone(parameter.default)]);
                     state.args = {...Object.fromEntries(defaults), ...initialArgs};
+                    if (invocation.type === "query" && !state.schema) state.jsonArgs = JSON.stringify(state.args, null, 2);
                     page.label = invocation.label;
                     page.description = invocation.description;
                     state.ready = true;
@@ -462,6 +496,7 @@ export default {
             async submit() {
                 // submit invocation
                 if (!invocation || !state.ready || state.phase !== "arguments" || state.running || submitting) return;
+                if (invocation.type === "query") return this.runQuery(invocation);
 
                 //page.host.querySelector("#details1").collapse();
                 //page.host.querySelector("#details2").collapse();
@@ -513,6 +548,30 @@ export default {
                 state.hasResult = result !== undefined;
                 state.result = result;
 
+            },
+
+            async runQuery(query) {
+                // Keep direct Query execution and its result on this Page.
+                resetExecutionState();
+                state.running = true;
+                state.phase = "execution";
+                try {
+                    // The generated form stores undefined for untouched optional fields.
+                    const args = state.schema
+                        ? Object.fromEntries(Object.entries(state.args).filter(([, value]) => value !== undefined))
+                        : JSON.parse(state.jsonArgs);
+                    const result = await query.invoke(args);
+                    if (!alive) return;
+                    state.result = result;
+                    state.hasResult = result !== undefined;
+                    state.completed = true;
+                } catch (error) {
+                    if (!alive) return;
+                    state.errors = [{label: "Error", message: error?.message || String(error)}];
+                    state.phase = "arguments";
+                } finally {
+                    if (alive) state.running = false;
+                }
             },
 
             toggleOutput() {

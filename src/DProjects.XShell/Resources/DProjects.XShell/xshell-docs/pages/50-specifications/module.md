@@ -155,12 +155,11 @@ Command and Component entries use the same file shape with their own small proje
 }
 ```
 
-Supported types are `page`, `component`, `command`, `contract`, and `schema`. Page metadata contains `title`, `description`, and `icon`; Component,
-Command, and contract metadata uses `label`, `description`, and `icon`; schema metadata uses `id`, `title`, and `description`. JavaScript Pages,
-Components, and Commands plus standalone JSON contracts may also contain `tags`, copied from authored `contract.tags` in declaration order. All
+Supported types are `page`, `component`, `command`, `query`, `contract`, and `schema`. Page metadata contains `title`, `description`, and `icon`.
+Component, Command, Query, and contract metadata uses `label`, `description`, and `icon`. Schema metadata uses `id`, `title`, and `description`.
+JavaScript Pages, Components, Commands, and Queries plus standalone JSON contracts may also contain `tags` in authored declaration order. All
 descriptive fields are optional. Component metadata prefers `meta.title`, `meta.description`, and `meta.icon`, falling back individually to the corresponding
-`contract.label`, `contract.description`, and `contract.icon`. The inventory never embeds full contracts, schemas, templates, command parameters,
-or datasets.
+`contract.label`, `contract.description`, and `contract.icon`. The inventory never embeds full contracts, schemas, templates, or datasets.
 
 Module tags and resource tags are independent. Module tags are authored directly on the module definition and are never inherited by contained
 resources. Resource tags are authored on the public resource contract, never inferred from filenames or directories, and generated automatically
@@ -171,6 +170,9 @@ A JavaScript file under `/commands/` is a valid generated Command resource only 
 `contract` object contains a static `execute` object. Packaging reads this shape without executing JavaScript and reports the source path when the
 required structure, optional descriptive strings, or `contract.tags` are dynamic or malformed. Static tag extraction accepts quoted strings,
 comments, multiline arrays, escaped literals, empty arrays, and trailing commas without executing JavaScript.
+
+A `/queries/*.js` file follows the same static metadata rules. Its definition contains `contract.query` and `contract.query.returns` objects.
+The same rule applies in subdirectories. See [Queries](../30-subsystems/95-queries.md#discover-queries) for discovery and identifier conventions.
 
 `module.files` remains the authoritative enumeration of packaged resources. `file.resource` permits discovery and presentation without loading an
 implementation, but it is not a resource catalog or registry. Resolver and Loader continue to resolve and load the underlying file.

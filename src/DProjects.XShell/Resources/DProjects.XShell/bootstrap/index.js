@@ -481,24 +481,32 @@ async function main() {
                     };
                 }
             };
-            resolver.command ??= {};
-            const commandDeclarations = new Map();
-            const addCommandDeclarations = (ownerType, ownerId, assetsPath, files) => {
-                const commandsPath = assetsPath + "/commands";
-                for (const file of files ?? []) {
-                    if (!file.path.startsWith(commandsPath + "/") || !file.path.endsWith(".js")) continue;
-                    const id = file.path.substring(commandsPath.length + 1).replace(/\.js$/, "");
-                    const first = commandDeclarations.get(id);
-                    if (first) throw new Error(`Duplicate command '${id}' declared by ${first.ownerType} '${first.ownerId}' in '${first.path}' ` + `and ${ownerType} '${ownerId}' in '${file.path}'.`);
-                    if (Object.hasOwn(resolver.command, id)) throw new Error(`Duplicate command '${id}' conflicts with an existing resolver entry while processing ` + `${ownerType} '${ownerId}' file '${file.path}'.`);
-                    commandDeclarations.set(id, { ownerType, ownerId, path: file.path });
-                    resolver.command[id] = {
-                        src: `${commandsPath}/${id}.js`,
-                        loader: "command-js",
-                        cache: true,
-                        moduleId: ownerId,
-                        modulePath: assetsPath
-                    };
+            // Register Commands and Queries independently, using the same inventory and conflict rules.
+            const operations = [["command", "commands", new Map()], ["query", "queries", new Map()]];
+            for (const [type] of operations) resolver[type] ??= {};
+            const addOperationDeclarations = (ownerType, ownerId, assetsPath, files) => {
+                for (const [type, directory, declarations] of operations) {
+                    const directoryPath = `${assetsPath}/${directory}/`;
+                    if (ownerType === "module") {
+                        resolver[type][`${ownerId}:{name}`] ??= {
+                            src: `${directoryPath}{name}.js`, loader: `${type}-js`, cache: true,
+                            moduleId: ownerId, modulePath: directoryPath.slice(0, -1)
+                        };
+                    }
+                    for (const file of files ?? []) {
+                        if (!file.path.startsWith(directoryPath) || !file.path.endsWith(".js")) continue;
+                        const id = file.path.slice(directoryPath.length, -".js".length);
+                        const first = declarations.get(id);
+                        if (first) throw new Error(`Duplicate ${type} '${id}' declared by ${first.ownerType} '${first.ownerId}' in '${first.path}' ` +
+                            `and ${ownerType} '${ownerId}' in '${file.path}'.`);
+                        if (Object.hasOwn(resolver[type], id)) throw new Error(`Duplicate ${type} '${id}' conflicts with an existing resolver entry while processing ` +
+                            `${ownerType} '${ownerId}' file '${file.path}'.`);
+                        declarations.set(id, { ownerType, ownerId, path: file.path });
+                        Object.defineProperty(resolver[type], id, {
+                            value: { src: file.path, loader: `${type}-js`, cache: true, moduleId: ownerId, modulePath: assetsPath },
+                            enumerable: true, configurable: true, writable: true
+                        });
+                    }
                 }
             };
 
@@ -514,7 +522,7 @@ async function main() {
                 };
                 addContractDeclarations("XShell", "xshell", frameworkAssetsPath, config.xshell.files);
                 addSchemaDeclarations("XShell", "xshell", frameworkAssetsPath, config.xshell.files);
-                addCommandDeclarations("XShell", "xshell", frameworkAssetsPath, config.xshell.files);
+                addOperationDeclarations("XShell", "xshell", frameworkAssetsPath, config.xshell.files);
             }
 
             for (const [moduleId, module] of Object.entries(config.modules)) {
@@ -787,16 +795,7 @@ async function main() {
                 };
                 addContractDeclarations("module", moduleId, moduleAssetsPath, module.files);
 
-                // commands
-                const moduleAssetsPathCommands = moduleAssetsPath + "/commands";
-                resolver.command[`${moduleId}:{name}`] ??= {
-                    src: `${moduleAssetsPathCommands}/{name}.js`,
-                    loader: "command-js",
-                    cache: true,
-                    moduleId,
-                    modulePath: moduleAssetsPathCommands
-                };
-                addCommandDeclarations("module", moduleId, moduleAssetsPath, module.files);
+                addOperationDeclarations("module", moduleId, moduleAssetsPath, module.files);
             }
 
             return config;

@@ -3,6 +3,8 @@
 The application-wide `commands` service discovers available Commands, resolves executable implementations, and dispatches each execution through
 the [Tasks](80-tasks.md) service.
 
+Use [Queries](95-queries.md) to retrieve data directly through a declared return contract.
+
 ## Discovery
 
 `commands.list(options = {})` synchronously returns frozen lightweight descriptors sorted by Command ID. It scans the effective

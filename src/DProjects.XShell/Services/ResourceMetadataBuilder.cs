@@ -63,6 +63,7 @@ namespace DProjects.XShell.Services {
             if (path.StartsWith("/components/", StringComparison.Ordinal) &&
                 (extension.Equals(".js", StringComparison.OrdinalIgnoreCase) || extension.Equals(".html", StringComparison.OrdinalIgnoreCase))) return "component";
             if (path.StartsWith("/commands/", StringComparison.Ordinal) && extension.Equals(".js", StringComparison.OrdinalIgnoreCase)) return "command";
+            if (path.StartsWith("/queries/", StringComparison.Ordinal) && extension.Equals(".js", StringComparison.Ordinal)) return "query";
             if (path.StartsWith("/contracts/", StringComparison.Ordinal) && extension.Equals(".json", StringComparison.OrdinalIgnoreCase)) return "contract";
             if (path.StartsWith("/schemas/", StringComparison.Ordinal) && path.EndsWith(".schema.json", StringComparison.OrdinalIgnoreCase)) return "schema";
             return null;
@@ -74,8 +75,9 @@ namespace DProjects.XShell.Services {
             if (extension.Equals(".html", StringComparison.OrdinalIgnoreCase)) source = new ModuleFileCompilerHtmlSfc().ExtractDefinitionSource(source);
             var definition = JavaScriptSource.Parse(source).FindDefaultExportObject();
             var resource = new JsonObject { ["type"] = type };
-            if (type == "command" && definition == null) throw new InvalidOperationException(
-                $"Command resource '{displayPath}' must default-export a static definition object.");
+            var operation = type == "command" ? "Command" : type == "query" ? "Query" : null;
+            if (operation != null && definition == null) throw new InvalidOperationException(
+                $"{operation} resource '{displayPath}' must default-export a static definition object.");
             if (definition == null) return resource;
 
             // extract the small type-specific surface without copying the complete definition contract
@@ -95,9 +97,10 @@ namespace DProjects.XShell.Services {
                     "meta.description", "contract.description");
                 AddPreferredStaticString(resource, "icon", meta, "icon", contract, "icon", displayPath, "meta.icon", "contract.icon");
                 AddStaticTags(resource, contract, displayPath);
-            } else if (type == "command") {
-                var contract = RequireStaticObject(definition, "contract", displayPath, "Command resource");
-                RequireStaticObject(contract, "execute", displayPath, "Command contract");
+            } else if (operation != null) {
+                var contract = RequireStaticObject(definition, "contract", displayPath, $"{operation} resource");
+                var method = RequireStaticObject(contract, type == "command" ? "execute" : "query", displayPath, $"{operation} contract");
+                if (type == "query") RequireStaticObject(method, "returns", displayPath, "Query method contract");
                 AddStaticString(resource, "label", contract, "label", displayPath, "contract.label");
                 AddStaticString(resource, "description", contract, "description", displayPath, "contract.description");
                 AddStaticString(resource, "icon", contract, "icon", displayPath, "contract.icon");
@@ -114,7 +117,7 @@ namespace DProjects.XShell.Services {
         }
         private static JavaScriptSource.JavaScriptObject RequireStaticObject(JavaScriptSource.JavaScriptObject definition, string propertyName,
             string displayPath, string owner) {
-            // Require the statically inspectable command shape used by the runtime contract loader.
+            // Require the statically inspectable definition shape used by the runtime loader.
             var property = definition.FindProperty(propertyName) ?? throw new InvalidOperationException(
                 $"{owner} in '{displayPath}' must declare a static '{propertyName}' object.");
             return property.Value.AsObject() ?? throw new InvalidOperationException(

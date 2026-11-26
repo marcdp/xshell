@@ -67,6 +67,17 @@ namespace DProjects.XShell.Test {
             }
         }
 
+        [Theory]
+        [InlineData("xshell-diagnostics", "pages/queries.js")]
+        [InlineData("x", "pages/invoke.js")]
+        public async Task QueryInvocationPagesCompile(string module, string relativePath) {
+            // Compile the diagnostics and invocation Pages through the hosting pipeline.
+            var directory = Path.Combine(GetResourceDirectory(), module);
+            var result = await new ModuleFileCompiler().CompileAsync(Path.Combine(directory, "manifest.jsonc"),
+                Path.Combine(directory, relativePath), TestContext.Current.CancellationToken);
+            Assert.Contains("templateRenderer:", result.Content, StringComparison.Ordinal);
+        }
+
         [Fact]
         public void StaticModuleTemplatesCompileWhenTemplatePropertyUsesWhitespaceBeforeTheColon() {
             var compilerType = typeof(XTemplateCompiler).Assembly.GetType("DProjects.XShell.Services.XTemplate.XTemplateJavaScriptCompiler", throwOnError: true)!;

@@ -55,6 +55,11 @@
                 "implementation": "/services/commands.js",
                 "lifetime": "singleton"
             },
+            "queries": {
+                "contract": "queries",
+                "implementation": "/services/queries.js",
+                "lifetime": "singleton"
+            },
             "dialog": {
                 "contract": "dialog",
                 "implementation": "/services/dialog.js",

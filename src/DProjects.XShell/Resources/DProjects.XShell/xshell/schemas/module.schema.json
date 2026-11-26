@@ -55,10 +55,10 @@
     "resource": {
       "type": "object",
       "properties": {
-        "type": {"type": "string", "enum": ["page", "component", "command", "contract", "schema"], "description": "Recognized XShell resource type."},
+        "type": {"type": "string", "enum": ["page", "component", "command", "query", "contract", "schema"], "description": "Recognized XShell resource type."},
         "id": {"type": "string", "description": "JSON Schema identifier."},
         "title": {"type": "string", "description": "Human-readable Page or JSON Schema title."},
-        "label": {"type": "string", "description": "Human-readable Component, Command, or Contract label."},
+        "label": {"type": "string", "description": "Human-readable Component, Command, Query, or Contract label."},
         "description": {"type": "string", "description": "Human-readable resource description."},
         "icon": {"type": "string", "description": "Optional resource icon."},
         "tags": {"$ref": "./contract.schema.json#/$defs/tags", "description": "Ordered machine-readable classification identifiers copied from the resource contract."}

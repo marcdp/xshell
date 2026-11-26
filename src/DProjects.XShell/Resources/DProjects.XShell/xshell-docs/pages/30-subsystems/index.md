@@ -11,6 +11,7 @@ Implemented V0 runtime capabilities:
 - [Identity](70-identity.md) — Optional Principal state synchronized from the authoritative server session.
 - [Tasks](80-tasks.md) — Asynchronous execution, reporting, cancellation, ownership, and global visibility.
 - [Commands](90-commands.md) — Command resolution, argument validation, and Task-backed execution.
+- [Queries](95-queries.md) — Read-only operations with validated arguments and results.
 - [Secrets](100-secrets.md) — Browser-local envelope encryption with password and passkey unlocking.
 - [Preferences](110-preferences.md) — Browser-local structured-clone settings persisted with IndexedDB.
 - [Stores](120-stores.md) — Provider-independent, schema-described JSON document collections.

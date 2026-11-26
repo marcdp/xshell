@@ -118,7 +118,7 @@ method results against `type`, `ref`, or `schema`.
 
 ## Usage examples
 
-Components, Pages, Services, and Commands share the same example format. Declare `contract.examples` in a Component, Page, or Command
+Components, Pages, Services, Commands, and Queries share the same example format. Declare `contract.examples` in a Component, Page, Command, or Query
 definition. In a Service contract JSON file, declare `examples` at the top level because the file itself is the contract.
 The array is optional and may be empty.
 
@@ -174,6 +174,8 @@ Specialized schemas reuse the shared definitions and then apply element-specific
 - `page.schema.json` embeds the contract in the Page implementation object, adds Page property metadata and `slots`, and rejects unsupported Page
   contract fields. The loader separately rejects slots reported by the selected Page render engine.
 - `command.schema.json` defines the specialized Command contract with required `execute` metadata and references the shared `tags`, `types`, and `examples` fields.
+- `query.schema.json` uses the shared contract vocabulary for a required `query` method and its required `returns` descriptor.
+  The [Queries service](../30-subsystems/95-queries.md) validates invocation arguments and results.
 
 Modules do not define public contracts; `module.schema.json` rejects `contract` on effective Module configurations.
 

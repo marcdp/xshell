@@ -55,10 +55,13 @@ Path, for example `/_assets/x-demo/<generation>`.
 | `bytes` | `bytes:<assets-path>/{path}` | `bytes:<module-id>:/{path}` | `bytes-any` |
 | `dataset` | `dataset:<assets-path>/{path}` | `dataset:<module-id>:{name}`; `dataset:<module-id>:/{path}` | `dataset-url` |
 | `contract` | exact `contract:<id>` entries discovered from `/contracts/*.json` inventory | `contract:<module-id>:{name}` | `object-json` |
+| `command` | exact `command:<id>` entries discovered under `/commands/` | `command:<module-id>:{name}` | `command-js` |
+| `query` | exact `query:<id>` entries discovered under `/queries/` | `query:<module-id>:{name}` | `query-js` |
 
 The `.html` Page convention resolves to the corresponding `.js` source. Exact global contract ids can include nested inventory paths without the
 `.json` suffix. Bootstrap generates general rules without checking that each requested file exists; a missing resource fails during loading.
 Rules for a canonical module definition are generated once, regardless of repeated dependency references.
+Global [Query](../30-subsystems/95-queries.md) and [Command](../30-subsystems/90-commands.md) IDs retain nested paths and omit the final `.js`.
 
 The generated file inventory can attach optional `file.resource` descriptions to recognized resources. That metadata avoids loading an
 implementation merely to obtain a title, label, description, or icon, but it does not replace a resolver entry or prove that loading will succeed.

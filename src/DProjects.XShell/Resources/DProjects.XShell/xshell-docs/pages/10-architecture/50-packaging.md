@@ -13,7 +13,7 @@ In Development, `ResourcesMiddleware` provides the representation consumed by th
 - strict-JSON descriptors with generated physical file inventories.
 
 `FilesIndexer` produces sorted package-relative entries containing `path`, `size`, and a lowercase SHA-256 content hash. A separate
-`ResourceMetadataBuilder` enriches recognized Pages, Components, Commands, contracts, and JSON Schemas with a small optional `resource` object.
+`ResourceMetadataBuilder` enriches recognized Pages, Components, Commands, Queries, contracts, and JSON Schemas with optional `resource` metadata.
 Development descriptor generation replaces stale inventory on the owning local module or framework definition without editing the authored JSONC
 file. Bootstrap then normalizes each file path into `/_assets/<id>/<generation>/...` while retaining descriptive resource metadata literally.
 

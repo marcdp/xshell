@@ -242,6 +242,7 @@ namespace DProjects.XShell.Test {
         [InlineData("pages/90-advanced/07-tasks.js")]
         [InlineData("pages/90-advanced/08-commands.js")]
         [InlineData("pages/90-advanced/09-temp.js")]
+        [InlineData("pages/90-advanced/10-queries.js")]
         public void Compile_CookbookServiceDemoPages(string relativePath) {
             var repositoryPath = FindRepositoryPath();
             var modulePath = Path.Combine(repositoryPath, "src", "DProjects.XShell", "Resources", "DProjects.XShell", "x-demo");

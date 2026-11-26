@@ -1,0 +1,82 @@
+{
+  "$schema": "../schemas/contract.schema.json",
+  "label": "Queries",
+  "description": "Discovers read-only Queries from effective file inventories and executes resolved implementations to retrieve data.",
+  "types": {
+    "queryDescriptor": {
+      "type": "object",
+      "description": "Frozen lightweight metadata for one discovered Query.",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "id": {"type": "string", "description": "Query identifier derived from its path below the owning queries directory."},
+          "moduleId": {"type": "string", "description": "Owning module ID, or xshell for a framework Query."},
+          "label": {"type": "string", "description": "Authored Query label, or an empty string when omitted."},
+          "description": {"type": "string", "description": "Authored Query description, or an empty string when omitted."},
+          "tags": {"type": "array", "items": {"type": "string"}, "description": "Frozen authored Query tags in declaration order."},
+          "category": {"type": "string", "description": "Effective Query category, defaulting to the owning module ID."},
+          "icon": {"type": "string", "description": "Authored Query icon, or an empty string when omitted."},
+          "path": {"type": "string", "description": "Normalized virtual path of the Query JavaScript file."},
+          "size": {"type": "integer", "minimum": 0, "description": "Physical Query file size in bytes."}
+        },
+        "required": ["id", "moduleId", "label", "description", "tags", "category", "icon", "path", "size"],
+        "additionalProperties": false
+      }
+    },
+    "queryDescriptorList": {
+      "type": "array",
+      "description": "Frozen array of Query descriptors sorted by Query ID.",
+      "schema": {
+        "type": "array",
+        "items": {"type": "object", "description": "Item conforming to queryDescriptor."}
+      }
+    },
+    "queryListOptions": {
+      "type": "object",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "moduleId": {"type": "string", "description": "Exact owning module ID."},
+          "category": {"type": "string", "description": "Exact effective category."},
+          "query": {"type": "string", "description": "Case-insensitive substring matched against ID, label, description, and tags."}
+        },
+        "additionalProperties": false
+      }
+    },
+    "queryRunOptions": {
+      "type": "object",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "id": {"type": "string", "minLength": 1, "description": "Query identifier resolved through the query Loader."},
+          "args": {"type": "object", "default": {}, "description": "Named arguments validated and ordered using the Query contract."}
+        },
+        "required": ["id"],
+        "additionalProperties": false
+      }
+    }
+  },
+  "properties": {},
+  "events": {},
+  "methods": {
+    "list": {
+      "description": "Synchronously lists Queries from effective framework and module file inventories without loading implementations.",
+      "parameters": [{"name": "options", "ref": "queryListOptions", "default": {}}],
+      "returns": {"ref": "queryDescriptorList"}
+    },
+    "getInfo": {
+      "description": "Synchronously gets one discovered Query descriptor by exact ID without loading its implementation.",
+      "parameters": [{"name": "id", "type": "string", "required": true, "description": "Exact Query identifier."}],
+      "returns": {
+        "type": "any",
+        "schema": {"anyOf": [{"type": "object", "description": "Descriptor conforming to queryDescriptor."}, {"type": "null"}]},
+        "description": "Frozen Query descriptor, or null when the ID is unknown."
+      }
+    },
+    "run": {
+      "description": "Asynchronously resolves a Query, validates its arguments, executes it, and validates its result.",
+      "parameters": [{"name": "options", "ref": "queryRunOptions", "required": true}],
+      "returns": {"type": "any", "description": "The Query result as declared by its return contract."}
+    }
+  }
+}

@@ -225,6 +225,66 @@ namespace DProjects.XShell.Test {
             Assert.Contains("static", exception.Message, StringComparison.OrdinalIgnoreCase);
         }
         [Fact]
+        public async Task QueryResources_AppearInFrameworkAndModuleInventories() {
+            using var files = new TemporaryDirectory();
+            files.Write("xshell/manifest.jsonc", """{ "xshell": { "version": "1.0.0" } }""");
+            files.Write("sample/manifest.jsonc", """{ "modules": { "sample": { "version": "1.0.0" } } }""");
+            // The authored module is statically inspected, including when evaluating it would throw.
+            const string source = """
+                throw new Error("Do not evaluate");
+                export default {
+                    contract: { label: "Find orders", description: "Finds orders", icon: "x-search", tags: ["sales", "orders"],
+                        query: { parameters: [], returns: { type: "array" } } },
+                    controller() { return { query() { return []; } }; }
+                };
+                """;
+            files.Write("xshell/queries/runtime.inspect.js", source);
+            files.Write("sample/queries/nested/orders.find.js", source);
+            files.Write("sample/queries/readme.txt", "Ordinary asset");
+
+            // Generate both descriptor kinds through the same path used by the host.
+            var builder = new DescriptorInventory();
+            var framework = JsonNode.Parse(await builder.CreateJsonAsync(Path.Combine(files.Root, "xshell", "manifest.jsonc"),
+                DescriptorKind.XShell, TestContext.Current.CancellationToken))!;
+            var module = JsonNode.Parse(await builder.CreateJsonAsync(Path.Combine(files.Root, "sample", "manifest.jsonc"),
+                DescriptorKind.Module, TestContext.Current.CancellationToken))!;
+            var entries = new[] {
+                framework["xshell"]!["files"]!.AsArray().Single(file => file!["path"]!.GetValue<string>() == "/queries/runtime.inspect.js"),
+                module["modules"]!["sample"]!["files"]!.AsArray().Single(file => file!["path"]!.GetValue<string>() == "/queries/nested/orders.find.js")
+            };
+            foreach (var entry in entries) {
+                Assert.True(entry!["size"]!.GetValue<int>() > 0);
+                Assert.False(string.IsNullOrEmpty(entry["hash"]!.GetValue<string>()));
+                var resource = entry["resource"]!.AsObject();
+                Assert.Equal("query", resource["type"]!.GetValue<string>());
+                Assert.Equal("Find orders", resource["label"]!.GetValue<string>());
+                Assert.Equal("Finds orders", resource["description"]!.GetValue<string>());
+                Assert.Equal("x-search", resource["icon"]!.GetValue<string>());
+                Assert.Equal(["sales", "orders"], ReadTags(resource));
+                Assert.Equal(5, resource.Count);
+            }
+            var ordinary = module["modules"]!["sample"]!["files"]!.AsArray()
+                .Single(file => file!["path"]!.GetValue<string>() == "/queries/readme.txt");
+            Assert.Null(ordinary!["resource"]);
+        }
+        [Theory]
+        [InlineData("export default class Find {};", "definition object")]
+        [InlineData("export default {};", "contract")]
+        [InlineData("export default { contract: { execute: {} } };", "query")]
+        [InlineData("export default { contract: { query: {} } };", "returns")]
+        [InlineData("export default { contract: { query: { returns: returnType } } };", "returns")]
+        public async Task InvalidQueryDefinitions_ProducePathAndShapeDiagnostics(string source, string expected) {
+            using var files = new TemporaryDirectory();
+            files.Write("queries/find.js", source);
+
+            var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+                new ResourceMetadataBuilder().BuildAsync(files.Root, "/queries/find.js", TestContext.Current.CancellationToken));
+
+            Assert.Contains("/queries/find.js", exception.Message);
+            Assert.Contains(expected, exception.Message, StringComparison.OrdinalIgnoreCase);
+            Assert.Contains("static", exception.Message, StringComparison.OrdinalIgnoreCase);
+        }
+        [Fact]
         public async Task InvalidRecognizedResources_ProduceSourceDiagnostics() {
             using var files = new TemporaryDirectory();
             files.Write("contracts/invalid.json", "{ \"label\": 123 }");

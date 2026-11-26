@@ -99,10 +99,10 @@ or more are reported with `AggregateError` after all cleanup attempts. Concurren
 cleanup, and a completed child detaches from its parent. Disposing a child leaves its parent and siblings active. Disposing the root follows the same
 hierarchy but does not automatically dispose its registered singleton instances, and XShell shutdown does not invoke root disposal in this phase.
 
-Module controllers and definition-based Pages, Components, and Commands automatically receive independent owner scopes. Every automatic owner
-scope is a direct child of the application root, regardless of Module ownership, DOM, Page composition, or which UI owner initiated a Command. A
+Module controllers, definition-based Pages and Components, and Command and Query invocations automatically receive independent owner scopes.
+Every automatic owner scope is a direct child of the application root, regardless of Module ownership, DOM, Page composition, or initiating UI. A
 Module controller does not inherit a UI scope, a Component inside a Page does not inherit the Page scope, nested or sibling Components do not
-inherit one another's scopes, and Commands do not inherit UI scopes. This intentionally avoids DOM lookup, scope reparenting,
+inherit one another's scopes, and Commands and Queries do not inherit UI scopes. This intentionally avoids DOM lookup, scope reparenting,
 invocation-supplied ownership, and ambient current-scope state. A Module with no `/module.js` controller creates no owner scope.
 
 Their controller providers keep the existing special injections and resolve ordinary service names through the owner scope. The special
@@ -127,6 +127,9 @@ Command controller providers similarly resolve ordinary services through the Com
 scope and `controller({ task })` retains the Task execution context. The high-level Commands service and direct framework construction paths await
 `Command.dispose()` after execution, so Task completion waits for scope cleanup. Cancellation remains cooperative: aborting the Task does not
 dispose a scope while Command code is still running. Foreground and background Commands use the same independent ownership model.
+
+The Queries service creates an owner scope for each invocation and awaits its disposal after execution and return validation. Query controllers
+resolve ordinary services through that scope and receive it through `controller({ services })`.
 
 Class-based Page and Component exports remain unchanged and do not receive definition-loader integration.
 
@@ -378,12 +381,12 @@ scoped and transient registrations can emit for multiple instances. Failed attem
 
 The directly registered core names are `bus`, `config`, `loader`, `resolver`, `contracts`, and `services`; these preconstructed registrations are
 singletons. `areas`, `commands`, `dialog`, `i18n`,
-`jsonValidator`, `modules`, `navigation`, `preferences`, `registry`, `runtime`, `secrets`, `tasks`, and `temp` are framework-owned configured services
+`jsonValidator`, `modules`, `navigation`, `preferences`, `queries`, `registry`, `runtime`, `secrets`, `tasks`, and `temp` are framework-owned services
 registered through `xshell.services`. Modules still receives `bus`, `config`, `loader`, `resolver`, and `services` through normal constructor
 injection; each Module controller provider exposes its owner scope as `services`, resolves named services through that scope, and retains the
 module-specific `moduleAssetsPath` and `moduleConfig` values.
 There is no auth/identity registration. A Diagnostics getter is not a registered service contract.
 
 See [Bus](../30-subsystems/20-bus.md), [Dialogs](../30-subsystems/30-dialogs.md), [Temp](../30-subsystems/50-temp.md),
-[Tasks](../30-subsystems/80-tasks.md), [Commands](../30-subsystems/90-commands.md), [Secrets](../30-subsystems/100-secrets.md), and
+[Tasks](../30-subsystems/80-tasks.md), [Commands](../30-subsystems/90-commands.md), [Queries](../30-subsystems/95-queries.md), [Secrets](../30-subsystems/100-secrets.md), and
 [Preferences](../30-subsystems/110-preferences.md).

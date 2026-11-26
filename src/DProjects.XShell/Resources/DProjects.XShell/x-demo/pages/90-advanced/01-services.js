@@ -115,7 +115,8 @@ controller({navigation, dependencies}) {
 }</x-code>
         <h2>Interactive service examples</h2>
         <p>Continue with <x-anchor href="02-bus.js">Event Bus</x-anchor>, <x-anchor href="07-tasks.js">Tasks</x-anchor>,
-        <x-anchor href="08-commands.js">Commands</x-anchor>, or <x-anchor href="09-temp.js">Temp</x-anchor> for focused examples using injected services.</p>
+        <x-anchor href="08-commands.js">Commands</x-anchor>, <x-anchor href="09-temp.js">Temp</x-anchor>, or
+        <x-anchor href="10-queries.js">Queries</x-anchor> for focused examples using injected services.</p>
     `,
 
     state: {

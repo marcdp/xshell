@@ -102,6 +102,30 @@ namespace DProjects.XShell.Test {
             AssertInventoryMatchesFiles(ReadInventory(xshell.GetProperty("files")), files);
         }
         [Fact]
+        public async Task XShell_PublishesQueryJavaScriptAndInventoryMetadata() {
+            using var workspace = new TemporaryDirectory();
+            var source = CreateXShellSource(workspace.PathFor("source/xshell"));
+            var output = workspace.PathFor("dist");
+            // Package a static Query through the framework's ordinary inventory path.
+            const string querySource = """
+                export default {
+                    contract: { label: "Count", query: { returns: { type: "integer" } } },
+                    controller() { return { query() { return 3; } }; }
+                };
+                """;
+            Directory.CreateDirectory(Path.Combine(source, "queries"));
+            File.WriteAllText(Path.Combine(source, "queries", "count.js"), querySource);
+
+            var package = await PackAsync(source, output);
+            var files = ReadZipFiles(Path.Combine(package, "xshell.zip"));
+            Assert.Equal(querySource, Encoding.UTF8.GetString(files["queries/count.js"]));
+            using var descriptor = JsonDocument.Parse(File.ReadAllText(Path.Combine(package, "manifest.json")));
+            var inventory = descriptor.RootElement.GetProperty("xshell").GetProperty("files");
+            var query = inventory.EnumerateArray().Single(file => file.GetProperty("path").GetString() == "/queries/count.js").GetProperty("resource");
+            Assert.Equal("query", query.GetProperty("type").GetString());
+            Assert.Equal("Count", query.GetProperty("label").GetString());
+        }
+        [Fact]
         public async Task Module_LoadsManifestJson() {
             using var workspace = new TemporaryDirectory();
             var source = workspace.PathFor("source");
