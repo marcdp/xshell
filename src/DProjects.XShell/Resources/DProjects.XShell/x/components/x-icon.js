@@ -19,7 +19,7 @@ export default {
         ]
     },
     style: `
-        :host {display:inline; }
+        :host {display:inline; min-width:1.3em;}
         :host svg {height:1.25em;width:1.25em;fill:none;stroke:currentcolor;vertical-align:var(--x-icon-vertical-align, middle);display:inline-block;}
         :host(.size-x2) svg {height:2em;width:2em;}
     `,
