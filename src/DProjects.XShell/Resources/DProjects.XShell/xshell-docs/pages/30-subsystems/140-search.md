@@ -120,9 +120,10 @@ applied only after all bundled metadata candidates are ranked and deduplicated.
 
 ## Bundled providers and UI
 
-The `x` module contributes providers for Area navigation Pages, application module metadata, Commands, and global menu shortcuts. The Area provider
-searches the current Area first and preserves friendly `path || href` destinations. The Command provider uses `commands.list({query})` and opens the
-existing invocation Page in a stack; it never loads or executes a Command. The shortcut provider omits embedded menu entries because Search results
+The `x` module contributes providers for Area navigation Pages, application module metadata, Commands, Queries, and global menu shortcuts. The Area
+provider searches the current Area first and preserves friendly `path || href` destinations. The Command and Query providers use
+`commands.list({query})` and `queries.list({query})` for metadata-only discovery. Activating a result opens the corresponding invocation Page in the
+stack. The shortcut provider omits embedded menu entries because Search results
 cannot represent `open: "embed"` or the local `outlet: "self"` composition behavior. Menu providers also omit separators, targetless groups, empty
 destinations, and empty or whitespace-only labels while continuing to traverse valid descendants. Shortcut result IDs use the effective menu and
 hierarchical ancestor identities, with length-prefixed components preventing ambiguous concatenation when sibling-scoped item IDs are reused.
@@ -136,12 +137,12 @@ request, ignores stale responses by revision, and cancels work on unload. `x-lis
 
 ## Lazy-loading limits
 
-Provider descriptors, module discovery, and Command discovery use existing configuration or generated inventories. Provider implementations load
+Provider descriptors and discovery of modules, Commands, and Queries use existing configuration or generated inventories. Provider implementations load
 only when selected, and explicit providers do not load during general searches. A result does not load its destination Page before activation.
 
 Loading a default provider owned by an optional packaged module can still require that module's resources to be available. The current runtime also
 loads other configured module resources eagerly during startup, so this behavior is compatible with future lazy module activation but is not a claim
 that the whole application bootstrap is manifest-only or lazily activated.
 
-See [Services](../10-architecture/100-services.md), [Areas](10-areas.md), [Commands](90-commands.md), and
+See [Services](../10-architecture/100-services.md), [Areas](10-areas.md), [Commands](90-commands.md), [Queries](95-queries.md), and
 [Filesystems](130-filesystems.md).

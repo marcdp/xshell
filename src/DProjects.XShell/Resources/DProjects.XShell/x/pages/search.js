@@ -11,8 +11,12 @@ export default {
     meta: {
         title: "Search",
         description: "Enter at least 3 characters to search",
-        classes: ["stack-size-narrow", "embed-size-narrow"]
+        classes: ["stack-size-narrow", "embed-size-medium"]
     },
+    style:`
+        x-listview-head {display:none;}
+        .tags {display: flex; justify-content: center; flex-wrap: wrap;gap: .25em;align-items: center;}
+    `,
     template: `
         <x-datafields>
             <x-datafield type="search" placeholder="Search" x-model="state.keyword" autocomplete="off" autofocus></x-datafield>
@@ -23,7 +27,10 @@ export default {
 
             <div x-if="state.results.length > 0">
                 <x-listview view="details" title="Search results">
-                    <x-listview-head></x-listview-head>
+                    <x-listview-head>
+                        <x-listview-column></x-listview-column>
+                        <x-listview-column width="5em"></x-listview-column>
+                    </x-listview-head>
                     <x-listview-body>
                         <x-listview-item
                             x-for="result in state.results"
@@ -31,22 +38,21 @@ export default {
                             x-attr:label="result.label"
                             x-attr:description="result.description"
                             x-attr:icon="result.icon"
-                            x-attr:href="result.href"
                             x-attr:category="result.category"
                             x-attr:tooltip="result.description"
                             x-attr:open="result.open"
-                        ></x-listview-item>
+                        >
+                            <div class="tags">
+                                <x-chip x-attr:label="result.providerId"></x-chip>
+                            </div>
+                        </x-listview-item>
                     </x-listview-body>
                 </x-listview>
                 <div><br><b>{{ state.results.length }}</b> results found for <b>{{state.searched}}</b></div>
             </div>
 
-            <x-empty
-                x-if="!state.loading && state.searched.length > 2 && state.results.length == 0"
-                icon="x-search"
-                label="No results"
-                message="No matching resources were found."
-            ></x-empty>
+            <x-empty x-if="!state.loading && state.searched.length > 2 && state.results.length == 0" icon="x-search" label="No results" message="No matching resources were found."></x-empty>
+
         </x-datafields>
     `,
     state: {
@@ -61,7 +67,6 @@ export default {
         let alive = true;
         let debounceId = null;
         let request = null;
-        let revision = 0;
 
         return {
             load() {
@@ -69,12 +74,10 @@ export default {
                 events.on(state, "change:keyword", "queueSearch");
             },
             focus() {
-                alert("FOCUSSS")
                 page.refs.search?.focus();
             },
             queueSearch() {
                 // Cancel active work immediately and schedule only the latest eligible keyword.
-                revision++;
                 request?.abort();
                 request = null;
                 if (debounceId !== null) clearTimeout(debounceId);
@@ -88,13 +91,12 @@ export default {
                     debounceId = null;
                     return;
                 }
-                const currentRevision = revision;
                 debounceId = setTimeout(() => {
                     debounceId = null;
-                    this.search(keyword, currentRevision);
+                    this.search(keyword);
                 }, 200);
             },
-            async search(keyword = state.keyword.trim(), currentRevision = ++revision) {
+            async search(keyword = state.keyword.trim()) {
                 // Publish only the response associated with the latest live Page request.
                 if (!alive || keyword.length < 3) return;
                 request?.abort();
@@ -105,19 +107,19 @@ export default {
                 state.errorMessage = "";
                 try {
                     const response = await search.query(keyword, {signal: currentRequest.signal});
-                    if (!alive || currentRevision !== revision || currentRequest.signal.aborted) return;
+                    if (!alive || currentRequest.signal.aborted) return;
                     state.searched = keyword;
                     state.results = response.results;
                     state.errors = response.errors;
                     state.errorMessage = response.errors.map(error => error.message).join(" ");
                 } catch (error) {
-                    if (!alive || currentRevision !== revision || currentRequest.signal.aborted || error?.name === "AbortError") return;
+                    if (!alive || currentRequest.signal.aborted || error?.name === "AbortError") return;
                     state.searched = keyword;
                     state.results = [];
                     state.errors = [{providerId: "search", message: "Search is temporarily unavailable."}];
                     state.errorMessage = "Search is temporarily unavailable.";
                 } finally {
-                    if (alive && currentRevision === revision && request === currentRequest) {
+                    if (alive && request === currentRequest) {
                         state.loading = false;
                         request = null;
                     }
@@ -126,7 +128,6 @@ export default {
             unload() {
                 // Stop timers and pending providers before the Page Services scope is disposed.
                 alive = false;
-                revision++;
                 if (debounceId !== null) clearTimeout(debounceId);
                 request?.abort();
                 request = null;

@@ -48,7 +48,7 @@ export default {
         ]
     },
     style: `
-        :host {display:flex; position:relative; box-sizing:border-box; flex-direction:column; margin-bottom:.15em;--x-menuitem-indent: calc(var(--x-menu-indent, -1) + 1);}
+        :host {display:flex; position:relative; box-sizing:border-box; flex-direction:column; margin-bottom:.15em; --x-menuitem-indent: calc(var(--x-menu-indent, -1) + 1);}
         :host(:last-child) {margin-bottom:0;}
         
         /* default */
@@ -85,15 +85,17 @@ export default {
 
         /* collapsible */
         :host(.collapsible) x-anchor::part(a) {padding-left:.3em; padding-right:.3em;}
-        :host(.collapsible) x-anchor span {box-sizing:border-box; width:10em; transition: width var(--x-transition-duration); box-sizing:border-box; }
-        
+        :host(.collapsible) x-anchor span {box-sizing:border-box; width:10em; transition: all 5s; var(--x-transition-duration); box-sizing:border-box; overflow:hidden; }
+        :host(.collapsible) x-icon.has-childs {display:none;}
         :host(.collapsible.collapsed) x-anchor::part(a) {}
-        :host(.collapsible.collapsed) x-anchor span { width:0em; padding:0; overflow:hidden; }
-        :host(.collapsible.collapsed) x-anchor x-icon.has-childs {display:none;}
+        :host(.collapsible.collapsed) x-anchor span { width:0em; padding:0;}
         
+
+        :host(.collapsible) x-button { display:block; border:1px red solid; width:10em; transition: all 5s; var(--x-transition-duration)!important;  overflow:hidden;}
         :host(.collapsible.collapsed) x-button  {padding:0;}
         :host(.collapsible.collapsed) x-button::part(button) {padding-right:.2em;}
-        :host(.collapsible.collapsed) x-button::part(label) { display:none; }
+        :host(.collapsible.collapsed) x-button::part(label) {width:0em; padding:0;}
+        :host(.collapsible.collapsed) x-button {width:2.5em; padding:0;}
 
         /* top right */
         :host(.top.right) x-contextmenu {bottom:0!important;}
@@ -124,8 +126,7 @@ export default {
                 <span x-if="state.description" class="description">{{ state.description }}</span>
              </span>
             <span   x-if="state.suffix" class="suffix">{{ state.suffix }}</span>
-            <x-icon x-if="state.hasChilds" class="has-childs" x-attr:icon="(state.childsDown ? 'x-keyboard-arrow-down' : 'x-keyboard-arrow-right')" x-on:click="expandTrigger"></x-icon>
-            
+            <x-icon x-if="state.hasChilds" class="has-childs" x-attr:icon="(state.childsDown ? 'x-keyboard-arrow-down' : 'x-keyboard-arrow-right')" x-on:click="expandTrigger"></x-icon>           
         </x-anchor>
         
         <x-contextmenu x-if="state.hasChilds" x-show="state.expanded" submenu x-class:down="state.childsDown" x-class:left="state.childsLeft" x-class:inline="state.childsInline">

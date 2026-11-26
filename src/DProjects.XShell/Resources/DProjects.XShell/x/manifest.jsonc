@@ -151,6 +151,13 @@
                             "implementation": "/providers/search-commands.js",
                             "mode": "default"
                         },
+                        "queries": {
+                            "label": "Queries",
+                            "description": "Search discovered Queries",
+                            "icon": "x-search",
+                            "implementation": "/providers/search-queries.js",
+                            "mode": "default"
+                        },
                         "shortcuts": {
                             "label": "Shortcuts",
                             "description": "Search effective global menu destinations",

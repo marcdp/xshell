@@ -24,8 +24,8 @@ const available = queries.list({moduleId: "x-demo", query: "inventory"});
 const descriptor = queries.getInfo("demo.inventory.count");
 ```
 
-In the Diagnostics console, open **Queries** to filter the inventory or click a Query ID to open its invocation form in the stack.
-The form accepts named arguments and displays the returned value.
+Open **Queries** in Diagnostics to filter the inventory, or find Queries through the default providers in [Search](140-search.md). Activate a result
+to open its invocation form in the stack. The form accepts named arguments and displays the returned value.
 
 ## Define a Query
 

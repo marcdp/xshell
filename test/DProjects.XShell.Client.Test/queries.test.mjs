@@ -8,7 +8,6 @@ import JsonValidator from "../../src/DProjects.XShell/Resources/DProjects.XShell
 import Loader from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/loader.js";
 import Resolver from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/resolver.js";
 import Services from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services.js";
-import Anchor from "../../src/DProjects.XShell/Resources/DProjects.XShell/x/components/x-anchor.js";
 import InvokePage from "../../src/DProjects.XShell/Resources/DProjects.XShell/x/pages/invoke.js";
 import queriesPage from "../../src/DProjects.XShell/Resources/DProjects.XShell/x-demo/pages/90-advanced/10-queries.js";
 import DiagnosticsQueries from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell-diagnostics/pages/queries.js";
@@ -188,30 +187,29 @@ test("Query loading validates definitions and checks controller shape inside eac
     }
 });
 
-test("Diagnostics filters Query metadata and its clickable ID opens invoke.js in the stack", async t => {
+test("Diagnostics filters Query metadata and activating a row opens invoke.js in the stack", async t => {
     const {queries, loader, root} = await createRuntime(t);
     const state = {...structuredClone(DiagnosticsQueries.state), id: "COUNT", tags: "INVENTORY"};
     const events = {on: t.mock.fn()};
+    const navigate = t.mock.fn();
+    const diagnosticsPage = {src: "/xshell-diagnostics/pages/queries.js"};
+    const diagnostics = DiagnosticsQueries.controller({state, queries, events, page: diagnosticsPage, navigation: {navigate}});
     const loads = loader.registry.length;
-    DiagnosticsQueries.controller({state, queries, events}).load();
+    diagnostics.load();
     assert.equal(loader.registry.length, loads);
     assert.deepEqual(state.items.map(item => item.id), ["demo.inventory.count"]);
     assert.equal(events.on.mock.calls.length, 6);
-    assert.match(DiagnosticsQueries.template, /x-attr:href="item\.href" open="stack"/);
+    assert.match(DiagnosticsQueries.template, /x-on:activate="invokeQuery"/);
+    assert.match(DiagnosticsQueries.template, /x-prop:value="item\.id"/);
     assert.match(DiagnosticsQueries.template, /x-attr:href="item\.path" target="_blank"/);
 
-    // Follow the same anchor click path used by x-listview-item.
-    const navigate = t.mock.fn();
-    const diagnosticsPage = {src: "/xshell-diagnostics/pages/queries.js"};
-    Anchor.controller({
-        state: {href: state.items[0].href, open: "stack", query: {}}, getPage: () => diagnosticsPage, navigation: {navigate}
-    }).click({event: {button: 0, preventDefault() {}}});
+    // Follow the list's activation event into the invocation Page.
+    await diagnostics.invokeQuery({event: {detail: {value: state.items[0].id}}});
     const [navigation] = navigate.mock.calls[0].arguments;
     assert.equal(navigation.open, "stack");
     assert.strictEqual(navigation.page, diagnosticsPage);
-    const [target, search] = navigation.href.split("?");
-    assert.equal(target, "page:x:/pages/invoke.js");
-    const params = Object.fromEntries(new URLSearchParams(search));
+    assert.equal(navigation.href, "page:x:/pages/invoke.js");
+    const {params} = navigation;
     assert.deepEqual(params, {type: "query", id: "demo.inventory.count", method: "query"});
 
     // Load the real Query contract and use its prefilled default through the invocation form.

@@ -5,13 +5,14 @@ import test from "node:test";
 import AreasSearchProvider from "../../src/DProjects.XShell/Resources/DProjects.XShell/x/providers/search-areas.js";
 import CommandsSearchProvider from "../../src/DProjects.XShell/Resources/DProjects.XShell/x/providers/search-commands.js";
 import ModulesSearchProvider from "../../src/DProjects.XShell/Resources/DProjects.XShell/x/providers/search-modules.js";
+import QueriesSearchProvider from "../../src/DProjects.XShell/Resources/DProjects.XShell/x/providers/search-queries.js";
 import ShortcutsSearchProvider from "../../src/DProjects.XShell/Resources/DProjects.XShell/x/providers/search-shortcuts.js";
 import FilesystemsSearchProvider from "../../src/DProjects.XShell/Resources/DProjects.XShell/x-filesystem/providers/search-filesystems.js";
 import Search from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/search.js";
 
 test("module manifests resolve Search providers through the standard providers directory", () => {
     for (const [moduleName, expected] of [
-        ["x", ["search-areas.js", "search-modules.js", "search-commands.js", "search-shortcuts.js"]],
+        ["x", ["search-areas.js", "search-modules.js", "search-commands.js", "search-queries.js", "search-shortcuts.js"]],
         ["x-filesystem", ["search-filesystems.js"]]
     ]) {
         const moduleRoot = new URL(`../../src/DProjects.XShell/Resources/DProjects.XShell/${moduleName}/`, import.meta.url);
@@ -167,6 +168,32 @@ test("Commands provider discovers without executing and opens the invocation Pag
     assert.equal(results[0].href, "page:x:/pages/invoke.js?type=command&id=filesystem.entry.zip");
     assert.equal(results[0].open, "stack");
     assert.equal(results.length, 2);
+});
+
+test("Queries provider returns discovery metadata and opens the exact Query ID in the invocation Page", async t => {
+    // Include a nested ID and inventory metadata that should survive the projection.
+    const id = "customers/active.count";
+    const tags = Object.freeze(["customers"]);
+    const queries = {
+        list: t.mock.fn(() => [
+            {id, label: "Count active customers", description: "Counts matching customers", icon: "x-people", category: "catalog", tags},
+            {id: "customers.detail"}
+        ]),
+        run: t.mock.fn()
+    };
+    const provider = new QueriesSearchProvider({queries});
+    const [count, detail] = await provider.query("customers", {limit: 1});
+
+    assert.deepEqual(queries.list.mock.calls[0].arguments, [{query: "customers"}]);
+    assert.equal(queries.run.mock.callCount(), 0);
+    assert.deepEqual(count, {
+        id, label: "Count active customers", description: "Counts matching customers", icon: "x-people", category: "catalog", tags,
+        href: "page:x:/pages/invoke.js?type=query&id=customers%2Factive.count&method=query", open: "stack"
+    });
+    assert.notStrictEqual(count.tags, tags);
+    assert.deepEqual([detail.label, detail.icon, detail.category, detail.tags], ["customers.detail", "x-search", "Queries", []]);
+    await assert.rejects(provider.query("customers", {signal: AbortSignal.abort()}), {name: "AbortError"});
+    assert.equal(queries.list.mock.callCount(), 1);
 });
 
 test("Filesystems provider preserves named registration identity without opening instances", async () => {

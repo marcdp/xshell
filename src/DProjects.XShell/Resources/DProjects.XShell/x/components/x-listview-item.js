@@ -66,8 +66,8 @@ export default {
         .primary {display: flex; align-items:center; gap:.3em; min-width:0; width:100%; box-sizing: border-box;  cursor:pointer;}
         .primary x-icon {display: inline-block; transform: translateY(-.1em);}
         .primary .text {display: flex; align-items: baseline; min-width: 0;flex: 1;}
-        .primary .label {cursor:pointer;}
-        .primary .label, .primary .description {min-width: 0;overflow: hidden;text-overflow: ellipsis;white-space: nowrap;}
+        .primary .label {cursor:pointer; white-space: nowrap;}
+        .primary .description {min-width: 0;overflow: hidden;text-overflow: ellipsis;white-space: nowrap; color: var(--x-color-text-x-gray);}
         .primary .description:empty {display:none;}
 
         /* list */
