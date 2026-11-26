@@ -46,6 +46,38 @@ named handlers privately, and invokes the `load` handler. Every controller handl
 Component is available only through the explicitly requested `host` dependency, so DOM access uses forms such as `host.dispatchEvent(...)` and
 `host.shadowRoot`. Lifecycle handlers remain private controller methods rather than public Web Component methods.
 
+Definition-based Components can set `meta.awaitLoad: true` when their first render depends on initialization performed by `load`. Its default is
+`false`, which preserves the ordinary lifecycle: an asynchronous `load` can continue after the Component mounts and renders. With
+`awaitLoad: true`, the loader accepts either a synchronous or asynchronous handler and delays the initial mount and render until it completes successfully.
+State invalidations during that wait are retained without rendering, so the first render observes the initialized state.
+Native Web Component classes supplied directly by a module keep their independently implemented lifecycle and are unaffected by this metadata.
+
+```javascript
+export default {
+    meta: {
+        awaitLoad: true
+    },
+
+    state: {
+        ready: false
+    },
+
+    controller({ state, preferences }) {
+        return {
+            async load() {
+                // Initialize state before rendering.
+                state.ready = await preferences.get("ready") ?? false;
+            }
+        };
+    }
+};
+```
+
+Use this option only when initialization must complete before the first render. If the Component disconnects while waiting, completion does not
+mount it; a later reconnection mounts the same initialized instance without invoking `load` again. Unloading permanently prevents a pending
+continuation from mounting. A rejected awaited `load` is reported as a Component load failure and prevents mounting, while explicit unloading and
+cleanup remain available.
+
 ## Mount and render
 
 On connection, the loader creates and mounts a render-engine instance, invokes `mount`, and schedules a render. State invalidations are coalesced
@@ -116,7 +148,8 @@ render engine is ignored once that engine has been unmounted or replaced.
 
 ## Awaiting handlers
 
-Component construction invokes `load` without awaiting its result; connection/disconnection similarly invoke `mount`/`unmount` synchronously.
+Component construction ordinarily invokes `load` without awaiting its result. A definition-based Component with `meta.awaitLoad: true` instead
+uses the handler's completion as a barrier before its first mount and render. Connection/disconnection still invoke `mount`/`unmount` synchronously.
 Explicit Component `unload()` awaits its handler and disposes helpers in a final cleanup path.
 If the Component is still mounted, it first runs `unmount` and tears down the render engine. Final helper disposal still runs if either lifecycle handler fails.
 Page `load`, `mount`, `unmount`, and `unload` use asynchronous lifecycle methods that await their handlers.

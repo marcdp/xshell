@@ -55,6 +55,7 @@
         "icon": { "type": "string", "minLength": 1, "description": "The icon of the component." },
         "renderEngine": { "type": "string", "minLength": 1, "description": "The rendering engine used by the component." },
         "stateEngine": { "type": "string", "minLength": 1, "description": "The state management engine used by the component." },
+        "awaitLoad": { "type": "boolean", "default": false, "description": "Wait for the controller load() method to complete before initial mounting and rendering." },
         "shadowRootOptions": { "type": "object", "description": "Options for the component's shadow root." }
       },
       "required": [ "id" ],

@@ -4,9 +4,9 @@ import layout from "../../src/DProjects.XShell/Resources/DProjects.XShell/x/layo
 
 const settle = () => new Promise(resolve => setImmediate(resolve));
 
-test("Main layout retrieves shortcuts through the unified menu API", () => {
+test("Main layout retrieves navigation through the unified menu API", () => {
     const source = layout.controller.toString();
-    assert.match(source, /areas\.getMenu\("shortcuts"\)/);
+    assert.match(source, /areas\.getMenu\("navigation"\)/);
     assert.doesNotMatch(source, /getGlobalMenu/);
 });
 
@@ -20,7 +20,7 @@ function setup(getPage = () => null) {
         ".dock-container":{getBoundingClientRect: () => viewport}, "x-splitter":{getBoundingClientRect: () => ({width:2, height:2})}
     };
     const host = {shadowRoot:{querySelector: selector => elements[selector] || null}};
-    const state = new Proxy({dockPosition:"bottom", dockSrc:"/dock.js", toggled:false}, {set(target, prop, value) {
+    const state = new Proxy({menuCollapsed:false, dockPosition:"bottom", dockSrc:"/dock.js"}, {set(target, prop, value) {
         const oldValue = target[prop];
         target[prop] = value;
         if (oldValue !== value) {
@@ -112,11 +112,11 @@ test("invalid or failed dock size reads restore the CSS default", async () => {
 test("load restores saved layout values without persisting defaults", async () => {
     const ui = setup();
     try {
-        ui.values.set("x-layout-main.toggled", "true");
+        ui.values.set("x-layout-main.menuCollapsed", true);
         ui.values.set("x-layout-main.dockSrc", "/saved.js");
         ui.values.set("x-layout-main.dockPosition", "right");
         await ui.controller.load();
-        assert.equal(ui.state.toggled, true);
+        assert.equal(ui.state.menuCollapsed, true);
         assert.equal(ui.state.dockSrc, "/saved.js");
         assert.equal(ui.state.dockPosition, "right");
         assert.deepEqual(ui.writes, []);
@@ -133,7 +133,7 @@ test("rapid menu and dock updates leave the latest values", async () => {
         ui.state.dockSrc = "/second.js";
         ui.state.dockPosition = "right";
         await settle();
-        assert.equal(ui.values.get("xshell.toggled"), "false");
+        assert.equal(ui.values.get("x-layout-main.menuCollapsed"), false);
         assert.equal(ui.values.get("x-layout-main.dockSrc"), "/second.js");
         assert.equal(ui.values.get("x-layout-main.dockPosition"), "right");
     } finally { ui.restore(); }
@@ -147,12 +147,14 @@ test("changes made during a delayed load take precedence over saved values", asy
         const loading = ui.controller.load();
         ui.controller.onToggleMenu();
         ui.state.dockSrc = "/new.js";
-        pending.get("x-layout-main.toggled")("false");
+        pending.get("x-layout-main.menuCollapsed")(false);
+        await settle();
         pending.get("x-layout-main.dockSrc")("/old.js");
+        await settle();
         pending.get("x-layout-main.dockPosition")("right");
         await loading;
         await settle();
-        assert.equal(ui.state.toggled, true);
+        assert.equal(ui.state.menuCollapsed, true);
         assert.equal(ui.state.dockSrc, "/new.js");
         assert.equal(ui.state.dockPosition, "right");
         assert.equal(ui.values.get("x-layout-main.dockSrc"), "/new.js");
@@ -184,7 +186,7 @@ test("closing a dock deletes its source and storage failures do not interrupt ch
         ui.state.dockSrc = null;
         ui.controller.onToggleMenu();
         await settle();
-        assert.equal(ui.values.get("xshell.toggled"), "true");
+        assert.equal(ui.values.get("x-layout-main.menuCollapsed"), true);
         assert.equal(ui.values.get("x-layout-main.dockSrc"), "/dock.js");
     } finally { ui.restore(); }
 });

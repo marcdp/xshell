@@ -257,6 +257,9 @@ export async function createComponentClassFromJsDefinition(src, context, definit
         _renderPending = false;
         _renderCount = 0;
         _postRenderPending = [];
+        _connected = false;
+        _loadState = definition.meta.awaitLoad === true ? "pending" : "ready";
+        _loadPromise = null;
         _unloaded = false;
         // static
         static get observedAttributes() { 
@@ -382,8 +385,25 @@ export async function createComponentClassFromJsDefinition(src, context, definit
                     }
                 }
             }
-            // load
-            this.onCommand("load", {});
+            // invoke load once and retain its completion only when initial rendering must wait
+            const loadResult = this.onCommand("load", {});
+            if (definition.meta.awaitLoad === true && loadResult && typeof(loadResult.then) === "function") {
+                const loadPromise = Promise.resolve(loadResult);
+                this._loadPromise = loadPromise;
+                loadPromise.then(() => {
+                    if (this._loadPromise !== loadPromise) return;
+                    this._loadPromise = null;
+                    this._loadState = "ready";
+                    this._mount();
+                }, error => {
+                    if (this._loadPromise !== loadPromise) return;
+                    this._loadPromise = null;
+                    this._loadState = "failed";
+                    console.error(`Failed to load Component '${definition.meta.id ?? src}'.`, error);
+                });
+            } else if (definition.meta.awaitLoad === true) {
+                this._loadState = "ready";
+            }
             } catch (error) {
                 // initiate asynchronous cleanup while preserving synchronous constructor behavior
                 const scope = this._servicesScope;
@@ -403,16 +423,11 @@ export async function createComponentClassFromJsDefinition(src, context, definit
         // connected/disconnected
         connectedCallback() {
             if (this._unloaded) return;
-            this._renderEngine = renderEngineFactory.create({ host: this.shadowRoot, state: this._state, handler:(command, ...params) => {
-                this.onCommand(command, ...params);
-            }, invalidate: () => { 
-                this.invalidate(); 
-            } });
-            this._renderEngine.mount();
-            this.onCommand("mount", {});
-            this.invalidate();
+            this._connected = true;
+            this._mount();
         }
         disconnectedCallback() {
+            this._connected = false;
             if (this._unloaded) return;
             this._unmount();
         }
@@ -423,6 +438,8 @@ export async function createComponentClassFromJsDefinition(src, context, definit
         async unload() {
             if (this._unloaded) return;
             this._unloaded = true;
+            this._connected = false;
+            this._loadPromise = null;
             const errors = [];
             let result;
 
@@ -461,6 +478,18 @@ export async function createComponentClassFromJsDefinition(src, context, definit
             return result;
         }
         // methods (private)
+        _mount() {
+            // mount only the current connected instance after awaited initialization succeeds
+            if (this._unloaded || !this._connected || this._loadState !== "ready" || this._renderEngine) return;
+            this._renderEngine = renderEngineFactory.create({ host: this.shadowRoot, state: this._state, handler:(command, ...params) => {
+                this.onCommand(command, ...params);
+            }, invalidate: () => {
+                this.invalidate();
+            } });
+            this._renderEngine.mount();
+            this.onCommand("mount", {});
+            this.invalidate();
+        }
         _unmount() {
             const renderEngine = this._renderEngine;
             if (!renderEngine) return;

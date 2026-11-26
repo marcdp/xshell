@@ -9,7 +9,7 @@ export default {
     meta: {
         title: "Search",
         description: "Enter at least 3 characters to search",
-        classes: ["stack-size-narrow", "embed-size-medium"]
+        classes: ["stack-size-narrow", "embed-size-narrow"]
     },
     template: `
         <x-datafields>

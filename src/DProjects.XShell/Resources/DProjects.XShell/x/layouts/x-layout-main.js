@@ -19,7 +19,8 @@ export default {
     },
     meta: {
         renderEngine: "x",
-        stateEngine:  "proxy"
+        stateEngine: "proxy",
+        awaitLoad: true
     },
     style:`
         :host {
@@ -335,6 +336,8 @@ export default {
         let menuCollapsedChanged = false;
         let dockSrcChanged = false;
         let dockPositionChanged = false;
+        let restoringProperty = null;
+        let dockSizeGeneration = 0;
         return {
             async load(params) {
                 // auto close menu on navigation start (mobile)
@@ -351,26 +354,51 @@ export default {
                 events.on(bus, "xshell:navigation:dock:changed", (event) => {
                     state.dockSrc = event.detail.src;
                 });
-                events.on(state, ["change:dockSrc", "change:dockPosition"], (event) => {
-                    if (event.prop === "menuCollapsed") menuCollapsedChanged = true;
-                    if (event.prop === "dockSrc") dockSrcChanged = true;
-                    if (event.prop === "dockPosition") dockPositionChanged = true;
+                events.on(state, ["change:menuCollapsed", "change:dockSrc", "change:dockPosition"], (event) => {
+                    const restoring = restoringProperty === event.prop;
+                    if (!restoring && event.prop === "menuCollapsed") menuCollapsedChanged = true;
+                    if (!restoring && event.prop === "dockSrc") dockSrcChanged = true;
+                    if (!restoring && event.prop === "dockPosition") dockPositionChanged = true;
+                    if (event.prop === "menuCollapsed") {
+                        if (!restoring) this.queuePreferenceWrite(() => preferences.set("x-layout-main.menuCollapsed", state.menuCollapsed));
+                        return;
+                    }
                     if (state.dockSrc) {
                         document.documentElement.setAttribute("data-scrollbar", "none");
                     } else {
                         document.documentElement.removeAttribute("data-scrollbar");
                     }
-                    // Queue both changes in event order while rendering remains synchronous.
-                    if (state.dockSrc) preferences.set("x-layout-main.dockSrc", state.dockSrc);
-                    else preferences.delete("x-layout-main.dockSrc");
-                    preferences.set("x-layout-main.dockPosition", state.dockPosition);
+                    // Persist user changes while initialization assignments remain read-only.
+                    if (!restoring) {
+                        if (state.dockSrc) this.queuePreferenceWrite(() => preferences.set("x-layout-main.dockSrc", state.dockSrc));
+                        else this.queuePreferenceWrite(() => preferences.delete("x-layout-main.dockSrc"));
+                        this.queuePreferenceWrite(() => preferences.set("x-layout-main.dockPosition", state.dockPosition));
+                    }
                     postRender("restoreDockSize");
                 });
                 // restore settings
-                state.menuCollapsed = await preferences.get("x-layout-main.menuCollapsed") || false;
-                state.dockSrc = await preferences.get("x-layout-main.dockSrc") || "";
-                state.dockPosition = await preferences.get("x-layout-main.dockPosition") || "bottom";
+                const menuCollapsed = await preferences.get("x-layout-main.menuCollapsed");
+                if (!menuCollapsedChanged) {
+                    restoringProperty = "menuCollapsed";
+                    try { state.menuCollapsed = menuCollapsed ?? false; } finally { restoringProperty = null; }
+                }
+                const dockSrc = await preferences.get("x-layout-main.dockSrc");
+                if (!dockSrcChanged) {
+                    restoringProperty = "dockSrc";
+                    try { state.dockSrc = dockSrc ?? ""; } finally { restoringProperty = null; }
+                }
+                const dockPosition = await preferences.get("x-layout-main.dockPosition");
+                if (!dockPositionChanged) {
+                    restoringProperty = "dockPosition";
+                    try { state.dockPosition = dockPosition ?? "bottom"; } finally { restoringProperty = null; }
+                }
                 if (state.dockSrc) postRender("restoreDockSize");
+            },
+
+            queuePreferenceWrite(operation) {
+                // Serialize preference changes and keep storage failures from interrupting UI state.
+                pendingWrite = pendingWrite.catch(() => {}).then(operation).catch(() => {});
+                return pendingWrite;
             },
 
             async mount(params) {
@@ -441,23 +469,26 @@ export default {
                 // Persist the measured dock dimension only when resizing finishes.
                 const panel = host.shadowRoot.querySelector(".docked-page");
                 if (!panel) return;
-                const dimension = state.dockPosition === "right" ? "width" : "height";
+                const position = state.dockPosition;
+                const dimension = position === "right" ? "width" : "height";
                 const size = Math.round(panel.getBoundingClientRect()[dimension]);
                 if (!Number.isFinite(size) || size <= 0) return;
-                preferences.set(`x-layout-main.dockSize.${state.dockPosition}`, String(size));
+                dockSizeGeneration++;
+                this.queuePreferenceWrite(() => preferences.set(`x-layout-main.dockSize.${position}`, String(size)));
             },
             async restoreDockSize() {
                 // Find the rendered dock and read the saved size for its current position.
                 const panel = host.shadowRoot.querySelector(".docked-page");
                 if (!panel) return;
                 const position = state.dockPosition;
+                const generation = dockSizeGeneration;
                 let size;
                 try {
                     await pendingWrite;
                     size = Number(await preferences.get(`x-layout-main.dockSize.${position}`));
                 } catch { }
                 // A newer resize, position change, or render takes precedence over this read.
-                if (position !== state.dockPosition || panel !== host.shadowRoot.querySelector(".docked-page")) return;
+                if (generation !== dockSizeGeneration || position !== state.dockPosition || panel !== host.shadowRoot.querySelector(".docked-page")) return;
                 if (!Number.isFinite(size) || size <= 0) {
                     panel.style.removeProperty("flex");
                     return;
@@ -482,7 +513,6 @@ export default {
             },
             onToggleMenu() {
                 state.menuCollapsed = !state.menuCollapsed;
-                preferences.set("x-layout-main.menuCollapsed", state.menuCollapsed);
             }
         };
     }

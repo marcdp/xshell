@@ -6,6 +6,7 @@ import Services from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshe
 import { Validator } from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/vendor/json-schema/4.1.1/json-schema.js";
 import Dialog from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/dialog.js";
 import pickerDefinition from "../../src/DProjects.XShell/Resources/DProjects.XShell/x/pages/dialog-picker.js";
+import mainLayoutDefinition from "../../src/DProjects.XShell/Resources/DProjects.XShell/x/layouts/x-layout-main.js";
 
 const animationFrames = [];
 const bus = { emit() {} };
@@ -124,7 +125,7 @@ globalThis.customElements = {
         return this.definitions.get(name);
     }
 };
-globalThis.window = { customElements: globalThis.customElements };
+globalThis.window = { customElements: globalThis.customElements, location: { origin: "https://example.test" } };
 globalThis.document = {
     adoptedStyleSheets: [],
     baseURI: "https://example.test/",
@@ -446,16 +447,18 @@ class RenderEngineFactory {
 
     init() {}
 
-    create() {
+    create({ state } = {}) {
         const renderEngine = {
             mountCount: 0,
             renderCount: 0,
             unmountCount: 0,
+            lastState: null,
             mount() {
                 this.mountCount += 1;
             },
             render() {
                 this.renderCount += 1;
+                this.lastState = { ...state };
             },
             unmount() {
                 this.unmountCount += 1;
@@ -499,6 +502,15 @@ function flushAnimationFrames() {
     for (const callback of callbacks) {
         callback();
     }
+}
+
+function createDeferred() {
+    let resolve, reject;
+    const promise = new Promise((resolvePromise, rejectPromise) => {
+        resolve = resolvePromise;
+        reject = rejectPromise;
+    });
+    return { promise, resolve, reject };
 }
 
 test("Component definitions reject an ID already registered by another source", async () => {
@@ -579,6 +591,226 @@ test("component preserves its instance lifetime across reconnects and unloads on
     assert.deepEqual(commands, ["load", "mount", "unmount", "mount", "unmount", "unload"]);
     assert.equal(mutationObserver.disconnectCount, 1);
     assert.equal(disposable.disposeCount, 1);
+});
+
+test("Components without awaitLoad and with awaitLoad false preserve immediate mounting", async () => {
+    for (const [name, awaitLoad] of [["omitted", undefined], ["false", false]]) {
+        configureDefinitionLoaders();
+        renderEngines.length = 0;
+        animationFrames.length = 0;
+        const loading = createDeferred();
+        const meta = { id: `x-await-load-${name}-test` };
+        if (awaitLoad !== undefined) meta.awaitLoad = awaitLoad;
+        const Component = await createComponentClassFromJsDefinition(`await-load-${name}.js`, createContext(), {
+            meta,
+            controller() { return { load() { return loading.promise; } }; }
+        }, {});
+        const component = new Component();
+
+        component.connectedCallback();
+        flushAnimationFrames();
+
+        assert.equal(renderEngines.length, 1);
+        assert.equal(renderEngines[0].mountCount, 1);
+        assert.equal(renderEngines[0].renderCount, 1);
+        loading.resolve();
+        await loading.promise;
+        await component.unload();
+    }
+});
+
+test("awaitLoad accepts synchronous load and mounts once with initialized state", async () => {
+    configureDefinitionLoaders();
+    renderEngines.length = 0;
+    animationFrames.length = 0;
+    let loadCount = 0;
+    const Component = await createComponentClassFromJsDefinition("await-load-sync.js", createContext(), {
+        meta: { id: "x-await-load-sync-test", awaitLoad: true },
+        state: { value: "initial" },
+        controller({ state }) {
+            return { load() { loadCount++; state.value = "loaded"; } };
+        }
+    }, {});
+    const component = new Component();
+
+    component.connectedCallback();
+    component.connectedCallback();
+    flushAnimationFrames();
+
+    assert.equal(loadCount, 1);
+    assert.equal(renderEngines.length, 1);
+    assert.equal(renderEngines[0].mountCount, 1);
+    assert.equal(renderEngines[0].renderCount, 1);
+    assert.equal(renderEngines[0].lastState.value, "loaded");
+    await component.unload();
+});
+
+test("awaitLoad blocks mounts, renders, and invalidations until asynchronous initialization completes", async () => {
+    configureDefinitionLoaders();
+    renderEngines.length = 0;
+    animationFrames.length = 0;
+    const loading = createDeferred();
+    const Component = await createComponentClassFromJsDefinition("await-load-async.js", createContext(), {
+        meta: { id: "x-await-load-async-test", awaitLoad: true },
+        state: { value: "initial" },
+        controller({ state, host }) {
+            return {
+                async load() {
+                    state.value = "loading";
+                    host.invalidate();
+                    await loading.promise;
+                    state.value = "loaded";
+                    host.invalidate();
+                }
+            };
+        }
+    }, {});
+    const component = new Component();
+
+    component.connectedCallback();
+    component.invalidate();
+    flushAnimationFrames();
+    assert.equal(renderEngines.length, 0);
+
+    loading.resolve();
+    await loading.promise;
+    await Promise.resolve();
+    flushAnimationFrames();
+
+    assert.equal(renderEngines.length, 1);
+    assert.equal(renderEngines[0].mountCount, 1);
+    assert.equal(renderEngines[0].renderCount, 1);
+    assert.equal(renderEngines[0].lastState.value, "loaded");
+    await component.unload();
+});
+
+test("awaitLoad defers mounting while disconnected and mounts on a connected completion or later reconnect", async () => {
+    for (const reconnectBeforeCompletion of [false, true]) {
+        configureDefinitionLoaders();
+        renderEngines.length = 0;
+        animationFrames.length = 0;
+        const loading = createDeferred();
+        const Component = await createComponentClassFromJsDefinition(`await-load-reconnect-${reconnectBeforeCompletion}.js`, createContext(), {
+            meta: { id: `x-await-load-reconnect-${reconnectBeforeCompletion}-test`, awaitLoad: true },
+            controller() { return { load() { return loading.promise; } }; }
+        }, {});
+        const component = new Component();
+        component.connectedCallback();
+        component.disconnectedCallback();
+        if (reconnectBeforeCompletion) component.connectedCallback();
+
+        loading.resolve();
+        await loading.promise;
+        await Promise.resolve();
+        assert.equal(renderEngines.length, reconnectBeforeCompletion ? 1 : 0);
+
+        component.connectedCallback();
+        component.connectedCallback();
+        flushAnimationFrames();
+        assert.equal(renderEngines.length, 1);
+        assert.equal(renderEngines[0].mountCount, 1);
+        await component.unload();
+    }
+});
+
+test("awaitLoad never mounts after unloading during initialization", async () => {
+    configureDefinitionLoaders();
+    renderEngines.length = 0;
+    animationFrames.length = 0;
+    const loading = createDeferred();
+    const commands = [];
+    const Component = await createComponentClassFromJsDefinition("await-load-unload.js", createContext(), {
+        meta: { id: "x-await-load-unload-test", awaitLoad: true },
+        controller() {
+            return {
+                load() { commands.push("load"); return loading.promise; },
+                unload() { commands.push("unload"); }
+            };
+        }
+    }, {});
+    const component = new Component();
+    component.connectedCallback();
+
+    await component.unload();
+    loading.resolve();
+    await loading.promise;
+    await Promise.resolve();
+    component.connectedCallback();
+    flushAnimationFrames();
+
+    assert.deepEqual(commands, ["load", "unload"]);
+    assert.equal(renderEngines.length, 0);
+});
+
+test("awaitLoad reports asynchronous load failures, prevents mounting, and still unloads", async (t) => {
+    configureDefinitionLoaders();
+    renderEngines.length = 0;
+    animationFrames.length = 0;
+    const loading = createDeferred();
+    const failure = new Error("initialization failed");
+    const errors = [];
+    t.mock.method(console, "error", (...args) => errors.push(args));
+    const Component = await createComponentClassFromJsDefinition("await-load-failure.js", createContext(), {
+        meta: { id: "x-await-load-failure-test", awaitLoad: true },
+        controller() { return { load() { return loading.promise; } }; }
+    }, {});
+    const component = new Component();
+    component.connectedCallback();
+
+    loading.reject(failure);
+    await loading.promise.catch(() => {});
+    await Promise.resolve();
+    component.connectedCallback();
+    flushAnimationFrames();
+
+    assert.equal(renderEngines.length, 0);
+    assert.equal(errors.length, 1);
+    assert.match(errors[0][0], /Failed to load Component 'x-await-load-failure-test'/);
+    assert.equal(errors[0][1], failure);
+    await assert.doesNotReject(component.unload());
+});
+
+test("x-layout-main applies a saved collapsed preference before its first Component render", async () => {
+    configureDefinitionLoaders();
+    renderEngines.length = 0;
+    animationFrames.length = 0;
+    const menuPreference = createDeferred();
+    const preferences = {
+        get(key) {
+            if (key === "x-layout-main.menuCollapsed") return menuPreference.promise;
+            if (key === "x-layout-main.dockPosition") return Promise.resolve("bottom");
+            return Promise.resolve("");
+        },
+        set() {},
+        delete() {}
+    };
+    definitionServices.services.register("events", { on() {} });
+    definitionServices.services.register("areas", { getMenu() { return null; } });
+    definitionServices.services.register("bus", {});
+    definitionServices.services.register("preferences", preferences);
+    const Component = await createComponentClassFromJsDefinition("x-layout-main-await-load.js", createContext(), {
+        ...mainLayoutDefinition,
+        meta: { ...mainLayoutDefinition.meta, id: "x-layout-main-await-load-test" },
+        state: { ...mainLayoutDefinition.state },
+        controller(services) {
+            const controller = mainLayoutDefinition.controller(services);
+            return { ...controller, mount() {} };
+        }
+    }, {});
+    const component = new Component();
+
+    component.connectedCallback();
+    assert.equal(renderEngines.length, 0);
+    menuPreference.resolve(true);
+    await menuPreference.promise;
+    await new Promise(resolve => setImmediate(resolve));
+    flushAnimationFrames();
+
+    assert.equal(mainLayoutDefinition.meta.awaitLoad, true);
+    assert.equal(renderEngines.length, 1);
+    assert.equal(renderEngines[0].renderCount, 1);
+    assert.equal(renderEngines[0].lastState.menuCollapsed, true);
+    await component.unload();
 });
 
 test("component explicit unload while mounted unmounts before final cleanup", async () => {
@@ -1019,6 +1251,17 @@ function validateComponentContract(contract) {
     const schema = { ...ComponentSchema, $defs: { [ContractSchema.$id]: ContractSchema } };
     return new Validator(schema, "2020-12").validate({ contract });
 }
+
+test("Component schema accepts boolean awaitLoad and rejects other values", () => {
+    const schema = { ...ComponentSchema, $defs: { [ContractSchema.$id]: ContractSchema } };
+    const validator = new Validator(schema, "2020-12");
+    for (const awaitLoad of [true, false]) {
+        assert.equal(validator.validate({ meta: { id: "x-await-load-schema", awaitLoad } }).valid, true);
+    }
+    for (const awaitLoad of ["true", 1, null, {}]) {
+        assert.equal(validator.validate({ meta: { id: "x-await-load-schema", awaitLoad } }).valid, false);
+    }
+});
 
 test("Component contract accepts boolean attribute observation and rejects string aliases", () => {
     for (const attribute of [true, false]) {

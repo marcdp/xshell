@@ -320,3 +320,10 @@ test("Component and Page definitions reject configuration-only CSS references", 
         meta: { id: "invalid-page" }, style: '@import "app:/theme.css";'
     }, {}), /'app:' scheme is not supported in CSS resource references/);
 });
+
+test("Component definitions reject non-boolean awaitLoad metadata", async () => {
+    configureDefinitionLoaders();
+    await assert.rejects(() => createComponentClassFromJsDefinition("invalid-await-load.js", createContext(), {
+        meta: { id: "invalid-await-load", awaitLoad: "true" }
+    }, {}), /Invalid component/);
+});
