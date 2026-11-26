@@ -22,5 +22,14 @@ export default {
     state: {
         src: null,
         path: null
+    },
+    controller({state}) {
+        return {
+            load() {
+                // Initialize state from query parameters if needed
+                alert(1)
+            }
+        }
     }
+
 }

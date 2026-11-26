@@ -49,13 +49,13 @@
                     "description": "Manage application preferences.",
                     "icon": "x-settings",
                     "items": [
-                        {"label": "Appearance", "href": "/pages/preferences/appearance.js"},
-                        {"label": "Browser permissions", "href": "/pages/preferences/browser-permissions.js"},
-                        {"label": "Internationalization", "href": "/pages/preferences/i18n.js"},
-                        {"label": "Modules", "href": "/pages/preferences/modules.js"},
-                        {"label": "Secrets", "href": "/pages/preferences/secrets.js"},
+                        {"id": "appearance", "label": "Appearance", "href": "/pages/preferences/appearance.js"},
+                        {"id": "browser-permissions", "label": "Browser permissions", "href": "/pages/preferences/browser-permissions.js"},
+                        {"id": "i18n", "label": "Internationalization", "href": "/pages/preferences/i18n.js"},
+                        {"id": "modules", "label": "Modules", "href": "/pages/preferences/modules.js"},
+                        {"id": "secrets", "label": "Secrets", "href": "/pages/preferences/secrets.js"},
                         {"label": "-", "order": 100},
-                        {"label": "About", "href": "/pages/about.js"}
+                        {"id": "about", "label": "About", "href": "/pages/about.js"}
                     ]
                 }
             }

@@ -5,79 +5,105 @@ import test from "node:test";
 import WorkspacePage from "../../src/DProjects.XShell/Resources/DProjects.XShell/x/pages/workspace.js";
 import Areas from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/areas.js";
 
-const href = "/_assets/reports/pages/overview.js";
+const href = "/_assets/reports/first-generation/pages/overview.js";
 const reports = { scope: "global", label: "Reports", description: "Review the latest results.", icon: "x-chart",
-    items: [{ label: "Group", children: [{ label: "Overview", href }] }, { label: "Other", href: "/pages/other.js" }] };
+    items: [
+        { label: "-" },
+        { label: "Refresh", command: "refresh" },
+        { label: "Group", children: [{ id: "overview", label: "Overview", href }] },
+        { id: "other", label: "Other", href: "/pages/other.js" }
+    ] };
 
-function createPage(menuName, src = null) {
-    const config = { modules: { reports: { menus: { reports, empty: { scope: "global" } } } }, xshell: { assets: { basePath: "/_assets" } } };
-    const areas = new Areas({ config, bus: new EventTarget() }, { default: null, definitions: {} });
-    const state = { ...structuredClone(WorkspacePage.state), menuName, src };
-    const page = {};
-    const controller = WorkspacePage.controller({ state, areas, page });
-    controller.load();
-    return { state, page, controller, areas };
+function createAreas(modules, definitions = {}) {
+    const config = { modules, xshell: { assets: { basePath: "/_assets" } } };
+    const areas = new Areas({ config, bus: new EventTarget() }, { default: Object.keys(definitions)[0] ?? null, definitions });
+    areas.init({ modules: { getModuleById: id => ({ id, config: modules[id] }) } });
+    return areas;
 }
 
-test("Workspace uses the requested global menu metadata and opens its first navigable item", () => {
-    const { state, page, areas } = createPage("reports");
+function createPage(menuName, item = null, areas = createAreas({ reports: { menus: { reports, empty: { scope: "global" } } } })) {
+    const state = { ...structuredClone(WorkspacePage.state), menuName, item };
+    const page = {};
+    const navigations = [];
+    const navigation = { navigate: request => navigations.push(request) };
+    const pending = [];
+    const controller = WorkspacePage.controller({
+        state, areas, page, navigation, query: new URLSearchParams(), postRender: method => pending.push(method)
+    });
+    controller.load();
+    controller.mount();
+    assert.equal(navigations.length, 0);
+    for (const method of pending) controller[method]();
+    return { state, page, controller, areas, navigations };
+}
+
+test("Workspace uses global menu metadata and defaults to the first nested Page", () => {
+    const { state, page, areas, navigations } = createPage("reports");
     assert.deepEqual(page, { label: reports.label, description: reports.description, icon: reports.icon });
     assert.equal(state.menu, areas.getMenu("reports").items);
-    assert.deepEqual(areas.getMenus(), [areas.getMenu("reports"), areas.getMenu("empty")]);
-    assert.equal(state.src, href);
+    assert.equal(state.item, "overview");
+    assert.deepEqual(navigations, [{ href, page, open: "embed", outlet: "content" }]);
 });
 
-test("Workspace uses an Area menu through the unified lookup", () => {
-    const localReports = { label: "Area reports", description: "Reports for this Area.", icon: "x-chart", items: [{ label: "Overview", href }] };
-    const config = { modules: { reports: { menus: { reports: localReports } } }, xshell: { assets: { basePath: "/_assets" } } };
-    const areas = new Areas({ config, bus: new EventTarget() }, { default: "main", definitions: { main: { prefix: "/main", modules: ["reports"] } } });
-    areas.init({ modules: { getModuleById: id => ({ id, config: config.modules[id] }) } });
-    const state = { ...structuredClone(WorkspacePage.state), menuName: "reports", src: null };
-    const page = {};
-    const controller = WorkspacePage.controller({ state, areas, page });
-
-    controller.load();
-
-    assert.deepEqual(page, { label: localReports.label, description: localReports.description, icon: localReports.icon });
+test("Workspace resolves an Area item's friendly path via Navigation", () => {
+    const localReports = { ...reports, scope: "area", items: [{ id: "overview", label: "Overview", href, path: "/overview" }] };
+    const areas = createAreas({ reports: { menus: { reports: localReports } } }, { main: { prefix: "/main", modules: ["reports"] } });
+    const { state, page, navigations } = createPage("reports", "overview", areas);
     assert.equal(state.menu, areas.getMenu("reports").items);
-    assert.equal(state.src, "/main" + href);
+    assert.equal(state.menu[0].href, "/main" + href);
+    assert.deepEqual(navigations, [{ href: "/main/overview", page, open: "embed", outlet: "content" }]);
 });
 
-test("Workspace preserves a supplied source and tracks the embedded Page for selection and reflection", () => {
-    const { state, controller } = createPage("reports", "/pages/preselected.js");
-    assert.equal(state.src, "/pages/preselected.js");
-    controller.refresh({ event: { detail: { page: { src: href, label: "Overview" } } } });
-    assert.equal(state.src, href);
-    assert.equal(state.title, "Overview");
-    assert.match(WorkspacePage.template, /x-attr:selected="[^"]*menuitem.href == state.src/);
-    assert.match(WorkspacePage.template, /open="embed"\s+outlet="content"/);
-    assert.match(WorkspacePage.template, /<x-page outlet="content" x-attr:src="state.src" x-on:load="refresh"/);
-    const { menuName, src, showTitle } = WorkspacePage.contract.properties;
-    assert.equal(menuName.query, true);
-    assert.ok(src.query && src.reflect);
-    assert.ok(showTitle.query && showTitle.default);
+test("Workspace resolves explicit IDs and falls back for unknown values", () => {
+    const explicit = createPage("reports", "other");
+    assert.equal(explicit.state.item, "other");
+    assert.equal(explicit.navigations[0].href, "/pages/other.js");
+
+    const unknown = createPage("reports", "/pages/untrusted.js");
+    assert.equal(unknown.state.item, "overview");
+    assert.equal(unknown.navigations[0].href, href);
 });
 
-test("Workspace handles unknown and empty menus", () => {
-    const unknown = createPage("unknown");
-    assert.deepEqual(unknown.state.menu, []);
-    assert.equal(unknown.state.src, null);
-    assert.deepEqual(unknown.page, {});
-
-    const empty = createPage("empty");
-    assert.deepEqual(empty.state.menu, []);
-    assert.equal(empty.state.src, null);
-    assert.deepEqual(empty.page, { label: "empty", description: "", icon: null });
+test("Workspace leaves missing and empty menus without embedded navigation", () => {
+    for (const name of ["unknown", "empty"]) {
+        const { state, navigations } = createPage(name, "overview");
+        assert.deepEqual(state.menu, []);
+        assert.equal(state.item, null);
+        assert.equal(state.src, null);
+        assert.deepEqual(navigations, []);
+    }
 });
+
+test("Workspace rejects missing or blank navigable IDs", () => {
+    for (const id of [undefined, "", " "]) {
+        const invalid = { ...reports, items: [{ id, label: "Missing ID", href }] };
+        const areas = createAreas({ reports: { menus: { invalid } } });
+        assert.throws(() => createPage("invalid", null, areas), /Workspace menu 'invalid' requires a non-empty ID.*Missing ID/);
+    }
+});
+
+test("Workspace validates duplicate IDs across branches and allows merged sibling contributions", () => {
+    const duplicate = { ...reports, items: [...reports.items, { label: "Another group", children: [{ id: "overview", label: "Duplicate", href }] }] };
+    const areas = createAreas({ reports: { menus: { duplicate, reports } }, extra: { menus: {
+        reports: { items: [{ id: "other", label: "Updated" }] }
+    } } });
+    assert.throws(() => createPage("duplicate", "other", areas), /Workspace menu 'duplicate' has duplicate navigable item ID 'overview'/);
+    const merged = createPage("reports", "other", areas);
+    assert.equal(merged.state.menu.filter(item => item.id === "other").length, 1);
+    assert.equal(merged.state.menu.find(item => item.id === "other").label, "Updated");
+    assert.equal(merged.navigations[0].href, "/pages/other.js");
+});
+
 
 test("bundled manifests compose Preferences and Diagnostics shortcuts as global menus", () => {
     const resources = new URL("../../src/DProjects.XShell/Resources/DProjects.XShell/", import.meta.url);
-    const readManifest = id => JSON.parse(readFileSync(new URL(`${id}/manifest.jsonc`, resources), "utf8").replace(/^\s*\/\/[^\r\n]*/gm, ""));
+    const readManifest = id => JSON.parse(readFileSync(new URL(`${id}/manifest.jsonc`, resources), "utf8")
+        .replace(/^\s*\/\/[^\r\n]*/gm, "").replace(/,(?=\s*[}\]])/g, ""));
     const framework = readManifest("xshell");
     const x = readManifest("x");
-    const filesystem = readFileSync(new URL("x-filesystem/manifest.jsonc", resources), "utf8");
+    const filesystem = readManifest("x-filesystem");
     const diagnostics = readManifest("xshell-diagnostics");
-    const config = { modules: { ...x.modules, ...diagnostics.modules }, xshell: { assets: { basePath: "/_assets" } } };
+    const config = { modules: { ...x.modules, ...filesystem.modules, ...diagnostics.modules }, xshell: { assets: { basePath: "/_assets" } } };
     const options = { ...framework.xshell.services.areas.options, ...diagnostics.xshell.services.areas.options };
     options.definitions.main = { modules: ["x", "xshell-diagnostics"] };
     config.modules["xshell-diagnostics"].files = [{ path: "/pages/index.js" }];
@@ -88,6 +114,9 @@ test("bundled manifests compose Preferences and Diagnostics shortcuts as global 
     assert.deepEqual([menu.name, menu.scope, menu.label, menu.description, menu.icon],
         ["preferences", "global", "Preferences", "Manage application preferences.", "x-settings"]);
     assert.equal(menu.items[0].href, "/pages/preferences/appearance.js");
+    assert.deepEqual(menu.items.filter(item => item.href).map(item => item.id).sort(),
+        ["about", "appearance", "browser-permissions", "filesystems", "i18n", "modules", "secrets"]);
+    assert.equal(createPage("preferences", "filesystems", areas).navigations[0].href, "/pages/preferences/filesystems.js");
     const workspaceSrc = "/pages/workspace.js?menu-name=preferences";
     assert.equal(x.xshell.services.preferences.options.page, workspaceSrc);
     const shortcuts = areas.getMenu("global").items.find(item => item.id === "root").children;
@@ -98,6 +127,7 @@ test("bundled manifests compose Preferences and Diagnostics shortcuts as global 
     const embeddedItems = x.modules.x.menus.global.items.flatMap(item => item.children || []).filter(item => item.open === "embed");
     assert.equal(embeddedItems.length, 2);
     assert.ok(embeddedItems.every(item => item.outlet === "self" && !Object.hasOwn(item, "embedded")));
-    assert.match(filesystem, /"href": "\/pages\/global\/filesystems\.js", "open": "embed", "outlet": "self"/);
-    assert.doesNotMatch(filesystem, /"embedded"\s*:/);
+    const [filesystemShortcut] = filesystem.modules["x-filesystem"].menus.global.items[0].children;
+    assert.deepEqual([filesystemShortcut.href, filesystemShortcut.open, filesystemShortcut.outlet], ["/pages/global/filesystems.js", "embed", "self"]);
+    assert.ok(!Object.hasOwn(filesystemShortcut, "embedded"));
 });

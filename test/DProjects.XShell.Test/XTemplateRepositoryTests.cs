@@ -47,12 +47,16 @@ namespace DProjects.XShell.Test {
         [InlineData("x-home", "components/x-home.js")]
         [InlineData("x-home", "pages/index.js")]
         [InlineData("x-demo", "pages/03-navigation/07-home.js")]
-        public async Task HomeLauncherTemplatesCompile(string module, string relativePath) {
-            // Compile launcher templates through the development hosting pipeline.
-            var directory = Path.Combine(GetResourceDirectory(), module);
-            var result = await new ModuleFileCompiler().CompileAsync(Path.Combine(directory, "manifest.jsonc"),
-                Path.Combine(directory, relativePath), TestContext.Current.CancellationToken);
-            Assert.Contains("templateRenderer:", result.Content, StringComparison.Ordinal);
+        public Task HomeLauncherTemplatesCompile(string module, string relativePath) {
+            return RequireCompiledTemplate(module, relativePath);
+        }
+
+        [Theory]
+        [InlineData("x", "pages/workspace.js")]
+        [InlineData("x", "layouts/x-layout-embed.js")]
+        [InlineData("x-filesystem", "pages/global/filesystems.js")]
+        public Task WorkspaceTemplatesCompile(string module, string relativePath) {
+            return RequireCompiledTemplate(module, relativePath);
         }
 
         [Fact]
@@ -143,6 +147,14 @@ namespace DProjects.XShell.Test {
         }
 
         // methods (private)
+        private static async Task RequireCompiledTemplate(string module, string relativePath) {
+            // Compile module templates through the development hosting pipeline.
+            var directory = Path.Combine(GetResourceDirectory(), module);
+            var result = await new ModuleFileCompiler().CompileAsync(Path.Combine(directory, "manifest.jsonc"),
+                Path.Combine(directory, relativePath), TestContext.Current.CancellationToken);
+            Assert.Contains("templateRenderer:", result.Content, StringComparison.Ordinal);
+        }
+
         private static string GetResourceDirectory() {
             var projectDirectory = typeof(Extensions).Assembly.GetCustomAttributes<AssemblyMetadataAttribute>().Single(attribute => attribute.Key == "ProjectDirectory").Value;
             return Path.Combine(projectDirectory!, "Resources", "DProjects.XShell");

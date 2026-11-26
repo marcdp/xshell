@@ -126,9 +126,11 @@ for (const [kind, id, contract, reference] of [
         assert.deepEqual(resolver.resolve.mock.calls[0].arguments, [reference ?? `${kind}:${id}`]);
         assert.equal(Resource.constructions.mock.callCount(), 0);
         if (kind === "page") {
-            const src = section(state.detail, "Properties").find(property => property.name === "src");
-            assert.ok(src.badges.includes("query"));
-            assert.ok(src.badges.includes("reflect"));
+            const properties = section(state.detail, "Properties");
+            const item = properties.find(property => property.name === "item");
+            assert.ok(item.badges.includes("query"));
+            assert.ok(item.badges.includes("reflect"));
+            assert.ok(!properties.some(property => property.name === "src"));
         }
     });
 }

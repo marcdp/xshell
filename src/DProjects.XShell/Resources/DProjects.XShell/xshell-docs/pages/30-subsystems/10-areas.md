@@ -205,12 +205,22 @@ Global menus use the same metadata, recursive item merge, and ordering rules as 
 metadata. Root `source` and nested `childrenSource` are reserved for Area menus. Global targets keep their normalized module hrefs without an Area
 prefix.
 
-The `x` module's generic Workspace Page accepts any accessible named menu through the `menu-name` query parameter.
-It uses the definition's label, description, and icon for Page metadata and renders `items` in the sidebar. Its `src` query parameter selects the
-embedded Page and reflects its current target. Without `src`, Workspace selects the first item with an href. The `show-title` query parameter
-controls the embedded Page heading.
-
 See [Bus](20-bus.md) for source refresh events.
+
+## Workspace
+
+The `x` module's Workspace Page takes the menu identifier in its `menuName` property (`menu-name` in the URL) and the selected menu item ID
+in `item`. It uses the effective menu's label, description, and icon for Page metadata and displays the menu tree in its sidebar.
+
+Give each navigable Workspace item a stable, non-empty `id` that is unique throughout the effective menu tree. Contributions with the same ID
+in one sibling array still merge under the normal Areas rules. Separators, command items, and groups without a Page target do not need IDs.
+
+Workspace looks up the requested ID throughout the tree and opens the item's effective destination. If the ID is missing or unknown, Workspace
+selects the first navigable item in depth-first menu order. A missing menu or a menu with no navigable items leaves the content empty.
+Workspace reflects the selected ID by replacing the current URL. Navigation within the embedded Page keeps that selection. The former `src`
+query parameter has been removed. Use `show-title=false` to hide the embedded Page heading.
+
+See [Preferences](110-preferences.md) for links to individual sections.
 
 ## Working example
 

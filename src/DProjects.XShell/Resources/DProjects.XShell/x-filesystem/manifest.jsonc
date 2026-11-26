@@ -30,7 +30,7 @@
                 },
                 "preferences": {
                     "items": [
-                        {"label": "Filesystems", "href": "/pages/preferences/filesystems.js"},
+                        {"id": "filesystems", "label": "Filesystems", "href": "/pages/preferences/filesystems.js"},
                     ]
                 }
             }

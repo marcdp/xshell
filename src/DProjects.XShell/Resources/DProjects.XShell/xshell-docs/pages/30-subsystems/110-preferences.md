@@ -2,8 +2,19 @@
 
 Preferences is the Core browser-local key/value service for non-secret application settings. Its implementation is
 `xshell/services/preferences.js`, its contract is `xshell/contracts/preferences.json`, and XShell registers it as `xshell.services.preferences`.
-The `x` module opens the global Preferences menu through `page:x:/pages/workspace.js?menu-name=preferences`. This Workspace hosts
-settings Pages such as Appearance and Internationalization.
+The `x` module opens the global Preferences menu through `page:x:/pages/workspace.js?menu-name=preferences`. To open a specific section,
+add its item ID to the [Workspace](10-areas.md#workspace) URL. For example:
+
+```text
+page:x:/pages/workspace.js?menu-name=preferences&item=appearance
+page:x:/pages/workspace.js?menu-name=preferences&item=i18n
+page:x:/pages/workspace.js?menu-name=preferences&item=filesystems
+page:x:/pages/workspace.js?menu-name=preferences&item=secrets
+page:x:/pages/workspace.js?menu-name=preferences&item=modules
+```
+
+The Filesystems section is available when the application includes the `x-filesystem` module.
+
 The X theme service and main layout use Preferences for the selected theme, menu state, dock source and position, and dock sizes. Their existing
 `xshell.theme`, `xshell.toggled`, `xshell.dockSrc`, `xshell.dockPosition`, and `xshell.dockSize.*` keys are stored as strings. These settings are
 restored asynchronously; changes made while a read is pending take precedence over the saved value.

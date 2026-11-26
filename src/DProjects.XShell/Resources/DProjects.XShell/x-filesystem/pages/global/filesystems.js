@@ -31,7 +31,7 @@ export default {
         </x-empty>
 
         <x-menuitem label="-"></x-menuitem>
-        <x-menuitem label="Manage filesystems" description="Add, configure or remove filesystems" icon="x-settings" href="page:x:/pages/workspace.js?menu-name=preferences&/filesystems.js" open="stack"></x-menuitem>
+        <x-menuitem label="Manage filesystems" description="Add, configure or remove filesystems" icon="x-settings" href="page:x:/pages/workspace.js?menu-name=preferences&item=filesystems" open="stack"></x-menuitem>
         
     `,
     state: {

@@ -32,7 +32,8 @@ export default {
         ::slotted(p:last-child) {
             margin-bottom:0;
         }        
-        .header {display:flex; justify-content:end; align-items:center; }
+        .header {display:var(--x-layout-embed-heading-display, flex); justify-content:end; align-items:center; }
+        slot {--x-layout-embed-heading-display:initial;}
         .header .title {flex:1; margin-bottom:1em; }
         .header .title x-page-title {margin:0; font-weight:500;}
         .header .title x-page-description {margin:0; font-weight:normal; font-size:var(--x-font-size-small);}

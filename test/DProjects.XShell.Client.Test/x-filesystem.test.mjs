@@ -1330,7 +1330,7 @@ test("global Filesystems Page builds named Explorer targets without opening regi
         href: "page:x-filesystem:/pages/explorer.js?src=named%3Adocuments&path=%2F"
     }]);
     assert.match(globalFilesystemsDefinition.template, /open="top"/);
-    assert.match(globalFilesystemsDefinition.template, /pages\/preferences\/filesystems\.js/);
+    assert.match(globalFilesystemsDefinition.template, /workspace\.js\?menu-name=preferences&item=filesystems" open="stack"/);
 });
 
 test("filesystem component opens its source through the Filesystems Service", async () => {
