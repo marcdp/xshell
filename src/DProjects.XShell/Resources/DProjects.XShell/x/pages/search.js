@@ -11,7 +11,7 @@ export default {
     meta: {
         title: "Search",
         description: "Enter at least 3 characters to search",
-        classes: ["stack-size-narrow", "embed-size-medium"]
+        classes: ["stack-size-narrow", "embed-size-medium", "embed-padding", "embed-no-title"]
     },
     style:`
         x-listview-head {display:none;}
@@ -19,9 +19,7 @@ export default {
     `,
     template: `
         <x-datafields>
-            <x-datafield type="search" placeholder="Search" x-model="state.keyword" autocomplete="off" autofocus></x-datafield>
-
-            <x-loading x-if="state.loading" role="status" aria-label="Loading search results"></x-loading>
+            <x-datafield label="Search" type="search" placeholder="Search" description="Enter at least 3 characters to search" x-model="state.keyword" autocomplete="off" autofocus></x-datafield>
             
             <x-notice x-if="state.errors.length > 0" type="warning" label="Some results are unavailable" x-attr:message="state.errorMessage"></x-notice>
 
@@ -35,6 +33,7 @@ export default {
                         <x-listview-item
                             x-for="result in state.results"
                             x-attr:key="result.providerId + ':' + result.id"
+                            x-attr:href="result.href"
                             x-attr:label="result.label"
                             x-attr:description="result.description"
                             x-attr:icon="result.icon"
@@ -51,12 +50,13 @@ export default {
                 <div><br><b>{{ state.results.length }}</b> results found for <b>{{state.searched}}</b></div>
             </div>
 
-            <x-empty x-if="!state.loading && state.searched.length > 2 && state.results.length == 0" icon="x-search" label="No results" message="No matching resources were found."></x-empty>
+            <x-empty x-if="state.results.length == 0" icon="x-search" x-attr:label="'No results' + (state.searched ? ' for ' + state.searched : '')" message="No matching resources were found"></x-empty>
 
         </x-datafields>
     `,
     state: {
         keyword: "",
+        prefixHint: "",
         searched: "",
         results: [],
         errors: [],
@@ -70,6 +70,9 @@ export default {
 
         return {
             load() {
+                // Guide users with the prefixes configured for this application.
+                const prefixes = new Set(search.listProviders().flatMap(provider => provider.prefixes));
+                if (prefixes.size) state.prefixHint = `To target a provider, start with ${[...prefixes].join(", ")} followed by search text.`;
                 // Debounce reactive text changes while keeping the three-character threshold as Page policy.
                 events.on(state, "change:keyword", "queueSearch");
             },
@@ -81,8 +84,8 @@ export default {
                 request?.abort();
                 request = null;
                 if (debounceId !== null) clearTimeout(debounceId);
-                const keyword = state.keyword.trim();
-                if (keyword.length < 3) {
+                const keyword = state.keyword;
+                if (keyword.trim().length < 3) {
                     state.searched = "";
                     state.results = [];
                     state.errors = [];
@@ -96,9 +99,10 @@ export default {
                     this.search(keyword);
                 }, 200);
             },
-            async search(keyword = state.keyword.trim()) {
+            async search(keyword = state.keyword) {
                 // Publish only the response associated with the latest live Page request.
-                if (!alive || keyword.length < 3) return;
+                const expression = keyword.trim();
+                if (!alive || expression.length < 3) return;
                 request?.abort();
                 request = new AbortController();
                 const currentRequest = request;
@@ -108,13 +112,13 @@ export default {
                 try {
                     const response = await search.query(keyword, {signal: currentRequest.signal});
                     if (!alive || currentRequest.signal.aborted) return;
-                    state.searched = keyword;
+                    state.searched = expression;
                     state.results = response.results;
                     state.errors = response.errors;
                     state.errorMessage = response.errors.map(error => error.message).join(" ");
                 } catch (error) {
                     if (!alive || currentRequest.signal.aborted || error?.name === "AbortError") return;
-                    state.searched = keyword;
+                    state.searched = expression;
                     state.results = [];
                     state.errors = [{providerId: "search", message: "Search is temporarily unavailable."}];
                     state.errorMessage = "Search is temporarily unavailable.";

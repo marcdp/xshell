@@ -65,7 +65,7 @@ export default {
     },
     style: `
         :host {position:relative; display:inline-flex;}
-        :host > div {display:flex; flex:1;}
+        :host > div {display:flex; flex:1; overflow:hidden;}
         :host .button {
             border: var(--x-button-border); 
             padding: var(--x-button-padding); 
@@ -137,7 +137,7 @@ export default {
         :host(.anchor[disabled]) x-icon {color:var(--x-color-xxx-gray)}
 
         :host(.menuitem) {}
-        :host(.menuitem) .button {display:flex; padding-left:.6em; padding-right:.6em; text-decoration:none; height:2.1em; outline:none; border:none; background:var(--x-button-background); border-radius:var(--x-menuitem-border-radius); align-items:center;}
+        :host(.menuitem) .button {display:flex; padding-left:.7em; padding-right:.6em; text-decoration:none; height:2.1em; outline:none; border:none; background:var(--x-button-background); border-radius:var(--x-menuitem-border-radius); align-items:center;}
         :host(.menuitem) .button > x-icon {font-weight: normal; color:var(--x-color-text); margin-right:.2em;}
         :host(.menuitem) .button > div span.label {font-weight: normal; color:var(--x-color-text);}
         :host(.menuitem) .button:hover {background:var(--x-color-background-x-gray); }

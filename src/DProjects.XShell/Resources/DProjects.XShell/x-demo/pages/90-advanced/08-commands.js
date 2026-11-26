@@ -14,6 +14,10 @@ export default {
         <p>The <code>commands</code> service resolves a Command, validates named arguments, and uses <code>tasks.run()</code> for execution. It returns the
         live Task handle rather than introducing a second execution lifecycle.</p>
 
+        <h2>Find the demo Command</h2>
+        <p>In global Search, enter <code>demo.operation</code> to search default providers. Enter <code>command: demo.operation</code> or
+        <code>&gt;demo.operation</code> to search Commands. Selecting a result opens the invocation Page, where you can supply arguments and run it.</p>
+
         <h2>Run the demo Command</h2>
         <p class="actions">
             <x-button label="Run successfully" command="runSuccess"></x-button>

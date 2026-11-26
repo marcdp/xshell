@@ -42,6 +42,9 @@ export default {
         /* no title */
         .embed-no-title .header {display:none;}
 
+        /* padding */
+        .embed-padding {padding: .5em;}
+
         /* size */
         .embed-size-medium {width:50vw}
         .size-compact {width:24rem; min-width:0;}

@@ -24,6 +24,51 @@ test("module manifests resolve Search providers through the standard providers d
     }
 });
 
+test("bundled prefixes select their configured providers and discover Commands and Queries without executing them", async t => {
+    // Use the authored provider IDs, modes, and aliases end to end.
+    const manifestPath = new URL("../../src/DProjects.XShell/Resources/DProjects.XShell/x/manifest.jsonc", import.meta.url);
+    const manifest = JSON.parse(readFileSync(manifestPath, "utf8").replace(/^\s*\/\/.*$/gm, ""));
+    const {providers} = manifest.xshell.services.search.options;
+    const commands = {list: t.mock.fn(() => [{id: "customers"}]), run: t.mock.fn()};
+    const queries = {list: t.mock.fn(() => [{id: "customers"}]), run: t.mock.fn()};
+    const dependencies = {
+        commands, queries,
+        areas: {
+            getCurrentArea: () => null,
+            getAreas: () => [{id: "shop"}],
+            getMenu: () => ({scope: "area", items: [{label: "Customers", href: "/customers", module: "shop"}]})
+        },
+        config: {modules: {}},
+        modules: {registry: [{id: "customers"}]}
+    };
+    const implementations = {
+        "esm:/providers/search-areas.js": AreasSearchProvider,
+        "esm:/providers/search-commands.js": CommandsSearchProvider,
+        "esm:/providers/search-modules.js": ModulesSearchProvider,
+        "esm:/providers/search-queries.js": QueriesSearchProvider
+    };
+    const search = new Search({
+        loader: {async load(key) { return implementations[key]; }},
+        services: {resolve(name) { return dependencies[name]; }}
+    }, {providers});
+
+    for (const [expression, providerId, href] of [
+        [">customers", "commands", "page:x:/pages/invoke.js?type=command&id=customers"],
+        ["command: customers", "commands", "page:x:/pages/invoke.js?type=command&id=customers"],
+        ["query: customers", "queries", "page:x:/pages/invoke.js?type=query&id=customers&method=query"],
+        ["page: customers", "areas", "/customers"],
+        ["module: customers", "modules", "page:x:/pages/preferences/modules.js"]
+    ]) {
+        const {results, errors} = await search.query(expression);
+        assert.deepEqual(errors, []);
+        assert.deepEqual(results.map(item => [item.providerId, item.href]), [[providerId, href]]);
+    }
+    assert.deepEqual(commands.list.mock.calls.map(call => call.arguments), [[{query: "customers"}], [{query: "customers"}]]);
+    assert.deepEqual(queries.list.mock.calls.map(call => call.arguments), [[{query: "customers"}]]);
+    assert.equal(commands.run.mock.callCount(), 0);
+    assert.equal(queries.run.mock.callCount(), 0);
+});
+
 test("Areas provider searches current Area first and preserves friendly destinations and presentation", async () => {
     const definitions = {
         main: {scope: "area", items: [{label: "Reports", description: "Annual reports", path: "/main/reports", href: "/main/_assets/reports.js", module: "reports", open: "dock", children: []}]},

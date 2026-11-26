@@ -20,6 +20,7 @@ export default class Search {
                         icon: {type: "string"},
                         implementation: {type: "string", minLength: 1},
                         mode: {type: "string", enum: ["default", "explicit"]},
+                        prefixes: {type: "array", items: {type: "string", minLength: 1, not: {pattern: "\\s"}}, uniqueItems: true},
                         options: {type: "object"}
                     },
                     additionalProperties: false
@@ -47,6 +48,7 @@ export default class Search {
             ...(provider.icon !== undefined ? {icon: provider.icon} : {}),
             implementation: provider.implementation,
             mode: provider.mode || "default",
+            ...this.#preparePrefixes(id, provider.prefixes),
             options: structuredClone(provider.options || {})
         })));
     }
@@ -54,19 +56,24 @@ export default class Search {
     // methods
     listProviders() {
         // Return new frozen projections so callers never retain the internal implementation configuration.
-        return Object.freeze(this.#providers.map(({id, label, description, icon, mode}) => Object.freeze({
-            id, label, ...(description !== undefined ? {description} : {}), ...(icon !== undefined ? {icon} : {}), mode
+        return Object.freeze(this.#providers.map(({id, label, description, icon, mode, prefixes}) => Object.freeze({
+            id, label, ...(description !== undefined ? {description} : {}), ...(icon !== undefined ? {icon} : {}), mode, prefixes
         })));
     }
     async query(text, options = {}) {
         // Validate the complete public request before selecting or loading providers.
         const request = this.#validateQuery(text, options);
-        const selected = request.providerIds === null
-            ? this.#providers.filter(provider => provider.mode === "default")
-            : request.providerIds.map(id => this.#providers.find(provider => provider.id === id));
         this.#throwIfAborted(request.signal);
+        const expression = this.#parseExpression(request.text);
+        request.text = expression.text;
         if (!request.text) return {results: [], errors: []};
 
+        // Keep configuration order for prefix matches and caller order for direct ID selection.
+        const selected = expression.providers !== null
+            ? expression.providers.filter(provider => request.providerIds === null || request.providerIds.includes(provider.id))
+            : request.providerIds === null
+                ? this.#providers.filter(provider => provider.mode === "default")
+                : request.providerIds.map(id => this.#providers.find(provider => provider.id === id));
         // Execute providers concurrently while retaining configuration order in the aggregate response.
         const operation = Promise.all(selected.map(provider => this.#queryProvider(provider, request))).then(entries => {
             this.#throwIfAborted(request.signal);
@@ -93,6 +100,38 @@ export default class Search {
     }
 
     // methods (private)
+    #preparePrefixes(id, prefixes = []) {
+        // Compile literal matches and enforce case-insensitive uniqueness with the same matching rules.
+        if (!Array.isArray(prefixes)) throw new TypeError(`Search provider '${id}' prefixes must be an array.`);
+        const copy = [...prefixes];
+        const patterns = [];
+        for (const prefix of copy) {
+            if (typeof prefix !== "string" || !prefix || /\s/.test(prefix)) {
+                throw new TypeError(`Search provider '${id}' prefixes must be non-empty strings without whitespace.`);
+            }
+            if (patterns.some(pattern => pattern.exec(prefix)?.[0] === prefix)) {
+                throw new TypeError(`Search provider '${id}' has duplicate prefix '${prefix}'.`);
+            }
+            const literal = prefix.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+            patterns.push(new RegExp("^" + literal, "iu"));
+        }
+        return {prefixes: Object.freeze(copy), prefixPatterns: patterns};
+    }
+    #parseExpression(text) {
+        // Collect providers for the longest leading match in configuration order.
+        let length = 0;
+        let providers = [];
+        for (const provider of this.#providers) {
+            for (const pattern of provider.prefixPatterns) {
+                const match = pattern.exec(text);
+                if (!match || match[0].length < length) continue;
+                if (match[0].length > length) providers = [];
+                length = match[0].length;
+                providers.push(provider);
+            }
+        }
+        return length ? {text: text.slice(length).trim(), providers} : {text, providers: null};
+    }
     #validateQuery(text, options) {
         // Keep input validation independent from provider loading and provider-owned behavior.
         if (typeof text !== "string") throw new TypeError("Search text must be a string.");

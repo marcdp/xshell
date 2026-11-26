@@ -321,7 +321,10 @@ async function main() {
                         manifestPath.length === 3 && manifestPath[0] === "xshell" && manifestPath[1] === "files" && Number.isInteger(manifestPath[2]) ||
                         manifestPath.length === 4 && manifestPath[0] === "modules" && typeof manifestPath[1] === "string" &&
                             manifestPath[2] === "files" && Number.isInteger(manifestPath[3]));
-                    return [key, inventoryResource ? item : normalizeManifest(item, module, declaringPath, [...manifestPath, key])];
+                    // Search prefixes are literal text even when an alias looks like a URL.
+                    const searchPrefixes = key === "prefixes" && manifestPath.length === 6 && manifestPath[0] === "xshell" &&
+                        manifestPath[1] === "services" && manifestPath[2] === "search" && manifestPath[3] === "options" && manifestPath[4] === "providers";
+                    return [key, inventoryResource || searchPrefixes ? item : normalizeManifest(item, module, declaringPath, [...manifestPath, key])];
                 }));
             }
             return normalizeUrl(value, module, declaringPath);

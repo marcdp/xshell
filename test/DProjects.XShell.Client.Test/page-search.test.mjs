@@ -12,21 +12,27 @@ function createController(search) {
 
 test("Search Page delegates to the Search Service and preserves result presentation modes", async () => {
     const calls = [];
-    const search = {async query(text, options) {
-        calls.push({text, options});
-        return {results: [{id: "logs", providerId: "shortcuts", label: "Logs", href: "/logs", open: "dock"}], errors: []};
-    }};
+    const search = {
+        listProviders() { return [{prefixes: ["command:", ">"]}, {prefixes: ["command:", "custom:"]}, {prefixes: []}]; },
+        async query(text, options) {
+            calls.push({text, options});
+            return {results: [{id: "logs", providerId: "shortcuts", label: "Logs", href: "/logs", open: "dock"}], errors: []};
+        }
+    };
     const {state, subscriptions, controller} = createController(search);
     controller.load();
     await controller.search("logs");
 
     assert.deepEqual(subscriptions.map(item => [item.name, item.handler]), [["change:keyword", "queueSearch"]]);
+    assert.equal(state.prefixHint, "To target a provider, start with command:, >, custom: followed by search text.");
+    assert.equal(SearchPage.template.includes('x-attr:description="state.prefixHint"'), true);
     assert.equal(calls[0].text, "logs");
     assert.equal(calls[0].options.signal instanceof AbortSignal, true);
     assert.equal(state.results[0].open, "dock");
     assert.equal(state.searched, "logs");
     assert.equal(state.loading, false);
     assert.equal(SearchPage.template.includes("x-on:activate"), false);
+    assert.equal(SearchPage.template.includes('x-attr:href="result.href"'), true);
     assert.equal(SearchPage.template.includes('x-attr:open="result.open"'), true);
 });
 
@@ -38,12 +44,12 @@ test("Search Page debounces text changes and keeps the three-character minimum i
     controller.queueSearch();
     state.keyword = "first";
     controller.queueSearch();
-    state.keyword = "second";
+    state.keyword = "  >Second  ";
     controller.queueSearch();
     await new Promise(resolve => setTimeout(resolve, 250));
 
-    assert.deepEqual(calls, ["second"]);
-    assert.equal(state.searched, "second");
+    assert.deepEqual(calls, ["  >Second  "]);
+    assert.equal(state.searched, ">Second");
     controller.unload();
 });
 
@@ -92,10 +98,12 @@ test("Search Page displays successful results together with sanitized partial fa
         errors: [{providerId: "failed", message: "Unable to search Failed."}]
     }; }};
     const {state, controller} = createController(search);
-    await controller.search("good");
+    const pending = controller.search("good");
+    assert.equal(state.loading, true);
+    await pending;
+    assert.equal(state.loading, false);
     assert.deepEqual(state.results.map(item => item.id), ["good"]);
     assert.equal(state.errorMessage, "Unable to search Failed.");
-    assert.equal(SearchPage.template.includes("x-loading"), true);
     assert.equal(SearchPage.template.includes("x-notice"), true);
     assert.equal(SearchPage.template.includes("x-empty"), true);
 });

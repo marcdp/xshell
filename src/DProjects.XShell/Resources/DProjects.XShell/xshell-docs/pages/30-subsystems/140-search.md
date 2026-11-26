@@ -10,25 +10,42 @@ The `search` singleton exposes two methods:
 
 ```javascript
 const providers = search.listProviders();
-const {results, errors} = await search.query("documents", {
-    providers: ["filesystems", "commands"],
+const {results, errors} = await search.query("command: documents", {
+    providers: ["commands"],
     limit: 20,
     signal: abortController.signal
 });
 ```
 
 `listProviders()` returns frozen descriptors in effective configuration order without loading, constructing, or initializing provider
-implementations. Each descriptor contains `id`, `label`, and `mode`, with optional `description` and `icon`. Implementation paths and provider
-options are private configuration and are not included.
+implementations. Each descriptor contains `id`, `label`, `mode`, and a frozen `prefixes` array, with optional `description` and `icon`. The array
+is empty when a provider has no configured prefixes. Implementation paths and provider-specific options are private configuration.
 
-`query(text, options = {})` trims the text and returns `{results, errors}`. An empty query returns both arrays empty without loading a provider.
-The default aggregate limit is 50 and the accepted range is 1 through 200. Supplying `providers` explicitly selects those unique known IDs in the
-given order. Omitting it selects every provider whose mode is `default`.
+`query(text, options = {})` accepts a search expression and returns `{results, errors}`. The default aggregate limit is 50 and the accepted range
+is 1 through 200.
 
 Each result requires `id`, `providerId`, `label`, and `href`. Optional fields are `description`, `icon`, `category`, `tags`, and `open`; `open`
 defaults to `top` and supports `top`, `stack`, `dialog`, and `dock`. Results are plain navigation data: callbacks, DOM nodes, Service instances, and
 other executable values are not valid. The Service attaches `providerId`; providers do not author or control it. The pair `(providerId, id)` is the
 stable aggregate identity.
+
+## Search expressions
+
+Enter ordinary text such as `customers` to search the default providers. Start with a configured prefix to target its providers. The bundled
+`command: customers`, `> customers`, and `>customers` expressions all search Commands. Other bundled prefixes include `page:`, `module:`,
+and `query:`.
+
+Search trims the input and matches a prefix only at the start, ignoring case. If several prefixes match, the longest wins. Search strips that one
+prefix and trims the remaining text, preserving its casing and content for providers and using it for relevance ranking. Whitespace after the
+prefix is optional. An unknown prefix remains part of the search text, as do colons and other characters inside it.
+
+A recognized prefix selects every provider that declares it, regardless of mode, in effective configuration order. When
+`options.providers` is also supplied, the query uses the intersection in that same order. Without a recognized prefix, explicit selection uses
+the supplied provider ID order, or selects all `default` providers when `options.providers` is omitted. Provider IDs must be unique and known, even
+when the search text is empty or the prefix selection would exclude them.
+
+A blank expression, a recognized prefix with no remaining text, or an empty provider selection returns empty `results` and `errors` arrays
+without loading providers.
 
 ## Provider configuration
 
@@ -47,6 +64,7 @@ Modules contribute providers through the existing Service options composition me
                             "icon": "catalog",
                             "implementation": "/providers/search-catalog.js",
                             "mode": "default",
+                            "prefixes": ["catalog:", "cat:"],
                             "options": {"includeArchived": false}
                         }
                     }
@@ -57,15 +75,17 @@ Modules contribute providers through the existing Service options composition me
 }
 ```
 
-Provider IDs are the keys below `providers`. `label` and `implementation` are required. `description`, `icon`, provider-specific `options`, and
-`mode` are optional; omitted mode is `default`. Bootstrap normalizes a module-relative implementation path while processing the declaring module,
-then ordinary manifest merging composes it into `xshell.services.search.options`.
+Provider IDs are the keys below `providers`. `label` and `implementation` are required. `description`, `icon`, `prefixes`, provider-specific
+`options`, and `mode` are optional. The mode defaults to `default`. Each prefix must be a non-empty string without whitespace, and case-insensitive
+duplicates within one provider are invalid. A module can declare several aliases for a provider, as shown by `catalog:` and `cat:`, and
+different providers can share a prefix. Bootstrap preserves the prefixes as literal text and normalizes the declaring module's implementation path.
+Ordinary manifest merging composes the contribution into `xshell.services.search.options`.
 
 Provider implementations follow `providers/<domain>-<provider>.js`. The directory identifies the architectural role, while the filename identifies
 the domain and specialization: `providers/search-commands.js`, `providers/search-filesystems.js`, `providers/filesystem-http.js`, and
 `providers/store-indexeddb.js` are representative names.
 
-`default` providers participate in an ordinary query. `explicit` providers participate only when named in `options.providers`. Expensive remote,
+`default` providers participate in an ordinary query. `explicit` providers require a matching prefix or selection through `options.providers`. Expensive remote,
 content, database, semantic, or credential-sensitive discovery should normally use `explicit` so a general search does not trigger it.
 
 ## Provider implementation
@@ -80,7 +100,7 @@ export default class CatalogSearchProvider {
     }
 
     async query(text, {signal, limit}) {
-        signal.throwIfAborted();
+        signal?.throwIfAborted();
         return [{id: "products", label: "Products", href: "page:catalog:/pages/products.js"}];
     }
 }
@@ -131,9 +151,9 @@ hierarchical ancestor identities, with length-prefixed components preventing amb
 The `x-filesystem` module contributes the Filesystems provider. It calls `filesystems.listDefinitions()` and builds Explorer links with
 `named:<name>` references. It does not open Filesystem instances, connect to providers, read credential storage, or unlock Secrets.
 
-The bundled Search Page keeps its three-character minimum as a UI policy; the Service has no minimum. The Page debounces changes, aborts the prior
-request, ignores stale responses by revision, and cancels work on unload. `x-listview-item` and `x-anchor` perform navigation using each result's
-`href` and `open` mode.
+The bundled Search Page requires at least three characters in the trimmed input. The Service accepts non-empty search text of any length.
+The Page shows the configured prefixes and sends the complete expression to the Service. It debounces changes, aborts the prior request,
+ignores stale responses, and cancels work on unload. `x-listview-item` and `x-anchor` use each result's `href` and `open` mode for navigation.
 
 ## Lazy-loading limits
 

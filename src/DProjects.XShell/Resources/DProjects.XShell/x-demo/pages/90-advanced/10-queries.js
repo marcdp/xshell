@@ -10,6 +10,9 @@ export default {
 const names = await queries.run({id: "demo.inventory.list", args: {category: "stationery"}});
 const product = await queries.run({id: "demo.inventory.detail", args: {sku: "NOTE-01"}});</x-code>
 
+        <p>In global Search, enter <code>demo.inventory</code> to search default providers or <code>query: demo.inventory</code> to search Queries.
+        Selecting a Query result opens its invocation Page.</p>
+
         <h2>Discovered Queries</h2>
         <ul>
             <li x-for="item in state.items"><strong>{{ item.label }}</strong> <code>{{ item.id }}</code> {{ item.description }}</li>

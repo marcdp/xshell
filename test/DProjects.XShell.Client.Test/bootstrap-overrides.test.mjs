@@ -136,12 +136,16 @@ test("menu configuration follows generic value-driven path semantics", () => {
     });
 });
 
-test("only generated framework and module file resource metadata remains literal", () => {
+test("generated resource metadata and Search provider prefixes remain literal", () => {
     const metadata = { type: "page", title: "/Getting Started", description: "app: configuration guide", icon: "x-settings" };
+    const prefixes = ["/", "./", "app:", "url:", "page:"];
     const definition = {
-        xshell: { files: [{ path: "/framework.js", size: 12, hash: "framework", resource: metadata }] },
+        xshell: {
+            files: [{ path: "/framework.js", size: 12, hash: "framework", resource: metadata }],
+            services: { search: { options: { providers: { custom: { implementation: "/providers/search-custom.js", prefixes } } } } }
+        },
         modules: { x: { files: [{ path: "/pages/index.js", size: 123, hash: "module", resource: metadata }] } },
-        unrelated: { path: "/ordinary.js", size: 1, hash: "ordinary", resource: { title: "/Normalize me" } }
+        unrelated: { path: "/ordinary.js", size: 1, hash: "ordinary", resource: { title: "/Normalize me" }, prefixes: ["/ordinary.js"] }
     };
     const normalize = bootstrapSource.match(/^        function normalizeUrl\([\s\S]*?^        \}\r?\n        function normalizeManifest\([\s\S]*?^        \}/m)[0];
     const module = plain(vm.runInNewContext(`${normalize}\nnormalizeManifest(definition, owner)`, {
@@ -154,6 +158,10 @@ test("only generated framework and module file resource metadata remains literal
     assert.equal(module.modules.x.files[0].path, "/_assets/x/1.0.0.dev/pages/index.js");
     assert.deepEqual(module.modules.x.files[0].resource, metadata);
     assert.equal(module.unrelated.resource.title, "/_assets/x/1.0.0.dev/Normalize%20me");
+    assert.deepEqual(module.unrelated.prefixes, ["/_assets/x/1.0.0.dev/ordinary.js"]);
+    assert.deepEqual(module.xshell.services.search.options.providers.custom, {
+        implementation: "/_assets/x/1.0.0.dev/providers/search-custom.js", prefixes
+    });
 });
 
 function apply(config, entries) {

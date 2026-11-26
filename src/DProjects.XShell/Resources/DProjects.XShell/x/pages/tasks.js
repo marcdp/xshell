@@ -23,7 +23,7 @@ export default {
     },
     meta: {
         title: "Tasks",
-        classes: ["no-title"]
+        classes: ["no-title", "embed-padding"]
     },
     style: `
         x-progress {

@@ -135,28 +135,32 @@
                             "description": "Search effective Area navigation Pages",
                             "icon": "x-page",
                             "implementation": "/providers/search-areas.js",
-                            "mode": "default"
+                            "mode": "default",
+                            "prefixes": ["page:"]
                         },
                         "modules": {
                             "label": "Modules",
                             "description": "Search application module metadata",
                             "icon": "x-module",
                             "implementation": "/providers/search-modules.js",
-                            "mode": "default"
+                            "mode": "default",
+                            "prefixes": ["module:"]
                         },
                         "commands": {
                             "label": "Commands",
                             "description": "Search discovered Commands",
                             "icon": "x-command",
                             "implementation": "/providers/search-commands.js",
-                            "mode": "default"
+                            "mode": "default",
+                            "prefixes": ["command:", ">"]
                         },
                         "queries": {
                             "label": "Queries",
                             "description": "Search discovered Queries",
                             "icon": "x-search",
                             "implementation": "/providers/search-queries.js",
-                            "mode": "default"
+                            "mode": "default",
+                            "prefixes": ["query:"]
                         },
                         "shortcuts": {
                             "label": "Shortcuts",

@@ -28,16 +28,25 @@ export default {
             height:100%;
             min-width:3.6em;
             box-sizing: border-box;
-            padding:.5em;
+            
         }
-        div {display:flex; flex-direction: column; flex:1;}
+        div {
+            display:flex; flex-direction: column; flex:1;
+            padding:.5em;
+            box-sizing: border-box;
+            width:var(--x-layout-main-drawer-width);
+            transition: all var(--x-transition-duration);
+        }
+        div.collapsed {
+            width:3.6em;
+        }
         x-menuitem.flex {flex:1; visibility:hidden;}
         x-menuitem[label='-'] {padding-left:.75em; padding-right:.75em;}
         
 
     `,
     template: `
-        <div x-if="state.menu" >
+        <div x-if="state.menu" x-attr:class="state.expanded ? '' : 'collapsed'">
             <x-menuitem x-recursive="(menuitem,index,indexAbsolute,indent) in state.menu"
                 x-key="id,href,path,order,command"
                 x-attr:label="menuitem.label"
@@ -46,7 +55,7 @@ export default {
                 x-attr:icon="menuitem.icon"
                 x-attr:expand-on="indent == 0 ? 'click' : 'hover'"
                 x-attr:selected="(indent==0 && menuitem.href == state.selected)"
-                x-attr:class="(indent==0 ? 'collapsible ' + (!state.expanded ? 'collapsed ' : '') : '') + menuitem.class"
+                x-attr:class="(indent==0 ? 'collapsible ' : '') + menuitem.class"
                 x-attr:tooltip="menuitem.tooltip"
                 x-attr:open="menuitem.open"
                 x-attr:outlet="menuitem.outlet"

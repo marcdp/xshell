@@ -84,18 +84,10 @@ export default {
         :host(.inline) > x-contextmenu {--x-menu-indent: var(--x-menuitem-indent);position:unset; width:100%; margin:0; margin-bottom: -.15em;}
 
         /* collapsible */
-        :host(.collapsible) x-anchor::part(a) {padding-left:.3em; padding-right:.3em;}
-        :host(.collapsible) x-anchor span {box-sizing:border-box; width:10em; transition: all 5s; var(--x-transition-duration); box-sizing:border-box; overflow:hidden; }
+        :host(.collapsible) x-anchor::part(a) {padding-left:.3em; padding-right:.3em; box-sizing:border-box;}
+        :host(.collapsible) x-anchor .label {overflow:hidden; padding:0}
         :host(.collapsible) x-icon.has-childs {display:none;}
-        :host(.collapsible.collapsed) x-anchor::part(a) {}
-        :host(.collapsible.collapsed) x-anchor span { width:0em; padding:0;}
-        
-
-        :host(.collapsible) x-button { display:block; border:1px red solid; width:10em; transition: all 5s; var(--x-transition-duration)!important;  overflow:hidden;}
-        :host(.collapsible.collapsed) x-button  {padding:0;}
-        :host(.collapsible.collapsed) x-button::part(button) {padding-right:.2em;}
-        :host(.collapsible.collapsed) x-button::part(label) {width:0em; padding:0;}
-        :host(.collapsible.collapsed) x-button {width:2.5em; padding:0;}
+        :host(.collapsible) x-button::part(button) {overflow:hidden;}
 
         /* top right */
         :host(.top.right) x-contextmenu {bottom:0!important;}

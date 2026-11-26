@@ -39,7 +39,7 @@ test("Search provider configuration schema validates declarative definitions", (
     const validator = new JsonValidator();
     const valid = validator.validate({providers: {
         local: {label: "Local", implementation: "/providers/search-local.js"},
-        remote: {label: "Remote", implementation: "/providers/search-remote.js", mode: "explicit", options: {endpoint: "catalog"}}
+        remote: {label: "Remote", implementation: "/providers/search-remote.js", mode: "explicit", prefixes: ["remote:", ">"], options: {endpoint: "catalog"}}
     }}, Search.optionsSchema);
     assert.equal(valid.valid, true);
 
@@ -51,21 +51,82 @@ test("Search provider configuration schema validates declarative definitions", (
     ]) assert.equal(validator.validate(options, Search.optionsSchema).valid, false);
 });
 
+test("Search rejects malformed prefixes and case-insensitive duplicates at construction", () => {
+    const validator = new JsonValidator();
+    const definition = {label: "Local", implementation: "/providers/search-local.js"};
+    for (const prefixes of [null, "local:", [12], [""], ["two words"], ["local:\n"], ["local:", "local:"]]) {
+        const providers = {local: {...definition, prefixes}};
+        assert.equal(validator.validate({providers}, Search.optionsSchema).valid, false, JSON.stringify(prefixes));
+        assert.throws(() => createSearch(providers, {}), /Search provider 'local'.*prefix/);
+    }
+    assert.throws(() => createSearch({local: {...definition, prefixes: ["local:", "LOCAL:"]}}, {}), /local.*duplicate prefix 'LOCAL:'/);
+    assert.throws(() => createSearch({local: {...definition, prefixes: ["Σ:", "ς:"]}}, {}), /duplicate prefix/);
+});
+
 test("listProviders returns defensive immutable metadata without loading implementations", () => {
+    const prefixes = ["Local:", ">"];
     const {loads, search} = createSearch({
-        local: {label: "Local", description: "Local data", icon: "local", implementation: "/providers/search-local.js", options: {secret: "private"}}
+        local: {label: "Local", description: "Local data", icon: "local", implementation: "/providers/search-local.js", prefixes, options: {secret: "private"}},
+        fallback: {label: "Fallback", implementation: "/providers/search-fallback.js"}
     }, {});
 
+    prefixes.splice(0, 2, "changed:");
     const first = search.listProviders();
     const second = search.listProviders();
-    assert.deepEqual(first, [{id: "local", label: "Local", description: "Local data", icon: "local", mode: "default"}]);
+    assert.deepEqual(first, [
+        {id: "local", label: "Local", description: "Local data", icon: "local", mode: "default", prefixes: ["Local:", ">"]},
+        {id: "fallback", label: "Fallback", mode: "default", prefixes: []}
+    ]);
     assert.notStrictEqual(first, second);
     assert.notStrictEqual(first[0], second[0]);
     assert.equal(Object.isFrozen(first), true);
     assert.equal(Object.isFrozen(first[0]), true);
+    assert.equal(Object.isFrozen(first[1].prefixes), true);
+    assert.throws(() => first[0].prefixes.push("changed:"), TypeError);
     assert.deepEqual(loads, []);
     assert.equal("implementation" in first[0], false);
     assert.equal("options" in first[0], false);
+});
+
+test("expressions select the longest leading prefix, support aliases, and preserve the remaining text", async () => {
+    class Echo { async query(text) { return [result("echo", text)]; } }
+    const {loads, search} = createSearch({
+        short: {label: "Short", implementation: "/short.js", prefixes: ["c"]},
+        commands: {label: "Commands", implementation: "/commands.js", mode: "explicit", prefixes: ["command:", ">", "+", "Σ:"]},
+        shared: {label: "Shared", implementation: "/shared.js", prefixes: ["COMMAND:"]},
+        plain: {label: "Plain", implementation: "/plain.js"}
+    }, {"esm:/short.js": Echo, "esm:/commands.js": Echo, "esm:/shared.js": Echo, "esm:/plain.js": Echo});
+
+    for (const input of ["", "   ", " > ", "COMMAND:  "]) {
+        assert.deepEqual(await search.query(input), {results: [], errors: []});
+    }
+    assert.deepEqual(await search.query("command: Needle", {providers: ["short", "plain"]}), {results: [], errors: []});
+    assert.deepEqual(await search.query(">Needle", {providers: []}), {results: [], errors: []});
+    await assert.rejects(search.query("command: Needle", {providers: ["missing"]}), /Unknown Search provider 'missing'/);
+    assert.deepEqual(loads, []);
+
+    for (const [input, providers, text, options] of [
+        ["> Needle", ["commands"], "Needle"],
+        [">Needle", ["commands"], "Needle"],
+        ["+Needle", ["commands"], "Needle"],
+        ["ς:Needle", ["commands"], "Needle"],
+        ["  COMMAND:\tNeedle  Details ", ["commands", "shared"], "Needle  Details", {providers: ["shared", "commands"]}],
+        ["command:https://Example.com", ["commands", "shared"], "https://Example.com"],
+        ["command: > Needle", ["commands", "shared"], "> Needle"],
+        ["command: Needle", ["shared"], "Needle", {providers: ["plain", "shared"]}]
+    ]) {
+        const response = await search.query(input, options);
+        assert.deepEqual(response.results.map(item => [item.providerId, item.label]), providers.map(id => [id, text]));
+        assert.deepEqual(response.errors, []);
+    }
+    assert.deepEqual(loads, ["esm:/commands.js", "esm:/shared.js"]);
+
+    for (const input of ["unknown: Needle", "Needle command: details", "https://Example.com"]) {
+        const {results} = await search.query(input);
+        assert.deepEqual(results.map(item => [item.providerId, item.label]), ["short", "shared", "plain"].map(id => [id, input]));
+    }
+    const {results} = await search.query("Needle", {providers: ["plain", "commands"]});
+    assert.deepEqual(results.map(item => item.providerId), ["plain", "commands"]);
 });
 
 test("query selects default and explicit providers lazily and skips loading for empty text", async () => {
@@ -137,14 +198,16 @@ test("cancellation rejects before loading and during provider execution", async 
             return [];
         }
     }
-    const {loads, search} = createSearch({local: {label: "Local", implementation: "/providers/search-local.js"}}, {"esm:/providers/search-local.js": Provider});
+    const {loads, search} = createSearch({
+        local: {label: "Local", implementation: "/providers/search-local.js", mode: "explicit", prefixes: ["local:"]}
+    }, {"esm:/providers/search-local.js": Provider});
     const before = new AbortController();
     before.abort();
-    await assert.rejects(() => search.query("value", {signal: before.signal}), error => error.name === "AbortError");
+    await assert.rejects(() => search.query("local: value", {signal: before.signal}), error => error.name === "AbortError");
     assert.deepEqual(loads, []);
 
     const during = new AbortController();
-    const pending = search.query("value", {signal: during.signal});
+    const pending = search.query("local: value", {signal: during.signal});
     await new Promise(resolve => setImmediate(resolve));
     during.abort();
     await assert.rejects(() => pending, error => error.name === "AbortError");
@@ -192,12 +255,12 @@ test("provider failures and invalid results are isolated while successful result
     class Failed { async query() { throw new Error("credential=https://secret.example"); } }
     class Invalid { async query() { return [{id: "invalid", label: "Invalid", href: "/invalid", callback() {}}]; } }
     const {search} = createSearch({
-        good: {label: "Good", implementation: "/providers/search-good.js"},
-        failed: {label: "Failed", implementation: "/providers/search-failed.js"},
-        invalid: {label: "Invalid", implementation: "/providers/search-invalid.js"}
+        good: {label: "Good", implementation: "/providers/search-good.js", prefixes: ["shared:"]},
+        failed: {label: "Failed", implementation: "/providers/search-failed.js", prefixes: ["shared:"]},
+        invalid: {label: "Invalid", implementation: "/providers/search-invalid.js", prefixes: ["shared:"]}
     }, {"esm:/providers/search-good.js": Good, "esm:/providers/search-failed.js": Failed, "esm:/providers/search-invalid.js": Invalid});
 
-    const response = await search.query("anything");
+    const response = await search.query("shared: anything");
     assert.deepEqual(response.results.map(item => item.id), ["good"]);
     assert.deepEqual(response.errors, [
         {providerId: "failed", message: "Unable to search Failed."},
@@ -244,11 +307,11 @@ test("Search ranks and deduplicates all provider candidates before enforcing the
             ];
         }
     }
-    const {search} = createSearch({local: {label: "Local", implementation: "/providers/search-local.js"}}, {
+    const {search} = createSearch({local: {label: "Local", implementation: "/providers/search-local.js", prefixes: ["local:"]}}, {
         "esm:/providers/search-local.js": Provider
     });
 
-    const response = await search.query("documents", {limit: 2});
+    const response = await search.query("local: documents", {limit: 2});
     assert.deepEqual(response.results.map(item => item.id), ["documents", "duplicate"]);
     assert.equal(response.results.length, 2);
 });
