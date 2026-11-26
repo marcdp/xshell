@@ -26,8 +26,7 @@ export default {
     controller({state}) {
         return {
             load() {
-                // Initialize state from query parameters if needed
-                alert(1)
+                // load
             }
         }
     }
