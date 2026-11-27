@@ -133,13 +133,12 @@ export default class Menus {
         return this.#globalMenus.get(name) ?? this.#areaMenus.get(area?.id)?.get(name)?.menu ?? null;
     }
     resolvePath(path) {
-        // Only contextual menu aliases participate in Area navigation.
+        // Resolve the owning Area before searching its menus.
         if (!path) return null;
-        for (const area of this.#areas.getAreas()) {
-            const items = this.#findInArea(area, item => item.path === path && item.href);
-            if (items) return items.at(-1);
-        }
-        return null;
+        const area = this.#areas.getArea(this.#areas.resolveAreaId(path));
+        if (!area) return null;
+        const items = this.#findInArea(area, item => item.path === path && item.href);
+        return items?.at(-1) ?? null;
     }
     resolveHref(href, areaId = null) {
         if (!href) return null;
@@ -192,11 +191,16 @@ export default class Menus {
         return null;
     }
     #validatePaths(areaId, menus, updates) {
-        // Check aliases across all slots, using candidate snapshots for menus being refreshed.
+        // Check alias ownership and destinations across all slots, using candidate snapshots for refreshed menus.
         const aliases = new Map();
         const visit = (slot, items) => {
             for (const { path, href, children } of items) {
                 if (path && href) {
+                    const owner = this.#areas.resolveAreaId(path);
+                    if (owner !== areaId) {
+                        const ownership = owner === null ? "does not belong to any Area" : `belongs to Area '${owner}'`;
+                        throw new Error(`Area '${areaId}' menu slot '${slot}' exposes path '${path}', which ${ownership}.`);
+                    }
                     const previous = aliases.get(path);
                     if (previous && previous.href !== href && this.#aliasDestination(previous.href) !== this.#aliasDestination(href)) {
                         throw new Error(`Area '${areaId}' has conflicting menu path '${path}': slot '${previous.slot}' targets '${previous.href}' and slot '${slot}' targets '${href}'.`);

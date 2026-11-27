@@ -117,7 +117,7 @@
       }
     },
     "resolvePath": {
-      "description": "Finds the first navigable Area menu item with the exact friendly path, or returns null.",
+      "description": "Finds the first navigable menu item with the exact friendly path in the Area that owns the path. Returns null when no Area owns the path or no alias matches.",
       "parameters": [
         {
           "name": "path",

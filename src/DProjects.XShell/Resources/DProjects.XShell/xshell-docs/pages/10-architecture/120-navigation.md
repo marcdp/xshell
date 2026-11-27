@@ -160,9 +160,10 @@ item's canonical `href` before setting `x-page.src`; when no path matches, it pr
 `/main/_assets/x-demo/<generation>/pages/01-components/index.js` navigation both remain valid. Navigation translates to the Area-aware canonical href, not to
 the final module resource URL.
 
-Menus validates friendly aliases across every slot and descendant within an Area before Navigation uses them. Repeated aliases can share an
-effective destination. Use inventory source `path` prefixes to mount distinct inventories at distinct friendly paths. Route patterns keep their
-existing matching and precedence rules. See [Areas and Menus](../30-subsystems/10-areas.md#menus-and-home).
+Areas selects the owning Area by the longest matching prefix on a segment boundary, including when Area prefixes overlap. Menus looks for an exact
+friendly alias only in that Area. At startup and on source refresh, Menus validates ownership and checks for conflicting destinations across every
+slot and descendant. Repeated aliases can share an effective destination. Use inventory source `path` prefixes to mount distinct inventories at
+distinct friendly paths. See [Areas and Menus](../30-subsystems/10-areas.md#menus-and-home).
 
 For browser-facing links, Navigation performs the inverse lookup through `menus.resolveHref(href, areaId)`. For an unprefixed module resource,
 Menus derives the module id from the structural `/_assets/<module-id>/...` prefix, prioritizes Areas associated with that module, and returns the matching item. The originating Page's Area is tried first when applicable.

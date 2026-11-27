@@ -728,11 +728,49 @@ test("Menus.resolveHref discovers named dynamic menus through module-associated 
     assert.equal(menusByAreaService.get(areas).resolveHref("/_assets/x-demo/pages/index.js")?.path, "/demo/");
 });
 
-test("Menus.resolvePath matches exact friendly paths across Areas", () => {
+test("Menus.resolvePath matches an exact friendly path in its owning Area", () => {
     const areas = createAreas();
 
     assert.equal(menusByAreaService.get(areas).resolvePath("/sales/detail")?.href, "/sales/_assets/customer/pages/detail.js");
     assert.equal(menusByAreaService.get(areas).resolvePath("/sales/detail?customer=42"), null);
+});
+
+test("Navigation opens the owning nested Area's friendly path in path and hash modes", async t => {
+    const bus = { addEventListener() {}, emit() {} };
+    const config = { modules: {}, xshell: { assets: { basePath: "/_assets" } } };
+    const areas = new Areas({ config, bus }, { default: "main", definitions: {
+        main: { prefix: "/main", menus: { navigation: "main" } },
+        tools: { prefix: "/main/tools", menus: { navigation: "tools" } }
+    } });
+    const asset = "/_assets/customer/pages/help.js";
+    initializeAreas(areas, { bus, config, modules: {}, definitions: {
+        main: { items: [{ label: "Help", path: "help", href: asset }] },
+        tools: { items: [{ label: "Help", path: "help", href: asset }] }
+    } });
+
+    // Open the public URL as a browser entry point and observe the Page that Navigation mounts.
+    globalThis.window = { addEventListener() {} };
+    t.after(() => {
+        delete globalThis.document;
+        delete globalThis.window;
+    });
+    for (const [mode, prefix] of [["path", "/app"], ["hash", "/app/#!"]]) {
+        const mounted = [];
+        const container = { querySelectorAll: () => mounted, appendChild: page => mounted.push(page) };
+        const navigation = createNavigation({ areas, mode, basePath: "/app", baseUrl: "https://example.test/app/", container });
+        const publicHref = prefix + "/main/tools/help?view=full#summary";
+        globalThis.document = {
+            location: new URL(publicHref, "https://example.test"),
+            createElement: () => ({
+                setAttribute(name, value) { this[name] = value; }, getAttribute(name) { return this[name] ?? null; }, addEventListener() {}
+            })
+        };
+        const canonical = `/main/tools${asset}?view=full#summary`;
+        await navigation.init();
+        assert.equal(mounted.length, 1);
+        assert.equal(mounted[0].src, canonical);
+        assert.equal(navigation.buildUrlAbsolute({ href: canonical }), publicHref);
+    }
 });
 
 test("Navigation exposes a friendly path while preserving canonical lookup suffixes", () => {

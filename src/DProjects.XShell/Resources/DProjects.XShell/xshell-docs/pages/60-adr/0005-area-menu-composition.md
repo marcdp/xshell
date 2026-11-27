@@ -20,15 +20,18 @@ from participating modules. An Area-scoped menu can be selected by several Areas
 projection. Global menus are static and application-wide. Area slots select only Area-scoped definitions and reserve global menu names for
 canonical lookup and enumeration. Canonical asset paths identify the resources and their runtime modules.
 
+Overlapping Area prefixes are supported. Areas determines navigation context using the longest prefix that matches on a segment boundary.
+Menus resolves exact friendly aliases only in the Area that owns the path.
+
 ## Consequences and open work
 
 XShell resolves Areas and Menus before initializing module controllers. The Menus constructor validates Area selections and publishes globals.
 Module controllers can register sources during initialization. XShell then initializes the contextual menus and derives Area routes and homes
 before Navigation starts. Menu shortcuts initialize after Navigation.
 
-Inventory sources may set a friendly prefix and choose whether their root participates in default home selection. Menus checks all navigable
-aliases within each Area at startup and before publishing any source refresh. A shared alias must resolve to the same destination. A conflicting
-refresh preserves the previous projections, and valid changes emit `xshell:menus:change`.
+Inventory sources may set a friendly prefix and choose whether their root participates in default home selection. Every navigable alias must
+belong to the Area exposing it. Menus checks ownership and destination conflicts at startup and before publishing any source refresh. A shared
+alias must resolve to the same destination. An invalid refresh preserves all previous projections. Valid changes emit `xshell:menus:change`.
 
 Navigation uses menu aliases and canonical Area-aware hrefs. Page loading removes the matched Area prefix for resource lookup. Areas emits
 `xshell:area:change` when navigation changes the active Area.

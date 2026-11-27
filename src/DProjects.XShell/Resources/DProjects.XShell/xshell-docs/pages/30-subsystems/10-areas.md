@@ -89,9 +89,11 @@ start. `getMenus(areaId)` lists the contextual slots in selection order, then ev
 explicit Area yields `null` or `[]`, respectively. Global definitions are available even without configured Areas. Effective definitions and
 their item trees are read-only. Read `menu.items` again after a change event to obtain the latest snapshot.
 
-`menus.resolvePath(path)` searches contextual menus for an exact friendly alias with an `href`. A targetless group can keep a path for
-organization. Menus validates aliases across all slots and descendants in each Area. Repeated aliases may share a destination, including
-its default query parameters and fragment. Conflicting destinations fail with the Area, path, and contributing slots.
+`menus.resolvePath(path)` asks Areas which Area owns the path and searches only that Area's contextual menus for an exact friendly alias with an
+`href`. It returns `null` if the path has no owner or no matching alias. Menus checks all slots and descendants during startup and source refresh.
+Every navigable alias must belong to the Area exposing it. Aliases in another Area, in the reserved global navigation namespace, or outside all
+Areas fail validation. Targetless groups can keep organizational paths and are exempt from this check. Repeated aliases may share a destination,
+including its default query parameters and fragment. Conflicting destinations fail with the Area, path, and contributing slots.
 
 `menus.resolveHref(href, areaId)` matches canonical identity
 without query parameters or fragments. Without an explicit Area, it tries a recognized Area prefix, Areas associated with the target module,
@@ -131,8 +133,8 @@ and icon. The module label names the generated root item.
 
 Module controllers register runtime sources during initialization. A source exposes `resolve()` and can list Bus events in `dependsOn`.
 Call `source.refresh()` or emit a dependency event to refresh root or child content. Menus validates every affected Area before publishing
-new snapshots. A conflict causes `refresh()` to throw and leaves the previous menus effective. On a valid content change, Menus publishes
-the read-only snapshots and emits `xshell:menus:change`. A removed source override exposes the original static entry again.
+new snapshots. Invalid ownership or conflicting destinations cause `refresh()` to throw and leave all previous menus effective. On a valid content
+change, Menus publishes the read-only snapshots and emits `xshell:menus:change`. A removed source override exposes the original static entry again.
 
 ## Routes
 
@@ -156,8 +158,9 @@ composition order; Areas neither rank nor reorder candidates. Routes remain sepa
 An Area prefix marks a navigation context; `/_assets/<module-id>/...` marks resource ownership. Effective menu `path` and `href` values are Area-aware
 after composition; neither should be described as an unprefixed physical resource URL. Route descriptors remain Area-relative until Navigation
 resolves them. A configured `"inventory"` or
-`"/inventory/"` normalizes to `"/inventory"`. Empty or root prefixes normalize to `""`. Prefix matching uses complete segments and tries the
-longest prefix first. Navigation resolves a friendly path through `menus.resolvePath(path)` to its canonical Area-aware href. At page load,
+`"/inventory/"` normalizes to `"/inventory"`. Empty or root prefixes normalize to `""`. Overlapping Area prefixes are supported. Areas uses the
+longest prefix that matches on a segment boundary to determine which Area owns the path. An empty-prefix Area can own paths outside more specific
+Areas. Navigation resolves a friendly path through `menus.resolvePath(path)` to its canonical Area-aware href. At page load,
 `x-page` removes the matched Area prefix before module resource resolution while retaining the prefixed canonical URL for navigation and
 breadcrumbs.
 

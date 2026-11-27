@@ -84,7 +84,7 @@ test("inventory menu uses Page metadata for files and directory index Pages", ()
 const customerAssets = "/_assets/customers/1.0.0.dev";
 const inventoryAssets = "/_assets/inventory/1.0.0.dev";
 
-function createMultiInventory(sources, files = ["index.js", "02-settings.html", "01-help.md"]) {
+function createMultiInventory(sources, files = ["index.js", "02-settings.html", "01-help.md"], additionalAreas = {}) {
     const owner = (path, label) => ({ label, assets: { path }, files: files.map(file => ({ path: path + "/pages/" + file })) });
     const config = {
         app: { basePath: "/app", baseUrl: "https://example.test/app/" },
@@ -95,7 +95,8 @@ function createMultiInventory(sources, files = ["index.js", "02-settings.html", 
     bus.emit = (type, detail) => bus.dispatchEvent(new CustomEvent(type, { detail }));
     const areas = new Areas({ config, bus }, { default: "main", definitions: {
         main: { prefix: "main", menus: { navigation: "management" } },
-        customers: { prefix: "customers", menus: { navigation: "management" } }
+        customers: { prefix: "customers", menus: { navigation: "management" } },
+        ...additionalAreas
     } });
     const menus = new Menus({ config, bus, areas }, { definitions: { management: { sources } } });
     return { config, bus, areas, menus };
@@ -154,4 +155,12 @@ test("inventory filenames that produce the same alias retain both targets for va
     const { menus } = createMultiInventory([{ source: customerAssets + "/pages", path: "customers" }],
         ["index.js", "01-help.js", "02-help.md"]);
     assert.throws(() => menus.init(), /Area 'main'.*'\/main\/customers\/help'.*01-help\.js.*02-help\.md/);
+});
+
+test("a nested inventory alias must belong to the Area exposing it", () => {
+    const { menus } = createMultiInventory([{ source: customerAssets + "/pages", path: "customers" }],
+        ["index.js", "01-help.md"], { help: { prefix: "/main/customers/help" } });
+    assert.throws(() => menus.init(),
+        /Area 'main' menu slot 'navigation' exposes path '\/main\/customers\/help', which belongs to Area 'help'/);
+    assert.equal(menus.getMenu("navigation", "main"), null);
 });
