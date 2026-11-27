@@ -21,3 +21,22 @@ Pages reuse the contract and state model with Page-specific query/context initia
 - [List View](90-listview.md) — List selection, filesystem integration, and defaults for list data fields.
 
 See [Component Architecture](../10-architecture/60-components.md), [Pages](../10-architecture/70-pages.md), and [X Templates](../40-extensions/x-templates/index.md).
+
+## Embedded Pages in menu items
+
+When an `x-menuitem` expands its submenu, it automatically requests focus from the first embedded Page in DOM order that implements a `focus()`
+controller method. The method is optional and chooses which element in the Page receives focus. Pages within independently expandable child submenus
+receive their own focus request when those submenus open.
+
+Focus waits for lazy loading and the Page's initial render. Reopening the submenu requests focus again, and closing it discards any pending request.
+
+The global menu in the `x` module embeds the Search Page with this menu item definition. Its `focus()` method focuses the search `x-datafield`.
+
+```jsonc
+{
+    "label": "Search",
+    "children": [
+        {"href": "/pages/search.js", "open": "embed", "outlet": "self"}
+    ]
+}
+```

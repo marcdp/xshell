@@ -36,6 +36,8 @@ export function createXPageClass(runtime) {
         _module = null;
         _page = null;
 
+        #firstRenderedPage = null;
+        #focusRequest = null;
 
         //ctor
         constructor() {
@@ -54,6 +56,12 @@ export function createXPageClass(runtime) {
                 event.preventDefault();
                 event.stopPropagation();
                 return false;
+            });
+            this.addEventListener("first-render", (event) => {
+                // Remember readiness even when the first render precedes the load event.
+                if (!this._page || event.detail?.page !== this._page) return;
+                this.#firstRenderedPage = this._page;
+                this.#advanceFocus();
             });
             this.addEventListener("click", (event) => {
                 const path = typeof event.composedPath === "function" ? event.composedPath() : [];
@@ -98,6 +106,7 @@ export function createXPageClass(runtime) {
             }
             this._src = value;
             if (changed){
+                this.#finishFocus();
                 if (this._src && this._connected) this.#loadSource();
             }
         }
@@ -192,6 +201,7 @@ export function createXPageClass(runtime) {
         disconnectedCallback() {
             this._connected = false;
             // unmount current page; disconnection does not imply final destruction
+            this.#finishFocus();
             this.unmount();
         }
         connectedMoveCallback() {
@@ -200,6 +210,49 @@ export function createXPageClass(runtime) {
 
 
         //methods
+        requestFocus(signal) {
+            // Follow only the current load, or the first load of a lazy Page.
+            if (!this._connected || !this._src || signal?.aborted) return Promise.resolve(false);
+            this.#finishFocus();
+            const revision = this._status === "" ? this._loadRevision + 1 : this._loadRevision;
+            return new Promise((resolve, reject) => {
+                const cancel = () => this.#finishFocus();
+                this.#focusRequest = {revision, signal, cancel, resolve, reject, frame: null};
+                signal?.addEventListener("abort", cancel, {once: true});
+                this.#advanceFocus();
+            });
+        }
+        #advanceFocus() {
+            // A loaded Page can decline focus without waiting for a render.
+            const request = this.#focusRequest;
+            if (!request || request.revision !== this._pageLoadRevision || this._status !== "loaded") return;
+            const page = this._page;
+            if (!page?.hasCommand("focus")) {
+                this.#finishFocus();
+                return;
+            }
+
+            // Let Components created during the Page's first render render their own controls.
+            if (this.#firstRenderedPage !== page || request.frame !== null) return;
+            request.frame = requestAnimationFrame(() => {
+                if (this.#focusRequest !== request) return;
+                request.frame = null;
+                this.#finishFocus(page.host === this ? page : null);
+            });
+        }
+        #finishFocus(page = null) {
+            // Release pending work before invoking the Page or returning to the caller.
+            const request = this.#focusRequest;
+            if (!request) return;
+            this.#focusRequest = null;
+            request.signal?.removeEventListener("abort", request.cancel);
+            if (request.frame !== null) cancelAnimationFrame(request.frame);
+            try {
+                request.resolve(page ? Promise.resolve(page.onCommand("focus")).then(() => true) : false);
+            } catch (error) {
+                request.reject(error);
+            }
+        }
         async #loadSource() {
             // Report automatic load failures while keeping explicit load() calls awaitable.
             try {
@@ -209,9 +262,19 @@ export function createXPageClass(runtime) {
             }
         }
         async load() {
+            // Associate focus with this load and discard it if the load fails.
+            const loadRevision = ++this._loadRevision;
+            if (this.#focusRequest?.revision !== loadRevision) this.#finishFocus();
+            try {
+                await this.#loadPage(loadRevision);
+            } catch (error) {
+                if (this.#focusRequest?.revision === loadRevision) this.#finishFocus();
+                throw error;
+            }
+        }
+        async #loadPage(loadRevision) {
             console.log(`x-page: load '${this.src} ...`);
             let src = this.src;
-            let loadRevision = ++this._loadRevision;
 
             // reset
             this._status = "loading";
@@ -328,7 +391,7 @@ export function createXPageClass(runtime) {
 
                         // replace the current Page before transferring ownership of the candidate
                         await this.unmount();
-                        await this.unload();
+                        await this.#unloadPage();
                         if (loadRevision !== this._loadRevision) return;
                         this._page = page;
                         this._pageLoadRevision = loadRevision;
@@ -340,6 +403,7 @@ export function createXPageClass(runtime) {
                             this._status = "loaded";
                             if (layoutElement) layoutElement.removeAttribute("status");
                             this.dispatchEvent(new CustomEvent("load", { detail: { page } }));
+                            this.#advanceFocus();
                         }
                     });
 
@@ -368,6 +432,7 @@ export function createXPageClass(runtime) {
         }
         async unmount() {
             // unmount
+            if (this.#focusRequest?.revision === this._pageLoadRevision) this.#finishFocus();
             if (this._page) {
                 await this._page.unmount();
             }
@@ -381,9 +446,15 @@ export function createXPageClass(runtime) {
             this._src = value;
         }
         async unload() {
-            // unload
+            // Cancel focus even when the Page is still loading.
+            this.#finishFocus();
+            await this.#unloadPage();
+        }
+        async #unloadPage() {
+            // Release readiness with the Page that was rendered.
             const page = this._page;
             if (page) {
+                if (this.#firstRenderedPage === page) this.#firstRenderedPage = null;
                 await page.unload();
                 if (this._page === page) {
                     this._page = null;
@@ -408,6 +479,7 @@ export function createXPageClass(runtime) {
         }
         async removePage() {
             // Invalidate pending candidates and let an in-progress replacement finish cleanup.
+            this.#finishFocus();
             this._loadRevision++;
             if (this._loadCommit) await this._loadCommit;
             // try to close the layout if it exists

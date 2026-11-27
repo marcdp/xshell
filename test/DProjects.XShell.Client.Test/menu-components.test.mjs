@@ -34,7 +34,7 @@ function createMenuItem({children = true, classes = [], horizontal = false, stat
             if (documentListeners.get(`${name}:${capture}`) === listener) documentListeners.delete(`${name}:${capture}`);
         }
     };
-    const controller = menuItemDefinition.controller({state, host});
+    const controller = menuItemDefinition.controller({state, host, postRender() {}});
     return {controller, document, documentListeners, host, listeners, owner, state};
 }
 

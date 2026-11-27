@@ -130,6 +130,10 @@ export default class Page {
         this._host = host;
         await this.onCommand("mount", {});
     }
+    hasCommand(command) {
+        // Check for an optional controller handler without exposing the controller.
+        return typeof this._controller?.[command] === "function";
+    }
     async onCommand(command, params = {}) {
         const handler = this._controller[command];
         if (typeof(handler) === "function") {

@@ -63,7 +63,7 @@ export default {
         :host x-anchor x-icon:first-child {width:2em; text-align:center;}
         :host x-anchor x-icon:first-child:last-child {align-self:flex-end;}
         :host x-anchor x-icon ~ .label {apadding-left:.35em!important;}
-        :host x-anchor.selected {font-weight: 500; background:var(--x-menuitem-background-selected);}
+        :host x-anchor.selected {font-weight: 500!important; background:var(--x-menuitem-background-selected);}
         :host x-anchor:active {font-weight: normal; background:var(--x-menuitem-background-active);}
         :host .menuitem[disabled] {pointer-events:none; cursor:default; --x-color-text:var(--x-color-text-disabled);}
         :host HR {border:none; background:var(--x-menuitem-separator-color); height:.05em; margin-top:.15em; margin-bottom:.15em; display:block; box-sizing: border-box; width:100%;}
@@ -127,7 +127,7 @@ export default {
         </x-contextmenu>
         
     `,
-    controller({ state, host }) {
+    controller({ state, host, postRender }) {
         return {
             mount() {
                 // Bind interaction listeners once for the mounted Component.
@@ -242,19 +242,42 @@ export default {
                 this.refresh();
                 if (!state.hasChilds || state.disabled || state.expanded) return;
                 state.expanded = true;
+                // Request focus once the submenu is visible.
+                this._focusRequest = new AbortController();
+                postRender("focusEmbeddedPage", this._focusRequest);
                 if (!host.classList.contains("inline")) {
                     document.addEventListener("pointerdown", this._documentPointerDown, true);
                     document.addEventListener("x-menuitem-expand", this._siblingExpanded, true);
                     host.dispatchEvent(new CustomEvent("x-menuitem-expand", {detail: {item: host}, bubbles: true, composed: true}));
                 }
-                
             },
 
             collapse() {
                 // Collapse centrally and release dropdown dismissal listeners.
                 state.expanded = false;
+                this._focusRequest?.abort();
+                this._focusRequest = null;
                 document.removeEventListener("pointerdown", this._documentPointerDown, true);
                 document.removeEventListener("x-menuitem-expand", this._siblingExpanded, true);
+            },
+
+            async focusEmbeddedPage(request) {
+                // Visit this submenu's Pages in DOM order, including items that host their own Page.
+                const {signal} = request;
+                try {
+                    if (signal.aborted || !state.expanded || !host.isConnected) return;
+                    for (const element of host.querySelectorAll("x-menuitem, x-page")) {
+                        if (signal.aborted) break;
+                        if (element.parentElement?.closest("x-menuitem, x-page") !== host) continue;
+                        const page = element.localName === "x-page" ? element : element.shadowRoot?.querySelector("x-page");
+                        if (page?.layout && page.layout !== "embed") continue;
+                        if (page?.requestFocus && await page.requestFocus(signal)) break;
+                    }
+                } catch (error) {
+                    console.error("x-menuitem: embedded Page focus failed.", error);
+                } finally {
+                    if (this._focusRequest === request) this._focusRequest = null;
+                }
             },
 
             toggle() {
