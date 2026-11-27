@@ -187,20 +187,17 @@ export default {
             @media (min-width: 769px) {
                 .body:is(.layout-fill, .main-layout-fill) > main {
                     max-width:unset;
-                    __position:absolute;
-                    __top: var(--x-fill-top);
-                    __laeft:var(--x-layout-main-drawer-width); 
-                    __right:0;
-                    __bottom:0;
-                    
-                    outline:1px red solid;
-                    outline-offset: -1px;
+                    position:sticky;
+                    top: var(--x-fill-top);
+                    bottom:0;
+                    __outline:1px red solid;
+                    __outline-offset: -1px;
 
                     padding:0;
                     display:flex;
                     transition: left var(--x-transition-duration);
                     flex-direction: column;
-                    --x-layout-main-page-max-width: unset;
+                    --x-layout-main-page-max-width: 100vw;
                     --x-layout-main-page-max-width
                 }
                 .body:is(.layout-fill, .main-layout-fill) main > div {

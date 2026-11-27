@@ -14,7 +14,7 @@ export default {
         x-object {width:40em;}
     `,
     template: `
-        <x-dropdown class="bottom left fixed" collapse-on-click >
+        <x-dropdown class="bottom left" ccollapse-on-click >
             <x-button class="light round" icon="x-info" tooltip="Page information"></x-button>
             <div slot="dropdown" x-if="state.id">
                 <h3>Page information</h3>

@@ -65,6 +65,7 @@ export default {
             overflow: hidden;
             max-width:90vw;
             min-width: clamp(22em, 100%, 200%);
+            
         }
         .body > div {
             display:block;
@@ -72,8 +73,8 @@ export default {
             border-radius:var(--x-dropdown-border-radius);
             max-height:65vh;
             overflow-y:auto;
-            _scrollbar-width: var(--x-scrollbar-width);
-            _scrollbar-gutter: var(--x-scrollbar-gutter);
+            scrollbar-width: var(--x-scrollbar-width);
+            scrollbar-gutter: var(--x-scrollbar-gutter);
         }
 
         :host .body.expanded {
@@ -91,7 +92,7 @@ export default {
         :host(.right.up) .body { transform:translateY(-100%); margin-left:calc(100% + 1em);}
 
         /* fixed */
-        :host(.fixed) .body {
+        :host(.fixed) .body, :host .body[fixed] {
             min-width:unset;
             position: fixed;
         }
@@ -122,7 +123,7 @@ export default {
         <div class="header" x-class:expanded="state.expanded" x-on:focusin="focusHead" x-on:mousedown.stop="mousedownHead" x-on:click="clickHead" x-on:keydown.enter="clickHead">
             <slot></slot>
         </div>
-        <div class="body" x-class:expanded="state.expanded" x-on:collapse.stop="collapse" x-on:mousedown.stop="mousedown-body" x-on:click="clickBody">
+        <div class="body" x-class:expanded="state.expanded" x-on:collapse.stop="collapse" x-on:mousedown.stop="mousedown-body" x-on:click="clickBody" x-attr:fixed="state.fixed">
             <div>
                 <slot name="dropdown"></slot>
             </div>
@@ -131,7 +132,7 @@ export default {
     state: {
         expanded: false,
     },
-    controller({ state, events, bus, host, postRender }) {
+    controller({ state, events, bus, host, postRender, getPage }) {
         return {
             load() {
                 //load
@@ -154,7 +155,7 @@ export default {
                     }
                 });
             },
-
+            
             focusHead() {
                 //focus-head
                 if (!state.collapseOnClick) {
@@ -205,6 +206,10 @@ export default {
             expand() {
                 //expand
                 if (!state.expanded) {
+                    const page = getPage();
+                    if (page) {
+                        state.fixed = (page.layout == "dialog")
+                    }
                     this._expandedAt = performance.now();
                     state.expanded = true;
                     postRender("focus");

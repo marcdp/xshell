@@ -247,6 +247,7 @@ export default {
                     document.addEventListener("x-menuitem-expand", this._siblingExpanded, true);
                     host.dispatchEvent(new CustomEvent("x-menuitem-expand", {detail: {item: host}, bubbles: true, composed: true}));
                 }
+                
             },
 
             collapse() {

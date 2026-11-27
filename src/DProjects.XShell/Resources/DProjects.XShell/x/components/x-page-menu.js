@@ -47,6 +47,13 @@ export default {
         
     `,
     template: `
+
+        <!--
+        <x-dropdown>
+            <x-button icon="x-file"></x-button>
+            <x-page slot="dropdown" src="x:/page/preferences.js"></x-page>
+        </x-dropdown>-->
+
         <nav>
             <ul x-if="state.menu">
                 <li class="menuitem new" x-recursive="menuitem in state.menu" x-key="id,href,path,command,order" x-recursive-wrapper="ul">
@@ -63,6 +70,7 @@ export default {
                 </li>
             </ul>
         </nav>
+
     `,
     state: {
         collapsed: false,
