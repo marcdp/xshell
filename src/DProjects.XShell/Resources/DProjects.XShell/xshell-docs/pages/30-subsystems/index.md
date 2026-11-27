@@ -17,6 +17,7 @@ Implemented V0 runtime capabilities:
 - [Stores](120-stores.md) — Provider-independent, schema-described JSON document collections.
 - [Filesystems](130-filesystems.md) — Filesystem actions, file editor selection, and declarative editor contributions.
 - [Search](140-search.md) — Lazy federated provider discovery, ranking, cancellation, and failure isolation.
+- [Logging](150-logging.md) — Synchronous logging with a declaratively selected provider.
 
 Authentication and identity are supplied by the optional `x-identity` module; they do not introduce an `xshell.identity` Core configuration section.
 

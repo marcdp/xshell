@@ -82,6 +82,8 @@ export default class XShell {
         this._services.register("services", this._services, { contractItem: this._contracts.getContractItemById("services")});
         this._services.register("runtime", this._runtime, { contractItem: this._contracts.getContractItemById("runtime")});
         await this._services.init();
+        // Initialize logging before module controllers can consume it.
+        await this._services.initialize("logger");
         this._servicesInitialized = true;
         // Construct and validate Areas before module controllers execute
         const areas = this._services.resolve("areas");

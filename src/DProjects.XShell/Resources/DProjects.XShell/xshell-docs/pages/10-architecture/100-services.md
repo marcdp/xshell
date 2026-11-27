@@ -26,7 +26,8 @@ These are three separate objects:
 
 During startup, XShell discovers and validates contracts, registers its core/runtime service instances, and calls `Services.init()`. That method
 validates every configured contract reference, eagerly loads each configured implementation class, registers the implementation metadata, and then
-finalizes the registry. Configured service instances are not constructed during registration. XShell next resolves the declarative `areas` service,
+finalizes the registry. Configured service instances are not constructed during registration. XShell initializes the [Logger](../30-subsystems/150-logging.md)
+singleton before module controllers run. XShell next resolves the declarative `areas` service,
 validating its merged `xshell.services.areas.options`, before module controllers execute. It then resolves the declarative `modules` singleton
 and explicitly awaits its once-only initialization. Application definitions remain under top-level `config.modules`; Modules has no implementation options. After Modules
 initialize, XShell explicitly invokes `Areas.init()` with that singleton to compose module contributions, then resolves the declarative `navigation`

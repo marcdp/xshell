@@ -327,7 +327,11 @@ async function main() {
                     // The global navigation prefix belongs to the application URL, independent of the declaring module.
                     const globalPrefix = key === "globalPrefix" && manifestPath.length === 4 && manifestPath[0] === "xshell" &&
                         manifestPath[1] === "services" && manifestPath[2] === "navigation" && manifestPath[3] === "options";
-                    return [key, inventoryResource || searchPrefixes || globalPrefix ? item : normalizeManifest(item, module, declaringPath, [...manifestPath, key])];
+                    // Logger selection is a literal dictionary key even when it looks like a URL.
+                    const loggerProvider = key === "provider" && manifestPath.length === 4 && manifestPath[0] === "xshell" &&
+                        manifestPath[1] === "services" && manifestPath[2] === "logger" && manifestPath[3] === "options";
+                    return [key, inventoryResource || searchPrefixes || globalPrefix || loggerProvider
+                        ? item : normalizeManifest(item, module, declaringPath, [...manifestPath, key])];
                 }));
             }
             return normalizeUrl(value, module, declaringPath);
@@ -392,7 +396,9 @@ async function main() {
                 return result;
             };
             const merge = (target, source) => {
+                // Treat dictionary entries as own data properties, including keys inherited from Object.prototype.
                 for (const [key, value] of Object.entries(source)) {
+                    if (!Object.hasOwn(target, key)) Object.defineProperty(target, key, {value: undefined, enumerable: true, writable: true, configurable: true});
                     if (Array.isArray(value)) target[key] = mergeArray(Array.isArray(target[key]) ? target[key] : [], value);
                     else if (isObject(value)) target[key] = merge(isObject(target[key]) ? target[key] : {}, value);
                     else target[key] = value;

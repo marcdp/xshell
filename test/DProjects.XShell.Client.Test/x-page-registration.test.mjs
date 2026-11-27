@@ -4,6 +4,7 @@ import { readFile } from "node:fs/promises";
 import { registerHooks } from "node:module";
 import test from "node:test";
 import Services from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services.js";
+import Logger from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/logger.js";
 import MenuShortcuts from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/menu-shortcuts.js";
 import menuShortcutsContract from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/contracts/menu-shortcuts.json" with { type: "json" };
 
@@ -59,15 +60,21 @@ test("XShell init registers the native x-page and Loader returns the registered 
         return initShortcuts.call(this);
     });
     t.mock.method(xshell, "validateConfig", async () => {});
+    const initLogger = Logger.prototype.init;
+    t.mock.method(Logger.prototype, "init", async function () {
+        await initLogger.call(this);
+        startup.push("logger");
+    });
     t.mock.method(Services.prototype, "init", async function () {
         this.register("areas", { init() {}, getCurrentArea: () => null, getMenus: () => [] });
+        this.register("logger", null, { implementationItem: { class: Logger } });
         this.register("navigation", { init() { startup.push("navigation"); } });
         // Construct the real service through the runtime's options and contract validation.
         this.register("menuShortcuts", null, {
             implementationItem: { class: MenuShortcuts },
             contractItem: { contract: menuShortcutsContract }
         });
-        this.register("modules", { init() {}, shadowStyleSheets: [sharedSheet] });
+        this.register("modules", { init() { startup.push("modules"); }, shadowStyleSheets: [sharedSheet] });
         assert.equal(customElements.get("x-page"), undefined);
     });
     const manifestSource = await readFile(new URL("manifest.jsonc", framework), "utf8");
@@ -88,7 +95,7 @@ test("XShell init registers the native x-page and Loader returns the registered 
     // Resolve the manifest entry without loading the factory as a Component definition.
     assert.equal(await xshell._loader.load("component:x-page"), XPage);
     assert.deepEqual(xshell._loader.registry, []);
-    assert.deepEqual(startup, ["navigation", "shortcuts"]);
+    assert.deepEqual(startup, ["logger", "modules", "navigation", "shortcuts"]);
     assert.equal(getEventListeners(window.document, "keydown").length, 1);
     await xshell._services.dispose();
     assert.equal(getEventListeners(window.document, "keydown").length, 0);

@@ -86,6 +86,15 @@
                 "implementation": "/services/json-validator.js",
                 "lifetime": "singleton"
             },
+            "logger": {
+                "contract": "logger",
+                "implementation": "/services/logger.js",
+                "lifetime": "singleton",
+                "options": {
+                    "provider": null,
+                    "providers": {}
+                }
+            },
             "modules": {
                 "contract": "modules",
                 "implementation": "/services/modules.js",
