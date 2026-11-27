@@ -13,7 +13,7 @@
           "label": { "type": "string" },
           "description": { "type": "string" },
           "icon": { "type": ["string", "null"] },
-          "items": { "type": "array", "description": "Ordered, normalized root menu items. Nested items are in children." }
+          "items": { "type": "array", "description": "Ordered, normalized root menu items. Items preserve shortcut strings or lists and the declared disabled and target fields. Nested items are in children." }
         },
         "required": ["name", "scope", "label", "description", "icon", "items"],
         "additionalProperties": false

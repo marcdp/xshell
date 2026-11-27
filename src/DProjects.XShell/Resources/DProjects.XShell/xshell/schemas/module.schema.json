@@ -131,6 +131,15 @@
         "default": {"type": "boolean", "description": "Whether this item is the default navigation target."},
         "tooltip": {"type": ["string", "null"], "description": "Optional tooltip text for the menu item."},
         "command": {"type": ["string", "null"], "description": "Optional command associated with the menu item."},
+        "shortcut": {
+          "description": "One keyboard combination or a non-empty array of alternative combinations with explicit modifiers.",
+          "oneOf": [
+            {"type": "string", "minLength": 1},
+            {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}}
+          ]
+        },
+        "disabled": {"type": "boolean", "description": "Whether activation of this menu item is disabled."},
+        "target": {"type": ["string", "null"], "description": "Optional browser target for the menu item's navigation link."},
         "open": {"type": ["string", "null"], "description": "Optional Page presentation mode for the menu item.", "enum": ["auto", "top", "stack", "dialog", "dock", "embed", null]},
         "outlet": {"type": ["string", "null"], "description": "Optional named Page outlet. The reserved 'self' value is interpreted locally by x-menuitem when open is 'embed'."},
         "class": {"type": "string", "description": "CSS class to apply to the menu item."},

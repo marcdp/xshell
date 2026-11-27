@@ -140,27 +140,37 @@ function ownerController({ services, singleton, session, formatter }) {
     };
 }
 
+const pageControllers = new WeakMap();
+function pageOwnerController(dependencies) {
+    // Capture the injected values from the controller factory for scope assertions.
+    const controller = ownerController(dependencies);
+    pageControllers.set(dependencies.page, controller);
+    return controller;
+}
+
 test("definition-based Pages create one direct root scope with lifetime-aware injection", async () => {
     const { root, context } = createRuntime();
     const PageClass = await createPageClassFromJsDefinition("page-scopes.js", context, {
         meta: { id: "page-scopes" },
-        controller: ownerController
+        controller: pageOwnerController
     });
 
     const first = createPage(PageClass, "/pages/first.js");
     const second = createPage(PageClass, "/pages/second.js");
+    const firstController = pageControllers.get(first);
+    const secondController = pageControllers.get(second);
 
     assert.notStrictEqual(first._servicesScope, second._servicesScope);
     assert.strictEqual(first._servicesScope.resolve("services"), root);
     assert.strictEqual(second._servicesScope.resolve("services"), root);
-    assert.strictEqual(first._controller.services, first._servicesScope);
-    assert.strictEqual(first._controller.singleton, second._controller.singleton);
-    assert.strictEqual(first._controller.session, first._servicesScope.resolve("session"));
-    assert.notStrictEqual(first._controller.session, second._controller.session);
-    assert.notStrictEqual(first._controller.transients[0], first._controller.transients[1]);
+    assert.strictEqual(firstController.services, first._servicesScope);
+    assert.strictEqual(firstController.singleton, secondController.singleton);
+    assert.strictEqual(firstController.session, first._servicesScope.resolve("session"));
+    assert.notStrictEqual(firstController.session, secondController.session);
+    assert.notStrictEqual(firstController.transients[0], firstController.transients[1]);
 
     const scope = first._servicesScope;
-    const scopedInstance = first._controller.session;
+    const scopedInstance = firstController.session;
     const host = createPageHost();
     await first.mount({ host });
     await first.unmount();
@@ -172,7 +182,7 @@ test("definition-based Pages create one direct root scope with lifetime-aware in
     await first.unload();
     assertScopeDisposed(scope);
     assertScopeActive(second._servicesScope);
-    assert.strictEqual(second._servicesScope.resolve("singleton"), second._controller.singleton);
+    assert.strictEqual(second._servicesScope.resolve("singleton"), secondController.singleton);
 });
 
 test("definition-based Components create independent scopes before attachment and preserve them across reconnects", async () => {
@@ -216,7 +226,7 @@ test("definition-based Components create independent scopes before attachment an
 test("Page and Component scopes are independent even when the Component is rendered inside the Page", async () => {
     const { root, context } = createRuntime();
     const PageClass = await createPageClassFromJsDefinition("independent-page.js", context, {
-        meta: { id: "independent-page" }, controller: ownerController
+        meta: { id: "independent-page" }, controller: pageOwnerController
     });
     const Component = await createComponentClassFromJsDefinition("independent-component.js", context, {
         meta: { id: `x-independent-component-${++runtimeId}` }, controller: ownerController
@@ -230,8 +240,8 @@ test("Page and Component scopes are independent even when the Component is rende
     assert.strictEqual(page._servicesScope.resolve("services"), root);
     assert.strictEqual(component._servicesScope.resolve("services"), root);
     assert.notStrictEqual(page._servicesScope, component._servicesScope);
-    assert.notStrictEqual(page._controller.session, component._controller.session);
-    assert.strictEqual(page._controller.singleton, component._controller.singleton);
+    assert.notStrictEqual(pageControllers.get(page).session, component._controller.session);
+    assert.strictEqual(pageControllers.get(page).singleton, component._controller.singleton);
 
     await page.unload();
     assertScopeActive(component._servicesScope);
@@ -348,8 +358,8 @@ test("Page cleanup and scope disposal continue when controller unload fails", as
     assert.deepEqual(events, ["xshell:page:unload"]);
     assert.deepEqual(order.slice(0, 2), ["controller-unload", "helper-dispose"]);
     assertScopeDisposed(scope);
-    assert.equal(page._host, null);
-    assert.equal(page._refs, null);
+    assert.equal(page.host, null);
+    assert.equal(page.hasCommand("unload"), false);
     await page.unload();
 });
 

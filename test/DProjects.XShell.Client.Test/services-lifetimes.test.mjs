@@ -106,6 +106,24 @@ test("direct registrations remain singleton and reject incompatible preconstruct
     assert.throws(() => services.register("invalid", null, { lifetime: "application" }), /Invalid lifetime 'application'/);
 });
 
+test("service construction does not publish lifecycle notifications to the Bus", async t => {
+    const bus = { emit: t.mock.fn() };
+    const services = createServices(bus);
+    services.register("bus", bus);
+    class Example {
+        static optionsSchema = { type: "object", additionalProperties: false };
+    }
+    // Exercise each lifetime through the same scope and confirm singleton metadata stays available.
+    const scope = services.beginScope();
+    for (const lifetime of ["singleton", "scoped", "transient"]) {
+        registerImplementation(services, lifetime, Example, lifetime);
+        assert.ok(scope.resolve(lifetime) instanceof Example);
+    }
+    assert.equal(services.getServiceInfo("singleton").state, "created");
+    assert.equal(bus.emit.mock.callCount(), 0);
+    await services.dispose();
+});
+
 test("singletons construct once in root context and remain shared across scopes", async () => {
     const services = createServices();
     let dependencyConstructions = 0;

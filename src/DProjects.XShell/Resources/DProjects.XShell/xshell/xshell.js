@@ -67,9 +67,8 @@ export default class XShell {
         this._services = new Services( {
             config, 
             loader: this._loader, 
-            contracts: this._contracts, 
-            resolver: this._resolver, 
-            bus: this._bus
+            contracts: this._contracts,
+            resolver: this._resolver
         } );
         // compose contracts list in memory from modules             
         await this._contracts.init();
@@ -103,6 +102,10 @@ export default class XShell {
         customElements.define("x-page", XPage);
         // initialize the declaratively registered Navigation service
         await this._services.initialize("navigation");
+        // Start application shortcut handling after the effective Area is known.
+        if (this._services.has("menuShortcuts")) {
+            this._services.addDisposable(await this._services.initialize("menuShortcuts"));
+        }
         
     }   
     async validateConfig(config) {

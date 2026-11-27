@@ -227,8 +227,8 @@ implementation configuration, and the public contract remain distinct: dependenc
 `options` is private implementation configuration, and the contract describes the public runtime API.
 
 `Services.resolve()` validates the complete configured options object immediately before invoking the constructor. When `options` is absent, it
-validates and passes a new empty object. A missing or invalid `optionsSchema`, or options that fail it, produce a service-specific error without
-invoking the constructor or emitting `xshell:service:created`; the service remains registered and may be resolved again. Validation does not mutate
+validates and passes a new empty object. A missing or invalid `optionsSchema`, or options that fail it, produce a service-specific error before
+invoking the constructor. The service remains registered and may be resolved again. Validation does not mutate
 the schema or options. Options remain private construction data and are not included in `services.registry` or `services.getServiceInfo()` metadata.
 
 `Services` owns its mutable runtime service records internally. `services.registry` returns a read-only snapshot of application registration metadata:
@@ -375,9 +375,8 @@ being constructed detects a circular constructor dependency and reports the reso
 validation resets any singleton or scoped cache record so a later resolve can retry; a failed transient is never cached.
 Duplicate registrations, including collisions with core names, fail.
 
-After each configured instance is constructed and validated, XShell emits `xshell:service:created` on the Bus with `{ id }`. A singleton emits once;
-scoped and transient registrations can emit for multiple instances. Failed attempts emit no created event. Consumers can re-read
-`services.registry`; only singleton construction changes its global state projection.
+Successful singleton construction updates the state reported by `services.registry`. The Services diagnostics Page reads a fresh registry snapshot
+on load, when its filters change, and when the user clicks Refresh.
 
 The directly registered core names are `bus`, `config`, `loader`, `resolver`, `contracts`, and `services`; these preconstructed registrations are
 singletons. `areas`, `commands`, `dialog`, `i18n`,

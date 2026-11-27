@@ -31,12 +31,6 @@
       }
     }
   },
-  "events": {
-    "xshell:service:created": {
-      "description": "Emitted after each configured service instance is constructed and its contract surface has been validated. Singleton construction emits once; scoped and transient registrations may emit for multiple instances.",
-      "detail": {"id":{"type":"string","required":true,"description":"Registered service name."}}
-    }
-  },
   "methods": {
     "beginScope": {
       "description": "Creates an active child Services instance that shares root registrations and singletons while owning an independent resource lifecycle and optional construction context.",

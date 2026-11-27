@@ -159,9 +159,8 @@ test("Bus diagnostics retains only the newest 1000 events", () => {
     assert.equal(state.registry[999].detail.id, 1001);
 });
 
-test("Services diagnostics re-reads the public registry when a service is created", () => {
+test("Services diagnostics re-reads the public registry on Refresh", () => {
     const state = Object.assign(new EventTarget(), { id: "", moduleId: "", contractId: "", tags: "ROUT", description: "", items: [] });
-    const bus = new EventTarget();
     let reads = 0;
     let serviceState = "registered";
     const services = {
@@ -171,14 +170,15 @@ test("Services diagnostics re-reads the public registry when a service is create
         }
     };
     let controller;
-    controller = ServicesPage.controller({ state, bus, services, events: createEvents(() => controller) });
+    controller = ServicesPage.controller({ state, services, events: createEvents(() => controller) });
     controller.load();
     assert.equal(state.items[0].status, "registered");
     assert.equal(state.items[0].initializationStatus, "not-initialized");
     assert.deepEqual(state.items[0].tags, ["navigation", "routing"]);
 
     serviceState = "created";
-    bus.dispatchEvent(new Event("xshell:service:created"));
+    assert.match(ServicesPage.template, /<x-button[^>]*label="Refresh"[^>]*command="refresh"/);
+    controller.refresh();
     assert.equal(reads, 2);
     assert.equal(state.items[0].status, "created");
 });
@@ -385,7 +385,6 @@ function createInspector(t, query = "", { resolutionError, instance = { mode: "p
             if (resolutionError) throw resolutionError;
             if (!instance) return instance;
             services.getServiceInfo(id).state = "created";
-            bus.dispatchEvent(new Event("xshell:service:created"));
             return instance;
         }
     };

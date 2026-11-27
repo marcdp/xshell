@@ -1,4 +1,6 @@
 
+import { bindMenuPresenter, getMenuShortcutHints } from "../utils/menu-presenter.js";
+
 export default {
     contract: {
         description: "Workspace menu and pages.",
@@ -54,16 +56,20 @@ export default {
     template: `
         <div>
             <div class="menu-container" x-on:click.capture="selectItem">
-                <x-menuitem x-recursive="menuitem in state.menu" 
+                <x-menuitem x-recursive="(menuitem,index,indexAbsolute) in state.menu"
                     x-key="id,href,path,command,order" 
-                    x-attr:data-item="menuitem.label != '-' && !menuitem.command && (menuitem.path || menuitem.href) ? menuitem.id : null"
-                    x-attr:label="menuitem.label" 
-                    x-attr:href="menuitem.path || menuitem.href" 
+                    x-attr:data-menu-index="menuitem.shortcut ? indexAbsolute : null"
+                    x-attr:data-item="menuitem.label != '-' && !menuitem.command && !menuitem.target && (menuitem.path || menuitem.href) ? menuitem.id : null"
+                    x-attr:label="menuitem.label"
+                    x-attr:href="menuitem.path || menuitem.href"
+                    x-attr:target="menuitem.target"
                     x-attr:command="menuitem.command"
+                    x-attr:shortcut="state.shortcutHints[indexAbsolute]"
+                    x-attr:disabled="menuitem.disabled"
                     x-attr:icon="menuitem.icon"                     
                     x-attr:class="menuitem.class"
                     x-attr:tooltip="menuitem.tooltip" 
-                    x-attr:selected="state.item != null && menuitem.id == state.item && menuitem.label != '-' && !menuitem.command && !!(menuitem.path || menuitem.href)"
+                    x-attr:selected="state.item != null && menuitem.id == state.item && menuitem.label != '-' && !menuitem.command && !menuitem.target && !!(menuitem.path || menuitem.href)"
                     open="embed"
                     outlet="content"
                     >                
@@ -81,18 +87,20 @@ export default {
 
     state: {
         menu: [],
+        shortcutHints: [],
         title: null,
         description: null,
         src: null
     },
 
-    controller({state, areas, page, navigation, query, postRender}) {
+    controller({state, areas, page, navigation, query, postRender, services}) {
 
         return {
             load() {
                 // Read the effective menu through the current Area.
                 const menu = areas.getMenu(state.menuName);
                 state.menu = menu?.items || [];
+                state.shortcutHints = getMenuShortcutHints(state.menu);
 
                 this.collectItems(state.menu);
                 if (!menu) return;
@@ -103,12 +111,21 @@ export default {
             },
             mount() {
                 // Wait until the Workspace is in the navigation stack and its outlet exists.
+                postRender("bindMenu");
                 if (!state.src) postRender("openInitialItem");
             },
+            unmount() {
+                this._releaseMenu?.();
+                this._releaseMenu = null;
+            },
+            bindMenu() {
+                // Keep mounted activation on the Workspace's own click handler and outlet.
+                this._releaseMenu = bindMenuPresenter(page.host?.querySelector(".menu-container"), state.menu, services);
+            },
             collectItems(items, result = new Map()) {
-                // Validate effective IDs in depth-first menu order, after Areas merges contributions.
+                // Collect embedded destinations in depth-first menu order after Areas merges contributions.
                 for (const item of items) {
-                    if (item.label !== "-" && !item.command && (item.path || item.href)) {
+                    if (item.label !== "-" && !item.command && !item.target && (item.path || item.href)) {
                         if (item.id) {
                             if (result.has(item.id)) {
                                 throw new Error(`Workspace menu '${state.menuName}' has duplicate navigable item ID '${item.id}'.`);
@@ -137,7 +154,7 @@ export default {
                 const menuitem = path.find(element => element.localName === "x-menuitem");
                 if (anchor < 0 || !menuitem?.dataset.item || path.slice(0, anchor).some(element => element.classList?.contains("has-childs"))) return;
                 const item = this.collectItems(state.menu).get(menuitem.dataset.item);
-                if (!item) return;
+                if (!item || item.disabled) return;
                 event.preventDefault();
                 return this.openItem(item);
             },

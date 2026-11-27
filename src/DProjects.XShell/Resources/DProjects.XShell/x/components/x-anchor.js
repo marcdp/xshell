@@ -81,7 +81,7 @@ export default {
         :host(.light) a:active {background:var(--x-button-background-active-light); border-color:var(--x-color-background-xx-gray); }
     `,
     template: `
-        <a part="a" x-attr:href="state.hrefReal" x-attr:disabled="state.disabled" x-attr:target="state.target" x-attr:rel="state.rel" x-attr:title="state.tooltip" x-on:click="click" x-on:keydown="keydown" tabindex="1"><slot></slot></a>
+        <a part="a" x-attr:href="state.hrefReal" x-attr:disabled="state.disabled" x-attr:target="state.target" x-attr:rel="state.rel" x-attr:title="state.tooltip" x-on:click="click" x-on:keydown="keydown" x-attr:tabindex="state.disabled ? -1 : 1"><slot></slot></a>
     `,
     state: {
         hrefReal: null
@@ -124,6 +124,10 @@ export default {
             click(params) {
                 // click
                 const event = params.event;
+                if (state.disabled) {
+                    event.preventDefault();
+                    return;
+                }
                 if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || state.target) return;
                 if (!state.href) return;
                 if (!state.href.startsWith("page:") && (/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(state.href) || state.href.startsWith("//"))) return;
@@ -149,7 +153,7 @@ export default {
             async keydown(args) {
                 // keydown
                 let event = args.event;
-                if (event.key == "Enter" && !event.altKey) {
+                if (!state.disabled && event.key == "Enter" && !event.altKey) {
                     const a = host.shadowRoot.querySelector("a");
                     a.click();
                 }

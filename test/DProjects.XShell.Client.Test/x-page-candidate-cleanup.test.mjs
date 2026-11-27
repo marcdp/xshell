@@ -435,17 +435,15 @@ test("Workspace reloads on explicit navigation and reflects selection and fragme
 
     // Select Workspace items through the controller, then use both Page URL update APIs.
     const scope = workspace._servicesScope;
-    const controller = workspace._controller;
     const position = runtime.position;
-    const items = controller.collectItems(workspace._state.menu);
-    await controller.openItem(items.get("appearance"));
-    await controller.openItem(items.get("filesystems"));
-    await controller.openItem(items.get("appearance"));
+    const items = await workspace.onCommand("collectItems", workspace._state.menu);
+    await workspace.onCommand("openItem", items.get("appearance"));
+    await workspace.onCommand("openItem", items.get("filesystems"));
+    await workspace.onCommand("openItem", items.get("appearance"));
     workspace.replaceQuery({ extra: "still here" });
     workspace.replaceHash("options");
     await runtime.flushHashEvents();
     assert.equal(host.page, workspace);
-    assert.equal(workspace._controller, controller);
     assert.equal(workspace._servicesScope, scope);
     assertScopeActive(scope);
     assert.equal(runtime.position, position);

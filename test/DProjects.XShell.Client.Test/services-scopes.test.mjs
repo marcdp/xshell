@@ -3,13 +3,12 @@ import test from "node:test";
 
 import Services from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services.js";
 
-function createServices(bus = { emit() {} }) {
+function createServices() {
     return new Services({
         config: { app: { baseUrl: "https://example.test/" }, modules: {}, xshell: { services: {} } },
         loader: { async load() { throw new Error("Unexpected load."); } },
         contracts: { getContractItemById() { return undefined; } },
-        resolver: { resolve() { return undefined; } },
-        bus
+        resolver: { resolve() { return undefined; } }
     });
 }
 
@@ -54,9 +53,8 @@ test("beginScope creates distinct nested Services scopes without constructing se
     await assert.rejects(first.init(), /Only the root Services instance can initialize the service registry/);
 });
 
-test("root and child scopes share lazy singleton construction, dependencies, and created events", () => {
-    const emitted = [];
-    const root = createServices({ emit(type, detail) { emitted.push({ type, detail }); } });
+test("root and child scopes share lazy singleton construction and dependencies", () => {
+    const root = createServices();
     let dependencyConstructions = 0;
     let consumerConstructions = 0;
     class Dependency {
@@ -79,7 +77,6 @@ test("root and child scopes share lazy singleton construction, dependencies, and
     assert.strictEqual(consumer.dependency, root.resolve("dependency"));
     assert.equal(dependencyConstructions, 1);
     assert.equal(consumerConstructions, 1);
-    assert.deepEqual(emitted.map(event => event.detail.id), ["dependency", "consumer"]);
 });
 
 test("scoped resolution preserves missing, circular, contract, and options validation errors", () => {

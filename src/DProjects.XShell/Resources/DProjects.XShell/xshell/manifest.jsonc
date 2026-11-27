@@ -127,6 +127,11 @@
                     "providers": {}
                 }
             },
+            "menuShortcuts": {
+                "contract": "menu-shortcuts",
+                "implementation": "/services/menu-shortcuts.js",
+                "lifetime": "singleton"
+            },
             "tasks":{
                 "contract": "tasks",
                 "implementation": "/services/tasks.js",

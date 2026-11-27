@@ -26,7 +26,6 @@ function createContractItem(id, methods = {}, properties = {}) {
 
 function createServices(definitions, implementations, contractItems, { moduleId = "test", frameworkFiles = [] } = {}) {
     const loads = [];
-    const emitted = [];
     const config = {
         app: { basePath: "/app", baseUrl: "https://example.test/app/" },
         modules: {
@@ -56,10 +55,9 @@ function createServices(definitions, implementations, contractItems, { moduleId 
             getModuleId() {
                 return moduleId;
             }
-        },
-        bus: { emit(type, detail) { emitted.push({ type, detail, state: services.getServiceInfo(detail.id).state }); } }
+        }
     });
-    return { config, loads, services, emitted };
+    return { config, loads, services };
 }
 
 // build each value descriptor in its contract location
@@ -409,13 +407,12 @@ test("service option validation rejects missing, incorrectly typed, and unknown 
             example: { contract: "example", implementation: "/_assets/test/services/example.js", lifetime: "singleton", options }
         };
         const implementations = { "esm:/_assets/test/services/example.js": ExampleService };
-        const { emitted, services } = createServices(definitions, implementations, { example: createContractItem("example") });
+        const { services } = createServices(definitions, implementations, { example: createContractItem("example") });
 
         await services.init();
 
         assert.throws(() => services.resolve("example"), expected);
         assert.equal(services.getServiceInfo("example").state, "registered");
-        assert.deepEqual(emitted, []);
     }
     assert.equal(constructions, 0);
 });
@@ -445,7 +442,7 @@ test("valid service options are validated immediately before construction withou
         example: { contract: "example", implementation: "/_assets/test/services/example.js", lifetime: "singleton", options }
     };
     const implementations = { "esm:/_assets/test/services/example.js": ExampleService };
-    const { emitted, services } = createServices(definitions, implementations, { example: createContractItem("example") });
+    const { services } = createServices(definitions, implementations, { example: createContractItem("example") });
 
     await services.init();
     assert.deepEqual(order, []);
@@ -456,7 +453,6 @@ test("valid service options are validated immediately before construction withou
     assert.deepEqual(order, ["validate", "construct"]);
     assert.deepEqual(options, originalOptions);
     assert.deepEqual(schema, originalSchema);
-    assert.deepEqual(emitted, [{ type: "xshell:service:created", detail: { id: "example" }, state: "created" }]);
 });
 
 test("omitted service options validate as an empty object", async () => {
@@ -495,14 +491,13 @@ test("failed service option validation preserves retry behavior and validation i
         example: { contract: "example", implementation: "/_assets/test/services/example.js", lifetime: "singleton", options }
     };
     const implementations = { "esm:/_assets/test/services/example.js": ExampleService };
-    const { emitted, services } = createServices(definitions, implementations, { example: createContractItem("example") });
+    const { services } = createServices(definitions, implementations, { example: createContractItem("example") });
 
     await services.init();
 
     assert.throws(() => services.resolve("example"), /#\/timeout.*type "string" is invalid/);
     assert.equal(constructions, 0);
     assert.equal(services.getServiceInfo("example").state, "registered");
-    assert.deepEqual(emitted, []);
     assert.deepEqual(options, originalOptions);
     assert.deepEqual(schema, originalSchema);
 
@@ -510,30 +505,9 @@ test("failed service option validation preserves retry behavior and validation i
     assert.ok(services.resolve("example") instanceof ExampleService);
     assert.equal(constructions, 1);
     assert.equal(services.getServiceInfo("example").state, "created");
-    assert.deepEqual(emitted, [{ type: "xshell:service:created", detail: { id: "example" }, state: "created" }]);
 });
 
-test("successful lazy creation emits once after validation with only the service ID", async () => {
-    class ExampleService {
-        static optionsSchema = {
-            type: "object",
-            additionalProperties: false
-        };
-        execute() {}
-    }
-    const definitions = { example: { contract: "example", implementation: "/_assets/test/services/example.js", lifetime: "singleton" } };
-    const implementations = { "esm:/_assets/test/services/example.js": ExampleService };
-    const contractItems = { example: createContractItem("example", { execute: {} }) };
-    const { services, emitted } = createServices(definitions, implementations, contractItems);
-
-    await services.init();
-    assert.deepEqual(emitted, []);
-    services.resolve("example");
-    services.resolve("example");
-    assert.deepEqual(emitted, [{ type: "xshell:service:created", detail: { id: "example" }, state: "created" }]);
-});
-
-test("failed lazy construction emits no created event and can be retried", async () => {
+test("failed lazy construction can be retried", async () => {
     let attempts = 0;
     class ExampleService {
         static optionsSchema = {
@@ -547,14 +521,14 @@ test("failed lazy construction emits no created event and can be retried", async
     const definitions = { example: { contract: "example", implementation: "/_assets/test/services/example.js", lifetime: "singleton" } };
     const implementations = { "esm:/_assets/test/services/example.js": ExampleService };
     const contractItems = { example: createContractItem("example") };
-    const { services, emitted } = createServices(definitions, implementations, contractItems);
+    const { services } = createServices(definitions, implementations, contractItems);
 
     await services.init();
     assert.throws(() => services.resolve("example"), /construction failed/);
     assert.equal(services.getServiceInfo("example").state, "registered");
-    assert.deepEqual(emitted, []);
-    services.resolve("example");
-    assert.deepEqual(emitted, [{ type: "xshell:service:created", detail: { id: "example" }, state: "created" }]);
+    assert.ok(services.resolve("example") instanceof ExampleService);
+    assert.equal(attempts, 2);
+    assert.equal(services.getServiceInfo("example").state, "created");
 });
 
 test("service inspection returns independent read-only metadata snapshots", async () => {
@@ -763,12 +737,11 @@ test("service creation rejects an implementation missing a required method", asy
     const definitions = { toast: { contract: "toast", implementation: "/_assets/test/services/toast.js", lifetime: "singleton" } };
     const implementations = { "esm:/_assets/test/services/toast.js": InvalidService };
     const contractItems = { toast: createContractItem("toast", { show: {} }) };
-    const { services, emitted } = createServices(definitions, implementations, contractItems);
+    const { services } = createServices(definitions, implementations, contractItems);
     await services.init();
 
     assert.throws(() => services.resolve("toast"), /Service 'toast' does not implement required method 'show'\./);
     assert.equal(services.getServiceInfo("toast").state, "registered");
-    assert.deepEqual(emitted, []);
 });
 
 test("service creation accepts a declared own property", async () => {

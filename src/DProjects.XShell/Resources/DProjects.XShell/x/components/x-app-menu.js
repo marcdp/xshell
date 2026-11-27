@@ -1,4 +1,4 @@
-
+import { bindMenuPresenter, getMenuShortcutHints } from "../utils/menu-presenter.js";
 // component
 export default {
     contract: {
@@ -40,6 +40,8 @@ export default {
         div.collapsed {
             width:3.6em;
         }
+        div.collapsed > x-menuitem {--x-menuitem-shortcut-display:none;}
+        div.collapsed x-menuitem:not(.collapsible) {--x-menuitem-shortcut-display:inline;}
         x-menuitem.flex {flex:1; visibility:hidden;}
         x-menuitem[label='-'] {padding-left:.75em; padding-right:.75em;}
         
@@ -49,9 +51,13 @@ export default {
         <div x-if="state.menu" x-attr:class="state.expanded ? '' : 'collapsed'">
             <x-menuitem x-recursive="(menuitem,index,indexAbsolute,indent) in state.menu"
                 x-key="id,href,path,order,command"
+                x-attr:data-menu-index="menuitem.shortcut ? indexAbsolute : null"
                 x-attr:label="menuitem.label"
-                x-attr:href="menuitem.href"
+                x-attr:href="menuitem.open == 'embed' && menuitem.outlet == 'self' ? menuitem.href : menuitem.path || menuitem.href"
+                x-attr:target="menuitem.target"
                 x-attr:command="menuitem.command"
+                x-attr:shortcut="state.shortcutHints[indexAbsolute]"
+                x-attr:disabled="menuitem.disabled"
                 x-attr:icon="menuitem.icon"
                 x-attr:expand-on="indent == 0 ? 'click' : 'hover'"
                 x-attr:selected="(indent==0 && menuitem.href == state.selected)"
@@ -71,11 +77,12 @@ export default {
         expanded: false,
         selected: "",
         menu: null,
+        shortcutHints: [],
         tasksRunning:    0,
         tasksFinished:   0,
         tasksButtonVisible: false
     },
-    controller({ config, events, bus, state, tasks, areas, host, preferences }) {
+    controller({ events, bus, state, tasks, areas, host, preferences, services, postRender }) {
         return {
             async load() {
                 // load
@@ -88,9 +95,26 @@ export default {
                 this.refreshTasks();
             },
 
+            mount() {
+                postRender("bindMenu");
+            },
+            stateChange({changes}) {
+                if (this._releaseMenu && changes.some(change => change.prop === "menu")) postRender("bindMenu");
+            },
+            unmount() {
+                this._releaseMenu?.();
+                this._releaseMenu = null;
+            },
+            bindMenu() {
+                // Associate controls with the rendered menu after the DOM has caught up.
+                this._releaseMenu?.();
+                this._releaseMenu = bindMenuPresenter(host.shadowRoot, state.menu, services);
+            },
+
             refresh() {
-                //refresh
+                // Refresh the effective menu and its visible shortcut hints together.
                 state.menu = areas.getMenu("global").items;
+                state.shortcutHints = getMenuShortcutHints(state.menu);
             },
             refreshSelected() {
                 // Resolve the Area home to its canonical href.

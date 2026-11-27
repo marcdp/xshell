@@ -73,6 +73,15 @@ test("Workspace resolves explicit IDs and falls back for unknown values", () => 
     assert.equal(unknown.navigations[0].href, href);
 });
 
+test("Workspace leaves browser-target links out of its embedded selection", () => {
+    const help = {id: "help", label: "Help", href: "/pages/help.js", target: "_blank"};
+    const areas = createAreas({reports: {menus: {reports: {...reports, items: [help, ...reports.items]}}}});
+    const {state, page, navigations} = createPage("reports", "help", areas);
+    assert.equal(state.menu[0].target, "_blank");
+    assert.equal(state.item, "overview");
+    assert.deepEqual(navigations, [{href, page, open: "embed", outlet: "content"}]);
+});
+
 test("Workspace leaves missing and empty menus without embedded navigation", () => {
     for (const name of ["unknown", "empty"]) {
         const { state, navigations } = createPage(name, "overview");

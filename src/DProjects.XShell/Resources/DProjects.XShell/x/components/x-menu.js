@@ -1,3 +1,5 @@
+import { bindMenuPresenter, getMenuShortcutHints } from "../utils/menu-presenter.js";
+
 // component
 export default {
     contract: {
@@ -38,11 +40,15 @@ export default {
     `,
     template: `
         <nav x-if="state.menu" x-attr:class="state.horizontal ? 'horizontal' : ''">
-            <x-menuitem x-recursive="menuitem in state.menu" 
+            <x-menuitem x-recursive="(menuitem,index,indexAbsolute) in state.menu"
                 x-key="id,href,path,command,order" 
+                x-attr:data-menu-index="menuitem.shortcut ? indexAbsolute : null"
                 x-attr:label="menuitem.label" 
                 x-attr:href="menuitem.open == 'embed' && menuitem.outlet == 'self' ? menuitem.href : menuitem.path || menuitem.href"
+                x-attr:target="menuitem.target"
                 x-attr:command="menuitem.command"
+                x-attr:shortcut="state.shortcutHints[indexAbsolute]"
+                x-attr:disabled="menuitem.disabled"
                 x-attr:icon="menuitem.icon" 
                 x-attr:selected="menuitem.selected" 
                 x-attr:class="menuitem.class"
@@ -52,6 +58,31 @@ export default {
                 >                
             </x-menuitem>
         </nav>        
-    `
+    `,
+    state: {
+        shortcutHints: []
+    },
+    controller({host, state, services, postRender}) {
+        return {
+            mount() {
+                postRender("bindMenu");
+            },
+            stateChange({changes}) {
+                // Update hints in the same render as the supplied menu.
+                if (!changes.some(change => change.prop === "menu")) return;
+                state.shortcutHints = getMenuShortcutHints(state.menu);
+                if (this._releaseMenu) postRender("bindMenu");
+            },
+            unmount() {
+                this._releaseMenu?.();
+                this._releaseMenu = null;
+            },
+            bindMenu() {
+                // Associate controls with the rendered menu after the DOM has caught up.
+                this._releaseMenu?.();
+                this._releaseMenu = bindMenuPresenter(host.shadowRoot, state.menu, services);
+            }
+        };
+    }
 };
 

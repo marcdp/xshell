@@ -20,6 +20,8 @@ export default {
             badge:     {type:"string", default:"", attribute:true, state:true, description:""},
             badgeClass: {type:"string", default:"plain", attribute:true, state:true, description:""},
             command:   {type:"string", default:"", attribute:true, state:true, description:""},
+            disabled:  {type:"boolean", default:false, attribute:true, state:true, description:"Disables activation of the button."},
+            shortcut:  {type:"string", default:"", attribute:true, state:true, description:"Optional keyboard combination to display beside the label."},
             href:      {type:"string", default:"", attribute:true, state:true, description:""},
             autofocus: {type:"boolean", default:false, attribute:true, state:true, description:""},
             tooltip:    {type:"string", default:"", attribute:true, state:true, description:""}
@@ -140,6 +142,7 @@ export default {
         :host(.menuitem) .button {display:flex; padding-left:.7em; padding-right:.6em; text-decoration:none; height:2.1em; outline:none; border:none; background:var(--x-button-background); border-radius:var(--x-menuitem-border-radius); align-items:center;}
         :host(.menuitem) .button > x-icon {font-weight: normal; color:var(--x-color-text); margin-right:.2em;}
         :host(.menuitem) .button > div span.label {font-weight: normal; color:var(--x-color-text);}
+        :host .button > kbd {display:var(--x-menuitem-shortcut-display, inline); margin-inline-start:auto; padding-inline-start:.5em; color:var(--x-color-text-gray); font:inherit; font-size:var(--x-font-size-small); white-space:nowrap; overflow:hidden;}
         :host(.menuitem) .button:hover {background:var(--x-color-background-x-gray); }
         :host(.menuitem) .button:active {background:var(--x-color-background-xx-gray); }
         :host(.menuitem) .button:focus {outline:none; background:var(--x-color-background-x-gray);}
@@ -172,12 +175,13 @@ export default {
     `,
     template: ` 
         <div>
-            <button part="button" class="button" tabindex="1" x-attr:expanded="(state.expanded && !state.command ? true : false)" x-on:click="command" x-attr:has-more="(state.childs && state.command ? true : false)" x-on:keydown.enter="command" x-attr:title="state.tooltip">
+            <button part="button" class="button" tabindex="1" x-attr:disabled="state.disabled" x-attr:expanded="(state.expanded && !state.command ? true : false)" x-on:click="command" x-attr:has-more="(state.childs && state.command ? true : false)" x-on:keydown.enter="command" x-attr:title="state.tooltip || state.shortcut">
                 <x-icon class="icon" x-if="state.icon" x-attr:icon="state.icon"></x-icon>
                 <div x-if="state.label" part="label">
                     <span class="label"   x-if="state.label" x-text="state.label"></span>
                     <span class="message" x-if="state.message" x-text="state.message"></span>
                 </div>
+                <kbd x-if="state.shortcut" aria-hidden="true" x-text="state.shortcut"></kbd>
                 <x-icon class="down" x-if="state.childs && !state.command" icon="x-arrow-down-fill"></x-icon>
                 <x-badge x-if="state.badge" x-attr:value="state.badge" x-attr:class="state.badgeClass"></x-badge>
             </button>
@@ -214,6 +218,7 @@ export default {
 
             command(args) {
                 // command
+                if (state.disabled) return;
                 let handled = false;
                 if (state.command) {
                     host.dispatchEvent(new CustomEvent("command", {detail: {command: state.command, data: host.dataset}, bubbles: true, composed: true}));

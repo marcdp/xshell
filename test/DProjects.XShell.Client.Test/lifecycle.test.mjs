@@ -204,12 +204,15 @@ test("Markdown adapter loads its component without fetching, and follows the Pag
     const source = "/_assets/xshell-docs/pages/10-architecture/100-services.md";
     const MarkdownPage = await new LoaderPageMd().load(source, markdownContext(loader));
     assert.deepEqual(resources, ["component:x-markdown"]);
-    const page = new MarkdownPage({ src: source + "?view=one#section", context: {}, bus });
+    const emit = t.mock.fn();
+    const page = new MarkdownPage({ src: source + "?view=one#section", context: {}, bus: { emit } });
     assert.ok(page instanceof Page);
     assert.equal(page.src, source + "?view=one#section");
     assert.equal(page.label, null); // menu/navigation metadata can supply the label
     await page.load();
-    assert.equal(page._loaded, true);
+    await page.load();
+    assert.deepEqual(emit.mock.calls.map(call => call.arguments), [["xshell:page:load", { src: page.src, id: page.id }]]);
+    assert.deepEqual(Object.keys(page), []);
     const host = new FakeNode();
     await page.mount({ host });
     const first = host.firstChild;
@@ -928,20 +931,21 @@ test("page preserves state and disposables until its final unload", async () => 
     renderEngines.length = 0;
     animationFrames.length = 0;
     const commands = [];
+    let controller;
     const PageClass = await createPageClassFromJsDefinition("page-lifecycle.js", createContext(), {
         meta: { id: "page-lifecycle-test" },
         state: { value: 1 },
         controller() {
-            return {
+            controller = {
                 load() { commands.push("load"); },
-                mount() { commands.push("mount"); },
-                unmount() { commands.push("unmount"); },
+                mount() { assert.equal(this, controller); commands.push("mount"); },
+                unmount() { assert.equal(this, controller); commands.push("unmount"); },
                 unload() { commands.push("unload"); }
             };
+            return controller;
         }
     }, {});
     const page = new PageClass({ src: "/pages/lifecycle.js", context: {}, bus });
-    const controller = page._controller;
     const disposable = { disposeCount: 0, dispose() { this.disposeCount += 1; } };
     const servicesScope = page._servicesScope;
     servicesScope.addDisposable(disposable);
@@ -956,7 +960,6 @@ test("page preserves state and disposables until its final unload", async () => 
     await page.unmount();
 
     assert.deepEqual(commands, ["load", "mount", "unmount"]);
-    assert.equal(page._controller, controller);
     assert.equal(page._state.value, 2);
     assert.equal(page._renderEngine, null);
     assert.equal(disposable.disposeCount, 0);
@@ -1203,9 +1206,10 @@ test("x-page loads URLs containing error through the normal Page loader", async 
     assert.deepEqual(loaded, ["page:/pages/error-report.js", "page:/pages/errors/index.js", "page:/pages/orders.js?status=error"]);
 });
 
-test("x-page renders a failed Page through the configured error Component", async () => {
+test("x-page renders a failed Page through the configured error Component", async t => {
     const resources = [];
-    const navigation = {};
+    const emit = t.mock.method(bus, "emit");
+    const navigation = { replacePageQuery: t.mock.fn(() => null) };
     const failure = Object.assign(new Error("Page unavailable"), { code: 404, details: "missing definition" });
     class ErrorComponent {}
     const XPage = createLoadableXPage(async resource => {
@@ -1221,8 +1225,9 @@ test("x-page renders a failed Page through the configured error Component", asyn
 
     assert.deepEqual(resources, ["layout:x-layout-test", "page:/pages/missing.js", "component:x-test-error"]);
     assert.equal(host.page.constructor, Page);
-    assert.equal(host.page._bus, bus);
-    assert.equal(host.page._navigation, navigation);
+    assert.ok(emit.mock.calls.some(({arguments: [name, detail]}) => name === "xshell:page:load" && detail.id === host.page.id));
+    host.page.replaceQuery({ retry: "true" });
+    assert.deepEqual(navigation.replacePageQuery.mock.calls[0].arguments, [host.page, { retry: "true" }]);
     assert.ok(host.firstChild instanceof ErrorComponent);
     assert.deepEqual(
         { code: host.firstChild.code, message: host.firstChild.message, src: host.firstChild.src,

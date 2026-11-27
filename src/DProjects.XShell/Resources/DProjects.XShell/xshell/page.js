@@ -1,87 +1,89 @@
 import { generateId } from "./utils/ids.js";
 
+// Page loaders use this lifecycle check before mounting or releasing their own resources.
+export const pageUnloaded = Symbol("pageUnloaded");
 
 // class
 export default class Page {
 
 
     //vars
-    _id = null;
-    _src = null;
-    _context = null;
-    _label = null;
-    _description = null;
-    _breadcrumb = null;
-    _icon = null;
-    _result = null;
-    _controller = null;
-    _bus = null;
-    _navigation = null;
+    #id = null;
+    #src = null;
+    #context = null;
+    #label = null;
+    #description = null;
+    #breadcrumb = null;
+    #icon = null;
+    #result = null;
+    #bus = null;
+    #navigation = null;
 
-    _host = null;
-    _refs = null;
-    _loaded = false;
-    _unloaded = false;
+    #host = null;
+    #refs = null;
+    #loaded = false;
+    #unloaded = false;
 
     //ctor
     constructor({ src, context, bus, navigation }) {
-        this._src = src;
-        this._context = context;
-        this._bus = bus;
-        this._navigation = navigation;
-        this._id = generateId("page");
+        this.#src = src;
+        this.#context = context;
+        this.#bus = bus;
+        this.#navigation = navigation;
+        this.#id = generateId("page");
     }
 
 
     //props
-    get host() { return this._host; }
+    get host() { return this.#host; }
+    get [pageUnloaded]() { return this.#unloaded; }
 
-    get id() { return this._id; }
-    set id(value) { this._id = value; }
+    get id() { return this.#id; }
+    set id(value) { this.#id = value; }
 
     get path() {
-        if (!this._src) return {};
-        const url = new URL(this._src, document.baseURI);
+        if (!this.#src) return {};
+        const url = new URL(this.#src, document.baseURI);
         return url.pathname;
     }
     get query() { 
-        if (!this._src) return {};
-        const url = new URL(this._src, document.baseURI);
+        if (!this.#src) return {};
+        const url = new URL(this.#src, document.baseURI);
         return Object.fromEntries(url.searchParams.entries());
     }
 
-    get src() { return this._src; }
-    get layout() { return this._host?.layout; }
+    get src() { return this.#src; }
+    get layout() { return this.#host?.layout; }
     
-    get context() { return this._context; }
+    get context() { return this.#context; }
 
-    get label() { return this._label; }
+    get label() { return this.#label; }
     set label(value) { 
-        this._label = value; 
-        if (this._breadcrumb && this._breadcrumb.length > 0) this._breadcrumb[this._breadcrumb.length - 1].label = value;
-        if (this._loaded) {
-            this._bus.emit("xshell:page:change", { src: this._src, id: this._id, label: this._label, description: this._description, result: this._result });
+        this.#label = value;
+        if (this.#breadcrumb && this.#breadcrumb.length > 0) this.#breadcrumb[this.#breadcrumb.length - 1].label = value;
+        if (this.#loaded) {
+            this.#bus.emit("xshell:page:change", { src: this.#src, id: this.#id, label: this.#label, description: this.#description, result: this.#result });
         }
     }
 
-    get description() { return this._description; }
+    get description() { return this.#description; }
     set description(value) { 
-        this._description = value; 
-        if (this._breadcrumb && this._breadcrumb.length > 0) this._breadcrumb[this._breadcrumb.length - 1].description = value;
-        if (this._loaded) {
-            this._bus.emit("xshell:page:change", { src: this._src, id: this._id, label: this._label, description: this._description, result: this._result });
+        this.#description = value;
+        if (this.#breadcrumb && this.#breadcrumb.length > 0) this.#breadcrumb[this.#breadcrumb.length - 1].description = value;
+        if (this.#loaded) {
+            this.#bus.emit("xshell:page:change", { src: this.#src, id: this.#id, label: this.#label, description: this.#description, result: this.#result });
         }
     }
 
-    get breadcrumb() { return this._breadcrumb; }
-    set breadcrumb(value) { this._breadcrumb = value; }
+    get breadcrumb() { return this.#breadcrumb; }
+    set breadcrumb(value) { this.#breadcrumb = value; }
 
-    get icon() { return this._icon; }
+    get icon() { return this.#icon; }
     set icon(value) { 
-        this._icon = value; 
-        if (this._breadcrumb && this._breadcrumb.length > 0) this._breadcrumb[this._breadcrumb.length - 1].icon = value;
-        if (this._loaded) {
-            this._bus.emit("xshell:page:change", { src: this._src, id: this._id, label: this._label, description: this._description, result: this._result });
+        this.#icon = value;
+        if (this.#breadcrumb && this.#breadcrumb.length > 0) this.#breadcrumb[this.#breadcrumb.length - 1].icon = value;
+        if (this.#loaded) {
+            this.#bus.emit("xshell:page:change", { src: this.#src, id: this.#id, label: this.#label, description: this.#description, result: this.#result });
         }
     }
 
@@ -89,66 +91,59 @@ export default class Page {
 
     get contract() { return this.constructor.definition?.contract ?? {}; }
 
-    get result() { return this._result; }
+    get result() { return this.#result; }
     set result(value) { 
-        this._result = value; 
-        if (this._loaded) {
-            this._bus.emit("xshell:page:change", { src: this._src, id: this._id, label: this._label, description: this._description, result: this._result });
+        this.#result = value;
+        if (this.#loaded) {
+            this.#bus.emit("xshell:page:change", { src: this.#src, id: this.#id, label: this.#label, description: this.#description, result: this.#result });
         }
     }
 
     get refs() {
-        if (!this._refs) {
-            this._refs = new Proxy(this._host, {
+        if (!this.#refs) {
+            this.#refs = new Proxy(this.#host, {
                 get: (target, prop) => {
                   return target.querySelector(`[ref="${prop}"]`);
                 }
             });
         }
-        return this._refs;
+        return this.#refs;
     }
 
     // lifecycle methods
     async load() {
-        if (this._loaded || this._unloaded) return;
-        this._loaded = true;
+        if (this.#loaded || this.#unloaded) return;
+        this.#loaded = true;
         // call load command
-        const url = new URL(this._src, document.baseURI);
+        const url = new URL(this.#src, document.baseURI);
         const params = {
             query: Object.fromEntries(url.searchParams.entries()),
             path: url.pathname,
             hash: url.hash,
-            context: this._context
+            context: this.#context
         };
         await this.onCommand("load", params);
         // bus event
-        this._bus.emit("xshell:page:load", { src: this._src, id: this._id });
+        this.#bus.emit("xshell:page:load", { src: this.#src, id: this.#id });
     }
     async mount({ host, renderEngine }) {
-        if (this._unloaded) return;
+        if (this.#unloaded) return;
         // mount
-        this._host = host;
+        this.#host = host;
         await this.onCommand("mount", {});
     }
-    hasCommand(command) {
-        // Check for an optional controller handler without exposing the controller.
-        return typeof this._controller?.[command] === "function";
-    }
-    async onCommand(command, params = {}) {
-        const handler = this._controller[command];
-        if (typeof(handler) === "function") {
-            return await handler.call(this._controller, params);
-        }
-    }
+    // Definition-based Pages override these hooks to dispatch to their controller.
+    hasCommand() { return false; }
+    async onCommand() {}
     async unmount() {
-        if (this._unloaded) return;
+        if (this.#unloaded) return;
         // unmount
         await this.onCommand("unmount", {});
-        this._host = null;
+        this.#host = null;
     }
     async unload() {
-        if (this._unloaded) return;
-        this._unloaded = true;
+        if (this.#unloaded) return;
+        this.#unloaded = true;
 
         // invoke controller unload while preserving final Page cleanup on failure
         const errors = [];
@@ -159,42 +154,42 @@ export default class Page {
         }
 
         // release Page runtime references and publish the unload notification
-        this._host = null;
-        this._refs = null;
+        this.#host = null;
+        this.#refs = null;
         try {
-            this._bus.emit("xshell:page:unload", { src: this._src, id: this._id });
+            this.#bus.emit("xshell:page:unload", { src: this.#src, id: this.#id });
         } catch (error) {
             errors.push(error);
         }
 
         // propagate all lifecycle failures after cleanup has completed
         if (errors.length === 1) throw errors[0];
-        if (errors.length > 1) throw new AggregateError(errors, `Multiple errors occurred while unloading Page '${this._id}'.`);
+        if (errors.length > 1) throw new AggregateError(errors, `Multiple errors occurred while unloading Page '${this.#id}'.`);
     }
 
     // close methods
     close(result) {
         // close
-        return this._host.close(result);
+        return this.#host.close(result);
     }
 
      // url methods (replace this Page's query or fragment without navigating or reloading it)
     replaceQuery(query) {
-        const src = this._navigation.replacePageQuery(this, query);
+        const src = this.#navigation.replacePageQuery(this, query);
         if (src !== null && typeof(src) !== "undefined") {
-            this._src = src;
-            if (this._host && typeof(this._host.synchronizePageSrc) === "function") {
-                this._host.synchronizePageSrc(src);
+            this.#src = src;
+            if (this.#host && typeof(this.#host.synchronizePageSrc) === "function") {
+                this.#host.synchronizePageSrc(src);
             }
         }
         return src;
     }
     replaceHash(hash) {
-        const src = this._navigation.replacePageHash(this, hash);
+        const src = this.#navigation.replacePageHash(this, hash);
         if (src !== null && typeof(src) !== "undefined") {
-            this._src = src;
-            if (this._host && typeof(this._host.synchronizePageSrc) === "function") {
-                this._host.synchronizePageSrc(src);
+            this.#src = src;
+            if (this.#host && typeof(this.#host.synchronizePageSrc) === "function") {
+                this.#host.synchronizePageSrc(src);
             }
         }
         return src;

@@ -1,8 +1,11 @@
 import assert from "node:assert/strict";
+import { getEventListeners } from "node:events";
 import { readFile } from "node:fs/promises";
 import { registerHooks } from "node:module";
 import test from "node:test";
 import Services from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services.js";
+import MenuShortcuts from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/menu-shortcuts.js";
+import menuShortcutsContract from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/contracts/menu-shortcuts.json" with { type: "json" };
 
 const framework = new URL("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/", import.meta.url);
 
@@ -37,7 +40,7 @@ test("XShell init registers the native x-page and Loader returns the registered 
         },
         get(name) { return definitions.get(name); }
     };
-    globalThis.window = { document: {}, customElements };
+    globalThis.window = { document: new EventTarget(), customElements };
     const { default: XShell } = await import(rootUrl);
     assert.equal(typeof XShell, "function");
     const xshell = new XShell();
@@ -49,10 +52,21 @@ test("XShell init registers the native x-page and Loader returns the registered 
 
     // Register test implementations at the Services boundary for the production initialization path.
     const sharedSheet = new CSSStyleSheet();
+    const startup = [];
+    const initShortcuts = MenuShortcuts.prototype.init;
+    t.mock.method(MenuShortcuts.prototype, "init", function () {
+        startup.push("shortcuts");
+        return initShortcuts.call(this);
+    });
     t.mock.method(xshell, "validateConfig", async () => {});
     t.mock.method(Services.prototype, "init", async function () {
-        this.register("areas", { init() {} });
-        this.register("navigation", { init() {} });
+        this.register("areas", { init() {}, getCurrentArea: () => null, getMenus: () => [] });
+        this.register("navigation", { init() { startup.push("navigation"); } });
+        // Construct the real service through the runtime's options and contract validation.
+        this.register("menuShortcuts", null, {
+            implementationItem: { class: MenuShortcuts },
+            contractItem: { contract: menuShortcutsContract }
+        });
         this.register("modules", { init() {}, shadowStyleSheets: [sharedSheet] });
         assert.equal(customElements.get("x-page"), undefined);
     });
@@ -74,4 +88,8 @@ test("XShell init registers the native x-page and Loader returns the registered 
     // Resolve the manifest entry without loading the factory as a Component definition.
     assert.equal(await xshell._loader.load("component:x-page"), XPage);
     assert.deepEqual(xshell._loader.registry, []);
+    assert.deepEqual(startup, ["navigation", "shortcuts"]);
+    assert.equal(getEventListeners(window.document, "keydown").length, 1);
+    await xshell._services.dispose();
+    assert.equal(getEventListeners(window.document, "keydown").length, 0);
 });

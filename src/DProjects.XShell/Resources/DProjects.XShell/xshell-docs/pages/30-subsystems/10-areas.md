@@ -152,8 +152,8 @@ effective item lets Navigation expose its optional friendly `path`.
 entries retain both the canonical `href` and optional friendly `path`, so breadcrumb UI can use a ready-to-navigate friendly link without
 performing translation itself.
 `Areas.registerSource(name, source)` registers a source before Areas composition. A source exposes `resolve()`, which returns menu items, and may
-declare `dependsOn`, an array of Bus event names. For `childrenSource` targets, an event refreshes their effective children and emits
-`xshell:menus:change` when content changed. Each refresh merges the latest source items into the static children. When a source override
+declare `dependsOn`, an array of Bus event names. For `childrenSource` targets, a dependency event or an explicit `source.refresh()` refreshes
+their effective children and emits `xshell:menus:change` when content changes. Each refresh merges the latest source items into the static children. When a source override
 disappears, the static item is restored. The definition's root `source` resolves once during `Areas.init()`.
 
 ## Routes
@@ -210,6 +210,50 @@ metadata. Root `source` and nested `childrenSource` are reserved for Area menus.
 prefix.
 
 See [Bus](20-bus.md) for source refresh events.
+
+## Keyboard shortcuts
+
+Declare `shortcut` on a root or nested menu item as a string or a non-empty array of strings. Each entry is an independent combination, and the
+menu displays the first entry as its hint. For example, `"shortcut": ["Ctrl+K", "Meta+K"]` gives one item both combinations. A later contribution
+to the same item ID replaces the whole shortcut value, including any previous array.
+
+XShell activates the effective item through its mounted menu control when available. Commands
+raise the usual bubbling UI `command` event. Links use their friendly `path` or canonical `href` and retain their Page presentation mode or browser
+`target`. When a command or link has no mounted control, XShell dispatches the command in the current Page or uses Navigation with that Page's
+context. A group with children and no direct action needs a mounted menu control to toggle its submenu.
+
+The bundled global Search item opens its submenu with `Ctrl+K`. The submenu loads the embedded Search Page and uses its existing focus behavior.
+Pressing the shortcut again closes the submenu.
+
+```jsonc
+{
+    "scope": "global",
+    "items": [{
+        "id": "search",
+        "label": "Search",
+        "icon": "x-search",
+        "shortcut": "Ctrl+K",
+        "children": [{ "label": "Search Options", "href": "/pages/search.js", "open": "embed", "outlet": "self" }]
+    }]
+}
+```
+
+Use one or more distinct modifiers (`Ctrl`, `Shift`, `Alt`, `Meta`), followed by one logical key. Parsing ignores case, modifier order, and
+whitespace around each token. The pressed modifiers must match exactly. `Ctrl` is Control on every platform. The key is matched using
+`KeyboardEvent.key`, so printable characters follow the active keyboard layout. Supported keys are ASCII letters, digits, punctuation
+(including `,` and `Plus`), `Space`, `F1` through `F24`, the four `Arrow` keys, `Enter`, `Escape`, `Tab`, `Backspace`, `Delete`, `Insert`,
+`Home`, `End`, `PageUp`, and `PageDown`. For example, `Ctrl+Shift+P`, `Alt+F`, `Meta+K`, and `Ctrl+,` each describe one combination.
+
+Global shortcuts are available throughout the application. Area shortcuts are available in the current Area. If several enabled actions claim the
+same normalized combination, XShell disables that binding and logs the conflicting menu items. Other combinations on those items remain active.
+Repeated declarations of the same combination on one item count as one binding. Invalid combinations are ignored with a diagnostic.
+XShell refreshes bindings on Area changes and effective menu updates. Disabled items and their descendants are skipped. The app sidebar hides
+shortcut hints when collapsed, while the bindings remain active.
+
+In inputs, textareas, and editable content, XShell accepts printable shortcuts with `Ctrl` or `Meta` and without `Alt`, including `Ctrl+K`.
+Space, navigation and deletion keys, and the usual select, copy, paste, cut, undo, redo, and rich-text editing chords stay with the editor.
+XShell also ignores repeated, composing, AltGraph, and already-canceled key events. Browsers and operating systems may reserve combinations
+before the application receives them.
 
 ## Workspace
 

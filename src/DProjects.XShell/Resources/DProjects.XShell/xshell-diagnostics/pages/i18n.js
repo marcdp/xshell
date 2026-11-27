@@ -8,7 +8,7 @@ export default {
         methods: {}
     },
     meta: {
-        title: "Internationalization",
+        title: "I18n",
         description: "Shows the active language, available languages, date/time formats, and translation dictionaries."
     },
     template: `

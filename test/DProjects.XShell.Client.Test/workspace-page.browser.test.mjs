@@ -183,6 +183,7 @@ async function verifyFilesystems() {
     const params = new URLSearchParams(location.search);
     const mode = params.get("mode");
     const direct = params.has("direct");
+    const verifyShortcuts = params.has("shortcuts");
     const browserBase = mode === "hash" ? "/app/#!" : "/app";
     const explorerPath = "/_assets/x-filesystem/pages/explorer.js";
     const globalPath = "/global" + explorerPath;
@@ -228,6 +229,30 @@ async function verifyFilesystems() {
             } }
         }
     };
+    const searchSrc = "/_assets/x/pages/search.js";
+    const intersections = new Map();
+    if (verifyShortcuts) {
+        // Deliver the intersection after verifying visibility since virtual time may skip compositor updates.
+        window.IntersectionObserver = class {
+            constructor(callback) { this.callback = callback; }
+            observe(element) { intersections.set(element, this.callback); }
+            disconnect() {}
+        };
+        document.body.style.setProperty("--x-contextmenu-width", "20em");
+        document.body.style.setProperty("--x-layout-main-drawer-width", "19em");
+        // Use the bundled Search item with the same resource normalization performed by bootstrap.
+        const source = await (await fetch("/resources/x/manifest.jsonc")).text();
+        const manifest = JSON.parse(source.replace(/^\s*\/\/[^\r\n]*/gm, ""));
+        const search = manifest.modules.x.menus.global.items.find(item => item.id === "search");
+        config.modules.x.menus.global.items.push(
+            {...search, shortcut: [search.shortcut, "Meta+K"], children: search.children.map(item => ({...item, href: "/_assets/x" + item.href}))},
+            {label: "Expand sidebar", command: "expand", shortcut: "Ctrl+Shift+E"},
+            {label: "Open separately", href: "/help", target: "_blank", shortcut: "Ctrl+Shift+L"}
+        );
+        cookbook.module.menus.navigation.items = [{
+            label: "Area tools", shortcut: "Ctrl+Shift+G", children: [{label: "Help", href: "/help"}]
+        }];
+    }
     const bus = new EventTarget();
     bus.emit = (type, detail) => bus.dispatchEvent(new CustomEvent(type, { detail }));
     const areas = new Areas({ config, bus }, {
@@ -248,13 +273,26 @@ async function verifyFilesystems() {
         return {};
     } };
     const root = new Services({ bus, config, loader, resolver, contracts: {} });
+    const shortcutComponents = [];
+    if (verifyShortcuts) {
+        const {default: MenuShortcuts} = await import("/resources/xshell/services/menu-shortcuts.js");
+        root.register("menuShortcuts", new MenuShortcuts({areas, bus, document, navigation}));
+        root.register("search", {listProviders: () => []});
+        root.register("temp", {});
+        // Disable datafield autofocus in this test so only the submenu's focus request can succeed.
+        root.register("timer", {setTimeout() {}});
+        for (const name of ["x-button", "x-contextmenu", "x-datafield"]) {
+            const {default: definition} = await import("/resources/x/components/" + name + ".js");
+            shortcutComponents.push([name, definition]);
+        }
+    }
     const values = new Map();
     const filesystems = new Filesystems({ bus, config, jsonValidator: new JsonValidator(), preferences: {
         async get(key, fallback) { return values.get(key) ?? fallback; },
         async set(key, value) { values.set(key, value); },
         async list() { return [...values.values()].map(value => ({ value })); }
     } }, { providers: { mem: { implementation: location.origin + "/resources/x-filesystem/providers/filesystem-mem.js" } } });
-    const preferences = new Map([["x-layout-main.menuCollapsed", true]]);
+    const preferences = new Map([["x-layout-main.menuCollapsed", !verifyShortcuts]]);
     for (const [name, value] of Object.entries({ bus, config, loader, resolver, modules, areas, navigation, filesystems, preferences, services: root, i18n: {} })) {
         root.register(name, value);
     }
@@ -269,7 +307,8 @@ async function verifyFilesystems() {
     customElements.define("x-page", createXPageClass({ areas, bus, config, loader, modules, navigation }));
     for (const [name, definition] of [
         ["x-menuitem", menuitem], ["x-anchor", anchor], ["x-filesystem", filesystem],
-        ["x-filesystem-list", list], ["x-listview-item", row], ["x-layout-main", mainLayout], ["x-page-menu", pageMenu], ["x-app-menu", appMenu]
+        ["x-filesystem-list", list], ["x-listview-item", row], ["x-layout-main", mainLayout], ["x-page-menu", pageMenu], ["x-app-menu", appMenu],
+        ...shortcutComponents
     ]) {
         await createComponentClassFromJsDefinition("/" + name + ".js", context, {
             ...definition, meta: { ...definition.meta, id: name, renderEngine: "x-client" }
@@ -281,6 +320,10 @@ async function verifyFilesystems() {
     ]) {
         pages.set(path, await createPageClassFromJsDefinition(path, context, definition));
     }
+    if (verifyShortcuts) {
+        const {default: searchPage} = await import("/resources/x/pages/search.js");
+        pages.set(searchSrc, await createPageClassFromJsDefinition(searchSrc, context, searchPage));
+    }
     for (const name of ["filesystem1", "filesystem2"]) {
         await filesystems.saveDefinition({ name, label: name, provider: "mem", options: {} });
         await (await filesystems.openNamed(name)).saveFile("/" + name + ".txt", name);
@@ -290,6 +333,65 @@ async function verifyFilesystems() {
     history.replaceState(null, "", browserBase + (direct ? target("filesystem1") : areas.getArea(cookbook.areaId).home));
     await navigation.init();
     const host = navigation.getXPage();
+    if (verifyShortcuts) {
+        const shortcuts = await root.initialize("menuShortcuts");
+        const appMenu = await waitFor(() => host.shadowRoot.querySelector("x-layout-main")?.shadowRoot
+            ?.querySelector("x-app-menu")?.shadowRoot?.querySelector("div.collapsed")?.getRootNode(), "Collapsed sidebar did not mount");
+        const item = appMenu.querySelector('x-menuitem[label="Search"]');
+        const hint = await waitFor(() => item.shadowRoot?.querySelector("kbd"), "Search shortcut hint did not render");
+        const anchor = () => item.shadowRoot.querySelector("x-anchor")?.shadowRoot.querySelector("a");
+        const searchHost = () => item.querySelector("x-menuitem")?.shadowRoot?.querySelector("x-page");
+        const searchField = () => searchHost()?.querySelector('[ref="search"]');
+        const focus = () => searchField()?.shadowRoot?.activeElement?.matches('input[type="search"]');
+        const press = (target, key, modifiers = {}) => !target.dispatchEvent(new KeyboardEvent("keydown",
+            {key, ctrlKey: true, bubbles: true, composed: true, cancelable: true, ...modifiers}));
+
+        check(hint.textContent === "Ctrl+K" && getComputedStyle(hint).display === "none", "Collapsed sidebar hint is visible");
+        check(press(host, "k"), "Ctrl+K did not activate the collapsed Search presenter");
+        await waitFor(() => item.shadowRoot.querySelector("x-contextmenu")?.checkVisibility(), "Search submenu did not expand");
+        const embeddedSearch = await waitFor(() => searchHost()?.checkVisibility() && searchHost(), "Embedded Search Page is hidden");
+        check(intersections.has(embeddedSearch) && embeddedSearch.status === "", "Search did not wait for the lazy intersection");
+        intersections.get(embeddedSearch)([{isIntersecting: true}]);
+        await waitFor(() => searchHost()?.status === "loaded", "Visible Search Page did not load");
+        await waitFor(() => searchField()?.shadowRoot?.querySelector("input"), "Search datafield did not render its input");
+        check(embeddedSearch.page.hasCommand("focus"), "The loaded Search Page has no focus method");
+        check(embeddedSearch.page.refs.search === searchField(), "Search Page did not resolve its focus ref");
+        await waitFor(focus, "Search submenu did not focus its embedded input");
+        check(press(searchField().shadowRoot.activeElement, "k", {ctrlKey: false, metaKey: true}), "Meta+K from Search did not toggle the submenu");
+        await waitFor(() => !item.shadowRoot.querySelector("x-contextmenu").checkVisibility(), "Search did not close");
+        anchor().click();
+        await waitFor(focus, "A mouse click did not reopen the same submenu and focus its input");
+
+        const buttonItem = appMenu.querySelector('x-menuitem[label="Expand sidebar"]');
+        await waitFor(() => buttonItem.shadowRoot?.querySelector("x-button")?.shadowRoot.querySelector("kbd"), "Command shortcut hint did not render");
+        check(press(host, "E", {shiftKey: true}), "The command shortcut did not activate");
+        await waitFor(() => !appMenu.querySelector("div.collapsed"), "The existing command handler did not expand the sidebar");
+        check(preferences.get("x-app-menu:expanded") && getComputedStyle(hint).display !== "none", "Expanded sidebar shortcut hint is hidden");
+
+        const targetLink = await waitFor(() => appMenu.querySelector('x-menuitem[label="Open separately"]')?.shadowRoot
+            ?.querySelector("x-anchor")?.shadowRoot?.querySelector("a"), "Targeted menu link did not render");
+        check(targetLink.target === "_blank", "Menu target was missing before activation");
+        const targets = [];
+        targetLink.addEventListener("click", event => {
+            targets.push([targetLink.target, event.defaultPrevented]);
+            event.preventDefault();
+        });
+        check(press(host, "L", {shiftKey: true}), "Targeted link shortcut did not activate");
+        targetLink.click();
+        check(JSON.stringify(targets) === JSON.stringify([["_blank", false], ["_blank", false]]), "Browser target differed between keyboard and mouse");
+
+        const areaGroup = await waitFor(() => host.shadowRoot.querySelector("x-layout-main")?.shadowRoot
+            ?.querySelector("x-page-menu")?.shadowRoot?.querySelector('x-menuitem[label="Area tools"]'), "Area submenu did not mount");
+        const areaSubmenu = () => areaGroup.shadowRoot?.querySelector("x-contextmenu")?.checkVisibility();
+        check(press(host, "G", {shiftKey: true}), "Area submenu shortcut did not activate");
+        await waitFor(areaSubmenu, "Area submenu did not open");
+        check(press(host, "G", {shiftKey: true}), "Area submenu shortcut did not toggle closed");
+        await waitFor(() => !areaSubmenu(), "Area submenu did not close");
+
+        shortcuts.dispose();
+        check(!press(host, "k"), "A disposed shortcut listener accepted the event");
+        return;
+    }
 
     // Click the popup's real links and wait for the bound Filesystem list rows to render.
     const click = async name => {
@@ -321,10 +423,11 @@ async function verifyFilesystems() {
     }
     async function verifyArea(entry = cookbook) {
         const area = areas.getArea(entry.areaId);
+        const selected = () => sidebar()?.shadowRoot?.querySelector("x-anchor.selected");
         await waitFor(() => host.page?.src === area.prefix + entry.home && areas.getCurrentArea().id === area.id &&
-            sidebar()?.shadowRoot?.querySelector("x-anchor.selected"), "Area menu did not restore for " + area.id);
+            selected(), "Area menu did not restore for " + area.id);
         check(sidebar().classList.contains("collapsed") && toggle(), "Area layout lost its collapse preference");
-        check(sidebar().shadowRoot.querySelector("x-anchor.selected").href === area.home, "Sidebar selected the wrong Area Page");
+        check(selected().href === area.home, "Sidebar selected the wrong Area Page");
     }
     if (!direct) {
         await verifyArea();
@@ -421,3 +524,6 @@ test("Workspace reflects IDs and reuses its outlet across selection and embedded
 
 test("Global Filesystem links work on direct access and history and preserve Area layout preferences", chromiumOnly,
     () => runInChromium(verifyFilesystems, ["mode=path", "mode=hash", "mode=path&direct", "mode=hash&direct"]));
+
+test("Ctrl+K opens and toggles the real Search submenu with focus from the collapsed sidebar", chromiumOnly,
+    () => runInChromium(verifyFilesystems, ["mode=path&shortcuts"]));

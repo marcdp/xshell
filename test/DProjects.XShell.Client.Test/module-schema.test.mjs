@@ -82,6 +82,31 @@ function configuration(module) {
     };
 }
 
+test("effective module schema accepts nested and identified shortcut declarations and rejects invalid types", () => {
+    const module = moduleDefinition();
+    const item = {id: "search", shortcut: "Ctrl+K"};
+    module.menus = {tools: {scope: "global", items: [{label: "Group", children: [item]}]}};
+    for (const shortcut of ["Ctrl+K", ["Ctrl+K"], ["Ctrl+K", "Meta+K"]]) {
+        item.shortcut = shortcut;
+        assert.equal(validator.validate(configuration(module)).valid, true);
+    }
+    for (const invalid of [null, 42, "", [], [""], ["Ctrl+K", false], [["Ctrl+K"]]]) {
+        item.shortcut = invalid;
+        assert.equal(validator.validate(configuration(module)).valid, false, JSON.stringify(invalid));
+    }
+});
+
+test("effective module schema accepts browser targets and rejects non-string values", () => {
+    const module = moduleDefinition();
+    const item = {label: "Help", href: "/pages/help.js", target: "_blank"};
+    module.menus = {tools: {items: [item]}};
+    assert.equal(validator.validate(configuration(module)).valid, true);
+    item.target = null;
+    assert.equal(validator.validate(configuration(module)).valid, true);
+    item.target = true;
+    assert.equal(validator.validate(configuration(module)).valid, false);
+});
+
 function assertValid(module) {
     const result = validator.validate(configuration(module));
     assert.equal(result.valid, true, JSON.stringify(result.errors));

@@ -420,7 +420,7 @@ test("refresh merges live children into the static baseline and updates nested s
 
     dynamic = [];
     bus.emit("settings:refresh");
-    assert.equal(changes, 1);
+    assert.equal(changes, 2);
     assert.equal(settings.children, children);
     assert.deepEqual(children.map(item => [item.label, item.order]), [["Theme", 0.5], ["Static", 1.5]]);
     assert.equal(children[1].children, staticItem.children);
@@ -434,12 +434,12 @@ test("refresh merges live children into the static baseline and updates nested s
     nested = [{ label: "Detached" }];
     assert.equal(nestedSource.refresh(), false);
     bus.emit("settings:refresh");
-    assert.equal(changes, 1);
+    assert.equal(changes, 2);
 
     // Restore an override and make a nested tie use the original static declaration order.
     dynamic = [{ id: "theme", order: -1, children: [{ id: "details", order: 0 }, { label: "Advanced", order: 1 }] }];
     bus.emit("settings:refresh");
-    assert.equal(changes, 2);
+    assert.equal(changes, 3);
     assert.deepEqual(children.map(item => [item.label, item.order]), [["Theme", -1], ["Static", 0]]);
     assert.deepEqual(children[0].children.map(item => [item.label, item.order]), [["Details", 0], ["Overview", 1], ["Advanced", 1]]);
     assert.equal(children[1].children, staticItem.children);
@@ -447,18 +447,18 @@ test("refresh merges live children into the static baseline and updates nested s
     assert.equal(persistentSource.refresh(), true);
     assert.deepEqual(children[1].children.map(item => [item.label, item.order]), [["Earlier", -1], ["Inferred", 0], ["Later", 1]]);
     bus.emit("settings:refresh");
-    assert.equal(changes, 2);
+    assert.equal(changes, 4);
 
     // An order change emits an event even when the sorted positions stay the same.
     dynamic = [{ ...dynamic[0], order: -0.5 }];
     bus.emit("settings:refresh");
-    assert.equal(changes, 3);
+    assert.equal(changes, 5);
     assert.deepEqual(children.map(item => [item.label, item.order]), [["Theme", -0.5], ["Static", 0.5]]);
     assert.equal(children[1].children, staticItem.children);
 
     dynamic = [{ label: "Opening shortcut" }];
     bus.emit("settings:refresh");
-    assert.equal(changes, 4);
+    assert.equal(changes, 6);
     assert.deepEqual(children.map(item => [item.label, item.order]), [["Opening shortcut", 0], ["Theme", 0.5], ["Static", 1.5]]);
     assert.equal(children[2].children, staticItem.children);
 });

@@ -1,0 +1,15 @@
+{
+  "label": "Menu Shortcuts",
+  "description": "Matches keyboard combinations against effective application menus and activates the corresponding items.",
+  "methods": {
+    "registerPresenter": {
+      "description": "Associates a mounted menu control with its effective item. Returns a callback that removes the registration.",
+      "parameters": [
+        { "name": "item", "type": "object", "required": true },
+        { "name": "host", "type": "any", "required": true },
+        { "name": "activate", "type": "function", "required": true }
+      ],
+      "returns": { "type": "function" }
+    }
+  }
+}

@@ -21,8 +21,7 @@ import SignIn from "../../src/DProjects.XShell/Resources/DProjects.XShell/x-iden
 import XVault from "../../src/DProjects.XShell/Resources/DProjects.XShell/x-vault/services/xvault.js";
 
 function createServices(implementation, options, name = "example") {
-    const emitted = [];
-    const bus = { emit(type, detail) { emitted.push({ type, detail }); } };
+    const bus = { emit() {} };
     const definition = { contract: name, implementation: `/services/${name}.js`, lifetime: "singleton" };
     if (options !== undefined) definition.options = options;
     const config = {
@@ -38,10 +37,9 @@ function createServices(implementation, options, name = "example") {
                 return { id: name, contract: { methods: {}, properties: {} } };
             }
         },
-        resolver: { resolve() { return { definition: { moduleId: "test" } }; } },
-        bus
+        resolver: { resolve() { return { definition: { moduleId: "test" } }; } }
     });
-    return { bus, config, emitted, services };
+    return { bus, config, services };
 }
 
 const timeoutSchema = {
@@ -79,7 +77,7 @@ test("valid service options are validated immediately before singleton construct
             this.options = configuredOptions;
         }
     }
-    const { emitted, services } = createServices(Example, options);
+    const { services } = createServices(Example, options);
 
     await services.init();
     assert.deepEqual(order, []);
@@ -91,7 +89,6 @@ test("valid service options are validated immediately before singleton construct
     assert.deepEqual(order, ["schema", "constructor"]);
     assert.deepEqual(options, originalOptions);
     assert.deepEqual(timeoutSchema, originalSchema);
-    assert.deepEqual(emitted, [{ type: "xshell:service:created", detail: { id: "example" } }]);
 });
 
 test("a service without options receives a validated empty object", async () => {
@@ -119,7 +116,7 @@ test("missing or non-object optionsSchema declarations fail lazily", async () =>
     }
 });
 
-test("invalid options do not invoke the constructor or emit a created event", async () => {
+test("invalid options do not invoke the constructor", async () => {
     let constructions = 0;
     class Example {
         static optionsSchema = timeoutSchema;
@@ -131,11 +128,10 @@ test("invalid options do not invoke the constructor or emit a created event", as
         [{ timeout: "30" }, /#\/timeout.*type "string" is invalid/],
         [{ timeout: 30, unknown: true }, /additional properties schema/]
     ]) {
-        const { emitted, services } = createServices(Example, options);
+        const { services } = createServices(Example, options);
         await services.init();
         assert.throws(() => services.resolve("example"), expected);
         assert.equal(services.getServiceInfo("example").state, "registered");
-        assert.deepEqual(emitted, []);
     }
     assert.equal(constructions, 0);
 });

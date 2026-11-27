@@ -1,4 +1,4 @@
-import Page from "../page.js"
+import Page, { pageUnloaded } from "../page.js"
 import JsonValidator from "../services/json-validator.js"
 import { processStyle } from "../utils/style.js";
 import { deepFreeze } from "../utils/object.js";
@@ -329,6 +329,7 @@ export async function createPageClassFromJsDefinition(src, context, definition) 
     // returns a class that extends base class Page
     const PageClass = class extends Page {
         // vars
+        #controller = null;
         _state = null;
         _stateChanges = [];
         _renderEngine = null;
@@ -344,13 +345,13 @@ export async function createPageClassFromJsDefinition(src, context, definition) 
             // create this Page's independent direct child of the application root scope
             const rootServices = definitionContext.services.services;
             this._servicesScope = rootServices.beginScope({context: {
-                invokeController(command, ...params) { return self._controller[command]?.(...params); }
+                invokeController(command, ...params) { return self.#controller[command]?.(...params); }
             }});
             try {
             // meta
-            this._label = definition.meta.title || "";
-            this._description = definition.meta.description || "";
-            this._icon = definition.meta.icon || "";
+            this.label = definition.meta.title || "";
+            this.description = definition.meta.description || "";
+            this.icon = definition.meta.icon || "";
             // state
             this._state = stateEngineFactory.create({
                 stateChange(prop, oldValue, newValue) {
@@ -391,7 +392,7 @@ export async function createPageClassFromJsDefinition(src, context, definition) 
                         return self._state;
                     } else if (prop == "context") {
                         // context
-                        return self._context;
+                        return self.context;
                     } else if (prop == "page") {
                         // get current page
                         return self;
@@ -425,10 +426,10 @@ export async function createPageClassFromJsDefinition(src, context, definition) 
                 }
             });            
             // controller
-            this._controller = definition.controller(servicesProvider) ?? {};
+            this.#controller = definition.controller(servicesProvider) ?? {};
             // validate public contract methods
             for (const methodName of Object.keys(definition.contract.methods ?? {})) {
-                const method = this._controller[methodName];
+                const method = this.#controller[methodName];
                 if (typeof(method) !== "function") {
                     throw new Error(`Page '${definition.meta.id}' declares public method '${methodName}' in definition.contract.methods but controller.${methodName} is not a function.`);
                 }
@@ -443,9 +444,21 @@ export async function createPageClassFromJsDefinition(src, context, definition) 
         }
         // props
         static get definition() {return definition;}
+
+        hasCommand(command) {
+            // Let Page hosts check for an optional handler without exposing the controller.
+            return typeof this.#controller?.[command] === "function";
+        }
+
+        async onCommand(command, params = {}) {
+            // Dispatch Page lifecycle and public commands with the controller as their receiver.
+            const handler = this.#controller[command];
+            if (typeof handler === "function") return await handler.call(this.#controller, params);
+        }
+
         // mount/unmount
         async mount({ host }) {
-            if (this._unloaded) return;
+            if (this[pageUnloaded]) return;
             // style
             const cssPageSelector = `${host.nodeName.toLowerCase()}[src="${escapeCssString(host.getAttribute("src"))}"]`;
             if (style) {
@@ -456,7 +469,7 @@ export async function createPageClassFromJsDefinition(src, context, definition) 
             host.getRootNode().adoptedStyleSheets = [...host.getRootNode().adoptedStyleSheets,...this._styleSheets];
             // render engine
             this._renderEngine = renderEngineFactory.create({ host, state: this._state, handler:(command, ...params) => {
-                this._controller[command](...params);
+                this.#controller[command](...params);
             }, invalidate: () => { 
                 this.invalidate(); 
             } })
@@ -467,7 +480,7 @@ export async function createPageClassFromJsDefinition(src, context, definition) 
             this.invalidate();
         }
         async unmount() {
-            if (this._unloaded) return;
+            if (this[pageUnloaded]) return;
             // detach this mount's resources immediately
             const renderEngine = this._renderEngine;
             const styleSheets = this._styleSheets;
@@ -490,7 +503,7 @@ export async function createPageClassFromJsDefinition(src, context, definition) 
             }
         }
         async unload() {
-            if (this._unloaded) return;
+            if (this[pageUnloaded]) return;
             const errors = [];
             let result;
 
@@ -522,7 +535,7 @@ export async function createPageClassFromJsDefinition(src, context, definition) 
             } catch (error) {
                 errors.push(error);
             } finally {
-                this._controller = null;
+                this.#controller = null;
                 this._servicesScope = null;
             }
 
@@ -557,16 +570,16 @@ export async function createPageClassFromJsDefinition(src, context, definition) 
                 // notify the host after its first completed render
                 if (!this._firstRenderReported) {
                     this._firstRenderReported = true;
-                    this._host.dispatchEvent(new CustomEvent("first-render", {
+                    this.host.dispatchEvent(new CustomEvent("first-render", {
                         detail: { page: this }
                     }));
                 }
                 // post-render callbacks
                 while (this._postRenderPending.length > 0) {
                     const pending = this._postRenderPending.shift();
-                    const handler = this._controller[pending.methodName];
+                    const handler = this.#controller[pending.methodName];
                     if (typeof(handler) === "function") {
-                        handler.apply(this._controller, pending.args);
+                        handler.apply(this.#controller, pending.args);
                     }
                 }
             });

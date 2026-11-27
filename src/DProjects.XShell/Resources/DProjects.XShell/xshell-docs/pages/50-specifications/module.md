@@ -243,6 +243,11 @@ A menu item's canonical `href` identifies its Page. Its optional `open` value is
 selects the named destination for embedded navigation. The reserved `outlet: "self"` value is interpreted only by `x-menuitem`, which composes the
 canonical `href` as a lazy embedded Page. Omitting `outlet` does not select self-embedding.
 
+A root or nested item can declare `shortcut` as one keyboard combination such as `"Ctrl+K"` or a non-empty array such as `["Ctrl+K", "Meta+K"]`.
+An identified contribution that supplies `shortcut` replaces the whole value. The containing menu's scope determines where the bindings are active. An item can declare
+`disabled: true` to prevent activation or a browser `target` such as `"_blank"` to open its link in a new tab. See
+[Keyboard shortcuts](../30-subsystems/10-areas.md#keyboard-shortcuts) for syntax, activation, conflict handling, and the global Search example.
+
 `routes` maps Area-relative friendly Path patterns to module-relative Page targets:
 
 ```jsonc

@@ -27,7 +27,7 @@
                     "icon": "x-settings",
                     "items":[
                         {"label": "-", "order":100},
-                        {"label": "Search", "icon":"x-search", "children": [
+                        {"id": "search", "label": "Search", "icon":"x-search", "shortcut": "Ctrl+K", "children": [
                             {"label": "Search Options", "href": "/pages/search.js", "open": "embed", "outlet": "self"}
                         ]},
                         {"label": "-", "order":900, "class": "flex"},                        

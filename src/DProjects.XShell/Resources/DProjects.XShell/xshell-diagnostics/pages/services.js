@@ -14,6 +14,10 @@ export default {
         .tags { display: flex; flex-wrap: wrap; gap: .25em; align-items: center; }
     `,
     template: `
+        <x-toolbar slot="header-actions">
+            <x-button label="Refresh" icon="x-refresh" command="refresh"></x-button>
+        </x-toolbar>
+
         <x-listview view="details" x-on:activate="inspectService">
             <x-listview-head>
                 <x-listview-column width="10em"><x-datafield type="search" x-model="state.id" placeholder="Service"></x-datafield></x-listview-column>
@@ -62,7 +66,7 @@ export default {
         description: "",
         items: []
     },
-    controller({ state, events, services, bus, navigation, page }) {
+    controller({ state, events, services, navigation, page }) {
         return {
             load() {
                // load
@@ -74,7 +78,6 @@ export default {
                events.on(state, "change:tags", "refresh");
                events.on(state, "change:description", "refresh");
                events.on(state, "change:label", "refresh");
-               events.on(bus, "xshell:service:created", "refresh");
             },
             inspectService({ event }) {
                 // Open the Inspector for the activated registry entry.

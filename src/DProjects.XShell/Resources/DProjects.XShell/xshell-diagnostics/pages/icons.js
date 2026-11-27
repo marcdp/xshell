@@ -11,7 +11,7 @@ export default {
         description: "Shows available icons by module together with their size, load time, and status."
     },
     template: `
-        <x-listview view="details" views="list,details,tiles,icons">
+        <x-listview view="icons" views="list,details,tiles,icons">
             <x-listview-head>
                 <x-listview-column><x-datafield type="search" x-model="state.id" placeholder="Icon"></x-datafield></x-listview-column>
                 <x-listview-column width="12em"><x-datafield type="search" x-model="state.moduleId" placeholder="Module"></x-datafield></x-listview-column>
@@ -66,7 +66,7 @@ export default {
                     const moduleConfig = config.modules[moduleId];
                     let moduleIconsPath = moduleConfig.assets.path + "/icons";
                     for(const file of Object.values(moduleConfig.files)) {
-                        if (file.path.startsWith(moduleIconsPath)) {
+                        if (file.path.startsWith(moduleIconsPath) && file.path.endsWith(".svg")) {
                             const id = (file.path.split("/").pop() || "").split(".")[0];    
                             const url = new URL(file.path.replace(/^\/+/, ""), config.app.baseUrl).href;
                             await loader.load("icon:" + id);

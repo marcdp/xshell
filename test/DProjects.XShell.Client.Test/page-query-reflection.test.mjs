@@ -194,8 +194,11 @@ async function createPageClass(properties, controller = () => ({})) {
     );
 }
 
-function createPageInstance(PageType, src) {
-    return new PageType({ src, context: {}, bus, navigation: activeNavigation });
+async function createMountedPage(PageType, host) {
+    // Use the base lifecycle to attach a host without involving a render engine in URL tests.
+    const page = new PageType({ src: host.src, context: {}, bus, navigation: activeNavigation });
+    await Page.prototype.mount.call(page, { host });
+    return page;
 }
 
 function createXPage(src, layout = "main") {
@@ -217,8 +220,7 @@ for (const mode of ["path", "hash"]) {
         const { navigation, initialize, replaceCalls, pushCalls, locationReplacements } = createNavigation(mode, [host]);
         await initialize();
         const PageClass = await createPageClass({ item: { type: "string", state: true, query: true, reflect: true } });
-        const page = createPageInstance(PageClass, host.src);
-        page._host = host;
+        const page = await createMountedPage(PageClass, host);
 
         // A query or fragment change synchronizes the mounted source through replaceState.
         page._state.item = "two";
@@ -242,8 +244,7 @@ test("reflected Page state patches only its own query and removes contract defau
         enabled: { type: "boolean", default: false, state: true, query: true, reflect: true },
         ratio: { type: "number", default: 1, state: true, query: true, reflect: true }
     });
-    const page = createPageInstance(PageClass, host.src);
-    page._host = host;
+    const page = await createMountedPage(PageClass, host);
 
     assert.equal(page._state.pageIndex, 2);
     assert.equal(page._state.enabled, false);
@@ -283,8 +284,7 @@ test("reflected Page JSON values serialize, remove defaults, and preserve JSON n
         args: { type: "object", default: {}, state: true, query: true, queryParser: "json", reflect: true },
         value: { type: "any", default: false, state: true, query: true, queryParser: "json", reflect: true }
     });
-    const page = createPageInstance(PageClass, host.src);
-    page._host = host;
+    const page = await createMountedPage(PageClass, host);
 
     page._state.args = { path: "/docs/file.txt", options: [1, true] };
     assert.deepEqual(JSON.parse(navigation.stack[0].params.args), { path: "/docs/file.txt", options: [1, true] });
@@ -306,8 +306,7 @@ test("Page JSON reflection rejects JavaScript values that JSON would serialize l
     const PageClass = await createPageClass({
         value: { type: "any", default: null, state: true, query: true, queryParser: "json", reflect: true }
     });
-    const page = createPageInstance(PageClass, host.src);
-    page._host = host;
+    const page = await createMountedPage(PageClass, host);
 
     for (const value of [undefined, () => {}, Number.NaN, { omitted: undefined }, [undefined], new Date()]) {
         assert.throws(() => { page._state.value = value; }, /cannot be serialized losslessly as JSON/);
@@ -324,8 +323,7 @@ test("Page JSON reflection uses existing hash-mode navigation serialization", as
     const PageClass = await createPageClass({
         args: { type: "object", default: {}, state: true, query: true, queryParser: "json", reflect: true }
     });
-    const page = createPageInstance(PageClass, host.src);
-    page._host = host;
+    const page = await createMountedPage(PageClass, host);
 
     page._state.args = { path: "/docs/file.txt" };
 
@@ -345,8 +343,7 @@ test("stacked Page query reflection preserves other stack items and navigation m
         { ...navigation.parseUrl(xpages[1].src), nav: { title: "Customer", marker: "keep" } },
         navigation.parseUrl(xpages[2].src)
     ]);
-    const page = createPageInstance(Page, xpages[1].src);
-    page._host = xpages[1];
+    const page = await createMountedPage(Page, xpages[1]);
 
     page.replaceQuery({ tab: "details" });
 
@@ -366,8 +363,7 @@ test("hash-mode Page query reflection uses replacement serialization", async () 
     const host = createXPage("/page.js?enabled=false");
     const { navigation, initialize, locationReplacements } = createNavigation("hash", [host]);
     await initialize();
-    const page = createPageInstance(Page, host.src);
-    page._host = host;
+    const page = await createMountedPage(Page, host);
 
     page.replaceQuery({ enabled: true });
 
@@ -381,8 +377,7 @@ test("dialog and embedded Pages patch local src without changing the navigation 
     const dialogHost = createXPage("/dialog.js?tab=summary&external=x", "dialog");
     const { navigation, initialize, replaceCalls, locationReplacements } = createNavigation("path", [stackHost]);
     await initialize();
-    const page = createPageInstance(Page, dialogHost.src);
-    page._host = dialogHost;
+    const page = await createMountedPage(Page, dialogHost);
 
     page.replaceQuery({ tab: "details" });
 
@@ -405,8 +400,7 @@ test("root Page hash replacement preserves query and synchronizes its source wit
     await initialize();
     const originalStack = navigation.stack;
     const originalItem = originalStack[0];
-    const page = createPageInstance(Page, host.src);
-    page._host = host;
+    const page = await createMountedPage(Page, host);
 
     assert.equal(page.replaceHash("details"), "/page.js?tab=summary#details");
     await Promise.resolve();
@@ -426,8 +420,7 @@ test("Page hashes accept a leading marker and empty values remove the fragment",
     const host = createXPage("/page.js?tab=summary#overview");
     const { navigation, initialize, replaceCalls } = createNavigation("path", [host]);
     await initialize();
-    const page = createPageInstance(Page, host.src);
-    page._host = host;
+    const page = await createMountedPage(Page, host);
 
     assert.equal(page.replaceHash("#details"), "/page.js?tab=summary#details");
     assert.equal(page.replaceHash(""), "/page.js?tab=summary");
@@ -458,8 +451,7 @@ test("stacked Page hash replacement changes only its item", async () => {
         navigation.parseUrl(xpages[2].src)
     ]);
     const [root, oldTarget, order] = navigation.stack;
-    const page = createPageInstance(Page, xpages[1].src);
-    page._host = xpages[1];
+    const page = await createMountedPage(Page, xpages[1]);
 
     const src = page.replaceHash("details");
     await Promise.resolve();
@@ -485,8 +477,7 @@ test("hash-mode Page fragment replacement preserves the XShell navigation prefix
     const host = createXPage("/page.js?tab=summary#overview");
     const { navigation, initialize, locationReplacements, pushCalls } = createNavigation("hash", [host]);
     await initialize();
-    const page = createPageInstance(Page, host.src);
-    page._host = host;
+    const page = await createMountedPage(Page, host);
 
     page.replaceHash("details");
     await Promise.resolve();
@@ -506,8 +497,7 @@ test("dialog and embedded Page hashes change only their local sources", async ()
 
     for (const layout of ["dialog", "embed"]) {
         const host = createXPage("/dialog.js?tab=summary#old", layout);
-        const page = createPageInstance(Page, host.src);
-        page._host = host;
+        const page = await createMountedPage(Page, host);
         assert.equal(page.replaceHash("new"), "/dialog.js?tab=summary#new");
         assert.equal(host.src, page.src);
         assert.equal(page.replaceHash(null), "/dialog.js?tab=summary");
@@ -526,8 +516,7 @@ test("Page hash replacement rejects values other than strings and null", async (
     const host = createXPage("/page.js#old");
     const { navigation, initialize, replaceCalls } = createNavigation("path", [host]);
     await initialize();
-    const page = createPageInstance(Page, host.src);
-    page._host = host;
+    const page = await createMountedPage(Page, host);
 
     for (const value of [{}, [], 123, undefined]) {
         assert.throws(() => page.replaceHash(value), { name: "TypeError", message: "Navigation.replacePageHash: hash must be a string or null." });

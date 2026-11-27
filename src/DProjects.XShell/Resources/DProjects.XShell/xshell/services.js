@@ -12,7 +12,6 @@ export default class Services {
     #contracts = null;
     #items = null;
     #resolver = null;
-    #bus = null;
     #creationPath = [];
     #jsonValidator = null;
     #parent = null;
@@ -33,7 +32,7 @@ export default class Services {
     }
 
     // ctor
-    constructor( {config, loader, contracts, resolver, bus, context} = {}, parent = null ) {
+    constructor( {config, loader, contracts, resolver, context} = {}, parent = null ) {
         // associate child scopes with their direct parent and shared root container
         if (parent) {
             this.#parent = parent;
@@ -50,7 +49,6 @@ export default class Services {
         this.#loader = loader;
         this.#contracts = contracts;
         this.#resolver = resolver;
-        this.#bus = bus;
     }
 
     //methods
@@ -260,7 +258,6 @@ export default class Services {
                 runtime.state = "created";
             }
             if (registration.lifetime !== "singleton" && typeof instance?.dispose === "function") context.addDisposable(instance);
-            this.#bus?.emit("xshell:service:created", { id: name });
             return instance;
         } catch (error) {
             if (runtime) {

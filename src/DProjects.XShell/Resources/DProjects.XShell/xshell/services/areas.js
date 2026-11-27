@@ -346,12 +346,11 @@ export default class Areas {
                 target.items = items;
                 target.definition = definition;
             }
+            if (changed) this.#bus.emit("xshell:menus:change", {});
             return changed;
         };
         for (const event of source.dependsOn || []) {
-            this.#bus.addEventListener(event, () => {
-                if (source.refresh()) this.#bus.emit("xshell:menus:change", {});
-            });
+            this.#bus.addEventListener(event, () => source.refresh());
         }
     }
     // methods (private)
@@ -428,8 +427,11 @@ export default class Areas {
         if (Array.isArray(value)) return this.#mergeMenuitems(Array.isArray(previous) ? previous : [], value, moduleId);
         if (value === null || typeof value !== "object") return value;
         const base = previous && typeof previous === "object" && !Array.isArray(previous) ? previous : {};
+        // Replace a shortcut list as one field and snapshot it for the read-only effective menu.
         const properties = Object.fromEntries(Object.entries(value).map(([key, entry]) => [
-            key, this.#mergeMenuitemValue(Object.hasOwn(base, key) ? base[key] : undefined, entry, key === "children" ? moduleId : undefined)
+            key, key === "shortcut" && Array.isArray(entry)
+                ? Object.freeze([...entry])
+                : this.#mergeMenuitemValue(Object.hasOwn(base, key) ? base[key] : undefined, entry, key === "children" ? moduleId : undefined)
         ]));
         const item = { ...base, ...properties };
         if (moduleId !== undefined) {
@@ -465,6 +467,9 @@ export default class Areas {
             href: area ? this.#buildAreaHref(menuitem.href, area) : menuitem.href,
             path: area ? this.#buildAreaHref(menuitem.path, area) : menuitem.path,
             command: menuitem.command ?? null,
+            ...(menuitem.shortcut !== undefined ? { shortcut: menuitem.shortcut } : {}),
+            ...(menuitem.disabled !== undefined ? { disabled: menuitem.disabled } : {}),
+            ...(menuitem.target !== undefined ? { target: menuitem.target } : {}),
             icon: menuitem.icon ?? null,
             open: menuitem.open ?? null,
             outlet: menuitem.outlet ?? null,

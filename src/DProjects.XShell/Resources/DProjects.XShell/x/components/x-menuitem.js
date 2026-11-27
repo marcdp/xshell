@@ -9,11 +9,13 @@ export default {
             label:       {type:"string", default:"", attribute:true, state:true, description:""},
             description: {type:"string", default:"", attribute:true, state:true, description:""},
             href:        {type:"string", default:"", attribute:true, state:true, description:""},
+            target:      {type:"string", default:null, attribute:true, state:true, description:"Optional browser target for the navigation link."},
             suffix:      {type:"string", default:"", attribute:true, state:true, description:""},
             command:     {type:"string", default:"", attribute:true, state:true, description:""},
             selected:    {type:"boolean", default:false, attribute:true, state:true, description:""},
             checked:     {type:"boolean", default:false, attribute:true, state:true, description:""},
             disabled:    {type:"boolean", default:false, attribute:true, state:true, description:""},
+            shortcut:    {type:"string", default:"", attribute:true, state:true, description:"Keyboard combination displayed alongside the item label."},
             tooltip:     {type:"string", default:"", attribute:true, state:true, description:"Optional tooltip text shown on the navigation anchor."},
             expandOn:    {type: "string", default: "auto", attribute: true, state: true, enum: ["auto", "click", "hover"], description: "Determines how child menu items are expanded."},
             open:        {type: "string", default: "auto", attribute: true, state: true, enum: ["auto", "top", "stack", "dialog", "dock", "embed"], description: "Determines how the target Page is presented."},
@@ -24,7 +26,8 @@ export default {
         },
         methods: {
             focus: {description: "Focuses the menu item."},
-            expand: {description: "Expands the child menu items."}
+            expand: {description: "Expands the child menu items."},
+            activate: {description: "Activates the item or toggles its submenu.", returns: {type: "boolean"}}
         },
         slots: {
             "": {
@@ -56,9 +59,10 @@ export default {
         :host x-anchor {display:flex; flex:1; flex-direction:row; align-items:center; cursor:pointer; border-radius:var(--x-menuitem-border-radius); user-select: none; }
         :host x-anchor:hover {background:var(--x-menuitem-background-hover); z-index:1;}
         :host x-anchor x-icon {color:var(--x-color-text)!important; text-align:center; width:2em;}
-        :host x-anchor span.label {color:var(--x-color-text)!important; flex:1;  display:block; padding-top:.4em; padding-bottom:.4em; white-space:nowrap; padding-right:1.5em; padding-left: calc(var(--x-menuitem-indent) * 1em)!important; }
+        :host x-anchor span.label {color:var(--x-color-text)!important; flex:1;  display:flex; padding-top:.4em; padding-bottom:.4em; white-space:nowrap; padding-right:1.5em; padding-left: calc(var(--x-menuitem-indent) * 1em)!important; }
         :host x-anchor span.label .description {display:block; font-size:var(--x-font-size-small); color:var(--x-color-text-gray)!important; }
         :host x-anchor span.suffix {color:var(--x-color-text-gray)!important; padding-left:1em;}
+        :host kbd {display:var(--x-menuitem-shortcut-display, inline); margin-inline-start:auto; padding-inline-start:.5em; color:var(--x-color-text-gray); font:inherit; font-size:var(--x-font-size-small); white-space:nowrap; overflow:hidden; }
         :host x-anchor x-icon.has-childs {width:unset; margin-left:.25em;}
         :host x-anchor x-icon:first-child {width:2em; text-align:center;}
         :host x-anchor x-icon:first-child:last-child {align-self:flex-end;}
@@ -108,17 +112,18 @@ export default {
         <div x-elseif="state.open == 'embed' && state.outlet == 'self'">
             <x-page x-attr:src="state.href" layout="embed" loading="lazy"></x-page>
         </div>
-        <x-button x-elseif="state.command" class="menuitem" x-attr:command="state.command" x-attr:label="state.label" x-attr:icon="state.icon" x-attr:disabled="state.disabled" x-attr:badge="state.badge" x-attr:badge-class="state.badgeClass" x-attr:tooltip="state.tooltip">
+        <x-button x-elseif="state.command" class="menuitem" x-attr:command="state.command" x-attr:label="state.label" x-attr:icon="state.icon" x-attr:disabled="state.disabled" x-attr:badge="state.badge" x-attr:badge-class="state.badgeClass" x-attr:tooltip="state.tooltip" x-attr:shortcut="state.shortcut">
         </x-button>
-        <x-anchor x-else class="menuitem anchor" x-class:down="state.childsDown" x-attr:href="state.href" x-attr:disabled="state.disabled" x-attr:expanded="state.expanded" x-class:selected="state.selected" x-attr:tooltip="state.tooltip" x-attr:open="state.open" x-attr:scope="state.scope" x-attr:outlet="state.outlet">
+        <x-anchor x-else class="menuitem anchor" x-class:down="state.childsDown" x-attr:href="state.href" x-attr:target="state.target" x-attr:disabled="state.disabled" x-attr:expanded="state.expanded" x-class:selected="state.selected" x-attr:tooltip="state.tooltip || state.shortcut" x-attr:open="state.open" x-attr:scope="state.scope" x-attr:outlet="state.outlet">
             <x-icon x-if="state.checked" icon="x-check"></x-icon>
             <x-icon x-if="!state.checked && state.icon" class="icon" x-attr:icon="state.icon"></x-icon>
             <x-badge x-if="state.badge" x-attr:value="state.badge" x-attr:class="state.badgeClass"></x-badge>
             <span x-if="state.label" class="label">
                 {{ state.label + ' ' + state.command}}
                 <span x-if="state.description" class="description">{{ state.description }}</span>
+                <kbd x-if="state.shortcut" aria-hidden="true" x-text="state.shortcut"></kbd>
              </span>
-            <span   x-if="state.suffix" class="suffix">{{ state.suffix }}</span>
+            <span   x-if="state.suffix" class="suffix">{{ state.suffix }}</span>            
             <x-icon x-if="state.hasChilds" class="has-childs" x-attr:icon="(state.childsDown ? 'x-keyboard-arrow-down' : 'x-keyboard-arrow-right')" x-on:click="expandTrigger"></x-icon>           
         </x-anchor>
         
@@ -156,6 +161,30 @@ export default {
                 this.collapse();
             },
 
+            activate() {
+                // Let the native control handle commands, links, and their existing click listeners.
+                if (state.disabled || state.label === "-" || (state.open === "embed" && state.outlet === "self")) return false;
+                if (state.command || state.href) {
+                    const component = host.shadowRoot.querySelector(state.command ? "x-button" : "x-anchor");
+                    const target = component?.shadowRoot?.querySelector(state.command ? "button" : "a");
+                    if (!target) return false;
+                    target.click();
+                    return true;
+                }
+
+                // Open any containing submenus, then toggle the requested presenter and its embedded Page.
+                if (!state.hasChilds) return false;
+                const parents = [];
+                for (let item = host.parentElement?.closest("x-menuitem"); item; item = item.parentElement?.closest("x-menuitem")) {
+                    parents.unshift(item);
+                }
+                if (parents.some(item => item.disabled) || (parents[0] ?? host).checkVisibility?.({visibilityProperty: true}) === false) return false;
+                for (const item of parents) item.expand();
+                this.focus();
+                this.toggle();
+                return true;
+            },
+
             expansionMode() {
                 // Resolve automatic behavior without coupling explicit modes to presentation.
                 if (state.expandOn !== "auto") return state.expandOn;
@@ -187,12 +216,17 @@ export default {
 
                 // Let the dedicated indicator handler own indicator activation.
                 if (path.some(element => element.classList?.contains("has-childs"))) return;
+                if (state.disabled) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    return;
+                }
 
                 // Focus the trigger and toggle click or touch-driven items without swallowing activation.
                 host.shadowRoot.querySelector("x-anchor")?.focus();
                 const touch = event.pointerType && event.pointerType !== "mouse" || event.sourceCapabilities?.firesTouchEvents;
                 const togglesItem = this.expansionMode() === "click" || touch;
-                if (!togglesItem || !state.hasChilds || state.disabled) return;
+                if (!togglesItem || !state.hasChilds) return;
                 this.toggle();
                 if (!state.href && !state.command) {
                     event.preventDefault();
@@ -288,7 +322,7 @@ export default {
 
             refresh(args) {
                 //refresh
-                state.hasChilds = (host.firstElementChild != null);
+                state.hasChilds = host.firstElementChild != null;
                 if (state.hasChilds) {
                     let rect = host.getBoundingClientRect();
                     // childsInline

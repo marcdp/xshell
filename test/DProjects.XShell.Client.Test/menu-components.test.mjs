@@ -8,6 +8,15 @@ import appMenuDefinition from "../../src/DProjects.XShell/Resources/DProjects.XS
 
 const menuItemContract = menuItemDefinition.contract;
 
+test("x-menuitem exposes shortcuts and forwards browser targets to its anchor", () => {
+    assert.equal(menuItemContract.properties.shortcut.type, "string");
+    assert.equal(menuItemContract.methods.activate.returns.type, "boolean");
+    assert.equal(menuItemContract.properties.target.type, "string");
+    assert.equal(menuItemContract.properties.target.attribute, true);
+    assert.match(menuItemDefinition.template, /<x-anchor[^>]*x-attr:target="state\.target"/);
+    for (const property of ["menuItem", "showChildren"]) assert.equal(Object.hasOwn(menuItemContract.properties, property), false);
+});
+
 function createMenuItem({children = true, classes = [], horizontal = false, state: stateOverrides = {}} = {}) {
     const listeners = new Map();
     const documentListeners = new Map();
@@ -256,6 +265,6 @@ test("x-menuitem renders tooltip on a normal anchor and self-embeds a lazy Page 
 
     assert.match(
         menuItemDefinition.template,
-        /<x-anchor x-else[^>]*x-attr:tooltip="state\.tooltip"/
+        /<x-anchor x-else[^>]*x-attr:tooltip="state\.tooltip \|\| state\.shortcut"/
     );
 });
