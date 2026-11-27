@@ -1,8 +1,8 @@
 {
     // Module
     "modules": {
-        "x-logger": {
-            "label": "x-logger",
+        "x-logs": {
+            "label": "x-logs",
             "version": "0.9.0",
             "tags": ["logging", "diagnostics", "observability"],
             "icon": "",
@@ -10,11 +10,12 @@
             "defaults": {
                 "component": {"renderEngine": "x", "stateEngine": "proxy"},
                 "page": {"renderEngine": "x", "stateEngine": "proxy"}
-            }
+            },
+            "dependencies": {"x": "module:x:latest"}
         }
     },
 
-    // Logger provider contributions
+    // Logger provider contributions and log reader service
     "xshell": {
         "services": {
             "logger": {
@@ -25,6 +26,17 @@
                             "implementation": "/providers/logger-indexeddb.js",
                             "options": {"maxEntries": 10000, "retentionDays": 7}
                         }
+                    }
+                }
+            },
+            "logReader": {
+                "contract": "log-reader",
+                "implementation": "/services/log-reader.js",
+                "lifetime": "singleton",
+                "options": {
+                    "provider": null,
+                    "providers": {
+                        "indexeddb": {"implementation": "/providers/log-reader-indexeddb.js"}
                     }
                 }
             }

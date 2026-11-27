@@ -1,3 +1,5 @@
+const mapSize = Object.getOwnPropertyDescriptor(Map.prototype, "size").get;
+const setSize = Object.getOwnPropertyDescriptor(Set.prototype, "size").get;
 
  // component
 export default {
@@ -70,8 +72,13 @@ export default {
             <div class="row"><span class="summary" x-text="state.closeText"></span></div>
         </div>
     `,
-    state: { type: "undefined", text: "", expandable: false, summary: "", openText: "", closeText: "", entries: [] },
-    controller({ state, events }) {
+    state: { type: "undefined", text: "", expandable: false, summary: "", openText: "", closeText: "", entries: [], _inspection: null },
+    controller({ state, host, events }) {
+        // Pass inspection context between recursive instances without adding it to the public contract.
+        Object.defineProperty(host, "_inspection", {
+            get: () => state._inspection,
+            set: value => { state._inspection = value; }
+        });
         const typeOf = value => value === null ? "null" : value instanceof Date ? "date" : Array.isArray(value) ? "array" : typeof value;
         const nameOf = value => {
             const ctor = Object.getOwnPropertyDescriptor(Object.getPrototypeOf(value) || {}, "constructor")?.value;
@@ -82,8 +89,11 @@ export default {
             const type = typeOf(value);
             if ((type === "array" || type === "object") && ancestors.includes(value)) return "[Circular]";
             if (type === "array") return `Array(${value.length})`;
+            if (value instanceof Map) return `${nameOf(value)}(${mapSize.call(value)})`;
+            if (value instanceof Set) return `${nameOf(value)}(${setSize.call(value)})`;
             if (type === "object") return `${nameOf(value) ? nameOf(value) + " " : ""}${Object.keys(value).length ? "{…}" : "{}"}`;
             if (type === "string") return JSON.stringify(value);
+            if (type === "bigint") return `${value}n`;
             if (type === "null" || type === "undefined") return type;
             if (type === "date") return Number.isNaN(value.getTime()) ? "Invalid Date" : value.toISOString();
             if (type === "function") {
@@ -121,9 +131,13 @@ export default {
                     return;
                 }
 
+                // Expand stored collections and Error fields while retaining the original ancestor chain.
                 const branch = [...ancestors, value];
-                const entries = Object.keys(value).map(name => {
-                    const descriptor = Object.getOwnPropertyDescriptor(value, name);
+                const source = value instanceof Map ? Array.from(Map.prototype.entries.call(value))
+                    : value instanceof Set ? Array.from(Set.prototype.values.call(value)) : value;
+                const keys = value instanceof Error ? Object.getOwnPropertyNames(source) : Object.keys(source);
+                const entries = keys.map(name => {
+                    const descriptor = Object.getOwnPropertyDescriptor(source, name);
                     const accessor = descriptor && !Object.hasOwn(descriptor, "value")
                         ? descriptor.get && descriptor.set ? "[Getter/Setter]" : descriptor.get ? "[Getter]" : "[Setter]" : null;
                     const item = accessor ? undefined : descriptor?.value;

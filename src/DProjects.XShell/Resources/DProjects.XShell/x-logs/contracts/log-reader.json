@@ -1,0 +1,137 @@
+{
+    "$schema": "../../xshell/schemas/contract.schema.json",
+    "label": "Log Reader",
+    "description": "Queries persisted logging records and observes changes to the configured log source.",
+    "types": {
+        "logQueryOptions": {
+            "type": "object",
+            "description": "Optional severity and timestamp filters, page size, ordering and continuation cursor.",
+            "schema": {
+                "type": "object",
+                "properties": {
+                    "levels": {
+                        "type": "array",
+                        "items": {
+                            "enum": [
+                                "trace",
+                                "debug",
+                                "info",
+                                "warn",
+                                "error"
+                            ]
+                        },
+                        "description": "Omit for all levels. An empty array matches no records."
+                    },
+                    "from": {
+                        "type": "number",
+                        "description": "Inclusive minimum timestamp in epoch milliseconds."
+                    },
+                    "to": {
+                        "type": "number",
+                        "description": "Inclusive maximum timestamp in epoch milliseconds."
+                    },
+                    "limit": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 500,
+                        "default": 100
+                    },
+                    "cursor": {
+                        "type": "string",
+                        "description": "Opaque continuation returned by the same provider for compatible filters and ordering."
+                    },
+                    "order": {
+                        "type": "string",
+                        "enum": [
+                            "asc",
+                            "desc"
+                        ],
+                        "default": "desc"
+                    }
+                },
+                "additionalProperties": false
+            }
+        },
+        "logQueryResult": {
+            "type": "object",
+            "description": "One page of persisted log records.",
+            "schema": {
+                "type": "object",
+                "properties": {
+                    "items": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "id": {
+                                    "type": "integer"
+                                },
+                                "timestamp": {
+                                    "type": "number"
+                                },
+                                "level": {
+                                    "type": "string"
+                                },
+                                "args": {
+                                    "type": "array",
+                                    "description": "Original structured-cloned argument values."
+                                }
+                            },
+                            "required": [
+                                "id",
+                                "timestamp",
+                                "level",
+                                "args"
+                            ]
+                        }
+                    },
+                    "nextCursor": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "hasMore": {
+                        "type": "boolean"
+                    }
+                },
+                "required": [
+                    "items",
+                    "nextCursor",
+                    "hasMore"
+                ]
+            }
+        }
+    },
+    "methods": {
+        "query": {
+            "description": "Asynchronously returns the current page of matching log records. The Promise rejects if the reader is disabled or the query fails.",
+            "parameters": [
+                {
+                    "name": "options",
+                    "ref": "logQueryOptions",
+                    "default": {}
+                }
+            ],
+            "returns": {
+                "ref": "logQueryResult",
+                "description": "Promise resolving to the page of records."
+            }
+        },
+        "subscribe": {
+            "description": "Asynchronously subscribes to source changes. Query the source to reconcile after each notification.",
+            "parameters": [
+                {
+                    "name": "callback",
+                    "type": "function",
+                    "required": true,
+                    "description": "Receives a source change notification with type 'changed'."
+                }
+            ],
+            "returns": {
+                "type": "function",
+                "description": "Promise resolving to an idempotent unsubscribe function."
+            }
+        }
+    }
+}

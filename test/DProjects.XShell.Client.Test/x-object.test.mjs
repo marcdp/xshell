@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import objectDefinition, { contract } from "../../src/DProjects.XShell/Resources/DProjects.XShell/x/components/x-object.js";
+import objectDefinition from "../../src/DProjects.XShell/Resources/DProjects.XShell/x/components/x-object.js";
+const {contract} = objectDefinition;
 
 function inspect(value, inspection = null) {
     const state = { ...objectDefinition.state, value, expanded: false };
@@ -21,7 +22,7 @@ test("x-object retains primitive formatting and handles invalid Dates", () => {
         ["hello", "\"hello\"", "string"],
         [12, "12", "number"],
         [true, "true", "boolean"],
-        [12n, "12", "bigint"],
+        [12n, "12n", "bigint"],
         [null, "null", "null"],
         [undefined, "undefined", "undefined"],
         [new Date("2024-01-02T03:04:05.000Z"), "2024-01-02T03:04:05.000Z", "date"],
@@ -97,6 +98,23 @@ test("x-object stops cycles on the current branch and allows shared objects in s
         assert.equal(branch.expandable, true);
         assert.equal(branch.summary, "{id: 1}");
     }
+});
+
+test("x-object exposes stored Error details and collection entries without losing cycles", () => {
+    const error = new Error("example", {cause: new Error("cause")});
+    const errorEntries = inspect(error).state.entries;
+    assert.equal(errorEntries.find(entry => entry.name === "message").value, "example");
+    assert.equal(errorEntries.find(entry => entry.name === "cause").value, error.cause);
+    const map = new Map();
+    map.set("self", map);
+    const pair = inspectEntry(inspect(map).state.entries[0]).state;
+    assert.equal(inspectEntry(pair.entries[1]).state.text, "[Circular]");
+    assert.equal(inspect(new Set([32n])).state.entries[0].value, 32n);
+    const custom = new Map([["entry", 1]]);
+    Object.defineProperty(custom, "size", {get() { throw new Error("size getter must not execute"); }});
+    custom[Symbol.iterator] = () => { throw new Error("custom iterator must not execute"); };
+    assert.equal(inspect({custom}).state.summary, "{custom: Map(1)}");
+    assert.deepEqual(inspect(custom).state.entries[0].value, ["entry", 1]);
 });
 
 test("x-object describes accessors without invoking them in rows or summaries", () => {

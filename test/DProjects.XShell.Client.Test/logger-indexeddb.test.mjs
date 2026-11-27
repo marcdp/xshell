@@ -2,7 +2,8 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {setImmediate as waitTurn} from "node:timers/promises";
 
-import LoggerIndexedDB from "../../src/DProjects.XShell/Resources/DProjects.XShell/x-logger/providers/logger-indexeddb.js";
+import LoggerIndexedDB from "../../src/DProjects.XShell/Resources/DProjects.XShell/x-logs/providers/logger-indexeddb.js";
+import LogReaderIndexedDB from "../../src/DProjects.XShell/Resources/DProjects.XShell/x-logs/providers/log-reader-indexeddb.js";
 
 function installIndexedDB(t, value) {
     // Node can omit this browser global entirely.
@@ -31,6 +32,20 @@ test("IndexedDB logger validates its options before opening storage", t => {
     const provider = new LoggerIndexedDB({}, {databaseName: "logs", maxEntries: 1, retentionDays: 0.5});
     assert.equal(typeof provider.log, "function");
     assert.equal(open.mock.callCount(), 0);
+});
+
+test("IndexedDB log reader validates its configuration and reports storage failures", async t => {
+    const open = t.mock.fn(() => { throw new Error("Open failed."); });
+    installIndexedDB(t, {open});
+    assert.throws(() => new LogReaderIndexedDB({}, []), /options must be an object/);
+    assert.throws(() => new LogReaderIndexedDB({}, {databaseName: " "}), /nonblank/);
+    assert.throws(() => new LogReaderIndexedDB({}, {maxEntries: 10}), /Unknown.*maxEntries/);
+    const reader = new LogReaderIndexedDB({}, {databaseName: "historical"});
+    const unsubscribe = await reader.subscribe(() => {});
+    assert.equal(open.mock.callCount(), 0);
+    unsubscribe();
+    await assert.rejects(reader.query(), /Open failed/);
+    assert.deepEqual(open.mock.calls[0].arguments, ["historical", 1]);
 });
 
 test("Unavailable IndexedDB warns once through native console and never accesses the XShell logger", async t => {

@@ -2,7 +2,7 @@ import test from "node:test";
 import { chromiumOnly, runInChromium } from "./helpers/chromium.mjs";
 
 async function verifyIndexedDBLogger() {
-    const {default: LoggerIndexedDB} = await import("/resources/x-logger/providers/logger-indexeddb.js");
+    const {default: LoggerIndexedDB} = await import("/resources/x-logs/providers/logger-indexeddb.js");
     const {default: Resolver} = await import("/resources/xshell/services/resolver.js");
     const scenario = new URLSearchParams(location.search).get("scenario");
     const nativeOpen = indexedDB.open.bind(indexedDB);

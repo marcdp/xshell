@@ -4,7 +4,7 @@ import test from "node:test";
 import {setImmediate as waitTurn} from "node:timers/promises";
 import vm from "node:vm";
 import LoggerContract from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/contracts/logger.json" with {type: "json"};
-import ProviderContract from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/contracts/logger-provider.json" with {type: "json"};
+import LogReaderContract from "../../src/DProjects.XShell/Resources/DProjects.XShell/x-logs/contracts/log-reader.json" with {type: "json"};
 import ContractSchema from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/schemas/contract.schema.json" with {type: "json"};
 import ModuleSchema from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/schemas/module.schema.json" with {type: "json"};
 import ServiceSchema from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/schemas/service.schema.json" with {type: "json"};
@@ -14,7 +14,8 @@ import JsonValidator from "../../src/DProjects.XShell/Resources/DProjects.XShell
 import Logger from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/logger.js";
 import Tasks from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/tasks.js";
 import Resolver from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/resolver.js";
-import LoggerConsole from "../../src/DProjects.XShell/Resources/DProjects.XShell/x-logger/providers/logger-console.js";
+import LoggerConsole from "../../src/DProjects.XShell/Resources/DProjects.XShell/x-logs/providers/logger-console.js";
+import LogReader from "../../src/DProjects.XShell/Resources/DProjects.XShell/x-logs/services/log-reader.js";
 
 const resources = new URL("../../src/DProjects.XShell/Resources/DProjects.XShell/", import.meta.url);
 const bootstrap = readFileSync(new URL("bootstrap/index.js", resources), "utf8");
@@ -62,13 +63,14 @@ async function createServices(config, loadProvider = () => assert.fail("Unexpect
     const resolver = new Resolver({config});
     const loader = {async load(resource) {
         if (resource === `esm:${config.xshell.services.logger.implementation}`) return Logger;
+        if (resource === `esm:${config.xshell.services.logReader?.implementation}`) return LogReader;
         const resolved = resolver.resolve(resource);
         loads.push(resolved);
         if (!resolved) throw new Error(`Resource not found: ${resource}`);
         return loadProvider(resolved);
     }};
     const services = new Services({config, resolver, loader, contracts: {
-        getContractItemById: id => id === "logger" ? {id, contract: LoggerContract} : undefined
+        getContractItemById: id => ({id, contract: {"logger": LoggerContract, "log-reader": LogReaderContract}[id]})
     }});
     services.register("loader", loader);
     services.register("bus", {emit() {}});
@@ -77,21 +79,75 @@ async function createServices(config, loadProvider = () => assert.fail("Unexpect
     return {services, loads};
 }
 
-test("Core registers Logger as a singleton with schema-valid public contracts", async () => {
+test("Core registers Logger as a singleton with a schema-valid public contract", async () => {
     assert.deepEqual(registration, {contract: "logger", implementation: "/services/logger.js", lifetime: "singleton",
         options: {provider: null, providers: {}}});
-    for (const contract of [LoggerContract, ProviderContract]) {
-        const result = new JsonValidator().validate(contract, ServiceSchema, {"./contract.schema.json": ContractSchema});
-        assert.equal(result.valid, true, JSON.stringify(result.errors));
-    }
+    const result = new JsonValidator().validate(LoggerContract, ServiceSchema, {"./contract.schema.json": ContractSchema});
+    assert.equal(result.valid, true, JSON.stringify(result.errors));
     assert.deepEqual(Object.keys(LoggerContract.methods), levels);
-    assert.deepEqual(Object.keys(ProviderContract.methods), ["log"]);
     const {services} = await createServices(composeLogger());
     const logger = await services.initialize("logger");
     assert.strictEqual(services.beginScope().resolve("logger"), logger);
     for (const method of ["setProvider", "getProvider", "addProvider", "removeProvider", "configure", "enable", "disable"]) {
         assert.equal(method in logger, false);
     }
+});
+
+test("Log Reader validates its public contract and shares retryable lazy provider initialization", async () => {
+    const validation = new JsonValidator().validate(LogReaderContract, ServiceSchema, {"./contract.schema.json": ContractSchema});
+    assert.equal(validation.valid, true, JSON.stringify(validation.errors));
+    assert.deepEqual(Object.keys(LogReaderContract.methods), ["query", "subscribe"]);
+    const configured = {provider: "sample", providers: {sample: {implementation: "sample.js", options: {databaseName: "sample-db"}}}};
+    const gate = Promise.withResolvers();
+    let attempts = 0;
+    const deps = {loader: {async load(href) {
+        assert.equal(href, "esm:sample.js");
+        if (++attempts === 1) throw new Error("transient failure");
+        return gate.promise;
+    }}};
+    const reader = new LogReader(deps, configured);
+    assert.equal(attempts, 0);
+    await assert.rejects(reader.query(), /could not load.*transient failure/);
+    const query = reader.query({limit: 1});
+    const callback = () => {};
+    const subscription = reader.subscribe(callback);
+    assert.equal(attempts, 2);
+    let instances = 0;
+    const unsubscribe = () => {};
+    gate.resolve(class {
+        constructor(dependencies, options) {
+            assert.equal(dependencies, deps);
+            assert.deepEqual(options, {databaseName: "sample-db"});
+            assert.notEqual(options, configured.providers.sample.options);
+            instances++;
+        }
+        async query(options) { return options; }
+        subscribe(received) { assert.equal(received, callback); return unsubscribe; }
+    });
+    assert.deepEqual(await query, {limit: 1});
+    assert.equal(await subscription, unsubscribe);
+    assert.deepEqual(await reader.query(), {});
+    assert.equal(instances, 1);
+    assert.equal(attempts, 2);
+});
+
+test("Log Reader reports configuration, invalid implementation and operation failures distinctly", async () => {
+    const disabled = new LogReader({});
+    await assert.rejects(disabled.subscribe(() => {}), /No reader provider is configured/);
+    await assert.rejects(new LogReader({}, {provider: "missing"}).query(), /unknown provider 'missing'/);
+    await assert.rejects(disabled.subscribe(null), /requires a subscription callback/);
+    const reader = Implementation => new LogReader({loader: {load: async () => Implementation}}, {
+        provider: "sample", providers: {sample: {implementation: "sample.js"}}
+    });
+    await assert.rejects(reader({}).query(), /invalid implementation.*default-exported class/);
+    await assert.rejects(reader(class { query() {} }).query(), /invalid implementation.*subscribe/);
+    await assert.rejects(reader(class { constructor() { throw new Error("init failed"); } }).query(), /could not initialize.*init failed/);
+    const operations = reader(class {
+        query() { throw new Error("query details"); }
+        async subscribe() { throw new Error("subscribe details"); }
+    });
+    await assert.rejects(operations.query(), /query failed.*query details/);
+    await assert.rejects(operations.subscribe(() => {}), /subscription failed.*subscribe details/);
 });
 
 test("missing and explicit null selection ignore all calls without loading providers or writing output", async t => {
@@ -224,35 +280,41 @@ test("LoggerConsole synchronously forwards the original arguments to the matchin
     assert.equal(fallback.mock.callCount(), 0);
 });
 
-test("x-logger providers are selected, configured or disabled by the application", async t => {
+test("x-logs providers are selected, configured or disabled by the application", async t => {
     // Compose the authored module manifest with the framework and an application selecting the provider.
-    const authored = JSON.parse(readFileSync(new URL("x-logger/manifest.jsonc", resources), "utf8").replace(/^\s*\/\/[^\r\n]*/gm, ""));
-    const module = authored.modules["x-logger"];
+    const authored = JSON.parse(readFileSync(new URL("x-logs/manifest.jsonc", resources), "utf8").replace(/^\s*\/\/[^\r\n]*/gm, ""));
+    const module = authored.modules["x-logs"];
     const providerFile = "/providers/logger-console.js";
     const indexedDBFile = "/providers/logger-indexeddb.js";
-    const assetsPath = `/_assets/x-logger/${module.version}.dev`;
+    const assetsPath = `/_assets/x-logs/${module.version}.dev`;
     const implementation = assetsPath + providerFile;
-    const reference = "module:x-logger:latest";
-    const loggerManifest = {...authored, modules: {"x-logger": {...module, files: []}}};
+    const reference = "module:x-logs:latest";
+    const loggerManifest = {...authored, modules: {"x-logs": {...module, files: []}}};
     // Resolve the dependency with the production bootstrap and the standard development index response shape.
     const discovery = bootstrap.slice(bootstrap.indexOf("const stableVersion ="), bootstrap.indexOf("// Load repositories and resolve modules"));
-    const discovered = await vm.runInNewContext(discovery + "\nresolveModule(reference)", {
-        URL, reference, resolvedModules: new Map(),
-        repositoryIndexes: new Map([[0, {url: appBaseUrl + "index.json", index: {modules: {"x-logger": {url: "x-logger/index.json"}}}}]]),
+    const discovered = await vm.runInNewContext(discovery + "\n(async () => { const found = await schedule(reference); await Promise.all(moduleRequests.values()); return found; })()", {
+        URL, reference, resolvedModules: new Map(), moduleRequests: new Map(),
+        repositoryIndexes: new Map([[0, {url: appBaseUrl + "index.json", index: {modules: {
+            "x-logs": {url: "x-logs/index.json"}, x: {url: "x/index.json"}
+        }}}]]),
         fetchIndex(url) {
-            assert.equal(url, appBaseUrl + "x-logger/index.json");
-            return {module: "x-logger", versions: {[module.version]: {url: `${module.version}.dev/manifest.json`, dependencies: {}}}};
+            if (url === appBaseUrl + "x/index.json") {
+                return {module: "x", versions: {"0.9.0": {url: "0.9.0.dev/manifest.json", dependencies: {}}}};
+            }
+            assert.equal(url, appBaseUrl + "x-logs/index.json");
+            return {module: "x-logs", versions: {[module.version]: {url: `${module.version}.dev/manifest.json`, dependencies: module.dependencies}}};
         }
     });
     assert.equal(discovered.version, module.version);
     const contributions = [
+        {name: "x", assetsPath: "/_assets/x/1.dev", manifest: {modules: {x: {files: []}}}},
         {name: "xshell", assetsPath: "/_assets/xshell/1.dev", manifest: {xshell: {resolver: manifest.xshell.resolver, services: {logger: registration}}}},
         {...discovered, assetsPath, assetsUrl: discovered.baseUrl, manifest: loggerManifest}
     ];
     const defaults = {maxEntries: 10000, retentionDays: 7};
-    assert.deepEqual(authored.xshell.services, {logger: {options: {providers: {
+    assert.deepEqual(authored.xshell.services.logger, {options: {providers: {
         console: {implementation: providerFile}, indexeddb: {implementation: indexedDBFile, options: defaults}
-    }}}});
+    }}});
     const log = t.mock.method(console, "debug", () => {});
     t.mock.method(console, "warn", () => {});
     const open = t.mock.fn(() => { throw new Error("Test storage unavailable."); });
@@ -266,12 +328,18 @@ test("x-logger providers are selected, configured or disabled by the application
     const value = {commandId: "sample"};
     const overrides = {databaseName: "logger-integration", retentionDays: 30};
 
-    for (const selection of [omitted, "console", "indexeddb", null]) {
-        const dependencies = {xshell: "module:xshell:latest", "x-logger": reference};
+    for (const [selection, readSelection] of [[omitted, omitted], ["console", null], ["indexeddb", null],
+        ["indexeddb", "indexeddb"], ["console", "indexeddb"], [null, "indexeddb"], [null, null]]) {
+        const dependencies = {xshell: "module:xshell:latest", "x-logs": reference};
         const indexeddb = selection === "indexeddb";
         const options = indexeddb ? {provider: selection, providers: {indexeddb: {options: overrides}}} : {provider: selection};
+        const readOptions = readSelection === omitted ? {} : {provider: readSelection, providers: {
+            indexeddb: {options: {databaseName: overrides.databaseName}}
+        }};
         const app = {name: "app", assetsPath: "/_assets/app/1.dev", dependencies,
-            manifest: {modules: {app: {dependencies}}, ...(selection === omitted ? {} : {xshell: {services: {logger: {options}}}})}};
+            manifest: {modules: {app: {dependencies}}, xshell: {services: {
+                ...(selection === omitted ? {} : {logger: {options}}), logReader: {options: readOptions}
+            }}}};
         const config = composeManifests(app, contributions);
         const effective = config.xshell.services.logger;
         assert.deepEqual(effective, {...registration, implementation: "/_assets/xshell/1.dev/services/logger.js",
@@ -279,20 +347,25 @@ test("x-logger providers are selected, configured or disabled by the application
                 console: {implementation},
                 indexeddb: {implementation: assetsPath + indexedDBFile, options: indexeddb ? {...defaults, ...overrides} : defaults}
             }}});
-        const validation = new JsonValidator().validate(config.modules["x-logger"], ModuleSchema, {"./contract.schema.json": ContractSchema});
+        const validation = new JsonValidator().validate(config.modules["x-logs"], ModuleSchema, {"./contract.schema.json": ContractSchema});
         assert.equal(validation.valid, true, JSON.stringify(validation.errors));
 
         // Use the standard ESM loader with a file URL for the resolved resource in this Node test.
         const {services, loads} = await createServices(config, resolved => {
-            assert.equal(resolved.definition.moduleId, "x-logger");
+            assert.equal(resolved.definition.moduleId, "x-logs");
             assert.equal(resolved.definition.loader, "esm-js");
-            assert.equal(resolved.path, indexeddb ? assetsPath + indexedDBFile : implementation);
-            return esm.load(new URL("x-logger" + resolved.path.slice(assetsPath.length), resources).href);
+            return esm.load(new URL("x-logs" + resolved.path.slice(assetsPath.length), resources).href);
         });
+        const reader = services.resolve("logReader");
+        assert.equal(services.beginScope().resolve("logReader"), reader);
+        assert.equal(loads.length, 0);
+        assert.equal(config.xshell.services.logReader.contract, "log-reader");
+        assert.equal(config.xshell.services.logReader.options.provider, readSelection === omitted ? null : readSelection);
         const logger = await services.initialize("logger");
         logger.debug("Provider integration", value);
         await waitTurn();
         assert.equal(loads.length, selection === "console" || indexeddb ? 1 : 0);
+        if (loads.length) assert.equal(loads[0].path, indexeddb ? assetsPath + indexedDBFile : implementation);
         assert.equal(log.mock.callCount(), selection === "console" ? 1 : 0);
         assert.equal(open.mock.callCount(), indexeddb ? 1 : 0);
         if (indexeddb) {
@@ -303,6 +376,16 @@ test("x-logger providers are selected, configured or disabled by the application
             assert.equal(log.mock.calls[0].arguments[0], "Provider integration");
             assert.strictEqual(log.mock.calls[0].arguments[1], value);
             log.mock.resetCalls();
+        }
+        if (readSelection === "indexeddb") {
+            await assert.rejects(reader.query(), /query failed.*Test storage unavailable/);
+            assert.equal(loads.at(-1).path, assetsPath + "/providers/log-reader-indexeddb.js");
+            assert.deepEqual(open.mock.calls[0].arguments, [overrides.databaseName, 1]);
+            open.mock.resetCalls();
+        } else {
+            const count = loads.length;
+            await assert.rejects(reader.query(), /No reader provider is configured/);
+            assert.equal(loads.length, count);
         }
     }
 });

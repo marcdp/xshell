@@ -1,17 +1,20 @@
 # Logging
 
-XShell Core registers the `logger` singleton by default. Core defines the service and provider contracts. Modules can contribute implementations and
-their defaults, and the application selects the provider and overrides its options.
+XShell Core registers the write-oriented `logger` singleton. The optional `x-logs` module contributes the `console` and `indexeddb` writers,
+the `logReader` singleton, an IndexedDB reader and a Logs Page. The application selects and configures each service's provider independently.
 
-## Console provider
+## Module dependency
 
-The optional `x-logger` module contributes the `console` and `indexeddb` providers. Add `x-logger` to the root module's existing dependencies.
+Add `x-logs` to the root module's existing dependencies. To migrate from `x-logger`, replace the old dependency and update any module-qualified
+provider paths to use `x-logs`. The writer provider IDs and IndexedDB schema and names are unchanged, so existing records remain readable.
 
 ```jsonc
 "dependencies": {
-    "x-logger": "module:x-logger:latest"
+    "x-logs": "module:x-logs:latest"
 }
 ```
+
+## Console provider
 
 Select `console` in the application manifest to enable console logging.
 
@@ -82,14 +85,17 @@ Storage failures discard the failed batch and produce one fixed native console w
 queued records wait for a later logging call. The provider closes stale connections on version changes. Retention runs during writes and can leave
 expired records in an inactive application. The age and count limits apply to records. Browser quotas and eviction govern storage in bytes.
 
-Use the browser's developer tools to inspect the named database and its `logs` store in the IndexedDB storage panel. Records can survive reloads
-and browser sessions subject to storage policy. Writes are best-effort, and closing a tab or browser can discard pending records. The store has
-the protections of ordinary IndexedDB, without vault encryption. Code with access to the same storage namespace can read the records. Keep
-sensitive information out of logging arguments and use a separate system for guaranteed auditing.
+Use the Logs Page or the browser's IndexedDB storage panel to inspect stored records. Records can survive reloads and browser sessions subject to
+storage policy. Writes are best-effort, and closing a tab or browser can discard pending records. Code with access to the same browser storage
+namespace can read the records. Keep credentials and other sensitive information out of log arguments. Use a separate system for guaranteed auditing.
 
 ## Logger contract
 
 Inject `logger` by name using ordinary [service consumption](../10-architecture/100-services.md), such as a Page or Component controller.
+
+```javascript
+logger.info("Application initialized");
+```
 
 ```javascript
 controller({logger}) {
@@ -105,7 +111,7 @@ The public methods are `trace(...args)`, `debug(...args)`, `info(...args)`, `war
 arbitrary JavaScript values, including arrays and errors, and returns `undefined` synchronously. Values reach the provider in their original order
 and objects retain their identity. Calls are silently ignored when `provider` is omitted or null.
 
-## Provider contract
+## Writer provider interface
 
 A provider default-exports a class. Its constructor receives the logger's standard XShell service dependencies and the effective provider options
 as `constructor(dependencies, options)`. The class implements `log(level, ...args)`, where `level` is `trace`, `debug`, `info`, `warn`, or
@@ -117,6 +123,103 @@ loading and construction.
 
 The logger invokes the provider synchronously and suppresses any exception the provider throws during the call. Providers own completion and error
 handling for asynchronous work. The logger ignores the return value of `log()`.
+
+## Log Reader service
+
+Inject `logReader` by name. Its public contract exposes `query(options = {})` and `subscribe(callback)`, both asynchronous. The service loads the
+selected provider through the ordinary ESM loader on first use. Concurrent requests share initialization, a successful instance is reused, and a
+failed initialization can be retried. With no selected provider, calls reject and the service keeps storage and observation idle.
+
+```jsonc
+"xshell": {
+    "services": {
+        "logger": {"options": {"provider": "indexeddb"}},
+        "logReader": {"options": {"provider": "indexeddb"}}
+    }
+}
+```
+
+Select the writer and reader independently. An IndexedDB reader can inspect historical records with the console writer selected or with writing
+disabled. Selecting only the IndexedDB writer enables persistence. Both selections default to null.
+
+By default, both IndexedDB providers derive the database name from the application base path using the same Core utility. For a custom database,
+set the same nonblank name on both providers when they should share records. The reader uses its own configuration in every case.
+
+```jsonc
+"xshell": {
+    "services": {
+        "logger": {
+            "options": {
+                "provider": "indexeddb",
+                "providers": {"indexeddb": {"options": {"databaseName": "application-logs"}}}
+            }
+        },
+        "logReader": {
+            "options": {
+                "provider": "indexeddb",
+                "providers": {"indexeddb": {"options": {"databaseName": "application-logs"}}}
+            }
+        }
+    }
+}
+```
+
+### Querying records
+
+```javascript
+const result = await logReader.query({
+    levels: ["warn", "error"],
+    limit: 100
+});
+```
+
+| Option | Behavior |
+| --- | --- |
+| `levels` | Array containing any of `trace`, `debug`, `info`, `warn`, and `error`. Omit to match all. An empty array matches no records. |
+| `from`, `to` | Inclusive finite timestamps in epoch milliseconds. When both are present, `from` must be at or before `to`. |
+| `order` | `"desc"` for newest first, the default, or `"asc"` for oldest first. |
+| `limit` | Integer from 1 through 500. Defaults to 100. |
+| `cursor` | Opaque continuation from a prior result. Omit to start at the beginning. |
+
+The IndexedDB reader rejects unknown options, unsupported values and malformed or incompatible cursors. It queries using a readonly transaction
+and returns `{items, nextCursor, hasMore}`. Each item retains its stored `{id, timestamp, level, args}` shape, including structured-cloned argument
+values. An empty result or a final nonempty page has `nextCursor: null` and `hasMore: false`.
+
+Pass `nextCursor` back with compatible severity and timestamp filters and the same order. Page size can change. The timestamp index orders records
+by timestamp and then by primary key, so the reader can continue even when retention removed the cursor record. It looks for an extra matching
+record to determine whether another page is available. Each query runs in its own transaction. New writes and retention can change the results
+between pages.
+
+### Observing changes
+
+```javascript
+const unsubscribe = await logReader.subscribe(callback);
+// When observation is no longer needed:
+unsubscribe();
+```
+
+Register before the initial query and run another query when a notification arrives during that query. Callbacks receive `{type: "changed"}` as a
+signal to requery. Each committed IndexedDB write batch publishes one BroadcastChannel signal for its database, covering writes and retention in
+the same transaction. The transport carries no record data and works across browser contexts that share the database's origin and storage
+partition. The reader shares one channel per provider instance and sends a reconciliation notification about every five seconds while there
+are subscribers, including when BroadcastChannel is unavailable. The final unsubscribe closes the channel and stops reconciliation.
+
+Treat notifications as hints about committed storage. They may be coalesced, duplicated or missed while a context is inactive. Query results reflect
+the records that are still persisted when queried.
+
+### Reader provider interface
+
+A reader provider default-exports a class with `constructor(dependencies, options = {})`. The constructor receives the standard service dependencies
+and the effective provider options. The class exposes `async query(options)` and `subscribe(callback)`. Subscription registration may return an
+idempotent unsubscribe function directly or resolve one asynchronously. The service checks both methods and always returns a Promise to callers.
+Providers report query failures to callers and isolate subscriber callback failures. Use native diagnostics where needed to avoid a feedback loop
+through the logger being observed.
+
+### Logs Page
+
+Open `page:x-logs:/pages/logs.js`. In the Cookbook application (`x-demo`), choose **Logs** from the global menu. Apply severity and local date filters,
+open a record to inspect its arguments, and use **Older** and **Newer** to browse result pages. Historical browsing pauses live refresh. **Refresh**
+updates the visible page, and **Resume live** returns to the newest matching records and reconciles with current storage.
 
 ## Platform logging conventions
 

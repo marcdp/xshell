@@ -1,7 +1,6 @@
-
 export default {
     contract: {
-        description: "View configured repository sources and installed modules.",
+        description: "View configured repository sources, the XShell framework and installed modules.",
         events: {},
         properties: {},
         methods: {}
@@ -9,12 +8,11 @@ export default {
 
     meta: {
         title: "Modules",
-        description: "View configured repository sources and installed modules.",
+        description: "View configured repository sources, the XShell framework and installed modules.",
         icon: "x-module"
     },
 
     template: `
-    
         <x-datafields>
             <x-datafield label="Sources" class="no-padding">
                 <x-listview x-if="state.sources.length > 0" view="details">
@@ -43,7 +41,7 @@ export default {
                             x-for="module in state.modules"
                             x-attr:key="module.id"
                             x-attr:label="module.id"
-                            icon="x-module">
+                            x-attr:icon="module.icon">
                             <span x-text="module.version"></span>
                             <span x-text="module.label"></span>
                         </x-listview-item>
@@ -58,7 +56,7 @@ export default {
         modules: []
     },
 
-    controller({state, config, modules}) {
+    controller({ state, config, modules }) {
         return {
             load() {
                 // Load configured repository sources in their precedence order.
@@ -67,11 +65,15 @@ export default {
                     url
                 }));
 
-                // Load installed module metadata and sort by module name.
-                state.modules = modules.registry.map(module => ({
+                // Include the framework alongside installed application modules.
+                const framework = { ...config.xshell, id: "xshell", label: config.xshell.label || "XShell" };
+
+                // Project module metadata and sort by module name.
+                state.modules = [framework, ...modules.registry].map(module => ({
                     id: module.id,
                     version: module.version,
-                    label: module.label
+                    label: module.label,
+                    icon: module.icon || "x-module"
                 })).sort((a, b) => a.id.localeCompare(b.id));
             }
         };

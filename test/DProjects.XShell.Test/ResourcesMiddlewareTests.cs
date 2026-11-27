@@ -486,13 +486,15 @@ namespace DProjects.XShell.Test {
         [Theory]
         [InlineData("/providers/logger-console.js", "LoggerConsole")]
         [InlineData("/providers/logger-indexeddb.js", "LoggerIndexedDB")]
-        public async Task DevelopmentRepository_IndexesAndServesBundledLoggerModule(string providerPath, string providerName) {
+        [InlineData("/providers/log-reader-indexeddb.js", "LogReaderIndexedDB")]
+        [InlineData("/services/log-reader.js", "LogReader")]
+        public async Task DevelopmentRepository_IndexesAndServesBundledLogsModule(string resourcePath, string implementationName) {
             // Use the resource tree copied by the project build, then follow its generated index URLs.
             var root = Path.Combine(AppContext.BaseDirectory, "Resources", "DProjects.XShell");
             var catalog = await SendAsync(root, "/_resources/index.json", true);
             Assert.Equal(200, catalog.StatusCode);
             using var repository = JsonDocument.Parse(catalog.Body);
-            var entry = repository.RootElement.GetProperty("modules").GetProperty("x-logger");
+            var entry = repository.RootElement.GetProperty("modules").GetProperty("x-logs");
             var version = entry.GetProperty("latest").GetString();
             Assert.Equal("0.9.0", version);
             var indexPath = "/_resources/" + entry.GetProperty("url").GetString();
@@ -500,18 +502,37 @@ namespace DProjects.XShell.Test {
             Assert.Equal(200, module.StatusCode);
             using var index = JsonDocument.Parse(module.Body);
             var generation = index.RootElement.GetProperty("versions").GetProperty(version!);
-            var manifestPath = "/_resources/x-logger/" + generation.GetProperty("url").GetString();
+            var manifestPath = "/_resources/x-logs/" + generation.GetProperty("url").GetString();
             var descriptor = await SendAsync(root, manifestPath, true);
             Assert.Equal(200, descriptor.StatusCode);
             using var manifest = JsonDocument.Parse(descriptor.Body);
 
-            // Check that development inventory and versioned resource serving expose the same provider.
-            var files = manifest.RootElement.GetProperty("modules").GetProperty("x-logger").GetProperty("files");
-            Assert.Contains(files.EnumerateArray(), file => file.GetProperty("path").GetString() == providerPath);
-            var provider = await SendAsync(root, manifestPath[..manifestPath.LastIndexOf('/')] + providerPath, true);
-            Assert.Equal(200, provider.StatusCode);
-            Assert.Contains($"export default class {providerName}", provider.Text);
-            Assert.Equal(0, catalog.NextCalls + module.NextCalls + descriptor.NextCalls + provider.NextCalls);
+            // Check that development inventory and versioned resource serving expose the same implementation.
+            var files = manifest.RootElement.GetProperty("modules").GetProperty("x-logs").GetProperty("files");
+            Assert.Contains(files.EnumerateArray(), file => file.GetProperty("path").GetString() == resourcePath);
+            var resource = await SendAsync(root, manifestPath[..manifestPath.LastIndexOf('/')] + resourcePath, true);
+            Assert.Equal(200, resource.StatusCode);
+            Assert.Contains($"export default class {implementationName}", resource.Text);
+            Assert.Equal(0, catalog.NextCalls + module.NextCalls + descriptor.NextCalls + resource.NextCalls);
+        }
+        [Fact]
+        public async Task DevelopmentRepository_CompilesLogsPageAndIncludesItsContract() {
+            // Check that the real resource inventory includes the Page, its public service contract and the shared utility.
+            var root = Path.Combine(AppContext.BaseDirectory, "Resources", "DProjects.XShell");
+            var descriptor = await SendAsync(root, "/_resources/x-logs/0.9.0.dev/manifest.json", true);
+            Assert.Equal(200, descriptor.StatusCode);
+            using var manifest = JsonDocument.Parse(descriptor.Body);
+            var files = manifest.RootElement.GetProperty("modules").GetProperty("x-logs").GetProperty("files");
+            foreach (var path in new[] { "/pages/logs.js", "/contracts/log-reader.json", "/utils/indexeddb.js" }) {
+                Assert.Contains(files.EnumerateArray(), file => file.GetProperty("path").GetString() == path);
+            }
+            var page = await SendAsync(root, "/_resources/x-logs/0.9.0.dev/pages/logs.js", true);
+            Assert.Equal(200, page.StatusCode);
+            Assert.Contains("templateRenderer:", page.Text);
+            var demo = await SendAsync(root, "/_resources/x-demo/0.9.0.dev/manifest.json", true);
+            Assert.Equal(200, demo.StatusCode);
+            Assert.Contains("module:x-logs:latest", demo.Text);
+            Assert.Contains("page:x-logs:/pages/logs.js", demo.Text);
         }
         [Fact]
         public async Task DevelopmentModuleIndex_ReflectsManifestChanges() {
