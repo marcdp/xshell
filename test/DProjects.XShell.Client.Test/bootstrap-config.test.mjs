@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 import vm from "node:vm";
 
+import Logger from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/logger.js";
 import Modules from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/modules.js";
 import Resolver from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/resolver.js";
 
@@ -1076,6 +1077,7 @@ test("a shared dependency with the same URL is fetched and registered once", asy
     for (const module of Object.values(effective.modules)) module.files = [];
     globalThis.document = { adoptedStyleSheets: [] };
     const modules = new Modules({
+        logger: new Logger({}),
         bus: {},
         config: { xshell: { assets: { basePath: "/_assets" } }, modules: effective.modules },
         loader: { load() { throw new Error("No resources should be loaded by this fixture."); } },

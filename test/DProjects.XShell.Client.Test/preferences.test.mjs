@@ -7,6 +7,10 @@ import commonSchema from "../../src/DProjects.XShell/Resources/DProjects.XShell/
 import serviceSchema from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/schemas/service.schema.json" with { type: "json" };
 import JsonValidator from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/json-validator.js";
 import Preferences from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/preferences.js";
+import Logger from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/logger.js";
+import {createThrowingLogger} from "./fixtures/throwing-logger.mjs";
+
+const logger = new Logger({});
 
 const originalDescriptors = new Map();
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/u;
@@ -281,7 +285,7 @@ test("Preferences emits value-free change events only after committed modificati
     const database = createIndexedDB();
     installEnvironment(database);
     const events = [];
-    const preferences = new Preferences({bus:{emit(type, detail) {
+    const preferences = new Preferences({logger, bus:{emit(type, detail) {
         assert.equal(database.completedWrites, events.length + 1);
         events.push({type, detail});
     }}});
@@ -297,12 +301,13 @@ test("Preferences emits value-free change events only after committed modificati
     ]);
 });
 
-test("Preferences emits nothing for validation, opening, write, or commit failures", async () => {
+test("Preferences logs storage failures without emitting change events", async t => {
     // Request success is insufficient when the enclosing transaction later aborts.
     const database = createIndexedDB();
     installEnvironment(database);
     const events = [];
-    const preferences = new Preferences({bus:{emit(type, detail) { events.push({type, detail}); }}});
+    const {logger: recordingLogger, calls: {error}} = await createThrowingLogger(t);
+    const preferences = new Preferences({logger: recordingLogger, bus:{emit(type, detail) { events.push({type, detail}); }}});
     await assert.rejects(preferences.set(" ", 1), /non-empty/u);
     database.failOpen();
     await assert.rejects(preferences.set("key", 1), /Injected open failure/u);
@@ -317,28 +322,30 @@ test("Preferences emits nothing for validation, opening, write, or commit failur
     await assert.rejects(preferences.delete("key"), /aborted/u);
     assert.deepEqual(events, []);
     assert.equal(await preferences.get("key"), 1);
+    assert.deepEqual(error.mock.calls.map(call => call.arguments), [
+        ["Preferences: storage initialization failed"],
+        ["Preferences: persistence failed", {operation: "set"}],
+        ["Preferences: persistence failed", {operation: "set"}],
+        ["Preferences: persistence failed", {operation: "delete"}]
+    ]);
 });
 
-test("Preferences keeps a committed write successful when Bus dispatch throws", async () => {
+test("Preferences keeps a committed write successful when Bus dispatch and logging throw", async t => {
     // A notification failure cannot turn a committed write into a reported storage failure.
     const database = createIndexedDB();
     installEnvironment(database);
-    const originalError = console.error;
-    console.error = () => {};
-    try {
-        const preferences = new Preferences({bus:{emit() { throw new Error("Dispatch failed."); }}});
-        await preferences.set("key", 1);
-        assert.equal(await preferences.get("key"), 1);
-    } finally {
-        console.error = originalError;
-    }
+    const {logger: recordingLogger, calls: {warn: warning}} = await createThrowingLogger(t);
+    const preferences = new Preferences({logger: recordingLogger, bus:{emit() { throw new Error("private-preference-value"); }}});
+    await preferences.set("private-preference-key", "private-preference-value");
+    assert.equal(await preferences.get("private-preference-key"), "private-preference-value");
+    assert.deepEqual(warning.mock.calls[0].arguments, ["Preferences: change notification failed", {action: "added"}]);
 });
 
 test("Preferences lazily creates the version-one database, store, and unique name index", async () => {
     // Opening on first use must create schema without eager constructor work.
     const database = createIndexedDB();
     installEnvironment(database);
-    const preferences = new Preferences();
+    const preferences = new Preferences({logger});
     assert.equal(database.opens.length, 0);
     assert.deepEqual(await preferences.list(), []);
     assert.deepEqual(database.opens, [{name:"xshell-preferences", version:1}]);
@@ -358,7 +365,7 @@ test("Preferences namespaces independent databases by normalized application bas
     for (const [basePath, name] of cases) {
         const database = createIndexedDB();
         installEnvironment(database);
-        await new Preferences({config:{app:{basePath}}}).list();
+        await new Preferences({logger, config:{app:{basePath}}}).list();
         assert.deepEqual(database.opens, [{name, version:1}]);
     }
     assert.notEqual(cases[1][1], cases[3][1]);
@@ -369,7 +376,7 @@ test("Preferences creates UUID records with default metadata and updates them wi
     const database = createIndexedDB();
     installEnvironment(database);
     const clock = installClock(Date.parse("2026-11-17T10:00:00.000Z"));
-    const preferences = new Preferences();
+    const preferences = new Preferences({logger});
     await preferences.set("x-editor:fontSize", 14);
     const created = database.records()[0];
     assert.match(created.id, UUID_PATTERN);
@@ -402,7 +409,7 @@ test("Preferences get distinguishes stored undefined from a missing record", asy
     // A record lookup result, rather than its value, determines whether the default applies.
     const database = createIndexedDB();
     installEnvironment(database);
-    const preferences = new Preferences();
+    const preferences = new Preferences({logger});
     await preferences.set("defined", 0);
     await preferences.set("undefined", undefined);
     assert.equal(await preferences.get("defined", 42), 0);
@@ -414,7 +421,7 @@ test("Preferences list uses prefix ranges and returns deterministic name order",
     // Insert out of order so enumeration order must come from the name index.
     const database = createIndexedDB();
     installEnvironment(database);
-    const preferences = new Preferences();
+    const preferences = new Preferences({logger});
     await preferences.set("x-theme:mode", "dark");
     await preferences.set("x-editor:tabSize", 4);
     await preferences.set("x-editor:fontSize", 14);
@@ -427,7 +434,7 @@ test("Preferences deletion is safe for existing and missing names", async () => 
     // Both deletion paths must commit successfully and leave unrelated records intact.
     const database = createIndexedDB();
     installEnvironment(database);
-    const preferences = new Preferences();
+    const preferences = new Preferences({logger});
     await preferences.set("one", 1);
     await preferences.set("two", 2);
     await preferences.delete("one");
@@ -439,15 +446,15 @@ test("Preferences persists records across service instances", async () => {
     // Separate service singletons share the same origin-scoped IndexedDB database.
     const database = createIndexedDB();
     installEnvironment(database);
-    await new Preferences().set("shared", {enabled:true});
-    assert.deepEqual(await new Preferences().get("shared"), {enabled:true});
+    await new Preferences({logger}).set("shared", {enabled:true});
+    assert.deepEqual(await new Preferences({logger}).get("shared"), {enabled:true});
 });
 
 test("Preferences round-trips structured-clone values without JSON serialization", async () => {
     // Exercise representative native types that would be lost or changed by JSON serialization.
     const database = createIndexedDB();
     installEnvironment(database);
-    const preferences = new Preferences();
+    const preferences = new Preferences({logger});
     const value = {
         date: new Date("2026-11-17T12:00:00.000Z"),
         map: new Map([["answer", 42]]),
@@ -469,7 +476,7 @@ test("Preferences rejects unsupported values and preserves the previous record",
     // A structured-clone failure must abort the transaction rather than corrupt the old value.
     const database = createIndexedDB();
     installEnvironment(database);
-    const preferences = new Preferences();
+    const preferences = new Preferences({logger});
     await preferences.set("stable", {version:1});
     const before = database.records()[0];
     await assert.rejects(preferences.set("stable", () => {}), error => error?.name === "DataCloneError");
@@ -481,7 +488,7 @@ test("Preferences serializes concurrent updates and rejects transaction failures
     // IndexedDB's write lock keeps every revision increment, even when callers update concurrently.
     const database = createIndexedDB();
     installEnvironment(database);
-    const preferences = new Preferences();
+    const preferences = new Preferences({logger});
     await preferences.set("counter", 0);
     await Promise.all(Array.from({length:10}, (_unused, index) => preferences.set("counter", index + 1)));
     assert.equal(database.records()[0].revision, 11);
@@ -497,7 +504,7 @@ test("Preferences reports blocked and failed opens and permits a later retry", a
     const database = createIndexedDB();
     installEnvironment(database);
     database.blockOpen();
-    const preferences = new Preferences();
+    const preferences = new Preferences({logger});
     await assert.rejects(preferences.list(), /blocked by another tab/u);
     database.failOpen();
     await assert.rejects(preferences.list(), /Injected open failure/u);
@@ -509,7 +516,7 @@ test("Preferences validates keys, prefixes, and editable metadata", async () => 
     // Public input checks reject ambiguous keys and service-managed metadata before storage changes.
     const database = createIndexedDB();
     installEnvironment(database);
-    const preferences = new Preferences();
+    const preferences = new Preferences({logger});
     await assert.rejects(preferences.set(" ", 1), /non-empty string/u);
     await assert.rejects(preferences.set("key", 1, {id:"caller"}), /unknown property/u);
     await assert.rejects(preferences.set("key", 1, {label:1}), /label must be a string/u);

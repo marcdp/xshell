@@ -2,8 +2,10 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import LoaderCommandJs from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/loaders/command-js.js";
+import Logger from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/logger.js";
 import Services from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services.js";
 import Tasks from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/tasks.js";
+import {createThrowingLogger} from "./fixtures/throwing-logger.mjs";
 
 let instanceId = 0;
 
@@ -39,15 +41,17 @@ function createRoot({disposed = [], scopedDispose} = {}) {
     return root;
 }
 
-async function loadCommand(source, {root = createRoot(), module, moduleConfig} = {}) {
+async function loadCommand(source, {root = createRoot(), module, moduleConfig, logger = new Logger({})} = {}) {
     const schema = {
         type: "object",
         required: ["contract", "controller"],
         properties: {contract: {type: "object"}, controller: {type: "object"}}
     };
     const context = {
+        resourceName: "sample.command",
         resourceDefinition: {moduleId: "sample"},
         services: {
+            logger,
             loader: {async load(id) { assert.equal(id, "schema:command"); return schema; }},
             config: {modules: {sample: moduleConfig ?? {id: "sample", src: "sample.jsonc"}}},
             modules: {getModuleById(id) { return id === "sample" ? module ?? {id: "sample"} : null; }},
@@ -66,7 +70,7 @@ test("Command instances own independent direct-root scopes and preserve controll
     const ordinary = {
         loader: {name: "loader"},
         resolver: {name: "resolver"},
-        tasks: new Tasks({bus: null})
+        tasks: new Tasks({logger: new Logger({}), bus: null})
     };
     root.register("hooks", hooks);
     for (const [name, service] of Object.entries(ordinary)) root.register(name, service);
@@ -146,8 +150,7 @@ test("Command constructor failure initiates owned-scope cleanup and preserves th
     const cleanupError = new Error("constructor cleanup failed");
     const root = createRoot({disposed, scopedDispose() { throw cleanupError; }});
     const constructionError = new Error("controller failed");
-    const reported = [];
-    t.mock.method(console, "error", (...args) => reported.push(args));
+    const {logger, calls: {error}} = await createThrowingLogger(t);
     root.register("hooks", {constructionError});
     const {Command} = await loadCommand(`
         export default {
@@ -157,15 +160,14 @@ test("Command constructor failure initiates owned-scope cleanup and preserves th
                 throw provider.hooks.constructionError;
             }
         };
-    `, {root});
+    `, {root, logger});
 
     assert.throws(() => new Command({task: {}}), error => error === constructionError);
     await new Promise(resolve => setTimeout(resolve, 0));
 
     assert.equal(disposed.filter(item => item.startsWith("scoped:")).length, 1);
-    assert.equal(reported.length, 1);
-    assert.match(reported[0][0], /Command 'Failure'.*construction failed/);
-    assert.strictEqual(reported[0][1], cleanupError);
+    assert.equal(error.mock.callCount(), 1);
+    assert.deepEqual(error.mock.calls[0].arguments, ["Commands: disposal failed", {commandId: "sample.command", moduleId: "sample", stage: "construction"}]);
 });
 
 test("Command.dispose propagates cleanup failure while clearing owned references", async () => {

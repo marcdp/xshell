@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import Logger from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/logger.js";
 
 globalThis.HTMLElement = class {};
 globalThis.CSSStyleSheet = class {
@@ -54,7 +55,7 @@ const loader = {
         return resource.startsWith("state-engine:") ? StateEngineFactory : RenderEngineFactory;
     }
 };
-const services = { config, loader, modules: { shadowStyleSheets: [] } };
+const services = { config, loader, logger: new Logger({}), modules: { shadowStyleSheets: [] } };
 
 function createDefinition(state) {
     return { meta: { id: "x-contract-state-test" }, state };

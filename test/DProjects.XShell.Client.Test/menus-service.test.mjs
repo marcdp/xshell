@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import Areas from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/areas.js";
+import Logger from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/logger.js";
 import Menus from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/menus.js";
 import MenusContract from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/contracts/menus.json" with { type: "json" };
 import Modules from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/modules.js";
@@ -82,7 +83,7 @@ test("module controller startup can read global menus and register a source befo
     const resolver = { resolve: () => ({ definition: { moduleId: "xshell" } }) };
     const contracts = { getContractItemById: id => ({ id, contract: id === "menus" ? MenusContract : ModulesContract }) };
     const services = new Services({ config, loader, resolver, contracts });
-    for (const [name, instance] of Object.entries({ config, loader, resolver, bus, areas, document: { adoptedStyleSheets: [] } })) {
+    for (const [name, instance] of Object.entries({ config, loader, resolver, bus, areas, logger: new Logger({}), document: { adoptedStyleSheets: [] } })) {
         services.register(name, instance);
     }
     await services.init();

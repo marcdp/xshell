@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import Logger from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/logger.js";
 
 class FakeEventTarget {
     listeners = new Map();
@@ -78,6 +79,7 @@ const loader = { async load(resource) {
 } };
 const modules = { getModuleById() { return {}; } };
 const services = {
+    logger: new Logger({}),
     config,
     loader,
     modules

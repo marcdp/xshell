@@ -16,6 +16,7 @@ import ContractDetailPage from "../../src/DProjects.XShell/Resources/DProjects.X
 import NavigationPage from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell-diagnostics/pages/navigation.js";
 import ListView from "../../src/DProjects.XShell/Resources/DProjects.XShell/x/components/x-listview.js";
 import Page from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/page.js";
+import Logger from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/logger.js";
 import Navigation from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/navigation.js";
 import createStateEngine from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/state-engines/proxy.js";
 import NavigationContract from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/contracts/navigation.json" with { type: "json" };
@@ -210,6 +211,7 @@ test("Double-clicking a service opens and closes a stacked Inspector with the ex
     });
 
     const navigation = new Navigation({
+        logger: new Logger({}),
         areas: { }, menus: { resolvePath: () => null, resolveHref: () => null },
         resolver: { resolve: reference => reference === href ? { path: inspectorPath } : null },
         config: { app: { basePath: "", baseUrl: "https://example.test/" }, xshell: {} }
@@ -339,6 +341,7 @@ test("Navigation reconstructs a stacked contract reference and exact query ID fr
         delete globalThis.history;
     });
     const navigation = new Navigation({
+        logger: new Logger({}),
         areas: { }, menus: { resolvePath: () => null, resolveHref: () => null },
         resolver: { resolve: resource => resource === contractDetailHref ? { path: contractPath } : null },
         config: { app: { basePath: "", baseUrl: document.baseURI }, xshell: {} }

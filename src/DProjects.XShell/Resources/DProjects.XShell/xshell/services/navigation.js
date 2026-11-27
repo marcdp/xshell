@@ -38,6 +38,7 @@ export default class Navigation {
     #config = null;
     #container = null;
     #resolver = null;
+    #logger;
 
     #mode = "";
     #appBasePath = "";
@@ -49,7 +50,8 @@ export default class Navigation {
     #browserHash = "";
     
     // ctor
-    constructor( { areas, bus, config, menus, resolver }, options = {}, { container = document.body } = {} ) {
+    constructor( { areas, bus, config, menus, resolver, logger }, options = {}, { container = document.body } = {} ) {
+        this.#logger = logger;
         // initialize injected dependencies
         this.#areas = areas;
         this.#menus = menus;
@@ -250,7 +252,13 @@ export default class Navigation {
         if (typeof path !== "string" || !path.trim()) throw new Error("resolveRoute: path must be a non-empty string");
         if (!path.startsWith("/") || path.startsWith("//")) throw new Error("resolveRoute: path must start with a single '/'");
         const item = this.parseUrl(path);
-        const match = this.#findRouteMatch(this.#splitHref(item.href).identity);
+        let match;
+        try {
+            match = this.#findRouteMatch(this.#splitHref(item.href).identity);
+        } catch (error) {
+            this.#logger.warn("Navigation: route resolution failed");
+            throw error;
+        }
         if (!match) return null;
 
         // describe the first match and build the same logical Page href used during navigation
@@ -282,62 +290,68 @@ export default class Navigation {
             classes,        // caller presentation classes for a stacked Page
             replace = false
         }) {
-        // Preserve explicit asset targets for embeds while retaining ordinary relative resolution.
-        if (!open) open = "auto";
-        const preserveAssetPath = open === "embed" && (href.startsWith("/") || href.startsWith(HASH_PREFIX + "/") || href.startsWith("page:"));
-        const hrefResolved = this.#resolveCanonicalHref(href, page, { preserveAssetPath, scope });
-        const hrefAbsolute = this.buildUrl({ href: hrefResolved, params, nav, page });
-        // open
-        if (open == "auto") {
-            // auto
-            const xpage = page?.host;
-            const xpages = this.getXPages();
-            const indexPage = xpages.indexOf(xpage);
-            if  (xpage == null) {
-                // top
-                await this.#stackToBrowser([ this.parseUrl(hrefAbsolute) ], { replace });
-            } else if (indexPage == 0) {
-                // top
-                await this.#stackToBrowser([ this.parseUrl(hrefAbsolute) ], { replace });
-            } else if (indexPage != -1) {
-                // stackpage
-                let stack = [...this.#stack];
-                stack[indexPage] = withStackClasses(this.parseUrl(hrefAbsolute), classes);
-                await this.#stackToBrowser(stack, { replace });
-            } else {
-                // dialog or embed 
-                const hrefFinal = this.#buildUrlFinal(this.parseUrl(hrefAbsolute));
-                xpage.setAttribute("src", hrefFinal);
+        // Record the operation without forwarding addresses, parameters or Page state.
+        const startedAt = performance.now();
+        this.#logger.debug("Navigation: requested");
+        try {
+            // Preserve explicit asset targets for embeds while retaining ordinary relative resolution.
+            if (!open) open = "auto";
+            const preserveAssetPath = open === "embed" && (href.startsWith("/") || href.startsWith(HASH_PREFIX + "/") || href.startsWith("page:"));
+            const hrefResolved = this.#resolveCanonicalHref(href, page, { preserveAssetPath, scope });
+            // Classify the resolved local destination without exposing its address.
+            if (hrefResolved.startsWith("/") && !hrefResolved.startsWith("//")) {
+                const navigationScope = matchesPathPrefix(this.#splitHref(hrefResolved).identity, this.#areas.globalPrefix) ? "global" : "area";
+                this.#logger.trace("Navigation: scope determined", {scope: navigationScope});
             }
-        } else if (open == "top") {
-            // top                        
-            await this.#stackToBrowser([ this.parseUrl(hrefAbsolute) ], { replace });
-
-        } else if (open == "stack") {
-            // stack
-            await this.#stackToBrowser([...this.#stack, withStackClasses(this.parseUrl(hrefAbsolute), classes)], { replace });
-            
-        } else if (open == "dialog") {
-            // dialog
-            const hrefFinal = this.#buildUrlFinal(this.parseUrl(hrefAbsolute));
-            return await this.#showDialog({ href: hrefFinal, context });
-
-        } else if (open == "embed") {
-            // embed
-            if (typeof outlet === "string") {
-                const xpage = page.host;
-                const outletElement = xpage.querySelector(`x-page[outlet="${outlet}"]`);
-                if (outletElement) {
-                    const hrefFinal = this.#buildUrlFinal(this.parseUrl(hrefAbsolute), { preserveAssetPath });
-                    outletElement.setAttribute("src", hrefFinal);
+            const hrefAbsolute = this.buildUrl({ href: hrefResolved, params, nav, page });
+            // Log the mode at the existing dispatch boundary.
+            if (open == "auto") {
+                const xpage = page?.host;
+                const xpages = this.getXPages();
+                const indexPage = xpages.indexOf(xpage);
+                if (xpage == null || indexPage == 0) {
+                    this.#logger.debug("Navigation: mode selected", {mode: "top"});
+                    await this.#stackToBrowser([ this.parseUrl(hrefAbsolute) ], { replace });
+                } else if (indexPage != -1) {
+                    this.#logger.debug("Navigation: mode selected", {mode: "stack"});
+                    const stack = [...this.#stack];
+                    stack[indexPage] = withStackClasses(this.parseUrl(hrefAbsolute), classes);
+                    await this.#stackToBrowser(stack, { replace });
+                } else {
+                    this.#logger.debug("Navigation: mode selected", {mode: "in-place"});
+                    const hrefFinal = this.#buildUrlFinal(this.parseUrl(hrefAbsolute));
+                    xpage.setAttribute("src", hrefFinal);
                 }
+            } else if (open == "top") {
+                this.#logger.debug("Navigation: mode selected", {mode: "top"});
+                await this.#stackToBrowser([ this.parseUrl(hrefAbsolute) ], { replace });
+            } else if (open == "stack") {
+                this.#logger.debug("Navigation: mode selected", {mode: "stack"});
+                await this.#stackToBrowser([...this.#stack, withStackClasses(this.parseUrl(hrefAbsolute), classes)], { replace });
+            } else if (open == "dialog") {
+                this.#logger.debug("Navigation: mode selected", {mode: "dialog"});
+                const hrefFinal = this.#buildUrlFinal(this.parseUrl(hrefAbsolute));
+                const result = await this.#showDialog({ href: hrefFinal, context });
+                this.#logger.debug("Navigation: dialog closed", {duration: performance.now() - startedAt});
+                return result;
+            } else if (open == "embed") {
+                this.#logger.debug("Navigation: mode selected", {mode: "embed"});
+                if (typeof outlet === "string") {
+                    const xpage = page.host;
+                    const outletElement = xpage.querySelector(`x-page[outlet="${outlet}"]`);
+                    if (outletElement) {
+                        const hrefFinal = this.#buildUrlFinal(this.parseUrl(hrefAbsolute), { preserveAssetPath });
+                        outletElement.setAttribute("src", hrefFinal);
+                    }
+                }
+            } else if (open == "dock") {
+                this.#logger.debug("Navigation: mode selected", {mode: "dock"});
+                this.#bus.emit("xshell:navigation:dock:changed", {src: hrefAbsolute});
             }
-        } else if (open == "dock") {
-            // stack
-            this.#bus.emit("xshell:navigation:dock:changed", {
-                src: hrefAbsolute,
-            });
-        }  
+        } catch (error) {
+            this.#logger.error("Navigation: operation failed", {duration: performance.now() - startedAt});
+            throw error;
+        }
     }
 
 
@@ -416,11 +430,13 @@ export default class Navigation {
     }
     async #restoreBrowserStack(url) {
         // History traversal uses the same reconciliation as explicit navigation.
+        const startedAt = performance.now();
         try {
             this.#stack = this.#browserUrlToStack(url);
             await this.#stackToDom();
-        } catch (error) {
-            console.error("Navigation: could not restore the browser location.", error);
+            this.#logger.debug("Navigation: browser history restored", {mode: this.#mode, stackDepth: this.#stack.length, duration: performance.now() - startedAt});
+        } catch {
+            this.#logger.error("Navigation: browser history restoration failed", {mode: this.#mode});
         }
     }
     #browserUrlToStack(url) {
@@ -456,6 +472,7 @@ export default class Navigation {
     }
     async #reconcileStackToDom() {
         // Resolve a snapshot before reconciling so pending cleanup cannot mix stack revisions.
+        const startedAt = performance.now();
         const stack = this.#stack;
         const sources = stack.map(item => this.#buildUrlFinal(item));
         const xpages = this.getXPages();
@@ -498,7 +515,9 @@ export default class Navigation {
                         if (!item || !this.#isPageDestination(event.target, item)) return;
                         const nextStack = [...this.#stack];
                         nextStack.splice(index, 1);
-                        await this.#stackToBrowser(nextStack, { replace: false }).catch(error => console.error("Navigation: could not close the stacked Page.", error));
+                        await this.#stackToBrowser(nextStack, { replace: false }).catch(() => {
+                            this.#logger.error("Navigation: stacked Page close failed", {mode: "stack"});
+                        });
                     });
                 }
                 xpage.addEventListener("change", (event) => {
@@ -545,6 +564,7 @@ export default class Navigation {
                 }
             }
         }
+        this.#logger.debug("Navigation: stack reconciled", {stackDepth: stack.length, duration: performance.now() - startedAt});
     }
     #pageDestination(src) {
         // Compare decoded query values in key order, preserving the order of repeated values.
@@ -663,6 +683,7 @@ export default class Navigation {
             const resolved = this.#resolver.resolve(identity);
             if (!resolved?.path) throw new Error(`Navigation: unable to resolve Page reference '${identity}' to a browser path.`);
             href = resolved.path + suffix;
+            this.#logger.trace("Navigation: canonical Page reference resolved", {moduleId: resolved.definition?.moduleId});
         }
         if (/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(href) || href.startsWith("//")) return href;
         href = this.#toLogicalHref(href);
@@ -731,6 +752,9 @@ export default class Navigation {
         const area = this.#areas.getArea?.(this.#areas.resolveAreaId?.(identity));
         if (!area) return null;
         const match = this.#matchAreaRoutes(this.#removePathPrefix(identity, area.prefix), area);
+        if (match) {
+            this.#logger.trace("Navigation: route resolved", {areaId: area.id, moduleId: match.route.module});
+        }
         return match ? { area, ...match } : null;
     }
     #compileRoute(path) {

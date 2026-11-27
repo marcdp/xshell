@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import Logger from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/logger.js";
 
 const animationFrames = [];
 const renderEngines = [];
@@ -76,6 +77,7 @@ function configureRuntime(commandsService) {
         }
     };
     const services = {
+        logger: new Logger({}),
         config,
         loader,
         bus: { emit() {} },

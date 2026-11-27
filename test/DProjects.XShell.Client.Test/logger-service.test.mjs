@@ -9,6 +9,7 @@ import ServiceSchema from "../../src/DProjects.XShell/Resources/DProjects.XShell
 import Services from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services.js";
 import JsonValidator from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/json-validator.js";
 import Logger from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/logger.js";
+import Tasks from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/tasks.js";
 import Resolver from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/resolver.js";
 
 const resources = new URL("../../src/DProjects.XShell/Resources/DProjects.XShell/", import.meta.url);
@@ -61,6 +62,8 @@ async function createServices(config, loadProvider = () => assert.fail("Unexpect
         getContractItemById: id => id === "logger" ? {id, contract: LoggerContract} : undefined
     }});
     services.register("loader", loader);
+    services.register("bus", {emit() {}});
+    services.register("tasks", null, {implementationItem: {class: Tasks}});
     await services.init();
     return {services, loads};
 }
@@ -95,9 +98,34 @@ test("missing and explicit null selection ignore all calls without loading provi
         const {services, loads} = await createServices(config);
         const logger = await services.initialize("logger");
         for (const level of levels) assert.equal(logger[level]("ignored", {}), undefined);
+        const task = services.resolve("tasks").run({title: "Logging disabled", handler() { return 42; }});
+        assert.equal(await task.getResult(), 42);
         assert.deepEqual(loads, []);
     }
     for (const method of output) assert.equal(method.mock.callCount(), 0);
+});
+
+test("a provider can resolve an instrumented service during initialization and its logging errors stay isolated", async () => {
+    const config = composeLogger("selected", {selected: {implementation: "/providers/selected.js"}});
+    const events = [];
+    let tasks;
+    const {services, loads} = await createServices(config, () => class {
+        constructor(dependencies) { tasks = dependencies.tasks; }
+        log(level, message, metadata) {
+            events.push({level, message, metadata});
+            throw new Error("provider failed");
+        }
+    });
+    const logger = await services.initialize("logger");
+    assert.strictEqual(tasks, services.resolve("tasks"));
+    const metadata = {count: 1};
+    for (const level of levels) assert.equal(logger[level]("Provider isolation", metadata), undefined);
+    assert.deepEqual(events.map(event => event.level), levels);
+    assert.ok(events.every(event => event.metadata === metadata));
+    const task = tasks.run({title: "Logging enabled", handler() { return 42; }});
+    assert.equal(await task.getResult(), 42);
+    assert.ok(events.some(({level, message, metadata}) => level === "debug" && message === "Tasks: execution completed" && metadata.taskId === task.id));
+    assert.equal(loads.length, 1);
 });
 
 test("provider contributions compose, preserve module ownership and delegate original arguments once initialized", async () => {

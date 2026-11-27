@@ -1,9 +1,11 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import Logger from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/logger.js";
 
 import Services from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services.js";
 import Events from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/events.js";
 import Timer from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/timer.js";
+import {createThrowingLogger} from "./fixtures/throwing-logger.mjs";
 
 class FakeNode {
     adoptedStyleSheets = [];
@@ -73,7 +75,7 @@ function delay(milliseconds) {
     return new Promise(resolve => setTimeout(resolve, milliseconds));
 }
 
-function createRuntime({ order = [], scopedDispose } = {}) {
+function createRuntime({ order = [], scopedDispose, logger = new Logger({}) } = {}) {
     const config = {
         app: { baseUrl: "https://example.test/" },
         modules: { test: { defaults: { component: { stateEngine: "test", renderEngine: "test" }, page: { stateEngine: "test", renderEngine: "test" } } } },
@@ -89,6 +91,7 @@ function createRuntime({ order = [], scopedDispose } = {}) {
     };
     const root = new Services({ config, loader, contracts: {}, resolver: {}, bus: { emit() {} } });
     const modules = { getModuleById() { return { controller: {} }; } };
+    root.register("logger", logger);
     root.register("config", config);
     root.register("loader", loader);
     root.register("modules", modules);
@@ -365,7 +368,8 @@ test("Page cleanup and scope disposal continue when controller unload fails", as
 
 test("constructor failures asynchronously dispose created scopes without replacing the original error", async t => {
     const order = [];
-    const { root, context } = createRuntime({ order });
+    const {logger, calls: {error: errorLog}} = await createThrowingLogger(t);
+    const { context } = createRuntime({ order, logger });
     const controllerFailure = new Error("Controller construction failed.");
     const failedHelpers = [];
     const PageClass = await createPageClassFromJsDefinition("failing-page.js", context, {
@@ -377,9 +381,6 @@ test("constructor failures asynchronously dispose created scopes without replaci
         contract: { methods: { execute: {} } },
         controller({ session, events, timer }) { failedHelpers.push(events, timer); return { session }; }
     });
-    const cleanupErrors = [];
-    t.mock.method(console, "error", (...args) => cleanupErrors.push(args));
-
     assert.throws(() => createPage(PageClass), error => error === controllerFailure);
     assert.throws(() => new Component(), /declares public method 'execute'.*controller\.execute is not a function/);
     await new Promise(resolve => setTimeout(resolve, 0));
@@ -389,26 +390,27 @@ test("constructor failures asynchronously dispose created scopes without replaci
         if (helper instanceof Events) assert.throws(() => helper.on(new EventTarget(), "after-dispose", "run"), /require a Services scope controller context/);
         else assert.throws(() => helper.setTimeout("run", 0), /require a Services scope controller context/);
     }
-    assert.deepEqual(cleanupErrors, []);
+    assert.deepEqual(errorLog.mock.calls.map(call => call.arguments[0]), [
+        "Pages: lifecycle operation failed", "Components: lifecycle operation failed"
+    ]);
+    assert.ok(errorLog.mock.calls.every(call => call.arguments.length === 2 && call.arguments[1].stage === "controller initialization"));
 });
 
 test("constructor cleanup reports scope disposal failures without an unhandled rejection", async t => {
     const constructionFailure = new Error("construction failed");
     const cleanupFailure = new Error("constructor cleanup failed");
-    const { root, context } = createRuntime({ scopedDispose() { throw cleanupFailure; } });
+    const {logger, calls: {error: reported}} = await createThrowingLogger(t);
+    const { context } = createRuntime({ logger, scopedDispose() { throw cleanupFailure; } });
     const PageClass = await createPageClassFromJsDefinition("cleanup-reporting-page.js", context, {
         meta: { id: "cleanup-reporting-page" },
         controller({ session }) { assert.ok(session); throw constructionFailure; }
     });
-    const reported = [];
-    t.mock.method(console, "error", (...args) => reported.push(args));
-
     assert.throws(() => createPage(PageClass), error => error === constructionFailure);
     await new Promise(resolve => setTimeout(resolve, 0));
 
-    assert.equal(reported.length, 1);
-    assert.match(reported[0][0], /Failed to dispose Services scope for Page 'cleanup-reporting-page'/);
-    assert.strictEqual(reported[0][1], cleanupFailure);
+    assert.deepEqual(reported.mock.calls.find(call => call.arguments[0] === "Pages: scope disposal failed").arguments, [
+        "Pages: scope disposal failed", {pageId: "cleanup-reporting-page", moduleId: "test", stage: "construction"}
+    ]);
 });
 
 test("unload aggregates controller and scope failures after existing cleanup", async () => {

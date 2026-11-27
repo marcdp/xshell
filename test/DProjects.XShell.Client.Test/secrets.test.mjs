@@ -6,6 +6,10 @@ import commonSchema from "../../src/DProjects.XShell/Resources/DProjects.XShell/
 import serviceSchema from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/schemas/service.schema.json" with { type: "json" };
 import JsonValidator from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/json-validator.js";
 import Secrets from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/secrets.js";
+import Logger from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/logger.js";
+import {createThrowingLogger} from "./fixtures/throwing-logger.mjs";
+
+const logger = new Logger({});
 
 const originalDescriptors = new Map();
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/u;
@@ -270,7 +274,7 @@ function secretsConfig(rememberMinutes = 0, maxRememberMinutes = 0, pageUnlock =
 }
 
 function createSecrets(config, dependencies = { config }) {
-    return new Secrets(dependencies, config?.xshell?.services?.secrets?.options);
+    return new Secrets({logger, ...dependencies}, config?.xshell?.services?.secrets?.options);
 }
 
 function installClock(initial) {
@@ -394,7 +398,7 @@ test("Secrets V2 initializes a random-DEK vault and preserves JSON CRUD across p
     const database = createIndexedDB();
     installEnvironment(database);
     const events = [];
-    const secrets = new Secrets({ bus: { emit(name, detail) { events.push({ name, detail }); } } });
+    const secrets = new Secrets({ logger, bus: { emit(name, detail) { events.push({ name, detail }); } } });
 
     assert.equal(await secrets.ready(), "uninitialized");
     assert.equal(database.hasIndex("secrets", "name"), true);
@@ -434,7 +438,7 @@ test("Secrets V2 initializes a random-DEK vault and preserves JSON CRUD across p
 
     secrets.lock();
     await assert.rejects(secrets.get("text"), /locked/u);
-    const reopened = new Secrets({ bus: { emit(name, detail) { events.push({ name, detail }); } } });
+    const reopened = new Secrets({ logger, bus: { emit(name, detail) { events.push({ name, detail }); } } });
     assert.equal(await reopened.ready(), "locked");
     const metadataBeforeWrongPassword = database.records("metadata");
     await assert.rejects(reopened.unlock({ password: "wrong" }), /Invalid master password/u);
@@ -452,23 +456,21 @@ test("Secrets V2 initializes a random-DEK vault and preserves JSON CRUD across p
     ]);
 });
 
-test("Secrets mutation notifications cannot turn committed writes into failures", async () => {
+test("Secrets mutation notifications and diagnostics cannot turn committed writes into failures", async t => {
     // Preserve successful encrypted persistence when a mutation listener throws.
     const database = createIndexedDB();
     installEnvironment(database);
-    const secrets = new Secrets({bus:{emit(name) { if (name === "secrets:changed") throw new Error("Listener failed."); }}});
-    const originalError = console.error;
-    console.error = () => {};
-    try {
-        await secrets.ready();
-        await secrets.initialize({password:"master password"});
-        await secrets.set("token", "value");
-        assert.equal(await secrets.get("token"), "value");
-        await secrets.delete("token");
-        assert.equal(await secrets.has("token"), false);
-    } finally {
-        console.error = originalError;
-    }
+    const {logger: recordingLogger, calls: {warn: warning}} = await createThrowingLogger(t);
+    const secrets = new Secrets({logger: recordingLogger, bus:{emit(name) {
+        if (name === "secrets:changed") throw new Error("private vault identifier");
+    }}});
+    await secrets.ready();
+    await secrets.initialize({password:"master password"});
+    await secrets.set("private secret name", "private secret value");
+    assert.equal(await secrets.get("private secret name"), "private secret value");
+    await secrets.delete("private secret name");
+    assert.equal(await secrets.has("private secret name"), false);
+    assert.deepEqual(warning.mock.calls.map(call => call.arguments), Array(2).fill(["Secrets: change notification failed"]));
 });
 
 test("has checks exact Secret names without decrypting, unlocking, or authenticating", async () => {
@@ -508,7 +510,7 @@ test("Secrets namespaces independent databases by normalized application base pa
     for (const [basePath, name] of cases) {
         const database = createIndexedDB();
         installEnvironment(database);
-        const secrets = new Secrets({config:{app:{basePath}}});
+        const secrets = new Secrets({logger, config:{app:{basePath}}});
         assert.equal(await secrets.ready(), "uninitialized");
         assert.deepEqual(database.opens, [{name, version:1}]);
         assert.equal(database.hasIndex("secrets", "name"), true);
@@ -592,7 +594,7 @@ test("get supports dialog initialization without creating a missing secret and p
 test("secret metadata tracks timestamps, revisions, and encrypted descriptions", async () => {
     const database = createIndexedDB();
     installEnvironment(database);
-    const secrets = new Secrets();
+    const secrets = new Secrets({logger});
     await secrets.ready();
     await secrets.initialize({ password: "master password" });
 
@@ -678,7 +680,7 @@ test("secret metadata tracks timestamps, revisions, and encrypted descriptions",
 test("concurrent secret updates serialize revision increments", async () => {
     const database = createIndexedDB();
     installEnvironment(database);
-    const secrets = new Secrets();
+    const secrets = new Secrets({logger});
     await secrets.ready();
     await secrets.initialize({ password: "master password" });
     await secrets.set("api-token", "first");
@@ -696,7 +698,7 @@ test("concurrent secret updates serialize revision increments", async () => {
 test("secret names, labels, and renaming preserve immutable encrypted identities", async () => {
     const database = createIndexedDB();
     installEnvironment(database);
-    const secrets = new Secrets();
+    const secrets = new Secrets({logger});
     await secrets.ready();
     await secrets.initialize({ password:"master password" });
 
@@ -767,7 +769,7 @@ test("secret names, labels, and renaming preserve immutable encrypted identities
 test("concurrent creation uses one unique name and monotonic revisions", async () => {
     const database = createIndexedDB();
     installEnvironment(database);
-    const secrets = new Secrets();
+    const secrets = new Secrets({logger});
     await secrets.ready();
     await secrets.initialize({ password:"master password" });
 
@@ -787,7 +789,7 @@ test("multiple PRF passkeys wrap the same DEK without re-encrypting secrets", as
     const database = createIndexedDB();
     const webauthn = installEnvironment(database, createWebAuthn());
     const events = [];
-    const secrets = new Secrets({bus:{emit(name, detail) { events.push({name, detail}); }}});
+    const secrets = new Secrets({logger, bus:{emit(name, detail) { events.push({name, detail}); }}});
     await secrets.ready();
     await secrets.initialize({ password: "master password" });
     await secrets.set("token", { value: "unchanged" });
@@ -849,7 +851,7 @@ test("multiple PRF passkeys wrap the same DEK without re-encrypting secrets", as
 test("passkey enrollment rejects missing passwords, unsupported PRF, missing PRF output, and cancellation", async () => {
     const database = createIndexedDB();
     const unsupported = installEnvironment(database, createWebAuthn({ registrationEnabled: false }));
-    const secrets = new Secrets();
+    const secrets = new Secrets({logger});
     await secrets.ready();
     await secrets.initialize({ password: "master password" });
 
@@ -873,7 +875,7 @@ test("passkey enrollment rejects missing passwords, unsupported PRF, missing PRF
 test("passkey unlocking rejects cancellation, unexpected credentials, missing output, and incorrect PRF material", async () => {
     const database = createIndexedDB();
     const webauthn = installEnvironment(database, createWebAuthn());
-    const secrets = new Secrets();
+    const secrets = new Secrets({logger});
     await secrets.ready();
     await secrets.initialize({ password: "master password" });
     await secrets.set("token", "value");
@@ -904,7 +906,7 @@ test("passkey unlocking rejects cancellation, unexpected credentials, missing ou
 test("locking invalidates in-flight password unlock and encrypted writes", async () => {
     const database = createIndexedDB();
     installEnvironment(database);
-    const secrets = new Secrets();
+    const secrets = new Secrets({logger});
     await secrets.ready();
     await secrets.initialize({ password: "master password" });
     secrets.lock();
@@ -950,7 +952,7 @@ test("locking invalidates in-flight password unlock and encrypted writes", async
 test("locking during an in-flight get never returns the decrypted value", async () => {
     const database = createIndexedDB();
     installEnvironment(database);
-    const secrets = new Secrets();
+    const secrets = new Secrets({logger});
     await secrets.ready();
     await secrets.initialize({password:"master password"});
     await secrets.set("token", "must not return");
@@ -996,7 +998,7 @@ test("locking during passkey registration does not persist a registration", asyn
         return nativeCreate(options);
     };
     installEnvironment(database, webauthn);
-    const secrets = new Secrets();
+    const secrets = new Secrets({logger});
     await secrets.ready();
     await secrets.initialize({ password: "master password" });
 
@@ -1012,7 +1014,7 @@ test("locking during passkey registration does not persist a registration", asyn
 test("remembered-session policy defaults to memory-only and validates durations", async () => {
     const database = createIndexedDB();
     const { sessionStorage } = installEnvironment(database);
-    const secrets = new Secrets();
+    const secrets = new Secrets({logger});
     await secrets.ready();
     await secrets.initialize({ password: "master password" });
     secrets.lock();
@@ -1028,16 +1030,16 @@ test("remembered-session policy defaults to memory-only and validates durations"
     assert.throws(() => createSecrets(secretsConfig(0, 0, "page:")), /Page resource reference/u);
     assert.throws(() => createSecrets(secretsConfig(0, 0, " ")), /Page resource reference/u);
     assert.throws(() => createSecrets(secretsConfig(0, 0, null, "page:")), /Page resource reference/u);
-    assert.throws(() => new Secrets({}, {page:null}), /unknown option/u);
+    assert.throws(() => new Secrets({logger}, {page:null}), /unknown option/u);
 
     const configuredOptions = {rememberMinutes:15, maxRememberMinutes:60, pageUnlock:"/_assets/x/pages/preferences/secrets-unlock.js", pageManager:"page:x:/pages/preferences/secrets.js"};
-    const configured = new Secrets({}, configuredOptions);
+    const configured = new Secrets({logger}, configuredOptions);
     assert.deepEqual(configured.options, configuredOptions);
     assert.equal(Object.isFrozen(configured.options), true);
     configuredOptions.rememberMinutes = 30;
     assert.equal(configured.options.rememberMinutes, 15);
     assert.throws(() => { configured.options.pageManager = null; }, TypeError);
-    assert.deepEqual(new Secrets().options, {rememberMinutes:0, maxRememberMinutes:0, pageUnlock:null, pageManager:null});
+    assert.deepEqual(new Secrets({logger}).options, {rememberMinutes:0, maxRememberMinutes:0, pageUnlock:null, pageManager:null});
 
     const configurable = createSecrets(secretsConfig(15, 60));
     await configurable.ready();
@@ -1337,7 +1339,7 @@ test("legacy V1 metadata is rejected without deletion or replacement", async () 
         }
     });
     installEnvironment(database);
-    const secrets = new Secrets();
+    const secrets = new Secrets({logger});
     assert.equal(await secrets.ready(), "locked");
     await assert.rejects(secrets.unlock({ password: "password" }), /Unsupported Secrets vault format version 1/u);
     await assert.rejects(secrets.listPasskeys(), /Unsupported Secrets vault format version 1/u);

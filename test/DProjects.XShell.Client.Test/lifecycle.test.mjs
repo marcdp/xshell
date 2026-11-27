@@ -2,11 +2,13 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import ComponentSchema from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/schemas/component.schema.json" with { type: "json" };
 import ContractSchema from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/schemas/contract.schema.json" with { type: "json" };
+import Logger from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/logger.js";
 import Services from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services.js";
 import { Validator } from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/vendor/json-schema/4.1.1/json-schema.js";
 import Dialog from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/dialog.js";
 import pickerDefinition from "../../src/DProjects.XShell/Resources/DProjects.XShell/x/pages/dialog-picker.js";
 import mainLayoutDefinition from "../../src/DProjects.XShell/Resources/DProjects.XShell/x/layouts/x-layout-main.js";
+import {createThrowingLogger} from "./fixtures/throwing-logger.mjs";
 
 const animationFrames = [];
 const bus = { emit() {} };
@@ -300,6 +302,7 @@ test("x-page intercepts only application anchors and preserves native clicks", a
             await t.test(`${mode}: ${JSON.stringify(scenario)}`, () => {
                 // exercise the registered click listener with real Navigation URL parsing
                 const navigation = new Navigation({
+                    logger: new Logger({}),
                     areas: { }, menus: { resolvePath() { return null; }, resolveHref: () => null }, bus: {},
                     config: { app: { basePath: "", baseUrl: "https://example.test/" }, xshell: { assets: { basePath: "/_assets" } } }
                 }, { mode }, { container: {} });
@@ -372,6 +375,7 @@ test("x-page native anchors and x-anchor targets reach the same JavaScript and M
         for (const scenario of scenarios) {
             const browserUrls = [];
             const navigation = new Navigation({
+                logger: new Logger({}),
                 areas,
                 menus,
                 bus: {},
@@ -493,7 +497,7 @@ function configureDefinitionLoaders() {
     };
     const modules = { getModuleById() { return { controller: {} }; } };
     const services = new Services({ config, loader, contracts: {}, resolver: {}, bus });
-    definitionServices = { config, loader, modules, services };
+    definitionServices = { config, loader, modules, services, logger: new Logger({}) };
 }
 
 function createContext() {
@@ -751,8 +755,8 @@ test("awaitLoad reports asynchronous load failures, prevents mounting, and still
     animationFrames.length = 0;
     const loading = createDeferred();
     const failure = new Error("initialization failed");
-    const errors = [];
-    t.mock.method(console, "error", (...args) => errors.push(args));
+    const {logger, calls: {error}} = await createThrowingLogger(t);
+    definitionServices.logger = logger;
     const Component = await createComponentClassFromJsDefinition("await-load-failure.js", createContext(), {
         meta: { id: "x-await-load-failure-test", awaitLoad: true },
         controller() { return { load() { return loading.promise; } }; }
@@ -767,9 +771,10 @@ test("awaitLoad reports asynchronous load failures, prevents mounting, and still
     flushAnimationFrames();
 
     assert.equal(renderEngines.length, 0);
-    assert.equal(errors.length, 1);
-    assert.match(errors[0][0], /Failed to load Component 'x-await-load-failure-test'/);
-    assert.equal(errors[0][1], failure);
+    assert.equal(error.mock.callCount(), 1);
+    assert.deepEqual(error.mock.calls[0].arguments, ["Components: lifecycle operation failed", {
+        componentId: "x-await-load-failure-test", moduleId: "test", stage: "load"
+    }]);
     await assert.doesNotReject(component.unload());
 });
 
@@ -986,7 +991,7 @@ function createLoadableXPage(load, navigation = {}) {
     const config = { xshell: { ui: { layouts: { embed: "x-layout-test" }, components: { error: "x-test-error" } } } };
     const areas = { resolveAreaId() { return ""; }, getArea() { return null; } };
     const modules = { resolveModuleId() { return "test"; } };
-    return createXPageClass({ config, loader: { load }, bus, navigation, areas, menus: { getMenuitemBreadcrumb: () => [] }, modules });
+    return createXPageClass({ logger: new Logger({}), config, loader: { load }, bus, navigation, areas, menus: { getMenuitemBreadcrumb: () => [] }, modules });
 }
 
 test("x-page unmounts then unloads a replaced page and only unmounts on disconnection", async () => {
@@ -1076,6 +1081,7 @@ test("dialog close completes after one final Page unload and host removal", asyn
     const unloadGate = new Promise(resolve => { finishUnload = resolve; });
     const container = new FakeNode();
     const navigation = new Navigation({
+        logger: new Logger({}),
         areas: { }, menus: { resolvePath() { return null; }, resolveHref: () => null },
         bus: {},
         config: { app: { basePath: "", baseUrl: "https://example.test/" }, xshell: {} }
@@ -1110,6 +1116,7 @@ test("dialog close completes after one final Page unload and host removal", asyn
 test("dialog close rejects its promise when final Page cleanup fails", async () => {
     const container = new FakeNode();
     const navigation = new Navigation({
+        logger: new Logger({}),
         areas: { }, menus: { resolvePath() { return null; }, resolveHref: () => null },
         bus: {},
         config: { app: { basePath: "", baseUrl: "https://example.test/" }, xshell: {} }
@@ -1133,6 +1140,7 @@ test("navigation stack changes close dialogs through final Page cleanup", async 
     const container = new FakeNode();
     container.querySelectorAll = () => container.childNodes;
     const navigation = new Navigation({
+        logger: new Logger({}),
         areas: { }, menus: { resolvePath() { return null; }, resolveHref: () => null },
         bus,
         config: { app: { basePath: "", baseUrl: "https://example.test/" }, xshell: {} }
@@ -1157,6 +1165,7 @@ test("navigation shrinks three stack Pages to one after asynchronous final unloa
     const container = new FakeNode();
     container.querySelectorAll = () => container.childNodes;
     const navigation = new Navigation({
+        logger: new Logger({}),
         areas: { }, menus: { resolvePath() { return null; }, resolveHref: () => null }, bus: { emit() {} },
         config: { app: { basePath: "", baseUrl: "https://example.test/" }, xshell: {} }
     }, { mode: "path" }, { container });
@@ -1240,6 +1249,7 @@ test("x-page renders a failed Page through the configured error Component", asyn
 test("x-page and dialog preserve falsy results", async () => {
     const container = new FakeNode();
     const navigation = new Navigation({
+        logger: new Logger({}),
         areas: { }, menus: { resolvePath() { return null; }, resolveHref: () => null }, bus: {},
         config: { app: { basePath: "", baseUrl: "https://example.test/" }, xshell: {} }
     }, { mode: "path" }, { container });

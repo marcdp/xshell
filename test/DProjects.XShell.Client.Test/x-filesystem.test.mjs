@@ -15,6 +15,10 @@ import ContractSchema from "../../src/DProjects.XShell/Resources/DProjects.XShel
 import JsonValidator from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/json-validator.js";
 import Loader from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/loader.js";
 import Resolver from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/resolver.js";
+import Logger from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/logger.js";
+import {createThrowingLogger} from "./fixtures/throwing-logger.mjs";
+
+const logger = new Logger({});
 
 const commands = [
     { id: "command:filesystem.entry.encrypt.aes", label: "Encrypt", icon: "x-lock", type: "file", extensions: ["txt"], actions: [] },
@@ -83,7 +87,7 @@ function createSecrets(initial = [], events = []) {
     };
 }
 
-function createRuntime(providers, services = {}) {
+function createRuntime(providers, services = {}, diagnostics = logger) {
     // Build scheme-dispatched providers beside a global Resolver and Loader with no Filesystem category.
     const jsonValidator = new JsonValidator();
     const serviceScope = createServices({jsonValidator, ...services});
@@ -103,7 +107,7 @@ function createRuntime(providers, services = {}) {
         resolver,
         loader,
         serviceScope,
-        filesystems: new Filesystems({config, jsonValidator, preferences: services.preferences, secrets: services.secrets, services: serviceScope}, {providers})
+        filesystems: new Filesystems({logger: diagnostics, config, jsonValidator, preferences: services.preferences, secrets: services.secrets, services: serviceScope}, {providers})
     };
 }
 
@@ -115,7 +119,7 @@ function createController() {
     const contextMenuCalls = [];
     const filesystemOpenCalls = [];
     const jsonValidator = new JsonValidator();
-    const filesystems = new Filesystems({config: testConfig, jsonValidator, services: createServices({jsonValidator})}, {commands, editors});
+    const filesystems = new Filesystems({logger, config: testConfig, jsonValidator, services: createServices({jsonValidator})}, {commands, editors});
     filesystems.open = async url => { filesystemOpenCalls.push(url); return {url}; };
     const eventHandlers = {};
     const host = {
@@ -176,7 +180,7 @@ test("Filesystems.open resolves and imports providers locally", async () => {
     }`);
     const providerOptions = {tag: "configured", resource: "authored"};
     const jsonValidator = new JsonValidator();
-    const filesystems = new Filesystems({config: testConfig, jsonValidator, services: createServices({jsonValidator})}, {
+    const filesystems = new Filesystems({logger, config: testConfig, jsonValidator, services: createServices({jsonValidator})}, {
         providers: {test: {implementation, options: providerOptions}}
     });
     providerOptions.tag = "changed";
@@ -214,7 +218,7 @@ test("Filesystems emits definition changes only after successful save and remova
     const secrets = createSecrets();
     const jsonValidator = new JsonValidator();
     const implementation = new URL("../../src/DProjects.XShell/Resources/DProjects.XShell/x-filesystem/providers/filesystem-http.js", import.meta.url).href;
-    const filesystems = new Filesystems({bus, config: testConfig, jsonValidator, preferences, secrets, services: createServices({jsonValidator})}, {
+    const filesystems = new Filesystems({logger, bus, config: testConfig, jsonValidator, preferences, secrets, services: createServices({jsonValidator})}, {
         providers: {https: {implementation, options: {scheme: "https"}}}
     });
 
@@ -236,7 +240,7 @@ test("Filesystems emits definition changes only after successful save and remova
     assert.equal(notifications.length, 2);
 });
 
-test("Filesystems suppresses failed-mutation events and isolates committed persistence from notification failures", async () => {
+test("Filesystems suppresses failed-mutation events and isolates committed persistence from notification and logger failures", async t => {
     // Reject authentication, Secret writes, and Preferences writes before any domain event is published.
     const notifications = [];
     const bus = {emit(type, detail) { notifications.push({type, detail:structuredClone(detail)}); }};
@@ -253,7 +257,7 @@ test("Filesystems suppresses failed-mutation events and isolates committed persi
         constructor(services, options, credentials) { this.url = Implementation.optionsDefinition.getUrl(options); this.credentials = credentials; }
     }`);
     const options = {providers: {secure: {implementation, options: {scheme: "secure"}}}};
-    const filesystems = new Filesystems({bus, config: testConfig, jsonValidator, preferences, secrets, services: createServices({jsonValidator})}, options);
+    const filesystems = new Filesystems({logger, bus, config: testConfig, jsonValidator, preferences, secrets, services: createServices({jsonValidator})}, options);
     const definition = {name: "work", provider: "secure", options: {resource: "documents"}};
 
     secrets.failGet(new Error("Vault access cancelled."));
@@ -276,19 +280,17 @@ test("Filesystems suppresses failed-mutation events and isolates committed persi
     // A throwing listener is reported after commit without changing save, cache invalidation, or removal success.
     const throwingPreferences = createPreferences();
     const throwingBus = {emit() { throw new Error("Listener failed."); }};
-    const resilient = new Filesystems({bus:throwingBus, config:testConfig, jsonValidator, preferences:throwingPreferences, secrets, services:createServices({jsonValidator})}, options);
-    const originalError = console.error;
-    console.error = () => {};
-    try {
-        await resilient.saveDefinition(definition, {token:"first"});
-        const cached = await resilient.openNamed("work");
-        await resilient.saveDefinition(definition, {token:"second"});
-        assert.notStrictEqual(await resilient.openNamed("work"), cached);
-        await resilient.removeDefinition("work");
-        assert.deepEqual(await resilient.listDefinitions(), []);
-    } finally {
-        console.error = originalError;
-    }
+    const {logger: recordingLogger, calls: {warn: warning}} = await createThrowingLogger(t);
+    const resilient = new Filesystems({logger: recordingLogger, bus:throwingBus, config:testConfig, jsonValidator,
+        preferences:throwingPreferences, secrets, services:createServices({jsonValidator})}, options);
+    await resilient.saveDefinition(definition, {token:"first"});
+    const cached = await resilient.openNamed("work");
+    await resilient.saveDefinition(definition, {token:"second"});
+    assert.notStrictEqual(await resilient.openNamed("work"), cached);
+    await resilient.removeDefinition("work");
+    assert.deepEqual(await resilient.listDefinitions(), []);
+    assert.deepEqual(warning.mock.calls.map(call => call.arguments), ["saved", "saved", "removed"]
+        .map(action => ["Filesystems: change notification failed", {action}]));
 });
 
 test("Filesystems.listProviders exposes sorted cloned management metadata only", async () => {
@@ -296,7 +298,7 @@ test("Filesystems.listProviders exposes sorted cloned management metadata only",
     const jsonValidator = new JsonValidator();
     const httpImplementation = new URL("../../src/DProjects.XShell/Resources/DProjects.XShell/x-filesystem/providers/filesystem-http.js", import.meta.url).href;
     const memImplementation = new URL("../../src/DProjects.XShell/Resources/DProjects.XShell/x-filesystem/providers/filesystem-mem.js", import.meta.url).href;
-    const filesystems = new Filesystems({config: testConfig, jsonValidator, services: createServices({jsonValidator})}, {
+    const filesystems = new Filesystems({logger, config: testConfig, jsonValidator, services: createServices({jsonValidator})}, {
         providers: {
             https: {implementation: httpImplementation, options: {scheme: "https"}},
             mem: {implementation: memImplementation}
@@ -323,7 +325,7 @@ test("Filesystems saves, lists, replaces, and validates named definitions", asyn
     const preferences = createPreferences();
     const jsonValidator = new JsonValidator();
     const implementation = new URL("../../src/DProjects.XShell/Resources/DProjects.XShell/x-filesystem/providers/filesystem-http.js", import.meta.url).href;
-    const filesystems = new Filesystems({config: testConfig, jsonValidator, preferences, services: createServices({jsonValidator})}, {
+    const filesystems = new Filesystems({logger, config: testConfig, jsonValidator, preferences, services: createServices({jsonValidator})}, {
         providers: {https: {implementation, options: {scheme: "https"}}}
     });
     const input = {
@@ -390,7 +392,7 @@ test("Filesystems gets defensive definitions and persists credentials only when 
         }};
         constructor(services, options, credentials) { this.url = Implementation.optionsDefinition.getUrl(options); this.credentials = credentials; }
     }`);
-    const filesystems = new Filesystems({config: testConfig, jsonValidator, preferences, secrets, services: createServices({jsonValidator})}, {
+    const filesystems = new Filesystems({logger, config: testConfig, jsonValidator, preferences, secrets, services: createServices({jsonValidator})}, {
         providers: {secure: {implementation, options: {scheme: "secure"}}}
     });
     const definition = {name: "work", label: "Work Files", description: "Company documents", provider: "secure", options: {resource: "documents"}};
@@ -454,7 +456,7 @@ test("Filesystems authenticates before credential saves and preserves persistenc
         }};
         constructor(services, options, credentials) { this.url = Implementation.optionsDefinition.getUrl(options); this.credentials = credentials; }
     }`);
-    const filesystems = new Filesystems({config: testConfig, jsonValidator, preferences, secrets, services: createServices({jsonValidator})}, {
+    const filesystems = new Filesystems({logger, config: testConfig, jsonValidator, preferences, secrets, services: createServices({jsonValidator})}, {
         providers: {secure: {implementation, options: {scheme: "secure"}}}
     });
     const cached = await filesystems.openNamed("work");
@@ -495,7 +497,7 @@ test("Filesystems authenticates before credential removal and skips Secrets when
         };
         static credentialsDefinition = {schema: {type: "object", properties: {token: {type: "string"}}, additionalProperties: false}};
     }`);
-    const filesystems = new Filesystems({config: testConfig, jsonValidator, preferences, secrets, services: createServices({jsonValidator})}, {
+    const filesystems = new Filesystems({logger, config: testConfig, jsonValidator, preferences, secrets, services: createServices({jsonValidator})}, {
         providers: {secure: {implementation, options: {scheme: "secure"}}}
     });
     const definition = {name: "work", provider: "secure", options: {resource: "documents"}};
@@ -538,7 +540,7 @@ test("Filesystems removes stale definitions and deterministic credentials withou
     ], events);
     const secrets = createSecrets([[removedCredentialKey, {token: "private-token"}]], events);
     const jsonValidator = new JsonValidator();
-    const filesystems = new Filesystems({config: testConfig, jsonValidator, preferences, secrets, services: createServices({jsonValidator})}, {
+    const filesystems = new Filesystems({logger, config: testConfig, jsonValidator, preferences, secrets, services: createServices({jsonValidator})}, {
         providers: {"broken-provider": {implementation: "data:text/javascript,throw new Error('must not import')"}}
     });
 
@@ -578,7 +580,7 @@ test("Filesystems removes an ordinary non-secret definition without authenticati
     const secrets = createSecrets([], events);
     secrets.failGet(new Error("must not authenticate"));
     const jsonValidator = new JsonValidator();
-    const filesystems = new Filesystems({config: testConfig, jsonValidator, preferences, secrets, services: createServices({jsonValidator})});
+    const filesystems = new Filesystems({logger, config: testConfig, jsonValidator, preferences, secrets, services: createServices({jsonValidator})});
 
     await filesystems.removeDefinition("memory");
 
@@ -604,7 +606,7 @@ test("Filesystems opens named definitions with stored credentials and invalidate
         }};
         constructor(services, options, credentials) { this.url = Implementation.optionsDefinition.getUrl(options); this.credentials = credentials; }
     }`);
-    const filesystems = new Filesystems({config: testConfig, jsonValidator, preferences, secrets, services: createServices({jsonValidator})}, {
+    const filesystems = new Filesystems({logger, config: testConfig, jsonValidator, preferences, secrets, services: createServices({jsonValidator})}, {
         providers: {secure: {implementation, options: {scheme: "secure"}}}
     });
     const definition = {name: "work", label: "Work", provider: "secure", options: {resource: "documents"}};
@@ -636,7 +638,7 @@ test("Filesystems.openNamed preserves options and caches by registration name", 
     const secrets = createSecrets();
     const jsonValidator = new JsonValidator();
     const implementation = new URL("../../src/DProjects.XShell/Resources/DProjects.XShell/x-filesystem/providers/filesystem-http.js", import.meta.url).href;
-    const filesystems = new Filesystems({config: testConfig, jsonValidator, preferences, secrets, services: createServices({jsonValidator})}, {
+    const filesystems = new Filesystems({logger, config: testConfig, jsonValidator, preferences, secrets, services: createServices({jsonValidator})}, {
         providers: {https: {implementation, options: {scheme: "https"}}}
     });
     const options = {host: "files.example.com", path: "/documents", isReadonly: true};
@@ -731,18 +733,20 @@ test("Filesystems.open preserves local provider memory identity semantics withou
     await assert.rejects(() => loader.load("filesystem:mem:demo"), { name: "ResourceError", code: "RESOURCE_NOT_FOUND" });
 });
 
-test("failed cached provider creation is evicted and retried", async () => {
+test("failed provider creation is logged with only the scheme, then evicted and retried", async t => {
     // Evict a failed provider-owned cache identity so a later open can retry construction.
     const providerUrl = new URL("./fixtures/filesystem-provider.mjs?case=retry", import.meta.url).href;
     const provider = await import(providerUrl);
     provider.reset();
     provider.failOnce();
-    const {filesystems, loader} = createRuntime({test: {implementation: providerUrl}});
+    const {logger: recordingLogger, calls: {error: logged}} = await createThrowingLogger(t);
+    const {filesystems, loader} = createRuntime({test: {implementation: providerUrl}}, {}, recordingLogger);
 
     await assert.rejects(() => filesystems.open("test:demo"), /Simulated Filesystem provider failure/);
     const value = await filesystems.open("test:demo");
 
     assert.equal(value.number, 2);
+    assert.deepEqual(logged.mock.calls[0].arguments, ["Filesystems: provider initialization failed", {providerId: "test"}]);
     assert.deepEqual(provider.getCalls().map(call => call.url), ["test:demo", "test:demo"]);
     assert.deepEqual(loader.registry, []);
 });
@@ -812,7 +816,7 @@ test("Filesystems requires valid provider options definitions and resolves depen
             ${optionsSource} constructor() { globalThis.__filesystemConstructions++; }
         }`);
         const jsonValidator = new JsonValidator();
-        const filesystems = new Filesystems({config: testConfig, jsonValidator, services: createServices({jsonValidator})}, {
+        const filesystems = new Filesystems({logger, config: testConfig, jsonValidator, services: createServices({jsonValidator})}, {
             providers: {test: {implementation}}
         });
         await assert.rejects(() => filesystems.open("test:demo"), expected);
@@ -829,7 +833,7 @@ test("Filesystems requires valid provider options definitions and resolves depen
     }`);
     const jsonValidator = new JsonValidator();
     const serviceScope = createServices({jsonValidator, secrets: {credential: "work"}, unused: {}});
-    const filesystems = new Filesystems({config: testConfig, jsonValidator, services: serviceScope}, {
+    const filesystems = new Filesystems({logger, config: testConfig, jsonValidator, services: serviceScope}, {
         providers: {test: {implementation, options: {timeout: 30}}}
     });
     const instance = await filesystems.open("test:demo");
@@ -856,7 +860,7 @@ test("Filesystems recognizes optional provider credential descriptors without re
             ${credentialsSource} constructor() { globalThis.__filesystemCredentialConstructions++; }
         }`);
         const jsonValidator = new JsonValidator();
-        const filesystems = new Filesystems({config: testConfig, jsonValidator, services: createServices({jsonValidator})}, {
+        const filesystems = new Filesystems({logger, config: testConfig, jsonValidator, services: createServices({jsonValidator})}, {
             providers: {test: {implementation}}
         });
         await assert.rejects(() => filesystems.open("test:"), expected);
@@ -868,7 +872,7 @@ test("Filesystems recognizes optional provider credential descriptors without re
         constructor(services, options, credentials) { this.credentials = credentials; }
     }`);
     const jsonValidator = new JsonValidator();
-    const withoutCredentials = new Filesystems({config: testConfig, jsonValidator, services: createServices({jsonValidator})}, {
+    const withoutCredentials = new Filesystems({logger, config: testConfig, jsonValidator, services: createServices({jsonValidator})}, {
         providers: {test: {implementation: implementationWithoutCredentials}}
     });
     assert.equal((await withoutCredentials.open("test:")).credentials, null);
@@ -878,7 +882,7 @@ test("Filesystems recognizes optional provider credential descriptors without re
         static credentialsDefinition = {schema: {type: "object", required: ["token"], properties: {token: {type: "string"}}, additionalProperties: false}};
         constructor(services, options, credentials) { this.credentials = credentials; }
     }`);
-    const filesystems = new Filesystems({config: testConfig, jsonValidator, services: createServices({jsonValidator})}, {
+    const filesystems = new Filesystems({logger, config: testConfig, jsonValidator, services: createServices({jsonValidator})}, {
         providers: {test: {implementation}}
     });
     assert.equal((await filesystems.open("test:")).credentials, null);
@@ -905,7 +909,7 @@ test("Filesystems requires valid URL parsing and projection contracts", async ()
             ${optionsSource} constructor() { globalThis.__filesystemContractConstructions++; }
         }`);
         const jsonValidator = new JsonValidator();
-        const filesystems = new Filesystems({config: testConfig, jsonValidator, services: createServices({jsonValidator})}, {
+        const filesystems = new Filesystems({logger, config: testConfig, jsonValidator, services: createServices({jsonValidator})}, {
             providers: {test: {implementation}}
         });
         await assert.rejects(() => filesystems.open("test:demo"), expected);
@@ -928,7 +932,7 @@ test("Filesystems validates parsed and merged options before canonical projectio
     }`);
     const jsonValidator = new JsonValidator();
     const defaults = {count: 1};
-    const filesystems = new Filesystems({config: testConfig, jsonValidator, services: createServices({jsonValidator})}, {
+    const filesystems = new Filesystems({logger, config: testConfig, jsonValidator, services: createServices({jsonValidator})}, {
         providers: {test: {implementation, options: defaults}}
     });
 
@@ -957,7 +961,7 @@ test("Filesystems validates provider-defined cache identity before construction"
             ${cacheSource} constructor() { globalThis.__filesystemCacheConstructions++; }
         }`);
         const jsonValidator = new JsonValidator();
-        const filesystems = new Filesystems({config: testConfig, jsonValidator, services: createServices({jsonValidator})}, {
+        const filesystems = new Filesystems({logger, config: testConfig, jsonValidator, services: createServices({jsonValidator})}, {
             providers: {test: {implementation}}
         });
         await assert.rejects(() => filesystems.open("test:demo"), expected);
@@ -991,7 +995,7 @@ test("Filesystems options validate commands, keyed editors, and closed provider 
     assert.equal(validator.validate({providers: {"mem:": providers.mem}}, Filesystems.optionsSchema).valid, false);
     assert.equal(validator.validate({providers: {MEM: providers.mem}}, Filesystems.optionsSchema).valid, false);
     assert.equal(validator.validate({providers: {named: providers.mem}}, Filesystems.optionsSchema).valid, false);
-    assert.throws(() => new Filesystems({config: testConfig}, {providers: {NAMED: providers.mem}}), /Filesystem provider scheme is reserved: named/);
+    assert.throws(() => new Filesystems({logger, config: testConfig}, {providers: {NAMED: providers.mem}}), /Filesystem provider scheme is reserved: named/);
     assert.equal(validator.validate({ commands, editors: [] }, Filesystems.optionsSchema).valid, false);
     assert.equal(validator.validate({ editors: { text: { label: "Open", extensions: ["txt"] } } }, Filesystems.optionsSchema).valid, false);
     assert.equal(validator.validate({ editors: { text: { page: "/editor.js", label: "Open", extensions: [".txt"] } } }, Filesystems.optionsSchema).valid, false);
@@ -1238,7 +1242,7 @@ test("x-filesystem manifest uses the providers directory for instance implementa
 test("Filesystems exposes defensive command and editor snapshots", () => {
     // Verify editor definitions remain independent from explicit filesystem Commands.
     const jsonValidator = new JsonValidator();
-    const filesystems = new Filesystems({config: testConfig, jsonValidator, services: createServices({jsonValidator})}, {commands, editors});
+    const filesystems = new Filesystems({logger, config: testConfig, jsonValidator, services: createServices({jsonValidator})}, {commands, editors});
     const commandSnapshot = filesystems.commands;
     const editorSnapshot = filesystems.editors;
     commandSnapshot.push({ id: "page:editor", label: "Open", type: "file", extensions: ["txt"], actions: ["open"] });
@@ -1256,7 +1260,7 @@ test("getEditor selects simple and compound extensions deterministically", () =>
     configuredEditors.fallback = { page: "/fallback.js", label: "Open", extensions: ["aes", "txt"] };
     configuredEditors.alternate = { page: "/alternate.js", label: "Open", extensions: ["pdf"] };
     const jsonValidator = new JsonValidator();
-    const filesystems = new Filesystems({config: testConfig, jsonValidator, services: createServices({jsonValidator})}, {editors: configuredEditors});
+    const filesystems = new Filesystems({logger, config: testConfig, jsonValidator, services: createServices({jsonValidator})}, {editors: configuredEditors});
 
     assert.equal(filesystems.getEditor("/notes/readme.txt").page, "/fallback.js");
     assert.equal(filesystems.getEditor("/notes/secret.TXT.AES").page, editors.text.page);

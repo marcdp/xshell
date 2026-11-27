@@ -3,6 +3,7 @@ import test from "node:test";
 
 import Areas from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/areas.js";
 import Menus from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/menus.js";
+import Logger from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/logger.js";
 import Navigation from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/navigation.js";
 
 for (const [rootIndex, runtimeIndex] of [["index.js", "index.js"], ["index.html", "index.js"], ["index.md", "index.md"]]) {
@@ -123,7 +124,7 @@ test("inventory prefixes separate equal root and nested aliases and preserve Are
 
     for (const mode of ["path", "hash"]) {
         const container = { querySelectorAll: () => [] };
-        const navigation = new Navigation({ config, bus, areas, menus }, { mode }, { container });
+        const navigation = new Navigation({ logger: new Logger({}), config, bus, areas, menus }, { mode }, { container });
         for (const [name, assets] of [["customers", customerAssets], ["inventory", inventoryAssets]]) {
             const host = { setAttribute(name, value) { this[name] = value; } };
             await navigation.navigate({ href: `/main/${name}/settings?view=full#details`, page: { src: "/main/", host }, open: "auto" });

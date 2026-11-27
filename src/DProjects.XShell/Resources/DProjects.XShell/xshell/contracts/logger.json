@@ -1,7 +1,7 @@
 {
     "$schema": "../schemas/contract.schema.json",
     "label": "Logger",
-    "description": "Delegates logging synchronously to the configured provider. Each method accepts zero or more arbitrary JavaScript values and forwards them unchanged and in order. Calls are ignored when no provider is selected.",
+    "description": "Delegates logging synchronously to the configured provider. Each method accepts zero or more arbitrary JavaScript values and forwards them unchanged and in order. Calls are ignored when no provider is selected. Logger methods suppress synchronous exceptions from the provider.",
     "methods": {
         "trace": {"description": "trace(...args) logs at trace level.", "returns": {"type": "void"}},
         "debug": {"description": "debug(...args) logs at debug level.", "returns": {"type": "void"}},

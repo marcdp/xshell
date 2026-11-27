@@ -10,6 +10,7 @@ import ShortcutsSearchProvider from "../../src/DProjects.XShell/Resources/DProje
 import FilesystemsSearchProvider from "../../src/DProjects.XShell/Resources/DProjects.XShell/x-filesystem/providers/search-filesystems.js";
 import StoresSearchProvider from "../../src/DProjects.XShell/Resources/DProjects.XShell/x-store/providers/search-stores.js";
 import SampleStore from "../../src/DProjects.XShell/Resources/DProjects.XShell/x-store/samples/store.json" with {type: "json"};
+import Logger from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/logger.js";
 import Search from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/search.js";
 import Areas from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/areas.js";
 import Menus from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/menus.js";
@@ -58,7 +59,7 @@ test("Store expressions discover collections from the configured sources without
     const list = t.mock.fn();
     const stores = {open: t.mock.fn(async () => ({schema: SampleStore.schema, list}))};
     const loader = {load: t.mock.fn(async () => StoresSearchProvider)};
-    const search = new Search({loader, services: {resolve(name) { return name === "stores" ? stores : undefined; }}}, {providers});
+    const search = new Search({logger: new Logger({}), loader, services: {resolve(name) { return name === "stores" ? stores : undefined; }}}, {providers});
 
     assert.deepEqual(search.listProviders().map(provider => provider.prefixes), [["store:"]]);
     assert.deepEqual(await search.query("customers"), {results: [], errors: []});
@@ -122,6 +123,7 @@ test("bundled prefixes select their configured providers and discover Commands a
     };
     const load = t.mock.fn(async key => implementations[key]);
     const search = new Search({
+        logger: new Logger({}),
         loader: {load},
         services: {resolve(name) { return dependencies[name]; }}
     }, {providers});
@@ -224,6 +226,7 @@ test("menu providers exclude non-displayable items while preserving valid siblin
     assert.deepEqual(shortcutResults.map(item => [item.label, item.href]), [["Valid child", "/child"], ["Valid sibling", "/sibling"]]);
 
     const search = new Search({
+        logger: new Logger({}),
         loader: {async load() { return ShortcutsSearchProvider; }},
         services: {resolve(name) { return name === "menus" ? menus : undefined; }}
     }, {providers: {shortcuts: {label: "Shortcuts", implementation: "/providers/search-shortcuts.js"}}});
@@ -248,6 +251,7 @@ test("Search ranks every candidate from a bundled provider before applying its l
         constructor() { super({areas, menus, config: {modules: {}}}); }
     }
     const search = new Search({
+        logger: new Logger({}),
         loader: {async load() { return Provider; }},
         services: {resolve() { return undefined; }}
     }, {providers: {areas: {label: "Areas", implementation: "/providers/search-areas.js"}}});
@@ -275,6 +279,7 @@ test("Shortcuts provider creates stable hierarchical identities for sibling-scop
     assert.deepEqual(second.map(item => item.id), first.map(item => item.id));
 
     const search = new Search({
+        logger: new Logger({}),
         loader: {async load() { return ShortcutsSearchProvider; }},
         services: {resolve(name) { return name === "menus" ? menus : undefined; }}
     }, {providers: {shortcuts: {label: "Shortcuts", implementation: "/providers/search-shortcuts.js"}}});

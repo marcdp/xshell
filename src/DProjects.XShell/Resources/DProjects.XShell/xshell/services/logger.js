@@ -53,9 +53,16 @@ export default class Logger {
     }
 
     // Forward each call synchronously with the original arguments.
-    trace(...args) { this.#provider?.log("trace", ...args); }
-    debug(...args) { this.#provider?.log("debug", ...args); }
-    info(...args) { this.#provider?.log("info", ...args); }
-    warn(...args) { this.#provider?.log("warn", ...args); }
-    error(...args) { this.#provider?.log("error", ...args); }
+    trace(...args) { this.#log("trace", args); }
+    debug(...args) { this.#log("debug", args); }
+    info(...args) { this.#log("info", args); }
+    warn(...args) { this.#log("warn", args); }
+    error(...args) { this.#log("error", args); }
+
+    #log(level, args) {
+        // A synchronous provider failure must not interrupt the operation being logged.
+        try {
+            this.#provider?.log(level, ...args);
+        } catch {}
+    }
 }

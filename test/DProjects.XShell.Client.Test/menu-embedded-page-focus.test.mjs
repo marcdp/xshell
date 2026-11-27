@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { getEventListeners, once } from "node:events";
 import test from "node:test";
+import Logger from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/logger.js";
 
 import contextMenu from "../../src/DProjects.XShell/Resources/DProjects.XShell/x/components/x-contextmenu.js";
 import datafield from "../../src/DProjects.XShell/Resources/DProjects.XShell/x/components/x-datafield.js";
@@ -75,6 +76,7 @@ function createRuntime(t) {
     const pages = new Map();
     const loads = [];
     const services = {
+        logger: new Logger({}),
         config: {
             app: {baseUrl: document.baseURI},
             modules: {x: {defaults: {page: {stateEngine: "test", renderEngine: "test"}}}},

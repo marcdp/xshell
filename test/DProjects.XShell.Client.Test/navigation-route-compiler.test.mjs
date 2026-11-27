@@ -1,12 +1,14 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
+import Logger from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/logger.js";
 import Navigation from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/navigation.js";
 import { compileRoute } from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/utils/route.js";
 
 function createNavigation(routes = []) {
     const area = { id: "test", prefix: "", routes };
     return new Navigation({
+        logger: new Logger({}),
         areas: { resolveAreaId() { return "test"; }, getArea() { return area; } },
         bus: {},
         config: {

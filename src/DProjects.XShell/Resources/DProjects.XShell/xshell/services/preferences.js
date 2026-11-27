@@ -78,12 +78,14 @@ export default class Preferences {
     #options = {};
     #bus;
     #databaseName;
+    #logger;
 
     // ctor
-    constructor({bus, config} = {}, _options = {}) {
+    constructor({bus, config, logger} = {}, _options = {}) {
         this.#bus = bus;
         this.#options = _options;
         this.#databaseName = indexedDBName("preferences", config?.app?.basePath ?? "");
+        this.#logger = logger;
     }
 
     // props
@@ -106,7 +108,11 @@ export default class Preferences {
             let requestError = null;
             transaction.oncomplete = () => resolve();
             transaction.onerror = () => {};
-            transaction.onabort = () => reject(requestError || transaction.error || new Error("Preference write transaction was aborted."));
+            transaction.onabort = () => {
+                // IndexedDB errors may contain private keys or values.
+                reject(requestError || transaction.error || new Error("Preference write transaction was aborted."));
+                this.#logger.error("Preferences: persistence failed", {operation: "set"});
+            };
 
             const lookup = store.index(NAME_INDEX).get(name);
             lookup.onerror = () => { requestError = lookup.error; };
@@ -170,7 +176,10 @@ export default class Preferences {
             let requestError = null;
             transaction.oncomplete = () => resolve();
             transaction.onerror = () => {};
-            transaction.onabort = () => reject(requestError || transaction.error || new Error("Preference delete transaction was aborted."));
+            transaction.onabort = () => {
+                reject(requestError || transaction.error || new Error("Preference delete transaction was aborted."));
+                this.#logger.error("Preferences: persistence failed", {operation: "delete"});
+            };
             const lookup = store.index(NAME_INDEX).get(name);
             lookup.onerror = () => { requestError = lookup.error; };
             lookup.onsuccess = () => {
@@ -210,13 +219,18 @@ export default class Preferences {
     #notify(name, action) {
         // A committed write remains successful even if Bus notification fails.
         try { this.#bus?.emit("preferences:changed", {name, action}); }
-        catch (error) { console.error("Preferences change notification failed:", error); }
+        catch {
+            this.#logger.warn("Preferences: change notification failed", {action});
+        }
     }
 
     #open() {
         // Share one lazy open attempt per instance and allow a later retry after failure.
         if (this.#databasePromise) return this.#databasePromise;
-        if (!globalThis.indexedDB) return Promise.reject(new Error("Preferences requires IndexedDB."));
+        if (!globalThis.indexedDB) {
+            this.#logger.error("Preferences: storage initialization failed");
+            return Promise.reject(new Error("Preferences requires IndexedDB."));
+        }
 
         let opening;
         opening = new Promise((resolve, reject) => {
@@ -254,6 +268,7 @@ export default class Preferences {
         opening.catch(() => {
             // Clear synchronous open failures, including SecurityError, so a later browser-policy change can be retried.
             if (this.#databasePromise === opening) this.#databasePromise = null;
+            this.#logger.error("Preferences: storage initialization failed");
         });
         return opening;
     }

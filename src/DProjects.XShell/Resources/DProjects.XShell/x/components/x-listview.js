@@ -136,8 +136,8 @@ export default {
             <slot x-on:slotchange="refresh" ></slot>
         </div>
 
-        <x-dropdown class="menu left" x-if="state.availableViews.length > 1">
-            <x-button x-attr:icon="'x-listview-' + state.view" class="menuitem" tooltip="Change view"></x-button>
+        <x-dropdown class="menu" x-if="state.availableViews.length > 1">
+            <x-button x-attr:icon="'x-listview-' + state.view" class="menuitem top right" tooltip="Change view"></x-button>
             <div slot="dropdown">
                 <x-menuitem x-for="view in state.availableViews"
                     x-attr:data-view="view"

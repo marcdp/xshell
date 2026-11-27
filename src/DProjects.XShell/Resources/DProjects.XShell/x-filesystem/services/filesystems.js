@@ -75,6 +75,7 @@ export default class Filesystems {
     #preferences;
     #secrets;
     #services;
+    #logger;
     #providers = new Map();
     #instances = new Map();
     #namedInstances = new Map();
@@ -82,7 +83,7 @@ export default class Filesystems {
     #editors;
 
     // constructor
-    constructor({bus, config, jsonValidator, preferences, secrets, services}, options = {}) {
+    constructor({bus, config, jsonValidator, preferences, secrets, services, logger}, options = {}) {
         // Normalize the scheme-keyed provider configuration and resolve implementation URLs once.
         for (const [scheme, provider] of Object.entries(options.providers ?? {})) {
             if (scheme.toLowerCase() === NAMED_SCHEME) throw new Error(`Filesystem provider scheme is reserved: ${NAMED_SCHEME}`);
@@ -99,6 +100,7 @@ export default class Filesystems {
         this.#preferences = preferences;
         this.#secrets = secrets;
         this.#services = services;
+        this.#logger = logger;
         this.#commands = structuredClone(options.commands ?? []);
         this.#editors = structuredClone(options.editors ?? {});
     }
@@ -210,7 +212,7 @@ export default class Filesystems {
             const credentialsDefinition = this.#getProviderCredentialsDefinition(resolved.canonicalUrl, resolved.Implementation);
             const storedCredentials = credentialsDefinition === undefined ? undefined : await this.#secrets.get(CREDENTIAL_PREFIX + name);
             const credentials = this.#validateCredentials(resolved.canonicalUrl, credentialsDefinition, storedCredentials);
-            return await this.#createProvider(resolved.canonicalUrl, resolved.options, resolved.Implementation, credentialsDefinition, credentials);
+            return await this.#createProvider(resolved.definition.provider, resolved.canonicalUrl, resolved.options, resolved.Implementation, credentialsDefinition, credentials);
         })();
         this.#namedInstances.set(name, creation);
         try {
@@ -236,7 +238,7 @@ export default class Filesystems {
         const diagnosticUrl = this.#getDiagnosticUrl(url);
         if (!definition) throw new Error(`Filesystem provider not found: ${diagnosticUrl}`);
 
-        const Implementation = await this.#importProvider(diagnosticUrl, definition);
+        const Implementation = await this.#importProvider(scheme, definition, diagnosticUrl);
         const optionsDefinition = this.#getProviderOptionsDefinition(diagnosticUrl, Implementation);
         const credentialsDefinition = this.#getProviderCredentialsDefinition(diagnosticUrl, Implementation);
         const parsedOptions = this.#parseProviderUrl(url, diagnosticUrl, optionsDefinition);
@@ -246,7 +248,7 @@ export default class Filesystems {
         const cacheKey = this.#getCacheKey(canonicalUrl, Implementation);
         if (cacheKey !== null && this.#instances.has(cacheKey)) return await this.#instances.get(cacheKey);
 
-        const creation = this.#createProvider(diagnosticUrl, options, Implementation, credentialsDefinition);
+        const creation = this.#createProvider(scheme, diagnosticUrl, options, Implementation, credentialsDefinition);
         if (cacheKey !== null) this.#instances.set(cacheKey, creation);
         try {
             const instance = await creation;
@@ -350,11 +352,12 @@ export default class Filesystems {
         }
         return copy;
     }
-    async #importProvider(url, definition) {
+    async #importProvider(providerId, definition, url = providerId) {
         // Import the implementation class before asking it to deserialize provider configuration.
         try {
             return (await import(definition.implementation)).default;
         } catch (cause) {
+            this.#logger.error("Filesystems: provider import failed", {providerId});
             throw new Error(`Filesystem provider '${url}' could not import implementation '${definition.implementation}': ${cause.message}`, {cause});
         }
     }
@@ -459,7 +462,7 @@ export default class Filesystems {
         }
         return canonicalUrl;
     }
-    async #createProvider(url, options, Implementation, credentialsDefinition, credentials = null) {
+    async #createProvider(providerId, url, options, Implementation, credentialsDefinition, credentials = null) {
         // Validate credentials separately before resolving dependencies or constructing the provider.
         const validatedCredentials = this.#validateCredentials(url, credentialsDefinition, credentials);
 
@@ -471,7 +474,15 @@ export default class Filesystems {
                 return typeof property === "string" ? services.resolve(property) : undefined;
             }
         });
-        return new Implementation(dependencies, structuredClone(options), validatedCredentials);
+        // Log instance materialization with the scheme only. Provider errors can contain paths or credentials.
+        try {
+            const provider = new Implementation(dependencies, structuredClone(options), validatedCredentials);
+            this.#logger.debug("Filesystems: provider initialized", {providerId});
+            return provider;
+        } catch (error) {
+            this.#logger.error("Filesystems: provider initialization failed", {providerId});
+            throw error;
+        }
     }
     #getScheme(url) {
         // Treat provider identity as a domain URL and dispatch only by its normalized scheme.
@@ -502,7 +513,9 @@ export default class Filesystems {
     #notifyDefinitionsChanged(name, action) {
         // Keep committed persistence successful when a notification listener fails.
         try { this.#bus?.emit("filesystems:definitions-changed", {name, action}); }
-        catch (error) { console.error("Filesystems change notification failed:", error); }
+        catch {
+            this.#logger.warn("Filesystems: change notification failed", {action});
+        }
     }
     async #resolveDefinition(definition) {
         // Normalize the persisted shape without mutating the caller or retaining non-domain fields.

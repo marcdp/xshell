@@ -2,11 +2,6 @@
 import JsonValidator from "../services/json-validator.js";
 import { deepFreeze } from "../utils/object.js";
 
-function disposeFailedScope(scope, commandName) {
-    // dispose constructor-owned resources without replacing the original synchronous failure
-    scope.dispose().catch(error => console.error(`Failed to dispose Services scope for Command '${commandName}' after construction failed.`, error));
-}
-
 export default class LoaderCommandJs {
 
     async load(src, context) {
@@ -42,7 +37,6 @@ export default class LoaderCommandJs {
         );
         const result = new JsonValidator().validate(definitionObject, schema);
         if (!result.valid) {
-            console.error(`Invalid command: ${src}`, result.errors);
             throw new Error(`Invalid command: ${src}`, { cause: result.errors });
         }
         if (typeof definition.controller !== "function") {
@@ -107,7 +101,12 @@ export default class LoaderCommandJs {
                     const scope = this._servicesScope;
                     this._controller = null;
                     this._servicesScope = null;
-                    disposeFailedScope(scope, definition.contract?.label ?? src);
+                    scope.dispose().catch(() => {
+                        // Only the loader observes this asynchronous disposal after a failed constructor.
+                        const name = context.resourceName;
+                        const commandId = typeof name === "string" && /^[\w./-]+$/.test(name) ? name : undefined;
+                        context.services.logger.error("Commands: disposal failed", {commandId, moduleId, stage: "construction"});
+                    });
                     throw error;
                 }
             }

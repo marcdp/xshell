@@ -2,10 +2,11 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import invokeDefinition from "../../src/DProjects.XShell/Resources/DProjects.XShell/x/pages/invoke.js";
+import Logger from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/logger.js";
 import Tasks from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/tasks.js";
 
 function createInvocation(Command, {background = true} = {}) {
-    const tasks = new Tasks({bus: null});
+    const tasks = new Tasks({logger: new Logger({}), bus: null});
     const state = structuredClone(invokeDefinition.state);
     Object.assign(state, {type: "command", id: "example", method: "execute", args: {value: 7}, background});
     const page = {closed: false, close() { this.closed = true; }, invalidate() {}};

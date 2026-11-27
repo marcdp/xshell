@@ -34,13 +34,15 @@ export default class Search {
     #loader;
     #services;
     #providers;
+    #logger;
     #instances = new Map();
 
     // ctor
-    constructor({loader, services}, options = {}) {
+    constructor({loader, services, logger}, options = {}) {
         // Retain immutable declarative provider definitions without materializing implementations.
         this.#loader = loader;
         this.#services = services;
+        this.#logger = logger;
         this.#providers = Object.freeze(Object.entries(options.providers || {}).map(([id, provider]) => Object.freeze({
             id,
             label: provider.label,
@@ -63,11 +65,19 @@ export default class Search {
     async query(text, options = {}) {
         // Validate the complete public request before selecting or loading providers.
         const request = this.#validateQuery(text, options);
+        const startedAt = performance.now();
+        this.#logger.debug("Search: requested");
+        if (request.signal?.aborted) {
+            this.#logger.trace("Search: canceled", {duration: performance.now() - startedAt});
+        }
         this.#throwIfAborted(request.signal);
         const expression = this.#parseExpression(request.text);
         request.text = expression.text;
         // A standalone prefix selects providers for unfiltered discovery.
-        if (!request.text && expression.providers === null) return {results: [], errors: []};
+        if (!request.text && expression.providers === null) {
+            this.#logger.debug("Search: completed", {count: 0, failureCount: 0, duration: performance.now() - startedAt});
+            return {results: [], errors: []};
+        }
 
         // Keep configuration order for prefix matches and caller order for direct ID selection.
         const selected = expression.providers !== null
@@ -75,6 +85,7 @@ export default class Search {
             : request.providerIds === null
                 ? this.#providers.filter(provider => provider.mode === "default")
                 : request.providerIds.map(id => this.#providers.find(provider => provider.id === id));
+        this.#logger.trace("Search: providers selected", {count: selected.length});
         // Execute providers concurrently while retaining configuration order in the aggregate response.
         const operation = Promise.all(selected.map(provider => this.#queryProvider(provider, request))).then(entries => {
             this.#throwIfAborted(request.signal);
@@ -97,7 +108,17 @@ export default class Search {
             }
             return {results, errors};
         });
-        return await this.#withCancellation(operation, request.signal);
+        // Report the public query outcome without forwarding the query, results or abort reason.
+        try {
+            const result = await this.#withCancellation(operation, request.signal);
+            this.#logger.debug("Search: completed", {count: result.results.length, failureCount: result.errors.length, duration: performance.now() - startedAt});
+            return result;
+        } catch (error) {
+            if (request.signal?.aborted) {
+                this.#logger.trace("Search: canceled", {duration: performance.now() - startedAt});
+            }
+            throw error;
+        }
     }
 
     // methods (private)
@@ -159,22 +180,32 @@ export default class Search {
     }
     async #queryProvider(provider, request) {
         // Initialization is shared independently from any one query's cancellation signal.
+        const providerId = provider.id;
+        let stage = "initialization";
         try {
             this.#throwIfAborted(request.signal);
             const instance = await this.#getProvider(provider);
             this.#throwIfAborted(request.signal);
+            stage = "execution";
+            const startedAt = performance.now();
+            this.#logger.trace("Search: provider execution started", {providerId});
             const values = await instance.query(request.text, {signal: request.signal, limit: request.limit});
             this.#throwIfAborted(request.signal);
             if (!Array.isArray(values)) throw new TypeError(`Search provider '${provider.id}' must return an array.`);
-            return {results: values.map(value => this.#normalizeResult(provider.id, value))};
-        } catch (error) {
+            const results = values.map(value => this.#normalizeResult(providerId, value));
+            this.#logger.trace("Search: provider execution completed", {providerId, count: results.length, duration: performance.now() - startedAt});
+            return {results};
+        } catch {
             if (request.signal?.aborted) this.#throwIfAborted(request.signal);
+            // Provider errors can contain search text, private options, or result data.
+            this.#logger.warn("Search: provider failed", {providerId, stage});
             return {error: {providerId: provider.id, message: `Unable to search ${provider.label}.`}};
         }
     }
     async #getProvider(provider) {
         // Reuse either the completed instance or one in-flight construction and remove failures for later retry.
         if (this.#instances.has(provider.id)) return await this.#instances.get(provider.id);
+        const startedAt = performance.now();
         const creation = (async () => {
             const Implementation = await this.#loader.load(`esm:${provider.implementation}`);
             if (typeof Implementation !== "function") throw new TypeError(`Search provider '${provider.id}' implementation must export a class.`);
@@ -190,9 +221,11 @@ export default class Search {
             return instance;
         })();
         this.#instances.set(provider.id, creation);
+        this.#logger.trace("Search: provider initialization started", {providerId: provider.id});
         try {
             const instance = await creation;
             if (this.#instances.get(provider.id) === creation) this.#instances.set(provider.id, instance);
+            this.#logger.debug("Search: provider initialized", {providerId: provider.id, duration: performance.now() - startedAt});
             return instance;
         } catch (error) {
             if (this.#instances.get(provider.id) === creation) this.#instances.delete(provider.id);

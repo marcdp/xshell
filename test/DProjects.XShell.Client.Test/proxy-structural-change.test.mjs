@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import Logger from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/logger.js";
 
 import createProxyStateEngineFactory from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/state-engines/proxy.js";
 
@@ -138,7 +139,7 @@ test("x-json receives change:value after a modified same-reference value is reas
             return resource.startsWith("state-engine:") ? StateEngineFactory : RenderEngineFactory;
         }
     };
-    const services = { config, loader, modules: { shadowStyleSheets: [], getModuleById() { return {}; } } };
+    const services = { logger: new Logger({}), config, loader, modules: { shadowStyleSheets: [], getModuleById() { return {}; } } };
     const rootServices = {
         beginScope() {
             return {

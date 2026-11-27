@@ -1,12 +1,14 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
+import Logger from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/logger.js";
 import Modules from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/modules.js";
 import Services from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services.js";
 import Loader from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/loader.js";
 import Resolver from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/resolver.js";
 import Events from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/events.js";
 import Timer from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/timer.js";
+import {createThrowingLogger} from "./fixtures/throwing-logger.mjs";
 
 function assertScopeDisposed(scope) {
     assert.throws(() => scope.has("__test__"), /Services scope is disposed/);
@@ -44,9 +46,10 @@ function addScopeSupport(services) {
     };
 }
 
-function createModules(config, { loader = {}, services = {}, document = { adoptedStyleSheets: [] } } = {}) {
+function createModules(config, { loader = {}, services = {}, document = { adoptedStyleSheets: [] }, logger = new Logger({}) } = {}) {
     globalThis.document = document;
     return new Modules({
+        logger,
         bus: {},
         config,
         loader,
@@ -245,9 +248,9 @@ test("controller construction failure disposes all created Module scopes and pre
         xshell: {assets: {basePath: "/_assets"}},
         modules: Object.fromEntries(["first", "second"].map(id => [id, moduleDefinition(id, {files: [{path: `/_assets/${id}/module.js`}]})]))
     });
-    const reported = [];
-    t.mock.method(console, "error", (...args) => reported.push(args));
+    const {logger, calls: {error}} = await createThrowingLogger(t);
     const modules = createModules(config, {
+        logger,
         services: root,
         loader: {async load(resource) {
             const id = resource.split("/").at(-2);
@@ -260,9 +263,10 @@ test("controller construction failure disposes all created Module scopes and pre
     await assert.rejects(() => modules.init(), error => error === constructionError);
 
     assert.deepEqual(disposed, [2, 1]);
-    assert.equal(reported.length, 1);
-    assert.match(reported[0][0], /controller initialization failed/);
-    assert.strictEqual(reported[0][1], cleanupError);
+    assert.deepEqual(error.mock.calls.map(call => call.arguments), [
+        ["Modules: initialization failed", {moduleId: "second", stage: "controller initialization"}],
+        ["Modules: scope disposal failed", {moduleId: "second"}]
+    ]);
 });
 
 test("shared sheets are published before module controller construction", async () => {
@@ -299,8 +303,10 @@ test("shared sheets are published before module controller construction", async 
     assert.deepEqual(injectedSheets, [sheet]);
 });
 
-test("module controllers start in dependency order and stop in reverse dependency order", async () => {
+test("module controllers start and stop in order and log one initialization milestone", async t => {
     const events = [];
+    const logger = new Logger({});
+    const info = t.mock.method(logger, "info");
     const config = freeze({
         xshell: { assets: { basePath: "/_assets" } },
         modules: Object.fromEntries(["base", "feature", "app"].map(id => [
@@ -309,6 +315,7 @@ test("module controllers start in dependency order and stop in reverse dependenc
         ]))
     });
     const modules = createModules(config, {
+        logger,
         loader: { async load(resource) {
             const id = resource.split("/").at(-2);
             return class ModuleController {
@@ -322,6 +329,9 @@ test("module controllers start in dependency order and stop in reverse dependenc
     await modules.init();
     const orderBeforeStop = modules.registry.map(module => module.id);
     assert.deepEqual(events, ["base.start", "feature.start", "app.start"]);
+    assert.equal(info.mock.callCount(), 1);
+    assert.equal(info.mock.calls[0].arguments[0], "Modules: initialization completed");
+    assert.equal(info.mock.calls[0].arguments[1].count, 3);
 
     await modules.stop();
 
@@ -335,8 +345,7 @@ test("module controllers start in dependency order and stop in reverse dependenc
 test("failed module startup rolls back successful starts in reverse order and preserves the startup error", async t => {
     const events = [];
     const startupError = new Error("app startup failed");
-    const reported = [];
-    t.mock.method(console, "error", (...args) => reported.push(args));
+    const {logger, calls: {debug: started, info: milestone, warn: rollback}} = await createThrowingLogger(t);
     const config = freeze({
         xshell: { assets: { basePath: "/_assets" } },
         modules: Object.fromEntries(["base", "feature", "app"].map(id => [
@@ -345,6 +354,7 @@ test("failed module startup rolls back successful starts in reverse order and pr
         ]))
     });
     const modules = createModules(config, {
+        logger,
         loader: { async load(resource) {
             const id = resource.split("/").at(-2);
             return class ModuleController {
@@ -366,9 +376,10 @@ test("failed module startup rolls back successful starts in reverse order and pr
         "base.start", "feature.start", "app.start",
         "feature.stop", "base.stop"
     ]);
-    assert.equal(reported.length, 1);
-    assert.match(reported[0][0], /startup failed/);
-    assert.match(reported[0][1].message, /feature stop failed/);
+    assert.deepEqual(started.mock.calls.filter(call => call.arguments[0] === "Modules: module started")
+        .map(call => call.arguments[1].moduleId), ["base", "feature"]);
+    assert.equal(milestone.mock.callCount(), 0);
+    assert.deepEqual(rollback.mock.calls[0].arguments, ["Modules: startup rollback", {moduleId: "app", count: 2}]);
 });
 
 test("startup failure disposes every Module scope after rollback and reports cleanup failures", async t => {
@@ -389,9 +400,9 @@ test("startup failure disposes every Module scope after rollback and reports cle
             moduleDefinition(id, {files: [{path: `/_assets/${id}/module.js`}]})
         ]))
     });
-    const reported = [];
-    t.mock.method(console, "error", (...args) => reported.push(args));
+    const {logger, calls: {error}} = await createThrowingLogger(t);
     const modules = createModules(config, {
+        logger,
         services: root,
         loader: {async load(resource) {
             const id = resource.split("/").at(-2);
@@ -409,9 +420,13 @@ test("startup failure disposes every Module scope after rollback and reports cle
     assert.deepEqual(events.filter(event => event.endsWith(".dispose")), ["later.dispose", "app.dispose", "feature.dispose", "base.dispose"]);
     assert.equal(events.includes("app.stop"), false);
     assert.equal(events.includes("later.start"), false);
-    assert.equal(reported.length, 1);
-    assert.ok(reported[0][1] instanceof AggregateError);
-    assert.deepEqual(reported[0][1].errors, [rollbackError, disposalError]);
+    const reported = error.mock.calls.map(call => call.arguments);
+    assert.equal(reported[0][0], "Modules: startup failed");
+    assert.equal(reported[0][1].moduleId, "app");
+    assert.deepEqual(reported.slice(1), [
+        ["Modules: rollback shutdown failed", {moduleId: "feature"}],
+        ["Modules: scope disposal failed", {moduleId: "app"}]
+    ]);
 });
 
 test("normal stop keeps each Module scope active through stop, continues cleanup, and aggregates failures", async () => {
@@ -672,7 +687,7 @@ test("module document and shared Shadow DOM styles load once and retain module o
     const existingStyleSheet = { id: "existing" };
     const document = { adoptedStyleSheets: [existingStyleSheet, existingStyleSheet] };
     globalThis.document = document;
-    const modules = new Modules({ bus: {}, config, loader, resolver, services: {}, document });
+    const modules = new Modules({ logger: new Logger({}), bus: {}, config, loader, resolver, services: {}, document });
 
     await modules.init();
 

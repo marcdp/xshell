@@ -351,6 +351,7 @@ export default class Secrets {
     // vars
     #bus;
     #dialog;
+    #logger;
     #database;
     #databaseName;
     #ready;
@@ -365,10 +366,11 @@ export default class Secrets {
     #writeTransactions = new Set();
     #unlockPromise = null;
 
-    constructor({ bus, dialog, config } = {}, options) {
+    constructor({ bus, dialog, config, logger } = {}, options) {
         // Initialize services, options, and asynchronous vault recovery.
         this.#bus = bus;
         this.#dialog = dialog;
+        this.#logger = logger;
         this.#databaseName = indexedDBName("secrets", config?.app?.basePath ?? "");
         this.#options = effectiveOptions(options);
         const epoch = this.#epoch;
@@ -378,7 +380,10 @@ export default class Secrets {
             if (this.#metadata) await this.#restore(epoch);
             else await this.#discardStoredSession(this.#readStoredSession());
         });
-        void this.#ready.catch(() => {});
+        void this.#ready.catch(() => {
+            // Report the boundary only: vault recovery errors can contain authentication or storage details.
+            this.#logger.error("Secrets: storage initialization failed");
+        });
     }
 
     get status() { return this.#status; }
@@ -1319,7 +1324,9 @@ export default class Secrets {
     #notifyChanged(kind, action) {
         // Keep committed vault mutations successful when a notification listener fails.
         try { this.#bus?.emit("secrets:changed", {kind, action}); }
-        catch (error) { console.error("Secrets change notification failed:", error); }
+        catch {
+            this.#logger.warn("Secrets: change notification failed");
+        }
     }
 
     #request(name, mode, operation, trackWrite = true) {

@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
+import Logger from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/logger.js";
 import Commands from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/commands.js";
 import Events from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/events.js";
 import Timer from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/timer.js";
@@ -8,6 +9,7 @@ import JsonValidator from "../../src/DProjects.XShell/Resources/DProjects.XShell
 import LoaderCommandJs from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/loaders/command-js.js";
 import Services from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services.js";
 import Tasks from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/tasks.js";
+import {createThrowingLogger} from "./fixtures/throwing-logger.mjs";
 
 let instanceId = 0;
 
@@ -37,7 +39,7 @@ class OwnedCommand {
     }
 }
 
-function createRuntime(Command, { dispose, loader, tasks = new Tasks({bus: null}) } = {}) {
+function createRuntime(Command, { dispose, loader, logger = new Logger({}), tasks = new Tasks({logger, bus: null}) } = {}) {
     const root = new Services({config: {xshell: {services: {}}}, bus: null});
     const disposed = [];
     class Singleton {
@@ -63,6 +65,7 @@ function createRuntime(Command, { dispose, loader, tasks = new Tasks({bus: null}
     root.register("timer", null, {lifetime: "transient", implementationItem: {class: Timer}});
     Command.root = root;
     const commands = new Commands({
+        logger,
         loader: loader ?? {async load() { return Command; }},
         tasks,
         jsonValidator: new JsonValidator(),
@@ -141,7 +144,11 @@ test("loading and argument validation finish before Task or scope creation", asy
 
 test("scope creation occurs inside the Task handler immediately before Command construction", async () => {
     let taskOptions;
-    const tasks = {run(options) { taskOptions = options; return {marker: "task"}; }};
+    const tasks = {run(...params) {
+        assert.equal(params.length, 1);
+        [taskOptions] = params;
+        return {marker: "task"};
+    }};
     let constructedScope;
     class Command extends OwnedCommand {
         static contract = {execute: {parameters: []}};
@@ -178,7 +185,7 @@ test("canceling a pending Task before its handler starts creates no Command scop
     assert.equal(typeof taskOptions.handler, "function");
 });
 
-test("Task completion waits for invocation scope disposal and preserves the result", async () => {
+test("Command completion is logged after invocation scope disposal and preserves the result", async t => {
     const cleanup = deferred();
     const cleanupStarted = deferred();
     let scope;
@@ -187,30 +194,39 @@ test("Task completion waits for invocation scope disposal and preserves the resu
         constructor(context) { super(context); scope = this.services; this.session = this.services.resolve("session"); }
         execute() { return {value: 42}; }
     }
-    const {commands, root} = createRuntime(Command, {dispose: async () => { cleanupStarted.resolve(); await cleanup.promise; }});
+    const {logger, calls: {debug}} = await createThrowingLogger(t);
+    const {commands} = createRuntime(Command, {logger, dispose: async () => { cleanupStarted.resolve(); await cleanup.promise; }});
     const task = await commands.run({id: "cleanup"});
 
     await cleanupStarted.promise;
     assert.equal(task.status, "running");
+    assert.ok(debug.mock.calls.every(call => call.arguments[0] !== "Commands: execution completed"));
     assert.throws(() => scope.has("__test__"), /Services scope is disposing/);
     cleanup.resolve();
 
     assert.deepEqual(await task.getResult(), {value: 42});
     assert.equal(task.status, "finished");
     assertScopeDisposed(scope);
+    const completed = debug.mock.calls.find(call => call.arguments[0] === "Commands: execution completed").arguments[1];
+    assert.equal(completed.commandId, "cleanup");
+    assert.ok(completed.duration >= 0);
 });
 
-test("execution, disposal, and combined failures dispose exactly once", async () => {
-    const executionFailure = new Error("execution failed");
+test("execution and disposal failures are logged once each and preserve the original errors", async t => {
+    const executionFailure = new Error("private execution data");
+    const {logger, calls: {error: logs}} = await createThrowingLogger(t);
     class ExecutionFailure extends OwnedCommand {
         static contract = {execute: {parameters: []}};
         constructor(context) { super(context); this.session = this.services.resolve("session"); }
         execute() { throw executionFailure; }
     }
-    const executed = createRuntime(ExecutionFailure);
+    const executed = createRuntime(ExecutionFailure, {logger});
     const executionTask = await executed.commands.run({id: "execution-failure"});
     await assert.rejects(executionTask.getResult(), error => error === executionFailure);
     assert.equal(executed.disposed.length, 1);
+    assert.equal(logs.mock.callCount(), 1);
+    assert.equal(logs.mock.calls[0].arguments[1].commandId, "execution-failure");
+    assert.equal(logs.mock.calls[0].arguments.length, 2);
 
     const disposalFailure = new Error("disposal failed");
     const combined = createRuntime(ExecutionFailure, {dispose() { throw disposalFailure; }});
@@ -316,9 +332,8 @@ test("disposal failures during cancellation are handled and reported without cha
         constructor(context) { super(context); scope = this.services; this.session = this.services.resolve("session"); }
         async execute() { executing.resolve(); await release.promise; }
     }
-    const reported = [];
-    t.mock.method(console, "error", (...args) => reported.push(args));
-    const {commands, root} = createRuntime(Command, {dispose() { throw cleanupFailure; }});
+    const {logger, calls: {debug, error}} = await createThrowingLogger(t);
+    const {commands} = createRuntime(Command, {logger, dispose() { throw cleanupFailure; }});
     const task = await commands.run({id: "canceled-cleanup-failure"});
     await executing.promise;
 
@@ -328,8 +343,12 @@ test("disposal failures during cancellation are handled and reported without cha
 
     assert.equal(task.status, "canceled");
     assertScopeDisposed(scope);
-    assert.equal(reported.length, 1);
-    assert.match(reported[0][0], /canceled Command 'canceled-cleanup-failure'/);
-    assert.strictEqual(reported[0][1], cleanupFailure);
+    assert.equal(error.mock.callCount(), 1);
+    const [message, metadata] = error.mock.calls[0].arguments;
+    assert.equal(message, "Commands: disposal failed");
+    assert.equal(metadata.commandId, "canceled-cleanup-failure");
+    assert.equal(error.mock.calls[0].arguments.length, 2);
+    assert.ok(debug.mock.calls.some(call => call.arguments[0] === "Commands: execution canceled" && call.arguments[1].commandId === "canceled-cleanup-failure"));
+    assert.ok(debug.mock.calls.some(call => call.arguments[0] === "Tasks: execution canceled" && call.arguments[1].taskId === task.id));
     await assert.rejects(task.getResult(), error => error?.name === "AbortError");
 });

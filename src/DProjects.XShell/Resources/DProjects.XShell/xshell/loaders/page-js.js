@@ -9,10 +9,6 @@ function camelToKebab(str) {
     // convert camelCase to kebab-case
     return str.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase();                      
 }
-function disposeFailedScope(scope, pageName) {
-    // dispose constructor-owned resources without replacing the original synchronous failure
-    scope.dispose().catch(error => console.error(`Failed to dispose Services scope for Page '${pageName}' after construction failed.`, error));
-}
 function throwCleanupErrors(errors, message) {
     // preserve one cleanup failure and aggregate independent lifecycle failures
     if (errors.length === 1) throw errors[0];
@@ -172,7 +168,6 @@ async function validatePage(src, definition, context) {
     const definitionObject = Object.fromEntries(Object.entries(definition).map(([key, value]) => [key, typeof value === "function" ? {} : value]));
     const result = new JsonValidator().validate(definitionObject, componentSchema);
     if (!result.valid) {
-        console.error(`Invalid component: ${src}`, result.errors);
         throw new Error(`Invalid component: ${src}`, { cause: result.errors });
     }
 }
@@ -279,9 +274,16 @@ export async function createPageClassFromJsDefinition(src, context, definition) 
     if (!definition.controller) definition.controller = () => ({});
     // freeze implementation and contract
     definition = deepFreeze(definition);
-    // validate
-    validateQueryProperties(definition, definition.meta?.name || src);
-    await validatePage(src, definition, context);
+    // Reuse the injected logger and keep diagnostic identity independent of the Page's URL and query.
+    const logger = context.services.logger;
+    const pageId = typeof definition.meta.id === "string" && /^[\w.-]+$/.test(definition.meta.id) ? definition.meta.id : undefined;
+    try {
+        validateQueryProperties(definition, definition.meta?.name || src);
+        await validatePage(src, definition, context);
+    } catch (error) {
+        logger.error("Pages: contract validation failed", {pageId, moduleId});
+        throw error;
+    }
     // process definition CSS before Page scoping and instance construction
     const style = definition.style ? await processStyle({ src, context, css: definition.style }) : "";
     // state skeleton
@@ -312,7 +314,12 @@ export async function createPageClassFromJsDefinition(src, context, definition) 
     };
     const renderEngineFactory = new renderEngineFactoryCreator(definition.template, renderContext, definition.templateRenderer);
     // validate compiled template slots through the render-engine factory contract
-    validateSlots(renderEngineFactory.slots, definition.meta?.name || "unknown");
+    try {
+        validateSlots(renderEngineFactory.slots, definition.meta?.name || "unknown");
+    } catch (error) {
+        logger.error("Pages: contract validation failed", {pageId, moduleId});
+        throw error;
+    }
     // load render engine dependencies
     if (renderEngineFactory.dependencies.length) {
         await context.services.loader.load(renderEngineFactory.dependencies);
@@ -347,6 +354,7 @@ export async function createPageClassFromJsDefinition(src, context, definition) 
             this._servicesScope = rootServices.beginScope({context: {
                 invokeController(command, ...params) { return self.#controller[command]?.(...params); }
             }});
+            let stage = "construction";
             try {
             // meta
             this.label = definition.meta.title || "";
@@ -426,6 +434,7 @@ export async function createPageClassFromJsDefinition(src, context, definition) 
                 }
             });            
             // controller
+            stage = "controller initialization";
             this.#controller = definition.controller(servicesProvider) ?? {};
             // validate public contract methods
             for (const methodName of Object.keys(definition.contract.methods ?? {})) {
@@ -434,13 +443,18 @@ export async function createPageClassFromJsDefinition(src, context, definition) 
                     throw new Error(`Page '${definition.meta.id}' declares public method '${methodName}' in definition.contract.methods but controller.${methodName} is not a function.`);
                 }
             }
+            logger.trace("Pages: controller initialized", {pageId, moduleId});
             } catch (error) {
                 // initiate asynchronous cleanup while preserving synchronous constructor behavior
                 const scope = this._servicesScope;
                 this._servicesScope = null;
-                disposeFailedScope(scope, definition.meta.id ?? src);
+                scope.dispose().catch(() => {
+                    logger.error("Pages: scope disposal failed", {pageId, moduleId, stage: "construction"});
+                });
+                logger.error("Pages: lifecycle operation failed", {pageId, moduleId, stage});
                 throw error;
             }
+            logger.trace("Pages: instance constructed", {pageId, moduleId});
         }
         // props
         static get definition() {return definition;}
@@ -527,6 +541,9 @@ export async function createPageClassFromJsDefinition(src, context, definition) 
             this._renderPending = false;
             this._styleSheets = [];
             this._stateChanges = [];
+            if (errors.length) {
+                logger.error("Pages: lifecycle operation failed", {pageId, moduleId, stage: "unload"});
+            }
 
             // dispose the owner scope and its transient helpers after existing cleanup
             const servicesScope = this._servicesScope;
@@ -534,12 +551,14 @@ export async function createPageClassFromJsDefinition(src, context, definition) 
                 if (servicesScope) await servicesScope.dispose();
             } catch (error) {
                 errors.push(error);
+                logger.error("Pages: scope disposal failed", {pageId, moduleId, stage: "unload"});
             } finally {
                 this.#controller = null;
                 this._servicesScope = null;
             }
 
             throwCleanupErrors(errors, `Multiple errors occurred while unloading Page '${definition.meta.id ?? src}'.`);
+            logger.trace("Pages: unloaded", {pageId, moduleId});
             return result;
         }
         // statechange
@@ -598,6 +617,7 @@ export async function createPageClassFromJsDefinition(src, context, definition) 
             configurable: false
         });
     }
+    logger.trace("Pages: definition loaded", {pageId, moduleId});
     return PageClass;
 }
 

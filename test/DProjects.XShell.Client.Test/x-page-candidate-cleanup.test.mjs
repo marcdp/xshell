@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
+import Logger from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/logger.js";
 import Services from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services.js";
 import Areas from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/areas.js";
 import Events from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/events.js";
@@ -15,6 +16,7 @@ import GlobalFilesystems from "../../src/DProjects.XShell/Resources/DProjects.XS
 import FilesystemComponent from "../../src/DProjects.XShell/Resources/DProjects.XShell/x-filesystem/components/x-filesystem.js";
 import FilesystemList from "../../src/DProjects.XShell/Resources/DProjects.XShell/x-filesystem/components/x-filesystem-list.js";
 import Filesystems from "../../src/DProjects.XShell/Resources/DProjects.XShell/x-filesystem/services/filesystems.js";
+import {createThrowingLogger} from "./fixtures/throwing-logger.mjs";
 
 const resources = new URL("../../src/DProjects.XShell/Resources/DProjects.XShell/", import.meta.url);
 
@@ -129,6 +131,8 @@ function createRuntime({ navigation = { mode: "path" }, bus = { emit() {} } } = 
     };
     const root = new Services({ config, loader, contracts: {}, resolver: {}, bus: { emit() {} } });
     const modules = { getModuleById() { return { controller: {} }; } };
+    const logger = new Logger({});
+    root.register("logger", logger);
     root.register("config", config);
     root.register("bus", bus);
     root.register("events", null, { lifetime: "transient", implementationItem: { class: Events } });
@@ -138,7 +142,7 @@ function createRuntime({ navigation = { mode: "path" }, bus = { emit() {} } } = 
     root.register("i18n", {});
     root.register("navigation", navigation);
     const services = new Proxy({}, { get(target, prop) { return typeof prop === "string" ? root.resolve(prop) : undefined; } });
-    return { root, config, loader, modules, context: { resourceDefinition: { moduleId: "test" }, services } };
+    return { root, config, loader, modules, logger, context: { resourceDefinition: { moduleId: "test" }, services } };
 }
 
 function registerDisposableServices(root, disposed) {
@@ -165,7 +169,7 @@ async function createTrackedPageClass(runtime, id, controller, capture) {
     };
 }
 
-function createHost(src, resolvePage) {
+function createHost(src, resolvePage, logger = new Logger({})) {
     const areas = {
         resolveAreaId() { return ""; },
         getArea() { return null; },
@@ -175,7 +179,7 @@ function createHost(src, resolvePage) {
     const config = { xshell: { ui: { layouts: { embed: "x-layout-test" } } } };
     const bus = { emit() {} };
     const loader = { async load(resource) { return resource.startsWith("layout:") ? class {} : resolvePage(resource); } };
-    const XPage = createXPageClass({ config, loader, bus, navigation, areas, menus: { getMenuitemBreadcrumb: () => [] }, modules });
+    const XPage = createXPageClass({ logger, config, loader, bus, navigation, areas, menus: { getMenuitemBreadcrumb: () => [] }, modules });
     const host = new XPage();
     host._src = src;
     host.setAttribute("src", src);
@@ -241,7 +245,7 @@ function createNavigationRuntime(t, mode) {
     container.querySelectorAll = selector => container.childNodes.filter(host =>
         !selector.includes(":not") || host.getAttribute("layout") !== "dialog");
     container.appendChild = host => { FakeNode.prototype.appendChild.call(container, host); host.connectedCallback(); };
-    const navigation = new Navigation({ areas, bus, config, menus, resolver: new Resolver({ config }) }, { mode }, { container });
+    const navigation = new Navigation({ logger: new Logger({}), areas, bus, config, menus, resolver: new Resolver({ config }) }, { mode }, { container });
     const runtime = createRuntime({ navigation, bus });
     runtime.root.register("areas", areas);
     runtime.root.register("menus", menus);
@@ -297,7 +301,7 @@ for (const mode of ["path", "hash"]) {
     test(`Filesystems menu switches Explorer invocations and restores them through ${mode} history`, async t => {
         // Register two filesystems with different contents and let the popup generate the targets.
         const preferences = new Map();
-        const filesystems = new Filesystems({ config: { app: {} }, jsonValidator: new JsonValidator(), bus: { emit() {} }, preferences: {
+        const filesystems = new Filesystems({ logger: new Logger({}), config: { app: {} }, jsonValidator: new JsonValidator(), bus: { emit() {} }, preferences: {
             async get(key, fallback) { return preferences.get(key) ?? fallback; },
             async set(key, value) { preferences.set(key, value); },
             async list(prefix) { return [...preferences].filter(([key]) => key.startsWith(prefix)).map(([, value]) => ({ value })); }
@@ -581,7 +585,7 @@ test("stacked query history reloads the selected entry and preserves the root an
     assert.equal(await dialogResult, "closed");
 });
 
-test("x-page unloads a definition-based candidate whose asynchronous load fails", async () => {
+test("x-page logs a load failure and unloads the candidate even when logging throws", async t => {
     const runtime = createRuntime();
     const disposed = [];
     const capture = {};
@@ -593,7 +597,8 @@ test("x-page unloads a definition-based candidate whose asynchronous load fails"
         async load() { throw loadFailure; },
         unload() { unloads++; }
     }), capture);
-    const host = createHost("/pages/failed.js", () => Candidate);
+    const {logger, calls: {error: logged}} = await createThrowingLogger(t);
+    const host = createHost("/pages/failed.js?token=private-value", () => Candidate, logger);
 
     await assert.rejects(host.load(), error => error === loadFailure);
 
@@ -601,6 +606,7 @@ test("x-page unloads a definition-based candidate whose asynchronous load fails"
     assertScopeDisposed(capture.scope);
     assert.deepEqual(disposed, ["helper", "session"]);
     assert.equal(host.page, null);
+    assert.deepEqual(logged.mock.calls[0].arguments, ["Pages: load operation failed"]);
 });
 
 test("x-page unloads a candidate when navigation metadata preparation fails", async () => {

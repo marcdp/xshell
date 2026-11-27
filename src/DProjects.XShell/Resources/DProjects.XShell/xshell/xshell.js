@@ -100,6 +100,7 @@ export default class XShell {
             get config() { return services.resolve("config"); },
             get loader() { return services.resolve("loader"); },
             get bus() { return services.resolve("bus"); },
+            get logger() { return services.resolve("logger"); },
             get navigation() { return services.resolve("navigation"); },
             get areas() { return services.resolve("areas"); },
             get menus() { return services.resolve("menus"); },

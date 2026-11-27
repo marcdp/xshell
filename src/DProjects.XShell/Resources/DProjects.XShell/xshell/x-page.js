@@ -254,12 +254,10 @@ export function createXPageClass(runtime) {
             }
         }
         async #loadSource() {
-            // Report automatic load failures while keeping explicit load() calls awaitable.
+            // Automatic source changes use the same diagnostics as explicit load() calls.
             try {
                 await this.load();
-            } catch (error) {
-                console.error("x-page: could not load the Page.", error);
-            }
+            } catch {}
         }
         async load() {
             // Associate focus with this load and discard it if the load fails.
@@ -269,11 +267,13 @@ export function createXPageClass(runtime) {
                 await this.#loadPage(loadRevision);
             } catch (error) {
                 if (this.#focusRequest?.revision === loadRevision) this.#finishFocus();
+                runtime.logger.error("Pages: load operation failed");
                 throw error;
             }
         }
         async #loadPage(loadRevision) {
-            console.log(`x-page: load '${this.src} ...`);
+            // Keep the source private and record the result at the host's commit boundary.
+            const startedAt = performance.now();
             let src = this.src;
 
             // reset
@@ -315,12 +315,14 @@ export function createXPageClass(runtime) {
             let pageAdopted = false;
             let failure = null;
             let failed = false;
+            let fallback = false;
             try {
                 // fetch the candidate Page or prepare the existing fallback Page
                 try {
                     const pageClass = await runtime.loader.load("page:" + resourceSrc);
                     page = new pageClass( { src, context: this._context, bus: runtime.bus, navigation: runtime.navigation } );
                 } catch(exception) {
+                    fallback = true;
                     page = new Page({ src, bus: runtime.bus, navigation: runtime.navigation });
                     page.onCommand = (command, params) => {
                         if (command == "mount") {
@@ -404,6 +406,9 @@ export function createXPageClass(runtime) {
                             if (layoutElement) layoutElement.removeAttribute("status");
                             this.dispatchEvent(new CustomEvent("load", { detail: { page } }));
                             this.#advanceFocus();
+                            const metadata = {moduleId, areaId: area?.id, duration: performance.now() - startedAt};
+                            if (fallback) runtime.logger.warn("Pages: error Page mounted", metadata);
+                            else runtime.logger.debug("Pages: loaded", metadata);
                         }
                     });
 

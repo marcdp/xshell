@@ -4,7 +4,9 @@ import test from "node:test";
 import tasksContract from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/contracts/tasks.json" with { type: "json" };
 import contractSchema from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/schemas/contract.schema.json" with { type: "json" };
 import JsonValidator from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/json-validator.js";
+import Logger from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/logger.js";
 import Tasks from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/tasks.js";
+import {createThrowingLogger} from "./fixtures/throwing-logger.mjs";
 
 test("tasks contract owns the complete Task vocabulary and validates structurally", () => {
     const result = new JsonValidator().validate(tasksContract, contractSchema);
@@ -34,7 +36,7 @@ test("tasks contract owns the complete Task vocabulary and validates structurall
 
 test("tasks run reports description, progress, ordered level output and result", async () => {
     const events = [];
-    const tasks = new Tasks({ bus: { emit(name, detail) { events.push({ name, detail }); } } });
+    const tasks = new Tasks({ logger: new Logger({}), bus: { emit(name, detail) { events.push({ name, detail }); } } });
     const task = tasks.run({
         title: "Example",
         description: "Starting",
@@ -74,7 +76,7 @@ test("tasks run reports description, progress, ordered level output and result",
 });
 
 test("tasks expose live monotonic duration and freeze it on completion", async () => {
-    const tasks = new Tasks({ bus: null });
+    const tasks = new Tasks({ logger: new Logger({}), bus: null });
     let started, release;
     const running = new Promise(resolve => { started = resolve; });
     const blocked = new Promise(resolve => { release = resolve; });
@@ -101,7 +103,7 @@ test("tasks expose live monotonic duration and freeze it on completion", async (
 });
 
 test("tasks support explicit foreground execution and reject invalid background values", async () => {
-    const tasks = new Tasks({ bus: null });
+    const tasks = new Tasks({ logger: new Logger({}), bus: null });
     const task = tasks.run({ title: "Foreground", background: false, handler() {} });
 
     assert.equal(task.background, false);
@@ -114,8 +116,9 @@ test("tasks support explicit foreground execution and reject invalid background 
     );
 });
 
-test("tasks distinguish thrown failures from error-level output", async () => {
-    const tasks = new Tasks({ bus: null });
+test("tasks diagnose lifecycle outcomes separately from task output", async t => {
+    const {logger, calls: {error, debug}} = await createThrowingLogger(t);
+    const tasks = new Tasks({ logger, bus: null });
     const outputTask = tasks.run({ title: "Output", handler(context) { context.error("warning"); return "ok"; } });
     const failedTask = tasks.run({ title: "Failure", handler() { throw new Error("broken"); } });
 
@@ -131,10 +134,15 @@ test("tasks distinguish thrown failures from error-level output", async () => {
     assert.ok(failedTask.duration >= 0);
     assert.equal(failedTask.error.message, "broken");
     await assert.rejects(failedTask.getResult(), /broken/);
+    assert.equal(error.mock.callCount(), 1);
+    assert.deepEqual(error.mock.calls[0].arguments, ["Tasks: execution failed", {
+        taskId: failedTask.id, status: "error", background: true, duration: failedTask.duration
+    }]);
+    assert.ok(debug.mock.calls.some(call => call.arguments[0] === "Tasks: execution completed" && call.arguments[1].taskId === outputTask.id));
 });
 
 test("tasks paginate output in chronological order", async () => {
-    const tasks = new Tasks({ bus: null });
+    const tasks = new Tasks({ logger: new Logger({}), bus: null });
     const task = tasks.run({
         title: "Pagination",
         handler(context) {
@@ -160,7 +168,7 @@ test("tasks paginate output in chronological order", async () => {
 });
 
 test("tasks cancel through AbortSignal without producing a successful result", async () => {
-    const tasks = new Tasks({ bus: null });
+    const tasks = new Tasks({ logger: new Logger({}), bus: null });
     let started;
     const running = new Promise(resolve => { started = resolve; });
     const task = tasks.run({
@@ -186,4 +194,22 @@ test("tasks cancel through AbortSignal without producing a successful result", a
     assert.doesNotThrow(() => tasks.remove(task.id + "-missing"));
     tasks.remove(task.id);
     assert.equal(tasks.get(task.id), undefined);
+});
+
+test("tasks log pending cancellation without invoking the handler", async t => {
+    const {logger, calls: {debug, error}} = await createThrowingLogger(t);
+    const tasks = new Tasks({logger, bus: null});
+    const handler = t.mock.fn();
+    const task = tasks.run({title: "Pending cancellation", handler});
+
+    await task.cancel();
+    await task.wait();
+
+    assert.equal(handler.mock.callCount(), 0);
+    assert.equal(error.mock.callCount(), 0);
+    assert.equal(task.status, "canceled");
+    assert.deepEqual(debug.mock.calls.map(call => call.arguments), [
+        ["Tasks: cancellation requested", {taskId: task.id, status: "pending", background: true}],
+        ["Tasks: execution canceled", {taskId: task.id, status: "canceled", background: true, duration: 0}]
+    ]);
 });

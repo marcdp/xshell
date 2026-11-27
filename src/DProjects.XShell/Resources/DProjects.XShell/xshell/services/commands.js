@@ -21,13 +21,15 @@ export default class Commands {
     #tasks;
     #jsonValidator;
     #config;
+    #logger;
 
     // ctor
-    constructor({loader, tasks, jsonValidator, config}, options) {
+    constructor({loader, tasks, jsonValidator, config, logger}, options) {
         this.#loader = loader;
         this.#tasks = tasks;
         this.#jsonValidator = jsonValidator;
         this.#config = config || {xshell: {}, modules: {}};
+        this.#logger = logger;
     }
 
     // methods
@@ -56,47 +58,68 @@ export default class Commands {
     }
     async run({id, args = {}, background = true} = {}) {
         if (typeof id !== "string" || !id.trim()) throw new TypeError("Command id must be a non-empty string");
-        if (!args || typeof args !== "object" || Array.isArray(args)) throw new TypeError("Command arguments must be an object");
+        // Keep only logical command identifiers in diagnostics, even for rejected requests.
+        const commandId = /^[\w./-]+$/.test(id) ? id : undefined;
+        this.#logger.debug("Commands: execution requested", {commandId});
+        if (!args || typeof args !== "object" || Array.isArray(args)) {
+            this.#logger.warn("Commands: arguments rejected", {commandId});
+            throw new TypeError("Command arguments must be an object");
+        }
         if (typeof background !== "boolean") throw new TypeError("Command background must be a boolean");
 
-        const Command = await this.#loader.load(`command:${id}`);
-        if (typeof Command !== "function") throw new Error(`Invalid command '${id}': loader did not return a Command class.`);
+        // Own implementation failures here; Loader errors can carry URLs and response bodies.
+        let Command, contract, parameters;
+        try {
+            Command = await this.#loader.load(`command:${id}`);
+            if (typeof Command !== "function") throw new Error(`Invalid command '${id}': loader did not return a Command class.`);
+            contract = Command.contract;
+            if (!contract?.execute) throw new Error(`Command '${id}' has no execute contract.`);
+            parameters = contract.execute.parameters || [];
+            const duplicate = parameters.find((parameter, index) =>
+                parameters.findIndex(candidate => candidate.name === parameter.name) !== index);
+            if (duplicate) throw new Error(`Duplicate argument '${duplicate.name}' in Command '${id}' contract.`);
+        } catch (error) {
+            this.#logger.error("Commands: implementation loading failed", {commandId});
+            throw error;
+        }
+        this.#logger.trace("Commands: implementation resolved", {commandId});
 
-        const contract = Command.contract;
-        if (!contract?.execute) throw new Error(`Command '${id}' has no execute contract.`);
-
-        const parameters = contract.execute.parameters || [];
-        const duplicate = parameters.find((parameter, index) =>
-            parameters.findIndex(candidate => candidate.name === parameter.name) !== index);
-        if (duplicate) throw new Error(`Duplicate argument '${duplicate.name}' in Command '${id}' contract.`);
-
-        const parameterNames = new Set(parameters.map(parameter => parameter.name));
-        const unexpected = Object.keys(args).find(name => !parameterNames.has(name));
-        if (unexpected) throw new Error(`Unknown argument '${unexpected}' for Command '${id}'.`);
-
-        const positionalArgs = parameters.map(parameter => {
-            const supplied = Object.hasOwn(args, parameter.name);
-            if (!supplied && !Object.hasOwn(parameter, "default")) {
-                if (parameter.required === true) throw new Error(`Missing required argument '${parameter.name}' for Command '${id}'.`);
-                return undefined;
-            }
-
-            const value = supplied ? args[parameter.name] : structuredClone(parameter.default);
-            this.#validateArgument(id, parameter, contract.types || {}, value);
-            return value;
-        });
+        // Validate named arguments before creating a Task, without logging argument names or values.
+        let positionalArgs;
+        try {
+            const parameterNames = new Set(parameters.map(parameter => parameter.name));
+            const unexpected = Object.keys(args).find(name => !parameterNames.has(name));
+            if (unexpected) throw new Error(`Unknown argument '${unexpected}' for Command '${id}'.`);
+            positionalArgs = parameters.map(parameter => {
+                const supplied = Object.hasOwn(args, parameter.name);
+                if (!supplied && !Object.hasOwn(parameter, "default")) {
+                    if (parameter.required === true) throw new Error(`Missing required argument '${parameter.name}' for Command '${id}'.`);
+                    return undefined;
+                }
+                const value = supplied ? args[parameter.name] : structuredClone(parameter.default);
+                this.#validateArgument(id, parameter, contract.types || {}, value);
+                return value;
+            });
+        } catch (error) {
+            this.#logger.warn("Commands: arguments rejected", {commandId});
+            throw error;
+        }
 
         return this.#tasks.run({
             title: contract.label || id,
             description: contract.description || contract.execute.description || "",
             background,
+            // Commands report their own failures with command-specific context.
+            logFailure: false,
             handler: async taskContext => {
                 // construct and execute one Command after Task execution begins
+                const startedAt = performance.now();
                 let command = null;
                 let result;
                 let executionError;
                 try {
                     command = new Command({task: taskContext});
+                    this.#logger.debug("Commands: execution started", {commandId});
                     result = await command.execute(...positionalArgs);
                 } catch (error) {
                     executionError = error;
@@ -110,15 +133,23 @@ export default class Commands {
                     disposalError = error;
                 }
 
-                // preserve cancellation status while retaining cleanup failures in diagnostics
-                if (disposalError && taskContext.signal.aborted) {
-                    console.error(`Failed to dispose Services scope for canceled Command '${id}'.`, disposalError);
+                // Describe the command outcome after execution and disposal have settled.
+                const duration = performance.now() - startedAt;
+                const canceled = taskContext.signal.aborted;
+                if (executionError && !canceled) {
+                    const stage = command ? "execution" : "construction";
+                    this.#logger.error("Commands: execution failed", {commandId, stage, duration});
                 }
+                if (disposalError) {
+                    this.#logger.error("Commands: disposal failed", {commandId, duration});
+                }
+                if (canceled) this.#logger.debug("Commands: execution canceled", {commandId, duration});
                 if (executionError && disposalError) {
                     throw new AggregateError([executionError, disposalError], `Command '${id}' execution and Services scope disposal both failed.`);
                 }
                 if (executionError) throw executionError;
                 if (disposalError) throw disposalError;
+                if (!canceled) this.#logger.debug("Commands: execution completed", {commandId, duration});
                 return result;
             }
         });

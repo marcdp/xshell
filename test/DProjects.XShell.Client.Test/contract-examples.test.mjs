@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync, readdirSync } from "node:fs";
 import test from "node:test";
+import Logger from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/logger.js";
 import * as Details from "../../src/DProjects.XShell/Resources/DProjects.XShell/x/components/x-details.js";
 import Accordion from "../../src/DProjects.XShell/Resources/DProjects.XShell/x/components/x-accordion.js";
 import LoaderSchemaJson from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/loaders/schema-json.js";
@@ -192,6 +193,7 @@ test("Component and Page loaders retain examples and give render engines only th
     const navigation = { mode: "hash" };
     let navigationResolutionCount = 0;
     const services = {
+        logger: new Logger({}),
         config: { modules: { test: { defaults: { component: defaults, page: defaults } } } },
         loader: { async load(id) { return id.startsWith("schema:") ? schemas[id.slice(7)] : engines[id]; } },
         modules: {},
@@ -257,6 +259,7 @@ test("Command loader exposes the same examples on the class and instance", async
     const context = {
         resourceDefinition: {moduleId: "test"},
         services: {
+            logger: new Logger({}),
             loader: {async load(id) { assert.equal(id, "schema:command"); return schemas.command; }},
             config: {modules: {test: {id: "test"}}},
             modules: {getModuleById() { return {id: "test"}; }},

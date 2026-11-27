@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import Logger from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/logger.js";
 
 globalThis.HTMLElement = class {};
 globalThis.CSSStyleSheet = class {
@@ -50,7 +51,7 @@ for (const [name, create] of [
                 return { helper: { loaded: true } };
             }
         };
-        const services = { config, loader, modules: { shadowStyleSheets: [] } };
+        const services = { config, loader, logger: new Logger({}), modules: { shadowStyleSheets: [] } };
 
         await create("test.js", { resourceDefinition: { moduleId: "test" }, services }, {
             meta: { id: `x-${name}-esm-test` },

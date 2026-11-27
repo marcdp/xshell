@@ -8,6 +8,7 @@ import tempPage from "../../src/DProjects.XShell/Resources/DProjects.XShell/x-de
 import commandSchema from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/schemas/command.schema.json" with {type:"json"};
 import contractSchema from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/schemas/contract.schema.json" with {type:"json"};
 import JsonValidator from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/json-validator.js";
+import Logger from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/logger.js";
 import Tasks from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/tasks.js";
 
 const cloneState = definition => structuredClone(definition.state);
@@ -22,7 +23,7 @@ test("demo Command follows the Command schema and cooperatively cancels its pend
     assert.equal(validation.valid, true, JSON.stringify(validation.errors));
     assert.equal(typeof commandDefinition.controller, "function");
 
-    const tasks = new Tasks({bus:null});
+    const tasks = new Tasks({logger: new Logger({}), bus:null});
     const task = tasks.run({
         title: "Demo operation",
         background: false,
@@ -37,7 +38,7 @@ test("demo Command follows the Command schema and cooperatively cancels its pend
 });
 
 test("Tasks Page runs, lists, inspects, and cancels a real foreground Task", async () => {
-    const tasks = new Tasks({bus:null});
+    const tasks = new Tasks({logger: new Logger({}), bus:null});
     const state = cloneState(tasksPage);
     const controller = tasksPage.controller({tasks, state, page:{invalidate() {}}});
 
@@ -57,7 +58,7 @@ test("Tasks Page runs, lists, inspects, and cancels a real foreground Task", asy
 });
 
 test("Commands Page passes named arguments and distinguishes validation from Task execution", async () => {
-    const tasks = new Tasks({bus:null});
+    const tasks = new Tasks({logger: new Logger({}), bus:null});
     const calls = [];
     const commands = {
         async run(options) {

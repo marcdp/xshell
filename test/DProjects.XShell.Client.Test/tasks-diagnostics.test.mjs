@@ -6,6 +6,7 @@ import TaskDetailPage from "../../src/DProjects.XShell/Resources/DProjects.XShel
 import ListView from "../../src/DProjects.XShell/Resources/DProjects.XShell/x/components/x-listview.js";
 import { createPageClassFromJsDefinition } from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/loaders/page-js.js";
 import createStateEngine from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/state-engines/proxy.js";
+import Logger from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/logger.js";
 import Navigation from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/navigation.js";
 import Tasks from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/tasks.js";
 import PageSchema from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/schemas/page.schema.json" with { type: "json" };
@@ -36,7 +37,7 @@ async function loadPage(definition, src, services) {
     };
     const PageClass = await createPageClassFromJsDefinition(src, {
         resourceDefinition: { moduleId: "xshell-diagnostics" },
-        services: { ...services, config, loader: { load: name => resources[name] } }
+        services: { logger: new Logger({}), ...services, config, loader: { load: name => resources[name] } }
     }, { ...definition, contract: structuredClone(definition.contract), meta: { ...definition.meta } });
     const page = new PageClass({ src, context: {}, bus: services.bus });
     await page.load();
@@ -52,7 +53,7 @@ function setup(t) {
         delete globalThis.window;
     });
     const bus = createBus();
-    return { bus, tasks: new Tasks({ bus }) };
+    return { bus, tasks: new Tasks({ logger: new Logger({}), bus }) };
 }
 
 test("Tasks activates the selected row in the stack and retains its live filtered list on return", async t => {
@@ -75,6 +76,7 @@ test("Tasks activates the selected row in the stack and retains its live filtere
         async removePage() { await this.page.unload(); pages.splice(pages.indexOf(this), 1); }
     });
     const navigation = new Navigation({
+        logger: new Logger({}),
         areas: { }, menus: { resolvePath: () => null, resolveHref: () => null },
         resolver: { resolve: href => href === detailHref ? { path: detailPath } : null },
         config: { app: { basePath: "", baseUrl: "https://example.test/" }, xshell: {} }

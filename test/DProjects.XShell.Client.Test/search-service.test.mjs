@@ -1,13 +1,15 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
+import Logger from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/logger.js";
 import Search from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/search.js";
 import SearchContract from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/contracts/search.json" with {type: "json"};
 import ContractSchema from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/schemas/contract.schema.json" with {type: "json"};
 import ServiceSchema from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/schemas/service.schema.json" with {type: "json"};
 import JsonValidator from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/json-validator.js";
+import {createThrowingLogger} from "./fixtures/throwing-logger.mjs";
 
-function createSearch(providers, implementations, dependencies = {}) {
+function createSearch(providers, implementations, dependencies = {}, logger = new Logger({})) {
     const loads = [];
     const loader = {
         async load(resource) {
@@ -19,7 +21,7 @@ function createSearch(providers, implementations, dependencies = {}) {
         }
     };
     const services = {resolve(name) { return dependencies[name]; }};
-    return {loads, search: new Search({loader, services}, {providers})};
+    return {loads, search: new Search({logger, loader, services}, {providers})};
 }
 
 const result = (id, label = id, extra = {}) => ({id, type: "page", label, href: `/pages/${id}.js`, ...extra});
@@ -189,7 +191,7 @@ test("provider construction shares concurrent initialization and retries a faile
     const loads = [];
     const loader = {async load(resource) { loads.push(resource); return implementations[resource](); }};
     const services = {resolve() { return undefined; }};
-    const search = new Search({loader, services}, {providers: {shared: {label: "Shared", implementation: "/providers/search-shared.js"}}});
+    const search = new Search({logger: new Logger({}), loader, services}, {providers: {shared: {label: "Shared", implementation: "/providers/search-shared.js"}}});
 
     const failed = await search.query("first");
     assert.deepEqual(failed.results, []);
@@ -252,7 +254,7 @@ test("canceling one query does not invalidate provider initialization shared wit
         return Provider;
     }};
     const services = {resolve() { return undefined; }};
-    const search = new Search({loader, services}, {providers: {local: {label: "Local", implementation: "/providers/search-local.js"}}});
+    const search = new Search({logger: new Logger({}), loader, services}, {providers: {local: {label: "Local", implementation: "/providers/search-local.js"}}});
     const controller = new AbortController();
     const canceled = search.query("canceled", {signal: controller.signal});
     const surviving = search.query("surviving");
@@ -323,17 +325,18 @@ test("Search rejects missing, blank, and non-string resource types and isolates 
     }
 });
 
-test("provider failures and invalid results are isolated while successful results survive", async () => {
+test("provider failures are logged safely while successful results survive a throwing logger", async t => {
     class Good { async query() { return [result("good")]; } }
     class Failed { async query() { throw new Error("credential=https://secret.example"); } }
     class Invalid { async query() { return [{...result("invalid"), callback() {}}]; } }
+    const {logger, calls: {warn: warning, debug}} = await createThrowingLogger(t);
     const {search} = createSearch({
         good: {label: "Good", implementation: "/providers/search-good.js", prefixes: ["shared:"]},
         failed: {label: "Failed", implementation: "/providers/search-failed.js", prefixes: ["shared:"]},
         invalid: {label: "Invalid", implementation: "/providers/search-invalid.js", prefixes: ["shared:"]}
-    }, {"esm:/providers/search-good.js": Good, "esm:/providers/search-failed.js": Failed, "esm:/providers/search-invalid.js": Invalid});
+    }, {"esm:/providers/search-good.js": Good, "esm:/providers/search-failed.js": Failed, "esm:/providers/search-invalid.js": Invalid}, {}, logger);
 
-    for (const expression of ["shared: anything", "shared:"]) {
+    for (const expression of ["shared: private query", "shared:"]) {
         const response = await search.query(expression);
         assert.deepEqual(response.results.map(item => item.id), ["good"]);
         assert.deepEqual(response.errors, [
@@ -342,6 +345,11 @@ test("provider failures and invalid results are isolated while successful result
         ]);
         assert.equal(JSON.stringify(response).includes("secret.example"), false);
     }
+    assert.deepEqual(warning.mock.calls.map(call => call.arguments.slice(1).map(value => value.providerId)), [["failed"], ["invalid"], ["failed"], ["invalid"]]);
+    const complete = debug.mock.calls.filter(call => call.arguments[0] === "Search: completed");
+    assert.equal(complete.length, 2);
+    assert.ok(complete.every(call => call.arguments[1].count === 1 && call.arguments[1].failureCount === 2));
+    assert.doesNotMatch(JSON.stringify([...warning.mock.calls, ...debug.mock.calls].map(call => call.arguments)), /private query|secret\.example/);
 });
 
 test("Search assigns provider IDs, ranks deterministically, deduplicates, and applies the aggregate limit", async () => {

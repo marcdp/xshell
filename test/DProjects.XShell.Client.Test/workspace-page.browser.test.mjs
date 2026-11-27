@@ -8,6 +8,7 @@ import test from "node:test";
 import { promisify } from "node:util";
 
 async function verifyWorkspace() {
+    const {default: Logger} = await import("/resources/xshell/services/logger.js");
     const [
         { default: workspace }, { default: menuitem }, { default: anchor }, { default: embedLayout }, { default: Areas }, { default: Menus },
         { default: Navigation }, { createXPageClass }, { createPageClassFromJsDefinition }, { createComponentClassFromJsDefinition },
@@ -52,7 +53,7 @@ async function verifyWorkspace() {
     menus.init();
     areas.init({ modules, menus });
     const resolver = { resolve: href => href === "page:x:/pages/workspace.js" ? { path: workspaceSrc } : null };
-    const navigation = new Navigation({ areas, bus, config, menus, resolver }, { mode });
+    const navigation = new Navigation({ logger: new Logger({}), areas, bus, config, menus, resolver }, { mode });
     const pages = new Map();
     const loader = { async load(resource) {
         if (typeof resource !== "string" || resource.startsWith("schema:")) return {};
@@ -63,7 +64,7 @@ async function verifyWorkspace() {
         if (!pages.has(path)) throw new Error("Unexpected Page resource " + path);
         return pages.get(path);
     } };
-    const services = { areas, menus, bus, config, loader, modules, navigation, events: {
+    const services = { logger: new Logger({}), areas, menus, bus, config, loader, modules, navigation, events: {
         on(target, type, callback) { target.addEventListener(type, callback); }
     } };
     services.services = { beginScope: () => ({ resolve: name => services[name], async dispose() {} }) };
@@ -160,6 +161,7 @@ async function verifyWorkspace() {
 }
 
 async function verifyFilesystems() {
+    const {default: Logger} = await import("/resources/xshell/services/logger.js");
     const [
         { default: popup }, { default: explorer }, { default: filesystem }, { default: list }, { default: row },
         { default: menuitem }, { default: anchor }, { default: Navigation }, { default: Services },
@@ -270,7 +272,7 @@ async function verifyFilesystems() {
     menus.init();
     areas.init({ modules, menus });
     const resolver = new Resolver({ config });
-    const navigation = new Navigation({ areas, bus, config, menus, resolver }, { mode });
+    const navigation = new Navigation({ logger: new Logger({}), areas, bus, config, menus, resolver }, { mode });
     const pages = new Map();
     const loader = { async load(resource) {
         if (resource === "state-engine:proxy") return stateEngine;
@@ -294,13 +296,13 @@ async function verifyFilesystems() {
         }
     }
     const values = new Map();
-    const filesystems = new Filesystems({ bus, config, jsonValidator: new JsonValidator(), preferences: {
+    const filesystems = new Filesystems({ logger: new Logger({}), bus, config, jsonValidator: new JsonValidator(), preferences: {
         async get(key, fallback) { return values.get(key) ?? fallback; },
         async set(key, value) { values.set(key, value); },
         async list() { return [...values.values()].map(value => ({ value })); }
     } }, { providers: { mem: { implementation: location.origin + "/resources/x-filesystem/providers/filesystem-mem.js" } } });
     const preferences = new Map([["x-layout-main.menuCollapsed", !verifyShortcuts]]);
-    for (const [name, value] of Object.entries({ bus, config, loader, resolver, modules, areas, menus, navigation, filesystems, preferences, services: root, i18n: {} })) {
+    for (const [name, value] of Object.entries({ logger: new Logger({}), bus, config, loader, resolver, modules, areas, menus, navigation, filesystems, preferences, services: root, i18n: {} })) {
         root.register(name, value);
     }
     root.register("dialog", {});
@@ -311,7 +313,7 @@ async function verifyFilesystems() {
     customElements.define("test-layout", class extends HTMLElement {
         connectedCallback() { this.attachShadow({ mode: "open" }).innerHTML = "<slot></slot>"; }
     });
-    customElements.define("x-page", createXPageClass({ areas, menus, bus, config, loader, modules, navigation }));
+    customElements.define("x-page", createXPageClass({ logger: new Logger({}), areas, menus, bus, config, loader, modules, navigation }));
     for (const [name, definition] of [
         ["x-menuitem", menuitem], ["x-anchor", anchor], ["x-filesystem", filesystem],
         ["x-filesystem-list", list], ["x-listview-item", row], ["x-layout-main", mainLayout], ["x-page-menu", pageMenu], ["x-app-menu", appMenu],

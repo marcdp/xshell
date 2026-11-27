@@ -26,15 +26,17 @@ class Task extends EventTarget {
     #done;
     #resolveDone;
     #onChange;
+    #logger;
 
     // ctor
-    constructor({id, title, description, background, onChange}) {
+    constructor({id, title, description, background, onChange, logger}) {
         super();
         this.#id = id;
         this.#title = title;
         this.#description = description;
         this.#background = background;
         this.#onChange = onChange;
+        this.#logger = logger;
         this.#done = new Promise(resolve => { this.#resolveDone = resolve; });
     }
 
@@ -84,7 +86,12 @@ class Task extends EventTarget {
     }
 
     async cancel() {
-        if (!TERMINAL_STATUSES.has(this.#status)) this.#controller.abort();
+        // Keep cancellation on its existing boundary.
+        if (!TERMINAL_STATUSES.has(this.#status)) {
+            const wasAborted = this.#controller.signal.aborted;
+            this.#controller.abort();
+            if (!wasAborted) this.#logger.debug("Tasks: cancellation requested", {taskId: this.id, status: this.status, background: this.background});
+        }
     }
 
     // internal methods
@@ -184,15 +191,17 @@ export default class Tasks {
 
     // vars
     #bus;
+    #logger;
     #tasks = [];
 
     // ctor
-    constructor({bus}) {
+    constructor({bus, logger}) {
         this.#bus = bus;
+        this.#logger = logger;
     }
 
     // methods
-    run({title, description = "", background = true, handler, data} = {}) {
+    run({title, description = "", background = true, handler, data, logFailure = true} = {}) {
         if (typeof title !== "string" || !title.trim()) throw new TypeError("Task title must be a non-empty string");
         if (typeof description !== "string") throw new TypeError("Task description must be a string");
         if (typeof background !== "boolean") throw new TypeError("Task background must be a boolean");
@@ -203,17 +212,21 @@ export default class Tasks {
             title,
             description,
             background,
+            logger: this.#logger,
             onChange: task => this.#bus?.emit("xshell:tasks:updated", {id: task.id, status: task.status})
         });
 
         this.#tasks.unshift(task);
         this.#bus?.emit("xshell:tasks:added", {id: task.id});
+        const taskId = task.id;
+        this.#logger.trace("Tasks: created", {taskId, background});
 
         // Start asynchronously so run() returns the task immediately.
         Promise.resolve().then(async () => {
             try {
                 task._signal.throwIfAborted();
                 task._start();
+                this.#logger.debug("Tasks: execution started", {taskId, background, status: task.status});
 
                 const result = await handler({
                     data,
@@ -231,6 +244,13 @@ export default class Tasks {
             } catch (error) {
                 task._fail(error);
             }
+
+            // Diagnose the terminal status. An operation owner can report its own failure details.
+            const {status, duration} = task;
+            const metadata = {taskId, background, status, duration};
+            if (status === "finished") this.#logger.debug("Tasks: execution completed", metadata);
+            else if (status === "canceled") this.#logger.debug("Tasks: execution canceled", metadata);
+            else if (logFailure) this.#logger.error("Tasks: execution failed", metadata);
         });
 
         return task;
@@ -260,5 +280,6 @@ export default class Tasks {
 
         this.#tasks.splice(index, 1);
         this.#bus?.emit("xshell:tasks:removed", {id});
+        this.#logger.trace("Tasks: removed", {taskId: id});
     }
 }

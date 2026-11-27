@@ -3,13 +3,15 @@ import test from "node:test";
 
 import commandsContract from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/contracts/commands.json" with {type: "json"};
 import contractSchema from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/schemas/contract.schema.json" with {type: "json"};
+import Logger from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/logger.js";
 import Commands from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/commands.js";
 import JsonValidator from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/json-validator.js";
 import Tasks from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/tasks.js";
 
-function createCommands(Command, tasks = new Tasks({bus: null}), config) {
+function createCommands(Command, tasks = new Tasks({logger: new Logger({}), bus: null}), config) {
     const loads = [];
     const commands = new Commands({
+        logger: new Logger({}),
         loader: { async load(id) { loads.push(id); return Command; } },
         tasks,
         jsonValidator: new JsonValidator(),
@@ -53,7 +55,7 @@ test("commands discovers framework and module inventories without loading implem
             ]}
         }
     };
-    const {commands, loads} = createCommands(Command, new Tasks({bus: null}), config);
+    const {commands, loads} = createCommands(Command, new Tasks({logger: new Logger({}), bus: null}), config);
     assert.ok(["_loader", "_tasks", "_jsonValidator", "_config", "_discover", "_validateArgument"].every(name => !(name in commands)));
 
     const items = commands.list();

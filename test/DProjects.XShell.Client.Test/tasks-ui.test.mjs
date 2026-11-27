@@ -3,6 +3,7 @@ import test from "node:test";
 
 import layoutDefinition from "../../src/DProjects.XShell/Resources/DProjects.XShell/x/layouts/x-layout-main.js";
 import tasksPageDefinition from "../../src/DProjects.XShell/Resources/DProjects.XShell/x/pages/tasks.js";
+import Logger from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/logger.js";
 import Tasks from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/tasks.js";
 
 test("Tasks Page projects and counts only background Tasks", () => {
@@ -58,7 +59,7 @@ test("main layout badge counts only pending and running background Tasks", () =>
 });
 
 test("Tasks created without a background option remain globally visible", async () => {
-    const tasks = new Tasks({ bus: null });
+    const tasks = new Tasks({ logger: new Logger({}), bus: null });
     const task = tasks.run({ title: "Compatible", handler() {} });
     const state = structuredClone(tasksPageDefinition.state);
     const controller = tasksPageDefinition.controller({ state, page: { invalidate() {} }, tasks });

@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import Logger from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/logger.js";
 
 let initialAttributes = {};
 
@@ -83,6 +84,7 @@ class RenderEngineFactory {
 
 function createNavigation({ areas = null, menus = { resolveHref: () => null, resolvePath: () => null }, mode = "path", basePath = "", baseUrl = "https://example.test/", resolver = null } = {}) {
     return new Navigation({
+        logger: new Logger({}),
         areas: areas || {
             resolveAreaId() { return null; },
             getArea() { return null; },
@@ -127,6 +129,7 @@ function createRouteAreas() {
 
 let AnchorClass = null;
 const services = {
+    logger: new Logger({}),
     config: { modules: { test: { defaults: { component: { stateEngine: "test", renderEngine: "test" } } } } },
     modules: {},
     services: { beginScope: () => ({ resolve: name => services[name], async dispose() {} }) },

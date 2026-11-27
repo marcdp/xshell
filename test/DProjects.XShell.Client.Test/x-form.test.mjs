@@ -5,6 +5,7 @@ import datafieldDefinition from "../../src/DProjects.XShell/Resources/DProjects.
 import formDefinition from "../../src/DProjects.XShell/Resources/DProjects.XShell/x/components/x-form.js";
 import schemaDefinition from "../../src/DProjects.XShell/Resources/DProjects.XShell/x/components/x-schema.js";
 import invokeDefinition from "../../src/DProjects.XShell/Resources/DProjects.XShell/x/pages/invoke.js";
+import Logger from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/logger.js";
 import Tasks from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/tasks.js";
 
 globalThis.CSSStyleSheet = class { replaceSync() {} };
@@ -203,7 +204,7 @@ function createInvoke(contract, initialArgs = {}, editorErrors = [], options = {
         invalidate() {}
     };
     const state = { ...structuredClone(invokeDefinition.state), type: "command", id: "test", method: "execute", args: initialArgs };
-    const tasks = options.tasks || new Tasks({ bus: null });
+    const tasks = options.tasks || new Tasks({ logger: new Logger({}), bus: null });
     const loader = { load: async () => Command };
     const controller = invokeDefinition.controller({ state, page, tasks, loader });
     return { calls, closed, contexts, controller, page, state, tasks, get constructions() { return constructions; } };
@@ -590,7 +591,7 @@ test("invoke cancels a running Command through its task signal", async () => {
 });
 
 test("invoke unload detaches its listener and cancels its foreground Task", async () => {
-    const baseTasks = new Tasks({ bus: null });
+    const baseTasks = new Tasks({ logger: new Logger({}), bus: null });
     let added = 0, removed = 0, started;
     const running = new Promise(resolve => { started = resolve; });
     const tasks = {
@@ -676,7 +677,7 @@ test("invoke executes shared Service methods through Tasks with only declared ar
         ...structuredClone(invokeDefinition.state),
         type: "service", id: "math", method: "run", args: { value: 4 }
     };
-    const tasks = new Tasks({ bus: null });
+    const tasks = new Tasks({ logger: new Logger({}), bus: null });
     const controller = invokeDefinition.controller({ state, page, services, contracts, tasks });
 
     await controller.load();

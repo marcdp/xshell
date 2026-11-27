@@ -4,8 +4,10 @@ import test from "node:test";
 import Areas from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/areas.js";
 import Menus from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/menus.js";
 import Loader from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/loader.js";
+import Logger from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/logger.js";
 import Navigation from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/navigation.js";
 import Resolver from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/resolver.js";
+import {createThrowingLogger} from "./fixtures/throwing-logger.mjs";
 
 test("Areas construction rejects an unknown configured module", () => {
     const config = { modules: {}, xshell: { assets: { basePath: "/_assets" } } };
@@ -113,8 +115,9 @@ function createAreas({ globalPrefix, root = false, bus = {
 }
 
 function createNavigation({ areas = createAreas(), mode = "path", basePath = "", baseUrl = "https://example.test/",
-    resolver = null, assetsBasePath = "/_assets", bus = { emit() {} }, container = { querySelectorAll() { return []; } } } = {}) {
+    resolver = null, assetsBasePath = "/_assets", bus = { emit() {} }, container = { querySelectorAll() { return []; } }, logger = new Logger({}) } = {}) {
     return new Navigation({
+        logger,
         areas,
         menus: menusByAreaService.get(areas),
         bus,
@@ -285,14 +288,21 @@ test("A unique root-Area home keeps its native URL when another Area includes th
     assert.deepEqual(historyUrls, [nativeHref]);
 });
 
-test("Navigation opens resolved Page resources through public auto and embed behavior", async () => {
-    const navigation = createNavigation({ resolver: createPageResolver() });
+test("Navigation diagnoses auto and embed decisions without forwarding addresses or parameters", async t => {
+    const {logger, calls: {debug, trace, error: failure}} = await createThrowingLogger(t);
+    const navigation = createNavigation({ logger, resolver: createPageResolver() });
     const page = { src: "/demo/_assets/x-demo/pages/origin.js" };
     assert.equal(resolveNavigationTarget(navigation, "page:x-demo:/pages/items.js", page, { repositoryId: "12" }),
         "/demo/_assets/x-demo/pages/items.js?repositoryId=12");
     const embedded = createEmbedPage(page.src);
     await navigation.navigate({ href: "page:x-demo:/pages/about.js", page: embedded.page, open: "embed", outlet: "content" });
     assert.equal(embedded.outlet.src, "/_assets/x-demo/pages/about.js");
+    await assert.rejects(navigation.navigate({ href: "page:missing:/pages/index.js?token=private-query#private-fragment", open: "top" }), /unable to resolve Page reference/);
+    assert.deepEqual(debug.mock.calls.filter(call => call.arguments[0] === "Navigation: mode selected")
+        .map(call => call.arguments[1].mode), ["in-place", "embed"]);
+    assert.equal(failure.mock.calls[0].arguments[0], "Navigation: operation failed");
+    assert.doesNotMatch(JSON.stringify([...trace.mock.calls, ...debug.mock.calls, ...failure.mock.calls].map(call => call.arguments)),
+        /private-query|private-fragment|repositoryId|\/pages\//);
 });
 
 for (const mode of ["hash", "path"]) {
@@ -340,9 +350,10 @@ for (const mode of ["hash", "path"]) {
             window: { addEventListener: (name, listener) => { listeners[name] = listener; } },
             document: { location, createElement }
         });
+        const {logger, calls: {error: logged}} = await createThrowingLogger(t);
         const startNavigation = async () => {
             const container = { querySelectorAll: () => mounted, appendChild: page => mounted.push(page) };
-            const navigation = createNavigation({ mode, basePath: "/app", resolver: createPageResolver(), container });
+            const navigation = createNavigation({ mode, basePath: "/app", resolver: createPageResolver(), container, logger });
             await navigation.init();
             return navigation;
         };
@@ -412,10 +423,9 @@ for (const mode of ["hash", "path"]) {
         assert.deepEqual({ position, url: urls[position].href, stack: restored.stack, src: mounted[0].src }, before);
 
         // Invalid browser destinations cannot replace the valid mounted stack.
-        const logged = t.mock.method(console, "error", () => {});
         setUrl(mode === "hash" ? "/app/#!/global/customers" : "/app/global/customers", true);
         await listeners[mode === "hash" ? "hashchange" : "popstate"]();
-        assert.match(logged.mock.calls[0].arguments[1].message, error);
+        assert.deepEqual(logged.mock.calls.at(-1).arguments, ["Navigation: browser history restoration failed", {mode}]);
         assert.deepEqual(restored.stack, before.stack);
         assert.equal(mounted[0].src, before.src);
         await assert.rejects(startNavigation(), error);
@@ -511,7 +521,7 @@ test("x-page resolves embed resources and supplies stack classes before connecti
     const navigation = createNavigation({ areas, resolver, basePath: config.app.basePath });
     const resourceLoader = new Loader({ bus, resolver }, {});
     const modules = { resolveModuleId: href => areas.getModuleId(href) };
-    const XPage = createXPageClass({ config, loader: resourceLoader, bus, navigation, areas, menus: menusByAreaService.get(areas), modules });
+    const XPage = createXPageClass({ logger: new Logger({}), config, loader: resourceLoader, bus, navigation, areas, menus: menusByAreaService.get(areas), modules });
 
     for (const [prefix, breadcrumbPath] of [["", null], ["/sales", "/sales/detail"], ["/global", null]]) {
         const outlet = new XPage();

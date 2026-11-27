@@ -11,10 +11,6 @@ function camelToKebab(str) {
     // convert camelCase to kebab-case
     return str.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase();                      
 }
-function disposeFailedScope(scope, componentName) {
-    // dispose constructor-owned resources without replacing the original synchronous failure
-    scope.dispose().catch(error => console.error(`Failed to dispose Services scope for Component '${componentName}' after construction failed.`, error));
-}
 function throwCleanupErrors(errors, message) {
     // preserve one cleanup failure and aggregate independent lifecycle failures
     if (errors.length === 1) throw errors[0];
@@ -141,7 +137,6 @@ async function validateComponent(src, definition, context) {
     const componentSchema = await context.services.loader.load("schema:component");
     const result = new JsonValidator().validate(definitionObject, componentSchema);
     if (!result.valid) {
-        console.error(`Invalid component: ${src}`, result.errors);
         throw new Error(`Invalid component: ${src}`, { cause: result.errors });
     }
 }
@@ -163,7 +158,16 @@ export async function createComponentClassFromJsDefinition(src, context, definit
     if (!definition.template) definition.template = "";
     if (!definition.controller) definition.controller = () => ({});
     // validateComponent 
-    await validateComponent(src, definition, context);
+    // Use the declared custom-element identity and omit schema details from diagnostics.
+    const logger = context.services.logger;
+    const moduleId = context.resourceDefinition.moduleId;
+    const componentId = typeof definition.meta.id === "string" && /^[\w.-]+$/.test(definition.meta.id) ? definition.meta.id : undefined;
+    try {
+        await validateComponent(src, definition, context);
+    } catch (error) {
+        logger.error("Components: contract validation failed", {componentId, moduleId});
+        throw error;
+    }
     // freeze and seal the implementation and contract to prevent further modifications
     definition = deepFreeze(definition);
     // process definition CSS once before creating Component instances
@@ -231,7 +235,12 @@ export async function createComponentClassFromJsDefinition(src, context, definit
     };
     const renderEngineFactory = new renderEngineFactoryCreator(definition.template, renderContext, definition.templateRenderer);
     // validate compiled template slots through the render-engine factory contract
-    validateSlots(renderEngineFactory.slots, definition, definition.meta.id || "unknown");
+    try {
+        validateSlots(renderEngineFactory.slots, definition, definition.meta.id || "unknown");
+    } catch (error) {
+        logger.error("Components: contract validation failed", {componentId, moduleId});
+        throw error;
+    }
     // load render engine dependencies
     if (renderEngineFactory.dependencies.length) {
         await context.services.loader.load(renderEngineFactory.dependencies);
@@ -283,6 +292,7 @@ export async function createComponentClassFromJsDefinition(src, context, definit
             this._servicesScope = rootServices.beginScope({context: {
                 invokeController(command, ...params) { return self._controller[command](...params); }
             }});
+            let stage = "construction";
             try {
             //shadowRoot
             this.attachShadow(definition.meta.shadowRootOptions || {mode: "open"});
@@ -347,6 +357,7 @@ export async function createComponentClassFromJsDefinition(src, context, definit
                 }
             });
             // controller
+            stage = "controller initialization";
             this._controller = definition.controller(servicesProvider) ?? {};
             // validate public contract methods
             for (const methodName of Object.keys(definition.contract.methods ?? {})) {
@@ -355,6 +366,8 @@ export async function createComponentClassFromJsDefinition(src, context, definit
                     throw new Error(`Component '${definition.meta.id}' declares public method '${methodName}' in definition.contract.methods but controller.${methodName} is not a function.`);
                 }
             }
+            logger.trace("Components: controller initialized", {componentId, moduleId});
+            stage = "construction";
             // attribute mutation observer (listen for changes in attributes that start with state map attribute names)
             if (stateMapAttributes.length) {
                 this._mutationObserver = new MutationObserver((mutationsList) => {
@@ -386,6 +399,7 @@ export async function createComponentClassFromJsDefinition(src, context, definit
                 }
             }
             // invoke load once and retain its completion only when initial rendering must wait
+            stage = "load";
             const loadResult = this.onCommand("load", {});
             if (definition.meta.awaitLoad === true && loadResult && typeof(loadResult.then) === "function") {
                 const loadPromise = Promise.resolve(loadResult);
@@ -395,11 +409,11 @@ export async function createComponentClassFromJsDefinition(src, context, definit
                     this._loadPromise = null;
                     this._loadState = "ready";
                     this._mount();
-                }, error => {
+                }, () => {
                     if (this._loadPromise !== loadPromise) return;
                     this._loadPromise = null;
                     this._loadState = "failed";
-                    console.error(`Failed to load Component '${definition.meta.id ?? src}'.`, error);
+                    logger.error("Components: lifecycle operation failed", {componentId, moduleId, stage: "load"});
                 });
             } else if (definition.meta.awaitLoad === true) {
                 this._loadState = "ready";
@@ -408,7 +422,10 @@ export async function createComponentClassFromJsDefinition(src, context, definit
                 // initiate asynchronous cleanup while preserving synchronous constructor behavior
                 const scope = this._servicesScope;
                 this._servicesScope = null;
-                disposeFailedScope(scope, definition.meta.id ?? src);
+                scope.dispose().catch(() => {
+                    logger.error("Components: scope disposal failed", {componentId, moduleId, stage: "construction"});
+                });
+                logger.error("Components: lifecycle operation failed", {componentId, moduleId, stage});
                 throw error;
             }
         }        
@@ -462,6 +479,9 @@ export async function createComponentClassFromJsDefinition(src, context, definit
                 errors.push(error);
             }
             this._mutationObserver = null;
+            if (errors.length) {
+                logger.error("Components: lifecycle operation failed", {componentId, moduleId, stage: "unload"});
+            }
 
             // dispose the owner scope and its transient helpers after existing cleanup
             const servicesScope = this._servicesScope;
@@ -469,12 +489,14 @@ export async function createComponentClassFromJsDefinition(src, context, definit
                 if (servicesScope) await servicesScope.dispose();
             } catch (error) {
                 errors.push(error);
+                logger.error("Components: scope disposal failed", {componentId, moduleId, stage: "unload"});
             } finally {
                 this._controller = null;
                 this._servicesScope = null;
             }
 
             throwCleanupErrors(errors, `Multiple errors occurred while unloading Component '${definition.meta.id ?? src}'.`);
+            logger.trace("Components: unloaded", {componentId, moduleId});
             return result;
         }
         // methods (private)
@@ -592,6 +614,7 @@ export async function createComponentClassFromJsDefinition(src, context, definit
         throw new Error(`Component '${id}' from '${src}' cannot be registered because that id is already registered.`);
     }
     window.customElements.define(id, WebComponent);
+    logger.trace("Components: definition loaded", {componentId, moduleId});
     // return class
     return WebComponent
 }

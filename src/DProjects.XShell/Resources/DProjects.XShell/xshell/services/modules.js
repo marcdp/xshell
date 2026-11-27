@@ -1,8 +1,3 @@
-function reportCleanupErrors(errors, message) {
-    // report cleanup failures without replacing the lifecycle error that triggered cleanup
-    if (!errors.length) return;
-    console.error(message, errors.length === 1 ? errors[0] : new AggregateError(errors, message));
-}
 function throwCleanupErrors(errors, message) {
     // preserve one cleanup failure and aggregate independent lifecycle failures
     if (errors.length === 1) throw errors[0];
@@ -28,10 +23,11 @@ export default class Modules {
     #document = null;
     #services = null;
     #controllerScopes = null;
+    #logger;
     
     
     // ctor
-    constructor({ bus, config, loader, resolver, services, document }, options = {}) {
+    constructor({ bus, config, loader, resolver, services, document, logger }, options = {}) {
         // initialize injected dependencies
         this.#bus = bus;
         this.#config = config;
@@ -39,6 +35,7 @@ export default class Modules {
         this.#resolver = resolver;
         this.#document = document;
         this.#services = services;
+        this.#logger = logger;
         this.#modules = [];
         this.#controllerScopes = new Map();
         this.#shadowStyleSheets = Object.freeze([]);
@@ -79,12 +76,18 @@ export default class Modules {
 
     // method
     async init() {
-        // init modules instances
+        // Measure the full initialization through startup and stylesheet adoption.
+        const startedAt = performance.now();
+        this.#logger.debug("Modules: initialization started");
         // validate service requirements before loading or starting any module controller
         for (const moduleId of Object.keys(this.#config.modules)) {
             const moduleConfig = this.#config.modules[moduleId];
             for (const serviceName of moduleConfig.requires || []) {
-                if (!this.#services.has(serviceName)) throw new Error(`Module '${moduleId}' requires unavailable service '${serviceName}'.`);
+                if (!this.#services.has(serviceName)) {
+                    const error = new Error(`Module '${moduleId}' requires unavailable service '${serviceName}'.`);
+                    this.#logger.error("Modules: required service unavailable", {moduleId, serviceId: serviceName}, error);
+                    throw error;
+                }
             }
         }
 
@@ -124,20 +127,29 @@ export default class Modules {
             }
             // add module instance
             this.#modules.push(module);
+            this.#logger.trace("Modules: instance prepared", {moduleId});
         }
-        await Promise.all(tasks);
+        try {
+            await Promise.all(tasks);
+        } catch (error) {
+            this.#logger.error("Modules: initialization failed", {stage: "stylesheet loading"});
+            throw error;
+        }
 
         // publish shared sheets before module controllers can instantiate Components or Pages
         this.#shadowStyleSheets = Object.freeze(await Promise.all(sharedStyleTasks));
 
         // load Module controllers and give each one an independent direct-root Services scope
+        let initializingModuleId;
         try {
             for (const module of this.#modules) {
                 const moduleId = module.id;
+                initializingModuleId = moduleId;
                 const moduleConfig = module.config;
                 const moduleControllerJs = moduleConfig.assets.path + "/module.js";
                 if (!moduleConfig.files.some(file => file.path == moduleControllerJs)) continue;
                 const moduleClass = await this.#loader.load("esm:" + moduleControllerJs);
+                this.#logger.trace("Modules: controller loaded", {moduleId});
                 const moduleScope = this.#services.beginScope({context: {
                     invokeController(command, ...params) { return module.controller?.[command]?.(...params); }
                 }});
@@ -162,12 +174,12 @@ export default class Modules {
                     }
                 });
                 module.controller = new moduleClass(servicesProvider);
+                this.#logger.trace("Modules: controller constructed", {moduleId});
             }
         } catch (error) {
             // release every scope created during failed controller initialization and preserve the original error
-            const cleanupErrors = [];
-            await this.#disposeControllerScopes(cleanupErrors);
-            reportCleanupErrors(cleanupErrors, "Failed to dispose Module Services scopes after controller initialization failed.");
+            this.#logger.error("Modules: initialization failed", {moduleId: initializingModuleId, stage: "controller initialization"});
+            await this.#disposeControllerScopes();
             throw error;
         }
 
@@ -181,39 +193,51 @@ export default class Modules {
 
         // adopt shared sheets before document-only sheets while preserving prior adoption and object identity
         const documentStyleSheets = this.#modules.flatMap(module => module.styles);
-        this.#document.adoptedStyleSheets = [
-            ...this.#document.adoptedStyleSheets,
-            ...this.#shadowStyleSheets,
-            ...documentStyleSheets
-        ].filter((styleSheet, index, styleSheets) => styleSheets.indexOf(styleSheet) === index);
+        try {
+            this.#document.adoptedStyleSheets = [
+                ...this.#document.adoptedStyleSheets,
+                ...this.#shadowStyleSheets,
+                ...documentStyleSheets
+            ].filter((styleSheet, index, styleSheets) => styleSheets.indexOf(styleSheet) === index);
+        } catch (error) {
+            this.#logger.error("Modules: initialization failed", {stage: "stylesheet adoption"});
+            throw error;
+        }
+        this.#logger.info("Modules: initialization completed", {count: this.#modules.length, duration: performance.now() - startedAt});
     }
 
     // start/stop
     async start() {
+        // Roll back only modules reached by the existing startup sequence.
         const started = [];
+        let moduleId, startedAt;
         try {
             for (const module of [...this.#modules]) {
+                moduleId = module.id;
+                startedAt = performance.now();
                 if (module.controller?.start) {
+                    this.#logger.debug("Modules: startup started", {moduleId});
                     await module.controller.start();
+                    this.#logger.debug("Modules: module started", {moduleId, duration: performance.now() - startedAt});
                 }
                 started.push(module);
             }
         } catch (error) {
-            const cleanupErrors = [];
+            this.#logger.error("Modules: startup failed", {moduleId, duration: performance.now() - startedAt});
+            this.#logger.warn("Modules: startup rollback", {moduleId, count: started.length});
             // preserve existing rollback ordering while scopes remain active
             for (const module of [...started].reverse()) {
                 try {
                     if (module.controller?.stop) {
                         await module.controller.stop();
                     }
-                } catch (cleanupError) {
-                    cleanupErrors.push(cleanupError);
+                } catch {
+                    this.#logger.error("Modules: rollback shutdown failed", {moduleId: module.id});
                 }
             }
 
             // release every controller scope created for the failed initialization
-            await this.#disposeControllerScopes(cleanupErrors);
-            reportCleanupErrors(cleanupErrors, "Failed to clean up Module controllers after startup failed.");
+            await this.#disposeControllerScopes();
             throw error;
         }
     } 
@@ -225,15 +249,24 @@ export default class Modules {
             this.#controllerScopes.delete(module.id);
 
             // keep the scope active through controller shutdown, then dispose it regardless of stop failures
+            const moduleId = module.id;
+            const startedAt = performance.now();
+            const errorCount = errors.length;
+            this.#logger.debug("Modules: shutdown started", {moduleId});
             try {
                 if (module.controller?.stop) await module.controller.stop();
             } catch (error) {
                 errors.push(error);
+                this.#logger.error("Modules: shutdown failed", {moduleId});
             }
             try {
                 await moduleScope.dispose();
             } catch (error) {
                 errors.push(error);
+                this.#logger.error("Modules: scope disposal failed", {moduleId});
+            }
+            if (errors.length === errorCount) {
+                this.#logger.debug("Modules: module stopped", {moduleId, duration: performance.now() - startedAt});
             }
         }
         throwCleanupErrors(errors, "Multiple errors occurred while stopping Module controllers.");
@@ -260,7 +293,7 @@ export default class Modules {
         }
         return null;
     }
-    async #disposeControllerScopes(errors) {
+    async #disposeControllerScopes() {
         // detach ownership first so repeated cleanup cannot dispose the same Module scope twice
         for (const module of [...this.#modules].reverse()) {
             const moduleScope = this.#controllerScopes.get(module.id);
@@ -268,8 +301,8 @@ export default class Modules {
             this.#controllerScopes.delete(module.id);
             try {
                 await moduleScope.dispose();
-            } catch (error) {
-                errors.push(error);
+            } catch {
+                this.#logger.error("Modules: scope disposal failed", {moduleId: module.id});
             }
         }
     }

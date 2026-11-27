@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
+import Logger from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/logger.js";
 import Modules from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/modules.js";
 import Services from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services.js";
 
@@ -27,6 +28,7 @@ function createServices(options) {
     const services = new Services({ config, loader, contracts: { getContractItemById() { return contractItem; } }, resolver, bus });
 
     // Register the constructor dependencies supplied by the normal service injection proxy.
+    services.register("logger", new Logger({}));
     services.register("bus", bus);
     services.register("config", config);
     services.register("document", globalThis.document);

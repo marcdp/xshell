@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import Logger from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/logger.js";
 
 class FakeElement {
     constructor() {
@@ -102,6 +103,7 @@ function configureDefinitionLoaders() {
         }
     };
     const services = {
+        logger: new Logger({}),
         config,
         loader,
         bus,
@@ -147,6 +149,7 @@ function createNavigation(mode, xpages) {
         }
     };
     const navigation = new Navigation({
+        logger: new Logger({}),
         areas: { globalPrefix: "/global", }, menus: { resolvePath() { return null; }, resolveHref: () => null },
         bus: { emit() {} },
         resolver: { has: href => href === "page:/_assets/test/pages/tool.js" },

@@ -9,6 +9,7 @@ import contractSchema from "../../src/DProjects.XShell/Resources/DProjects.XShel
 import moduleSchema from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/schemas/module.schema.json" with { type: "json" };
 import Areas from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/areas.js";
 import Menus from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/menus.js";
+import Logger from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/logger.js";
 import Navigation from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/navigation.js";
 import JsonValidator from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/json-validator.js";
 import Events from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/events.js";
@@ -49,7 +50,7 @@ function setup({ saved, delayedRead } = {}) {
     menus.registerSource("live", {dependsOn: ["test:refresh"], resolve: () => dynamic});
     menus.init();
     areas.init({menus, modules: {getModuleById: id => ({id})}});
-    const navigation = new Navigation({areas, bus, config, menus, resolver: {
+    const navigation = new Navigation({logger: new Logger({}), areas, bus, config, menus, resolver: {
         resolve: resource => resource === "page:x-home:/pages/index.js" ? {path: homeAssets + "/pages/index.js"} : null
     }}, {mode: "hash"}, {container: {}});
     const navigated = [];
