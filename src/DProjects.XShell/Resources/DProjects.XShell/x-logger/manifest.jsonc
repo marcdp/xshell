@@ -20,7 +20,11 @@
             "logger": {
                 "options": {
                     "providers": {
-                        "console": {"implementation": "/providers/logger-console.js"}
+                        "console": {"implementation": "/providers/logger-console.js"},
+                        "indexeddb": {
+                            "implementation": "/providers/logger-indexeddb.js",
+                            "options": {"maxEntries": 10000, "retentionDays": 7}
+                        }
                     }
                 }
             }

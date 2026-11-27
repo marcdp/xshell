@@ -1,11 +1,5 @@
-import assert from "node:assert/strict";
-import { execFile } from "node:child_process";
-import { mkdtemp, readFile, rm } from "node:fs/promises";
-import { createServer } from "node:http";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
 import test from "node:test";
-import { promisify } from "node:util";
+import { chromiumOnly, runInChromium } from "./helpers/chromium.mjs";
 
 async function verifyWorkspace() {
     const {default: Logger} = await import("/resources/xshell/services/logger.js");
@@ -475,55 +469,6 @@ async function verifyFilesystems() {
     await click("filesystem1");
     await verifyExplorer("filesystem1", docs.areaId);
     await openAreaShortcut("Demo", cookbook);
-}
-
-const browser = process.env.XSHELL_TEST_BROWSER;
-const chromiumOnly = { skip: !browser && "Set XSHELL_TEST_BROWSER to a Chromium executable" };
-
-async function runInChromium(verify, scenarios) {
-    // Serve the actual runtime modules to an isolated Chromium profile for each scenario.
-    const root = new URL("../../src/DProjects.XShell/Resources/DProjects.XShell/", import.meta.url);
-    const html = `<!doctype html><body data-result="pending"><script type="module">
-        try {
-            await (${verify})();
-            document.body.dataset.result = "passed";
-        } catch (error) {
-            document.body.dataset.result = "failed";
-            document.body.prepend(error.stack);
-        }
-    </script>`;
-    const server = createServer(async (request, response) => {
-        const path = new URL(request.url, "http://localhost").pathname;
-        if (path === "/app/test") {
-            response.writeHead(200, { "Content-Type": "text/html" }).end(html);
-        } else if (/^\/resources\/[\w./-]+\.(?:js|jsonc)$/.test(path)) {
-            try {
-                const script = await readFile(new URL("./" + path.slice(11), root));
-                response.writeHead(200, { "Content-Type": path.endsWith(".js") ? "text/javascript" : "application/json" }).end(script);
-            } catch {
-                response.writeHead(404).end();
-            }
-        } else {
-            response.writeHead(404).end();
-        }
-    });
-    const temp = await mkdtemp(join(tmpdir(), "xshell-browser-"));
-    try {
-        await new Promise(resolve => server.listen(0, "127.0.0.1", resolve));
-        for (const [index, params] of scenarios.entries()) {
-            const url = `http://127.0.0.1:${server.address().port}/app/test?${params}`;
-            const { stdout } = await promisify(execFile)(browser, [
-                "--headless", "--disable-gpu", "--disable-background-networking", "--no-first-run",
-                `--user-data-dir=${join(temp, "profile-" + index)}`, "--virtual-time-budget=1500", "--dump-dom", url
-            ], { timeout: 30_000 });
-            const status = stdout.match(/<body[^>]*data-result="([^"]+)"/)?.[1];
-            const failure = stdout.match(/<body[^>]*>([\s\S]*?)<script/)?.[1];
-            assert.equal(status, "passed", params + " " + (failure || "Browser did not complete checks"));
-        }
-    } finally {
-        server.close();
-        await rm(temp, { recursive: true, force: true, maxRetries: 3 });
-    }
 }
 
 test("Workspace reflects IDs and reuses its outlet across selection and embedded navigation", chromiumOnly, () => runInChromium(verifyWorkspace, [

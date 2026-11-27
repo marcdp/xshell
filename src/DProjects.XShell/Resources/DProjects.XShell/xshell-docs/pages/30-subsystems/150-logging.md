@@ -5,7 +5,7 @@ their defaults, and the application selects the provider and overrides its optio
 
 ## Console provider
 
-The optional `x-logger` module provides one logging provider, `console`. Add `x-logger` to the root module's existing dependencies to make it available.
+The optional `x-logger` module contributes the `console` and `indexeddb` providers. Add `x-logger` to the root module's existing dependencies.
 
 ```jsonc
 "dependencies": {
@@ -30,6 +30,62 @@ The provider forwards the original arguments synchronously, preserving native co
 | `error` | `console.error()` |
 
 Logging stays disabled when no provider is selected. Set `provider` to `null` in the application manifest to disable logging explicitly.
+
+## IndexedDB provider
+
+Select `indexeddb` in the application manifest to persist logs in browser storage. Applications can override the contributed provider options
+in the same manifest.
+
+```jsonc
+{
+    "xshell": {
+        "services": {
+            "logger": {
+                "options": {
+                    "provider": "indexeddb",
+                    "providers": {
+                        "indexeddb": {"options": {"maxEntries": 50000, "retentionDays": 30}}
+                    }
+                }
+            }
+        }
+    }
+}
+```
+
+| Option | Accepted value | Default |
+| --- | --- | --- |
+| `databaseName` | Optional nonblank string | `xshell-logs` at the origin root, namespaced by application base path elsewhere |
+| `maxEntries` | Positive safe integer | 10,000 |
+| `retentionDays` | Positive finite number, including fractions | 7 |
+
+The application version stays out of the default database name, so upgrades can use the same logs. Applications that explicitly choose the same
+database name can share logs within the same origin and browser storage partition. Use a plain name such as `my-application-logs` for a shared
+namespace because URL-like manifest values follow ordinary manifest normalization. Invalid options fail provider initialization.
+
+The version 1 database has a `logs` object store with an auto-incrementing `id` and non-unique `timestamp` and `level` indexes. Each record
+contains `{id, timestamp, level, args}`. The timestamp is epoch milliseconds captured when the logger receives the call.
+
+The provider takes a structured clone snapshot of the argument array before queueing it. Structured clone preserves supported values and
+relationships, including circular references. If the full array cannot be cloned, the provider clones arguments individually and substitutes
+`{unserializable: true}` at unsupported positions. Native storage can reject some values that structured clone accepts. The provider preserves
+the values IndexedDB can store and substitutes the same marker at rejected positions. Error details depend on browser cloning support, custom
+Error properties may be dropped, and custom object prototypes may become plain objects.
+
+Logging returns synchronously. A single writer per provider opens the database on demand and writes up to 100 queued records per batch in arrival
+order. The queue holds at most 1,000 records awaiting a write and discards the oldest pending record on overflow. A batch counts as persisted
+once its transaction commits. Within that transaction, the provider removes records older than `retentionDays` through the timestamp index,
+then removes the oldest remaining records above `maxEntries`. The generated primary key breaks timestamp ties. Native IndexedDB transactions
+coordinate writes and retention across tabs sharing the database. Ordering across tabs depends on their transactions.
+
+Storage failures discard the failed batch and produce one fixed native console warning until a later write succeeds. If opening fails, remaining
+queued records wait for a later logging call. The provider closes stale connections on version changes. Retention runs during writes and can leave
+expired records in an inactive application. The age and count limits apply to records. Browser quotas and eviction govern storage in bytes.
+
+Use the browser's developer tools to inspect the named database and its `logs` store in the IndexedDB storage panel. Records can survive reloads
+and browser sessions subject to storage policy. Writes are best-effort, and closing a tab or browser can discard pending records. The store has
+the protections of ordinary IndexedDB, without vault encryption. Code with access to the same storage namespace can read the records. Keep
+sensitive information out of logging arguments and use a separate system for guaranteed auditing.
 
 ## Logger contract
 

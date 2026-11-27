@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import {readFileSync} from "node:fs";
 import test from "node:test";
+import {setImmediate as waitTurn} from "node:timers/promises";
 import vm from "node:vm";
 import LoggerContract from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/contracts/logger.json" with {type: "json"};
 import ProviderContract from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/contracts/logger-provider.json" with {type: "json"};
@@ -223,15 +224,16 @@ test("LoggerConsole synchronously forwards the original arguments to the matchin
     assert.equal(fallback.mock.callCount(), 0);
 });
 
-test("x-logger contributes a console provider that the application can select or disable", async t => {
+test("x-logger providers are selected, configured or disabled by the application", async t => {
     // Compose the authored module manifest with the framework and an application selecting the provider.
     const authored = JSON.parse(readFileSync(new URL("x-logger/manifest.jsonc", resources), "utf8").replace(/^\s*\/\/[^\r\n]*/gm, ""));
     const module = authored.modules["x-logger"];
     const providerFile = "/providers/logger-console.js";
+    const indexedDBFile = "/providers/logger-indexeddb.js";
     const assetsPath = `/_assets/x-logger/${module.version}.dev`;
     const implementation = assetsPath + providerFile;
     const reference = "module:x-logger:latest";
-    const consoleManifest = {...authored, modules: {"x-logger": {...module, files: []}}};
+    const loggerManifest = {...authored, modules: {"x-logger": {...module, files: []}}};
     // Resolve the dependency with the production bootstrap and the standard development index response shape.
     const discovery = bootstrap.slice(bootstrap.indexOf("const stableVersion ="), bootstrap.indexOf("// Load repositories and resolve modules"));
     const discovered = await vm.runInNewContext(discovery + "\nresolveModule(reference)", {
@@ -245,38 +247,60 @@ test("x-logger contributes a console provider that the application can select or
     assert.equal(discovered.version, module.version);
     const contributions = [
         {name: "xshell", assetsPath: "/_assets/xshell/1.dev", manifest: {xshell: {resolver: manifest.xshell.resolver, services: {logger: registration}}}},
-        {...discovered, assetsPath, assetsUrl: discovered.baseUrl, manifest: consoleManifest}
+        {...discovered, assetsPath, assetsUrl: discovered.baseUrl, manifest: loggerManifest}
     ];
-    assert.deepEqual(authored.xshell.services, {logger: {options: {providers: {console: {implementation: providerFile}}}}});
+    const defaults = {maxEntries: 10000, retentionDays: 7};
+    assert.deepEqual(authored.xshell.services, {logger: {options: {providers: {
+        console: {implementation: providerFile}, indexeddb: {implementation: indexedDBFile, options: defaults}
+    }}}});
     const log = t.mock.method(console, "debug", () => {});
+    t.mock.method(console, "warn", () => {});
+    const open = t.mock.fn(() => { throw new Error("Test storage unavailable."); });
+    const previousStorage = Object.getOwnPropertyDescriptor(globalThis, "indexedDB");
+    Object.defineProperty(globalThis, "indexedDB", {configurable: true, value: {open}});
+    t.after(() => {
+        if (previousStorage) Object.defineProperty(globalThis, "indexedDB", previousStorage);
+        else delete globalThis.indexedDB;
+    });
     const esm = new LoaderEsmJs();
     const value = {commandId: "sample"};
+    const overrides = {databaseName: "logger-integration", retentionDays: 30};
 
-    for (const selection of [omitted, "console", null]) {
+    for (const selection of [omitted, "console", "indexeddb", null]) {
         const dependencies = {xshell: "module:xshell:latest", "x-logger": reference};
+        const indexeddb = selection === "indexeddb";
+        const options = indexeddb ? {provider: selection, providers: {indexeddb: {options: overrides}}} : {provider: selection};
         const app = {name: "app", assetsPath: "/_assets/app/1.dev", dependencies,
-            manifest: {modules: {app: {dependencies}}, ...(selection === omitted ? {} : {xshell: {services: {logger: {options: {provider: selection}}}}})}};
+            manifest: {modules: {app: {dependencies}}, ...(selection === omitted ? {} : {xshell: {services: {logger: {options}}}})}};
         const config = composeManifests(app, contributions);
         const effective = config.xshell.services.logger;
         assert.deepEqual(effective, {...registration, implementation: "/_assets/xshell/1.dev/services/logger.js",
-            options: {provider: selection === omitted ? null : selection, providers: {console: {implementation}}}});
+            options: {provider: selection === omitted ? null : selection, providers: {
+                console: {implementation},
+                indexeddb: {implementation: assetsPath + indexedDBFile, options: indexeddb ? {...defaults, ...overrides} : defaults}
+            }}});
         const validation = new JsonValidator().validate(config.modules["x-logger"], ModuleSchema, {"./contract.schema.json": ContractSchema});
         assert.equal(validation.valid, true, JSON.stringify(validation.errors));
 
         // Use the standard ESM loader with a file URL for the resolved resource in this Node test.
-        const selected = selection === "console";
         const {services, loads} = await createServices(config, resolved => {
             assert.equal(resolved.definition.moduleId, "x-logger");
             assert.equal(resolved.definition.loader, "esm-js");
-            assert.equal(resolved.path, implementation);
+            assert.equal(resolved.path, indexeddb ? assetsPath + indexedDBFile : implementation);
             return esm.load(new URL("x-logger" + resolved.path.slice(assetsPath.length), resources).href);
         });
         const logger = await services.initialize("logger");
-        logger.debug("Console provider", value);
-        assert.equal(loads.length, selected ? 1 : 0);
-        assert.equal(log.mock.callCount(), selected ? 1 : 0);
-        if (selected) {
-            assert.equal(log.mock.calls[0].arguments[0], "Console provider");
+        logger.debug("Provider integration", value);
+        await waitTurn();
+        assert.equal(loads.length, selection === "console" || indexeddb ? 1 : 0);
+        assert.equal(log.mock.callCount(), selection === "console" ? 1 : 0);
+        assert.equal(open.mock.callCount(), indexeddb ? 1 : 0);
+        if (indexeddb) {
+            assert.deepEqual(open.mock.calls[0].arguments, [overrides.databaseName, 1]);
+            open.mock.resetCalls();
+        }
+        if (selection === "console") {
+            assert.equal(log.mock.calls[0].arguments[0], "Provider integration");
             assert.strictEqual(log.mock.calls[0].arguments[1], value);
             log.mock.resetCalls();
         }

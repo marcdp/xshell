@@ -447,8 +447,10 @@ namespace DProjects.XShell.Test {
             if (moduleId == "demo") Assert.Equal("module:xshell:*", generation.GetProperty("dependencies").GetProperty("xshell").GetString());
             else Assert.Empty(generation.GetProperty("dependencies").EnumerateObject());
         }
-        [Fact]
-        public async Task DevelopmentRepository_IndexesAndServesBundledLoggerModule() {
+        [Theory]
+        [InlineData("/providers/logger-console.js", "LoggerConsole")]
+        [InlineData("/providers/logger-indexeddb.js", "LoggerIndexedDB")]
+        public async Task DevelopmentRepository_IndexesAndServesBundledLoggerModule(string providerPath, string providerName) {
             // Use the resource tree copied by the project build, then follow its generated index URLs.
             var root = Path.Combine(AppContext.BaseDirectory, "Resources", "DProjects.XShell");
             var catalog = await SendAsync(root, "/_resources/index.json", true);
@@ -469,11 +471,10 @@ namespace DProjects.XShell.Test {
 
             // Check that development inventory and versioned resource serving expose the same provider.
             var files = manifest.RootElement.GetProperty("modules").GetProperty("x-logger").GetProperty("files");
-            const string providerPath = "/providers/logger-console.js";
             Assert.Contains(files.EnumerateArray(), file => file.GetProperty("path").GetString() == providerPath);
             var provider = await SendAsync(root, manifestPath[..manifestPath.LastIndexOf('/')] + providerPath, true);
             Assert.Equal(200, provider.StatusCode);
-            Assert.Contains("export default class LoggerConsole", provider.Text);
+            Assert.Contains($"export default class {providerName}", provider.Text);
             Assert.Equal(0, catalog.NextCalls + module.NextCalls + descriptor.NextCalls + provider.NextCalls);
         }
         [Fact]
