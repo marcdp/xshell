@@ -14,7 +14,6 @@ test(`inventory menu normalizes root ${rootIndex} and nested Page destinations`,
         "/_assets/x-demo/pages/01-guides/01-start.js",
         "/_assets/x-demo/pages/01-guides/02-readme.md"
     ];
-    const module = { id: "x-demo" };
     const definitions = { demo: { label: "Browse", sources: [{ source: "/_assets/x-demo/pages" }] } };
     const config = {
         xshell: { assets: { basePath: "/_assets" } },
@@ -22,11 +21,11 @@ test(`inventory menu normalizes root ${rootIndex} and nested Page destinations`,
     };
     const bus = new EventTarget();
     const areas = new Areas({ config, bus }, {
-        default: "demo", definitions: { demo: { prefix: "/demo", modules: [], menus: { navigation: "demo" } } }
+        default: "demo", definitions: { demo: { prefix: "/demo", menus: { navigation: "demo" } } }
     });
     const menus = new Menus({ areas, bus, config }, { definitions });
     menus.init();
-    areas.init({ menus, modules: { getModuleById() { return module; } } });
+    areas.init({ menus });
     const menu = menus.getMenu("navigation");
     const [root] = menu.items;
     assert.equal(menu.label, "Browse");
@@ -52,7 +51,6 @@ test("inventory menu uses Page metadata for files and directory index Pages", ()
         } },
         { path: "/_assets/x-demo/pages/04-plain.js" }
     ];
-    const module = { id: "x-demo" };
     const definitions = { demo: { sources: [{ source: "/_assets/x-demo/pages" }] } };
     const config = {
         xshell: { assets: { basePath: "/_assets" } },
@@ -60,12 +58,12 @@ test("inventory menu uses Page metadata for files and directory index Pages", ()
     };
     const bus = new EventTarget();
     const areas = new Areas({ config, bus }, {
-        default: "demo", definitions: { demo: { prefix: "/demo", modules: [], menus: { navigation: "demo" } } }
+        default: "demo", definitions: { demo: { prefix: "/demo", menus: { navigation: "demo" } } }
     });
 
     const menus = new Menus({ areas, bus, config }, { definitions });
     menus.init();
-    areas.init({ menus, modules: { getModuleById() { return module; } } });
+    areas.init({ menus });
 
     const [root] = menus.getMenu("navigation").items;
     assert.equal(root.label, "Demo");
@@ -108,7 +106,7 @@ test("inventory prefixes separate equal root and nested aliases and preserve Are
         { source: inventoryAssets + "/pages", path: "inventory", default: true }
     ]);
     menus.init();
-    areas.init({ menus, modules: {} });
+    areas.init({ menus });
     assert.equal(areas.getArea("main").home, "/main/inventory");
     assert.equal(areas.getArea("customers").home, "/customers/inventory");
 
@@ -140,7 +138,7 @@ test("inventories without explicit defaults remain candidates in source order", 
         { source: inventoryAssets + "/pages", path: "inventory" }
     ]);
     menus.init();
-    areas.init({ menus, modules: {} });
+    areas.init({ menus });
     assert.deepEqual(menus.getMenu("navigation").items.map(item => item.default), [true, true]);
     assert.equal(areas.getDefaultArea().home, "/main/customers");
 });

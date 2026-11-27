@@ -17,11 +17,6 @@
     "assets": {"$ref": "#/$defs/moduleAssets", "description": "Virtual and physical addressing for module assets."},
     "hash": {"type": "string", "minLength": 1, "description": "Generated immutable package-generation hash when published."},
     "builtAt": {"type": "string", "format": "date-time", "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$", "description": "Optional UTC time when the immutable module package was originally built by pack; excluded from canonical hashing."},
-    "routes": {
-      "type": "object",
-      "additionalProperties": {"type": "string"},
-      "description": "Declarative Area-relative application Path patterns mapped to module-relative Page targets."
-    },
     "defaults": {"$ref": "#/$defs/moduleDefaults", "description": "Defaults for that module."},
     "dependencies": {"type": "object", "additionalProperties": {"type": "string"}, "description": "Module dependencies mapped to their canonical identifiers."},
     "files": {"type": "array", "items": {"$ref": "#/$defs/file"}, "description": "Normalized virtual resource inventory for the module."}

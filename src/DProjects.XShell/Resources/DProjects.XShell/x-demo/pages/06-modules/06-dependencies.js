@@ -59,11 +59,9 @@ export default {
 
         <h2>Module references versus resource dependencies</h2>
         <p>These two declarations serve different purposes.</p>
-        <x-code language="javascript" x-pre>// Application manifest.jsonc
-"modules": {
-    "x": {
-        "configUrl": "url:../x/manifest.jsonc"
-    }
+        <x-code language="javascript" x-pre>// Root Module definition
+"dependencies": {
+    "x": "module:x:latest"
 }
 
 // Individual Page

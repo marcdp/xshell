@@ -113,17 +113,12 @@ function createPageResolver() {
 
 function createRouteAreas() {
     const config = { modules: { "x-demo": {} }, xshell: { assets: { basePath: "/_assets" } } };
-    const module = {
-        id: "x-demo",
-        routes: { "/repository/{repositoryId}/items": "/_assets/x-demo/pages/items.js" },
-        config: { menus: {} }
-    };
     const bus = new EventTarget();
     const areas = new Areas({ config, bus }, {
-        default: "demo", definitions: { demo: { prefix: "/demo", modules: ["x-demo"] } }
+        default: "demo", definitions: { demo: { prefix: "/demo", routes: { "/repository/{repositoryId}/items": "/_assets/x-demo/pages/items.js" } } }
     });
     const menus = new Menus({ areas, bus, config }, { definitions: {} });
-    areas.init({ menus, modules: { getModuleById(id) { return id === module.id ? module : null; } } });
+    areas.init({ menus });
     return areas;
 }
 

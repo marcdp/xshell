@@ -9,13 +9,6 @@ import Navigation from "../../src/DProjects.XShell/Resources/DProjects.XShell/xs
 import Resolver from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/resolver.js";
 import {createThrowingLogger} from "./fixtures/throwing-logger.mjs";
 
-test("Areas construction rejects an unknown configured module", () => {
-    const config = { modules: {}, xshell: { assets: { basePath: "/_assets" } } };
-    const options = { default: "admin", definitions: { admin: { modules: ["missing"] } } };
-
-    assert.throws(() => new Areas({ config, bus: { addEventListener() {} } }, options), /Area 'admin' references unknown module 'missing'/);
-});
-
 test("Areas rejects malformed global prefixes and segment collisions with Areas or assets", () => {
     // Validate against the effective asset namespace and normalized Area paths.
     const construct = (globalPrefix, areaPrefix = "/area") => new Areas({
@@ -46,11 +39,11 @@ test("Areas identifies modules under a normalized multi-segment assets.basePath"
 
 const menusByAreaService = new WeakMap();
 
-function initializeAreas(areas, { bus, config, modules, definitions = {}, registerSources }) {
+function initializeAreas(areas, { bus, config, definitions = {}, registerSources }) {
     const menus = new Menus({ areas, bus, config }, { definitions });
     registerSources?.(menus);
     menus.init();
-    areas.init({ modules, menus });
+    areas.init({ menus });
     menusByAreaService.set(areas, menus);
 }
 
@@ -59,24 +52,30 @@ function createAreas({ globalPrefix, root = false, bus = {
         emit() {}
     } } = {}) {
     const config = {
-        modules: { customer: {}, shell: {}, "x-demo": {} },
+        modules: Object.fromEntries(["customer", "shell", "x-demo"].map(id => [id, { assets: { path: "/_assets/" + id } }])),
         xshell: { assets: { basePath: "/_assets" }, services: { navigation: { options: { globalPrefix } } } }
     };
+    const customerRoutes = {
+        "/customer/{customerId}": "/_assets/customer/pages/detail.js",
+        "/customer-route/{customerId}": "/_assets/customer/pages/route-detail.js"
+    };
+    const demoRoutes = {
+        "/something": "/_assets/x-demo/pages/about.js",
+        "/repository/{repositoryId}": "/_assets/x-demo/pages/repository.js?mode=list",
+        "/repository/{repositoryId}/projects/{projectId}/items": "/_assets/x-demo/pages/items.js",
+        "/repository/{repositoryId}/items": "/_assets/x-demo/pages/items.js",
+        "/navigation": "/_assets/x-demo/pages/route-navigation.js",
+        "/navigation-route": "/_assets/x-demo/pages/03-navigation/index.js"
+    };
+
     const options = {
         default: "sales",
         definitions: {
-            sales: { prefix: "/sales", modules: ["customer"], menus: { navigation: "customers", tools: "customer-tools", canonical: "customer-canonical" } },
-            admin: { prefix: "/admin", modules: ["customer"], menus: { navigation: "customers", tools: "customer-tools", canonical: "customer-canonical" } },
-            main: { prefix: "/main", modules: ["shell"] },
-            demo: { prefix: "/demo", modules: ["x-demo"], menus: { navigation: "demo-navigation" } },
-            ...(root ? { root: { prefix: "", modules: ["customer"], menus: { navigation: "customers", tools: "customer-tools", canonical: "customer-canonical" } } } : {})
-        }
-    };
-    const module = {
-        id: "customer",
-        routes: {
-            "/customer/{customerId}": "/_assets/customer/pages/detail.js",
-            "/customer-route/{customerId}": "/_assets/customer/pages/route-detail.js"
+            sales: { prefix: "/sales", routes: customerRoutes, menus: { navigation: "customers", tools: "customer-tools", canonical: "customer-canonical" } },
+            admin: { prefix: "/admin", routes: customerRoutes, menus: { navigation: "customers", tools: "customer-tools", canonical: "customer-canonical" } },
+            main: { prefix: "/main" },
+            demo: { prefix: "/demo", routes: demoRoutes, menus: { navigation: "demo-navigation" } },
+            ...(root ? { root: { prefix: "", routes: customerRoutes, menus: { navigation: "customers", tools: "customer-tools", canonical: "customer-canonical" } } } : {})
         }
     };
     const definitions = {
@@ -88,22 +87,9 @@ function createAreas({ globalPrefix, root = false, bus = {
         "customer-canonical": { items: [{ label: "Canonical only", href: "/_assets/customer/pages/canonical.js" }] },
         "demo-navigation": { sources: [{ source: "demo-runtime-menu-source" }] }
     };
-    const demoModule = {
-        id: "x-demo",
-        routes: {
-            "/something": "/_assets/x-demo/pages/about.js",
-            "/repository/{repositoryId}": "/_assets/x-demo/pages/repository.js?mode=list",
-            "/repository/{repositoryId}/projects/{projectId}/items": "/_assets/x-demo/pages/items.js",
-            "/repository/{repositoryId}/items": "/_assets/x-demo/pages/items.js",
-            "/navigation": "/_assets/x-demo/pages/route-navigation.js",
-            "/navigation-route": "/_assets/x-demo/pages/03-navigation/index.js"
-        }
-    };
-    const shellModule = { id: "shell" };
     const areas = new Areas({ config, bus }, options);
-    const modules = new Map([[module.id, module], [demoModule.id, demoModule], [shellModule.id, shellModule]]);
     initializeAreas(areas, {
-        bus, config, definitions, modules: { getModuleById: id => modules.get(id) },
+        bus, config, definitions,
         registerSources(menus) {
             menus.registerSource("demo-runtime-menu-source", { resolve: () => [{
                 label: "Demo", path: "/", href: "/_assets/x-demo/pages/index.js",
@@ -268,10 +254,10 @@ test("A unique root-Area home keeps its native URL when another Area includes th
     const definitions = { team: { items: [team, welcome] }, welcome: { items: [welcome] } };
     const bus = new EventTarget();
     const areas = new Areas({ config, bus }, { default: "team", definitions: {
-        team: { prefix: "/team", modules: ["shell", "x-demo"], menus: { navigation: "team" } },
-        root: { prefix: "", modules: ["x-demo"], menus: { navigation: "welcome" } }
+        team: { prefix: "/team", menus: { navigation: "team" } },
+        root: { prefix: "", menus: { navigation: "welcome" } }
     } });
-    initializeAreas(areas, { bus, config, definitions, modules: { getModuleById: id => ({ id }) } });
+    initializeAreas(areas, { bus, config, definitions });
 
     // An explicit navigation should write the same URL that the native link advertised.
     const host = { src: "/global/_assets/x-demo/pages/editor.js", getAttribute: () => "main" };
@@ -617,21 +603,18 @@ test("Navigation.init preserves path-mode fragments on load and popstate without
 
 function createSharedRouteContext({ definitions, defaultArea, mode = "path", basePath = "", baseUrl = "https://example.test/", assetsBasePath = "/_assets",
     routes = { "/repository/{repositoryId}/items": "/_assets/shared/pages/items.js" } }) {
-    const config = { modules: { shared: {} }, xshell: { assets: { basePath: assetsBasePath } } };
-    const module = {
-        id: "shared",
-        routes,
-    };
+    const config = { modules: { shared: { assets: { path: assetsBasePath + "/shared" } } }, xshell: { assets: { basePath: assetsBasePath } } };
     const bus = { addEventListener() {}, emit() {} };
-    const areas = new Areas({ config, bus }, { default: defaultArea, definitions });
-    initializeAreas(areas, { bus, config, modules: { getModuleById(id) { return id === module.id ? module : null; } } });
-    return { areas, navigation: createNavigation({ areas, mode, basePath, baseUrl, assetsBasePath }), module };
+    const areaDefinitions = Object.fromEntries(Object.entries(definitions).map(([id, area]) => [id, { routes, ...area }]));
+    const areas = new Areas({ config, bus }, { default: defaultArea, definitions: areaDefinitions });
+    initializeAreas(areas, { bus, config });
+    return { areas, navigation: createNavigation({ areas, mode, basePath, baseUrl, assetsBasePath }) };
 }
 
 test("Navigation embeds explicit asset paths even when a route matches the configured asset namespace", async () => {
     const { navigation } = createSharedRouteContext({
         defaultArea: "main",
-        definitions: { main: { prefix: "/main", modules: ["shared"] }, root: { prefix: "/", modules: ["shared"] } },
+        definitions: { main: { prefix: "/main" }, root: { prefix: "/" } },
         assetsBasePath: "/resources/assets",
         routes: { "/resources/{section}/{module}/{folder}/{file}": "/resources/assets/shared/pages/fallback.js" }
     });
@@ -651,12 +634,11 @@ test("Navigation embeds explicit asset paths even when a route matches the confi
 
 function createNoRouteContext() {
     const config = { modules: { empty: {} }, xshell: { assets: { basePath: "/_assets" } } };
-    const module = { id: "empty" };
     const bus = { addEventListener() {}, emit() {} };
     const areas = new Areas({ config, bus }, {
-        default: "empty", definitions: { empty: { prefix: "/empty", modules: ["empty"] } }
+        default: "empty", definitions: { empty: { prefix: "/empty" } }
     });
-    initializeAreas(areas, { bus, config, modules: { getModuleById(id) { return id === module.id ? module : null; } } });
+    initializeAreas(areas, { bus, config });
     return { areas, navigation: createNavigation({ areas }) };
 }
 
@@ -668,26 +650,26 @@ test("Menus.resolveHref searches recursively across selected Area menus and igno
     assert.equal(menusByAreaService.get(areas).resolveHref("/sales/_assets/customer/pages/missing.js", "sales"), null);
 });
 
-test("Areas compose route descriptors in Area module and declaration order", () => {
+test("Areas expose route descriptors in declaration order", () => {
     const areas = createRouteAreas();
 
     assert.deepEqual(areas.getArea("combined").routes, [
-        { path: "/items", href: "/_assets/first/pages/items.js", module: "first" },
-        { path: "/repository/{repositoryId}", href: "/_assets/first/pages/repository.js", module: "first" },
-        { path: "/items", href: "/_assets/second/pages/items.js", module: "second" },
-        { path: "/settings", href: "/_assets/second/pages/settings.js", module: "second" }
+        { path: "/items/{id}", href: "/_assets/first/1.0.0.dev/pages/items.js", module: "first" },
+        { path: "/items/new", href: "/_assets/second/1.0.0.dev/pages/new.js", module: "second" },
+        { path: "/unowned", href: "/_assets/unknown/pages/index.js", module: null },
+        { path: "/items", href: "/_assets/first/1.0.0.dev/pages/items.js", module: "first" }
     ]);
 });
 
-test("Areas preserve route ownership and participation across multiple Areas", () => {
+test("Areas derive target ownership across independent Areas", () => {
     const areas = createRouteAreas();
 
     assert.deepEqual(areas.getArea("first-only").routes, [
-        { path: "/items", href: "/_assets/first/pages/items.js", module: "first" },
-        { path: "/repository/{repositoryId}", href: "/_assets/first/pages/repository.js", module: "first" }
+        { path: "/items", href: "/_assets/first/1.0.0.dev/pages/items.js", module: "first" },
+        { path: "/repository/{repositoryId}", href: "/_assets/first/1.0.0.dev/pages/repository.js", module: "first" }
     ]);
     assert.deepEqual(areas.getArea("outsider-only").routes, [
-        { path: "/outsider", href: "/_assets/outsider/pages/index.js", module: "outsider" }
+        { path: "/outsider", href: "/_assets/outsider/1.0.0.dev/pages/index.js", module: "outsider" }
     ]);
     assert.equal(areas.getArea("combined").routes.some(route => route.module === "outsider"), false);
 });
@@ -698,18 +680,64 @@ test("Area routes are immutable and do not apply the Area prefix", () => {
 
     assert.equal(Object.isFrozen(area.routes), true);
     assert.equal(Object.isFrozen(area.routes[0]), true);
-    assert.equal(area.routes[0].path, "/items");
-    assert.equal(area.routes[0].href, "/_assets/first/pages/items.js");
+    assert.equal(area.routes[0].path, "/items/{id}");
+    assert.equal(area.routes[0].href, "/_assets/first/1.0.0.dev/pages/items.js");
 });
 
-test("Navigation forward ambiguity follows composed Area module and route declaration order", () => {
+test("Navigation forward ambiguity follows Area route declaration order", () => {
     const areas = createRouteAreas();
     const navigation = createNavigation({ areas });
 
     assert.equal(
-        resolveNavigationTarget(navigation, "/demo/items"),
-        "/demo/_assets/first/pages/items.js"
+        resolveNavigationTarget(navigation, "/demo/items/new"),
+        "/demo/_assets/first/1.0.0.dev/pages/items.js?id=new"
     );
+});
+
+test("Navigation keeps canonical URLs when an earlier route or menu alias would change the destination", () => {
+    const navigation = createNavigation({ areas: createRouteAreas() });
+    const shadowed = "/demo/_assets/second/1.0.0.dev/pages/new.js";
+    assert.equal(navigation.buildUrlAbsolute({ href: shadowed }), shadowed);
+    assert.equal(resolveNavigationTarget(navigation, shadowed), shadowed);
+
+    const withMenus = createNavigation();
+    const routeTarget = "/demo/_assets/x-demo/pages/route-navigation.js";
+    assert.equal(resolveNavigationTarget(withMenus, "/demo/navigation"), "/demo/_assets/x-demo/pages/03-navigation/index.js");
+    assert.equal(withMenus.buildUrlAbsolute({ href: routeTarget }), routeTarget);
+});
+
+test("Navigation reverse routes respect nested and global ownership and try later safe patterns", () => {
+    const target = "/_assets/shared/pages/items.js";
+    const { navigation } = createSharedRouteContext({
+        defaultArea: "shop",
+        definitions: {
+            root: { prefix: "", routes: { "/global/{id}": target, "/shop/{id}": target } },
+            shop: { prefix: "/shop", routes: { "/{id}/items": target, "/shop/items/{id}": target } },
+            tools: { prefix: "/shop/tools", routes: { "/items/{id}": target } }
+        }
+    });
+    const rootPage = { src: "/_assets/shared/pages/root.js" };
+    const candidate = "/shop/_assets/shared/pages/items.js?id=tools";
+    assert.equal(navigation.buildUrlAbsolute({ href: candidate }), "/shop/shop/items/tools");
+    assert.equal(resolveNavigationTarget(navigation, "/shop/shop/items/tools"), candidate);
+    assert.equal(navigation.resolveRoute("/global/42"), null);
+    assert.equal(navigation.buildUrlAbsolute({ href: target + "?id=42", page: rootPage }), "/shop/42/items");
+
+    const { navigation: onlyShadowed } = createSharedRouteContext({
+        defaultArea: "root",
+        definitions: { root: { prefix: "", routes: { "/global/{id}": target, "/tools/{id}": target } }, tools: { prefix: "/tools", routes: {} } }
+    });
+    assert.equal(onlyShadowed.buildUrlAbsolute({ href: target + "?id=42" }), target + "?id=42");
+});
+
+test("Navigation keeps explicit Area hrefs when the destination has a route only in another Area", () => {
+    const target = "/_assets/shared/pages/items.js";
+    const { navigation } = createSharedRouteContext({
+        defaultArea: "sales",
+        definitions: { sales: { prefix: "/sales", routes: { "/items": target } }, admin: { prefix: "/admin", routes: {} } }
+    });
+    assert.equal(navigation.buildUrlAbsolute({ href: target }), "/sales/items");
+    assert.equal(navigation.buildUrlAbsolute({ href: "/admin" + target }), "/admin" + target);
 });
 
 test("Menus.resolveHref keeps ambiguous canonical Pages scoped to the selected Area", () => {
@@ -720,7 +748,7 @@ test("Menus.resolveHref keeps ambiguous canonical Pages scoped to the selected A
     assert.equal(menusByAreaService.get(areas).resolveHref("/admin/_assets/customer/pages/detail.js", "sales"), null);
 });
 
-test("Menus.resolveHref discovers named dynamic menus through module-associated Areas", () => {
+test("Menus.resolveHref discovers named dynamic menus by their effective destinations", () => {
     const areas = createAreas();
 
     assert.equal(menusByAreaService.get(areas).resolveHref("/_assets/x-demo/pages/03-navigation/index.js")?.path, "/demo/navigation");
@@ -743,7 +771,7 @@ test("Navigation opens the owning nested Area's friendly path in path and hash m
         tools: { prefix: "/main/tools", menus: { navigation: "tools" } }
     } });
     const asset = "/_assets/customer/pages/help.js";
-    initializeAreas(areas, { bus, config, modules: {}, definitions: {
+    initializeAreas(areas, { bus, config, definitions: {
         main: { items: [{ label: "Help", path: "help", href: asset }] },
         tools: { items: [{ label: "Help", path: "help", href: asset }] }
     } });
@@ -792,28 +820,28 @@ function createRouteAreas() {
         addEventListener() {},
         emit() {}
     };
-    const config = { modules: { first: {}, second: {}, outsider: {} }, xshell: { assets: { basePath: "/_assets" } } };
+    const config = {
+        modules: Object.fromEntries(["first", "second", "outsider"].map(id => [id, { assets: { path: "/_assets/" + id + "/1.0.0.dev" } }])),
+        xshell: { assets: { basePath: "/_assets" } }
+    };
     const options = {
         default: "combined",
         definitions: {
-            combined: { prefix: "/demo", modules: ["first", "second"] },
-            "first-only": { prefix: "/first", modules: ["first"] },
-            "outsider-only": { prefix: "/outsider", modules: ["outsider"] }
+            combined: { prefix: "/demo", routes: {
+                "/items/{id}": "/_assets/first/1.0.0.dev/pages/items.js",
+                "/items/new": "/_assets/second/1.0.0.dev/pages/new.js",
+                "/unowned": "/_assets/unknown/pages/index.js",
+                "/items": "/_assets/first/1.0.0.dev/pages/items.js"
+            } },
+            "first-only": { prefix: "/first", routes: {
+                "/items": "/_assets/first/1.0.0.dev/pages/items.js",
+                "/repository/{repositoryId}": "/_assets/first/1.0.0.dev/pages/repository.js"
+            } },
+            "outsider-only": { prefix: "/outsider", routes: { "/outsider": "/_assets/outsider/1.0.0.dev/pages/index.js" } }
         }
     };
-    const modules = new Map([
-        ["first", { id: "first", routes: {
-            "/items": "/_assets/first/pages/items.js",
-            "/repository/{repositoryId}": "/_assets/first/pages/repository.js"
-        } }],
-        ["second", { id: "second", routes: {
-            "/items": "/_assets/second/pages/items.js",
-            "/settings": "/_assets/second/pages/settings.js"
-        } }],
-        ["outsider", { id: "outsider", routes: { "/outsider": "/_assets/outsider/pages/index.js" } }]
-    ]);
     const areas = new Areas({ config, bus }, options);
-    initializeAreas(areas, { bus, config, modules: { getModuleById(id) { return modules.get(id) || null; } } });
+    initializeAreas(areas, { bus, config });
     return areas;
 }
 
@@ -840,7 +868,7 @@ test("Navigation uses the originating Page Area instead of the current Area", ()
     assert.equal(navigation.buildUrlAbsolute({ href: "/sales/_assets/customer/pages/detail.js", page }), "/sales/detail");
 });
 
-test("Navigation discovers a target module's Area when the originating Page belongs to another Area", () => {
+test("Navigation discovers the Area with a matching menu when the originating Page belongs to another Area", () => {
     const navigation = createNavigation();
     const page = { src: "/main/_assets/shell/pages/origin.js" };
 
@@ -962,9 +990,9 @@ test("Navigation.resolveRoute reports a literal match and keeps composed declara
         areaPrefix: "/demo",
         moduleId: "first",
         route: "/items",
-        target: "/_assets/first/pages/items.js",
+        target: "/_assets/first/1.0.0.dev/pages/items.js",
         params: {},
-        href: "/demo/_assets/first/pages/items.js"
+        href: "/demo/_assets/first/1.0.0.dev/pages/items.js"
     });
 });
 
@@ -990,10 +1018,10 @@ test("Navigation.resolveRoute selects the longest Area prefix, including an empt
     const { navigation } = createSharedRouteContext({
         defaultArea: "root",
         definitions: {
-            root: { prefix: "/", modules: ["shared"] },
-            shop: { prefix: "/shop", modules: ["shared"] },
-            detail: { prefix: "/shop/detail", modules: ["shared"] },
-            empty: { prefix: "/shop/empty", modules: [] }
+            root: { prefix: "/" },
+            shop: { prefix: "/shop" },
+            detail: { prefix: "/shop/detail" },
+            empty: { prefix: "/shop/empty", routes: {} }
         }
     });
     const path = "/repository/12/items";
@@ -1018,7 +1046,7 @@ test("Navigation.resolveRoute selects the longest Area prefix, including an empt
 test("Navigation.resolveRoute preserves an existing destination Area prefix and a target fragment", () => {
     const { navigation } = createSharedRouteContext({
         defaultArea: "shop",
-        definitions: { shop: { prefix: "/shop", modules: ["shared"] } },
+        definitions: { shop: { prefix: "/shop" } },
         routes: { "/": "/shop/_assets/shared/pages/index.js?mode=compact#summary" }
     });
 
@@ -1075,7 +1103,7 @@ test("Navigation route resolution preserves direct canonical and unmatched fallb
     assert.equal(resolveNavigationTarget(navigation, "/demo/not-a-route"), "/demo/not-a-route");
 });
 
-test("Navigation preserves fallback and canonical access when a module and Area have no routes", () => {
+test("Navigation preserves fallback and canonical access when an Area has no routes", () => {
     const { areas, navigation } = createNoRouteContext();
 
     assert.deepEqual(areas.getArea("empty").routes, []);
@@ -1185,7 +1213,7 @@ test("Navigation reverse routing uses the first applicable route for duplicate t
 test("Navigation reverse ambiguity uses Area order without ranking placeholder counts", () => {
     const { navigation } = createSharedRouteContext({
         defaultArea: "demo",
-        definitions: { demo: { prefix: "/demo", modules: ["shared"] } },
+        definitions: { demo: { prefix: "/demo" } },
         routes: {
             "/repository/{repositoryId}/items": "/_assets/shared/pages/items.js",
             "/repository/{repositoryId}/projects/{projectId}/items": "/_assets/shared/pages/items.js"
@@ -1198,7 +1226,7 @@ test("Navigation reverse ambiguity uses Area order without ranking placeholder c
 test("Navigation reverse ambiguity skips an inapplicable first route and uses the next candidate", () => {
     const { navigation } = createSharedRouteContext({
         defaultArea: "demo",
-        definitions: { demo: { prefix: "/demo", modules: ["shared"] } },
+        definitions: { demo: { prefix: "/demo" } },
         routes: {
             "/repository/{repositoryId}/items": "/_assets/shared/pages/items.js",
             "/projects/{projectId}/items": "/_assets/shared/pages/items.js"
@@ -1210,7 +1238,7 @@ test("Navigation reverse ambiguity skips an inapplicable first route and uses th
 test("Navigation treats missing, null, undefined, and empty reverse parameters as inapplicable", () => {
     const { navigation } = createSharedRouteContext({
         defaultArea: "demo",
-        definitions: { demo: { prefix: "/demo", modules: ["shared"] } }
+        definitions: { demo: { prefix: "/demo" } }
     });
 
     for (const params of [{}, { repositoryId: null }, { repositoryId: undefined }, { repositoryId: "" }]) {
@@ -1228,7 +1256,7 @@ test("Navigation reverse routing keeps exact menu aliases ahead of routes", () =
     );
 });
 
-test("Navigation reverse routing honors originating Area and target-module Area discovery", () => {
+test("Navigation reverse routing honors originating Area and discovers routes by destination", () => {
     const navigation = createNavigation();
     const page = { src: "/admin/_assets/customer/pages/origin.js" };
 
@@ -1263,9 +1291,9 @@ test("Navigation keeps Area routes relative while applying a non-root Area prefi
 });
 
 test("Navigation supports forward and reverse routes in an empty-prefix root Area", () => {
-    const { areas, navigation, module } = createSharedRouteContext({
+    const { areas, navigation } = createSharedRouteContext({
         defaultArea: "root",
-        definitions: { root: { prefix: "", modules: ["shared"] } }
+        definitions: { root: { prefix: "" } }
     });
     const publicHref = "/repository/12/items?sort=name#details";
     const canonicalHref = "/_assets/shared/pages/items.js?repositoryId=12&sort=name#details";
@@ -1273,16 +1301,15 @@ test("Navigation supports forward and reverse routes in an empty-prefix root Are
     assert.equal(resolveNavigationTarget(navigation, publicHref), canonicalHref);
     assert.equal(navigation.buildUrlAbsolute({ href: canonicalHref }), publicHref);
     assert.equal(navigation.buildUrlAbsolute({ href: canonicalHref }).startsWith("//"), false);
-    assert.deepEqual(module.routes, { "/repository/{repositoryId}/items": "/_assets/shared/pages/items.js" });
     assert.equal(areas.getArea("root").routes[0].path, "/repository/{repositoryId}/items");
 });
 
-test("Navigation preserves explicit and originating Area context when one module participates in multiple Areas", () => {
+test("Navigation preserves explicit and originating Area context when multiple Areas expose the same resource", () => {
     const { navigation } = createSharedRouteContext({
         defaultArea: "sales",
         definitions: {
-            sales: { prefix: "/sales", modules: ["shared"] },
-            admin: { prefix: "/admin", modules: ["shared"] }
+            sales: { prefix: "/sales" },
+            admin: { prefix: "/admin" }
         }
     });
     const adminPage = { src: "/admin/_assets/shared/pages/origin.js" };
@@ -1310,7 +1337,7 @@ test("Navigation preserves explicit and originating Area context when one module
 });
 
 test("Navigation wraps root and prefixed route URLs through path and hash AppBasePath modes", () => {
-    const definitions = { demo: { prefix: "/demo", modules: ["shared"] } };
+    const definitions = { demo: { prefix: "/demo" } };
     const path = createSharedRouteContext({ definitions, defaultArea: "demo", mode: "path", basePath: "/app", baseUrl: "https://example.test/app/" }).navigation;
     const hash = createSharedRouteContext({ definitions, defaultArea: "demo", mode: "hash", basePath: "/app", baseUrl: "https://example.test/app/" }).navigation;
     const canonicalHref = "/_assets/shared/pages/items.js?repositoryId=12&sort=name#details";
@@ -1364,7 +1391,7 @@ test("Navigation round-trips encoded route segments without changing segment bou
 test("Navigation round-trips routes through an empty-prefix Area", () => {
     const { navigation } = createSharedRouteContext({
         defaultArea: "root",
-        definitions: { root: { prefix: "", modules: ["shared"] } }
+        definitions: { root: { prefix: "" } }
     });
     const canonical = "/_assets/shared/pages/items.js?repositoryId=12&sort=name#details";
     const publicHref = navigation.buildUrlAbsolute({ href: canonical });

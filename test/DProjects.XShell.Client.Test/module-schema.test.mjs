@@ -8,7 +8,6 @@ import ModuleSchema from "../../src/DProjects.XShell/Resources/DProjects.XShell/
 import { Validator } from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/vendor/json-schema/4.1.1/json-schema.js";
 import Areas from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/areas.js";
 import Menus from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/menus.js";
-import { compileRoute } from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/utils/route.js";
 
 const validator = new Validator(ConfigSchema, "2020-12");
 validator.addSchema(ModuleSchema, ModuleSchema.$id);
@@ -19,23 +18,13 @@ const areasOptionsValidator = new Validator(Areas.optionsSchema, "2020-12");
 const areaOptions = config => config.xshell.services.areas.options;
 
 async function validateConfig(name, config) {
-    // validate service-owned Area options and their semantic relationship to effective modules
+    // Validate service-owned Area options and construction.
     if (!areasOptionsValidator.validate(areaOptions(config)).valid) throw new Error("Invalid config");
     new Areas({ config, bus: { addEventListener() {} } }, areaOptions(config));
 
-    // preserve route validation as an unrelated XShell responsibility
-    for (const [moduleId, module] of Object.entries(config.modules)) {
-        for (const path of Object.keys(module.routes || {})) {
-            try {
-                compileRoute(path);
-            } catch (cause) {
-                throw new Error(`Module '${moduleId}' declares invalid route '${path}'.`, { cause });
-            }
-        }
-    }
 }
 
-const moduleDefinition = routes => ({
+const moduleDefinition = () => ({
     label: "Test module",
     version: "1.0.0",
     copyright: "",
@@ -43,7 +32,6 @@ const moduleDefinition = routes => ({
     configUrl: "https://example.test/test/manifest.jsonc",
     assets: { path: "/_assets/test", url: "https://example.test/test/" },
     files: [{ path: "/_assets/test/pages/index.js", size: 123, hash: "test-hash" }],
-    ...(routes === undefined ? {} : { routes }),
     defaults: {
         page: { renderEngine: "x", stateEngine: "proxy" },
         component: { renderEngine: "x", stateEngine: "proxy" }
@@ -112,8 +100,10 @@ function assertValid(module) {
     assert.equal(result.valid, true, JSON.stringify(result.errors));
 }
 
-test("module schema keeps routes optional", () => {
-    assertValid(moduleDefinition());
+test("effective schema rejects obsolete module-level routes", () => {
+    const module = moduleDefinition();
+    assertValid(module);
+    assert.equal(validator.validate(configuration({ ...module, routes: { "/old": "/pages/index.js" } })).valid, false);
 });
 
 test("representative normal module authors stable classification tags", () => {
@@ -188,13 +178,8 @@ test("effective schema enforces the lexical module ID grammar", () => {
     }
 });
 
-test("effective config rejects unknown Area modules and accepts canonical ids", async () => {
-    const config = configuration(moduleDefinition());
-    areaOptions(config).definitions.admin = { modules: ["missing"] };
-    await assert.rejects(validateConfig("test", config), /Area 'admin' references unknown module 'missing'/);
-
-    areaOptions(config).definitions.admin.modules = ["test"];
-    await assert.doesNotReject(validateConfig("test", config));
+test("Area options reject obsolete module membership", () => {
+    assert.equal(areasOptionsValidator.validate({ default: null, definitions: { admin: { modules: ["test"] } } }).valid, false);
 });
 
 test("effective config requires a defined Area when a default is configured", async () => {
@@ -243,11 +228,12 @@ test("validated Area configuration constructs with normalized prefixes and an ex
     assert.equal(areas.getDefaultArea().id, "second");
 });
 
-test("effective config validates route grammar before runtime construction", async () => {
-    const config = configuration(moduleDefinition({ "/repository/{123id}": "/_assets/test/pages/index.js" }));
-    await assert.rejects(validateConfig("test", config), /Module 'test' declares invalid route '\/repository\/\{123id\}'/);
+test("Area construction validates route grammar", async () => {
+    const config = configuration(moduleDefinition());
+    const admin = areaOptions(config).definitions.admin = { routes: { "/repository/{123id}": "/_assets/test/pages/index.js" } };
+    await assert.rejects(validateConfig("test", config), /Area 'admin' declares invalid route '\/repository\/\{123id\}'/);
 
-    config.modules.test.routes = { "/repository/{repositoryId}/items": "/_assets/test/pages/index.js" };
+    admin.routes = { "/repository/{repositoryId}/items": "/_assets/test/pages/index.js" };
     await assert.doesNotReject(validateConfig("test", config));
 });
 
@@ -360,24 +346,19 @@ test("module schema rejects duplicate or empty service requirements", () => {
     }
 });
 
-test("module schema accepts static and parameterized routes", () => {
-    assertValid(moduleDefinition({
-        "/something": "/pages/index.js",
-        "/repository/{repositoryId}/projects/{projectId}/items": "/pages/index.js"
-    }));
-});
-
-test("module schema requires route values to be strings", () => {
-    const result = validator.validate(configuration(moduleDefinition({ "/something": 123 })));
-
-    assert.equal(result.valid, false);
-});
-
-test("module schema rejects object and array route values", () => {
-    for (const value of [{ target: "/pages/index.js" }, ["/pages/index.js"]]) {
-        const result = validator.validate(configuration(moduleDefinition({ "/something": value })));
-
-        assert.equal(result.valid, false);
+test("Area options accept route maps and require non-empty string targets", () => {
+    const options = { default: null, definitions: { main: { routes: {
+        "/something": "/_assets/test/pages/index.js",
+        "/repository/{repositoryId}/items": "/_assets/test/pages/items.js"
+    } } } };
+    assert.equal(areasOptionsValidator.validate(options).valid, true);
+    for (const value of [123, null, "", { target: "/pages/index.js" }, ["/pages/index.js"]]) {
+        options.definitions.main.routes["/something"] = value;
+        assert.equal(areasOptionsValidator.validate(options).valid, false);
+    }
+    for (const value of [null, [], "/pages/index.js"]) {
+        options.definitions.main.routes = value;
+        assert.equal(areasOptionsValidator.validate(options).valid, false);
     }
 });
 

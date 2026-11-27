@@ -4,10 +4,12 @@ import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import test from 'node:test';
 import Areas from '../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/areas.js';
+import Navigation from '../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/navigation.js';
 import Menus from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/menus.js";
 import JsonValidator from '../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/json-validator.js';
 import componentSchema from '../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/schemas/component.schema.json' with { type: 'json' };
 import contractSchema from '../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/schemas/contract.schema.json' with { type: 'json' };
+import { normalizeManifest } from './helpers/manifest-composition.mjs';
 
 const root = fileURLToPath(new URL('../../src/DProjects.XShell/Resources/DProjects.XShell/x-demo/', import.meta.url));
 const config = JSON.parse(readFileSync(path.join(root, 'manifest.jsonc'), 'utf8').replace(/^\/\/[^\n]*\n/, ''));
@@ -19,14 +21,12 @@ function assertValidComponent(implementation) {
     assert.equal(result.valid, true, JSON.stringify(result.errors));
 }
 
-test('x-demo is a separate root with resolvable module references', () => {
-    assert.deepEqual(Object.keys(config.modules).filter(id => !config.modules[id].configUrl), ['x-demo']);
+test('x-demo is a separate root with repository dependencies', () => {
+    assert.deepEqual(Object.keys(config.modules), ['x-demo']);
     assert.equal(config.xshell.services.areas.options.default, 'cookbook');
-    assert.deepEqual(config.xshell.services.areas.options.definitions.cookbook.modules, ['x-demo']);
-    for (const [id, module] of Object.entries(config.modules)) {
-        if (id === 'x-demo') continue;
-        assert.match(module.configUrl, /^url:\.\.\//);
-        assert.ok(existsSync(path.resolve(root, module.configUrl.slice(4))), id);
+    for (const [id, reference] of Object.entries(config.modules['x-demo'].dependencies)) {
+        assert.equal(reference, `module:${id}:latest`);
+        assert.ok(existsSync(path.resolve(root, '..', id, 'manifest.jsonc')), id);
     }
 });
 
@@ -52,7 +52,7 @@ test('cookbook navigation derives ordered Pages from the file inventory', () => 
         'cookbook': { sources: [{ source: '/_assets/x-demo/pages' }] }
     } });
     menus.init();
-    areas.init({ menus, modules: { getModuleById: id => ({ id }) } });
+    areas.init({ menus });
     const { name, items: menu } = menus.getMenu('navigation');
     assert.equal(name, 'navigation');
     assert.equal(areas.getArea('cookbook').home, '/cookbook/');
@@ -76,7 +76,26 @@ test('cookbook navigation derives ordered Pages from the file inventory', () => 
     walk(menu);
     assert.deepEqual([...visited].sort(), files.sort());
     assert.equal(menu[0].children[1].children[1].href, '/cookbook/_assets/x-demo/pages/02-pages/02-html-page.js');
-    assert.equal(config.modules['x-demo'].routes['/hello/{name}'], '/pages/02-pages/03-parameters.js');
+});
+
+test('Cookbook public route resolves against its normalized Area definition', () => {
+    const assetsPath = '/_assets/x-demo/0.9.0.dev';
+    const manifest = normalizeManifest(config, { assetsPath });
+    const services = manifest.xshell.services;
+    const runtimeConfig = {
+        app: { baseUrl: 'https://example.test/', basePath: '' },
+        xshell: { assets: { basePath: '/_assets' }, services },
+        modules: { 'x-demo': { assets: { path: assetsPath } } }
+    };
+    const bus = new EventTarget();
+    const areas = new Areas({ config: runtimeConfig, bus }, services.areas.options);
+    const logger = { trace() {} };
+    const navigation = new Navigation({ config: runtimeConfig, areas, bus, logger }, { mode: 'path' }, { container: {} });
+    const target = assetsPath + '/pages/02-pages/03-parameters.js';
+    assert.deepEqual(navigation.resolveRoute('/cookbook/hello/Marc'), {
+        areaId: 'cookbook', areaPrefix: '/cookbook', moduleId: 'x-demo', route: '/hello/{name}',
+        target, params: { name: 'Marc' }, href: '/cookbook' + target + '?name=Marc'
+    });
 });
 
 test('cookbook Page links resolve after renaming', () => {

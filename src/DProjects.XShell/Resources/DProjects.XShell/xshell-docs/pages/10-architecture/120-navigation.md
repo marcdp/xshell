@@ -8,10 +8,9 @@ resource path such as `/_assets/x/0.9.0.dev/pages/about.js` identifies the modul
 Page through a menu alias or route. The hash-mode `#!` marks the browser fragment.
 
 ```text
-Module.routes
-    ↓ Bootstrap normalization
-module.routes
-    ↓ Area composition
+xshell.services.areas.options.definitions.<area-id>.routes
+    ↓ Bootstrap normalization and configuration merge
+    ↓ Areas validation
 area.routes
     ↓
 Navigation
@@ -64,22 +63,22 @@ in the default ASP.NET configuration.
 
 ## Menus, routes, and canonical targets
 
-Areas also expose an ordered `area.routes` collection composed from their participating modules. These route declarations remain separate from menus:
-Area composition preserves each route's application-facing `path`, canonical Page `href`, source `module`, and declaration order without applying the
-Area prefix or interpreting placeholders. Navigation compiles and matches these declarations when resolving incoming friendly paths.
+Areas expose the route mappings configured under `xshell.services.areas.options.definitions.<area-id>.routes` as an ordered `area.routes`
+collection. Each descriptor contains the Area-relative `path`, normalized target `href`, and the target resource's `module` ID, or null if the
+target has no identifiable module owner. Navigation compiles and matches these declarations when resolving incoming friendly paths.
 
-Configuration validation and Navigation share a compiler for the intentionally small route syntax, so invalid patterns fail before runtime initialization.
+Configuration validation and Navigation share a compiler for the intentionally small route syntax, so invalid patterns fail before module controllers start.
 It supports literal path segments and whole-segment named parameters such as
 `/repository/{repositoryId}/projects/{projectId}/items`. Optional parameters, wildcards, catch-alls, typed parameters, custom regular expressions,
 partial-segment placeholders, duplicate parameter names, and route priorities are unsupported. The compiler records parameter names in declaration
 order and creates an internal escaped matcher; the same compiled segment metadata is used for forward matching and reverse path construction.
 
-Navigation also has an internal Area-relative matcher that scans `area.routes` in composition order and returns `{ route, params }` for the first
+Navigation also has an internal Area-relative matcher that scans `area.routes` in effective declaration order and returns `{ route, params }` for the first
 match, or `null` when none matches. It removes query and fragment suffixes for matching and decodes each captured segment independently, so encoded
 slashes remain within one parameter value.
 
 For forward resolution, Navigation first preserves the existing exact menu-path lookup. If no menu alias matches, it resolves the Area, removes that
-Area's prefix for matching, and scans `area.routes` in composition order. The first match becomes the route's canonical Page `href`, with the Area
+Area's prefix for matching, and scans `area.routes` in effective declaration order. The first match becomes the route's canonical Page `href`, with the Area
 prefix reapplied. Route parameters are encoded as query parameters; target query parameters and incoming public query parameters are preserved, with
 incoming values replacing same-name target values unless that name is a route parameter. Route parameters win all same-name conflicts. Incoming
 fragments are retained. For example,
@@ -100,23 +99,15 @@ For example, canonical
 `/demo/repository/12/projects/7/items?sort=name`. Reverse routing remains private to Navigation; `x-anchor` continues to request a browser-facing URL
 without understanding route syntax.
 
-Route ambiguity is resolved only by deterministic Area composition order: module declaration order followed by route declaration order within each
-module. Forward matching uses the first matching route, and reverse generation uses the first applicable route. Navigation performs no specificity
-scoring, literal weighting, parameter-count ranking, sorting, or priority lookup. Exact duplicate paths contributed by different modules remain in
-the ordered collection and therefore follow the same first-match rule.
+Later manifest contributions replace identical pattern keys in place. Distinct overlapping patterns use first-match precedence in effective
+declaration order. During reverse generation, Navigation checks that the candidate public URL belongs to the selected Area and that forward
+resolution reproduces the intended Page, query, and fragment. A nested Area, reserved global path, menu alias, or earlier matching route can
+make a candidate inapplicable. Navigation tries the remaining candidates and retains the Area-aware canonical URL when none can reproduce
+the destination. Malformed percent encoding in an incoming matched parameter remains an invalid-URL error.
 
-Route failure normally preserves established Navigation fallback behavior. A forward path with no matching route continues as the existing
-Navigation target. Reverse generation with no applicable route retains the concrete menu alias when one exists, otherwise the Area-aware canonical
-href. A reverse candidate missing any required placeholder value is skipped without throwing, allowing a later candidate or canonical fallback.
-Canonical Page URLs remain directly navigable whether or not a route exists. Bad route declarations fail during startup configuration validation, and malformed
-percent encoding in a matched parameter remains an invalid-URL error rather than a silent no-match.
-
-Area prefixes form the boundary between public URLs and Area-relative routes. Route paths in `module.routes` and `area.routes` never acquire the
-prefix. For forward resolution, Navigation selects the Area and removes its prefix before matching; it then applies that prefix exactly once to the
-canonical Page href. Reverse resolution removes an existing canonical Area prefix for target comparison and applies the selected Area's prefix
-exactly once to the generated route. An empty/root prefix performs neither operation, preserving the route's single leading slash. When one module
-participates in multiple Areas, the existing explicit href, originating Page, target-module, and current/default Area selection rules choose the
-public context.
+An explicit Area prefix fixes the context. For an unqualified Page target, Navigation prefers the originating context or the current Area
+and can discover other contexts through their effective menu and route destinations in Area order. Reverse route generation adds the selected
+Area prefix to the Area-relative pattern. An empty prefix leaves the route unchanged.
 
 For example, a route `/repository/{repositoryId}/items` in Area `demo` round-trips as follows:
 
@@ -165,10 +156,9 @@ friendly alias only in that Area. At startup and on source refresh, Menus valida
 slot and descendant. Repeated aliases can share an effective destination. Use inventory source `path` prefixes to mount distinct inventories at
 distinct friendly paths. See [Areas and Menus](../30-subsystems/10-areas.md#menus-and-home).
 
-For browser-facing links, Navigation performs the inverse lookup through `menus.resolveHref(href, areaId)`. For an unprefixed module resource,
-Menus derives the module id from the structural `/_assets/<module-id>/...` prefix, prioritizes Areas associated with that module, and returns the matching item. The originating Page's Area is tried first when applicable.
-Effective menus selected in other Areas can also provide a match. Query parameters and fragments remain attached to the public path. When no matching
-item or friendly `path` exists, the Area-aware canonical href remains the browser-facing fallback.
+For browser-facing links, Navigation performs the inverse lookup through `menus.resolveHref(href, areaId)`. It tries the originating Page's
+Area when applicable. For an unqualified resource, effective menu destinations in the current and other Areas can also provide a match. Query
+parameters and fragments remain attached to the public path. The Area-aware canonical href is the fallback when no friendly path applies.
 
 `x-page` receives that canonical Area-aware href, identifies its Area, and removes the Area prefix before asking the loader/resolver for the
 module resource. The loader/resolver therefore sees `/_assets/x-demo/<generation>/pages/01-components/index.js`; it does not know about menu `path` values or
@@ -191,7 +181,7 @@ The lookup considers configured routes only. During navigation, an exact menu al
 | Field | Meaning |
 | --- | --- |
 | `areaId`, `areaPrefix` | Selected Area ID and normalized prefix. The root prefix is the empty string. |
-| `moduleId` | ID of the module that contributed the route. |
+| `moduleId` | ID of the module that owns the target resource, or null. |
 | `route` | Area-relative route pattern as declared, such as `/hello/{name}`. |
 | `target` | Configured canonical Page href before the Area prefix and incoming parameters are applied. |
 | `params` | Decoded path parameters. A literal route returns an empty object. |
@@ -199,7 +189,7 @@ The lookup considers configured routes only. During navigation, an exact menu al
 
 The result uses the same href construction as forward navigation. Incoming query values override target query values, path parameters take
 precedence over both, and an incoming fragment takes precedence over the target fragment. The **Routes** tab in Navigation diagnostics uses
-this method and lists composed routes in declaration order.
+this method and lists configured routes in declaration order.
 
 ## Ordinary Page anchors
 

@@ -90,7 +90,7 @@ test("module controller startup can read global menus and register a source befo
     services.resolve("menus");
     const modules = await services.initialize("modules");
     const menus = await services.initialize("menus");
-    areas.init({ modules, menus });
+    areas.init({ menus });
     assert.equal(areas.getDefaultArea().home, "/main/home");
     assert.equal(menus.resolvePath("/main/home").href, "/main/_assets/demo/home.js");
     await modules.stop();
@@ -129,7 +129,7 @@ test("manifests extend nested named definitions and Areas contextualize reusable
     assert.equal(global.items[0].href, "/_assets/base/pages/help.js");
     assert.equal(menus.getMenu("navigation"), null);
     menus.init();
-    areas.init({ modules: {}, menus });
+    areas.init({ menus });
 
     const main = menus.getMenu("navigation", "main");
     const lab = menus.getMenu("navigation", "lab");
@@ -371,7 +371,7 @@ test("Menus orders equal entries stably and derives a fallback Area home", () =>
         { label: "Heading", order: -1 }
     ] } }, { main: { prefix: "main", menus: { navigation: "local" } } });
     menus.init();
-    areas.init({ modules: {}, menus });
+    areas.init({ menus });
     assert.deepEqual(menus.getMenu("navigation").items.map(({ label, order }) => [label, order]),
         [["Heading", -1], ["First equal", 0], ["Second equal", 0], ["Last", 1]]);
     assert.equal(areas.getDefaultArea().home, "/main/_assets/test/first.js");

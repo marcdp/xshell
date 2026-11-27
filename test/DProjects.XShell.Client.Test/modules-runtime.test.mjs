@@ -591,57 +591,11 @@ test("missing module requirement fails before its controller is loaded or starte
     assert.deepEqual(loads, []);
 });
 
-test("runtime module exposes normalized routes from its effective configuration", async () => {
-    const routes = {
-        "/something": "/_assets/x-demo/pages/index.js",
-        "/repository/{repositoryId}/projects/{projectId}/items": "/_assets/x-demo/pages/items.js"
-    };
-    const config = freeze({
-        xshell: { assets: { basePath: "/_assets" } },
-        modules: {
-            "x-demo": moduleDefinition("x-demo", { routes })
-        }
-    });
+test("runtime module records leave route declarations to Areas", async () => {
+    const config = freeze({ xshell: { assets: { basePath: "/_assets" } }, modules: { "x-demo": moduleDefinition("x-demo") } });
     const modules = createModules(config);
-
     await modules.init();
-
-    const module = modules.getModuleById("x-demo");
-    assert.equal(module.routes, routes);
-    assert.equal(module.routes["/something"], "/_assets/x-demo/pages/index.js");
-    assert.equal(module.routes["/repository/{repositoryId}/projects/{projectId}/items"], "/_assets/x-demo/pages/items.js");
-    assert.equal(Object.isFrozen(module.routes), true);
-});
-
-test("runtime modules expose independent route definitions", async () => {
-    const config = freeze({
-        xshell: { assets: { basePath: "/_assets" } },
-        modules: {
-            first: moduleDefinition("first", { routes: { "/first": "/_assets/first/pages/index.js" } }),
-            second: moduleDefinition("second", { routes: { "/second": "/_assets/second/pages/index.js" } })
-        }
-    });
-    const modules = createModules(config);
-
-    await modules.init();
-
-    assert.deepEqual(modules.getModuleById("first").routes, { "/first": "/_assets/first/pages/index.js" });
-    assert.deepEqual(modules.getModuleById("second").routes, { "/second": "/_assets/second/pages/index.js" });
-    assert.notEqual(modules.getModuleById("first").routes, modules.getModuleById("second").routes);
-});
-
-test("runtime module without routes exposes a frozen empty object", async () => {
-    const config = freeze({
-        xshell: { assets: { basePath: "/_assets" } },
-        modules: { "x-demo": moduleDefinition("x-demo") }
-    });
-    const modules = createModules(config);
-
-    await modules.init();
-
-    const routes = modules.getModuleById("x-demo").routes;
-    assert.deepEqual(routes, {});
-    assert.equal(Object.isFrozen(routes), true);
+    assert.equal(Object.hasOwn(modules.getModuleById("x-demo"), "routes"), false);
 });
 
 test("module document and shared Shadow DOM styles load once and retain module order", async () => {

@@ -38,7 +38,7 @@ The root uses an ordinary module manifest:
                 "options": {
                     "default": "shop",
                     "definitions": {
-                        "shop": { "prefix": "shop", "modules": ["shop"] }
+                        "shop": { "prefix": "shop", "routes": { "/orders/{id}": "/pages/order.js" } }
                     }
                 }
             }

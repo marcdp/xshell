@@ -32,9 +32,9 @@ test("Navigation options accept an optional reserved prefix as a string", () => 
 test("XShell resolves the configured Navigation singleton after Areas composition", async () => {
     const source = await readFile(new URL("xshell.js", frameworkUrl), "utf8");
     const servicesIndex = source.indexOf("await this._services.init()");
-    const resolveModulesIndex = source.indexOf('const modules = await this._services.initialize("modules")');
+    const resolveModulesIndex = source.indexOf('await this._services.initialize("modules")');
     const areasResolveIndex = source.indexOf('const areas = this._services.resolve("areas")');
-    const areasIndex = source.indexOf("areas.init({ modules, menus })");
+    const areasIndex = source.indexOf("areas.init({ menus })");
     const navigationIndex = source.indexOf('await this._services.initialize("navigation")');
 
     assert.doesNotMatch(source, /import Navigation from/);

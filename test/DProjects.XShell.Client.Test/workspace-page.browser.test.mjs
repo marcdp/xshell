@@ -45,7 +45,7 @@ async function verifyWorkspace() {
     const modules = { resolveModuleId: src => areas.getModuleId(src), getModuleById: id => ({ id, config: config.modules[id] }) };
     const menus = new Menus({ config, bus, areas }, { definitions });
     menus.init();
-    areas.init({ modules, menus });
+    areas.init({ menus });
     const resolver = { resolve: href => href === "page:x:/pages/workspace.js" ? { path: workspaceSrc } : null };
     const navigation = new Navigation({ logger: new Logger({}), areas, bus, config, menus, resolver }, { mode });
     const pages = new Map();
@@ -258,13 +258,13 @@ async function verifyFilesystems() {
     bus.emit = (type, detail) => bus.dispatchEvent(new CustomEvent(type, { detail }));
     const areas = new Areas({ config, bus }, {
         default: "root", definitions: {
-            root: { prefix: "", modules: ["x"] }, ...Object.fromEntries(entries.map(entry => [entry.areaId, entry.area]))
+            root: { prefix: "" }, ...Object.fromEntries(entries.map(entry => [entry.areaId, entry.area]))
         }
     });
     const modules = { resolveModuleId: href => areas.getModuleId(href) || "x", getModuleById: id => ({ id, config: config.modules[id], controller: {} }) };
     const menus = new Menus({ config, bus, areas }, { definitions });
     menus.init();
-    areas.init({ modules, menus });
+    areas.init({ menus });
     const resolver = new Resolver({ config });
     const navigation = new Navigation({ logger: new Logger({}), areas, bus, config, menus, resolver }, { mode });
     const pages = new Map();

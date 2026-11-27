@@ -6,36 +6,25 @@ export default {
     },
 
     template: `
-        <p>An application can include Modules defined in other directories. Instead of repeating their configuration, it references their <code>manifest.jsonc</code> files using <code>configUrl</code>.</p>
+        <p>The Cookbook declares Module dependencies by ID and version selector. The host's repositories supply the matching manifests.</p>
 
         <h2>Local definition versus reference</h2>
         <x-code language="json" x-pre>{
     "modules": {
         "x-demo": {
             "label": "XShell Cookbook",
-            "version": "0.9.0"
-        },
-        "x": {
-            "configUrl": "url:../x/manifest.jsonc"
-        },
-        "x-filesystem": {
-            "configUrl": "url:../x-filesystem/manifest.jsonc"
+            "version": "0.9.0",
+            "dependencies": {
+                "x": "module:x:latest",
+                "x-filesystem": "module:x-filesystem:latest"
+            }
         }
     }
 }</x-code>
-        <p><code>x-demo</code> is defined locally. The entries containing <code>configUrl</code> point to other Module definitions.</p>
+        <p><code>x-demo</code> is the root Module. Its <code>dependencies</code> declare the Modules it needs.</p>
 
         <h2>Reference resolution</h2>
-        <p>During bootstrap, XShell follows Module references, reads their definitions, and prepares effective configuration for each canonical Module ID.</p>
-        <x-code language="text" x-pre>Application manifest.jsonc
-    |
-    +-- x-demo         local definition
-    |
-    +-- x              ../x/manifest.jsonc
-    |
-    +-- x-filesystem   ../x-filesystem/manifest.jsonc
-    |
-    +-- xshell-docs    ../xshell-docs/manifest.jsonc</x-code>
+        <p>During bootstrap, XShell follows dependencies from the repository indexes and loads the selected manifests. The effective <code>configUrl</code> records the selected manifest URL for each Module.</p>
 
         <h2>Referenced Modules in this application</h2>
         <p>The following values come from the effective configuration and runtime Module registry.</p>
@@ -51,9 +40,9 @@ export default {
 
         <h2>References and resource dependencies</h2>
         <p>Module references make a Module's definition and resources available to the application. A Page's <code>dependencies</code> property requests particular resources from those Modules.</p>
-        <x-code language="javascript" x-pre>// Application configuration:
-"x": {
-    "configUrl": "url:../x/manifest.jsonc"
+        <x-code language="javascript" x-pre>// Root Module definition:
+"dependencies": {
+    "x": "module:x:latest"
 }
 
 // Individual Page:
@@ -64,7 +53,7 @@ dependencies: {
         <p>These mechanisms operate at different levels: Module discovery happens during bootstrap, while resource dependencies are loaded for a particular Page or Component.</p>
 
         <h2>References and Areas</h2>
-        <p>Referencing a Module does not automatically add it to an Area's navigation. The cookbook Area includes <code>x-demo</code>, even though other Modules are available as resource providers.</p>
+        <p>Module dependencies determine which resources are available. The Cookbook Area exposes resources through its selected menus and configured routes.</p>
 
         <p>Continue with <x-anchor href="03-resources.js">Module Resources</x-anchor> to learn what a Module exposes.</p>
     `,

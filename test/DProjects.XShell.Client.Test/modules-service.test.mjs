@@ -73,6 +73,6 @@ test("XShell delegates its Modules accessor and explicit initialization to the c
     const source = await readFile(new URL("xshell.js", frameworkUrl), "utf8");
 
     assert.doesNotMatch(source, /import Modules from|new Modules\s*\(|register\("modules"|_modules/);
-    assert.match(source, /const modules = await this\._services\.initialize\("modules"\);/);
-    assert.match(source, /areas\.init\(\{ modules, menus \}\);/);
+    assert.match(source, /await this\._services\.initialize\("modules"\);/);
+    assert.match(source, /areas\.init\(\{ menus \}\);/);
 });

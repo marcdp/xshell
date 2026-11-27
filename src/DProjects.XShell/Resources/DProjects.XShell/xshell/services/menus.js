@@ -143,18 +143,12 @@ export default class Menus {
     resolveHref(href, areaId = null) {
         if (!href) return null;
 
-        // Honor explicit context, then prefer an href's Area or the target module's participating Areas.
+        // Honor explicit context, then search effective menu destinations in the current Area and configured Area order.
         const target = this.#getHrefIdentity(href);
         const current = this.#areas.getCurrentArea();
         const contextual = this.#areas.getArea(this.#areas.resolveAreaId(target));
-        const moduleId = this.#areas.getModuleId(target);
-        const areas = this.#areas.getAreas();
-        const candidates = areaId !== null ? [this.#areas.getArea(areaId)] : [
-            contextual?.prefix ? contextual : null,
-            ...areas.filter(area => area.modules.includes(moduleId)),
-            current,
-            ...areas
-        ];
+        const candidates = areaId !== null ? [this.#areas.getArea(areaId)]
+            : contextual?.prefix ? [contextual] : [current, ...this.#areas.getAreas()];
         for (const area of new Set(candidates.filter(Boolean))) {
             const areaHref = this.#buildAreaHref(target, area);
             const items = this.#findInArea(area, item => this.#getHrefIdentity(item.href) === areaHref);

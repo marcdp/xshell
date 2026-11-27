@@ -29,8 +29,8 @@ function setup({ saved, delayedRead } = {}) {
     bus.emit = (name, detail) => bus.dispatchEvent(new CustomEvent(name, {detail}));
     const config = {app: {basePath: "/app"}, modules: {root: {}, "x-home": {}}, xshell: {assets: {basePath: "/_assets"}}};
     const areas = new Areas({bus, config}, {
-        default: "main", definitions: {main: {modules: ["root"], menus: {navigation: "root"}, icon: "main-icon", description: "Main Area"},
-            launcher: {prefix: "launcher", modules: ["x-home"], menus: {navigation: "x-home"}}, empty: {prefix: "empty"}}
+        default: "main", definitions: {main: {menus: {navigation: "root"}, icon: "main-icon", description: "Main Area"},
+            launcher: {prefix: "launcher", menus: {navigation: "x-home"}}, empty: {prefix: "empty"}}
     });
     let dynamic = [{label: "Reports", path: "reports", href: rootAssets + "/reports.js", icon: "reports-icon"}];
     const items = {
@@ -49,7 +49,7 @@ function setup({ saved, delayedRead } = {}) {
     const menus = new Menus({areas, bus, config}, {definitions});
     menus.registerSource("live", {dependsOn: ["test:refresh"], resolve: () => dynamic});
     menus.init();
-    areas.init({menus, modules: {getModuleById: id => ({id})}});
+    areas.init({ menus });
     const navigation = new Navigation({logger: new Logger({}), areas, bus, config, menus, resolver: {
         resolve: resource => resource === "page:x-home:/pages/index.js" ? {path: homeAssets + "/pages/index.js"} : null
     }}, {mode: "hash"}, {container: {}});
@@ -107,8 +107,8 @@ test("Home module, Component, Page and cookbook composition use the existing sch
     const cookbook = readManifest("x-demo");
     const options = cookbook.xshell.services.areas.options;
     assert.equal(options.default, "cookbook");
-    assert.deepEqual(options.definitions.cookbook.modules, ["x-demo"]);
-    assert.deepEqual(options.definitions.launcher.modules, ["x-home"]);
+    assert.equal(options.definitions.cookbook.menus.navigation, "cookbook");
+    assert.equal(options.definitions.launcher.menus.navigation, "home");
     assert.equal(cookbook.modules["x-demo"].dependencies["x-home"], "module:x-home:latest");
     const {areas, navigation} = setup();
     assert.equal(areas.getArea("launcher").home, "/launcher/home");

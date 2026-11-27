@@ -104,7 +104,6 @@ export default class Modules {
                 description: moduleConfig.description || "",
                 path: moduleConfig.assets.path,
                 params: moduleConfig.params,
-                routes: moduleConfig.routes || Object.freeze({}),
                 styles: [],
                 controller: {
                     onCommand: function() {}

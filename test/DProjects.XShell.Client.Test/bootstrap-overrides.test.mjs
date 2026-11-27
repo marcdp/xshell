@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 import vm from "node:vm";
-import { mergeManifests } from "./helpers/manifest-composition.mjs";
+import { mergeManifests, normalizeManifest } from "./helpers/manifest-composition.mjs";
 import Areas from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/areas.js";
 
 const bootstrapPath = new URL("../../src/DProjects.XShell/Resources/DProjects.XShell/bootstrap/index.js", import.meta.url);
@@ -96,6 +96,33 @@ test("manifest arrays merge by ID in bootstrap precedence order", () => {
     config.menu.other[0].label = "Changed";
     config.menu.items.pop();
     assert.deepEqual(modules, original);
+});
+
+test("manifests merge normalized Area route targets in ordinary configuration order", () => {
+    const framework = { name: "xshell", manifest: { xshell: { resolver: { esm: { xshell: { src: "/xshell.js" } } } } } };
+    const customers = { name: "customers", assetsPath: "/_assets/customers/1.0.0.dev" };
+    const app = { name: "app", assetsPath: "/_assets/app/1.0.0.dev", dependencies: { customers: "1.0.0" } };
+    for (const [module, routes] of [
+        [customers, { "/customers": "/pages/customers.js", "/customers/{id}": "./pages/customer.js" }],
+        [app, { "/orders": "/pages/orders.js", "/customers": "/pages/directory.js", "/orders/{id}": "./pages/order.js" }]
+    ]) {
+        module.manifest = normalizeManifest({ modules: { [module.name]: { assets: { path: module.assetsPath } } },
+            xshell: { services: { areas: { options: { default: "shop", definitions: { shop: { prefix: "shop", routes } } } } } }
+        }, module);
+    }
+
+    // The later contribution replaces the route in place, and each target keeps its declaring manifest's asset path.
+    const config = mergeManifests([app, customers, framework], app);
+    const options = config.xshell.services.areas.options;
+    assert.deepEqual(Object.entries(options.definitions.shop.routes), [
+        ["/customers", app.assetsPath + "/pages/directory.js"],
+        ["/customers/{id}", customers.assetsPath + "/pages/customer.js"],
+        ["/orders", app.assetsPath + "/pages/orders.js"],
+        ["/orders/{id}", app.assetsPath + "/pages/order.js"]
+    ]);
+    config.xshell.assets = { basePath: "/_assets" };
+    const areas = new Areas({ config, bus: new EventTarget() }, options);
+    assert.deepEqual(areas.getArea("shop").routes.map(route => route.module), ["app", "customers", "app", "app"]);
 });
 
 test("menu configuration follows generic value-driven path semantics", () => {
@@ -212,16 +239,21 @@ test("override values use JSON-first parsing with an explicit string fallback", 
 });
 
 test("multiple overrides are applied in metadata order", () => {
-    const config = { xshell: { services: { navigation: { options: { mode: "path" } } }, flags: {} } };
+    const config = { xshell: { services: {
+        navigation: { options: { mode: "path" } },
+        areas: { options: { definitions: { shop: { routes: { "/old": "/_assets/shop/1.0.0.dev/pages/old.js" } } } } }
+    }, flags: {} } };
+    const routes = { "/orders/{id}": "/_assets/shop/1.0.0.dev/pages/order.js" };
 
     apply(config, {
         "xshell:services.navigation.options.mode": '"hash"',
+        "xshell:services.areas.options.definitions.shop.routes": JSON.stringify(routes),
         "xshell:flags.enabled": "true",
         "xshell:flags.values": "[1,2]"
     });
 
     assert.deepEqual(plain(config.xshell), {
-        services: { navigation: { options: { mode: "hash" } } },
+        services: { navigation: { options: { mode: "hash" } }, areas: { options: { definitions: { shop: { routes } } } } },
         flags: { enabled: true, values: [1, 2] }
     });
 });

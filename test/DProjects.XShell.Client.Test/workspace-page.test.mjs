@@ -142,7 +142,7 @@ test("bundled manifests select named Area navigation menus and compose global sh
     const areas = new Areas({ config, bus }, config.xshell.services.areas.options);
     const menus = new Menus({ areas, bus, config }, config.xshell.services.menus.options);
     menus.init();
-    areas.init({ menus, modules: { getModuleById: id => ({ id }) } });
+    areas.init({ menus });
 
     for (const [areaId, name, home] of [
         ["cookbook", "cookbook", "/cookbook/"],

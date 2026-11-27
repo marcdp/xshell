@@ -36,9 +36,6 @@ export default {
                     "renderEngine": "x",
                     "stateEngine": "proxy"
                 }
-            },
-            "routes": {
-                "/hello/{name}": "/pages/02-pages/03-parameters.js"
             }
         }
     }
@@ -72,7 +69,7 @@ const files = definition.files;</x-code>
         <p>The effective configuration includes generated information such as the asset path and file inventory. These values are not required in the minimal local definition.</p>
 
         <h2>Definition versus runtime instance</h2>
-        <p>The configuration describes the Module. The runtime Module instance associates that configuration with its controller, routes, and other runtime information.</p>
+        <p>The configuration describes the Module. The runtime Module instance associates that configuration with its controller and resource metadata.</p>
         <p>Runtime instance uses the resolved configuration: <strong>{{ state.sameConfig }}</strong></p>
 
         <p>Continue with <x-anchor href="02-references.js">Module References</x-anchor> to see how an application includes Modules defined elsewhere.</p>

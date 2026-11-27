@@ -6,7 +6,7 @@ export default {
     },
 
     template: `
-        <p>A Module can contribute menu sources and route mappings. Areas decide which registered Modules participate in a navigation context.</p>
+        <p>A Module manifest can contribute menu sources and extend an Area's route configuration.</p>
 
         <h2>Module navigation</h2>
         <p>The <code>x-demo</code> manifest contributes the <code>cookbook</code> menu, and the Cookbook Area selects it as its <code>navigation</code> slot.</p>
@@ -46,17 +46,14 @@ export default {
         </ol>
         <p>These entries appear in Areas that select <code>cookbook</code>. Area composition is demonstrated separately in <x-anchor href="../03-navigation/02-areas.js">Areas and Menus</x-anchor>.</p>
 
-        <h2>Module routes</h2>
-        <p>Modules can declare route mappings. Routes map an application path to a Page resource.</p>
+        <h2>Area routes</h2>
+        <p>The manifest declares this route under <code>xshell.services.areas.options.definitions.cookbook.routes</code>.</p>
         <x-code language="json" x-pre>"routes": {
     "/hello/{name}": "/pages/02-pages/03-parameters.js"
 }</x-code>
         <p>The <code>{name}</code> segment is a route parameter consumed by the target Page.</p>
         <p>Configured route target: <code>{{ state.routeTarget }}</code></p>
         <p><x-anchor href="/cookbook/hello/Ada">Open the example route</x-anchor></p>
-
-        <h2>Contribution availability</h2>
-        <p>The current <strong>{{ state.areaId }}</strong> Area includes these Modules: {{ state.areaModules }}. Its <code>menus</code> mapping selects a named definition independently of module membership.</p>
 
         <p>Continue with <x-anchor href="06-dependencies.js">Using Module Resources</x-anchor> to consume resources from referenced Modules.</p>
 
@@ -66,8 +63,6 @@ export default {
 
     state: {
         source: "",
-        areaId: "",
-        areaModules: "",
         modulePages: [],
         routeTarget: "",
         docsModules: "",
@@ -77,16 +72,13 @@ export default {
     controller({areas, menus, config, state}) {
         return {
             load() {
-                const definition = config.modules["x-demo"];
+                // Read the current menu and the Cookbook Area route target.
                 const area = areas.getCurrentArea();
                 const root = menus.getMenu("navigation", area.id)?.items[0];
                 const categories = root?.children || [];
 
                 state.source = config.xshell.services.menus.options.definitions.cookbook.sources[0].source;
-                state.areaId = area.id;
-                state.areaModules = area.modules.join(", ");
-                state.routeTarget =
-                    definition.routes["/hello/{name}"] || "";
+                state.routeTarget = areas.getArea("cookbook")?.routes.find(route => route.path === "/hello/{name}")?.href || "";
                 const docsPath = config.modules["xshell-docs"].assets.path + "/pages";
                 state.docsModules = docsPath + "/10-architecture/30-modules.md";
                 state.docsAreas = docsPath + "/30-subsystems/10-areas.md";

@@ -46,7 +46,6 @@
                             "label": "Documentation",
                             "description": "Documentation for XShell",
                             "icon": "xshell-docs",
-                            "modules": [ "xshell-docs" ],
                             "menus": { "navigation": "documentation" }
                         }
                     }

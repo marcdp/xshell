@@ -60,7 +60,7 @@ count → 7       (number)</x-code>
         <p>Incrementing the count changes its reactive value and demonstrates the <code>reflect</code> option. Reflection is separate from updating the browser URL.</p>
 
         <h2>Route parameters</h2>
-        <p>Routes map friendly URLs to Page resources. The cookbook defines a route that sends a name parameter to this Page.</p>
+        <p>The Cookbook Area declares this mapping under <code>xshell.services.areas.options.definitions.cookbook.routes</code>.</p>
         <x-code language="json" x-pre>"routes": {
     "/hello/{name}": "/pages/02-pages/03-parameters.js"
 }</x-code>

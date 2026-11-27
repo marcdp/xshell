@@ -2,12 +2,12 @@
 
 ## Status
 
-Implemented for hash and path navigation. This revision supersedes the original module-owned menu composition.
+Implemented for hash and path navigation. This revision supersedes module-owned menu and route composition.
 
 ## Context
 
-Applications reuse menu definitions across navigation contexts and combine menu content from several manifests. Routes still follow the modules
-that participate in each Area.
+Applications reuse menu definitions across navigation contexts and combine menus and route mappings from several manifests. Modules own
+resources and their lifecycle. Areas determine how navigation exposes those resources.
 
 ## Decision
 
@@ -15,19 +15,21 @@ Modules contribute service configuration through `xshell.services.<service-name>
 then recursively merges objects and identified array elements in framework, dependency, and root order. Matching items retain their positions.
 Bootstrap applies the same rules to all configuration sections.
 
-Menus is a declarative singleton. Its options own named application menu definitions. Areas maps logical slots to those names and composes routes
-from participating modules. An Area-scoped menu can be selected by several Areas. Menus applies each Area's prefix to its own read-only
+Menus is a declarative singleton. Its options own named application menu definitions. Areas maps logical slots to those names and owns route mappings under
+`xshell.services.areas.options.definitions.<area-id>.routes`. Later values for a route pattern replace earlier values without changing key order.
+Module dependencies govern loading independently of Area configuration. An Area-scoped menu can be selected by several Areas. Menus applies each Area's prefix to its own read-only
 projection. Global menus are static and application-wide. Area slots select only Area-scoped definitions and reserve global menu names for
 canonical lookup and enumeration. Canonical asset paths identify the resources and their runtime modules.
 
 Overlapping Area prefixes are supported. Areas determines navigation context using the longest prefix that matches on a segment boundary.
-Menus resolves exact friendly aliases only in the Area that owns the path.
+Menus resolves exact friendly aliases only in the Area that owns the path. Navigation resolves routes in that same Area. Reverse lookups use
+effective menu and route destinations. An explicit Area prefix limits discovery to its owner.
 
 ## Consequences and open work
 
-XShell resolves Areas and Menus before initializing module controllers. The Menus constructor validates Area selections and publishes globals.
-Module controllers can register sources during initialization. XShell then initializes the contextual menus and derives Area routes and homes
-before Navigation starts. Menu shortcuts initialize after Navigation.
+XShell constructs Areas and validates route syntax before module controllers start. The Menus constructor validates Area selections and publishes
+globals. Module controllers can register sources during initialization. XShell then initializes contextual menus and derives Area homes before
+Navigation starts. Menu shortcuts initialize after Navigation.
 
 Inventory sources may set a friendly prefix and choose whether their root participates in default home selection. Every navigable alias must
 belong to the Area exposing it. Menus checks ownership and destination conflicts at startup and before publishing any source refresh. A shared

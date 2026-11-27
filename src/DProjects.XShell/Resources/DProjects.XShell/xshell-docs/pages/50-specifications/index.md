@@ -13,9 +13,8 @@ Initialization creates Resolver and Loader and then validates against `xshell/sc
 services. There is no separate host-side `xshell.validateConfig(config)` call.
 The X module currently includes a `module.js` controller; configuration validation remains a separate bootstrap and initialization responsibility.
 
-The schema defines `app`, `modules`, and `xshell`, including module `configUrl`, nested `assets`, defaults, optional service `requires`, optional
-declarative routes, named `xshell.services`, and the required `xshell.i18n` language, formatting,
-and translation configuration.
+The schema defines `app`, `modules`, and `xshell`, including module `configUrl`, nested `assets`, defaults, optional service `requires`, named
+`xshell.services`, and the required `xshell.i18n` configuration. The Areas service validates its route options during startup.
 
 Every resolved module requires **module defaults** at `modules.<id>.defaults`: both `page` and `component` require non-empty render-engine and
 state-engine names. These select how the owning module's definition-based resources execute after a resource `meta` override. The separate

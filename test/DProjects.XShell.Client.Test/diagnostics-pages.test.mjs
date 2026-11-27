@@ -584,7 +584,7 @@ test("Navigation diagnostics includes the Routes tab and uses route inspection f
     assert.deepEqual(paths, ["/shop/products/123?sort=name#details", "/shop/missing", "invalid"]);
 });
 
-test("Navigation diagnostics lists menu definitions and composed routes and refreshes its search filters", (t) => {
+test("Navigation diagnostics lists configured routes and refreshes its search filters", (t) => {
     const state = Object.assign(new EventTarget(), structuredClone(NavigationPage.state));
     const menu = { name: "navigation", scope: "area", label: "Shop", description: "Find products.", icon: "x-shop",
         items: [{ label: "Catalog", children: [{ label: "Featured", href: "/pages/featured.js" }] }] };
@@ -594,7 +594,7 @@ test("Navigation diagnostics lists menu definitions and composed routes and refr
             { path: "/products/featured", href: "/pages/featured.js", module: "marketing" },
             { path: "/", href: "/pages/shop.js", module: "products" }
         ] },
-        { id: "root", prefix: "", menus: {}, routes: [{ path: "/", href: "/pages/root.js", module: "shell" }] }
+        { id: "root", prefix: "", menus: {}, routes: [{ path: "/", href: "/pages/root.js", module: null }] }
     ];
     const bus = new EventTarget();
     globalThis.Node = { ELEMENT_NODE: 1, DOCUMENT_FRAGMENT_NODE: 11 };
@@ -613,7 +613,7 @@ test("Navigation diagnostics lists menu definitions and composed routes and refr
         { areaId: "shop", path: "/shop/products/{id}/{variant}", href: "/pages/detail.js", module: "products", parameters: "id, variant" },
         { areaId: "shop", path: "/shop/products/featured", href: "/pages/featured.js", module: "marketing", parameters: "" },
         { areaId: "shop", path: "/shop/", href: "/pages/shop.js", module: "products", parameters: "" },
-        { areaId: "root", path: "/", href: "/pages/root.js", module: "shell", parameters: "" }
+        { areaId: "root", path: "/", href: "/pages/root.js", module: null, parameters: "" }
     ]);
 
     // Apply each filter through the Page's change listeners.

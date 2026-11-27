@@ -47,7 +47,7 @@ Module specifications are normally authored as `manifest.jsonc`. A representativ
                 "options": {
                     "default": "shop",
                     "definitions": {
-                        "shop": { "prefix": "shop", "modules": ["shop"] }
+                        "shop": { "prefix": "shop", "routes": { "/orders/{id}": "/pages/order.js" } }
                     }
                 }
             }
@@ -62,7 +62,9 @@ downloaded manifests for `configUrl` references.
 
 Modules contribute service configuration under `xshell.services.<service-name>.options`. Declare named application menus under
 `xshell.services.menus.options.definitions`. An Area selects named definitions in its `menus` mapping. Menus with `scope: "global"` are
-available throughout the application. See [Areas and Menus](../30-subsystems/10-areas.md#menus-and-home).
+available throughout the application. Declare routes under `xshell.services.areas.options.definitions.<area-id>.routes`. Bootstrap normalizes
+Page target values before merging contributions to the same Area. The literal route keys follow [generic precedence](#merge-and-precedence),
+so a later value replaces the same key in place. See [Areas and Menus](../30-subsystems/10-areas.md#menus-and-home).
 
 The selected module manifest is the `manifest.json` URL recorded by its chosen version-index entry. Development middleware can generate that strict
 JSON response from either an authored `manifest.json` or `manifest.jsonc` file.
@@ -204,6 +206,9 @@ Override content is parsed with `JSON.parse`. JSON objects, arrays, numbers, boo
 content that is not valid JSON remains a string. To pass a string that resembles a JSON literal, use JSON string encoding: for example, `"true"`
 produces the string `true`, while `true` produces a boolean. No schema-specific coercion or URL normalization is performed. The effective
 configuration is subsequently validated during `XShell.init()`.
+
+An override of `services.areas.options.definitions.shop.routes` replaces the entire route map. Supply a JSON object with effective Page
+targets, such as `{"/orders/{id}":"/_assets/shop/1.0.0.dev/pages/order.js"}`.
 
 Override paths have these current restrictions:
 

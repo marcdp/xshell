@@ -17,6 +17,11 @@ framework configuration currently selects path mode. Both modes decode the same 
 Application-wide navigation reserves a configurable application-relative URL prefix (`/global` by default). The logical Page URL carries that prefix
 through both browser modes and the existing stack. Areas preserves its current selection when the main Page uses the reserved prefix.
 
+Areas own the route mappings under `xshell.services.areas.options.definitions.<area-id>.routes`. Navigation uses the owning Area's routes after
+checking its menu aliases. Distinct overlapping patterns keep first-match precedence. Navigation emits a reverse-generated route only when it
+belongs to the intended Area and forward resolution reproduces the intended destination. Otherwise it can try another route or keep the
+canonical Area-aware href.
+
 Public navigation intents should let modules request capabilities such as `customer.detail` without depending on another module's page URL or menu
 configuration. Intent registration and dispatch are not implemented yet.
 

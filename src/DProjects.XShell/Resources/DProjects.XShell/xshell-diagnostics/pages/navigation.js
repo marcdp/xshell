@@ -26,7 +26,6 @@ export default {
                         <x-listview-column label="Label"></x-listview-column>
                         <x-listview-column label="Default"></x-listview-column>
                         <x-listview-column label="Home"></x-listview-column>
-                        <x-listview-column label="Modules"></x-listview-column>
                     </x-listview-head>
                     <x-listview-body>
                     <x-listview-item x-for="area in state.areas"
@@ -44,7 +43,6 @@ export default {
                                 {{ area.home }}
                             </x-anchor>
                         </div>
-                        <div>{{ area.modules | json_stringify }}</div>
 
                     </x-listview-item>
                     </x-listview-body>
@@ -209,14 +207,14 @@ export default {
                 }
                 state.menus = menuDefinitions;
 
-                // list composed routes in Area and declaration order, with optional filters
+                // List configured routes in Area and declaration order, with optional filters
                 const routes = [];
                 for (const area of state.areas) {
                     if (!area.id.includes(state.query_area)) continue;
                     for (const route of area.routes) {
                         const path = area.prefix + route.path;
                         if (!path.includes(state.query_path) || !route.href.includes(state.query_destination) ||
-                            !route.module.includes(state.query_module)) continue;
+                            !(route.module ?? "").includes(state.query_module)) continue;
                         // declarations have already been validated; show placeholders in declaration order
                         const parameters = Array.from(route.path.matchAll(/\{([^}]+)\}/g), match => match[1]).join(", ");
                         routes.push({ areaId: area.id, path, href: route.href, module: route.module, parameters });

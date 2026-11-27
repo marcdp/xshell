@@ -414,12 +414,11 @@ test("module discovery keeps logical configUrl separate from its pre-Service-Wor
 
 test("module configuration URLs use the file's logical path when assets.url names its source root", async () => {
     const sourceUrl = "https://cdn.example.test/orders/pages/orders/details.jsonc";
-    const config = { modules: { orders: definition("orders", { assets: { url: "url:../../" }, controller: "./edit.js", routes: { "/shared": "../shared.js" } }) } };
+    const config = { modules: { orders: definition("orders", { assets: { url: "url:../../" }, controller: "./edit.js" }) } };
     const graph = await api.discover(config, sourceUrl, {}, []);
 
     assert.equal(graph.rootNode.config.modules.orders.assets.url, "https://cdn.example.test/orders/");
     assert.equal(graph.rootNode.config.modules.orders.controller, "/_assets/orders/1.0.0.dev/pages/orders/edit.js");
-    assert.equal(graph.rootNode.config.modules.orders.routes["/shared"], "/_assets/orders/1.0.0.dev/pages/shared.js");
 });
 
 test("configuration path expressions normalize regardless of their owning property", async () => {
@@ -1191,60 +1190,6 @@ test("root dependency references accept params and merge them last", async () =>
 
     assert.equal(effective.precedence, "root");
     assert.deepEqual(effective.modules.x.params, { retained: true, mode: "compact" });
-});
-
-test("module route targets use the owning module asset namespace while route keys remain unchanged", async () => {
-    const root = {
-        modules: {
-            app: definition("app", {
-                routes: {
-                    "/something": "/pages/index.js",
-                    "/repository/{repositoryId}/projects/{projectId}/items": "/pages/items.js"
-                },
-                controller: "/js/module.js"
-            })
-        }
-    };
-
-    const graph = await discover(root);
-    const module = graph.rootNode.config.modules.app;
-
-    assert.deepEqual(plain(module.routes), {
-        "/something": "/_assets/app/1.0.0.dev/pages/index.js",
-        "/repository/{repositoryId}/projects/{projectId}/items": "/_assets/app/1.0.0.dev/pages/items.js"
-    });
-    assert.equal(module.controller, "/_assets/app/1.0.0.dev/js/module.js");
-});
-
-test("module route targets are normalized independently for dependency modules", async () => {
-    const dependencyUrl = "https://example.test/modules/x/manifest.jsonc";
-    const root = { modules: { app: definition("app"), x: reference(dependencyUrl) } };
-    const configs = {
-        [dependencyUrl]: {
-            modules: {
-                x: definition("x", {
-                    routes: {
-                        "/something": "/pages/index.js",
-                        "/repository/{repositoryId}": "./pages/repository.js"
-                    }
-                })
-            }
-        }
-    };
-
-    const graph = await discover(root, configs);
-    const module = graph.nodesById.get("x").config.modules.x;
-
-    assert.deepEqual(plain(module.routes), {
-        "/something": "/_assets/x/1.0.0.dev/pages/index.js",
-        "/repository/{repositoryId}": "/_assets/x/1.0.0.dev/pages/repository.js"
-    });
-});
-
-test("modules without routes remain without a routes property", async () => {
-    const graph = await discover({ modules: { app: definition("app") } });
-
-    assert.equal(Object.hasOwn(graph.rootNode.config.modules.app, "routes"), false);
 });
 
 test("root references reject assets but accept arbitrary composition properties", async () => {

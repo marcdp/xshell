@@ -13,8 +13,8 @@
     }
   },
   "methods": {
-    "getAreas": { "description": "Returns the array of configured navigation areas.", "returns": { "type": "array" } },
-    "getArea": { "description": "Returns the area with the specified ID, or null if it is unknown.", "parameters": [{ "name": "id", "type": "string", "required": true }], "returns": { "type": "any" } },
+    "getAreas": { "description": "Returns the ordered array of configured Areas with their read-only route descriptors.", "returns": { "type": "array" } },
+    "getArea": { "description": "Returns the Area with the specified ID, or null. Its ordered routes expose path, href, and the target's module ID or null.", "parameters": [{ "name": "id", "type": "string", "required": true }], "returns": { "type": "any" } },
     "getDefaultArea": { "description": "Returns the default area, falling back to the first area, or null.", "returns": { "type": "any" } },
     "getCurrentArea": { "description": "Returns the currently selected area or the default area.", "returns": { "type": "any" } },
     "resolveAreaId": { "description": "Resolves an Area ID using the longest matching Area prefix. Returns null for global URLs or when no Area matches.", "parameters": [{ "name": "href", "type": "string", "required": true }], "returns": { "type": "any" } },

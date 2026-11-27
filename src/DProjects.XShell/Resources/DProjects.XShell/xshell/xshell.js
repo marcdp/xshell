@@ -7,7 +7,6 @@ import Runtime from "./services/runtime.js";
 import Services from "./services.js";
 import { createXPageClass } from "./x-page.js";
 import JsonValidator from "./services/json-validator.js";
-import { compileRoute } from "./utils/route.js";
 
 // class
 export default class XShell {
@@ -90,10 +89,10 @@ export default class XShell {
         // Resolve Menus early so global menus are available to module controllers.
         this._services.resolve("menus");
         // Resolve and initialize Modules and their controllers
-        const modules = await this._services.initialize("modules");
+        await this._services.initialize("modules");
         // Contextualize menus after source registration, then derive Area homes before Navigation.
         const menus = await this._services.initialize("menus");
-        areas.init({ modules, menus });
+        areas.init({ menus });
         // initialize XPage custom element
         const services = this._services;
         const XPage = createXPageClass({
@@ -125,16 +124,6 @@ export default class XShell {
             const location = detail?.instanceLocation ?? "#";
             const message = detail?.error ?? "Schema validation failed.";
             throw new Error(`Invalid config at '${location}': ${message}`, { cause: result.errors });
-        }
-        // validate routes with the same compiler used by Navigation
-        for (const [moduleId, module] of Object.entries(config.modules)) {
-            for (const path of Object.keys(module.routes || {})) {
-                try {
-                    compileRoute(path);
-                } catch (cause) {
-                    throw new Error(`Module '${moduleId}' declares invalid route '${path}'.`, { cause });
-                }
-            }
         }
     }
 

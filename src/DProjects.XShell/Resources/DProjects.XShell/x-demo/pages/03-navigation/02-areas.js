@@ -2,14 +2,14 @@
 export default {
     meta: {
         title: "Areas and Menus",
-        description: "Inspects the current Area, its participating Modules, and its composed navigation menu."
+        description: "Inspects the current Area, its configured routes, and its composed navigation menu."
     },
 
     template: `
-        <p>An Area is a navigation context with a URL prefix, participating Modules, and selected menu definitions. Each Module keeps one runtime instance.</p>
+        <p>An Area is a navigation context with a URL prefix, route declarations, and selected menu definitions.</p>
 
         <h2>Area configuration</h2>
-        <p>Areas are configured under <code>xshell.services.areas.options</code>. The cookbook defines a default Area with a URL prefix and a list of participating Modules.</p>
+        <p>Areas are configured under <code>xshell.services.areas.options</code>. The cookbook defines a default Area with a URL prefix and a parameterized route.</p>
         <x-code language="json" x-pre>"xshell": {
     "services": {
         "areas": {
@@ -19,8 +19,8 @@ export default {
                     "cookbook": {
                         "prefix": "cookbook",
                         "label": "Cookbook",
-                        "modules": ["x-demo"],
-                        "menus": { "navigation": "cookbook" }
+                        "menus": { "navigation": "cookbook" },
+                        "routes": { "/hello/{name}": "/pages/02-pages/03-parameters.js" }
                     }
                 }
             }
@@ -34,14 +34,14 @@ export default {
             <x-datafield label="Area ID">{{ state.id }}</x-datafield>
             <x-datafield label="Label">{{ state.label }}</x-datafield>
             <x-datafield label="URL prefix">{{ state.prefix }}</x-datafield>
-            <x-datafield label="Participating Modules">{{ state.modules }}</x-datafield>
+            <x-datafield label="Configured routes">{{ state.routeCount }}</x-datafield>
         </x-datafields>
         <x-code language="javascript" x-pre>const area = areas.getCurrentArea();
 
 area.id
 area.label
 area.prefix
-area.modules</x-code>
+area.routes</x-code>
 
         <h2>Composed navigation menu</h2>
         <p>The <code>menus.getMenu()</code> method returns the composed menu definition for an Area. Its <code>items</code> array contains navigation entries, each of which may contain child items.</p>
@@ -79,7 +79,7 @@ item.href</x-code>
         id: "",
         label: "",
         prefix: "",
-        modules: "",
+        routeCount: 0,
         items: [],
         examplePath: "",
         exampleHref: "",
@@ -97,7 +97,7 @@ item.href</x-code>
                 state.id = area?.id || "";
                 state.label = area?.label || "";
                 state.prefix = area?.prefix || "/";
-                state.modules = area?.modules?.join(", ") || "";
+                state.routeCount = area?.routes.length || 0;
                 state.items = (menu?.items[0]?.children || []).map(item => ({
                     label: item.label,
                     path: item.path,

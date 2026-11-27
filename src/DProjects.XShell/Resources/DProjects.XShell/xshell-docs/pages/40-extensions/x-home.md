@@ -31,10 +31,8 @@ menus and hides entries whose destinations are currently missing.
 
 ## Use Home as an Area landing Page
 
-Adding the dependency makes the Component and Page available. To contribute the launcher to an Area's navigation, include `x-home` in that Area's
-`modules` list. Its contribution declares `"path": "home"`, which becomes `/home` under the Area prefix.
-
-For example, an application with an `operations` module could use the following `xshell.services.areas.options` in its root manifest.
+Adding the dependency makes the Component and Page available. To use the launcher as an Area landing Page, map the Area's `navigation` slot to
+the named `home` menu. The menu's `home` alias becomes `/operations/home` for the following `xshell.services.areas.options`:
 
 ```json
 {
@@ -42,12 +40,10 @@ For example, an application with an `operations` module could use the following 
     "definitions": {
         "operations": {
             "prefix": "operations",
-            "modules": ["x-home", "operations"]
+            "menus": { "navigation": "home" }
         }
     }
 }
 ```
 
-With this order, Home is the first destination and becomes the landing Page if no composed entry is marked `default: true`.
-An existing default entry takes precedence. To choose Home explicitly, remove that default marker and keep `x-home` first.
-See [Areas](../30-subsystems/10-areas.md) for composition and home selection.
+See [Areas](../30-subsystems/10-areas.md) for menu composition and home selection.

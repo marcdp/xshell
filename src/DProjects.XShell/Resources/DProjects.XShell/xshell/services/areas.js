@@ -1,4 +1,5 @@
 import { matchesPathPrefix, normalizeUrlPrefix } from "../utils/urls.js";
+import { compileRoute } from "../utils/route.js";
 
 const defaultGlobalPrefix = "/global";
 
@@ -19,8 +20,8 @@ export default class Areas {
                         prefix: { type: "string", description: "Application navigation Path prefix assigned to the Area." },
                         label: { type: "string", description: "Human-readable area label." },
                         icon: { type: ["string", "null"], description: "Optional icon associated with the area." },
-                        modules: { type: "array", items: { type: "string" }, description: "Modules composed into the area, in composition order." },
                         menus: { type: "object", additionalProperties: { type: "string", minLength: 1 }, description: "Menu slots mapped to named definitions." },
+                        routes: { type: "object", additionalProperties: { type: "string", minLength: 1 }, description: "Area-relative route patterns mapped to Page targets." },
                         order: { type: "number", description: "Optional ordering value for the area." },
                         description: { type: "string", description: "Human-readable area description." }
                     },
@@ -64,7 +65,7 @@ export default class Areas {
         const definitions = options.definitions || {};
         const defaultAreaId = options.default;
 
-        // validate semantic Area configuration against the effective modules
+        // Validate the default Area and the ownership boundaries of configured prefixes.
         if (defaultAreaId !== null && !Object.hasOwn(definitions, defaultAreaId)) throw new Error(`Default area '${defaultAreaId}' is not defined.`);
         const prefixes = new Map();
         for (const [areaId, area] of Object.entries(definitions)) {
@@ -74,26 +75,37 @@ export default class Areas {
             }
             if (prefixes.has(prefix)) throw new Error(`Areas '${prefixes.get(prefix)}' and '${areaId}' have duplicate normalized prefix '${prefix}'.`);
             prefixes.set(prefix, areaId);
-            for (const moduleId of area.modules || []) {
-                if (!Object.hasOwn(config.modules, moduleId)) throw new Error(`Area '${areaId}' references unknown module '${moduleId}'.`);
-            }
         }
 
-        // create navigation contexts without accepting a configured home
+        // Validate configured routes before publishing their descriptors or starting module controllers.
+        const inventories = [["xshell", config.xshell], ...Object.entries(config.modules)];
         const areas = [];
         for (const [areaId, areaConfig] of Object.entries(definitions)) {
-            const { home, ...options } = areaConfig;
+            const { home, routes: configuredRoutes, ...options } = areaConfig;
+            const routes = Object.freeze(Object.entries(configuredRoutes || {}).map(([path, href]) => {
+                try {
+                    compileRoute(path);
+                } catch (cause) {
+                    throw new Error(`Area '${areaId}' declares invalid route '${path}': ${cause.message}`, { cause });
+                }
+                // Identify canonical asset targets, including paths already qualified by an Area prefix.
+                const identity = href.split(/[?#]/, 1)[0];
+                const assetIndex = identity.indexOf(this.#assetsBasePath + "/");
+                const resource = assetIndex === 0 || (assetIndex > 0 && prefixes.has(identity.slice(0, assetIndex))) ? identity.slice(assetIndex) : "";
+                const module = inventories.find(([, { assets }]) => assets?.path && resource.startsWith(assets.path + "/"))?.[0] ?? null;
+                return Object.freeze({ path, href, module });
+            }));
+            // Publish the navigation context, with its home derived after Menus initializes.
             areas.push({
                 ...options,
                 id: areaId,
                 label: areaConfig.label || areaId,
                 icon: areaConfig.icon || null,
                 prefix: this.#normalizeAreaPrefix(areaConfig.prefix),
-                modules: Object.freeze([...(areaConfig.modules || [])]),
                 order: areaConfig.order || 0,
                 default: areaId === defaultAreaId,
                 menus: Object.freeze({ ...areaConfig.menus }),
-                routes: Object.freeze([]),
+                get routes() { return routes; },
                 home: null
             });
         }
@@ -117,7 +129,7 @@ export default class Areas {
     }
 
     // methods
-    init({ modules, menus }) {
+    init({ menus }) {
         // derive Area homes from the configured navigation slot
         const findDefaultHref = (items) => {
             for (const item of items || []) {
@@ -137,17 +149,8 @@ export default class Areas {
             }
             return null;
         };
-        // Compose routes from participating modules and use the effective navigation menu for the Area home.
+        // Use the effective navigation menu for each Area home.
         for (const area of this.#areas) {
-            const routes = [];
-            for (const moduleId of area.modules) {
-                const module = modules.getModuleById(moduleId);
-                if (!module) throw new Error(`Area '${area.id}' references unknown module '${moduleId}'.`);
-                for (const [path, href] of Object.entries(module.routes || {})) {
-                    routes.push(Object.freeze({ path, href, module: module.id }));
-                }
-            }
-            area.routes = Object.freeze(routes);
             const navigation = menus.getMenu("navigation", area.id);
             const items = navigation?.scope === "area" ? navigation.items : [];
             area.home = findDefaultHref(items) || findFirstHref(items);

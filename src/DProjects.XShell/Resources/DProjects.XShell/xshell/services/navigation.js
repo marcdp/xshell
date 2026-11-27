@@ -667,9 +667,12 @@ export default class Navigation {
             }
             return { href: canonicalHref, params };
         }
-        // Keep an Area chosen from a global Page when generating the browser URL.
+        // Keep explicit Area paths and preserve the Area chosen for a stack entry or a global Page.
+        const input = this.#splitHref(this.#toLogicalHref(href)).identity;
+        const explicitArea = this.#areas.getArea?.(this.#areas.resolveAreaId?.(input));
         const fromGlobal = page?.src && matchesPathPrefix(this.#splitHref(page.src).identity, this.#areas.globalPrefix);
-        const routeAreas = area && (stackArea || fromGlobal) ? [area] : this.#getPublicRouteAreas(href.startsWith("page:") ? canonicalHref : href, page);
+        const routeAreas = stackArea || explicitArea?.prefix || fromGlobal ? [area].filter(Boolean)
+            : [...new Set([area, this.#areas.getCurrentArea?.(), ...(this.#areas.getAreas?.() ?? [])].filter(Boolean))];
         for (const routeArea of routeAreas) {
             const routeTarget = this.#resolvePublicRouteTarget(canonicalHref, params, routeArea);
             if (routeTarget) return routeTarget;
@@ -757,9 +760,6 @@ export default class Navigation {
         }
         return match ? { area, ...match } : null;
     }
-    #compileRoute(path) {
-        return compileRoute(path);
-    }
     #matchAreaRoutes(path, area) {
         return this.#matchRoutes(path, area?.routes || []);
     }
@@ -785,7 +785,7 @@ export default class Navigation {
     #getCompiledRoute(path) {
         let compiled = this.#compiledRoutes.get(path);
         if (!compiled) {
-            compiled = this.#compileRoute(path);
+            compiled = compileRoute(path);
             this.#compiledRoutes.set(path, compiled);
         }
         return compiled;
@@ -806,34 +806,18 @@ export default class Navigation {
             params
         });
     }
-    #getPublicRouteAreas(href, page) {
-        const areas = [];
-        const add = area => {
-            if (area && !areas.includes(area)) areas.push(area);
-        };
-        const identity = this.#splitHref(href).identity;
-        add(this.#areas.getArea?.(this.#areas.resolveAreaId?.(identity)));
-        if (page?.src) add(this.#areas.getArea?.(this.#areas.resolveAreaId?.(page.src)));
-        const moduleId = this.#areas.getModuleId?.(identity);
-        if (moduleId) {
-            for (const area of this.#areas.getAreas?.() || []) {
-                if (area.modules.includes(moduleId)) add(area);
-            }
-        }
-        add(this.#areas.getCurrentArea?.());
-        add(this.#areas.getDefaultArea?.());
-        return areas;
-    }
     #resolvePublicRouteTarget(canonicalHref, suppliedParams, area) {
+        // Compare targets in the candidate Area while retaining the invocation's query and fragment.
         const canonical = this.parseUrl(canonicalHref);
         const canonicalParts = this.#splitHref(canonical.href);
         const canonicalArea = this.#areas.getArea?.(this.#areas.resolveAreaId?.(canonicalParts.identity));
         const canonicalIdentity = this.#removePathPrefix(canonicalParts.identity, canonicalArea?.prefix);
+        const targetIdentity = this.#applyAreaPrefix(canonicalIdentity, area);
         const canonicalParams = { ...canonical.params, ...suppliedParams };
         for (const route of area.routes || []) {
             const target = this.parseUrl(route.href);
             const targetParts = this.#splitHref(target.href);
-            if (targetParts.identity !== canonicalIdentity || (targetParts.suffix && !canonicalParts.suffix)) continue;
+            if (this.#applyAreaPrefix(targetParts.identity, area) !== targetIdentity || (targetParts.suffix && !canonicalParts.suffix)) continue;
             let applicable = true;
             for (const [key, value] of Object.entries(target.params)) {
                 if (!Object.hasOwn(canonicalParams, key) || String(canonicalParams[key]) !== value) {
@@ -857,8 +841,26 @@ export default class Navigation {
             const remainingParams = { ...canonicalParams };
             for (const key of Object.keys(target.params)) delete remainingParams[key];
             for (const parameter of compiled.parameters) delete remainingParams[parameter];
-            const publicPath = this.#applyAreaPrefix(routePath, area);
-            return { href: publicPath + canonicalParts.suffix, params: remainingParams };
+            // Check browser path normalization, Area ownership, and the effective forward match.
+            const publicPath = area.prefix + routePath;
+            if (publicPath.startsWith("//") || this.#areas.resolveAreaId(publicPath) !== area.id) continue;
+            if (this.#mode === "path") {
+                const renderedPath = this.#appBasePath + publicPath;
+                if (new URL(renderedPath, this.#config.app.baseUrl).pathname !== renderedPath) continue;
+            }
+            const invocation = { href: publicPath + canonicalParts.suffix, params: remainingParams };
+            let resolved;
+            try {
+                resolved = this.parseUrl(this.#buildUrlFinal(invocation));
+            } catch (error) {
+                // An earlier parameterized route may reject percent encoding in a literal candidate.
+                if (error.cause instanceof URIError) continue;
+                throw error;
+            }
+            if (resolved.href !== targetIdentity + canonicalParts.suffix ||
+                Object.keys(resolved.params).length !== Object.keys(canonicalParams).length ||
+                !Object.entries(canonicalParams).every(([key, value]) => resolved.params[key] === String(value))) continue;
+            return invocation;
         }
         return null;
     }

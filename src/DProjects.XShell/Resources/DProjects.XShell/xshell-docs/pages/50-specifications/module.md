@@ -35,9 +35,6 @@ Do not duplicate identity in `name`, `id`, or `moduleId`; the `modules` property
             "dependencies": {
                 "xshell": "module:xshell:^1.0.0",
                 "x": "module:x:latest"
-            },
-            "routes": {
-                "/orders/{orderId}": "/pages/order.js"
             }
         }
     }
@@ -83,7 +80,7 @@ After selection, bootstrap merges the manifest and enriches the selected definit
 ```
 
 The effective schema requires `label`, `version`, `copyright`, `icon`, `configUrl`, `assets`, `defaults`, and `files`. It permits `tags`, `params`,
-`requires`, `hash`, `builtAt`, `routes`, and `dependencies`.
+`requires`, `hash`, `builtAt`, and `dependencies`.
 
 | Property | Meaning |
 | --- | --- |
@@ -216,17 +213,9 @@ a lazy service. `requires` is distinct from repository module `dependencies`, Co
 Module manifests can contribute named application menus through `xshell.services.menus.options.definitions`. Areas explicitly select these
 definitions for their menu slots. See [Menus and home](../30-subsystems/10-areas.md#menus-and-home) for the options and lookup APIs.
 
-`routes` maps Area-relative friendly Path patterns to module-relative Page targets:
-
-```jsonc
-"routes": {
-    "/orders/{orderId}": "/pages/order.js"
-}
-```
-
-Route values normalize into the owning module's virtual generation namespace. Route keys remain application navigation patterns and are not
-prefixed with Area or application base paths in the module definition. Areas preserve module and declaration order when composing routes;
-Navigation performs forward and reverse resolution.
+Module manifests can also extend `xshell.services.areas.options.definitions.<area-id>.routes`. Route keys are Area-relative application patterns.
+Bootstrap normalizes their Page targets against the declaring manifest before merging. Distinct patterns retain order, and a later value
+for the same pattern replaces the earlier value in place. See [Area routes](../30-subsystems/10-areas.md#routes).
 
 ## Public contracts
 
@@ -236,7 +225,7 @@ own public contracts. Module controller `start()` and `stop()` methods remain in
 
 ## Runtime instance
 
-Modules creates one runtime instance for every effective `config.modules` id. It exposes effective params, routes, document `styles`, and the
+Modules creates one runtime instance for every effective `config.modules` id. It exposes effective params, document `styles`, and the
 optional controller. The Modules service exposes the frozen ordered `shadowStyleSheets` collection separately; that API name is retained while
 the conventional resource is `styles/shared.css`. Controllers start in dependency order and stop in reverse order. Controller scopes remain
 private to the Modules service and are not exposed on this runtime object, which is separate from both the authored and resolved definition.

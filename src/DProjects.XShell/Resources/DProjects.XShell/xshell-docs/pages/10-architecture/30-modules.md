@@ -76,7 +76,7 @@ The effective module definition includes generated location and inventory metada
 generation-qualified application namespace. They are not interchangeable.
 
 Optional module `tags` are authored classification identifiers retained through normalization and merging at `config.modules[id].tags`. They are
-not dependencies, Area membership, or public contracts, and they are not inherited by the module's resources.
+not dependencies or public contracts, and they are not inherited by the module's resources.
 
 Merge order is framework first, dependency-first among modules, and root last. Objects merge recursively, arrays concatenate, and later scalar
 values replace earlier values. Objects with the same non-empty string ID recursively merge at the original array position.
@@ -120,13 +120,14 @@ a direct child of the application root; Modules owns and keeps that scope privat
 shared, scoped services are cached once per Module controller, and transients are constructed per resolution. `start()` runs with the scope active;
 on shutdown, `stop()` runs before Modules disposes the scope. Module scopes are siblings of Page, Component, and Command scopes and do not inherit
 them. XShell resolves Areas and Menus before module controllers start. Once Modules has initialized, XShell initializes contextual menus,
-composes Area routes and homes, and initializes Navigation.
+derives Area homes, and initializes Navigation.
 
 ## Menus, routes, Areas, and services
 
-Module manifests contribute menu definitions to `xshell.services.menus.options.definitions` and declare module routes under `routes`.
-Menus owns the effective definitions. Areas selects names for its menu slots and composes routes from participating modules. Area membership
-leaves the dependency graph and runtime module count unchanged. See [Areas and Menus](../30-subsystems/10-areas.md#menus-and-home).
+Module manifests contribute menu definitions to `xshell.services.menus.options.definitions` and route mappings to
+`xshell.services.areas.options.definitions.<area-id>.routes`. Areas select menus by name and expose configured routes. A route can target resources
+from any loaded module. The dependency graph determines module loading, and normalized resource paths identify the owning module.
+See [Areas](../30-subsystems/10-areas.md) for configuration and lookups.
 
 Modules are composition units and do not define public contracts. A module may provide multiple Services, each with its own contract describing
 public properties, methods, and published Bus events. Components and Pages have their own public contracts. Optional `requires` names services and

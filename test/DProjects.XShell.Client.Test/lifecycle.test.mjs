@@ -342,8 +342,8 @@ test("x-page intercepts only application anchors and preserves native clicks", a
 
 test("x-page native anchors and x-anchor targets reach the same JavaScript and Markdown Pages", () => {
     const definitions = [
-        { id: "demo", prefix: "/demo", modules: ["x-demo"] },
-        { id: "xshell-docs", prefix: "/xshell-docs", modules: ["xshell-docs"] }
+        { id: "demo", prefix: "/demo" },
+        { id: "xshell-docs", prefix: "/xshell-docs" }
     ];
     const areas = {
         resolveAreaId(href) {

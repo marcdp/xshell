@@ -202,7 +202,7 @@ test("Navigation validates service options before lazy singleton construction", 
 });
 
 test("Areas validates options and injects config and bus before lazy singleton construction", async () => {
-    const options = { default: "main", definitions: { main: { prefix: "/main", modules: ["test"] } } };
+    const options = { default: "main", definitions: { main: { prefix: "/main", routes: { "/test": "/_assets/test/pages/index.js" } } } };
     const { bus, config, services } = createServices(Areas, options, "areas");
     bus.addEventListener = () => {};
     config.xshell.assets = { basePath: "/_assets" };

@@ -226,8 +226,7 @@ function createNavigationRuntime(t, mode) {
             "x-filesystem:/{path}": { src: "/_assets/x-filesystem/{path}", loader: "page-js" },
             "x:/{path}": { src: "/_assets/x/{path}", loader: "page-js" }
         } } } };
-    const areas = new Areas({ config, bus }, { default: "sales", definitions: { sales: { prefix: "/sales", modules: ["test"], menus: { navigation: "navigation", preferences: "preferences" } } } });
-    const areaModule = { id: "test", routes: { "/customer/{id}": "/_assets/test/customer.js?mode=edit" } };
+    const areas = new Areas({ config, bus }, { default: "sales", definitions: { sales: { prefix: "/sales", menus: { navigation: "navigation", preferences: "preferences" }, routes: { "/customer/{id}": "/_assets/test/customer.js?mode=edit" } } } });
     const definitions = {
         navigation: { items: [
             { label: "Home", path: "/home", href: "/_assets/test/home.js" },
@@ -240,7 +239,7 @@ function createNavigationRuntime(t, mode) {
     };
     const menus = new Menus({ areas, bus, config }, { definitions });
     menus.init();
-    areas.init({ menus, modules: { getModuleById: () => areaModule } });
+    areas.init({ menus });
     const container = new FakeNode();
     container.querySelectorAll = selector => container.childNodes.filter(host =>
         !selector.includes(":not") || host.getAttribute("layout") !== "dialog");

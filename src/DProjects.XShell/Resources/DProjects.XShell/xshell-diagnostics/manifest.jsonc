@@ -49,7 +49,6 @@
                             "label": "XShell diagnostics",
                             "description": "Diagnostics for XShell",
                             "icon": "xshell-diagnostics",
-                            "modules": [ "xshell-diagnostics" ],
                             "menus": { "navigation": "diagnostics" }
                         }
                     }

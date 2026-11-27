@@ -116,6 +116,31 @@ namespace DProjects.XShell.Test {
             Assert.Equal("Updated home", updatedPage.GetProperty("title").GetString());
         }
         [Fact]
+        public async Task DevelopmentModuleDescriptor_PreservesAreaRouteDeclarations() {
+            using var workspace = new TemporaryDirectory();
+            // Serve an authored module contribution through the same manifest endpoint used by bootstrap.
+            workspace.Write("resources/demo/manifest.jsonc", """
+                {
+                    "modules": { "demo": { "version": "0.9.0" } },
+                    "xshell": {
+                        "services": {
+                            "areas": { "options": { "definitions": { "shop": { "routes": {
+                                "/orders/{id}": "./pages/order.js?mode=edit#summary"
+                            } } } } }
+                        }
+                    }
+                }
+                """);
+
+            var response = await SendAsync(workspace.PathFor("resources"), "/_resources/demo/manifest.json", isDevelopment: true);
+
+            Assert.Equal(StatusCodes.Status200OK, response.StatusCode);
+            using var descriptor = JsonDocument.Parse(response.Body);
+            var routes = descriptor.RootElement.GetProperty("xshell").GetProperty("services").GetProperty("areas")
+                .GetProperty("options").GetProperty("definitions").GetProperty("shop").GetProperty("routes");
+            Assert.Equal("./pages/order.js?mode=edit#summary", routes.GetProperty("/orders/{id}").GetString());
+        }
+        [Fact]
         public async Task DevelopmentModuleManifestJson_IsDiscovered() {
             using var workspace = new TemporaryDirectory();
             workspace.Write("resources/demo/manifest.json", ModuleDescriptor);

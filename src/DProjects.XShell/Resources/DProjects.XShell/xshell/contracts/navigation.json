@@ -46,7 +46,7 @@
           "properties": {
             "areaId": { "type": "string", "description": "Selected Area ID." },
             "areaPrefix": { "type": "string", "description": "Selected Area prefix, empty for the root Area." },
-            "moduleId": { "type": "string", "description": "ID of the module that contributed the route." },
+            "moduleId": { "type": ["string", "null"], "description": "ID of the module that owns the target resource, or null if no owner can be identified." },
             "route": { "type": "string", "description": "Declared Area-relative route pattern." },
             "target": { "type": "string", "description": "Configured Page href before Area-prefix application and parameter merging." },
             "params": { "type": "object", "additionalProperties": { "type": "string" }, "description": "Decoded path parameters." },

@@ -1,14 +1,13 @@
 # Areas
 
-An Area is a navigation context with a prefix, participating modules, and selected menu slots. Areas composes routes from participating modules.
-A module can participate in several Areas while retaining one runtime instance. Navigation owns browser URLs, history, Page stacks, and activation.
+An Area is a navigation context with a prefix, selected menu slots, and configured routes. Several Areas can expose the same loaded resource.
+Navigation owns browser URLs, history, Page stacks, and activation.
 
 ## Configuration and ownership
 
 Configure `xshell.services.areas.options.default` and `xshell.services.areas.options.definitions` in the application manifests.
-Each definition can supply `prefix`, `label`, `icon`, `description`, `order`, `modules`, and `menus`. The `modules` array determines route
-participation and composition order. The `menus` map assigns logical slots to named Menus definitions. An unknown module, default Area,
-or menu reference fails startup. The configured default appears first, then Areas sort by `order` and `label`. With a null default, the first
+Each definition can supply `prefix`, `label`, `icon`, `description`, `order`, `menus`, and `routes`. The `menus` map assigns logical slots to named Menus definitions.
+An unknown default Area, an invalid route, or an invalid menu selection fails startup. The configured default appears first, then Areas sort by `order` and `label`. With a null default, the first
 sorted Area becomes the initial current Area.
 
 ```jsonc
@@ -22,8 +21,8 @@ sorted Area becomes the initial current Area.
                         "customers": {
                             "prefix": "customers",
                             "label": "Customers",
-                            "modules": ["reports"],
-                            "menus": { "navigation": "report-navigation" }
+                            "menus": { "navigation": "report-navigation" },
+                            "routes": { "/reports/{id}": "/pages/report.js" }
                         },
                         "inventory": {
                             "prefix": "inventory",
@@ -71,7 +70,7 @@ Menus contextualizes each selected Area menu independently. It applies the Area 
 Use a bare relative string such as `"reports"` for an authored friendly path and `"/pages/report.js"` for a manifest-relative resource. The
 example produces `/customers/reports` as the friendly path and `/customers/_assets/reports/<generation>/pages/report.js` as its canonical
 Area-aware href. Menu items expose the canonical target's module id when the href uses the assets namespace. Targetless entries have a null
-module. Area membership determines which module routes participate. Menu selection can display resources from any loaded module.
+module. Areas can expose resources from any loaded module through their menu selections and route definitions. Module dependencies govern loading.
 
 Areas derives `home` at startup from the selected Area-scoped `navigation` menu. The default search visits parents before children and uses
 `path || href`. A targetless default ends that search in its sibling array. The first depth-first destination supplies the fallback when
@@ -96,8 +95,8 @@ Areas fail validation. Targetless groups can keep organizational paths and are e
 including its default query parameters and fragment. Conflicting destinations fail with the Area, path, and contributing slots.
 
 `menus.resolveHref(href, areaId)` matches canonical identity
-without query parameters or fragments. Without an explicit Area, it tries a recognized Area prefix, Areas associated with the target module,
-the current Area, then other configured Areas. `menus.getMenuitemBreadcrumb(href, areaId)` returns the matching Area's depth-first ancestor
+without query parameters or fragments. A supplied Area ID or a recognized non-empty href prefix limits the lookup to that Area. For an unqualified
+href, Menus searches effective destinations in the current Area, then the other Areas in their configured sort order. `menus.getMenuitemBreadcrumb(href, areaId)` returns the matching Area's depth-first ancestor
 chain for the canonical Area-aware href. Breadcrumb entries carry `path` and `href` for navigation.
 
 ### Sources
@@ -138,20 +137,22 @@ change, Menus publishes the read-only snapshots and emits `xshell:menus:change`.
 
 ## Routes
 
-`area.routes` is an ordered, read-only array of route descriptors composed from the runtime modules listed in `area.modules`:
+Declare Area-relative patterns and non-empty Page target strings under `xshell.services.areas.options.definitions.<area-id>.routes`. Multiple
+manifests can extend the same Area. Bootstrap normalizes targets against their declaring manifests before applying the
+[generic configuration merge](../10-architecture/20-configuration.md#merge-and-precedence). Pattern keys stay literal. Distinct keys keep their
+merge order, and a later value for the same key replaces the earlier value in place.
+
+The Areas service validates patterns before module controllers execute. The effective `area.routes` array and its descriptors are read-only:
 
 ```jsonc
 [
-    { "path": "/something", "href": "/_assets/x-demo/<generation>/pages/index.js", "module": "x-demo" },
-    { "path": "/settings", "href": "/_assets/x/<generation>/pages/settings.js", "module": "x" }
+    { "path": "/reports/{id}", "href": "/_assets/reports/<generation>/pages/report.js", "module": "reports" }
 ]
 ```
 
-Composition visits modules in Area declaration order and each module's route properties in declaration order. Duplicate paths are preserved rather than
-overwritten. Modules without routes contribute nothing, and a module may contribute independently to multiple Areas. Route paths and targets are
-copied exactly from `module.routes`; Area prefixes are not applied. Areas do not match routes, extract placeholders, or rewrite targets. Navigation
-uses these declarations for forward and reverse URL resolution. The first matching forward route or first applicable reverse route wins in this
-composition order; Areas neither rank nor reorder candidates. Routes remain separate from menus.
+The `module` field identifies the owner of the canonical resource, or is null when no module owns the target path. An Area without route
+declarations exposes an empty array. [Navigation](../10-architecture/120-navigation.md#menus-routes-and-canonical-targets) matches routes within
+the owning Area and generates public URLs. Menu aliases take precedence, followed by the first matching pattern in effective declaration order.
 
 ## Navigation context
 

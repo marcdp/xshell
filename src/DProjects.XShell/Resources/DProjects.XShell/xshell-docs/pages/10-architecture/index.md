@@ -12,7 +12,7 @@ Definition-based Components and Pages keep an inline public contract distinct fr
 lifecycle, dependencies, and engine selection. State engines own reactive state and render engines own output. Module engine defaults are distinct
 from global `xshell.ui` infrastructure.
 
-Areas select named Menus definitions and compose participating module routes into navigation contexts. Navigation translates friendly
+Areas define routes and select named Menus definitions for each navigation context. Navigation translates friendly
 routes separately from canonical Page/resource hrefs.
 
 ## Inspection registries

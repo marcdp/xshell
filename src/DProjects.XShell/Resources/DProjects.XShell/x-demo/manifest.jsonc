@@ -16,9 +16,6 @@
                     "stateEngine": "proxy"
                 }
             },
-            "routes": {
-                "/hello/{name}": "/pages/02-pages/03-parameters.js"
-            },
             "dependencies": {
                 "x":                    "module:x:latest",
                 "x-filesystem":         "module:x-filesystem:latest",    
@@ -43,17 +40,16 @@
                             "prefix": "cookbook",
                             "label": "Cookbook",
                             "description": "Focused examples of XShell features",
-                            "modules": [
-                                "x-demo"
-                            ],
-                            "menus": { "navigation": "cookbook" }
+                            "menus": { "navigation": "cookbook" },
+                            "routes": {
+                                "/hello/{name}": "/pages/02-pages/03-parameters.js"
+                            }
                         },
                         "launcher": {
                             "prefix": "launcher",
                             "label": "Home Launcher",
                             "description": "An Area that opens the reusable Home Page",
                             "icon": "x:x-home",
-                            "modules": ["x-home"],
                             "menus": { "navigation": "home" }
                         }
                     }

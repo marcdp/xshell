@@ -8,6 +8,11 @@ import MenusContract from "../../src/DProjects.XShell/Resources/DProjects.XShell
 import AreasContract from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/contracts/areas.json" with { type: "json" };
 import Services from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services.js";
 import Areas from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/areas.js";
+import Contracts from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/contracts.js";
+import Loader from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/loader.js";
+import Logger from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/logger.js";
+import Menus from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/menus.js";
+import Modules from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/modules.js";
 import JsonValidator from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/json-validator.js";
 
 const frameworkUrl = new URL("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/", import.meta.url);
@@ -81,8 +86,8 @@ test("XShell resolves Areas before Modules and composes it before Navigation", a
     const resolveAreasIndex = source.indexOf('const areas = this._services.resolve("areas")');
     const resolveMenusIndex = source.indexOf('this._services.resolve("menus");');
     const initMenusIndex = source.indexOf('const menus = await this._services.initialize("menus")');
-    const resolveModulesIndex = source.indexOf('const modules = await this._services.initialize("modules")');
-    const initAreasIndex = source.indexOf("areas.init({ modules, menus })");
+    const resolveModulesIndex = source.indexOf('await this._services.initialize("modules")');
+    const initAreasIndex = source.indexOf("areas.init({ menus })");
     const navigationIndex = source.indexOf('await this._services.initialize("navigation")');
 
     assert.doesNotMatch(source, /import Areas from/);
@@ -101,12 +106,46 @@ test("Areas performs semantic option validation during construction", () => {
     };
 
     assert.throws(() => new Areas({ config, bus }, {
-        default: "missing", definitions: { main: { prefix: "/main", modules: ["test"] } }
+        default: "missing", definitions: { main: { prefix: "/main" } }
     }), /Default area 'missing' is not defined/);
     assert.throws(() => new Areas({ config, bus }, {
         default: null, definitions: { first: { prefix: "demo" }, second: { prefix: "/demo/" } }
     }), /Areas 'first' and 'second' have duplicate normalized prefix '\/demo'/);
     assert.throws(() => new Areas({ config, bus }, {
-        default: null, definitions: { main: { modules: ["missing"] } }
-    }), /Area 'main' references unknown module 'missing'/);
+        default: null, definitions: { main: { routes: { "/bad/{123id}": "/pages/index.js" } } }
+    }), /Area 'main' declares invalid route '\/bad\/\{123id\}'/);
+});
+
+test("XShell rejects invalid Area routes before the module controller can start", async t => {
+    // Keep real service registration and startup, with resource loads supplied by the fixture.
+    const options = { default: "shop", definitions: { shop: { routes: { "/orders/{123id}": "/_assets/demo/pages/order.js" } } } };
+    const implementations = { logger: Logger, areas: Areas, menus: Menus, modules: Modules };
+    const services = Object.fromEntries(Object.keys(implementations).map(id => [id, { contract: id, implementation: `/${id}.js`, lifetime: "singleton" }]));
+    services.areas.options = options;
+    services.menus.options = { definitions: {} };
+    const resolver = { esm: Object.fromEntries(Object.entries(services).map(([id, { implementation }]) =>
+        [implementation, { src: `/${id}.js`, moduleId: "xshell" }])) };
+    const config = {
+        app: { baseUrl: "https://example.test/", basePath: "" },
+        modules: { demo: { assets: { path: "/_assets/demo" }, files: [{ path: "/_assets/demo/module.js" }] } },
+        xshell: { services, resolver, ui: { components: {} }, assets: { basePath: "/_assets" } }
+    };
+    globalThis.CSSStyleSheet = class { replaceSync() {} };
+    globalThis.window = { document: {} };
+    t.after(() => {
+        delete globalThis.CSSStyleSheet;
+        delete globalThis.window;
+    });
+    const { default: XShell } = await import("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/xshell.js");
+    const xshell = new XShell();
+    t.after(() => {
+        xshell._bus._channel.port1.close();
+        xshell._bus._channel.port2.close();
+    });
+    t.mock.method(xshell, "validateConfig", async () => {});
+    t.mock.method(Contracts.prototype, "getContractItemById", id => Object.hasOwn(implementations, id) ? { id, contract: {} } : undefined);
+    const load = t.mock.method(Loader.prototype, "load", async resource => implementations[resource.slice("esm:/".length, -".js".length)]);
+
+    await assert.rejects(xshell.init(config, {}), /Area 'shop' declares invalid route '\/orders\/\{123id\}'/);
+    assert.equal(load.mock.calls.some(({ arguments: [resource] }) => resource === "esm:/_assets/demo/module.js"), false);
 });
