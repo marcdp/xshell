@@ -7,6 +7,10 @@
     "xshell": {
 
         // core
+        "label": "XShell",
+        "description": "Core application framework and runtime.",
+        "tags": ["framework", "runtime", "infrastructure"],
+        "icon": "x-xshell",
         "version": "0.9.0",
         "assets": {
             "basePath": "app:/_assets",

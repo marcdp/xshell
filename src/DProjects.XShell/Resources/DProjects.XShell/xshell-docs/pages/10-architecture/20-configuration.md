@@ -69,6 +69,12 @@ so a later value replaces the same key in place. See [Areas and Menus](../30-sub
 The selected module manifest is the `manifest.json` URL recorded by its chosen version-index entry. Development middleware can generate that strict
 JSON response from either an authored `manifest.json` or `manifest.jsonc` file.
 
+## Framework descriptor metadata
+
+The framework manifest can declare four optional fields under `xshell`. `label` and `description` are display strings, and `icon` is an icon resource
+identifier. `tags` is an ordered array of unique lowercase kebab-case identifiers using the same rules as module tags. Older framework descriptors
+can omit any of these fields. Development serving and framework packaging preserve the fields alongside the generated inventory.
+
 ## Effective application metadata
 
 Bootstrap generates, rather than authors, `config.app`:
@@ -180,8 +186,9 @@ selected XShell framework
     -> selected root module
 ```
 
-Dependency traversal is deterministic and rejects cycles. The root contributes last. The selected framework's
-`xshell.resolver.esm.xshell` entry is restored after the merge so the selected framework runtime stays authoritative.
+Dependency traversal is deterministic and rejects cycles. The root contributes last. After merging, bootstrap restores the selected framework's
+`xshell.resolver.esm.xshell` entry and its optional `label`, `description`, `tags`, and `icon` fields. Only the selected framework manifest supplies
+these fields during manifest composition. Its display text and tags retain their authored values during URL normalization.
 
 The root module's effective `params` is replaced with the parsed `xshell:app.params` host value. The same object becomes `config.app.params`.
 

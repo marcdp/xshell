@@ -39,13 +39,70 @@ test("Diagnostics console derives its tabs from the effective navigation menu it
     assert.deepEqual(state.menuitems, [tasks]);
 });
 
-test("Modules diagnostics filters on the canonical configured assets path and authored tags", () => {
+test("Modules diagnostics displays and filters the framework alongside the module registry", () => {
+    const assetsPath = "/_assets/xshell/0.9.0.release";
+    const framework = Object.freeze({
+        label: "XShell", description: "Core application framework and runtime.", tags: Object.freeze(["framework", "runtime", "infrastructure"]),
+        icon: "x-xshell", version: "0.9.0", builtAt: "2026-11-20T10:00:00Z",
+        assets: Object.freeze({ basePath: "/_assets", path: assetsPath, url: "https://repo.example/xshell/0.9.0.release/xshell.zip" }),
+        configUrl: "https://repo.example/xshell/0.9.0.release/manifest.json",
+        files: Object.freeze(["pages/index.js", "components/x-page.js", "services/modules.js", "contracts/modules.json", "xshell.js"]
+            .map((path, index) => Object.freeze({ path: assetsPath + "/" + path, size: 10 * index, hash: `file-${index}` })))
+    });
+    const archive = { id: "z-archive", version: "1.0.0", assets: { path: "/_assets/z-archive" }, configUrl: "/archive/manifest.json", files: [] };
+    const orders = {
+        id: "orders", label: "Orders", description: "Manage orders.", tags: ["commerce"], icon: "x-shop", version: "2.0.0",
+        assets: { path: "/_assets/orders", url: "https://repo.example/orders/" }, configUrl: "/orders/manifest.json",
+        files: [{ path: "/_assets/orders/pages/index.js", size: 12 }]
+    };
+    const modules = Object.freeze({ registry: Object.freeze([Object.freeze(archive), Object.freeze(orders)]) });
+    const config = Object.freeze({ xshell: framework });
+    const state = Object.assign(new EventTarget(), ModulesPage.state);
+    const controller = ModulesPage.controller({ state, modules, config, events: createEvents(() => controller) });
+
+    // Exercise the shared row data and the template bindings for both document links.
+    controller.load();
+    assert.deepEqual(state.modules.map(module => module.id), ["orders", "xshell", "z-archive"]);
+    assert.deepEqual(state.modules[1], {
+        id: "xshell", label: framework.label, description: framework.description, tags: framework.tags, icon: framework.icon,
+        version: framework.version, builtAt: framework.builtAt, assets: { path: assetsPath, url: framework.assets.url },
+        configUrl: framework.configUrl, configUrlName: "manifest.json", status: "loaded",
+        files: { all: 5, pages: 1, components: 1, services: 1, contracts: 1, others: 1 }, size: 100
+    });
+    assert.deepEqual(state.modules[0], {
+        id: orders.id, label: orders.label, description: orders.description, tags: orders.tags, icon: orders.icon,
+        version: orders.version, builtAt: "", assets: orders.assets, configUrl: orders.configUrl, configUrlName: "manifest.json", status: "loaded",
+        files: { all: 1, pages: 1, components: 0, services: 0, contracts: 0, others: 0 }, size: 12
+    });
+    assert.match(ModulesPage.template, /x-attr:href="module\.assets\.url" target="_blank"/);
+    assert.match(ModulesPage.template, /x-attr:href="module\.configUrl" target="_blank"/);
+
+    // Each existing filter can include the framework, exclude it, and restore the full inventory.
+    for (const [key, query] of Object.entries({
+        id: "xshell", version: "0.9", label: "XShell", description: "framework and runtime", tags: "STRUCT", assetPath: assetsPath,
+        configUrl: "https://repo.example/xshell/0.9.0.release/manifest.json"
+    })) {
+        for (const [value, expected] of [[query, ["xshell"]], ["unmatched", []], ["", ["orders", "xshell", "z-archive"]]]) {
+            state[key] = value;
+            state.dispatchEvent(new Event("change:" + key));
+            assert.deepEqual(state.modules.map(module => module.id), expected, key);
+        }
+    }
+    assert.deepEqual(modules.registry.map(module => module.id), ["z-archive", "orders"]);
+    assert.equal(Object.hasOwn(framework, "id"), false);
+});
+
+test("Modules diagnostics preserves module filters and handles legacy framework metadata", () => {
     const state = { id: "", version: "", label: "", tags: "MER", assetPath: "/_assets/orders", configUrl: "", modules: [] };
     const modules = { registry: [{
         id: "orders", label: "Orders", version: "", tags: ["commerce", "orders"], assets: { path: "/_assets/orders", url: "https://example.test/orders/" },
         configUrl: "/orders/manifest.jsonc", files: []
     }] };
-    const controller = ModulesPage.controller({ state, modules });
+    const config = { xshell: {
+        version: "0.9.0", assets: { path: "/_assets/xshell", url: "https://example.test/xshell/" },
+        configUrl: "https://example.test/xshell/manifest.json", files: []
+    } };
+    const controller = ModulesPage.controller({ state, modules, config });
 
     controller.refresh();
     assert.equal(state.modules.length, 1);
@@ -54,6 +111,16 @@ test("Modules diagnostics filters on the canonical configured assets path and au
     state.assetPath = "/_assets/other";
     controller.refresh();
     assert.deepEqual(state.modules, []);
+
+    state.assetPath = "";
+    state.tags = "";
+    state.label = "XShell";
+    controller.refresh();
+    assert.deepEqual(state.modules, [{
+        id: "xshell", label: "XShell", description: "", tags: [], icon: "x-module", version: "0.9.0", builtAt: "",
+        assets: config.xshell.assets, configUrl: config.xshell.configUrl, configUrlName: "manifest.json", status: "loaded",
+        files: { all: 0, pages: 0, components: 0, services: 0, contracts: 0, others: 0 }, size: 0
+    }]);
 });
 
 test("Page and Component diagnostics use generated metadata before resources load", t => {

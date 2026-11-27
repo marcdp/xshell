@@ -84,11 +84,21 @@ namespace DProjects.XShell.Test {
             Assert.True(File.Exists(Path.GetFullPath(Path.Combine(Path.GetDirectoryName(middleDescriptorPath)!, leafReference.GetProperty("configUrl").GetString()![4..]))));
             Assert.Single(Directory.GetDirectories(Path.Combine(output, "leaf")));
         }
-        [Fact]
-        public async Task XShell_PublishesItsDistinctImmutableZipPackage() {
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public async Task XShell_PublishesItsDistinctImmutableZipPackage(bool withMetadata) {
             using var workspace = new TemporaryDirectory();
             var source = CreateXShellSource(workspace.PathFor("source/xshell"));
             var output = workspace.PathFor("dist");
+            if (withMetadata) {
+                File.WriteAllText(Path.Combine(source, "manifest.jsonc"), $$"""
+                    { "xshell": {
+                        "version": "{{XShellVersion}}", "label": "XShell", "description": "Core runtime.",
+                        "tags": ["framework", "runtime"], "icon": "x-xshell"
+                    } }
+                    """);
+            }
 
             var package = await PackAsync(source, output);
 
@@ -100,6 +110,19 @@ namespace DProjects.XShell.Test {
             var xshell = descriptor.RootElement.GetProperty("xshell");
             Assert.Equal("url:./xshell.zip", xshell.GetProperty("assets").GetProperty("url").GetString());
             AssertInventoryMatchesFiles(ReadInventory(xshell.GetProperty("files")), files);
+
+            // Verify the published and archived descriptors preserve the authored metadata.
+            using var archivedDescriptor = JsonDocument.Parse(files["manifest.json"]);
+            foreach (var framework in new[] { xshell, archivedDescriptor.RootElement.GetProperty("xshell") }) {
+                if (withMetadata) {
+                    Assert.Equal("XShell", framework.GetProperty("label").GetString());
+                    Assert.Equal("Core runtime.", framework.GetProperty("description").GetString());
+                    Assert.Equal(["framework", "runtime"], framework.GetProperty("tags").EnumerateArray().Select(tag => tag.GetString()));
+                    Assert.Equal("x-xshell", framework.GetProperty("icon").GetString());
+                } else {
+                    foreach (var key in new[] { "label", "description", "tags", "icon" }) Assert.False(framework.TryGetProperty(key, out _));
+                }
+            }
         }
         [Fact]
         public async Task XShell_PublishesQueryJavaScriptAndInventoryMetadata() {

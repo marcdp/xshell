@@ -104,6 +104,11 @@ snapshot. Each snapshot file retains its path and size plus a frozen copy of opt
 tags array when present, so management interfaces can
 present inventory descriptions without loading the underlying resource.
 
+The **Modules** Page in Diagnostics lists that registry snapshot alongside a read-only row for the XShell framework. The framework row uses the
+implicit `xshell` ID and reads its metadata, asset locations, configuration link, and generated file inventory from `config.xshell`. Both sources
+use the same filters, ID sort, file statistics, and `loaded` display status. Runtime module instances come from `config.modules`, and the framework
+row exists only in the diagnostic inventory. See [Framework descriptor metadata](20-configuration.md#framework-descriptor-metadata).
+
 Before controllers start, Modules verifies optional `requires` service names against the finalized service registry. It independently discovers
 conventional module-wide `/styles/index.css`, `/styles/shared.css`, and `/module.js` resources only when those paths occur in the generated
 inventory. Both stylesheet categories load through Resolver → Loader and finish before controllers start. Document-only sheets remain on each

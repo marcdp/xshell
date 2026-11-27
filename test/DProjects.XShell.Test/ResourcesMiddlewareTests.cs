@@ -179,9 +179,14 @@ namespace DProjects.XShell.Test {
             Assert.Equal(0, head.NextCalls);
         }
         [Fact]
-        public async Task DevelopmentXShellDescriptor_EmbedsFrameworkInventory() {
+        public async Task DevelopmentXShellDescriptor_PreservesMetadataAndEmbedsFrameworkInventory() {
             using var workspace = new TemporaryDirectory();
-            workspace.Write("resources/xshell/manifest.jsonc", "{ \"xshell\": { \"files\": [{ \"path\": \"/stale.js\" }] } }");
+            workspace.Write("resources/xshell/manifest.jsonc", """
+                { "xshell": {
+                    "label": "XShell", "description": "Core runtime.", "tags": ["framework", "runtime"], "icon": "x-xshell",
+                    "files": [{ "path": "/stale.js" }]
+                } }
+                """);
             workspace.Write("resources/xshell/bootstrap.js", "bootstrap");
             workspace.Write("resources/xshell/sw.js", "worker");
             workspace.Write("resources/xshell/contracts/runtime.json", "{ \"label\": \"Runtime\" }");
@@ -189,9 +194,15 @@ namespace DProjects.XShell.Test {
             var response = await SendAsync(workspace.PathFor("resources"), "/_resources/xshell/manifest.jsonc", isDevelopment: true);
 
             using var descriptor = JsonDocument.Parse(response.Text);
-            var files = ReadInventory(descriptor.RootElement.GetProperty("xshell").GetProperty("files"));
+            var framework = descriptor.RootElement.GetProperty("xshell");
+            // Keep authored metadata alongside the regenerated file inventory.
+            Assert.Equal("XShell", framework.GetProperty("label").GetString());
+            Assert.Equal("Core runtime.", framework.GetProperty("description").GetString());
+            Assert.Equal(["framework", "runtime"], framework.GetProperty("tags").EnumerateArray().Select(tag => tag.GetString()));
+            Assert.Equal("x-xshell", framework.GetProperty("icon").GetString());
+            var files = ReadInventory(framework.GetProperty("files"));
             Assert.Equal(["/bootstrap.js", "/contracts/runtime.json", "/sw.js"], files.Select(file => file.Path));
-            var contract = descriptor.RootElement.GetProperty("xshell").GetProperty("files").EnumerateArray()
+            var contract = framework.GetProperty("files").EnumerateArray()
                 .Single(file => file.GetProperty("path").GetString() == "/contracts/runtime.json").GetProperty("resource");
             Assert.Equal("contract", contract.GetProperty("type").GetString());
             Assert.Equal("Runtime", contract.GetProperty("label").GetString());

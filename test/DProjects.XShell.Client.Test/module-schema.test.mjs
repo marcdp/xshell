@@ -6,7 +6,9 @@ import ConfigSchema from "../../src/DProjects.XShell/Resources/DProjects.XShell/
 import ContractSchema from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/schemas/contract.schema.json" with { type: "json" };
 import ModuleSchema from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/schemas/module.schema.json" with { type: "json" };
 import { Validator } from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/vendor/json-schema/4.1.1/json-schema.js";
+import LoaderSchemaJson from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/loaders/schema-json.js";
 import Areas from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/areas.js";
+import JsonValidator from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/json-validator.js";
 import Menus from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/menus.js";
 
 const validator = new Validator(ConfigSchema, "2020-12");
@@ -131,6 +133,38 @@ test("module and generated resource tags use ordered lowercase kebab-case identi
         module.tags = ["business"];
         module.files[0].resource.tags = tags;
         assert.equal(validator.validate(configuration(module)).valid, false, JSON.stringify(tags));
+    }
+});
+
+test("the runtime schema loader and validator enforce optional framework metadata", async t => {
+    // Load the effective configuration schema with its runtime-bundled references.
+    const base = "https://example.test/_assets/xshell/schemas/";
+    const schemas = new Map([["config", ConfigSchema], ["module", ModuleSchema], ["contract", ContractSchema]]);
+    t.mock.method(globalThis, "fetch", async url => {
+        const schema = schemas.get(url.slice(base.length, -".schema.json".length));
+        assert.ok(url.startsWith(base) && schema, url);
+        return { ok: true, json: async () => structuredClone(schema) };
+    });
+    const previousDocument = globalThis.document;
+    globalThis.document = { baseURI: base };
+    t.after(() => {
+        if (previousDocument === undefined) delete globalThis.document;
+        else globalThis.document = previousDocument;
+    });
+    const schema = await new LoaderSchemaJson().load("config.schema.json");
+    const runtimeValidator = new JsonValidator();
+    const config = configuration(moduleDefinition());
+    assert.equal(runtimeValidator.validate(config, schema).valid, true);
+
+    // Validate the framework fields against the same conventions as module metadata.
+    const metadata = { label: "XShell", description: "Core runtime.", tags: ["framework", "core-runtime"], icon: "x-xshell" };
+    Object.assign(config.xshell, metadata);
+    assert.equal(runtimeValidator.validate(config, schema).valid, true);
+    for (const [key, value] of [["label", 42], ["description", null], ["icon", {}], ["tags", "runtime"],
+        ["tags", ["Core Runtime"]], ["tags", ["runtime", "runtime"]]]) {
+        config.xshell[key] = value;
+        assert.equal(runtimeValidator.validate(config, schema).valid, false, `${key}: ${JSON.stringify(value)}`);
+        config.xshell[key] = metadata[key];
     }
 });
 

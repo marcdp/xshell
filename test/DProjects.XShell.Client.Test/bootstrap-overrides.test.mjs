@@ -98,6 +98,41 @@ test("manifest arrays merge by ID in bootstrap precedence order", () => {
     assert.deepEqual(modules, original);
 });
 
+test("bootstrap preserves selected framework metadata without merging module contributions", () => {
+    const resources = new URL("../../src/DProjects.XShell/Resources/DProjects.XShell/", import.meta.url);
+    const authored = JSON.parse(readFileSync(new URL("xshell/manifest.jsonc", resources), "utf8").replace(/^\s*\/\/[^\r\n]*/gm, ""));
+    const metadata = { label: "XShell", description: "Core application framework and runtime.", tags: ["framework", "runtime", "infrastructure"], icon: "x-xshell" };
+    const framework = { name: "xshell", assetsPath: "/_assets/xshell/0.9.0.release", assetsUrl: "https://repo.example/xshell/xshell.zip",
+        manifestUrl: "https://repo.example/xshell/manifest.json" };
+    const dependency = { name: "dep", manifest: { modules: { dep: {} }, xshell: { ...metadata, tags: ["dependency"] } } };
+    const app = { name: "app", dependencies: { dep: "1.0.0" }, manifest: { modules: { app: { label: "Application" } }, xshell: {
+        label: "App framework label", description: "App framework description", tags: ["application"], icon: "app-icon"
+    } } };
+
+    // Verify the icon exists in the core UI module used by diagnostics.
+    assert.match(readFileSync(new URL(`x/icons/${metadata.icon}.svg`, resources), "utf8"), /<svg\b/);
+    framework.manifest = normalizeManifest(authored, framework);
+    const config = mergeManifests([app, dependency, framework], app);
+    for (const [key, value] of Object.entries(metadata)) assert.deepEqual(config.xshell[key], value);
+    assert.notEqual(config.xshell.tags, framework.manifest.xshell.tags);
+    assert.equal(config.xshell.configUrl, framework.manifestUrl);
+    assert.equal(config.xshell.assets.path, framework.assetsPath);
+    assert.equal(config.xshell.assets.url, framework.assetsUrl);
+    assert.deepEqual(Object.keys(config.modules), ["dep", "app"]);
+    assert.equal(config.modules.app.label, "Application");
+
+    // Preserve URL-like display text and leave missing legacy fields absent.
+    authored.xshell.label = "/XShell";
+    authored.xshell.description = "app: configuration and runtime";
+    const normalized = normalizeManifest(authored, framework);
+    assert.equal(normalized.xshell.label, authored.xshell.label);
+    assert.equal(normalized.xshell.description, authored.xshell.description);
+    for (const key of Object.keys(metadata)) delete authored.xshell[key];
+    framework.manifest = normalizeManifest(authored, framework);
+    const legacy = mergeManifests([framework, dependency, app], app);
+    for (const key of Object.keys(metadata)) assert.equal(Object.hasOwn(legacy.xshell, key), false, key);
+});
+
 test("manifests merge normalized Area route targets in ordinary configuration order", () => {
     const framework = { name: "xshell", manifest: { xshell: { resolver: { esm: { xshell: { src: "/xshell.js" } } } } } };
     const customers = { name: "customers", assetsPath: "/_assets/customers/1.0.0.dev" };

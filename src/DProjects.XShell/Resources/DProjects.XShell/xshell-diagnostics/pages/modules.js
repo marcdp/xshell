@@ -8,7 +8,7 @@ export default {
     },
     meta: {
         title: "Modules",
-        description: "Shows loaded modules, their asset locations, build metadata, resource counts, and status."
+        description: "Shows the XShell framework and loaded application modules, with asset locations, build metadata, resource counts, and status."
     },
     style: `
         .tags { display: flex; flex-wrap: wrap; gap: .25em; align-items: center; }
@@ -57,6 +57,7 @@ export default {
         id: "",
         version: "",
         label: "",
+        description: "",
         tags: "",
         assetPath: "",
         configUrl: "",
@@ -65,7 +66,7 @@ export default {
         files: 0,
         modules: null
     },
-    controller({ state, events, modules }) {
+    controller({ state, events, modules, config }) {
         return {
             load() {
                // load
@@ -79,9 +80,10 @@ export default {
                events.on(state, "change:configUrl", "refresh");
             },
             refresh() {
-                // refresh
+                // Include the framework configuration in the same inventory as the module registry snapshots.
+                const framework = { ...config.xshell, id: "xshell", label: config.xshell.label || "XShell" };
                 let list = [];
-                for(let target of modules.registry) {
+                for (const target of [framework, ...modules.registry]) {
                     let valid = true;
                     if (state.id && target.id.indexOf(state.id) == -1 ) valid = false;
                     if (state.version && target.version.indexOf(state.version) == -1 ) valid = false;
@@ -139,7 +141,7 @@ export default {
                 state.modules = list;
             },
             matchesTags(tags, query) {
-                // Match a partial authored module tag without inspecting contained resources.
+                // Match a partial authored tag without inspecting contained resources.
                 return !query || (tags || []).some(tag => tag.toLowerCase().includes(query.toLowerCase()));
             }
         };

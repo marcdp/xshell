@@ -316,6 +316,9 @@ async function main() {
             if (Array.isArray(value)) return value.map((item, index) => normalizeManifest(item, module, declaringPath, [...manifestPath, index]));
             if (value && typeof value === "object") {
                 return Object.fromEntries(Object.entries(value).map(([key, item]) => {
+                    // Framework display text and tags are literal values.
+                    const frameworkText = manifestPath.length === 1 && manifestPath[0] === "xshell" &&
+                        (key === "label" || key === "description" || key === "tags");
                     // Generated resource metadata is literal only at framework and module file-inventory locations.
                     const inventoryResource = key === "resource" && (
                         manifestPath.length === 3 && manifestPath[0] === "xshell" && manifestPath[1] === "files" && Number.isInteger(manifestPath[2]) ||
@@ -334,7 +337,7 @@ async function main() {
                     // Logger selection is a literal dictionary key even when it looks like a URL.
                     const loggerProvider = key === "provider" && manifestPath.length === 4 && manifestPath[0] === "xshell" &&
                         manifestPath[1] === "services" && manifestPath[2] === "logger" && manifestPath[3] === "options";
-                    return [key, inventoryResource || searchPrefixes || globalPrefix || inventoryPrefix || loggerProvider
+                    return [key, frameworkText || inventoryResource || searchPrefixes || globalPrefix || inventoryPrefix || loggerProvider
                         ? item : normalizeManifest(item, module, declaringPath, [...manifestPath, key])];
                 }));
             }
@@ -415,9 +418,15 @@ async function main() {
             };
             const config = order.reduce((result, module) => merge(result, module.manifest), {});
 
-            const frameworkEntry = framework.manifest.xshell?.resolver?.esm?.xshell;
+            // Restore fields owned by the selected framework, including absent optional metadata.
+            const frameworkDefinition = framework.manifest.xshell;
+            const frameworkEntry = frameworkDefinition?.resolver?.esm?.xshell;
             if (typeof frameworkEntry?.src !== "string" || !frameworkEntry.src) throw new Error("Selected XShell framework does not define resolver.esm.xshell.src");
             config.xshell.resolver.esm.xshell = structuredClone(frameworkEntry);
+            for (const key of ["label", "description", "tags", "icon"]) {
+                if (Object.hasOwn(frameworkDefinition, key)) config.xshell[key] = structuredClone(frameworkDefinition[key]);
+                else delete config.xshell[key];
+            }
 
             config.xshell.assets ??= {};
             config.xshell.assets.url = framework.assetsUrl;
