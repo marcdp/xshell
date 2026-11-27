@@ -5,12 +5,15 @@ import vm from "node:vm";
 import LoggerContract from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/contracts/logger.json" with {type: "json"};
 import ProviderContract from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/contracts/logger-provider.json" with {type: "json"};
 import ContractSchema from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/schemas/contract.schema.json" with {type: "json"};
+import ModuleSchema from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/schemas/module.schema.json" with {type: "json"};
 import ServiceSchema from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/schemas/service.schema.json" with {type: "json"};
+import LoaderEsmJs from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/loaders/esm-js.js";
 import Services from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services.js";
 import JsonValidator from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/json-validator.js";
 import Logger from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/logger.js";
 import Tasks from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/tasks.js";
 import Resolver from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/resolver.js";
+import LoggerConsole from "../../src/DProjects.XShell/Resources/DProjects.XShell/x-logger/providers/logger-console.js";
 
 const resources = new URL("../../src/DProjects.XShell/Resources/DProjects.XShell/", import.meta.url);
 const bootstrap = readFileSync(new URL("bootstrap/index.js", resources), "utf8");
@@ -20,11 +23,23 @@ const levels = ["trace", "debug", "info", "warn", "error"];
 const appBaseUrl = "https://example.test/app/";
 const omitted = Symbol("omitted selection");
 
-function composeLogger(selection = omitted, providers = {}, overrides = {}, otherProviders = {}, contributedSelection = omitted) {
-    // Run the active bootstrap's normalization, dependency-ordered merge and resolver generation on manifest fixtures.
+function composeManifests(app, modules) {
+    // Run the active bootstrap's normalization, dependency-ordered merge and resolver generation.
     const source = [bootstrap.match(/^        function normalizeUrl\([\s\S]*?^        \}\r?\n        function normalizeManifest\([\s\S]*?^        \}/m)[0],
         bootstrap.match(/^        function mergeManifests\(\) \{[\s\S]*?^        \}/m)[0],
         bootstrap.slice(bootstrap.indexOf("function fillXShellResolverRules(config)"), bootstrap.indexOf("config = fillXShell(config);"))].join("\n");
+    const resolvedModules = new Map([app, ...modules].map(item => [item.name, {...item}]));
+    return vm.runInNewContext(`${source}
+        for (const module of resolvedModules.values()) module.manifest = normalizeManifest(module.manifest, module);
+        const config = mergeManifests();
+        config.app = {baseUrl: appBaseUrl};
+        fillXShellResolverRules(config);
+        structuredClone(config);
+    `, {URL, appBaseUrl, app: resolvedModules.get(app.name), resolvedModules, structuredClone});
+}
+
+function composeLogger(selection = omitted, providers = {}, overrides = {}, otherProviders = {}, contributedSelection = omitted) {
+    // Keep the existing provider fixtures independent of the bundled console provider.
     const serviceConfig = (provider, declarations) => ({services: {logger: {options: {
         ...(provider === omitted ? {} : {provider}), providers: declarations
     }}}});
@@ -37,14 +52,7 @@ function composeLogger(selection = omitted, providers = {}, overrides = {}, othe
     const first = module("first", serviceConfig(contributedSelection, providers));
     const second = module("second", serviceConfig(omitted, otherProviders));
     const app = module("app", serviceConfig(selection, overrides), {first: "1", second: "1"});
-    const resolvedModules = new Map([app, first, second, framework].map(item => [item.name, item]));
-    return vm.runInNewContext(`${source}
-        for (const module of resolvedModules.values()) module.manifest = normalizeManifest(module.manifest, module);
-        const config = mergeManifests();
-        config.app = {baseUrl: appBaseUrl};
-        fillXShellResolverRules(config);
-        structuredClone(config);
-    `, {URL, appBaseUrl, app, resolvedModules, structuredClone});
+    return composeManifests(app, [first, second, framework]);
 }
 
 async function createServices(config, loadProvider = () => assert.fail("Unexpected provider load")) {
@@ -188,5 +196,89 @@ test("selected provider configuration, load, construction and contract failures 
         const config = composeLogger(id, declaration ? {[id]: declaration} : {});
         const {services} = await createServices(config, implementation);
         await assert.rejects(async () => services.initialize("logger"), message);
+    }
+});
+
+test("LoggerConsole synchronously forwards the original arguments to the matching native method", t => {
+    assert.equal(LoggerConsole.name, "LoggerConsole");
+    const provider = new LoggerConsole();
+    assert.equal(typeof provider.log, "function");
+    const fallback = t.mock.method(console, "log", () => {});
+    const methods = levels.map(level => t.mock.method(console, level, function () {
+        assert.strictEqual(this, console);
+        return "ignored";
+    }));
+    const args = ["Message %s %o", "formatted", {count: 1}, ["first"], new Error("failure"), undefined, Symbol("value")];
+
+    // Verify direct delegation, including zero arguments, by inspecting only the selected console method.
+    for (const [index, level] of levels.entries()) {
+        assert.equal(provider.log(level), undefined);
+        assert.equal(provider.log(level, ...args), undefined);
+        assert.deepEqual(methods.map(method => method.mock.callCount()), levels.map((_, position) => position <= index ? 2 : 0));
+        const [empty, call] = methods[index].mock.calls;
+        assert.deepEqual(empty.arguments, []);
+        assert.equal(call.arguments.length, args.length);
+        args.forEach((value, position) => assert.strictEqual(call.arguments[position], value));
+    }
+    assert.equal(fallback.mock.callCount(), 0);
+});
+
+test("x-logger contributes a console provider that the application can select or disable", async t => {
+    // Compose the authored module manifest with the framework and an application selecting the provider.
+    const authored = JSON.parse(readFileSync(new URL("x-logger/manifest.jsonc", resources), "utf8").replace(/^\s*\/\/[^\r\n]*/gm, ""));
+    const module = authored.modules["x-logger"];
+    const providerFile = "/providers/logger-console.js";
+    const assetsPath = `/_assets/x-logger/${module.version}.dev`;
+    const implementation = assetsPath + providerFile;
+    const reference = "module:x-logger:latest";
+    const consoleManifest = {...authored, modules: {"x-logger": {...module, files: []}}};
+    // Resolve the dependency with the production bootstrap and the standard development index response shape.
+    const discovery = bootstrap.slice(bootstrap.indexOf("const stableVersion ="), bootstrap.indexOf("// Load repositories and resolve modules"));
+    const discovered = await vm.runInNewContext(discovery + "\nresolveModule(reference)", {
+        URL, reference, resolvedModules: new Map(),
+        repositoryIndexes: new Map([[0, {url: appBaseUrl + "index.json", index: {modules: {"x-logger": {url: "x-logger/index.json"}}}}]]),
+        fetchIndex(url) {
+            assert.equal(url, appBaseUrl + "x-logger/index.json");
+            return {module: "x-logger", versions: {[module.version]: {url: `${module.version}.dev/manifest.json`, dependencies: {}}}};
+        }
+    });
+    assert.equal(discovered.version, module.version);
+    const contributions = [
+        {name: "xshell", assetsPath: "/_assets/xshell/1.dev", manifest: {xshell: {resolver: manifest.xshell.resolver, services: {logger: registration}}}},
+        {...discovered, assetsPath, assetsUrl: discovered.baseUrl, manifest: consoleManifest}
+    ];
+    assert.deepEqual(authored.xshell.services, {logger: {options: {providers: {console: {implementation: providerFile}}}}});
+    const log = t.mock.method(console, "debug", () => {});
+    const esm = new LoaderEsmJs();
+    const value = {commandId: "sample"};
+
+    for (const selection of [omitted, "console", null]) {
+        const dependencies = {xshell: "module:xshell:latest", "x-logger": reference};
+        const app = {name: "app", assetsPath: "/_assets/app/1.dev", dependencies,
+            manifest: {modules: {app: {dependencies}}, ...(selection === omitted ? {} : {xshell: {services: {logger: {options: {provider: selection}}}}})}};
+        const config = composeManifests(app, contributions);
+        const effective = config.xshell.services.logger;
+        assert.deepEqual(effective, {...registration, implementation: "/_assets/xshell/1.dev/services/logger.js",
+            options: {provider: selection === omitted ? null : selection, providers: {console: {implementation}}}});
+        const validation = new JsonValidator().validate(config.modules["x-logger"], ModuleSchema, {"./contract.schema.json": ContractSchema});
+        assert.equal(validation.valid, true, JSON.stringify(validation.errors));
+
+        // Use the standard ESM loader with a file URL for the resolved resource in this Node test.
+        const selected = selection === "console";
+        const {services, loads} = await createServices(config, resolved => {
+            assert.equal(resolved.definition.moduleId, "x-logger");
+            assert.equal(resolved.definition.loader, "esm-js");
+            assert.equal(resolved.path, implementation);
+            return esm.load(new URL("x-logger" + resolved.path.slice(assetsPath.length), resources).href);
+        });
+        const logger = await services.initialize("logger");
+        logger.debug("Console provider", value);
+        assert.equal(loads.length, selected ? 1 : 0);
+        assert.equal(log.mock.callCount(), selected ? 1 : 0);
+        if (selected) {
+            assert.equal(log.mock.calls[0].arguments[0], "Console provider");
+            assert.strictEqual(log.mock.calls[0].arguments[1], value);
+            log.mock.resetCalls();
+        }
     }
 });

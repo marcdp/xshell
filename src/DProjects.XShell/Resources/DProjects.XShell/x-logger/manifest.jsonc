@@ -1,0 +1,29 @@
+{
+    // Module
+    "modules": {
+        "x-logger": {
+            "label": "x-logger",
+            "version": "0.9.0",
+            "tags": ["logging", "diagnostics", "observability"],
+            "icon": "",
+            "copyright": "",
+            "defaults": {
+                "component": {"renderEngine": "x", "stateEngine": "proxy"},
+                "page": {"renderEngine": "x", "stateEngine": "proxy"}
+            }
+        }
+    },
+
+    // Logger provider contributions
+    "xshell": {
+        "services": {
+            "logger": {
+                "options": {
+                    "providers": {
+                        "console": {"implementation": "/providers/logger-console.js"}
+                    }
+                }
+            }
+        }
+    }
+}

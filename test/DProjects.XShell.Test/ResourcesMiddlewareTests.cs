@@ -448,6 +448,35 @@ namespace DProjects.XShell.Test {
             else Assert.Empty(generation.GetProperty("dependencies").EnumerateObject());
         }
         [Fact]
+        public async Task DevelopmentRepository_IndexesAndServesBundledLoggerModule() {
+            // Use the resource tree copied by the project build, then follow its generated index URLs.
+            var root = Path.Combine(AppContext.BaseDirectory, "Resources", "DProjects.XShell");
+            var catalog = await SendAsync(root, "/_resources/index.json", true);
+            Assert.Equal(200, catalog.StatusCode);
+            using var repository = JsonDocument.Parse(catalog.Body);
+            var entry = repository.RootElement.GetProperty("modules").GetProperty("x-logger");
+            var version = entry.GetProperty("latest").GetString();
+            Assert.Equal("0.9.0", version);
+            var indexPath = "/_resources/" + entry.GetProperty("url").GetString();
+            var module = await SendAsync(root, indexPath, true);
+            Assert.Equal(200, module.StatusCode);
+            using var index = JsonDocument.Parse(module.Body);
+            var generation = index.RootElement.GetProperty("versions").GetProperty(version!);
+            var manifestPath = "/_resources/x-logger/" + generation.GetProperty("url").GetString();
+            var descriptor = await SendAsync(root, manifestPath, true);
+            Assert.Equal(200, descriptor.StatusCode);
+            using var manifest = JsonDocument.Parse(descriptor.Body);
+
+            // Check that development inventory and versioned resource serving expose the same provider.
+            var files = manifest.RootElement.GetProperty("modules").GetProperty("x-logger").GetProperty("files");
+            const string providerPath = "/providers/logger-console.js";
+            Assert.Contains(files.EnumerateArray(), file => file.GetProperty("path").GetString() == providerPath);
+            var provider = await SendAsync(root, manifestPath[..manifestPath.LastIndexOf('/')] + providerPath, true);
+            Assert.Equal(200, provider.StatusCode);
+            Assert.Contains("export default class LoggerConsole", provider.Text);
+            Assert.Equal(0, catalog.NextCalls + module.NextCalls + descriptor.NextCalls + provider.NextCalls);
+        }
+        [Fact]
         public async Task DevelopmentModuleIndex_ReflectsManifestChanges() {
             using var workspace = new TemporaryDirectory();
             workspace.Write("resources/demo/manifest.jsonc", "{ \"modules\": { \"demo\": { \"version\": \"0.9.0\" } } }");

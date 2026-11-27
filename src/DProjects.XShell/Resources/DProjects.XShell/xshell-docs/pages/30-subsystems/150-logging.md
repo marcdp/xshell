@@ -3,6 +3,34 @@
 XShell Core registers the `logger` singleton by default. Core defines the service and provider contracts. Modules can contribute implementations and
 their defaults, and the application selects the provider and overrides its options.
 
+## Console provider
+
+The optional `x-logger` module provides one logging provider, `console`. Add `x-logger` to the root module's existing dependencies to make it available.
+
+```jsonc
+"dependencies": {
+    "x-logger": "module:x-logger:latest"
+}
+```
+
+Select `console` in the application manifest to enable console logging.
+
+```jsonc
+{"xshell": {"services": {"logger": {"options": {"provider": "console"}}}}}
+```
+
+The provider forwards the original arguments synchronously, preserving native console formatting and stack traces. It has no provider-specific options.
+
+| Logger level | Native console method |
+| --- | --- |
+| `trace` | `console.trace()` |
+| `debug` | `console.debug()` |
+| `info` | `console.info()` |
+| `warn` | `console.warn()` |
+| `error` | `console.error()` |
+
+Logging stays disabled when no provider is selected. Set `provider` to `null` in the application manifest to disable logging explicitly.
+
 ## Logger contract
 
 Inject `logger` by name using ordinary [service consumption](../10-architecture/100-services.md), such as a Page or Component controller.
