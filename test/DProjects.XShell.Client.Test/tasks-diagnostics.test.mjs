@@ -75,7 +75,7 @@ test("Tasks activates the selected row in the stack and retains its live filtere
         async removePage() { await this.page.unload(); pages.splice(pages.indexOf(this), 1); }
     });
     const navigation = new Navigation({
-        areas: { resolvePath: () => null },
+        areas: { }, menus: { resolvePath: () => null, resolveHref: () => null },
         resolver: { resolve: href => href === detailHref ? { path: detailPath } : null },
         config: { app: { basePath: "", baseUrl: "https://example.test/" }, xshell: {} }
     }, { mode: "path" }, { container });

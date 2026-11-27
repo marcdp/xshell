@@ -79,7 +79,8 @@ Optional module `tags` are authored classification identifiers retained through 
 not dependencies, Area membership, or public contracts, and they are not inherited by the module's resources.
 
 Merge order is framework first, dependency-first among modules, and root last. Objects merge recursively, arrays concatenate, and later scalar
-values replace earlier values. This is whole-manifest composition; the active bootstrap has no separate reference-contribution mechanism.
+values replace earlier values. Objects with the same non-empty string ID recursively merge at the original array position.
+See [Configuration precedence](20-configuration.md#merge-and-precedence).
 
 ## Root module and application metadata
 
@@ -118,17 +119,14 @@ a direct child of the application root; Modules owns and keeps that scope privat
 `moduleAssetsPath`, `moduleConfig`, its owning scope as `services`, and named services resolved through that scope. Application singletons remain
 shared, scoped services are cached once per Module controller, and transients are constructed per resolution. `start()` runs with the scope active;
 on shutdown, `stop()` runs before Modules disposes the scope. Module scopes are siblings of Page, Component, and Command scopes and do not inherit
-them. XShell resolves Areas before module controllers start, awaits Modules initialization, composes Areas from that initialized singleton, and
-initializes Navigation afterward.
+them. XShell resolves Areas and Menus before module controllers start. Once Modules has initialized, XShell initializes contextual menus,
+composes Area routes and homes, and initializes Navigation.
 
 ## Menus, routes, Areas, and services
 
-Module menu and route declarations are reusable contributions. Each named [menu definition](../50-specifications/module.md#menus-and-routes)
-can supply a composition scope, display metadata, root items, or an Area menu source. Areas composes global menus once across all selected modules
-and composes Area-scoped menus from each Area's participating modules. Area membership leaves the dependency graph and runtime module count
-unchanged. Scope affects composition rather than lookup: `Areas.getMenu()` and `Areas.getMenus()` expose both Area and global effective definitions,
-while route resolution, breadcrumbs, and Area home calculation continue using Area-scoped menus only. Routes map Area-relative friendly paths to
-normalized canonical Page Paths.
+Module manifests contribute menu definitions to `xshell.services.menus.options.definitions` and declare module routes under `routes`.
+Menus owns the effective definitions. Areas selects names for its menu slots and composes routes from participating modules. Area membership
+leaves the dependency graph and runtime module count unchanged. See [Areas and Menus](../30-subsystems/10-areas.md#menus-and-home).
 
 Modules are composition units and do not define public contracts. A module may provide multiple Services, each with its own contract describing
 public properties, methods, and published Bus events. Components and Pages have their own public contracts. Optional `requires` names services and

@@ -4,6 +4,7 @@ import test from "node:test";
 
 import ConfigSchema from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/schemas/config.schema.json" with { type: "json" };
 import ContractSchema from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/schemas/contract.schema.json" with { type: "json" };
+import MenusContract from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/contracts/menus.json" with { type: "json" };
 import AreasContract from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/contracts/areas.json" with { type: "json" };
 import Services from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services.js";
 import Areas from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/areas.js";
@@ -20,14 +21,23 @@ test("framework manifest registers Areas declaratively with service options", as
         lifetime: "singleton",
         options: { default: "main", definitions: {} }
     });
+    assert.deepEqual(manifest.xshell.services.menus, {
+        contract: "menus", implementation: "/services/menus.js",
+        lifetime: "singleton", options: { definitions: {} }
+    });
     assert.equal((source.match(/"areas"\s*:/g) ?? []).length, 1);
 });
 
-test("Areas declares the effective menu shape in its public contract", () => {
+test("Menus owns the effective menu shape and menu events in its public contract", () => {
     const validator = new JsonValidator();
     const result = validator.validate(AreasContract, ContractSchema);
     assert.equal(result.valid, true, JSON.stringify(result.errors));
-    const { methods, types } = AreasContract;
+    const menuResult = validator.validate(MenusContract, ContractSchema);
+    assert.equal(menuResult.valid, true, JSON.stringify(menuResult.errors));
+    const { methods, types } = MenusContract;
+    assert.equal(Object.hasOwn(AreasContract.methods, "getMenu"), false);
+    assert.equal(Object.hasOwn(AreasContract.events, "xshell:menus:change"), false);
+    assert.ok(Object.hasOwn(MenusContract.events, "xshell:menus:change"));
     assert.equal(methods.getMenu.returns.ref, "menuDefinition");
     assert.equal(Object.hasOwn(methods, "getGlobalMenu"), false);
     assert.equal(methods.getMenus.returns.type, "array");
@@ -69,16 +79,18 @@ test("XShell resolves Areas before Modules and composes it before Navigation", a
     const source = await readFile(new URL("xshell.js", frameworkUrl), "utf8");
     const servicesIndex = source.indexOf("await this._services.init()");
     const resolveAreasIndex = source.indexOf('const areas = this._services.resolve("areas")');
+    const resolveMenusIndex = source.indexOf('this._services.resolve("menus");');
+    const initMenusIndex = source.indexOf('const menus = await this._services.initialize("menus")');
     const resolveModulesIndex = source.indexOf('const modules = await this._services.initialize("modules")');
-    const initAreasIndex = source.indexOf("areas.init({ modules })");
+    const initAreasIndex = source.indexOf("areas.init({ modules, menus })");
     const navigationIndex = source.indexOf('await this._services.initialize("navigation")');
 
     assert.doesNotMatch(source, /import Areas from/);
     assert.doesNotMatch(source, /new Areas\s*\(/);
     assert.doesNotMatch(source, /register\("areas"/);
     assert.match(source, /const services = this\._services;\s+const XPage = createXPageClass\(\{[\s\S]*?get areas\(\) \{ return services\.resolve\("areas"\); \}/);
-    assert.ok(servicesIndex < resolveAreasIndex && resolveAreasIndex < resolveModulesIndex &&
-        resolveModulesIndex < initAreasIndex && initAreasIndex < navigationIndex);
+    assert.ok(servicesIndex < resolveAreasIndex && resolveAreasIndex < resolveMenusIndex && resolveMenusIndex < resolveModulesIndex &&
+        resolveModulesIndex < initMenusIndex && initMenusIndex < initAreasIndex && initAreasIndex < navigationIndex);
 });
 
 test("Areas performs semantic option validation during construction", () => {

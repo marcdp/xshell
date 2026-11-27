@@ -5,7 +5,7 @@ application format. All descriptors use `manifest.json` or `manifest.jsonc`. A d
 descriptor; a descriptor in every other directory is a module descriptor. Its extension selects the parser, and classification selects the
 framework or module structure. See [Root Module and Application Metadata](application.md) for the generated `app` section and [Module](module.md)
 for local definitions, repository dependency references, and asset locations.
-The root also composes [Areas](../30-subsystems/10-areas.md) from module ids. Module menu contributions remain independent of that placement.
+The root also composes [Areas](../30-subsystems/10-areas.md) from module ids. Areas select named Menus definitions independently of module placement.
 
 The validation boundary is the complete effective configuration after repository resolution, descriptor and embedded-inventory normalization,
 merge, worker mapping, and resolver generation. Host bootstrap imports XShell, deep-freezes the object, and calls `xshell.init(config)`.
@@ -13,7 +13,7 @@ Initialization creates Resolver and Loader and then validates against `xshell/sc
 services. There is no separate host-side `xshell.validateConfig(config)` call.
 The X module currently includes a `module.js` controller; configuration validation remains a separate bootstrap and initialization responsibility.
 
-The schema defines `app`, `modules`, and `xshell`, including module `configUrl`, nested `assets`, defaults, menus, optional service `requires`, optional
+The schema defines `app`, `modules`, and `xshell`, including module `configUrl`, nested `assets`, defaults, optional service `requires`, optional
 declarative routes, named `xshell.services`, and the required `xshell.i18n` language, formatting,
 and translation configuration.
 

@@ -33,6 +33,7 @@ export default class Navigation {
 
     // vars
     #areas = null;
+    #menus = null;
     #bus = null;
     #config = null;
     #container = null;
@@ -48,9 +49,10 @@ export default class Navigation {
     #browserHash = "";
     
     // ctor
-    constructor( { areas, bus, config, resolver }, options = {}, { container = document.body } = {} ) {
+    constructor( { areas, bus, config, menus, resolver }, options = {}, { container = document.body } = {} ) {
         // initialize injected dependencies
         this.#areas = areas;
+        this.#menus = menus;
         this.#bus = bus;
         this.#config = config;
         this.#resolver = resolver;
@@ -597,7 +599,7 @@ export default class Navigation {
             const area = this.#areas.getArea?.(this.#areas.resolveAreaId?.(identity));
             if (this.#isAssetPath(identity) || this.#isAssetPath(this.#removePathPrefix(identity, area?.prefix))) return this.buildUrl(item);
         }
-        const menuitem = this.#areas.resolvePath(identity);
+        const menuitem = this.#menus.resolvePath(identity);
         if (menuitem) {
             // Apply an alias's defaults before the invocation's explicit query and fragment.
             const target = this.parseUrl(menuitem.href);
@@ -633,7 +635,7 @@ export default class Navigation {
 
         // Prefer an Area alias, then try reverse routing.
         const area = stackArea || this.#areas.getArea?.(this.#areas.resolveAreaId?.(identity));
-        const menuitem = area ? this.#areas.resolveHref?.(identity, area.id) : null;
+        const menuitem = area ? this.#menus.resolveHref(identity, area.id) : null;
         if (menuitem) {
             // Use the friendly path only when resolving it can reproduce the invocation.
             if (!menuitem.path) return { href: canonicalHref, params };
@@ -684,7 +686,7 @@ export default class Navigation {
         // A global Page can follow a declared root-Area path or a unique canonical Area home.
         const fromGlobal = matchesPathPrefix(origin, globalPrefix);
         if (fromGlobal) {
-            if (targetArea && !this.#isAssetPath(identity) && (this.#areas.resolvePath(identity) || this.#findRouteMatch(identity))) {
+            if (targetArea && !this.#isAssetPath(identity) && (this.#menus.resolvePath(identity) || this.#findRouteMatch(identity))) {
                 return identity + suffix;
             }
             const entryArea = this.#isAssetPath(identity) ? this.#findAreaHome(identity) : null;
@@ -696,7 +698,7 @@ export default class Navigation {
         if (preserveAssetPath && scope !== "area" && this.#isAssetPath(identity)) return identity + suffix;
         const pageAreaId = scope === "area" && fromGlobal ? this.#areas.getCurrentArea?.()?.id
             : page?.src ? this.#areas.resolveAreaId?.(page.src) : null;
-        const menuitem = this.#areas.resolveHref?.(identity, pageAreaId) || this.#areas.resolveHref?.(identity);
+        const menuitem = this.#menus.resolveHref(identity, pageAreaId) || this.#menus.resolveHref(identity);
         if (menuitem) return this.#splitHref(menuitem.href).identity + suffix;
         const area = page && scope !== "area" ? this.#areas.getArea?.(pageAreaId)
             : this.#areas.getArea?.(pageAreaId) || this.#areas.getCurrentArea?.() || this.#areas.getDefaultArea?.();
@@ -709,7 +711,7 @@ export default class Navigation {
         for (const area of this.#areas.getAreas()) {
             if (!area.home) continue;
             const home = this.#splitHref(area.home).identity;
-            const href = this.#areas.resolvePath(home)?.href ?? home;
+            const href = this.#menus.resolvePath(home)?.href ?? home;
             if (this.#removePathPrefix(this.#splitHref(href).identity, area.prefix) !== identity) continue;
             if (match) return null;
             match = area;

@@ -272,7 +272,7 @@ test("XShell initializes services before modules and navigation", () => {
     const servicesInit = source.indexOf("await this._services.init()");
     const modulesResolve = source.indexOf('const modules = await this._services.initialize("modules")');
     const areasResolve = source.indexOf('const areas = this._services.resolve("areas")');
-    const areasInit = source.indexOf("areas.init({ modules })");
+    const areasInit = source.indexOf("areas.init({ modules, menus })");
     const navigationInit = source.indexOf('await this._services.initialize("navigation")');
 
     assert.ok(servicesInit >= 0);

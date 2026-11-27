@@ -91,7 +91,7 @@ export default {
         menu: null,
         shortcutHints: []
     },
-    controller({ events, bus, state, getPage, areas, host, services, postRender }) {
+    controller({ events, bus, state, getPage, areas, menus, host, services, postRender }) {
         return {
             load() {
                 // Refresh the owning Page's menu after navigation or menu composition changes.
@@ -126,7 +126,7 @@ export default {
                 // Resolve the menu and selection from the same Page source.
                 const src = getPage()?.src || "";
                 const areaId = areas.resolveAreaId(src);
-                state.menu = areaId ? areas.getMenu("navigation", areaId)?.items || [] : [];
+                state.menu = areaId ? menus.getMenu("navigation", areaId)?.items || [] : [];
                 state.shortcutHints = getMenuShortcutHints(state.menu);
                 state.selected = src.split(/[?#]/, 1)[0];
             }

@@ -19,20 +19,6 @@
             },
             "dependencies": {
                 "x": "module:x:latest"
-            },
-            "menus": {
-                "global": {
-                    "items":[
-                        {"label": "Filesystems", "icon":"x-filesystems", "order": 200, "children": [
-                            {"label": "Filesystems", "href": "/pages/global/filesystems.js", "open": "embed", "outlet": "self"}
-                        ]}
-                    ]
-                },
-                "preferences": {
-                    "items": [
-                        {"id": "filesystems", "label": "Filesystems", "href": "/pages/preferences/filesystems.js"},
-                    ]
-                }
             }
         }
     },
@@ -41,6 +27,24 @@
 
         // XShell specific configuration for the x-filesystem module
         "services": {
+            "menus": {
+                "options": {
+                    "definitions": {
+                        "global": {
+                            "items":[
+                                {"label": "Filesystems", "icon":"x-filesystems", "order": 200, "children": [
+                                    {"label": "Filesystems", "href": "/pages/global/filesystems.js", "open": "embed", "outlet": "self"}
+                                ]}
+                            ]
+                        },
+                        "preferences": {
+                            "items": [
+                                {"id": "filesystems", "label": "Filesystems", "href": "/pages/preferences/filesystems.js"},
+                            ]
+                        }
+                    }
+                }
+            },
             "search": {
                 "options": {
                     "providers": {

@@ -87,10 +87,13 @@ export default class XShell {
         this._servicesInitialized = true;
         // Construct and validate Areas before module controllers execute
         const areas = this._services.resolve("areas");
+        // Resolve Menus early so global menus are available to module controllers.
+        this._services.resolve("menus");
         // Resolve and initialize Modules and their controllers
         const modules = await this._services.initialize("modules");
-        // Compose effective Areas after Modules initialization
-        areas.init({ modules });
+        // Contextualize menus after source registration, then derive Area homes before Navigation.
+        const menus = await this._services.initialize("menus");
+        areas.init({ modules, menus });
         // initialize XPage custom element
         const services = this._services;
         const XPage = createXPageClass({
@@ -99,6 +102,7 @@ export default class XShell {
             get bus() { return services.resolve("bus"); },
             get navigation() { return services.resolve("navigation"); },
             get areas() { return services.resolve("areas"); },
+            get menus() { return services.resolve("menus"); },
             get modules() { return services.resolve("modules"); }
         });
         customElements.define("x-page", XPage);

@@ -93,21 +93,18 @@ export default {
         src: null
     },
 
-    controller({state, areas, page, navigation, query, postRender, services}) {
+    controller({state, menus, page, navigation, query, postRender, services, bus, events}) {
 
         return {
             load() {
-                // Read the effective menu through the current Area.
-                const menu = areas.getMenu(state.menuName);
-                state.menu = menu?.items || [];
-                state.shortcutHints = getMenuShortcutHints(state.menu);
-
-                this.collectItems(state.menu);
-                if (!menu) return;
-
-                page.label = menu.label;
-                page.description = menu.description;
-                page.icon = menu.icon;
+                // Retain the menu selected when this Workspace loads.
+                this._menu = menus.getMenu(state.menuName);
+                if (!this._menu) return;
+                this.refreshMenu();
+                events.on(bus, "xshell:menus:change", () => this.refreshMenu());
+                page.label = this._menu.label;
+                page.description = this._menu.description;
+                page.icon = this._menu.icon;
             },
             mount() {
                 // Wait until the Workspace is in the navigation stack and its outlet exists.
@@ -120,10 +117,20 @@ export default {
             },
             bindMenu() {
                 // Keep mounted activation on the Workspace's own click handler and outlet.
+                this._releaseMenu?.();
                 this._releaseMenu = bindMenuPresenter(page.host?.querySelector(".menu-container"), state.menu, services);
             },
+            refreshMenu() {
+                // Publish the latest menu snapshot without reopening the selected Page.
+                const items = this._menu.items;
+                if (state.menu === items) return;
+                this.collectItems(items);
+                state.menu = items;
+                state.shortcutHints = getMenuShortcutHints(items);
+                if (this._releaseMenu) postRender("bindMenu");
+            },
             collectItems(items, result = new Map()) {
-                // Collect embedded destinations in depth-first menu order after Areas merges contributions.
+                // Collect embedded destinations in depth-first menu order.
                 for (const item of items) {
                     if (item.label !== "-" && !item.command && !item.target && (item.path || item.href)) {
                         if (item.id) {

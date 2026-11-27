@@ -36,7 +36,7 @@ export default {
         items: []
     },
 
-    controller({ areas, bus, events, getPage, state }) {
+    controller({ areas, menus, bus, events, getPage, state }) {
         return {
             load() {
                 events.on(bus, "xshell:menus:change", "refresh");
@@ -62,7 +62,7 @@ export default {
 
                 const areaId = areas.resolveAreaId(page.src);
 
-                const menuitem = areas.resolveHref(
+                const menuitem = menus.resolveHref(
                     page.src,
                     areaId
                 );

@@ -115,7 +115,13 @@ namespace DProjects.XShell {
                 // bootstrap files
                 foreach (var aa in bootstrapFiles.Keys) {
                     if (context.Request.Path == config.App.BasePath + aa) {
-                        await WriteGeneratedTextAsync(context, bootstrapFiles[aa], MimeTypeUtils.GetMimeType(context.Request.Path));
+                        var content = bootstrapFiles[aa];
+                        // Keep Development scripts current with the manifests read during the same startup.
+                        if (isDevelopment && aa.EndsWith(".js", StringComparison.OrdinalIgnoreCase)) {
+                            content = await File.ReadAllTextAsync(Path.Combine(bootstrapPath, aa[1..]), context.RequestAborted);
+                            context.Response.Headers.CacheControl = "no-store";
+                        }
+                        await WriteGeneratedTextAsync(context, content, MimeTypeUtils.GetMimeType(context.Request.Path));
                         return;
                     }
                 }

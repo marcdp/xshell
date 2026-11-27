@@ -1,25 +1,6 @@
 {
   "label": "Areas",
-  "description": "Manages application navigation areas, their menus and routes, and global menu definitions.",
-  "types": {
-    "menuDefinition": {
-      "type": "any",
-      "description": "A read-only effective menu definition, or null when the requested menu is unknown.",
-      "schema": {
-        "type": ["object", "null"],
-        "properties": {
-          "name": { "type": "string" },
-          "scope": { "type": "string", "enum": ["global", "area"] },
-          "label": { "type": "string" },
-          "description": { "type": "string" },
-          "icon": { "type": ["string", "null"] },
-          "items": { "type": "array", "description": "Ordered, normalized root menu items. Items preserve shortcut strings or lists and the declared disabled and target fields. Nested items are in children." }
-        },
-        "required": ["name", "scope", "label", "description", "icon", "items"],
-        "additionalProperties": false
-      }
-    }
-  },
+  "description": "Manages application navigation areas, menu slot selection, and routes.",
   "properties": {
     "globalPrefix": { "type": "string", "readonly": true, "description": "Effective reserved path prefix for application-wide Navigation." }
   },
@@ -29,10 +10,6 @@
       "detail": {
         "areaId": { "type": "string", "required": true, "description": "Identifier of the newly selected area." }
       }
-    },
-    "xshell:menus:change": {
-      "description": "Emitted on the Bus when a registered dynamic menu source refreshes and changes its menu items.",
-      "detail": {}
     }
   },
   "methods": {
@@ -41,19 +18,6 @@
     "getDefaultArea": { "description": "Returns the default area, falling back to the first area, or null.", "returns": { "type": "any" } },
     "getCurrentArea": { "description": "Returns the currently selected area or the default area.", "returns": { "type": "any" } },
     "resolveAreaId": { "description": "Resolves an Area ID using the longest matching Area prefix. Returns null for global URLs or when no Area matches.", "parameters": [{ "name": "href", "type": "string", "required": true }], "returns": { "type": "any" } },
-    "resolvePath": { "description": "Finds a menu item by its public path across all areas, or returns null.", "parameters": [{ "name": "path", "type": "string", "required": true }], "returns": { "type": "any" } },
-    "resolveHref": { "description": "Finds the menu item for an href in the specified area or an area inferred from the target/current context.", "parameters": [{ "name": "href", "type": "string", "required": true }, { "name": "areaId", "type": "any", "required": false, "default": null, "description": "Optional area ID; null uses context-based resolution." }], "returns": { "type": "any" } },
-    "getModuleId": { "description": "Extracts the module ID from a URL containing the configured module-assets base path, or returns null.", "parameters": [{ "name": "href", "type": "string", "required": true }], "returns": { "type": "any" } },
-    "getMenus": {
-      "description": "Returns effective Area menu definitions followed by global menu definitions. If no Area exists, returns global menus. An invalid explicitly requested Area returns an empty array.",
-      "parameters": [{ "name": "areaId", "type": "any", "required": false, "default": null }],
-      "returns": {
-        "type": "array",
-        "schema": { "type": "array", "items": { "type": "object", "description": "Read-only menuDefinition object with name, scope, label, description, icon and items." } }
-      }
-    },
-    "getMenu": { "description": "Returns the named effective menu definition from the requested/current Area, falling back to a global menu. Returns null for an unknown menu or invalid explicitly requested Area.", "parameters": [{ "name": "name", "type": "string", "required": true }, { "name": "areaId", "type": "any", "required": false, "default": null }], "returns": { "ref": "menuDefinition" } },
-    "getMenuitemBreadcrumb": { "description": "Returns the ordered menu-item breadcrumb for an href in an area, or null.", "parameters": [{ "name": "href", "type": "string", "required": true }, { "name": "areaId", "type": "any", "required": false, "default": null }], "returns": { "type": "any" } },
-    "registerSource": { "description": "Registers a dynamic menu source with resolve() and optional dependsOn events; installs a refresh() method on the source.", "parameters": [{ "name": "name", "type": "string", "required": true }, { "name": "source", "type": "object", "required": true, "schema": { "type": "object", "properties": { "resolve": {}, "dependsOn": { "type": "array", "items": { "type": "string" } } }, "required": ["resolve"] } }] }
+    "getModuleId": { "description": "Extracts the module ID from a URL containing the configured module-assets base path, or returns null.", "parameters": [{ "name": "href", "type": "string", "required": true }], "returns": { "type": "any" } }
   }
 }

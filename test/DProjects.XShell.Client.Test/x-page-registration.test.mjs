@@ -66,7 +66,8 @@ test("XShell init registers the native x-page and Loader returns the registered 
         startup.push("logger");
     });
     t.mock.method(Services.prototype, "init", async function () {
-        this.register("areas", { init() {}, getCurrentArea: () => null, getMenus: () => [] });
+        this.register("areas", { init() {}, getCurrentArea: () => null });
+        this.register("menus", { init() {}, getMenus: () => [] });
         this.register("logger", null, { implementationItem: { class: Logger } });
         this.register("navigation", { init() { startup.push("navigation"); } });
         // Construct the real service through the runtime's options and contract validation.

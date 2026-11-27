@@ -36,9 +36,6 @@ Do not duplicate identity in `name`, `id`, or `moduleId`; the `modules` property
                 "xshell": "module:xshell:^1.0.0",
                 "x": "module:x:latest"
             },
-            "menus": {
-                "navigation": { "label": "Orders", "source": "/pages" }
-            },
             "routes": {
                 "/orders/{orderId}": "/pages/order.js"
             }
@@ -86,7 +83,7 @@ After selection, bootstrap merges the manifest and enriches the selected definit
 ```
 
 The effective schema requires `label`, `version`, `copyright`, `icon`, `configUrl`, `assets`, `defaults`, and `files`. It permits `tags`, `params`,
-`requires`, `hash`, `builtAt`, `menus`, `routes`, and `dependencies`.
+`requires`, `hash`, `builtAt`, `routes`, and `dependencies`.
 
 | Property | Meaning |
 | --- | --- |
@@ -216,37 +213,8 @@ a lazy service. `requires` is distinct from repository module `dependencies`, Co
 
 ## Menus and routes
 
-`menus` maps names to menu definitions. The dictionary key is the menu name. Each module can supply any of these fields:
-
-| Field | Type | Meaning |
-| --- | --- | --- |
-| `scope` | `"global"` or `"area"` | Composition scope shared by all contributions with this menu name. Defaults to `"area"` if every contribution omits it. |
-| `label` | string | Menu title |
-| `description` | string | Menu description |
-| `icon` | string or null | Menu icon |
-| `items` | array of menu items | Static root entries. Nested entries use `children` on the parent item. |
-| `source` | nonempty string | Module-relative inventory path such as `"/pages"` or a registered runtime source name. Available for Area menus. |
-
-Areas discovers global menus from the selected module definitions and composes them in configuration module order. Each Area composes its own
-Area-scoped menus in participation order. A module can extend a menu without declaring its scope again. Explicit scopes for the same name must
-agree, or Areas rejects the configuration.
-
-Scope selects that composition model; it does not select a public lookup method. `areas.getMenu(name, areaId)` prefers the requested/current Area
-definition and falls back to the global definition, while `areas.getMenus(areaId)` returns Area definitions first and global definitions afterward.
-An unknown explicit Area returns `null` or `[]`, respectively, without global fallback.
-
-Later supplied metadata overrides earlier values, and omitted metadata keeps its earlier value. Root items from each contribution merge
-recursively by item ID, with explicit items processed before resolved source items. See [Areas](../30-subsystems/10-areas.md#menus-and-home) for
-ordering, normalization, and effective menu APIs.
-
-A menu item's canonical `href` identifies its Page. Its optional `open` value is `auto`, `top`, `stack`, `dialog`, `dock`, or `embed`, and `outlet`
-selects the named destination for embedded navigation. The reserved `outlet: "self"` value is interpreted only by `x-menuitem`, which composes the
-canonical `href` as a lazy embedded Page. Omitting `outlet` does not select self-embedding.
-
-A root or nested item can declare `shortcut` as one keyboard combination such as `"Ctrl+K"` or a non-empty array such as `["Ctrl+K", "Meta+K"]`.
-An identified contribution that supplies `shortcut` replaces the whole value. The containing menu's scope determines where the bindings are active. An item can declare
-`disabled: true` to prevent activation or a browser `target` such as `"_blank"` to open its link in a new tab. See
-[Keyboard shortcuts](../30-subsystems/10-areas.md#keyboard-shortcuts) for syntax, activation, conflict handling, and the global Search example.
+Module manifests can contribute named application menus through `xshell.services.menus.options.definitions`. Areas explicitly select these
+definitions for their menu slots. See [Menus and home](../30-subsystems/10-areas.md#menus-and-home) for the options and lookup APIs.
 
 `routes` maps Area-relative friendly Path patterns to module-relative Page targets:
 

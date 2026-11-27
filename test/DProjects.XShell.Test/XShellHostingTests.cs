@@ -102,6 +102,7 @@ namespace DProjects.XShell.Test {
         }
         [Theory]
         [InlineData("/app/index.html", "text/html")]
+        [InlineData("/app/index.js", "application/javascript")]
         [InlineData("/app/sw.js", "application/javascript")]
         [InlineData("/app/customers/42", "text/html")]
         public async Task GeneratedResponse_HeadHasGetHeadersWithoutBody(string path, string contentType) {
@@ -120,6 +121,20 @@ namespace DProjects.XShell.Test {
             Assert.Equal(get.Content.Headers.ContentType, head.Content.Headers.ContentType);
             Assert.Equal(getBytes.Length, head.Content.Headers.ContentLength);
             Assert.Empty(headBytes);
+        }
+        [Theory]
+        [InlineData("/app/index.js")]
+        [InlineData("/app/sw.js")]
+        public async Task DevelopmentBootstrapScripts_DisableCaching(string path) {
+            await using var host = await HostingApplication.StartAsync();
+
+            using var get = await host.Client.GetAsync(path, TestContext.Current.CancellationToken);
+            using var head = await host.Client.SendAsync(new HttpRequestMessage(HttpMethod.Head, path), TestContext.Current.CancellationToken);
+
+            Assert.Equal(HttpStatusCode.OK, get.StatusCode);
+            Assert.Equal(HttpStatusCode.OK, head.StatusCode);
+            Assert.True(get.Headers.CacheControl?.NoStore);
+            Assert.True(head.Headers.CacheControl?.NoStore);
         }
         [Theory]
         [InlineData("POST", "/app/customers/42")]

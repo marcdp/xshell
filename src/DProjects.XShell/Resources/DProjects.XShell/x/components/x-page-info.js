@@ -37,7 +37,7 @@ export default {
         context: {},
         contract: null
     },
-    controller({ events, config, bus, state, getPage, areas, host}) {
+    controller({ events, config, bus, state, getPage, areas, menus, host}) {
         return {
             async load() {
                 // mount
@@ -57,7 +57,7 @@ export default {
             refresh() {
                 // refresh
                 const page = getPage();
-                const url = areas.resolveHref(page.src);   
+                const url = menus.resolveHref(page.src);
                 state.id = page.id; 
                 state.label = page.label; 
                 state.description = page.description; 

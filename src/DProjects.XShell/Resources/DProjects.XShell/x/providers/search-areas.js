@@ -1,9 +1,10 @@
 export default class AreasSearchProvider {
 
     // ctor
-    constructor({areas, config}) {
+    constructor({areas, menus, config}) {
         // Retain metadata-only Services used to inspect effective Area navigation.
         this.areas = areas;
+        this.menus = menus;
         this.config = config;
 
         // Include both inventoried Page paths and the runtime JS paths used for HTML Pages.
@@ -21,7 +22,7 @@ export default class AreasSearchProvider {
         const results = [];
         for (const area of areas) {
             signal?.throwIfAborted();
-            const menu = this.areas.getMenu("navigation", area.id);
+            const menu = this.menus.getMenu("navigation", area.id);
             if (!menu || menu.scope !== "area") continue;
             this.collect(menu.items, area, query, results, signal);
         }

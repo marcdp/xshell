@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import test from 'node:test';
 import Areas from '../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/areas.js';
+import Menus from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/menus.js";
 import JsonValidator from '../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/json-validator.js';
 import componentSchema from '../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/schemas/component.schema.json' with { type: 'json' };
 import contractSchema from '../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/schemas/contract.schema.json' with { type: 'json' };
@@ -36,18 +37,23 @@ const pageFiles = directory => readdirSync(directory, { withFileTypes: true }).f
 });
 
 test('cookbook navigation derives ordered Pages from the file inventory', () => {
-    assert.deepEqual(config.modules['x-demo'].menus.navigation, { source: '/pages' });
+    const { definitions } = config.xshell.services.menus.options;
+    assert.deepEqual(definitions.cookbook, { sources: [{ source: '/pages' }] });
     const files = pageFiles(path.join(root, 'pages'));
-    const module = { id: 'x-demo', config: { menus: { navigation: { source: '/_assets/x-demo/pages' } } } };
-    const areas = new Areas({
-        config: {
+    const runtimeConfig = {
             xshell: { assets: { basePath: '/_assets' } },
-            modules: { 'x-demo': { label: 'XShell Cookbook', files: files.map(file => ({ path: `/_assets/x-demo/${file.replace(/\.js$/, file.includes('html-page') ? '.html' : '.js')}` })) } }
-        },
-        bus: { addEventListener() {} }
-    }, { default: 'cookbook', definitions: { cookbook: { prefix: '/cookbook', modules: ['x-demo'] } } });
-    areas.init({ modules: { getModuleById() { return module; } } });
-    const { name, items: menu } = areas.getMenu('navigation');
+            modules: { 'x-demo': { assets: { path: '/_assets/x-demo' }, label: 'XShell Cookbook', files: files.map(file => ({ path: `/_assets/x-demo/${file.replace(/\.js$/, file.includes('html-page') ? '.html' : '.js')}` })) } }
+    };
+    const bus = new EventTarget();
+    const areas = new Areas({ config: runtimeConfig, bus }, { default: 'cookbook', definitions: {
+        cookbook: config.xshell.services.areas.options.definitions.cookbook
+    } });
+    const menus = new Menus({ areas, bus, config: runtimeConfig }, { definitions: {
+        'cookbook': { sources: [{ source: '/_assets/x-demo/pages' }] }
+    } });
+    menus.init();
+    areas.init({ menus, modules: { getModuleById: id => ({ id }) } });
+    const { name, items: menu } = menus.getMenu('navigation');
     assert.equal(name, 'navigation');
     assert.equal(areas.getArea('cookbook').home, '/cookbook/');
     assert.deepEqual(menu[0].children.map(item => item.label),
@@ -103,7 +109,7 @@ test('the counter keeps its public contract separate from private state', async 
 test('the cookbook module controller exposes its startup state', async () => {
     const { default: ModuleController } = await import(new URL(
         '../../src/DProjects.XShell/Resources/DProjects.XShell/x-demo/module.js', import.meta.url));
-    const controller = new ModuleController({ moduleConfig: config.modules['x-demo'] });
+    const controller = new ModuleController({ config, moduleConfig: config.modules['x-demo'] });
     assert.equal(controller.started, false);
     controller.start();
     assert.equal(controller.started, true);
@@ -113,8 +119,10 @@ test('the cookbook module controller exposes its startup state', async () => {
 test('the cookbook module controller summarizes its effective Page inventory', async () => {
     const { default: ModuleController } = await import(new URL(
         '../../src/DProjects.XShell/Resources/DProjects.XShell/x-demo/module.js', import.meta.url));
-    const controller = new ModuleController({ moduleConfig: {
-        id: 'x-demo', label: 'XShell Cookbook', menus: { navigation: { source: '/_assets/x-demo/pages' } },
+    const controller = new ModuleController({ config: { xshell: { services: { menus: { options: { definitions: {
+        'cookbook': { sources: [{ source: '/_assets/x-demo/pages' }] }
+    } } } } } }, moduleConfig: {
+        id: 'x-demo', label: 'XShell Cookbook',
         assets: { path: '/_assets/x-demo' }, files: [
             { path: '/_assets/x-demo/pages/index.js' },
             { path: '/_assets/x-demo/pages/01-components/01-buttons.js' },
@@ -151,7 +159,9 @@ test('path resolution example follows the effective Area menu in both directions
     const state = {};
     const controller = example.controller({
         areas: {
-            resolveAreaId(src) { assert.equal(src, href); return 'cookbook'; },
+            resolveAreaId(src) { assert.equal(src, href); return 'cookbook'; }
+        },
+        menus: {
             resolveHref(src, areaId) { assert.equal(areaId, 'cookbook'); assert.equal(src, href); return item; },
             resolvePath(path) { assert.equal(path, item.path); return item; }
         },

@@ -7,11 +7,13 @@ import ContractSchema from "../../src/DProjects.XShell/Resources/DProjects.XShel
 import ModuleSchema from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/schemas/module.schema.json" with { type: "json" };
 import { Validator } from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/vendor/json-schema/4.1.1/json-schema.js";
 import Areas from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/areas.js";
+import Menus from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/menus.js";
 import { compileRoute } from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/utils/route.js";
 
 const validator = new Validator(ConfigSchema, "2020-12");
 validator.addSchema(ModuleSchema, ModuleSchema.$id);
 validator.addSchema(ContractSchema, ContractSchema.$id);
+const menusOptionsValidator = new Validator(Menus.optionsSchema, "2020-12");
 const areasOptionsValidator = new Validator(Areas.optionsSchema, "2020-12");
 
 const areaOptions = config => config.xshell.services.areas.options;
@@ -82,29 +84,27 @@ function configuration(module) {
     };
 }
 
-test("effective module schema accepts nested and identified shortcut declarations and rejects invalid types", () => {
-    const module = moduleDefinition();
+test("Menus options schema accepts nested and identified shortcut declarations and rejects invalid types", () => {
     const item = {id: "search", shortcut: "Ctrl+K"};
-    module.menus = {tools: {scope: "global", items: [{label: "Group", children: [item]}]}};
+    const options = { definitions: {tools: {scope: "global", items: [{label: "Group", children: [item]}]}} };
     for (const shortcut of ["Ctrl+K", ["Ctrl+K"], ["Ctrl+K", "Meta+K"]]) {
         item.shortcut = shortcut;
-        assert.equal(validator.validate(configuration(module)).valid, true);
+        assert.equal(menusOptionsValidator.validate(options).valid, true);
     }
     for (const invalid of [null, 42, "", [], [""], ["Ctrl+K", false], [["Ctrl+K"]]]) {
         item.shortcut = invalid;
-        assert.equal(validator.validate(configuration(module)).valid, false, JSON.stringify(invalid));
+        assert.equal(menusOptionsValidator.validate(options).valid, false, JSON.stringify(invalid));
     }
 });
 
-test("effective module schema accepts browser targets and rejects non-string values", () => {
-    const module = moduleDefinition();
+test("Menus options schema accepts browser targets and rejects non-string values", () => {
     const item = {label: "Help", href: "/pages/help.js", target: "_blank"};
-    module.menus = {tools: {items: [item]}};
-    assert.equal(validator.validate(configuration(module)).valid, true);
+    const options = { definitions: {tools: {items: [item]}} };
+    assert.equal(menusOptionsValidator.validate(options).valid, true);
     item.target = null;
-    assert.equal(validator.validate(configuration(module)).valid, true);
+    assert.equal(menusOptionsValidator.validate(options).valid, true);
     item.target = true;
-    assert.equal(validator.validate(configuration(module)).valid, false);
+    assert.equal(menusOptionsValidator.validate(options).valid, false);
 });
 
 function assertValid(module) {
@@ -251,61 +251,39 @@ test("effective config validates route grammar before runtime construction", asy
     await assert.doesNotReject(validateConfig("test", config));
 });
 
-test("global menus accept metadata and static items while Area menus can declare a source", async () => {
+test("Menus validates named options and rejects obsolete module menu configuration", () => {
     const config = configuration(moduleDefinition());
-    config.modules.test.menus = { shortcuts: { source: "runtime-shortcuts" }, tools: { source: "runtime-tools" } };
-    config.modules.base = { ...moduleDefinition(), menus: { shortcuts: { scope: "global" } } };
-    await assert.rejects(validateConfig("test", config), /Global menu 'shortcuts' from module 'test' must use static contributions.*'runtime-shortcuts'/);
-    config.modules.test.menus.shortcuts.source = "/_assets/test/pages";
-    await assert.rejects(validateConfig("test", config), /Global menu 'shortcuts' from module 'test' must use static contributions.*'\/_assets\/test\/pages'/);
-
-    config.modules.test.menus.shortcuts = { label: "Shortcuts" };
-    await assert.doesNotReject(validateConfig("test", config));
-    config.modules.test.menus.shortcuts.items = [{ label: "Shortcut", href: "/pages/shortcut.js" }];
-    await assert.doesNotReject(validateConfig("test", config));
-
-    config.modules.test.menus.shortcuts.items[0].children = [{ label: "Nested", childrenSource: "runtime-children" }];
-    await assert.rejects(validateConfig("test", config), /Global menu item 'Nested' from module 'test' must use static children.*'runtime-children'/);
-
-    config.modules.base.menus.shortcuts.scope = "area";
-    config.modules.test.menus.shortcuts.source = "runtime-shortcuts";
-    await assert.doesNotReject(validateConfig("test", config));
-});
-
-test("module schema validates named menu definitions and rejects obsolete formats", () => {
-    const module = moduleDefinition();
-    module.menus = {
+    const definitions = {
         navigation: { label: "Navigation", description: "Find a Page.", icon: null,
-            source: "/pages", items: [{ id: "reports", label: "Reports", children: [{ label: "Detail" }] }] },
+            sources: [{ id: "inventory", source: "/_assets/test/pages" }], items: [{ id: "reports", children: [{ label: "Detail" }] }] },
         tools: { scope: "area", icon: "x-tools" },
         shortcuts: { scope: "global", items: [] },
         empty: {}
     };
-    assertValid(module);
-    assert.equal(Object.hasOwn(module.menus.navigation, "scope"), false);
-    assert.equal(Object.hasOwn(ModuleSchema.$defs.menuDefinition.properties.scope, "default"), false);
+    const options = { definitions };
+    assert.equal(menusOptionsValidator.validate(options).valid, true);
+    config.modules.test.menus = definitions;
+    assert.equal(validator.validate(config).valid, false);
 
-    for (const definition of [[], "/pages", { items: "/pages" }, { children: [] }, { id: "empty" }, { name: "empty" },
-        { description: null }, { icon: true }, { label: 1 }, { source: "" }, { scope: "local" }, { scope: "Global" },
-        { scope: true }, { scope: null }, { global: true }, { scope: "global", global: true }]) {
-        module.menus.empty = definition;
-        assert.equal(validator.validate(configuration(module)).valid, false, JSON.stringify(definition));
+    for (const invalid of [[], "/pages", { items: "/pages" }, { children: [] }, { id: "empty" }, { name: "empty" },
+        { description: null }, { icon: true }, { label: 1 }, { source: "/pages" }, { sources: ["runtime"] },
+        { sources: [{ id: "missing-target" }] }, { scope: "local" }, { scope: null }, { global: true }]) {
+        definitions.empty = invalid;
+        assert.equal(menusOptionsValidator.validate(options).valid, false, JSON.stringify(invalid));
     }
 });
 
-test("menu schema accepts Page presentation fields and rejects removed embedded spellings", () => {
-    const module = moduleDefinition();
-    module.menus = { navigation: { items: [{ label: "Inline report", href: "/pages/report.js", open: "embed", outlet: "self" }] } };
-    assertValid(module);
-
+test("Menus options accept Page presentation fields and reject removed embedded spellings", () => {
+    const items = [{ label: "Inline report", href: "/pages/report.js", open: "embed", outlet: "self" }];
+    const options = { definitions: { navigation: { items } } };
+    assert.equal(menusOptionsValidator.validate(options).valid, true);
     for (const property of ["embedded", "embeded"]) {
-        module.menus.navigation.items[0] = { label: "Inline report", href: "/pages/report.js", [property]: true };
-        assert.equal(validator.validate(configuration(module)).valid, false);
+        items[0] = { label: "Inline report", href: "/pages/report.js", [property]: true };
+        assert.equal(menusOptionsValidator.validate(options).valid, false);
     }
-
     for (const open of ["auto", "top", "stack", "dialog", "dock", "embed", null]) {
-        module.menus.navigation.items[0] = { label: "Report", open, outlet: open === "embed" ? "content" : null };
-        assertValid(module);
+        items[0] = { label: "Report", open, outlet: open === "embed" ? "content" : null };
+        assert.equal(menusOptionsValidator.validate(options).valid, true);
     }
 });
 

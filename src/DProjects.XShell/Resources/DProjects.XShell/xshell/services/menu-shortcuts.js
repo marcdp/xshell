@@ -13,7 +13,7 @@ export default class MenuShortcuts {
     };
 
     // fields
-    #areas;
+    #menus;
     #bus;
     #document;
     #navigation;
@@ -23,9 +23,9 @@ export default class MenuShortcuts {
     #diagnostics = new Set();
 
     // ctor
-    constructor({ areas, bus, document, navigation }) {
+    constructor({ bus, document, menus, navigation }) {
         // Use the application's document and effective navigation context.
-        this.#areas = areas;
+        this.#menus = menus;
         this.#bus = bus;
         this.#document = document;
         this.#navigation = navigation;
@@ -61,9 +61,8 @@ export default class MenuShortcuts {
     }
 
     #refresh = () => {
-        // Index only the current Area and the shared global menus returned by Areas.
-        const currentArea = this.#areas.getCurrentArea();
-        const menus = this.#areas.getMenus(currentArea?.id ?? null);
+        // Index only the current Area and the shared global menus.
+        const menus = this.#menus.getMenus();
         const candidates = new Map();
         const diagnostics = new Set();
         const collect = (items, location) => {
@@ -88,7 +87,7 @@ export default class MenuShortcuts {
                 collect(item.children, name);
             }
         };
-        for (const menu of menus) collect(menu.items, `${menu.scope === "global" ? "Global" : `Area '${currentArea.id}'` } menu '${menu.name}'`);
+        for (const menu of menus) collect(menu.items, `${menu.scope === "global" ? "Global" : `Area '${menu.items[0]?.area}'` } menu '${menu.name}'`);
 
         // Suppress every claimant of an ambiguous combination and report the participants.
         this.#bindings.clear();

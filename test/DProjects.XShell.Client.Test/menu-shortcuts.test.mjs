@@ -3,30 +3,32 @@ import { getEventListeners } from "node:events";
 import test from "node:test";
 
 import Areas from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/areas.js";
+import Menus from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/menus.js";
 import MenuShortcuts from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/menu-shortcuts.js";
 import { getEventShortcut, parseShortcut } from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/utils/keyboard-shortcut.js";
 
-function createRuntime(t, modules = {}, options = {}) {
+function createRuntime(t, definitions = {}, options = {}) {
     // Compose real menus and simulate a key bubbling from an application Page to its document.
     const document = Object.assign(new EventTarget(), {body: {}});
     const pageHost = Object.assign(new EventTarget(), {localName: "x-page", page: {src: "/main/home"}, appendChild() {}});
     const bus = Object.assign(new EventTarget(), {emit(type, detail) { this.dispatchEvent(new CustomEvent(type, {detail})); }});
-    const config = {xshell: {assets: {basePath: "/_assets"}}, modules};
+    const config = {xshell: {assets: {basePath: "/_assets"}}, modules: {}};
     const areas = new Areas({config, bus}, {default: null, definitions: {}, ...options});
+    const menus = new Menus({areas, bus, config}, {definitions});
     const navigation = {
         getXPages: () => [pageHost], getXPageFromElement: () => pageHost,
         navigate: t.mock.fn(async () => {}), buildUrlAbsolute: t.mock.fn(link => "/app" + link.href)
     };
     const nativeClicks = [];
     document.createElement = () => ({click() { nativeClicks.push([this.href, this.target]); }, remove() {}});
-    const shortcuts = new MenuShortcuts({areas, bus, document, navigation});
+    const shortcuts = new MenuShortcuts({menus, bus, document, navigation});
     t.after(() => shortcuts.dispose());
     const commands = [];
     pageHost.addEventListener("command", event => commands.push(event.detail));
     return {
-        areas, bus, document, pageHost, shortcuts, commands, navigation, nativeClicks,
+        menus, bus, document, pageHost, shortcuts, commands, navigation, nativeClicks,
         init() {
-            areas.init({modules: {getModuleById: id => ({id, config: modules[id]})}});
+            menus.init();
             shortcuts.init();
         },
         press(key, props = {ctrlKey: true}, path = [pageHost, document.body, document]) {
@@ -53,32 +55,24 @@ test("shortcut syntax normalizes modifier order and case and uses the logical ev
     assert.equal(getEventShortcut({key: "k", ctrlKey: true, altKey: true, getModifierState: key => key === "AltGraph"}), null);
 });
 
-test("merged nested shortcuts persist and activate only in their Area or in global scope", t => {
-    const global = {scope: "global", items: [{id: "search", label: "Search", command: "search", shortcut: ["Ctrl+J", "Alt+J"]}]};
+test("nested shortcuts activate only in their selected Area or in global scope", t => {
+    const global = {scope: "global", items: [{id: "search", label: "Search", command: "search", shortcut: ["Ctrl+K", "Meta+K"]}]};
     const tools = {items: [{id: "group", label: "Tools", children: [
-        {id: "report", label: "Report", href: "/report.js", path: "/report", open: "stack", shortcut: ["Alt+P", "Meta+P"]}
+        {id: "report", label: "Report", href: "/report.js", path: "/report", open: "stack", shortcut: "Ctrl+Shift+P"}
     ]}]};
-    const addons = { global: {items: [{id: "search", shortcut: ["Ctrl+K", "Meta+K"]}]},
-        tools: {items: [{id: "group", children: [{id: "report", shortcut: "Ctrl+Shift+P"}]}]} };
-    const modules = {base: {menus: {global, tools}}, addon: {menus: addons}, other: {menus: {
-        tools: {items: [{label: "Help", shortcut: "Ctrl+Shift+P", href: "/help.js", open: "dialog"}]}
-    }}};
-    const original = structuredClone(modules);
-    const runtime = createRuntime(t, modules, {default: "main", definitions: {
-        main: {prefix: "/main", modules: ["base", "addon"]}, other: {prefix: "/other", modules: ["other"]}
+    const help = {items: [{label: "Help", shortcut: "Ctrl+Shift+P", href: "/help.js", open: "dialog"}]};
+    const runtime = createRuntime(t, {global, tools, help}, {default: "main", definitions: {
+        main: {prefix: "/main", menus: {tools: "tools"}}, other: {prefix: "/other", menus: {tools: "help"}}
     }});
-    const {areas, bus, commands, press, navigation, pageHost} = runtime;
+    const {menus, bus, commands, press, navigation, pageHost} = runtime;
     runtime.init();
-    const shared = areas.getMenu("global");
-    assert.equal(shared, areas.getMenu("global", "other"));
+    const shared = menus.getMenu("global");
+    assert.equal(shared, menus.getMenu("global", "other"));
     assert.deepEqual(shared.items[0].shortcut, ["Ctrl+K", "Meta+K"]);
-    assert.notStrictEqual(shared.items[0].shortcut, addons.global.items[0].shortcut);
+    assert.notStrictEqual(shared.items[0].shortcut, global.items[0].shortcut);
     assert.ok(Object.isFrozen(shared.items[0].shortcut));
-    assert.equal(Object.isFrozen(addons.global.items[0].shortcut), false);
-    assert.equal(areas.getMenu("tools").items[0].children[0].shortcut, "Ctrl+Shift+P");
-    assert.deepEqual(modules, original);
-    assert.equal(press("j"), false);
-    assert.equal(press("j", {altKey: true}), false);
+    assert.equal(Object.isFrozen(global.items[0].shortcut), false);
+    assert.equal(menus.getMenu("tools").items[0].children[0].shortcut, "Ctrl+Shift+P");
     assert.equal(press("k"), true);
     assert.equal(press("K", {ctrlKey: true, shiftKey: true}), false);
     assert.equal(press("k", {metaKey: true}), true);
@@ -95,7 +89,7 @@ test("merged nested shortcuts persist and activate only in their Area or in glob
 
 test("collisions suppress all active claimants and refresh when live menus change", t => {
     const warn = t.mock.method(console, "warn", () => {});
-    const runtime = createRuntime(t, {base: {menus: {
+    const runtime = createRuntime(t, {
         global: {scope: "global", items: [
             {label: "One", shortcut: ["Ctrl+K", "Meta+K"], command: "one"}, {label: "Two", shortcut: "ctrl+k", command: "two"},
             {label: "Actions", shortcut: "Ctrl+L", command: "actions"},
@@ -104,14 +98,14 @@ test("collisions suppress all active claimants and refresh when live menus chang
         globalOther: {scope: "global", items: [{label: "Other actions", shortcut: "Ctrl+L", command: "other"}]},
         areaOne: {items: [{label: "Live", childrenSource: "live"}]},
         areaTwo: {items: [{label: "Area action", shortcut: "Ctrl+P", command: "area"}]}
-    }}}, {default: "main", definitions: {main: {prefix: "/main", modules: ["base"]}, other: {prefix: "/other", modules: []}}});
+    }, {default: "main", definitions: {main: {prefix: "/main", menus: {areaOne: "areaOne", areaTwo: "areaTwo"}}, other: {prefix: "/other"}}});
     let children = [
         {label: "First report", shortcut: "ctrl+r", command: "first"},
         {label: "Local action", shortcut: "Ctrl+P", command: "local"},
         {label: "Partially valid", shortcut: ["Mod+Q", "Alt+Q"], command: "partially-valid"}
     ];
     const source = {resolve: () => children, dependsOn: ["test:update"]};
-    runtime.areas.registerSource("live", source);
+    runtime.menus.registerSource("live", source);
     runtime.init();
     for (const key of ["k", "l", "r", "p", "q"]) assert.equal(runtime.press(key), false, key);
     assert.equal(runtime.press("k", {metaKey: true}), true);
@@ -129,7 +123,7 @@ test("collisions suppress all active claimants and refresh when live menus chang
 
     children = [{label: "Refreshed", shortcut: ["Ctrl+J", "Meta+J"], command: "refreshed"}];
     assert.equal(source.refresh(), true);
-    assert.deepEqual(runtime.areas.getMenu("areaOne").items[0].children[0].shortcut, ["Ctrl+J", "Meta+J"]);
+    assert.deepEqual(runtime.menus.getMenu("areaOne").items[0].children[0].shortcut, ["Ctrl+J", "Meta+J"]);
     for (const key of ["r", "p", "j"]) assert.equal(runtime.press(key), true);
     assert.equal(runtime.press("j", {metaKey: true}), true);
     children = [{label: "Refreshed", shortcut: "Ctrl+P", command: "refreshed"}];
@@ -148,7 +142,7 @@ test("keydown preserves editing, composition, repetition, disabled actions, and 
         {label: "Disabled", command: "disabled", shortcut: "Ctrl+D", disabled: true},
         {label: "Unavailable submenu", shortcut: "Ctrl+B", children: [{label: "Child", command: "child"}]}
     ];
-    const runtime = createRuntime(t, {base: {menus: {global: {scope: "global", items}}}});
+    const runtime = createRuntime(t, {global: {scope: "global", items}});
     const {document, pageHost, press, commands} = runtime;
     runtime.init();
     for (const editor of [{localName: "input"}, {localName: "textarea"}, {isContentEditable: true}]) {
@@ -175,15 +169,15 @@ test("presenters take precedence, browser targets are retained, and disposal rel
         {label: "Presented", command: "visible", shortcut: "Ctrl+K"},
         {label: "Tab", href: "/report", target: "_blank", shortcut: "Ctrl+T"}
     ];
-    const runtime = createRuntime(t, {base: {menus: {global: {scope: "global", items}}}});
-    const {areas, bus, document, shortcuts, press, commands, nativeClicks} = runtime;
+    const runtime = createRuntime(t, {global: {scope: "global", items}});
+    const {menus, bus, document, shortcuts, press, commands, nativeClicks} = runtime;
     runtime.init();
     shortcuts.init();
     assert.equal(getEventListeners(document, "keydown").length, 1);
     assert.equal(getEventListeners(bus, "xshell:menus:change").length, 1);
     const activate = t.mock.fn(() => true);
     const host = {isConnected: true, ownerDocument: document};
-    const remove = shortcuts.registerPresenter(areas.getMenu("global").items[0], host, activate);
+    const remove = shortcuts.registerPresenter(menus.getMenu("global").items[0], host, activate);
     assert.equal(press("k"), true);
     assert.equal(activate.mock.callCount(), 1);
     assert.deepEqual(commands, []);

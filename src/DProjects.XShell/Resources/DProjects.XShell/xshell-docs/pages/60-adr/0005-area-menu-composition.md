@@ -2,36 +2,30 @@
 
 ## Status
 
-Implemented for hash and path navigation.
+Implemented for hash and path navigation. This revision supersedes the original module-owned menu composition.
 
 ## Context
 
-Reusable modules should not need to know whether an application presents them under customers, inventory, or another navigation context.
-The earlier Area-keyed menu shape coupled module definitions to one application's placement and obscured resource ownership.
+Applications reuse menu definitions across navigation contexts and combine menu content from several manifests. Routes still follow the modules
+that participate in each Area.
 
 ## Decision
 
-The root application owns `xshell.services.areas.options.default` and `xshell.services.areas.options.definitions.<id>`. Each Area defines a navigation prefix and lists
-participating canonical module ids. A module owns reusable contributions to arbitrary named menu slots under
-`modules.<module-id>.menus.<menu-name>`. Each definition can declare `scope` and contribute display metadata, root `items`, or an Area `source`.
-Areas discovers global menus before module startup and composes them once from all selected modules in configuration order. An explicit
-scope applies across contributions with the same name. Menus default to Area scope when all contributions omit it. Conflicting explicit
-declarations fail. A menu item may have an optional friendly `path` and a canonical XShell navigation target `href`. Areas
-assembles Area-scoped menus in the listed module order and applies the Area prefix to both local values. The first navigation item
-marked `default: true` in depth-first traversal supplies the initial home candidate through `path || href`.
-If that search returns no target, the first depth-first target is used; no visibility flag is checked. Home is computed at initialization. A module
-may participate in multiple Areas while
-retaining one runtime module instance. An Area prefix denotes navigation context; `/_assets/<module-id>/...` denotes the resource namespace.
+Modules contribute service configuration through `xshell.services.<service-name>.options`. Bootstrap normalizes each manifest's resource URLs,
+then recursively merges objects and identified array elements in framework, dependency, and root order. Matching items retain their positions.
+Bootstrap applies the same rules to all configuration sections.
 
-Root ownership is a composition convention rather than an enforced fragment boundary: the configuration merger accepts `xshell` settings from
-references. Area membership does not create module dependencies or routes.
+Menus is a declarative singleton. Its options own named application menu definitions. Areas maps logical slots to those names and composes routes
+from participating modules. An Area-scoped menu can be selected by several Areas. Menus applies each Area's prefix to its own read-only
+projection. Global menus are static and application-wide. Canonical asset paths identify the resources and their runtime modules.
 
 ## Consequences and open work
 
-The runtime constructs the declarative Areas service before module controllers start, then constructs canonical modules and invokes `Areas.init()`
-to compose effective menus and homes before Navigation starts. Menu UI uses
-`path || href`; Navigation resolves a friendly path to canonical Area-aware href before passing it to `x-page`. `x-page` strips a matched Area
-prefix only for module resource lookup. Breadcrumb lookup uses the canonical href's Area before Navigation emits an Area change. Dynamic menu
-updates retain `xshell:menus:change`; Area changes use `xshell:area:change`.
+XShell resolves Areas and Menus before initializing module controllers. The Menus constructor validates Area selections and publishes globals.
+Module controllers can register sources during initialization. XShell then initializes the contextual menus and derives Area routes and homes
+before Navigation starts. Menu shortcuts initialize after Navigation.
+
+Navigation uses menu aliases and canonical Area-aware hrefs. Page loading removes the matched Area prefix for resource lookup. Menus emits
+`xshell:menus:change` for effective source updates. Areas emits `xshell:area:change` when navigation changes the active Area.
 
 See [Areas](../30-subsystems/10-areas.md), [Navigation](../10-architecture/120-navigation.md), and [Configuration](../10-architecture/20-configuration.md).

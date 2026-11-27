@@ -11,7 +11,7 @@ export default {
         <h2>Creating a Module controller</h2>
         <p>Place <code>module.js</code> at the Module root and default-export a class.</p>
         <x-code language="javascript" x-pre>export default class {
-    constructor({moduleConfig}) {
+    constructor({moduleConfig, config}) {
         this.id = moduleConfig.id;
         this.label = moduleConfig.label;
     }
@@ -58,10 +58,10 @@ Module shutdown
         <h2>The cookbook controller</h2>
         <p>The actual <code>x-demo/module.js</code> stores Module information and prepares a summary of its Page resources during startup.</p>
         <x-code language="javascript" x-pre>export default class {
-    constructor({moduleConfig}) {
+    constructor({moduleConfig, config}) {
         this.id = moduleConfig.id;
         this.label = moduleConfig.label;
-        this.menuSource = moduleConfig.menus.navigation.source;
+        this.menuSource = config.xshell.services.menus.options.definitions.cookbook.sources[0].source;
         this.files = moduleConfig.files || [];
         this.assetsPath = moduleConfig.assets?.path || "";
         this.pageCount = 0;

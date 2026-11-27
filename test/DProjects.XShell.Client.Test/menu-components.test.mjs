@@ -86,7 +86,9 @@ test("x-page-menu selects its owning Page's Area and skips menu lookup for globa
     const controller = pageMenuDefinition.controller({
         state, getPage: () => page,
         areas: {
-            resolveAreaId: src => src.startsWith("/docs/") ? "docs" : null,
+            resolveAreaId: src => src.startsWith("/docs/") ? "docs" : null
+        },
+        menus: {
             getMenu: (...args) => { lookups.push(args); return menu; }
         }
     });

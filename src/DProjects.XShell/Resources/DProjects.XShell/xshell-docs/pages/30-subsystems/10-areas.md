@@ -1,34 +1,52 @@
 # Areas
 
-An Area is a navigation context composed from participating modules, including the effective menus and route declarations contributed by those
-modules. Modules own declarative metadata; Areas define application composition. A module may participate in several Areas or none, while Modules
-keeps one live runtime instance per canonical module id. Navigation remains responsible for browser URLs, history, page stacks, and page activation.
+An Area is a navigation context with a prefix, participating modules, and selected menu slots. Areas composes routes from participating modules.
+A module can participate in several Areas while retaining one runtime instance. Navigation owns browser URLs, history, Page stacks, and activation.
 
 ## Configuration and ownership
 
-This composition fragment omits module metadata/defaults and other effective configuration sections:
+Configure `xshell.services.areas.options.default` and `xshell.services.areas.options.definitions` in the application manifests.
+Each definition can supply `prefix`, `label`, `icon`, `description`, `order`, `modules`, and `menus`. The `modules` array determines route
+participation and composition order. The `menus` map assigns logical slots to named Menus definitions. An unknown module, default Area,
+or menu reference fails startup. The configured default appears first, then Areas sort by `order` and `label`. With a null default, the first
+sorted Area becomes the initial current Area.
 
 ```jsonc
 {
-    "modules": {
-        "reports": {
-            "menus": {
-                "navigation": {
-                    "label": "Reports",
-                    "items": [{ "label": "Reports", "path": "reports", "href": "/pages/report.js", "default": true }]
-                },
-                "shortcuts": { "scope": "global", "items": [{ "label": "About", "href": "/pages/about.js" }] }
-            }
-        }
-    },
     "xshell": {
         "services": {
             "areas": {
                 "options": {
                     "default": "customers",
                     "definitions": {
-                        "customers": { "prefix": "customers", "label": "Customers", "modules": ["reports"] },
-                        "inventory": { "prefix": "inventory", "label": "Inventory", "modules": ["reports"] }
+                        "customers": {
+                            "prefix": "customers",
+                            "label": "Customers",
+                            "modules": ["reports"],
+                            "menus": { "navigation": "report-navigation" }
+                        },
+                        "inventory": {
+                            "prefix": "inventory",
+                            "label": "Inventory",
+                            "menus": { "navigation": "report-navigation" }
+                        }
+                    }
+                }
+            },
+            "menus": {
+                "options": {
+                    "definitions": {
+                        "report-navigation": {
+                            "label": "Reports",
+                            "items": [{
+                                "id": "reports", "label": "Reports", "path": "reports",
+                                "href": "/pages/report.js", "default": true
+                            }]
+                        },
+                        "shortcuts": {
+                            "scope": "global",
+                            "items": [{ "label": "About", "href": "/pages/about.js" }]
+                        }
                     }
                 }
             }
@@ -37,124 +55,67 @@ This composition fragment omits module metadata/defaults and other effective con
 }
 ```
 
-Each `xshell.services.areas.options.definitions.<id>` entry may set `prefix`, `label`, `icon`, `modules`, `order`, and descriptive `description`.
-The `modules` array
-sets participation
-and menu contribution order. The effective schema rejects a configured Area `home`; runtime derives it from menus. Root ownership is an architectural convention: bootstrap can merge
-`xshell` fragments from imported configurations. Arrays, including `area.modules`, concatenate during that merge.
-Authored navigation prefixes and friendly menu paths conventionally omit the leading `/`; a leading `/` is XShell's module-root-relative
-configuration syntax. Areas normalizes the ordinary authored values into leading-slash navigation paths at runtime.
-
-Areas are presented with the configured default first, then by `order`, then `label`. An unknown configured default or duplicate normalized
-prefix throws. With no configured default, the first sorted Area is used. The initial current Area is the default Area.
-
 ## Menus and home
 
-Each entry in a module's `menus` dictionary is a definition keyed by its menu name. A contribution can supply `scope`, `label`, `description`,
-`icon`, static root `items`, and a `source` for Area menus.
+Menus owns definitions under `xshell.services.menus.options.definitions.<name>`. Any selected module manifest can extend the same definition.
+Bootstrap normalizes each manifest's resource references and applies the [generic configuration merge](../10-architecture/20-configuration.md#merge-and-precedence).
+A matching non-empty string item ID merges in place within its sibling array, including nested `children`. Later metadata values follow ordinary
+configuration precedence. Identified items can omit a label supplied by an earlier manifest. A targetless identified group with children can use
+an empty effective label.
 
-Areas resolves scope by menu name across all selected modules. An explicit `"global"` or `"area"` applies to every contribution with that name,
-including contributions that omit the field. If every contribution omits `scope`, the effective scope is `"area"`. Conflicting explicit values
-raise a configuration error identifying the menu and the modules that declared them.
+Each definition can supply `scope`, `label`, `description`, `icon`, static `items`, and Area-only `sources`. The default scope is `"area"`.
+Missing display metadata defaults to the definition name, an empty description, and a null icon. Menus sorts each sibling array by numeric
+`order`, using zero for omitted values. Ties retain their order in the merged array. Set explicit values to position entries across manifests.
 
-Each Area composes Area-scoped menus from its participating modules in `area.modules` order. Later supplied metadata overrides earlier values,
-including `icon: null`. Omitted fields preserve earlier values, and metadata-only contributions retain earlier items.
+Menus contextualizes each selected Area menu independently. It applies the Area prefix to local `path` and `href` and leaves external URLs intact.
+Use a bare relative string such as `"reports"` for an authored friendly path and `"/pages/report.js"` for a manifest-relative resource. The
+example produces `/customers/reports` as the friendly path and `/customers/_assets/reports/<generation>/pages/report.js` as its canonical
+Area-aware href. Menu items expose the canonical target's module id when the href uses the assets namespace. Targetless entries have a null
+module. Area membership determines which module routes participate. Menu selection can display resources from any loaded module.
 
-For each module, Areas merges its explicit `items` and then the items from its `source`. A source beginning with `/` is a module-relative inventory
-path. Other source strings identify registered sources whose `resolve()` method returns menu items. All contributing modules' sources participate
-in order. Module controllers register runtime sources before `Areas.init()`, which fails if a menu source or `childrenSource` is unregistered.
-Each effective Area item carries its module id, Area id, label, icon, children, optional friendly `path`, and canonical `href`.
+Areas derives `home` at startup from the selected Area-scoped `navigation` menu. The default search visits parents before children and uses
+`path || href`. A targetless default ends that search in its sibling array. The first depth-first destination supplies the fallback when
+the default search yields no destination. An Area without a navigation destination has a null home. Source refreshes leave the startup home fixed.
 
-Menu items can declare an optional `id`. Areas recursively merges items with the same non-empty string ID within each named menu or parent's
-`children` array. The first occurrence sets the item's position in the merged array. Later explicitly supplied properties override earlier values,
-and omitted properties retain earlier values. Child arrays follow the same rules. Items with different, missing, or empty IDs append in contribution order.
-An identified contribution may omit `label` when another contribution supplies it. An identified group with children and no target or command
-can use an empty label by default. An item with an `href` keeps the module ownership of that target until a contribution overrides it.
+```javascript
+const navigation = menus.getMenu("navigation");
+const preferences = menus.getMenu("preferences");
+const inventoryMenus = menus.getMenus("inventory");
+```
 
-Each Area menu, global menu, and nested `children` array has a shared opening block at `0`. A later contribution's leading items without
-`order` append to that block in composition order. An explicit numeric `order` starts a block for that item and the siblings that follow it in
-the same contribution, up to the next explicit `order`. After merging by ID, Areas sorts whole blocks by their starting values. The opening
-block precedes explicit blocks at `0`, and other ties retain composition order. Effective item orders increment within each block, so blocks
-stay together even when those values overlap. Inferred values only appear on effective menu items.
+`getMenu(name, areaId)` looks up a slot in the requested or current Area, then falls back to a global definition named `name`.
+`getMenus(areaId)` lists the contextual slots, followed by global definitions whose names are available in that Area. An Area slot can refer to a global menu, which retains its global identity. An unknown explicit Area yields
+`null` or `[]`, respectively. Both methods expose global definitions when the application has no Area. Effective definitions and their
+item trees are read-only. Read `menu.items` again after a change event to obtain the latest snapshot.
 
-Menu items may also declare `tooltip`, `open`, and `outlet`. `tooltip` supplies the navigation anchor's tooltip text. The Page sidebar uses an item's
-description as its tooltip when no explicit tooltip is present. `open` selects automatic, top, stack, dialog, dock, or embedded Page presentation.
-For `open: "embed"`, a named `outlet` navigates into an existing Page outlet. The reserved `outlet: "self"` value instead causes `x-menuitem` to
-compose its canonical `href` directly as a lazy `x-page` with the embed layout and no additional navigation anchor. An omitted or empty outlet does
-not imply `self`. This local presentation behavior belongs to `x-menuitem`; Navigation continues to handle named outlets without special `self`
-semantics.
+`menus.resolvePath(path)` searches contextual menus for an exact friendly alias. `menus.resolveHref(href, areaId)` matches canonical identity
+without query parameters or fragments. Without an explicit Area, it tries a recognized Area prefix, Areas associated with the target module,
+the current Area, then other configured Areas. `menus.getMenuitemBreadcrumb(href, areaId)` returns the matching Area's depth-first ancestor
+chain for the canonical Area-aware href. Breadcrumb entries carry `path` and `href` for navigation.
 
-`childrenSource` belongs on a menu item and adds dynamically resolved children to that item. A definition's `source` contributes root items:
+### Sources
+
+Set `sources` to an ordered array of objects with a `source` string and optional merge `id`. Menus applies each source's root items in array
+order after the static items. A source starting with `/` names an inventory directory relative to the manifest. A named source comes from
+`menus.registerSource(name, source)`. Use `childrenSource` on an item to merge a named source into that item's static children.
 
 ```jsonc
 {
-    "navigation": {
-        "items": [{ "label": "Customers", "href": "/pages/customers.js", "childrenSource": "customer-pages" }]
-    },
-    "tools": { "source": "report-tools" }
+    "report-navigation": {
+        "items": [{ "label": "Customers", "childrenSource": "customer-pages" }],
+        "sources": [{ "id": "pages", "source": "/pages" }, { "id": "tools", "source": "report-tools" }]
+    }
 }
 ```
 
-Here `customer-pages` supplies only `Customers` children, while `report-tools` supplies the entire `tools` menu. Source names are runtime lookup
-identifiers, not URLs or resolver entries. They provide runtime data without mutating the readonly effective configuration.
-Named Area menu sources are registered during module startup, so configuration validation does not check whether they exist.
+An inventory source selects its module inventory by the normalized asset path. Menus generates entries for JavaScript, HTML, and Markdown
+Pages. HTML Page hrefs use `.js`, and Markdown keeps `.md`. Directory index Pages provide directory destinations. Numeric file and directory
+prefixes determine generated order and are removed from labels and friendly path segments. Page metadata can supply a title, description,
+and icon. The module label names the generated root item.
 
-The bundled `x-demo` and `xshell-docs` modules use `"navigation": { "source": "/pages" }`. Areas derives a hierarchy from each module's normalized
-`moduleConfig.files` inventory. It recognizes `.js`, `.html`, and `.md` Pages; HTML destinations become `.js`, while Markdown retains `.md`.
-An `index` Page is the directory destination. Numeric filename and directory prefixes such as `03-navigation` set order and are removed from
-labels and friendly path segments. When a Page inventory entry has generated `resource` metadata, its title overrides the filename-derived label
-and its description and icon are copied to the generated menu item. A nested directory's `index` Page supplies that directory item's metadata.
-Missing metadata retains the filename fallback, and the module label continues to name the root menu item. This is a menu-generation convention
-over the generated inventory, not a parallel authored menu catalog. Registered runtime sources and `childrenSource` remain separate mechanisms.
-The `x` module's Area Search provider traverses these effective nested navigation menus across Areas, searching the current Area first. It preserves
-each result's friendly `path || href`, Area category, and supported Page presentation mode; the core Search Service owns aggregate ranking and identity.
-
-Bootstrap first maps module-relative menu hrefs into `/_assets/<module-id>/<generation>/...`. Areas then applies the Area prefix to both local `path` and local
-`href`, leaving external scheme URLs unchanged. For example, authored `components` and normalized
-`/_assets/x-demo/<generation>/pages/01-components/index.js` become `/main/components` and
-`/main/_assets/x-demo/<generation>/pages/01-components/index.js` in the `main` Area. The Area home is `path || href` of the first
-`navigation` default item in depth-first traversal. If that result has no target, it falls back to the first depth-first item with `path || href`,
-testing each item before its children. Despite the helper's "visible" name, no visibility flag is tested. `home` is null only when neither search
-returns a target. A targetless default ends that search at its current sibling level; fallback still runs.
-Home is computed during `Areas.init()` and is not recomputed by later children refreshes.
-On a fresh load at the selected mode's empty/root URL, Navigation requires the default Area to have a home.
-
-Menu scope controls composition, not lookup. `areas.getMenu(name, areaId = null)` first looks for the name in the requested or current Area and then
-falls back to the shared global definition. An omitted or null Area uses the current Area; when no Area exists, global menus remain available. An
-unknown explicit Area returns `null` without falling back to a global menu.
-
-`areas.getMenus(areaId = null)` returns all menus accessible in the requested or current Area: Area definitions in their effective insertion order,
-followed by global definitions in composition order. It returns only global menus when no Area exists and `[]` for an unknown explicit Area. If a
-name occurs in both internal collections defensively, the Area definition appears once.
-
-```javascript
-// Retrieve an Area menu.
-const navigation = areas.getMenu("navigation");
-
-// Retrieve a global menu through the same API.
-const preferences = areas.getMenu("preferences");
-
-// Retrieve all menus accessible in the current or a specific Area.
-const menus = areas.getMenus();
-const adminMenus = areas.getMenus("admin");
-```
-
-Each definition has `name`, `scope`, `label`, `description`, `icon`, and `items`. After merging, missing metadata defaults to the menu name for
-`label`, an empty string for `description`, and `null` for `icon`. Menu lookups return `null` for an unknown name. Authored empty menus have `items: []`.
-Definitions and their root arrays are frozen. Dynamic item children can still refresh through their registered source.
-Pass a definition's `items` array to renderers such as `x-menu`, for example `areas.getMenu("navigation")?.items || []`.
-
-`resolveHref(href, areaId = null)` searches all effective menus recursively in only the selected Area when `areaId` is supplied. Without an explicit
-Area, it derives the module id from the canonical `/_assets/<module-id>/...` href and searches only Areas that compose that module. Static and
-dynamic effective menus participate equally. Query parameters and fragments are ignored when comparing canonical href identity. The matching
-effective item lets Navigation expose its optional friendly `path`.
-`getMenuitemBreadcrumb(href, areaId = null)` searches only that Area's effective menus by canonical href, defaulting to the current Area. Its
-entries retain both the canonical `href` and optional friendly `path`, so breadcrumb UI can use a ready-to-navigate friendly link without
-performing translation itself.
-`Areas.registerSource(name, source)` registers a source before Areas composition. A source exposes `resolve()`, which returns menu items, and may
-declare `dependsOn`, an array of Bus event names. For `childrenSource` targets, a dependency event or an explicit `source.refresh()` refreshes
-their effective children and emits `xshell:menus:change` when content changes. Each refresh merges the latest source items into the static children. When a source override
-disappears, the static item is restored. The definition's root `source` resolves once during `Areas.init()`.
+Module controllers register runtime sources during initialization. A source exposes `resolve()` and can list Bus events in `dependsOn`.
+Call `source.refresh()` or emit a dependency event to refresh root or child content. When the effective content changes, Menus publishes a
+read-only snapshot and emits `xshell:menus:change`. A removed source override exposes the original static entry again.
 
 ## Routes
 
@@ -179,7 +140,7 @@ An Area prefix marks a navigation context; `/_assets/<module-id>/...` marks reso
 after composition; neither should be described as an unprefixed physical resource URL. Route descriptors remain Area-relative until Navigation
 resolves them. A configured `"inventory"` or
 `"/inventory/"` normalizes to `"/inventory"`. Empty or root prefixes normalize to `""`. Prefix matching uses complete segments and tries the
-longest prefix first. Navigation resolves a friendly path through `Areas.resolvePath(path)` to its canonical Area-aware href. At page load,
+longest prefix first. Navigation resolves a friendly path through `menus.resolvePath(path)` to its canonical Area-aware href. At page load,
 `x-page` removes the matched Area prefix before module resource resolution while retaining the prefixed canonical URL for navigation and
 breadcrumbs.
 
@@ -190,32 +151,15 @@ The Main sidebar reads the Area associated with its owning Page and refreshes on
 `areas.resolveAreaId(href)` returns `null` for this namespace before testing any Area, including an empty-prefix Area. A global Page therefore
 leaves the active Area intact and has no Area menu or Area-derived breadcrumb. `areas.getAreas()` lists the configured Areas only.
 
-## Current implementation limits
-
-Both hash and path navigation apply Area prefixes. Bootstrap's generic configuration merge can accept Area definitions from dependency fragments even
-though Area composition belongs to the root application. Dynamic `childrenSource` content can refresh; complete named menu sources are composed once.
-
-See [Navigation](../10-architecture/120-navigation.md), [Configuration](../10-architecture/20-configuration.md),
-[Module Specification](../50-specifications/module.md), and [ADR-0005](../60-adr/0005-area-menu-composition.md).
-
 ## Global menus
 
-Areas automatically discovers global menu names from module definitions with `scope: "global"`. The former
-`xshell.services.areas.options.global` setting has been removed. Areas composes each global menu once from all selected modules that contribute to it,
-in configuration module order. Global definitions remain in their separate internal collection but are available through `getMenu()` and
-`getMenus()`. They remain excluded from Area navigation lookup, breadcrumbs, and home calculation.
-
-Global menus use the same metadata, recursive item merge, and ordering rules as Area menus. Global contributions support static `items` and
-metadata. Root `source` and nested `childrenSource` are reserved for Area menus. Global targets keep their normalized module hrefs without an Area
-prefix.
-
-See [Bus](20-bus.md) for source refresh events.
+Set `scope: "global"` for menus available throughout the application. Global lookups use their definition names. Their hrefs keep the normalized
+resource paths and global definitions support static items only. Area home, alias, and breadcrumb lookup use the Area-scoped menu projections.
 
 ## Keyboard shortcuts
 
 Declare `shortcut` on a root or nested menu item as a string or a non-empty array of strings. Each entry is an independent combination, and the
-menu displays the first entry as its hint. For example, `"shortcut": ["Ctrl+K", "Meta+K"]` gives one item both combinations. A later contribution
-to the same item ID replaces the whole shortcut value, including any previous array.
+menu displays the first entry as its hint. For example, `"shortcut": ["Ctrl+K", "Meta+K"]` gives one item both combinations. Shortcut arrays concatenate under the ordinary manifest merge. An incoming string or array of a different type replaces the previous value.
 
 XShell activates the effective item through its mounted menu control when available. Commands
 raise the usual bubbling UI `command` event. Links use their friendly `path` or canonical `href` and retain their Page presentation mode or browser
@@ -261,7 +205,7 @@ The `x` module's Workspace Page takes the menu identifier in its `menuName` prop
 in `item`. It uses the effective menu's label, description, and icon for Page metadata and displays the menu tree in its sidebar.
 
 Give each navigable Workspace item a stable, non-empty `id` that is unique throughout the effective menu tree. Contributions with the same ID
-in one sibling array still merge under the normal Areas rules. Separators, command items, and groups without a Page target do not need IDs.
+in one sibling array still merge under the generic manifest merge. Separators, command items, and groups without a Page target do not need IDs.
 
 Workspace looks up the requested ID throughout the tree and opens the item's effective destination. If the ID is missing or unknown, Workspace
 selects the first navigable item in depth-first menu order. A missing menu or a menu with no navigable items leaves the content empty.

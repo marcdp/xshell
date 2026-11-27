@@ -1,10 +1,10 @@
 export default class {
 
     // ctor
-    constructor({ moduleConfig }) {
+    constructor({ moduleConfig, config }) {
         this.id = moduleConfig.id;
         this.label = moduleConfig.label;
-        this.menuSource = moduleConfig.menus.navigation.source;
+        this.menuSource = config.xshell.services.menus.options.definitions.cookbook.sources[0].source;
         this.pageCount = 0;
         this.files = moduleConfig.files || [];
         this.assetsPath = moduleConfig.assets?.path || "";

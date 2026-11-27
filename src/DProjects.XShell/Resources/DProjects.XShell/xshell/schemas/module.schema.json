@@ -17,7 +17,6 @@
     "assets": {"$ref": "#/$defs/moduleAssets", "description": "Virtual and physical addressing for module assets."},
     "hash": {"type": "string", "minLength": 1, "description": "Generated immutable package-generation hash when published."},
     "builtAt": {"type": "string", "format": "date-time", "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$", "description": "Optional UTC time when the immutable module package was originally built by pack; excluded from canonical hashing."},
-    "menus": {"$ref": "#/$defs/menus", "description": "Menu contributions exposed by the module."},
     "routes": {
       "type": "object",
       "additionalProperties": {"type": "string"},
@@ -96,58 +95,6 @@
       },
       "additionalProperties": false,
       "description": "Default settings applied to components."
-    },    
-    "menus": {
-      "type": "object",
-      "additionalProperties": {"$ref": "#/$defs/menuDefinition"},
-      "description": "Named menu contributions provided by a module."
-    },
-    "menuDefinition": {
-      "type": "object",
-      "properties": {
-        "scope": {"type": "string", "enum": ["global", "area"], "description": "Menu composition scope. Defaults to 'area' when omitted."},
-        "label": {"type": "string", "description": "Human-readable menu title."},
-        "description": {"type": "string", "description": "Description of the menu."},
-        "icon": {"type": ["string", "null"], "description": "Optional icon associated with the menu."},
-        "items": {"type": "array", "items": {"$ref": "#/$defs/menuItem"}, "description": "Static root menu items."},
-        "source": {"type": "string", "minLength": 1, "description": "A module-relative inventory path beginning with /, or a registered runtime menu source name."}
-      },
-      "additionalProperties": false,
-      "description": "A contribution of menu metadata, root items, and optionally a source."
-    },
-    "menuItem": {
-      "type": "object",
-      "anyOf": [
-        {"required": ["label"]},
-        {"required": ["id"], "properties": {"id": {"minLength": 1}}}
-      ],
-      "properties": {
-        "id": {"type": "string", "description": "Optional merge key within the immediate sibling array. An empty string does not match other items."},
-        "label": {"type": "string", "description": "Human-readable menu item label. Identified contributions may omit it during composition."},
-        "order": {"type": "number", "description": "Optional ordering value within the containing menu array. Lower values appear first."},
-        "href": {"type": ["string", "null"], "description": "Canonical XShell navigation target associated with the menu item."},
-        "path": {"type": "string", "description": "Optional public navigation path used as a friendly alias for href."},
-        "icon": {"type": ["string", "null"], "description": "Optional icon associated with the menu item."},
-        "default": {"type": "boolean", "description": "Whether this item is the default navigation target."},
-        "tooltip": {"type": ["string", "null"], "description": "Optional tooltip text for the menu item."},
-        "command": {"type": ["string", "null"], "description": "Optional command associated with the menu item."},
-        "shortcut": {
-          "description": "One keyboard combination or a non-empty array of alternative combinations with explicit modifiers.",
-          "oneOf": [
-            {"type": "string", "minLength": 1},
-            {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}}
-          ]
-        },
-        "disabled": {"type": "boolean", "description": "Whether activation of this menu item is disabled."},
-        "target": {"type": ["string", "null"], "description": "Optional browser target for the menu item's navigation link."},
-        "open": {"type": ["string", "null"], "description": "Optional Page presentation mode for the menu item.", "enum": ["auto", "top", "stack", "dialog", "dock", "embed", null]},
-        "outlet": {"type": ["string", "null"], "description": "Optional named Page outlet. The reserved 'self' value is interpreted locally by x-menuitem when open is 'embed'."},
-        "class": {"type": "string", "description": "CSS class to apply to the menu item."},
-        "children": {"type": "array","items": {"$ref": "#/$defs/menuItem"},"description": "Nested menu items."},
-        "childrenSource": {"type": "string", "description": "Resource used to populate child menu items dynamically."}
-      },
-      "additionalProperties": false,
-      "description": "A navigable menu item with optional children."
     }
-  }  
+  }
 }

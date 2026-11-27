@@ -34,7 +34,7 @@ test("XShell resolves the configured Navigation singleton after Areas compositio
     const servicesIndex = source.indexOf("await this._services.init()");
     const resolveModulesIndex = source.indexOf('const modules = await this._services.initialize("modules")');
     const areasResolveIndex = source.indexOf('const areas = this._services.resolve("areas")');
-    const areasIndex = source.indexOf("areas.init({ modules })");
+    const areasIndex = source.indexOf("areas.init({ modules, menus })");
     const navigationIndex = source.indexOf('await this._services.initialize("navigation")');
 
     assert.doesNotMatch(source, /import Navigation from/);

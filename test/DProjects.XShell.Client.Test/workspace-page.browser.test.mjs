@@ -9,12 +9,12 @@ import { promisify } from "node:util";
 
 async function verifyWorkspace() {
     const [
-        { default: workspace }, { default: menuitem }, { default: anchor }, { default: embedLayout }, { default: Areas },
+        { default: workspace }, { default: menuitem }, { default: anchor }, { default: embedLayout }, { default: Areas }, { default: Menus },
         { default: Navigation }, { createXPageClass }, { createPageClassFromJsDefinition }, { createComponentClassFromJsDefinition },
         { default: renderEngine }, { default: stateEngine }
     ] = await Promise.all([
         "x/pages/workspace.js", "x/components/x-menuitem.js", "x/components/x-anchor.js", "x/layouts/x-layout-embed.js",
-        "xshell/services/areas.js", "xshell/services/navigation.js", "xshell/x-page.js",
+        "xshell/services/areas.js", "xshell/services/menus.js", "xshell/services/navigation.js", "xshell/x-page.js",
         "xshell/loaders/page-js.js", "xshell/loaders/component-js.js", "xshell/render-engines/x-client.js", "xshell/state-engines/proxy.js"
     ].map(path => import("/resources/" + path)));
 
@@ -38,22 +38,21 @@ async function verifyWorkspace() {
     const config = {
         app: { basePath, baseUrl: location.origin + basePath + "/", label: "Test application" },
         xshell: { assets: { basePath: "/_assets" }, ui: { layouts: { main: "test-main", stack: "test-stack", embed: "x-layout-embed" } } },
-        modules: {
-            x: { defaults: { page: defaults, component: defaults }, menus: {
-                preferences: { scope: "global", label: "Preferences", items: [{ id: "appearance", label: "Appearance", href: firstSrc }] }
-            } },
-            "x-filesystem": { menus: { preferences: { items: [{ id: "filesystems", label: "Storage", children: [
-                { id: "filesystems", label: "Filesystems", href: filesSrc }
-            ] }] } } }
-        }
+        modules: { x: { defaults: { page: defaults, component: defaults } }, "x-filesystem": {} }
     };
+    const definitions = { preferences: { scope: "global", label: "Preferences", items: [
+        { id: "appearance", label: "Appearance", href: firstSrc },
+        { id: "filesystems", label: "Storage", children: [{ id: "filesystems", label: "Filesystems", href: filesSrc }] }
+    ] } };
     const bus = new EventTarget();
     bus.emit = (type, detail) => bus.dispatchEvent(new CustomEvent(type, { detail }));
     const areas = new Areas({ config, bus }, { default: null, definitions: {} });
     const modules = { resolveModuleId: src => areas.getModuleId(src), getModuleById: id => ({ id, config: config.modules[id] }) };
-    areas.init({ modules });
+    const menus = new Menus({ config, bus, areas }, { definitions });
+    menus.init();
+    areas.init({ modules, menus });
     const resolver = { resolve: href => href === "page:x:/pages/workspace.js" ? { path: workspaceSrc } : null };
-    const navigation = new Navigation({ areas, bus, config, resolver }, { mode });
+    const navigation = new Navigation({ areas, bus, config, menus, resolver }, { mode });
     const pages = new Map();
     const loader = { async load(resource) {
         if (typeof resource !== "string" || resource.startsWith("schema:")) return {};
@@ -64,7 +63,7 @@ async function verifyWorkspace() {
         if (!pages.has(path)) throw new Error("Unexpected Page resource " + path);
         return pages.get(path);
     } };
-    const services = { areas, bus, config, loader, modules, navigation, events: {
+    const services = { areas, menus, bus, config, loader, modules, navigation, events: {
         on(target, type, callback) { target.addEventListener(type, callback); }
     } };
     services.services = { beginScope: () => ({ resolve: name => services[name], async dispose() {} }) };
@@ -166,7 +165,7 @@ async function verifyFilesystems() {
         { default: menuitem }, { default: anchor }, { default: Navigation }, { default: Services },
         { default: Events }, { default: JsonValidator }, { default: Filesystems },
         { createXPageClass }, { createPageClassFromJsDefinition }, { createComponentClassFromJsDefinition },
-        { default: renderEngine }, { default: stateEngine }, { default: Areas }, { default: mainLayout }, { default: pageMenu },
+        { default: renderEngine }, { default: stateEngine }, { default: Areas }, { default: Menus }, { default: mainLayout }, { default: pageMenu },
         { default: appMenu }, { default: Resolver }
     ] = await Promise.all([
         "x-filesystem/pages/global/filesystems.js", "x-filesystem/pages/explorer.js",
@@ -175,7 +174,7 @@ async function verifyFilesystems() {
         "xshell/services/navigation.js", "xshell/services.js", "xshell/services/events.js",
         "xshell/services/json-validator.js", "x-filesystem/services/filesystems.js", "xshell/x-page.js",
         "xshell/loaders/page-js.js", "xshell/loaders/component-js.js", "xshell/render-engines/x-client.js", "xshell/state-engines/proxy.js",
-        "xshell/services/areas.js", "x/layouts/x-layout-main.js", "x/components/x-page-menu.js",
+        "xshell/services/areas.js", "xshell/services/menus.js", "x/layouts/x-layout-main.js", "x/components/x-page-menu.js",
         "x/components/x-app-menu.js", "xshell/services/resolver.js"
     ].map(path => import("/resources/" + path)));
 
@@ -207,9 +206,11 @@ async function verifyFilesystems() {
         const assetsPath = `/_assets/${id}/${definition.version}.dev`;
         const home = assetsPath + "/pages/index." + extension;
         const area = manifest.xshell.services.areas.options.definitions[areaId];
-        const navigation = { source: assetsPath + definition.menus.navigation.source };
-        const items = definition.menus.global.items.map(item => item.href ? { ...item, href: assetsPath + item.href } : item);
-        return { id, areaId, area, home, module: { label: definition.label, files: [{ path: home }], menus: { navigation, global: { items } } } };
+        const definitions = manifest.xshell.services.menus.options.definitions;
+        const name = area.menus.navigation;
+        const navigation = { sources: definitions[name].sources.map(({ source }) => ({ source: assetsPath + source })) };
+        const items = definitions.global.items.map(item => item.href ? { ...item, href: assetsPath + item.href } : item);
+        return { id, areaId, area, home, name, navigation, items, module: { label: definition.label, assets: { path: assetsPath }, files: [{ path: home }] } };
     };
     const cookbook = await readEntry("x-demo", "cookbook", "js");
     const docs = await readEntry("xshell-docs", "xshell-docs", "md");
@@ -217,7 +218,7 @@ async function verifyFilesystems() {
     const config = {
         app: { basePath: "/app", baseUrl: location.origin + "/app/", label: "Test" },
         modules: {
-            x: { defaults: { page: defaults, component: defaults }, menus: { global: { scope: "global", items: [] } } },
+            x: { defaults: { page: defaults, component: defaults } },
             ...Object.fromEntries(entries.map(entry => [entry.id, entry.module]))
         },
         xshell: {
@@ -228,6 +229,10 @@ async function verifyFilesystems() {
                 [explorerPath]: { src: explorerPath, loader: "page-js" }
             } }
         }
+    };
+    const definitions = {
+        global: { scope: "global", items: entries.flatMap(entry => entry.items) },
+        ...Object.fromEntries(entries.map(entry => [entry.name, entry.navigation]))
     };
     const searchSrc = "/_assets/x/pages/search.js";
     const intersections = new Map();
@@ -243,13 +248,13 @@ async function verifyFilesystems() {
         // Use the bundled Search item with the same resource normalization performed by bootstrap.
         const source = await (await fetch("/resources/x/manifest.jsonc")).text();
         const manifest = JSON.parse(source.replace(/^\s*\/\/[^\r\n]*/gm, ""));
-        const search = manifest.modules.x.menus.global.items.find(item => item.id === "search");
-        config.modules.x.menus.global.items.push(
+        const search = manifest.xshell.services.menus.options.definitions.global.items.find(item => item.id === "search");
+        definitions.global.items.push(
             {...search, shortcut: [search.shortcut, "Meta+K"], children: search.children.map(item => ({...item, href: "/_assets/x" + item.href}))},
             {label: "Expand sidebar", command: "expand", shortcut: "Ctrl+Shift+E"},
             {label: "Open separately", href: "/help", target: "_blank", shortcut: "Ctrl+Shift+L"}
         );
-        cookbook.module.menus.navigation.items = [{
+        cookbook.navigation.items = [{
             label: "Area tools", shortcut: "Ctrl+Shift+G", children: [{label: "Help", href: "/help"}]
         }];
     }
@@ -261,9 +266,11 @@ async function verifyFilesystems() {
         }
     });
     const modules = { resolveModuleId: href => areas.getModuleId(href) || "x", getModuleById: id => ({ id, config: config.modules[id], controller: {} }) };
-    areas.init({ modules });
+    const menus = new Menus({ config, bus, areas }, { definitions });
+    menus.init();
+    areas.init({ modules, menus });
     const resolver = new Resolver({ config });
-    const navigation = new Navigation({ areas, bus, config, resolver }, { mode });
+    const navigation = new Navigation({ areas, bus, config, menus, resolver }, { mode });
     const pages = new Map();
     const loader = { async load(resource) {
         if (resource === "state-engine:proxy") return stateEngine;
@@ -276,7 +283,7 @@ async function verifyFilesystems() {
     const shortcutComponents = [];
     if (verifyShortcuts) {
         const {default: MenuShortcuts} = await import("/resources/xshell/services/menu-shortcuts.js");
-        root.register("menuShortcuts", new MenuShortcuts({areas, bus, document, navigation}));
+        root.register("menuShortcuts", new MenuShortcuts({menus, bus, document, navigation}));
         root.register("search", {listProviders: () => []});
         root.register("temp", {});
         // Disable datafield autofocus in this test so only the submenu's focus request can succeed.
@@ -293,7 +300,7 @@ async function verifyFilesystems() {
         async list() { return [...values.values()].map(value => ({ value })); }
     } }, { providers: { mem: { implementation: location.origin + "/resources/x-filesystem/providers/filesystem-mem.js" } } });
     const preferences = new Map([["x-layout-main.menuCollapsed", !verifyShortcuts]]);
-    for (const [name, value] of Object.entries({ bus, config, loader, resolver, modules, areas, navigation, filesystems, preferences, services: root, i18n: {} })) {
+    for (const [name, value] of Object.entries({ bus, config, loader, resolver, modules, areas, menus, navigation, filesystems, preferences, services: root, i18n: {} })) {
         root.register(name, value);
     }
     root.register("dialog", {});
@@ -304,7 +311,7 @@ async function verifyFilesystems() {
     customElements.define("test-layout", class extends HTMLElement {
         connectedCallback() { this.attachShadow({ mode: "open" }).innerHTML = "<slot></slot>"; }
     });
-    customElements.define("x-page", createXPageClass({ areas, bus, config, loader, modules, navigation }));
+    customElements.define("x-page", createXPageClass({ areas, menus, bus, config, loader, modules, navigation }));
     for (const [name, definition] of [
         ["x-menuitem", menuitem], ["x-anchor", anchor], ["x-filesystem", filesystem],
         ["x-filesystem-list", list], ["x-listview-item", row], ["x-layout-main", mainLayout], ["x-page-menu", pageMenu], ["x-app-menu", appMenu],

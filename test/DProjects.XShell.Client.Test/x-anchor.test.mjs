@@ -57,6 +57,7 @@ globalThis.window = {
 };
 
 const { createComponentClassFromJsDefinition } = await import("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/loaders/component-js.js");
+const { default: Menus } = await import("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/menus.js");
 const { default: Areas } = await import("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/areas.js");
 const { default: Navigation } = await import("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/navigation.js");
 const { default: Resolver } = await import("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/resolver.js");
@@ -80,16 +81,15 @@ class RenderEngineFactory {
     init() {}
 }
 
-function createNavigation({ areas = null, mode = "path", basePath = "", baseUrl = "https://example.test/", resolver = null } = {}) {
+function createNavigation({ areas = null, menus = { resolveHref: () => null, resolvePath: () => null }, mode = "path", basePath = "", baseUrl = "https://example.test/", resolver = null } = {}) {
     return new Navigation({
         areas: areas || {
             resolveAreaId() { return null; },
             getArea() { return null; },
             getCurrentArea() { return null; },
-            getDefaultArea() { return null; },
-            resolveHref() { return null; },
-            resolvePath() { return null; }
+            getDefaultArea() { return null; }
         },
+        menus,
         bus: {},
         config: {
             app: { basePath, baseUrl },
@@ -116,10 +116,12 @@ function createRouteAreas() {
         routes: { "/repository/{repositoryId}/items": "/_assets/x-demo/pages/items.js" },
         config: { menus: {} }
     };
-    const areas = new Areas({ config, bus: { addEventListener() {}, emit() {} } }, {
+    const bus = new EventTarget();
+    const areas = new Areas({ config, bus }, {
         default: "demo", definitions: { demo: { prefix: "/demo", modules: ["x-demo"] } }
     });
-    areas.init({ modules: { getModuleById(id) { return id === module.id ? module : null; } } });
+    const menus = new Menus({ areas, bus, config }, { definitions: {} });
+    areas.init({ menus, modules: { getModuleById(id) { return id === module.id ? module : null; } } });
     return areas;
 }
 
@@ -227,14 +229,16 @@ test("x-anchor retains its canonical href while exposing and navigating the frie
         resolveAreaId(src) { return src.startsWith("/demo/") ? "demo" : null; },
         getArea(id) { return id === "demo" ? area : null; },
         getCurrentArea() { return area; },
-        getDefaultArea() { return area; },
+        getDefaultArea() { return area; }
+    };
+    const menus = {
         resolveHref(href, areaId) {
             return areaId === "demo" && href === "/demo/_assets/x-demo/pages/basic.js"
                 ? { path: "/demo/navigation/basic", href } : null;
         },
         resolvePath() { return null; }
     };
-    const navigation = createNavigation({ areas });
+    const navigation = createNavigation({ areas, menus });
     const { anchor, navigateCalls } = await createAnchor({}, navigation);
     anchor.parentNode.page.src = "/demo/_assets/x-demo/pages/origin.js";
     anchor.href = "/_assets/x-demo/pages/basic.js";

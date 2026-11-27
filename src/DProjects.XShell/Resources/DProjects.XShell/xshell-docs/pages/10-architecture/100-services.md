@@ -27,13 +27,11 @@ These are three separate objects:
 During startup, XShell discovers and validates contracts, registers its core/runtime service instances, and calls `Services.init()`. That method
 validates every configured contract reference, eagerly loads each configured implementation class, registers the implementation metadata, and then
 finalizes the registry. Configured service instances are not constructed during registration. XShell initializes the [Logger](../30-subsystems/150-logging.md)
-singleton before module controllers run. XShell next resolves the declarative `areas` service,
-validating its merged `xshell.services.areas.options`, before module controllers execute. It then resolves the declarative `modules` singleton
-and explicitly awaits its once-only initialization. Application definitions remain under top-level `config.modules`; Modules has no implementation options. After Modules
-initialize, XShell explicitly invokes `Areas.init()` with that singleton to compose module contributions, then resolves the declarative `navigation`
-service and awaits `Services.initialize("navigation")`. Each service's static `optionsSchema` validates its options immediately before construction.
-Every declaratively configured service must explicitly declare `lifetime`; omission is a configuration error. This coordination is specific to
-startup ordering and does not introduce automatic dependency initialization.
+singleton before module controllers run. XShell resolves the declarative `areas` and `menus` singletons to validate Area options and menu
+selections and expose global menus. It then awaits initialization of the `modules` singleton. Module controllers can register named menu
+sources during initialization. XShell initializes Menus to contextualize the selected definitions, then calls `Areas.init()` to compose
+routes and derive each Area's home from its navigation menu. Navigation initializes next, followed by MenuShortcuts. Each service's static
+`optionsSchema` validates its options before construction. Every declarative registration explicitly declares its `lifetime`.
 
 The `theme` service is the one explicit startup exception. The X module controller declares `theme` as a constructor dependency, so normal service
 injection resolves it while modules initialize. The service starts with `system` and restores a saved `system`, `light`, or `dark` mode asynchronously
@@ -188,7 +186,7 @@ One construction stack detects cycles across every lifetime combination, includi
 transient-to-singleton-to-transient paths. Failed options validation, construction, contract validation, lifetime validation, or cycle detection
 does not leave an invalid cached instance.
 
-Parameterized service setup remains separate. In particular, Areas continues to use `areas.init({ modules })`, and services such as I18n retain their
+Parameterized service setup remains separate. Areas uses `areas.init({ modules, menus })`, and services such as I18n retain their
 existing parameterized semantics rather than using `Services.initialize(name)`.
 
 Each configured service may declare an optional `options` object. Every configured implementation class must declare a static `optionsSchema`

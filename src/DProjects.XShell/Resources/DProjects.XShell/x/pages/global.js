@@ -47,7 +47,7 @@ export default {
         selected: "",
         menu: null
     },
-    controller({ state, events, bus, areas }) {
+    controller({ state, events, bus, areas, menus }) {
         return {
             load() {
                 // load
@@ -63,7 +63,7 @@ export default {
                     state.selected = currentArea.id;
                 }
                 //refresh
-                state.menu = areas.getMenu("global").items;
+                state.menu = menus.getMenu("global")?.items || [];
             },
         };
     }

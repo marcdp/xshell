@@ -72,5 +72,5 @@ test("XShell delegates its Modules accessor and explicit initialization to the c
 
     assert.doesNotMatch(source, /import Modules from|new Modules\s*\(|register\("modules"|_modules/);
     assert.match(source, /const modules = await this\._services\.initialize\("modules"\);/);
-    assert.match(source, /areas\.init\(\{ modules \}\);/);
+    assert.match(source, /areas\.init\(\{ modules, menus \}\);/);
 });

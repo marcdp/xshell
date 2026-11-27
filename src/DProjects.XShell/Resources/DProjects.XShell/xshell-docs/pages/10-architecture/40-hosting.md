@@ -77,6 +77,9 @@ ending in `/manifest.json`; middleware may generate that response from an author
 Development requests reject traversal, ambiguous `manifest.json`/`manifest.jsonc` sources, version mismatches, and links that escape the configured
 resource root. Production resource middleware does not generate indexes or translate `.dev` generation paths.
 
+In Development, bootstrap scripts are read from disk on each request and served with `Cache-Control: no-store`. Reload the application to use edited
+scripts together with the current manifests.
+
 ## Request routing
 
 Generated startup files answer GET and HEAD at the application base. HEAD has the same representation headers and no body. A request exactly at a

@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 import vm from "node:vm";
+import { mergeManifests } from "./helpers/manifest-composition.mjs";
 import Areas from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/areas.js";
 
 const bootstrapPath = new URL("../../src/DProjects.XShell/Resources/DProjects.XShell/bootstrap/index.js", import.meta.url);
@@ -76,12 +77,9 @@ test("manifest arrays merge by ID in bootstrap precedence order", () => {
     const original = structuredClone(modules);
 
     // Exercise the active bootstrap's scoped merge and verify the source manifests remain independent.
-    const mergeSource = bootstrapSource.match(/^        function mergeManifests\(\) \{[\s\S]*?^        \}/m)[0];
-    const config = vm.runInNewContext(`${mergeSource}\nmergeManifests()`, {
-        app, resolvedModules: new Map(modules.map(module => [module.name, module])), structuredClone
-    });
+    const config = mergeManifests(modules, app);
     assert.deepEqual(plain(config.menu), {
-        items: [{ id: "open", label: "Root" }, "separator", { id: "save", label: "Dependency" }, { label: "Help" }, { id: "" }, { id: 1 },
+        items: [{ id: "open", obsolete: true, label: "Root" }, "separator", { id: "save", label: "Dependency" }, { label: "Help" }, { id: "" }, { id: 1 },
             "separator", { id: "rename", label: "Last" }, { label: "Help" }, { id: "" }, { id: 1 }],
         other: [{ id: "open", label: "Other" }],
         rootOnly: [{ id: "new", label: "Last" }, null]
@@ -101,16 +99,16 @@ test("manifest arrays merge by ID in bootstrap precedence order", () => {
 });
 
 test("menu configuration follows generic value-driven path semantics", () => {
-    const definition = { menus: {
-        navigation: { source: "/pages/navigation" },
-        tools: { source: "/pages/tools" },
-        arbitraryMenu123: { source: "/pages/custom" },
-        registered: { source: "customer-pages" },
+    const definition = { xshell: { services: { menus: { options: { definitions: {
+        navigation: { sources: [{ source: "/pages/navigation" }] },
+        tools: { sources: [{ source: "/pages/tools" }] },
+        arbitraryMenu123: { sources: [{ source: "/pages/custom" }] },
+        registered: { sources: [{ source: "customer-pages" }] },
         reports: { label: "Reports", icon: "/icons/reports.svg", items: [{
             label: "Reports", path: "/reports", href: "/pages/report.js", tooltip: "/literal-tooltip",
             children: [{ label: "Detail", path: "/reports/detail", href: "./pages/detail.js", class: "/literal-class" }]
         }] }
-    }, params: { metadata: { path: "/metadata" }, sample: { href: "/sample", url: "ordinary-url" } } };
+    } } } } }, params: { metadata: { path: "/metadata" }, sample: { href: "/sample", url: "ordinary-url" } } };
     // Exercise the path normalization functions scoped to the active bootstrap.
     const normalize = bootstrapSource.match(/^        function normalizeUrl\([\s\S]*?^        \}\r?\n        function normalizeManifest\([\s\S]*?^        \}/m)[0];
     const module = plain(vm.runInNewContext(`${normalize}\nnormalizeManifest(definition, owner)`, {
@@ -118,13 +116,14 @@ test("menu configuration follows generic value-driven path semantics", () => {
         owner: { assetsPath: "/_assets/x/1.0.0.dev", manifestUrl: "https://example.test/modules/x/manifest.json" }
     }));
 
-    assert.equal(module.menus.navigation.source, "/_assets/x/1.0.0.dev/pages/navigation");
-    assert.equal(module.menus.tools.source, "/_assets/x/1.0.0.dev/pages/tools");
-    assert.equal(module.menus.arbitraryMenu123.source, "/_assets/x/1.0.0.dev/pages/custom");
-    assert.equal(module.menus.registered.source, "customer-pages");
-    assert.equal(module.menus.reports.label, "Reports");
-    assert.equal(module.menus.reports.icon, "/_assets/x/1.0.0.dev/icons/reports.svg");
-    const [report] = module.menus.reports.items;
+    const menus = module.xshell.services.menus.options.definitions;
+    assert.equal(menus.navigation.sources[0].source, "/_assets/x/1.0.0.dev/pages/navigation");
+    assert.equal(menus.tools.sources[0].source, "/_assets/x/1.0.0.dev/pages/tools");
+    assert.equal(menus.arbitraryMenu123.sources[0].source, "/_assets/x/1.0.0.dev/pages/custom");
+    assert.equal(menus.registered.sources[0].source, "customer-pages");
+    assert.equal(menus.reports.label, "Reports");
+    assert.equal(menus.reports.icon, "/_assets/x/1.0.0.dev/icons/reports.svg");
+    const [report] = menus.reports.items;
     assert.equal(report.path, "/_assets/x/1.0.0.dev/reports");
     assert.equal(report.href, "/_assets/x/1.0.0.dev/pages/report.js");
     assert.equal(report.tooltip, "/_assets/x/1.0.0.dev/literal-tooltip");
@@ -271,4 +270,43 @@ test("bootstrap applies overrides before XShell initialization and configuration
     assert.notEqual(applyIndex, -1);
     assert.notEqual(initIndex, -1);
     assert.ok(applyIndex < initIndex);
+});
+
+test("manifest merging recursively applies value precedence inside matching array elements", () => {
+    const framework = { name: "xshell", manifest: { xshell: { resolver: { esm: { xshell: { src: "/xshell.js" } } } } } };
+    const base = { name: "base", manifest: { modules: { base: {} }, options: {
+        items: [{ id: "settings", label: "Settings", details: { keep: true, override: "old", cleared: [1] },
+            children: [{ id: "about", label: "About", flags: ["old"] }, { label: "Caption" }] }, ["untagged"]],
+        switchType: { old: true }, primitive: ["one", 1, null]
+    } } };
+    const app = { name: "app", dependencies: { base: "1.0.0" }, manifest: { modules: { app: {} }, options: {
+        items: [{ id: "settings", details: { override: 2, cleared: null }, children: [
+            { id: "about", flags: ["new"] }, { id: "diagnostics", label: "Diagnostics", children: [{ label: "Status" }] }
+        ] }, ["untagged"]],
+        switchType: ["new"], primitive: ["one", false]
+    } } };
+    const modules = [app, base, framework];
+    const original = structuredClone(modules);
+    const config = mergeManifests(modules, app);
+    assert.deepEqual(plain(config.options), {
+        items: [{ id: "settings", label: "Settings", details: { keep: true, override: 2, cleared: null },
+            children: [{ id: "about", label: "About", flags: ["old", "new"] }, { label: "Caption" },
+                { id: "diagnostics", label: "Diagnostics", children: [{ label: "Status" }] }] }, ["untagged"], ["untagged"]],
+        switchType: ["new"], primitive: ["one", 1, null, "one", false]
+    });
+    config.options.items[0].children[0].flags.push("changed");
+    config.options.items[0].children[2].children[0].label = "Changed";
+    assert.deepEqual(modules, original);
+});
+
+test("menu metadata overrides use the normal service options path and replacement rules", () => {
+    const config = { xshell: { services: { menus: { options: { definitions: {
+        global: { scope: "global", label: "Before", items: [{ label: "Original" }] }
+    } } } } } };
+    apply(config, {
+        "xshell:services.menus.options.definitions.global.label": '"After"',
+        "xshell:services.menus.options.definitions.global.items": '[{"label":"Replacement"}]'
+    });
+    assert.deepEqual(plain(config.xshell.services.menus.options.definitions.global),
+        { scope: "global", label: "After", items: [{ label: "Replacement" }] });
 });

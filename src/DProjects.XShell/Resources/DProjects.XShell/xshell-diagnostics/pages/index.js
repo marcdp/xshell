@@ -36,12 +36,11 @@ export default {
         menuitems: [],
         selectedIndex: 0
     },
-    controller({ state, areas, page, preferences }) {
+    controller({ state, menus, page, preferences }) {
         return {
             async load() {
                // load
-               const area = areas.getArea("xshell-diagnostics");
-               const menuitems = (area?.menus.navigation?.items[0]?.children || []).filter(item => item.href);
+               const menuitems = (menus.getMenu("navigation", "xshell-diagnostics")?.items[0]?.children || []).filter(item => item.href);
                state.menuitems = menuitems;
                state.selectedIndex = await preferences.get("xshell-diagnostics.selectedIndex", 0);
             },

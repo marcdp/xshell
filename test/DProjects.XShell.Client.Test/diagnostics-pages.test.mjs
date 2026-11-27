@@ -31,10 +31,10 @@ function createEvents(getController) {
 test("Diagnostics console derives its tabs from the effective navigation menu items", async () => {
     const state = structuredClone(DiagnosticsPage.state);
     const tasks = { label: "Tasks", href: "/_assets/xshell-diagnostics/pages/tasks.js" };
-    const area = { menus: { navigation: { name: "navigation", label: "Navigation", description: "", icon: null,
-        items: [{ children: [tasks, { label: "Detail" }] }] } } };
-    const areas = { getArea: () => area };
-    await DiagnosticsPage.controller({ state, areas, preferences: { get: async () => 0 } }).load();
+    const menu = { name: "navigation", label: "Navigation", description: "", icon: null,
+        items: [{ children: [tasks, { label: "Detail" }] }] };
+    const menus = { getMenu: () => menu };
+    await DiagnosticsPage.controller({ state, menus, preferences: { get: async () => 0 } }).load();
     assert.deepEqual(state.menuitems, [tasks]);
 });
 
@@ -210,7 +210,7 @@ test("Double-clicking a service opens and closes a stacked Inspector with the ex
     });
 
     const navigation = new Navigation({
-        areas: { resolvePath: () => null },
+        areas: { }, menus: { resolvePath: () => null, resolveHref: () => null },
         resolver: { resolve: reference => reference === href ? { path: inspectorPath } : null },
         config: { app: { basePath: "", baseUrl: "https://example.test/" }, xshell: {} }
     }, { mode: "path" }, { container });
@@ -339,7 +339,7 @@ test("Navigation reconstructs a stacked contract reference and exact query ID fr
         delete globalThis.history;
     });
     const navigation = new Navigation({
-        areas: { resolvePath: () => null },
+        areas: { }, menus: { resolvePath: () => null, resolveHref: () => null },
         resolver: { resolve: resource => resource === contractDetailHref ? { path: contractPath } : null },
         config: { app: { basePath: "", baseUrl: document.baseURI }, xshell: {} }
     }, { mode: "path" }, { container });
@@ -583,10 +583,10 @@ test("Navigation diagnostics includes the Routes tab and uses route inspection f
 
 test("Navigation diagnostics lists menu definitions and composed routes and refreshes its search filters", (t) => {
     const state = Object.assign(new EventTarget(), structuredClone(NavigationPage.state));
-    const menu = { name: "navigation", label: "Shop", description: "Find products.", icon: "x-shop",
+    const menu = { name: "navigation", scope: "area", label: "Shop", description: "Find products.", icon: "x-shop",
         items: [{ label: "Catalog", children: [{ label: "Featured", href: "/pages/featured.js" }] }] };
     const definitions = [
-        { id: "shop", prefix: "/shop", menus: { navigation: menu }, routes: [
+        { id: "shop", prefix: "/shop", menus: { navigation: "catalog" }, routes: [
             { path: "/products/{id}/{variant}", href: "/pages/detail.js", module: "products" },
             { path: "/products/featured", href: "/pages/featured.js", module: "marketing" },
             { path: "/", href: "/pages/shop.js", module: "products" }
@@ -601,7 +601,7 @@ test("Navigation diagnostics lists menu definitions and composed routes and refr
         delete globalThis.document;
     });
     const controller = NavigationPage.controller({
-        state, bus, areas: { getAreas: () => definitions }, events: createEvents(() => controller)
+        state, bus, areas: { getAreas: () => definitions }, menus: { getMenus: id => id === "shop" ? [menu] : [] }, events: createEvents(() => controller)
     });
     controller.load();
 

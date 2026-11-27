@@ -17,17 +17,6 @@
                     "stateEngine": "proxy"
                 }
             },
-            "menus": {
-                "navigation": { "source": "/pages" },
-                "global": {
-                    "items": [
-                        {"id": "root", "children": [
-                            {"label": "-", "order": 99},
-                            {"label": "Diagnostics console", "href": "/pages/index.js", "open": "dock" }
-                        ]}
-                    ]
-                }
-            },
             "dependencies": {
                 "x": "module:x:latest"
             }
@@ -37,6 +26,21 @@
     // xshell 
     "xshell": {
         "services": {
+            "menus": {
+                "options": {
+                    "definitions": {
+                        "diagnostics": { "sources": [{ "source": "/pages" }] },
+                        "global": {
+                            "items": [
+                                {"id": "root", "children": [
+                                    {"label": "-", "order": 99},
+                                    {"label": "Diagnostics console", "order": 99, "href": "/pages/index.js", "open": "dock" }
+                                ]}
+                            ]
+                        }
+                    }
+                }
+            },
             "areas": {
                 "options": {
                     "definitions": {
@@ -45,7 +49,8 @@
                             "label": "XShell diagnostics",
                             "description": "Diagnostics for XShell",
                             "icon": "xshell-diagnostics",
-                            "modules": [ "xshell-diagnostics" ]
+                            "modules": [ "xshell-diagnostics" ],
+                            "menus": { "navigation": "diagnostics" }
                         }
                     }
                 }

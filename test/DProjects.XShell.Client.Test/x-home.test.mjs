@@ -8,6 +8,7 @@ import pageSchema from "../../src/DProjects.XShell/Resources/DProjects.XShell/xs
 import contractSchema from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/schemas/contract.schema.json" with { type: "json" };
 import moduleSchema from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/schemas/module.schema.json" with { type: "json" };
 import Areas from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/areas.js";
+import Menus from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/menus.js";
 import Navigation from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/navigation.js";
 import JsonValidator from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/json-validator.js";
 import Events from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/events.js";
@@ -17,8 +18,9 @@ const rootAssets = "/_assets/root/1.0.0.hash/pages";
 const homeAssets = "/_assets/x-home/0.9.0.hash";
 const readManifest = module => JSON.parse(readFileSync(new URL(`../../src/DProjects.XShell/Resources/DProjects.XShell/${module}/manifest.jsonc`, import.meta.url), "utf8")
     .replace(/^\s*\/\/[^\r\n]*/gm, ""));
-const manifest = readManifest("x-home").modules["x-home"];
-const homeMenu = manifest.menus.navigation.items.map(item => ({...item, href: homeAssets + item.href}));
+const homeManifest = readManifest("x-home");
+const manifest = homeManifest.modules["x-home"];
+const homeMenu = homeManifest.xshell.services.menus.options.definitions.home.items.map(item => ({...item, href: homeAssets + item.href}));
 
 function setup({ saved, delayedRead } = {}) {
     // Exercise composition, route selection and scoped event dispatch with in-memory Preferences.
@@ -26,12 +28,11 @@ function setup({ saved, delayedRead } = {}) {
     bus.emit = (name, detail) => bus.dispatchEvent(new CustomEvent(name, {detail}));
     const config = {app: {basePath: "/app"}, modules: {root: {}, "x-home": {}}, xshell: {assets: {basePath: "/_assets"}}};
     const areas = new Areas({bus, config}, {
-        default: "main", definitions: {main: {modules: ["root"], icon: "main-icon", description: "Main Area"},
-            launcher: {prefix: "launcher", modules: ["x-home"]}, empty: {prefix: "empty"}}
+        default: "main", definitions: {main: {modules: ["root"], menus: {navigation: "root"}, icon: "main-icon", description: "Main Area"},
+            launcher: {prefix: "launcher", modules: ["x-home"], menus: {navigation: "x-home"}}, empty: {prefix: "empty"}}
     });
     let dynamic = [{label: "Reports", path: "reports", href: rootAssets + "/reports.js", icon: "reports-icon"}];
-    areas.registerSource("live", {dependsOn: ["test:refresh"], resolve: () => dynamic});
-    const menus = {
+    const items = {
         root: [
             {label: "Start", path: "start", href: rootAssets + "/index.js"},
             {label: "Group", path: "folder", childrenSource: "live", children: [
@@ -43,8 +44,12 @@ function setup({ saved, delayedRead } = {}) {
         ],
         "x-home": homeMenu
     };
-    areas.init({modules: {getModuleById: id => ({id, config: {menus: {navigation: {items: menus[id]}}}})}});
-    const navigation = new Navigation({areas, bus, config, resolver: {
+    const definitions = Object.fromEntries(Object.entries(items).map(([name, items]) => [name, {items}]));
+    const menus = new Menus({areas, bus, config}, {definitions});
+    menus.registerSource("live", {dependsOn: ["test:refresh"], resolve: () => dynamic});
+    menus.init();
+    areas.init({menus, modules: {getModuleById: id => ({id})}});
+    const navigation = new Navigation({areas, bus, config, menus, resolver: {
         resolve: resource => resource === "page:x-home:/pages/index.js" ? {path: homeAssets + "/pages/index.js"} : null
     }}, {mode: "hash"}, {container: {}});
     const navigated = [];
@@ -69,7 +74,7 @@ function setup({ saved, delayedRead } = {}) {
     function mount(areaId = "") {
         const state = Object.assign(new EventTarget(), structuredClone(home.state), {areaId});
         const events = new Events(command => controller[command]());
-        const controller = home.controller({state, events, areas, bus, navigation, preferences, config});
+        const controller = home.controller({state, events, areas, menus, bus, navigation, preferences, config});
         const loaded = controller.load();
         return {state, controller, loaded, dispose() {controller.unload(); events.dispose();}};
     }
@@ -83,7 +88,7 @@ const toggle = (controller, favorite) => controller.toggleFavorite({event: {curr
 
 test("Home module, Component, Page and cookbook composition use the existing schemas", () => {
     const effective = {...manifest, assets: {path: homeAssets, url: "https://example.test/x-home/"}, files: [],
-        configUrl: "https://example.test/x-home/manifest.json", menus: {navigation: {items: homeMenu}}};
+        configUrl: "https://example.test/x-home/manifest.json"};
     const check = (value, schema) => {
         const definition = Object.fromEntries(Object.entries(value).map(([name, item]) => [name, typeof item === "function" ? {} : item]));
         const result = new JsonValidator().validate(definition, schema, {"./contract.schema.json": contractSchema});

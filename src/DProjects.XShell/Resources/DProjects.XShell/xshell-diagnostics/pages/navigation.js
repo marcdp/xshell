@@ -146,7 +146,7 @@ export default {
         query_destination: "",
         query_module: ""
     },
-    controller({ state, events, bus, areas, navigation }) {
+    controller({ state, events, bus, areas, menus, navigation }) {
         return {
             load() {
                 // load
@@ -201,13 +201,13 @@ export default {
                 traverse(document.body, root)
                 state.children = root.children;
                 // Show each menu's metadata and effective items alongside its Area and name.
-                const menus = [];
+                const menuDefinitions = [];
                 for (const area of state.areas) {
-                    for (const menu of Object.values(area.menus)) {
-                        menus.push({ ...menu, id: area.id + "/" + menu.name });
+                    for (const menu of menus.getMenus(area.id).filter(menu => menu.scope === "area")) {
+                        menuDefinitions.push({ ...menu, id: area.id + "/" + menu.name });
                     }
                 }
-                state.menus = menus;
+                state.menus = menuDefinitions;
 
                 // list composed routes in Area and declaration order, with optional filters
                 const routes = [];

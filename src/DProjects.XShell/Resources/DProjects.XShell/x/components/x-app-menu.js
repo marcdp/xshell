@@ -82,7 +82,7 @@ export default {
         tasksFinished:   0,
         tasksButtonVisible: false
     },
-    controller({ events, bus, state, tasks, areas, host, preferences, services, postRender }) {
+    controller({ events, bus, state, tasks, areas, menus, host, preferences, services, postRender }) {
         return {
             async load() {
                 // load
@@ -113,13 +113,13 @@ export default {
 
             refresh() {
                 // Refresh the effective menu and its visible shortcut hints together.
-                state.menu = areas.getMenu("global").items;
+                state.menu = menus.getMenu("global")?.items || [];
                 state.shortcutHints = getMenuShortcutHints(state.menu);
             },
             refreshSelected() {
                 // Resolve the Area home to its canonical href.
                 const area = areas.getCurrentArea();
-                let href = area?.home ? areas.resolvePath(area.home)?.href || area.home : "";
+                let href = area?.home ? menus.resolvePath(area.home)?.href || area.home : "";
                 // Remove the Area prefix to match global menu hrefs.
                 if (area?.prefix && href.startsWith(area.prefix + "/")) {
                     href = href.substring(area.prefix.length);

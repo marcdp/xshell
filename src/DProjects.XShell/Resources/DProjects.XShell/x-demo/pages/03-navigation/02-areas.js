@@ -6,7 +6,7 @@ export default {
     },
 
     template: `
-        <p>An Area is the active navigation context: it selects participating Modules, composes their menu contributions, and establishes a URL prefix. It does not create additional Module instances.</p>
+        <p>An Area is a navigation context with a URL prefix, participating Modules, and selected menu definitions. Each Module keeps one runtime instance.</p>
 
         <h2>Area configuration</h2>
         <p>Areas are configured under <code>xshell.services.areas.options</code>. The cookbook defines a default Area with a URL prefix and a list of participating Modules.</p>
@@ -19,7 +19,8 @@ export default {
                     "cookbook": {
                         "prefix": "cookbook",
                         "label": "Cookbook",
-                        "modules": ["x-demo"]
+                        "modules": ["x-demo"],
+                        "menus": { "navigation": "cookbook" }
                     }
                 }
             }
@@ -43,14 +44,14 @@ area.prefix
 area.modules</x-code>
 
         <h2>Composed navigation menu</h2>
-        <p>The <code>areas.getMenu()</code> method returns the composed menu definition for an Area. Its <code>items</code> array contains navigation entries, each of which may contain child items.</p>
+        <p>The <code>menus.getMenu()</code> method returns the composed menu definition for an Area. Its <code>items</code> array contains navigation entries, each of which may contain child items.</p>
         <x-datafields label="Navigation items" columns="1">
             <x-datafield x-for="item in state.items" x-attr:label="item.label">
                 <p>Path: <code>{{ item.path }}</code></p>
                 <p>Child Pages: {{ item.children }}</p>
             </x-datafield>
         </x-datafields>
-        <x-code language="javascript" x-pre>const menu = areas.getMenu("navigation", area.id);
+        <x-code language="javascript" x-pre>const menu = menus.getMenu("navigation", area.id);
 const items = menu?.items[0]?.children || [];</x-code>
 
         <h2>Menu paths and Page resources</h2>
@@ -60,7 +61,7 @@ const items = menu?.items[0]?.children || [];</x-code>
             <x-datafield label="Canonical href">{{ state.exampleHref }}</x-datafield>
         </x-datafields>
         <x-code language="javascript" x-pre>const areaId = areas.resolveAreaId(page.src);
-const item = areas.resolveHref(page.src, areaId);
+const item = menus.resolveHref(page.src, areaId);
 
 item.path
 item.href</x-code>
@@ -85,13 +86,13 @@ item.href</x-code>
         docsAreas: ""
     },
 
-    controller({areas, config, page, state}) {
+    controller({areas, menus, config, page, state}) {
         return {
             load() {
                 const area = areas.getCurrentArea();
-                const menu = areas.getMenu("navigation", area?.id);
+                const menu = menus.getMenu("navigation", area?.id);
                 const areaId = areas.resolveAreaId(page.src);
-                const item = areas.resolveHref(page.src, areaId);
+                const item = menus.resolveHref(page.src, areaId);
 
                 state.id = area?.id || "";
                 state.label = area?.label || "";

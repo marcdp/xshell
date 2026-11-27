@@ -300,7 +300,7 @@ test("x-page intercepts only application anchors and preserves native clicks", a
             await t.test(`${mode}: ${JSON.stringify(scenario)}`, () => {
                 // exercise the registered click listener with real Navigation URL parsing
                 const navigation = new Navigation({
-                    areas: { resolvePath() { return null; } }, bus: {},
+                    areas: { }, menus: { resolvePath() { return null; }, resolveHref: () => null }, bus: {},
                     config: { app: { basePath: "", baseUrl: "https://example.test/" }, xshell: { assets: { basePath: "/_assets" } } }
                 }, { mode }, { container: {} });
                 const calls = [];
@@ -351,9 +351,8 @@ test("x-page native anchors and x-anchor targets reach the same JavaScript and M
         getCurrentArea() { return definitions[0]; },
         getDefaultArea() { return definitions[0]; },
         getModuleId(href) { return /\/_assets\/([^/]+)\//.exec(href)?.[1] || null; },
-        resolveHref() { return null; },
-        resolvePath() { return null; }
     };
+    const menus = { resolveHref: () => null, resolvePath: () => null };
     const scenarios = [
         {
             name: "JavaScript Page",
@@ -374,6 +373,7 @@ test("x-page native anchors and x-anchor targets reach the same JavaScript and M
             const browserUrls = [];
             const navigation = new Navigation({
                 areas,
+                menus,
                 bus: {},
                 config: {
                     app: { basePath: "/prefix", baseUrl: "https://example.test/prefix/" },
@@ -788,7 +788,8 @@ test("x-layout-main applies a saved collapsed preference before its first Compon
         delete() {}
     };
     definitionServices.services.register("events", { on() {} });
-    definitionServices.services.register("areas", { getMenu() { return null; } });
+    definitionServices.services.register("areas", {});
+    definitionServices.services.register("menus", { getMenu() { return null; } });
     definitionServices.services.register("bus", {});
     definitionServices.services.register("preferences", preferences);
     const Component = await createComponentClassFromJsDefinition("x-layout-main-await-load.js", createContext(), {
@@ -983,9 +984,9 @@ test("page preserves state and disposables until its final unload", async () => 
 
 function createLoadableXPage(load, navigation = {}) {
     const config = { xshell: { ui: { layouts: { embed: "x-layout-test" }, components: { error: "x-test-error" } } } };
-    const areas = { resolveAreaId() { return ""; }, getArea() { return null; }, getMenuitemBreadcrumb() { return []; } };
+    const areas = { resolveAreaId() { return ""; }, getArea() { return null; } };
     const modules = { resolveModuleId() { return "test"; } };
-    return createXPageClass({ config, loader: { load }, bus, navigation, areas, modules });
+    return createXPageClass({ config, loader: { load }, bus, navigation, areas, menus: { getMenuitemBreadcrumb: () => [] }, modules });
 }
 
 test("x-page unmounts then unloads a replaced page and only unmounts on disconnection", async () => {
@@ -1075,7 +1076,7 @@ test("dialog close completes after one final Page unload and host removal", asyn
     const unloadGate = new Promise(resolve => { finishUnload = resolve; });
     const container = new FakeNode();
     const navigation = new Navigation({
-        areas: { resolvePath() { return null; } },
+        areas: { }, menus: { resolvePath() { return null; }, resolveHref: () => null },
         bus: {},
         config: { app: { basePath: "", baseUrl: "https://example.test/" }, xshell: {} }
     }, { mode: "path" }, { container });
@@ -1109,7 +1110,7 @@ test("dialog close completes after one final Page unload and host removal", asyn
 test("dialog close rejects its promise when final Page cleanup fails", async () => {
     const container = new FakeNode();
     const navigation = new Navigation({
-        areas: { resolvePath() { return null; } },
+        areas: { }, menus: { resolvePath() { return null; }, resolveHref: () => null },
         bus: {},
         config: { app: { basePath: "", baseUrl: "https://example.test/" }, xshell: {} }
     }, { mode: "path" }, { container });
@@ -1132,7 +1133,7 @@ test("navigation stack changes close dialogs through final Page cleanup", async 
     const container = new FakeNode();
     container.querySelectorAll = () => container.childNodes;
     const navigation = new Navigation({
-        areas: { resolvePath() { return null; } },
+        areas: { }, menus: { resolvePath() { return null; }, resolveHref: () => null },
         bus,
         config: { app: { basePath: "", baseUrl: "https://example.test/" }, xshell: {} }
     }, { mode: "path" }, { container });
@@ -1156,7 +1157,7 @@ test("navigation shrinks three stack Pages to one after asynchronous final unloa
     const container = new FakeNode();
     container.querySelectorAll = () => container.childNodes;
     const navigation = new Navigation({
-        areas: { resolvePath() { return null; } }, bus: { emit() {} },
+        areas: { }, menus: { resolvePath() { return null; }, resolveHref: () => null }, bus: { emit() {} },
         config: { app: { basePath: "", baseUrl: "https://example.test/" }, xshell: {} }
     }, { mode: "path" }, { container });
     const counts = [0, 0, 0];
@@ -1239,7 +1240,7 @@ test("x-page renders a failed Page through the configured error Component", asyn
 test("x-page and dialog preserve falsy results", async () => {
     const container = new FakeNode();
     const navigation = new Navigation({
-        areas: { resolvePath() { return null; } }, bus: {},
+        areas: { }, menus: { resolvePath() { return null; }, resolveHref: () => null }, bus: {},
         config: { app: { basePath: "", baseUrl: "https://example.test/" }, xshell: {} }
     }, { mode: "path" }, { container });
     for (const value of [false, 0, "", null]) {

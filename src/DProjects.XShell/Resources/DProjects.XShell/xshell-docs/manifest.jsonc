@@ -17,14 +17,6 @@
                     "stateEngine": "proxy"
                 }
             },
-            "menus": {
-                "global": {
-                    "items":[
-                        {"label": "Docs", "icon":"xshell-docs", "href": "/pages/index.md"}
-                    ]
-                },
-                "navigation": { "source": "/pages" }
-            },
             "dependencies": {
                 "x": "module:x:latest"
             }
@@ -34,6 +26,18 @@
     // xshell 
     "xshell": {
         "services": {
+            "menus": {
+                "options": {
+                    "definitions": {
+                        "global": {
+                            "items":[
+                                {"label": "Docs", "icon":"xshell-docs", "href": "/pages/index.md"}
+                            ]
+                        },
+                        "documentation": { "sources": [{ "source": "/pages" }] }
+                    }
+                }
+            },
             "areas": {
                 "options": {
                     "definitions": {
@@ -42,7 +46,8 @@
                             "label": "Documentation",
                             "description": "Documentation for XShell",
                             "icon": "xshell-docs",
-                            "modules": [ "xshell-docs" ]
+                            "modules": [ "xshell-docs" ],
+                            "menus": { "navigation": "documentation" }
                         }
                     }
                 }

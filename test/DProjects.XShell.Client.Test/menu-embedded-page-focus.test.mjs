@@ -80,7 +80,7 @@ function createRuntime(t) {
             modules: {x: {defaults: {page: {stateEngine: "test", renderEngine: "test"}}}},
             xshell: {ui: {layouts: {embed: "x-layout-embed"}}}
         },
-        areas: {getArea() {}, resolveAreaId() {}, getMenuitemBreadcrumb() {}},
+        areas: {getArea() {}, resolveAreaId() {}}, menus: {getMenuitemBreadcrumb() {}},
         modules: {resolveModuleId: () => "x"},
         bus: {emit() {}},
         navigation: {},

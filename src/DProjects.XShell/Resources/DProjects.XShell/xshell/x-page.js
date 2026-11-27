@@ -350,7 +350,7 @@ export function createXPageClass(runtime) {
                 }
 
                 // breadcrumb
-                let breadcrumb = isGlobal ? null : runtime.areas.getMenuitemBreadcrumb(src, area?.id);
+                let breadcrumb = isGlobal ? null : runtime.menus.getMenuitemBreadcrumb(src, area?.id);
                 if (nav && nav.breadcrumb) {
                     breadcrumb = nav.breadcrumb;
                 }

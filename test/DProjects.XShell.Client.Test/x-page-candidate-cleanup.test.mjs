@@ -3,6 +3,8 @@ import test from "node:test";
 
 import Services from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services.js";
 import Areas from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/areas.js";
+import Events from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/events.js";
+import Menus from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/menus.js";
 import Navigation from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/navigation.js";
 import Resolver from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/resolver.js";
 import JsonValidator from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/json-validator.js";
@@ -128,6 +130,8 @@ function createRuntime({ navigation = { mode: "path" }, bus = { emit() {} } } = 
     const root = new Services({ config, loader, contracts: {}, resolver: {}, bus: { emit() {} } });
     const modules = { getModuleById() { return { controller: {} }; } };
     root.register("config", config);
+    root.register("bus", bus);
+    root.register("events", null, { lifetime: "transient", implementationItem: { class: Events } });
     root.register("loader", loader);
     root.register("modules", modules);
     root.register("services", root);
@@ -165,14 +169,13 @@ function createHost(src, resolvePage) {
     const areas = {
         resolveAreaId() { return ""; },
         getArea() { return null; },
-        getMenuitemBreadcrumb() { return []; }
     };
     const modules = { shadowStyleSheets: [], resolveModuleId() { return "test"; } };
     const navigation = {};
     const config = { xshell: { ui: { layouts: { embed: "x-layout-test" } } } };
     const bus = { emit() {} };
     const loader = { async load(resource) { return resource.startsWith("layout:") ? class {} : resolvePage(resource); } };
-    const XPage = createXPageClass({ config, loader, bus, navigation, areas, modules });
+    const XPage = createXPageClass({ config, loader, bus, navigation, areas, menus: { getMenuitemBreadcrumb: () => [] }, modules });
     const host = new XPage();
     host._src = src;
     host.setAttribute("src", src);
@@ -213,14 +216,15 @@ function createNavigationRuntime(t, mode) {
 
     // Use ordinary Area, Resolver, Navigation and x-page entry points with a small DOM.
     const events = [];
-    const bus = { emit(name, detail) { events.push({ name, detail }); }, addEventListener() {} };
+    const bus = Object.assign(new EventTarget(), { emit(name, detail) { events.push({ name, detail }); } });
     const config = { app: { basePath: "/app", baseUrl: "https://example.test/app/", label: "Test" }, modules: { test: {} },
         xshell: { assets: { basePath: "/_assets" }, resolver: { page: {
             "x-filesystem:/{path}": { src: "/_assets/x-filesystem/{path}", loader: "page-js" },
             "x:/{path}": { src: "/_assets/x/{path}", loader: "page-js" }
         } } } };
-    const areas = new Areas({ config, bus }, { default: "sales", definitions: { sales: { prefix: "/sales", modules: ["test"] } } });
-    const areaModule = { id: "test", routes: { "/customer/{id}": "/_assets/test/customer.js?mode=edit" }, config: { menus: {
+    const areas = new Areas({ config, bus }, { default: "sales", definitions: { sales: { prefix: "/sales", modules: ["test"], menus: { navigation: "navigation", preferences: "preferences" } } } });
+    const areaModule = { id: "test", routes: { "/customer/{id}": "/_assets/test/customer.js?mode=edit" } };
+    const definitions = {
         navigation: { items: [
             { label: "Home", path: "/home", href: "/_assets/test/home.js" },
             { label: "Preferences", path: "/preferences", href: "/_assets/x/pages/workspace.js?menu-name=preferences" }
@@ -229,15 +233,18 @@ function createNavigationRuntime(t, mode) {
             { id: "appearance", label: "Appearance", href: "/_assets/test/home.js" },
             { id: "filesystems", label: "Filesystems", href: "/_assets/test/home.js" }
         ] }
-    } } };
-    areas.init({ modules: { getModuleById: () => areaModule } });
+    };
+    const menus = new Menus({ areas, bus, config }, { definitions });
+    menus.init();
+    areas.init({ menus, modules: { getModuleById: () => areaModule } });
     const container = new FakeNode();
     container.querySelectorAll = selector => container.childNodes.filter(host =>
         !selector.includes(":not") || host.getAttribute("layout") !== "dialog");
     container.appendChild = host => { FakeNode.prototype.appendChild.call(container, host); host.connectedCallback(); };
-    const navigation = new Navigation({ areas, bus, config, resolver: new Resolver({ config }) }, { mode }, { container });
+    const navigation = new Navigation({ areas, bus, config, menus, resolver: new Resolver({ config }) }, { mode }, { container });
     const runtime = createRuntime({ navigation, bus });
     runtime.root.register("areas", areas);
+    runtime.root.register("menus", menus);
     runtime.config.xshell.ui = { layouts: { main: "x-layout-test", stack: "x-layout-test", dialog: "x-layout-test" } };
     runtime.modules.resolveModuleId = () => "test";
     const pages = new Map();
@@ -248,7 +255,7 @@ function createNavigationRuntime(t, mode) {
         }
     };
     const loads = [];
-    const XPage = createXPageClass({ ...runtime, loader, navigation, areas, bus });
+    const XPage = createXPageClass({ ...runtime, loader, navigation, areas, menus, bus });
     class TestHost extends XPage {
         load() {
             const task = super.load();

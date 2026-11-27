@@ -16,16 +16,6 @@
                     "stateEngine": "proxy"
                 }
             },
-            "menus": {
-                "navigation": { "source": "/pages" },
-                "global": {
-                    "items":[
-                        {"label": "Home", "icon":"x-home", "href": "/pages/index.js?home=1", "order": -1},
-                        {"label": "-"},
-                        {"label": "Demo", "icon":"x-demo", "href": "/pages/index.js"}
-                    ]
-                }
-            },
             "routes": {
                 "/hello/{name}": "/pages/02-pages/03-parameters.js"
             },
@@ -44,6 +34,20 @@
     },
     "xshell": {
         "services": {
+            "menus": {
+                "options": {
+                    "definitions": {
+                        "cookbook": { "sources": [{ "source": "/pages" }] },
+                        "global": {
+                            "items":[
+                                {"label": "Home", "icon":"x-home", "href": "/pages/index.js?home=1", "order": -1},
+                                {"label": "-", "order": -1},
+                                {"label": "Demo", "order": -1, "icon":"x-demo", "href": "/pages/index.js"}
+                            ]
+                        }
+                    }
+                }
+            },
             "areas": {
                 "options": {
                     "default": "cookbook",
@@ -54,14 +58,16 @@
                             "description": "Focused examples of XShell features",
                             "modules": [
                                 "x-demo"
-                            ]
+                            ],
+                            "menus": { "navigation": "cookbook" }
                         },
                         "launcher": {
                             "prefix": "launcher",
                             "label": "Home Launcher",
                             "description": "An Area that opens the reusable Home Page",
                             "icon": "x:x-home",
-                            "modules": ["x-home"]
+                            "modules": ["x-home"],
+                            "menus": { "navigation": "home" }
                         }
                     }
                 }

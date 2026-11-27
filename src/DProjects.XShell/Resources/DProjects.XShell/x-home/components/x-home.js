@@ -87,7 +87,7 @@ export default {
         saving: false,
         preferenceError: ""
     },
-    controller({ state, events, bus, areas, navigation, preferences, config }) {
+    controller({ state, events, bus, areas, menus, navigation, preferences, config }) {
         let active = false;
         let readVersion = 0;
         let favoriteIds = [];
@@ -118,7 +118,7 @@ export default {
                 linksByArea = new Map();
                 favoriteLinks = new Map();
                 state.areaTiles = areas.getAreas().map(area => {
-                    const links = this.collectLinks(areas.getMenu("navigation", area.id)?.items || [], area);
+                    const links = this.collectLinks(menus.getMenu("navigation", area.id)?.items || [], area);
                     linksByArea.set(area.id, links);
                     for (const link of links.values()) {
                         if (link.favoriteId && !favoriteLinks.has(link.favoriteId)) favoriteLinks.set(link.favoriteId, link);

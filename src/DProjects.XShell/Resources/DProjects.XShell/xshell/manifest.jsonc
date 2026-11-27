@@ -95,6 +95,14 @@
                     "providers": {}
                 }
             },
+            "menus": {
+                "contract": "menus",
+                "implementation": "/services/menus.js",
+                "lifetime": "singleton",
+                "options": {
+                    "definitions": {}
+                }
+            },
             "modules": {
                 "contract": "modules",
                 "implementation": "/services/modules.js",

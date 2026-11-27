@@ -5,7 +5,7 @@ pin Pages they want to revisit.
 
 ## Add and open the launcher
 
-Add `"x-home": "module:x-home:latest"` to the consuming module's `dependencies` in its manifest. The module brings in the `x` UI dependency.
+Add `"x-home": "module:x-home:latest"` to the consuming module's `dependencies` in its manifest. The module brings in the `x` UI dependency. An Area can select `home` for its `navigation` slot.
 Open the Home Page with `page:x-home:/pages/index.js`. Pass `?areaId=operations` to show Quick Links for a specific Area.
 
 To embed the launcher in an X Template Page, declare the resource dependency and use the Component in the template.

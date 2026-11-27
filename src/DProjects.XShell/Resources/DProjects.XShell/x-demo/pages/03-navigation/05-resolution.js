@@ -6,7 +6,7 @@ export default {
     },
 
     template: `
-        <p>XShell separates friendly navigation paths from the canonical hrefs used to identify Page resources. The <code>areas</code> service resolves between these representations within an Area.</p>
+        <p>XShell separates friendly navigation paths from the canonical hrefs used to identify Page resources. The <code>menus</code> service resolves between these representations within an Area.</p>
 
         <h2>Current Page</h2>
         <p>The current Page provides a <code>src</code> identifying its source. XShell uses this value to determine the Area and find the corresponding menu item.</p>
@@ -17,24 +17,24 @@ export default {
         <x-code language="javascript" x-pre>const areaId = areas.resolveAreaId(page.src);</x-code>
 
         <h2>Menu item resolution</h2>
-        <p>Use <code>areas.resolveHref()</code> to find the menu item corresponding to a Page resource within an Area.</p>
+        <p>Use <code>menus.resolveHref()</code> to find the menu item corresponding to a Page resource within an Area.</p>
         <x-datafields columns="1">
             <x-datafield label="Friendly path">{{ state.path }}</x-datafield>
             <x-datafield label="Canonical href">{{ state.href }}</x-datafield>
         </x-datafields>
-        <x-code language="javascript" x-pre>const item = areas.resolveHref(page.src, areaId);
+        <x-code language="javascript" x-pre>const item = menus.resolveHref(page.src, areaId);
 
 item.path
 item.href</x-code>
         <p>The friendly <code>path</code> is used for navigation, while the canonical <code>href</code> identifies the resource associated with the menu item.</p>
 
         <h2>Reverse resolution</h2>
-        <p>Use <code>areas.resolvePath()</code> to resolve a friendly navigation path back to its menu item and canonical href.</p>
+        <p>Use <code>menus.resolvePath()</code> to resolve a friendly navigation path back to its menu item and canonical href.</p>
         <x-datafields columns="2">
             <x-datafield label="Input path">{{ state.path }}</x-datafield>
             <x-datafield label="Resolved href">{{ state.resolved }}</x-datafield>
         </x-datafields>
-        <x-code language="javascript" x-pre>const byPath = areas.resolvePath(item.path);
+        <x-code language="javascript" x-pre>const byPath = menus.resolvePath(item.path);
 const href = byPath?.href;</x-code>
 
         <h2>Resolution sequence</h2>
@@ -45,8 +45,8 @@ const href = byPath?.href;</x-code>
             <li>Resolve the menu item's friendly path back to its canonical href.</li>
         </ol>
         <x-code language="javascript" x-pre>const areaId = areas.resolveAreaId(page.src);
-const item = areas.resolveHref(page.src, areaId);
-const byPath = item?.path ? areas.resolvePath(item.path) : null;</x-code>
+const item = menus.resolveHref(page.src, areaId);
+const byPath = item?.path ? menus.resolvePath(item.path) : null;</x-code>
         <p>Resolution result: <strong>{{ state.matches ? "The canonical hrefs match" : "No matching canonical href" }}</strong></p>
 
         <h2>Navigation and Page loading</h2>
@@ -68,12 +68,12 @@ const byPath = item?.path ? areas.resolvePath(item.path) : null;</x-code>
         matches: false
     },
 
-    controller({areas, page, state}) {
+    controller({areas, menus, page, state}) {
         return {
             load() {
                 const areaId = areas.resolveAreaId(page.src);
-                const item = areas.resolveHref(page.src, areaId);
-                const byPath = item?.path ? areas.resolvePath(item.path) : null;
+                const item = menus.resolveHref(page.src, areaId);
+                const byPath = item?.path ? menus.resolvePath(item.path) : null;
 
                 state.src = page.src;
                 state.areaId = areaId || "No Area";

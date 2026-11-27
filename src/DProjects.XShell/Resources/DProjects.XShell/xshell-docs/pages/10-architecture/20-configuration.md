@@ -60,8 +60,9 @@ A module manifest may contribute its local module definition and other effective
 definition's `dependencies` into that version's repository index entry. Browser discovery follows the version-index dependencies; it does not scan
 downloaded manifests for `configUrl` references.
 
-Declare application-wide menus with `scope: "global"` in a module's `menus` definition. Areas discovers those menus from the selected module
-definitions. The Area service options above configure the navigation contexts and their participating modules.
+Modules contribute service configuration under `xshell.services.<service-name>.options`. Declare named application menus under
+`xshell.services.menus.options.definitions`. An Area selects named definitions in its `menus` mapping. Menus with `scope: "global"` are
+available throughout the application. See [Areas and Menus](../30-subsystems/10-areas.md#menus-and-home).
 
 The selected module manifest is the `manifest.json` URL recorded by its chosen version-index entry. Development middleware can generate that strict
 JSON response from either an authored `manifest.json` or `manifest.jsonc` file.
@@ -163,8 +164,10 @@ when declared by the framework or overridden by an application manifest.
 
 ## Merge and precedence
 
-Objects merge recursively, and later scalar values replace earlier values. At each array path, elements append in merge order. When objects in the
-same array share a non-empty string `id`, the last object replaces the entire earlier object at the position where that `id` first appeared.
+Objects merge recursively. An incoming scalar, a different value type, or explicit `null` replaces the previous value. Omitted properties keep
+their values. Arrays append in merge order. An incoming object with a matching non-empty string `id` recursively merges into the first existing
+object with that ID, preserving its position. New IDs and unidentified entries append, including duplicate primitive entries. These rules apply
+at every depth, including nested arrays in service options. The merged configuration is independent of its input manifests.
 
 The merge order is:
 

@@ -18,46 +18,6 @@
                     "renderEngine": "x",
                     "stateEngine": "proxy"
                 }
-            },
-            "menus": {
-                "global": {
-                    "scope": "global",
-                    "label": "Preferences",
-                    "description": "Manage application preferences.",
-                    "icon": "x-settings",
-                    "items":[
-                        {"label": "-", "order":100},
-                        {"id": "search", "label": "Search", "icon":"x-search", "shortcut": "Ctrl+K", "children": [
-                            {"label": "Search Options", "href": "/pages/search.js", "open": "embed", "outlet": "self"}
-                        ]},
-                        {"label": "-", "order":900, "class": "flex"},                        
-                        {"label": "Expand", "icon":"x-sidebar-off", "command": "expand", "class":"expand"},
-                        {"label": "Collapse", "icon":"x-sidebar-on", "command": "collapse", "class":"collapse"},
-                        {"label": "Tasks", "icon":"x-tasks", "class": "tasks top right", "children": [
-                            {"label": "Background Tasks", "href": "/pages/tasks.js", "open": "embed", "outlet": "self"}
-                        ]},
-                        {"id": "root", "label": "Settings", "icon": "x-admin", "class": "top right", "children": [
-                            {"label": "Preferences", "href": "/pages/workspace.js?menu-name=preferences", "open":"stack"},
-                            {"label": "-", "order": 100},
-                            {"label": "About", "href": "/pages/about.js"}
-                        ]}
-                    ]
-                },
-                "preferences": {
-                    "scope": "global",
-                    "label": "Preferences",
-                    "description": "Manage application preferences.",
-                    "icon": "x-settings",
-                    "items": [
-                        {"id": "appearance", "label": "Appearance", "href": "/pages/preferences/appearance.js"},
-                        {"id": "browser-permissions", "label": "Browser permissions", "href": "/pages/preferences/browser-permissions.js"},
-                        {"id": "i18n", "label": "Internationalization", "href": "/pages/preferences/i18n.js"},
-                        {"id": "modules", "label": "Modules", "href": "/pages/preferences/modules.js"},
-                        {"id": "secrets", "label": "Secrets", "href": "/pages/preferences/secrets.js"},
-                        {"label": "-", "order": 100},
-                        {"id": "about", "label": "About", "href": "/pages/about.js"}
-                    ]
-                }
             }
         }
     },
@@ -67,6 +27,50 @@
         
         // services
         "services": {
+            "menus": {
+                "options": {
+                    "definitions": {
+                        "global": {
+                            "scope": "global",
+                            "label": "Preferences",
+                            "description": "Manage application preferences.",
+                            "icon": "x-settings",
+                            "items":[
+                                {"label": "-", "order":100},
+                                {"id": "search", "order": 101, "label": "Search", "icon":"x-search", "shortcut": "Ctrl+K", "children": [
+                                    {"label": "Search Options", "href": "/pages/search.js", "open": "embed", "outlet": "self"}
+                                ]},
+                                {"label": "-", "order":900, "class": "flex"},
+                                {"label": "Expand", "order": 901, "icon":"x-sidebar-off", "command": "expand", "class":"expand"},
+                                {"label": "Collapse", "order": 902, "icon":"x-sidebar-on", "command": "collapse", "class":"collapse"},
+                                {"label": "Tasks", "order": 903, "icon":"x-tasks", "class": "tasks top right", "children": [
+                                    {"label": "Background Tasks", "href": "/pages/tasks.js", "open": "embed", "outlet": "self"}
+                                ]},
+                                {"id": "root", "order": 950, "label": "Settings", "icon": "x-admin", "class": "top right", "children": [
+                                    {"label": "Preferences", "href": "/pages/workspace.js?menu-name=preferences", "open":"stack"},
+                                    {"label": "-", "order": 100},
+                                    {"label": "About", "order": 101, "href": "/pages/about.js"}
+                                ]}
+                            ]
+                        },
+                        "preferences": {
+                            "scope": "global",
+                            "label": "Preferences",
+                            "description": "Manage application preferences.",
+                            "icon": "x-settings",
+                            "items": [
+                                {"id": "appearance", "label": "Appearance", "href": "/pages/preferences/appearance.js"},
+                                {"id": "browser-permissions", "label": "Browser permissions", "href": "/pages/preferences/browser-permissions.js"},
+                                {"id": "i18n", "label": "Internationalization", "href": "/pages/preferences/i18n.js"},
+                                {"id": "modules", "label": "Modules", "href": "/pages/preferences/modules.js"},
+                                {"id": "secrets", "label": "Secrets", "href": "/pages/preferences/secrets.js"},
+                                {"label": "-", "order": 100},
+                                {"id": "about", "order": 101, "label": "About", "href": "/pages/about.js"}
+                            ]
+                        }
+                    }
+                }
+            },
             // i18n
             "i18n": {
                 "options": {

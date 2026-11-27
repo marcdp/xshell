@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import Areas from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/areas.js";
+import Menus from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/menus.js";
 
 for (const [rootIndex, runtimeIndex] of [["index.js", "index.js"], ["index.html", "index.js"], ["index.md", "index.md"]]) {
 test(`inventory menu normalizes root ${rootIndex} and nested Page destinations`, () => {
@@ -11,16 +12,20 @@ test(`inventory menu normalizes root ${rootIndex} and nested Page destinations`,
         "/_assets/x-demo/pages/01-guides/01-start.js",
         "/_assets/x-demo/pages/01-guides/02-readme.md"
     ];
-    const module = { id: "x-demo", config: { menus: { navigation: { label: "Browse", source: "/_assets/x-demo/pages" } } } };
+    const module = { id: "x-demo" };
+    const definitions = { demo: { label: "Browse", sources: [{ source: "/_assets/x-demo/pages" }] } };
     const config = {
         xshell: { assets: { basePath: "/_assets" } },
-        modules: { "x-demo": { label: "Demo", files: paths.map(path => ({ path })) } }
+        modules: { "x-demo": { assets: { path: "/_assets/x-demo" }, label: "Demo", files: paths.map(path => ({ path })) } }
     };
-    const areas = new Areas({ config, bus: { addEventListener() {} } }, {
-        default: "demo", definitions: { demo: { prefix: "/demo", modules: ["x-demo"] } }
+    const bus = new EventTarget();
+    const areas = new Areas({ config, bus }, {
+        default: "demo", definitions: { demo: { prefix: "/demo", modules: [], menus: { navigation: "demo" } } }
     });
-    areas.init({ modules: { getModuleById() { return module; } } });
-    const menu = areas.getMenu("navigation");
+    const menus = new Menus({ areas, bus, config }, { definitions });
+    menus.init();
+    areas.init({ menus, modules: { getModuleById() { return module; } } });
+    const menu = menus.getMenu("navigation");
     const [root] = menu.items;
     assert.equal(menu.label, "Browse");
     assert.equal(root.label, "Demo");
@@ -45,18 +50,22 @@ test("inventory menu uses Page metadata for files and directory index Pages", ()
         } },
         { path: "/_assets/x-demo/pages/04-plain.js" }
     ];
-    const module = { id: "x-demo", config: { menus: { navigation: { source: "/_assets/x-demo/pages" } } } };
+    const module = { id: "x-demo" };
+    const definitions = { demo: { sources: [{ source: "/_assets/x-demo/pages" }] } };
     const config = {
         xshell: { assets: { basePath: "/_assets" } },
-        modules: { "x-demo": { label: "Demo", files } }
+        modules: { "x-demo": { assets: { path: "/_assets/x-demo" }, label: "Demo", files } }
     };
-    const areas = new Areas({ config, bus: { addEventListener() {} } }, {
-        default: "demo", definitions: { demo: { prefix: "/demo", modules: ["x-demo"] } }
+    const bus = new EventTarget();
+    const areas = new Areas({ config, bus }, {
+        default: "demo", definitions: { demo: { prefix: "/demo", modules: [], menus: { navigation: "demo" } } }
     });
 
-    areas.init({ modules: { getModuleById() { return module; } } });
+    const menus = new Menus({ areas, bus, config }, { definitions });
+    menus.init();
+    areas.init({ menus, modules: { getModuleById() { return module; } } });
 
-    const [root] = areas.getMenu("navigation").items;
+    const [root] = menus.getMenu("navigation").items;
     assert.equal(root.label, "Demo");
     assert.equal(root.children[0].label, "Advanced Topics");
     assert.equal(root.children[0].description, "Explore advanced features.");

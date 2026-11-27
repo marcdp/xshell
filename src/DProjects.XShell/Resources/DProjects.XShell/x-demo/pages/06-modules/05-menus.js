@@ -9,12 +9,16 @@ export default {
         <p>A Module can contribute menu sources and route mappings. Areas decide which registered Modules participate in a navigation context.</p>
 
         <h2>Module navigation</h2>
-        <p>The <code>x-demo</code> Module declares <code>/pages</code> as the source for its navigation menu.</p>
+        <p>The <code>x-demo</code> manifest contributes the <code>cookbook</code> menu, and the Cookbook Area selects it as its <code>navigation</code> slot.</p>
         <x-code language="json" x-pre>{
-    "modules": {
-        "x-demo": {
+    "xshell": {
+        "services": {
             "menus": {
-                "navigation": { "source": "/pages" }
+                "options": {
+                    "definitions": {
+                        "cookbook": { "sources": [{ "source": "/pages" }] }
+                    }
+                }
             }
         }
     }
@@ -40,7 +44,7 @@ export default {
                 {{ item.label }} — {{ item.path }}
             </li>
         </ol>
-        <p>These entries are observed after the current Area includes <code>x-demo</code>. Area composition is demonstrated separately in <x-anchor href="../03-navigation/02-areas.js">Areas and Menus</x-anchor>.</p>
+        <p>These entries appear in Areas that select <code>cookbook</code>. Area composition is demonstrated separately in <x-anchor href="../03-navigation/02-areas.js">Areas and Menus</x-anchor>.</p>
 
         <h2>Module routes</h2>
         <p>Modules can declare route mappings. Routes map an application path to a Page resource.</p>
@@ -52,7 +56,7 @@ export default {
         <p><x-anchor href="/cookbook/hello/Ada">Open the example route</x-anchor></p>
 
         <h2>Contribution availability</h2>
-        <p>The current <strong>{{ state.areaId }}</strong> Area includes these Modules: {{ state.areaModules }}. A registered Module that is not an Area member remains available as a resource provider, but its menu contribution is not composed into that Area.</p>
+        <p>The current <strong>{{ state.areaId }}</strong> Area includes these Modules: {{ state.areaModules }}. Its <code>menus</code> mapping selects a named definition independently of module membership.</p>
 
         <p>Continue with <x-anchor href="06-dependencies.js">Using Module Resources</x-anchor> to consume resources from referenced Modules.</p>
 
@@ -70,15 +74,15 @@ export default {
         docsAreas: ""
     },
 
-    controller({areas, config, state}) {
+    controller({areas, menus, config, state}) {
         return {
             load() {
                 const definition = config.modules["x-demo"];
                 const area = areas.getCurrentArea();
-                const root = areas.getMenu("navigation", area.id)?.items[0];
+                const root = menus.getMenu("navigation", area.id)?.items[0];
                 const categories = root?.children || [];
 
-                state.source = definition.menus.navigation.source;
+                state.source = config.xshell.services.menus.options.definitions.cookbook.sources[0].source;
                 state.areaId = area.id;
                 state.areaModules = area.modules.join(", ");
                 state.routeTarget =

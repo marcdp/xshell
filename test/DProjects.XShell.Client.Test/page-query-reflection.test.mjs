@@ -147,7 +147,7 @@ function createNavigation(mode, xpages) {
         }
     };
     const navigation = new Navigation({
-        areas: { globalPrefix: "/global", resolvePath() { return null; } },
+        areas: { globalPrefix: "/global", }, menus: { resolvePath() { return null; }, resolveHref: () => null },
         bus: { emit() {} },
         resolver: { has: href => href === "page:/_assets/test/pages/tool.js" },
         config: {

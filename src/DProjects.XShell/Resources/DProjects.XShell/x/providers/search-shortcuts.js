@@ -1,9 +1,9 @@
 export default class ShortcutsSearchProvider {
 
     // ctor
-    constructor({areas}) {
+    constructor({menus}) {
         // Retain effective global menus as the existing source of shortcuts.
-        this.areas = areas;
+        this.menus = menus;
     }
 
     // methods
@@ -11,7 +11,7 @@ export default class ShortcutsSearchProvider {
         // Search every effective global menu without converting local self-embedded items into invalid results.
         const query = text.toLowerCase();
         const results = [];
-        const menus = this.areas.getMenus().filter(menu => menu.scope === "global");
+        const menus = this.menus.getMenus().filter(menu => menu.scope === "global");
         for (const menu of menus) {
             signal?.throwIfAborted();
             this.collect(menu.items, menu, query, results, signal);
@@ -56,7 +56,7 @@ export default class ShortcutsSearchProvider {
         if (command) return this.encodeIdentity(["command", command]);
         const label = typeof item.label === "string" ? item.label.trim() : "";
         const descendants = this.getDescendantIdentities(item.children).sort();
-        return this.encodeIdentity(["branch", String(item.module || ""), label, ...descendants]);
+        return this.encodeIdentity(["branch", label, ...descendants]);
     }
     getDescendantIdentities(items) {
         // Describe a targetless branch with every available stable descendant identity field.
@@ -64,9 +64,8 @@ export default class ShortcutsSearchProvider {
             const id = typeof item.id === "string" ? item.id.trim() : "";
             const href = typeof item.href === "string" ? item.href.trim() : "";
             const command = typeof item.command === "string" ? item.command.trim() : "";
-            const module = typeof item.module === "string" ? item.module.trim() : "";
             const label = typeof item.label === "string" ? item.label.trim() : "";
-            const own = this.encodeIdentity(["item", id, href, command, module, label]);
+            const own = this.encodeIdentity(["item", id, href, command, label]);
             return [own, ...this.getDescendantIdentities(item.children)];
         });
     }

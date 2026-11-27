@@ -80,7 +80,9 @@ test("bundled prefixes select their configured providers and discover Commands a
         commands, queries,
         areas: {
             getCurrentArea: () => null,
-            getAreas: () => [{id: "shop"}],
+            getAreas: () => [{id: "shop"}]
+        },
+        menus: {
             getMenu: () => ({scope: "area", items: [
                 {label: "Products", path: "/products", href: "page:shop:/pages/products.js", module: "shop"},
                 {label: "Customers", path: "/customers", href: "page:shop:/pages/customers.js", module: "shop"}
@@ -140,10 +142,12 @@ test("Areas provider distinguishes known Pages from shortcuts while preserving d
     };
     const areas = {
         getCurrentArea: () => ({id: "main"}),
-        getAreas: () => [{id: "admin", label: "Admin", prefix: "/admin"}, {id: "main", label: "Main", prefix: "/main"}],
+        getAreas: () => [{id: "admin", label: "Admin", prefix: "/admin"}, {id: "main", label: "Main", prefix: "/main"}]
+    };
+    const menus = {
         getMenu: (name, id) => definitions[id]
     };
-    const provider = new AreasSearchProvider({areas, config: {modules: {reports: {icon: "reports", files: [
+    const provider = new AreasSearchProvider({areas, menus, config: {modules: {reports: {icon: "reports", files: [
         {path: "/_assets/reports/build/pages/reports.html", resource: {type: "page"}},
         {path: "/_assets/reports/build/pages/help.md", resource: {type: "page"}},
         {path: "/_assets/reports/build/utils/export.js"}
@@ -161,12 +165,12 @@ test("Areas provider distinguishes known Pages from shortcuts while preserving d
 });
 
 test("Shortcuts provider preserves supported modes and excludes self-embedded menu items", async () => {
-    const areas = {getMenus: () => [{name: "global", scope: "global", label: "Global", icon: "global", items: [
+    const menus = {getMenus: () => [{name: "global", scope: "global", label: "Global", icon: "global", items: [
         {label: "Search", href: "/search", open: "embed", outlet: "self", children: []},
         {label: "Settings", description: "Workspace settings", href: "/settings", open: "dialog", children: []},
         {label: "Group", children: [{label: "Logs", href: "/logs", open: "dock", children: []}]}
     ]}]};
-    const provider = new ShortcutsSearchProvider({areas});
+    const provider = new ShortcutsSearchProvider({menus});
     assert.deepEqual((await provider.query("search", {limit: 10})), []);
     assert.deepEqual((await provider.query("settings", {limit: 10})).map(item => [item.type, item.href, item.open]), [["shortcut", "/settings", "dialog"]]);
     assert.deepEqual((await provider.query("logs", {limit: 10})).map(item => [item.href, item.open]), [["/logs", "dock"]]);
@@ -185,18 +189,20 @@ test("menu providers exclude non-displayable items while preserving valid siblin
     ];
     const areas = {
         getCurrentArea: () => ({id: "main"}),
-        getAreas: () => [{id: "main", label: "Main"}],
+        getAreas: () => [{id: "main", label: "Main"}]
+    };
+    const menus = {
         getMenu: () => ({scope: "area", items}),
         getMenus: () => [{name: "global", scope: "global", label: "Global", items}]
     };
-    const areaResults = await new AreasSearchProvider({areas, config: {modules: {}}}).query("find", {limit: 1});
-    const shortcutResults = await new ShortcutsSearchProvider({areas}).query("find", {limit: 1});
+    const areaResults = await new AreasSearchProvider({areas, menus, config: {modules: {}}}).query("find", {limit: 1});
+    const shortcutResults = await new ShortcutsSearchProvider({menus}).query("find", {limit: 1});
     assert.deepEqual(areaResults.map(item => [item.label, item.href]), [["Valid child", "/child"], ["Valid sibling", "/sibling"]]);
     assert.deepEqual(shortcutResults.map(item => [item.label, item.href]), [["Valid child", "/child"], ["Valid sibling", "/sibling"]]);
 
     const search = new Search({
         loader: {async load() { return ShortcutsSearchProvider; }},
-        services: {resolve(name) { return name === "areas" ? areas : undefined; }}
+        services: {resolve(name) { return name === "menus" ? menus : undefined; }}
     }, {providers: {shortcuts: {label: "Shortcuts", implementation: "/providers/search-shortcuts.js"}}});
     const response = await search.query("find", {limit: 10});
     assert.deepEqual(response.results.map(item => item.href), ["/child", "/sibling"]);
@@ -206,7 +212,9 @@ test("menu providers exclude non-displayable items while preserving valid siblin
 test("Search ranks every candidate from a bundled provider before applying its limit", async () => {
     const areas = {
         getCurrentArea: () => ({id: "main"}),
-        getAreas: () => [{id: "main", label: "Main"}],
+        getAreas: () => [{id: "main", label: "Main"}]
+    };
+    const menus = {
         getMenu: () => ({scope: "area", items: [
             {label: "Export customer documents", href: "/export", children: []},
             {label: "Import documents", href: "/import", children: []},
@@ -214,7 +222,7 @@ test("Search ranks every candidate from a bundled provider before applying its l
         ]})
     };
     class Provider extends AreasSearchProvider {
-        constructor() { super({areas, config: {modules: {}}}); }
+        constructor() { super({areas, menus, config: {modules: {}}}); }
     }
     const search = new Search({
         loader: {async load() { return Provider; }},
@@ -227,7 +235,7 @@ test("Search ranks every candidate from a bundled provider before applying its l
 });
 
 test("Shortcuts provider creates stable hierarchical identities for sibling-scoped IDs", async () => {
-    const areas = {getMenus: () => [
+    const menus = {getMenus: () => [
         {name: "primary", scope: "global", items: [
             {id: "filesystems", label: "Filesystems", children: [{id: "settings", label: "Settings", href: "/filesystems/settings", children: []}]},
             {id: "collections", label: "Collections", children: [{id: "settings", label: "Settings", href: "/collections/settings", children: []}]},
@@ -236,7 +244,7 @@ test("Shortcuts provider creates stable hierarchical identities for sibling-scop
         ]},
         {name: "secondary", scope: "global", items: [{id: "settings", label: "Settings", href: "/secondary/settings", children: []}]}
     ]};
-    const provider = new ShortcutsSearchProvider({areas});
+    const provider = new ShortcutsSearchProvider({menus});
     const first = await provider.query("settings", {limit: 1});
     const second = await provider.query("settings", {limit: 1});
     assert.equal(first.length, 5);
@@ -245,7 +253,7 @@ test("Shortcuts provider creates stable hierarchical identities for sibling-scop
 
     const search = new Search({
         loader: {async load() { return ShortcutsSearchProvider; }},
-        services: {resolve(name) { return name === "areas" ? areas : undefined; }}
+        services: {resolve(name) { return name === "menus" ? menus : undefined; }}
     }, {providers: {shortcuts: {label: "Shortcuts", implementation: "/providers/search-shortcuts.js"}}});
     const response = await search.query("settings", {limit: 10});
     assert.deepEqual(response.results.map(item => item.href), first.map(item => item.href));

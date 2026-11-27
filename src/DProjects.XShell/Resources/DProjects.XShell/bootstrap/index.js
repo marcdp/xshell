@@ -380,28 +380,32 @@ async function main() {
                 const getId = item => isObject(item) && typeof item.id === "string" && item.id ? item.id : null;
                 for (let i = 0; i < result.length; i++) {
                     const id = getId(result[i]);
-                    if (id !== null) indexes.set(id, i);
+                    if (id !== null && !indexes.has(id)) indexes.set(id, i);
                 }
 
-                // Replace matching contributions in place and append new ones in order.
+                // Merge matching objects in place and append new entries in order.
                 for (const item of source) {
                     const id = getId(item);
                     if (id !== null && indexes.has(id)) {
-                        result[indexes.get(id)] = structuredClone(item);
+                        const index = indexes.get(id);
+                        result[index] = merge(result[index], item);
                     } else {
                         if (id !== null) indexes.set(id, result.length);
-                        result.push(structuredClone(item));
+                        result.push(mergeValue(undefined, item));
                     }
                 }
                 return result;
+            };
+            const mergeValue = (target, source) => {
+                if (Array.isArray(source)) return mergeArray(Array.isArray(target) ? target : [], source);
+                if (isObject(source)) return merge(isObject(target) ? target : {}, source);
+                return source;
             };
             const merge = (target, source) => {
                 // Treat dictionary entries as own data properties, including keys inherited from Object.prototype.
                 for (const [key, value] of Object.entries(source)) {
                     if (!Object.hasOwn(target, key)) Object.defineProperty(target, key, {value: undefined, enumerable: true, writable: true, configurable: true});
-                    if (Array.isArray(value)) target[key] = mergeArray(Array.isArray(target[key]) ? target[key] : [], value);
-                    else if (isObject(value)) target[key] = merge(isObject(target[key]) ? target[key] : {}, value);
-                    else target[key] = value;
+                    target[key] = mergeValue(target[key], value);
                 }
                 return target;
             };

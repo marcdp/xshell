@@ -18,11 +18,13 @@ namespace DProjects.XShell.Test {
             Assert.Contains($"configuration override '{path}' is reserved", exception.Message, StringComparison.Ordinal);
         }
 
-        [Fact]
-        public async Task UseXShell_AcceptsOrdinaryOverridesAtTheHostBoundary() {
+        [Theory]
+        [InlineData("services.navigation.options.mode", "\"hash\"")]
+        [InlineData("services.menus.options.definitions.global.label", "\"Application menu\"")]
+        public async Task UseXShell_AcceptsOrdinaryOverridesAtTheHostBoundary(string path, string value) {
             var builder = WebApplication.CreateBuilder(new WebApplicationOptions { EnvironmentName = "Development" });
             await using var app = builder.Build();
-            var config = CreateValidConfiguration(new Dictionary<string, string> { ["services.navigation.options.mode"] = "\"hash\"" });
+            var config = CreateValidConfiguration(new Dictionary<string, string> { [path] = value });
 
             var exception = Record.Exception(() => app.UseXShell(config));
 

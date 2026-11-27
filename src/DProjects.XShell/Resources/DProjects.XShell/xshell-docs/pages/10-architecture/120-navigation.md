@@ -155,16 +155,14 @@ Search Page. `x-menuitem` and `x-anchor` receive only an
 `href`; neither knows about menu paths or performs path-to-href translation. Breadcrumb lookup starts with the canonical Area-aware `href`, and
 the returned breadcrumb entries carry their `path` for UIs that choose to expose the friendly link.
 
-Navigation accepts either form. When a browser/navigation URL matches `Areas.resolvePath(value)`, Navigation replaces it with that effective menu
+Navigation accepts either form. When a browser/navigation URL matches `menus.resolvePath(value)`, Navigation replaces it with that effective menu
 item's canonical `href` before setting `x-page.src`; when no path matches, it preserves the original value. Thus `/main/components` and direct
 `/main/_assets/x-demo/<generation>/pages/01-components/index.js` navigation both remain valid. Navigation translates to the Area-aware canonical href, not to
 the final module resource URL.
 
-For browser-facing links, Navigation performs the inverse lookup through `Areas.resolveHref(href, areaId)`. For an unprefixed module resource,
-Areas derives the module id from the structural `/_assets/<module-id>/...` prefix, searches the effective menus of Areas associated with that
-module, and returns the
-matching item, including items materialized from dynamic menu sources. The originating Page's Area is tried first when applicable; otherwise the
-target module's participating Areas determine the public path. Query parameters and fragments remain attached to the public path. When no matching
+For browser-facing links, Navigation performs the inverse lookup through `menus.resolveHref(href, areaId)`. For an unprefixed module resource,
+Menus derives the module id from the structural `/_assets/<module-id>/...` prefix, prioritizes Areas associated with that module, and returns the matching item. The originating Page's Area is tried first when applicable.
+Effective menus selected in other Areas can also provide a match. Query parameters and fragments remain attached to the public path. When no matching
 item or friendly `path` exists, the Area-aware canonical href remains the browser-facing fallback.
 
 `x-page` receives that canonical Area-aware href, identifies its Area, and removes the Area prefix before asking the loader/resolver for the
