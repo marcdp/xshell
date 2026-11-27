@@ -41,6 +41,7 @@ test("Menus is constructed and validated by Services with its declarative option
     const services = await setup(Menus);
     const instance = services.resolve("menus");
     assert.equal(instance.getMenu("global").items[0].label, "Help");
+    assert.deepEqual(instance.getMenus(), [instance.getMenu("global")]);
     assert.equal(await services.initialize("menus"), instance);
     assert.equal(services.resolve("menus"), instance);
 
@@ -150,6 +151,8 @@ test("manifests extend nested named definitions and Areas contextualize reusable
         [["Settings", null, null], ["Diagnostics", "dock", "details"]]);
     assert.deepEqual(menus.getMenus("empty"), [global]);
     assert.equal(menus.getMenu("shortcuts", "lab"), global);
+    assert.deepEqual(menus.getMenus("main"), [main, global]);
+    assert.deepEqual(menus.getMenus("lab"), [lab, global]);
     assert.equal(menus.getMenu("shortcuts", "unknown"), null);
     assert.deepEqual(menus.getMenus("unknown"), []);
     assert.ok(Object.isFrozen(main) && Object.isFrozen(main.items) && Object.isFrozen(main.items[0].children));
@@ -163,6 +166,82 @@ test("Menus validates references and retains the global static-only restriction"
         /Global menu 'global'.*Children source 'runtime'/);
     const { menus } = context({ local: { sources: [{ source: "runtime" }] } }, { main: { menus: { navigation: "local" } } });
     assert.throws(() => menus.init(), /Area 'main' menu 'local' references unregistered menu source 'runtime'/);
+});
+
+test("Area slots cannot reference or shadow global definitions during construction", () => {
+    const definitions = { global: { scope: "global" }, preferences: { scope: "global" }, local: {} };
+    assert.throws(() => context(definitions, { main: { menus: { actions: "global" } } }),
+        /Area 'main' menu slot 'actions' cannot reference global menu 'global'/);
+    assert.throws(() => context(definitions, { main: { menus: { preferences: "local" } } }),
+        /Area 'main' menu slot 'preferences' conflicts with global menu name 'preferences'/);
+
+    const { menus } = context(definitions, { main: { menus: { navigation: "local" } } });
+    menus.init();
+    const all = menus.getMenus("main");
+    assert.deepEqual(all.map(menu => menu.name), ["navigation", "global", "preferences"]);
+    assert.deepEqual(all, all.map(menu => menus.getMenu(menu.name, "main")));
+});
+
+test("Area aliases may be repeated across slots for an equivalent contextual destination", () => {
+    const { menus } = context({
+        local: { items: [{ label: "Group", path: "help", children: [{
+            label: "Help", path: "help", href: "/pages/help.js?view=full&sort=name#usage"
+        }] }] },
+        tools: { items: [{ label: "Help link", path: "/main/help", href: "/main/pages/help.js?sort=name&view=full#usage" }] }
+    }, { main: { prefix: "main", menus: { navigation: "local", tools: "tools" } } });
+    menus.init();
+    const [group] = menus.getMenu("navigation").items;
+    assert.equal(group.path, "/main/help");
+    assert.equal(menus.resolvePath("/main/help"), group.children[0]);
+    assert.equal(menus.resolvePath(null), null);
+});
+
+test("a named source alias can collide with a nested static item in another slot", () => {
+    const { menus } = context({
+        local: { items: [{ label: "Group", children: [{ label: "Help", path: "help", href: "/pages/help.js?view=full" }] }] },
+        tools: { sources: [{ source: "live" }] }
+    }, {
+        first: { prefix: "first", menus: { navigation: "local" } },
+        main: { prefix: "main", menus: { navigation: "local", tools: "tools" } }
+    });
+    menus.registerSource("live", { resolve: () => [{ label: "Other help", path: "/help", href: "/pages/help.js?view=compact" }] });
+    assert.throws(() => menus.init(), /Area 'main'.*'\/main\/help'.*'navigation'.*view=full.*'tools'.*view=compact/);
+    assert.equal(menus.getMenu("navigation", "first"), null);
+});
+
+test("a child source collision preserves every previous snapshot and can be retried", () => {
+    const { bus, menus } = context({
+        local: { items: [{ label: "Group", childrenSource: "live" }] },
+        tools: { items: [{ label: "Help", path: "help", href: "/pages/help.js" }] }
+    }, {
+        main: { prefix: "main", menus: { navigation: "local" } },
+        lab: { prefix: "lab", menus: { navigation: "local", tools: "tools" } }
+    });
+    let children = [{ label: "Status", path: "status", href: "/pages/status.js" }];
+    const source = { resolve: () => children };
+    menus.registerSource("live", source);
+    let changes = 0;
+    bus.addEventListener("xshell:menus:change", () => changes++);
+    menus.init();
+    const main = menus.getMenu("navigation", "main");
+    const lab = menus.getMenu("navigation", "lab");
+    const mainItems = main.items;
+    const labItems = lab.items;
+
+    children = [{ label: "Other help", path: "help", href: "/pages/other.js" }];
+    assert.throws(() => source.refresh(), /Area 'lab'.*'\/lab\/help'.*'navigation'.*other\.js.*'tools'.*help\.js/);
+    assert.equal(main.items, mainItems);
+    assert.equal(lab.items, labItems);
+    assert.equal(menus.resolvePath("/main/status"), mainItems[0].children[0]);
+    assert.equal(menus.resolvePath("/main/help"), null);
+    assert.equal(menus.resolvePath("/lab/help"), menus.getMenu("tools", "lab").items[0]);
+    assert.equal(changes, 0);
+
+    children = [{ label: "Shared help", path: "help", href: "/pages/help.js" }];
+    assert.equal(source.refresh(), true);
+    assert.equal(changes, 1);
+    assert.equal(menus.resolvePath("/main/help").href, "/main/pages/help.js");
+    assert.equal(menus.resolvePath("/lab/help"), lab.items[0].children[0]);
 });
 
 test("Menus orders equal entries stably and derives a fallback Area home", () => {

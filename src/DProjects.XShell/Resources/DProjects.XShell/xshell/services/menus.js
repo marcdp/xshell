@@ -1,3 +1,5 @@
+import { normalizeUrlPrefix } from "../utils/urls.js";
+
 // class
 export default class Menus {
 
@@ -22,7 +24,15 @@ export default class Menus {
                         type: "array", description: "Root inventory or registered sources, evaluated in array order.",
                         items: {
                             type: "object", required: ["source"], additionalProperties: false,
-                            properties: { id: { type: "string", minLength: 1 }, source: { type: "string", minLength: 1 } }
+                            properties: {
+                                id: { type: "string", minLength: 1 },
+                                source: { type: "string", minLength: 1 },
+                                path: { type: "string", pattern: "^(?!\\s*[A-Za-z][A-Za-z0-9+.-]*:)[^?#\\\\]*$",
+                                    description: "Friendly path prefix for an inventory source, relative to the Area." },
+                                default: { type: "boolean", description: "Whether the inventory root is a default navigation item. Defaults to true." }
+                            },
+                            if: { properties: { source: { pattern: "^/" } } },
+                            else: { not: { anyOf: [{ required: ["path"] }, { required: ["default"] }] } }
                         }
                     }
                 },
@@ -68,7 +78,6 @@ export default class Menus {
     #globalMenus = new Map();
     #areaMenus = new Map();
     #sources = new Map();
-    #instances = [];
 
     // ctor
     constructor({ areas, bus, config }, { definitions }) {
@@ -77,49 +86,57 @@ export default class Menus {
         this.#config = config;
         this.#definitions = definitions;
 
-        // Validate selections and publish static global menus before module controllers execute.
-        for (const area of areas.getAreas()) {
-            for (const [slot, name] of Object.entries(area.menus)) {
-                if (!Object.hasOwn(definitions, name)) throw new Error(`Area '${area.id}' menu slot '${slot}' references unknown menu '${name}'.`);
-            }
-        }
+        // Publish static global menus before module controllers execute.
         for (const [name, definition] of Object.entries(definitions)) {
             if (definition.scope !== "global") continue;
             if (definition.sources?.length) throw new Error(`Global menu '${name}' must use static items. Root sources are unsupported.`);
-            this.#globalMenus.set(name, this.#createMenu(name, name, null));
+            this.#globalMenus.set(name, this.#createMenu(name, name, null).menu);
+        }
+
+        // Reserve global names and validate every Area's slot selections.
+        for (const area of areas.getAreas()) {
+            for (const [slot, name] of Object.entries(area.menus)) {
+                const context = `Area '${area.id}' menu slot '${slot}'`;
+                if (!Object.hasOwn(definitions, name)) throw new Error(`${context} references unknown menu '${name}'.`);
+                if (this.#globalMenus.has(name)) throw new Error(`${context} cannot reference global menu '${name}'.`);
+                if (this.#globalMenus.has(slot)) throw new Error(`${context} conflicts with global menu name '${slot}'.`);
+            }
         }
     }
 
     // methods
     init() {
-        // Project Area slots after module controllers have registered their sources.
+        // Validate all Area projections before publishing them.
+        const areaMenus = new Map();
         for (const area of this.#areas.getAreas()) {
             const menus = new Map();
             for (const [slot, name] of Object.entries(area.menus)) {
-                menus.set(slot, this.#globalMenus.get(name) ?? this.#createMenu(slot, name, area));
+                menus.set(slot, this.#createMenu(slot, name, area));
             }
-            this.#areaMenus.set(area.id, menus);
+            this.#validatePaths(area.id, menus);
+            areaMenus.set(area.id, menus);
         }
+        this.#areaMenus = areaMenus;
     }
     getMenus(areaId = null) {
-        // Return selected slots followed by global definitions that are not shadowed by a slot.
+        // Return selected slots followed by each global definition.
         const area = areaId === null ? this.#areas.getCurrentArea() : this.#areas.getArea(areaId);
         if (areaId !== null && !area) return [];
         const menus = this.#areaMenus.get(area?.id);
-        const contextual = [...(menus?.values() ?? [])].filter(menu => menu.scope === "area");
-        const global = [...this.#globalMenus.values()].filter(menu => menus?.get(menu.name)?.scope !== "area");
-        return Object.freeze([...contextual, ...global]);
+        const contextual = [...(menus?.values() ?? [])].map(instance => instance.menu);
+        return Object.freeze([...contextual, ...this.#globalMenus.values()]);
     }
     getMenu(name, areaId = null) {
-        // Prefer the selected or current Area slot over a global definition of the same name.
+        // Resolve a canonical global name or a slot in the requested Area.
         const area = areaId === null ? this.#areas.getCurrentArea() : this.#areas.getArea(areaId);
         if (areaId !== null && !area) return null;
-        return this.#areaMenus.get(area?.id)?.get(name) ?? this.#globalMenus.get(name) ?? null;
+        return this.#globalMenus.get(name) ?? this.#areaMenus.get(area?.id)?.get(name)?.menu ?? null;
     }
     resolvePath(path) {
         // Only contextual menu aliases participate in Area navigation.
+        if (!path) return null;
         for (const area of this.#areas.getAreas()) {
-            const items = this.#findInArea(area, item => item.path === path);
+            const items = this.#findInArea(area, item => item.path === path && item.href);
             if (items) return items.at(-1);
         }
         return null;
@@ -169,11 +186,40 @@ export default class Menus {
     // methods (private)
     #findInArea(area, predicate) {
         for (const menu of this.#areaMenus.get(area.id)?.values() ?? []) {
-            if (menu.scope !== "area") continue;
             const path = this.#findMenuitemPath(menu.items, predicate);
             if (path) return path;
         }
         return null;
+    }
+    #validatePaths(areaId, menus, updates) {
+        // Check aliases across all slots, using candidate snapshots for menus being refreshed.
+        const aliases = new Map();
+        const visit = (slot, items) => {
+            for (const { path, href, children } of items) {
+                if (path && href) {
+                    const previous = aliases.get(path);
+                    if (previous && previous.href !== href && this.#aliasDestination(previous.href) !== this.#aliasDestination(href)) {
+                        throw new Error(`Area '${areaId}' has conflicting menu path '${path}': slot '${previous.slot}' targets '${previous.href}' and slot '${slot}' targets '${href}'.`);
+                    }
+                    if (!previous) aliases.set(path, { slot, href });
+                }
+                visit(slot, children);
+            }
+        };
+        for (const [slot, instance] of menus) {
+            visit(slot, updates?.get(instance)?.items ?? instance.items);
+        }
+    }
+    #aliasDestination(href) {
+        // Compare default query parameters independently of serialization order and keep the fragment.
+        const queryStart = href.indexOf("?");
+        const fragmentStart = href.indexOf("#");
+        if (queryStart < 0 || (fragmentStart >= 0 && fragmentStart < queryStart)) return href;
+        const query = new URLSearchParams(href.slice(queryStart + 1, fragmentStart < 0 ? href.length : fragmentStart));
+        query.delete("nav");
+        query.sort();
+        const params = query.toString();
+        return href.slice(0, queryStart) + (params ? "?" + params : "") + (fragmentStart < 0 ? "" : href.slice(fragmentStart));
     }
     #createMenu(slot, name, area) {
         // Keep the effective definition stable while publishing immutable item snapshots.
@@ -181,11 +227,11 @@ export default class Menus {
         const { label = name, description = "", icon = null } = definition;
         const instance = { name, area, definition };
         Object.assign(instance, this.#projectMenu(instance));
-        if (instance.sources.size) this.#instances.push(instance);
-        return Object.freeze({
+        instance.menu = Object.freeze({
             name: slot, scope: area ? "area" : "global", label, description, icon,
             get items() { return instance.items; }
         });
+        return instance;
     }
     #projectMenu({ definition, name, area, sources: previous }, refreshedName) {
         // Reuse other source results and track only sources that remain in the effective menu.
@@ -207,8 +253,9 @@ export default class Menus {
 
         // Apply root sources to the merged static definition, then normalize the resulting tree.
         let items = definition.items || [];
-        for (const { source } of definition.sources || []) {
-            const entries = source.startsWith("/") ? this.#resolveInventory(source, name) : resolveSource(source);
+        for (const sourceDefinition of definition.sources || []) {
+            const { source } = sourceDefinition;
+            const entries = source.startsWith("/") ? this.#resolveInventory(sourceDefinition, name, area) : resolveSource(source);
             items = this.#mergeSourceItems(items, entries);
         }
         items = this.#projectItems(items, area, name, resolveSource);
@@ -216,8 +263,14 @@ export default class Menus {
     }
     #refreshSource(name) {
         // Prepare every affected projection before publishing any changes.
-        const updates = this.#instances.filter(instance => instance.sources.has(name))
-            .map(instance => [instance, this.#projectMenu(instance, name)]);
+        const updates = new Map();
+        for (const [areaId, menus] of this.#areaMenus) {
+            const previousSize = updates.size;
+            for (const instance of menus.values()) {
+                if (instance.sources.has(name)) updates.set(instance, this.#projectMenu(instance, name));
+            }
+            if (updates.size !== previousSize) this.#validatePaths(areaId, menus, updates);
+        }
         let changed = false;
         for (const [instance, next] of updates) {
             if (instance.fingerprint === next.fingerprint) {
@@ -251,7 +304,8 @@ export default class Menus {
         }
         return result;
     }
-    #resolveInventory(source, name) {
+    #resolveInventory(sourceDefinition, name, area) {
+        const { source, path, default: isDefault = true } = sourceDefinition;
         // Use the generation-qualified asset path to select the inventory that owns the source.
         const inventories = [["xshell", this.#config.xshell], ...Object.entries(this.#config.modules)];
         const [moduleId, owner] = inventories.find(([, { assets }]) =>
@@ -259,7 +313,10 @@ export default class Menus {
         if (!owner?.files) {
             throw new Error(`Menu '${name}' inventory source '${source}' does not identify an effective module asset path.`);
         }
-        return this.#createMenuFromModuleFiles(owner.files, source, owner.label || moduleId);
+        // Resolve an explicit prefix relative to the Area even when they share the same first segment.
+        const segments = path?.trim().split("/").filter(Boolean);
+        const prefix = segments?.length ? normalizeUrlPrefix("/" + segments.join("/")).slice(0, -1) : "";
+        return this.#createMenuFromModuleFiles(owner.files, source, owner.label || moduleId, prefix ? area.prefix + prefix : "", isDefault);
     }
     #projectItems(items, area, name, resolveSource, activeSources = new Set()) {
         // Use stable numeric sorting, with zero for items that omit an explicit order.
@@ -317,7 +374,7 @@ export default class Menus {
         }
         return null;
     }
-    #createMenuFromModuleFiles(files, root, rootItemLabel) {
+    #createMenuFromModuleFiles(files, root, rootItemLabel, prefix, isDefault) {
         // Derive friendly paths and sort keys from inventory filenames.
         const extensions = [".js", ".html", ".md"];
         const getExtension = (path) => extensions.find(extension => path.endsWith(extension));
@@ -331,7 +388,7 @@ export default class Menus {
             const match = name.match(/^(\d+)-/);
             return match ? Number(match[1]) : Number.MAX_SAFE_INTEGER;
         };
-        const createPath = (parts) => "/" + parts.map(toPathPart).filter(Boolean).join("/");
+        const createPath = (parts) => prefix + "/" + parts.map(toPathPart).filter(Boolean).join("/");
         const applyResource = (node, file) => {
             const resource = file?.resource?.type === "page" ? file.resource : null;
             if (!resource) return;
@@ -340,19 +397,19 @@ export default class Menus {
             if (typeof resource.icon === "string") node.icon = resource.icon;
         };
         const ensureNode = (items, name, href = null, pathParts = [], file = null) => {
-            let node = items.find(item => item._name === toPathPart(name));
+            // Retain distinct inventory entries even when they generate the same friendly alias.
+            const key = href ? toRuntimePath(href) : name;
+            let node = items.find(item => item._key === key);
             if (!node) {
                 node = {
-                    _name: toPathPart(name),
+                    _key: key,
                     _order: getOrder(name),
                     label: toTitle(name),
-                    href: href ? toRuntimePath(href) : null,
+                    href: href ? key : null,
                     path: createPath(pathParts),
                     children: []
                 };
                 items.push(node);
-            } else if (href) {
-                node.href = toRuntimePath(href);
             }
             applyResource(node, file);
             return node;
@@ -365,8 +422,8 @@ export default class Menus {
         const rootItem = {
             label: rootItemLabel,
             href: rootIndex ? toRuntimePath(rootIndex.path) : `${root}/index.js`,
-            path: "/",
-            default: true,
+            path: prefix || "/",
+            default: isDefault,
             children: []
         };
 
@@ -404,7 +461,7 @@ export default class Menus {
         }
         const clean = (items) => items
             .sort((a, b) => a._order - b._order || a.label.localeCompare(b.label))
-            .map(({ _name, _order, children, ...item }) => ({
+            .map(({ _key, _order, children, ...item }) => ({
                 ...item,
                 ...(children.length ? { children: clean(children) } : {})
             }));

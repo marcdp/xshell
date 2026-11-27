@@ -100,7 +100,7 @@ test("manifest arrays merge by ID in bootstrap precedence order", () => {
 
 test("menu configuration follows generic value-driven path semantics", () => {
     const definition = { xshell: { services: { menus: { options: { definitions: {
-        navigation: { sources: [{ source: "/pages/navigation" }] },
+        navigation: { sources: [{ source: "/pages/navigation", path: "/friendly/navigation/", default: false }] },
         tools: { sources: [{ source: "/pages/tools" }] },
         arbitraryMenu123: { sources: [{ source: "/pages/custom" }] },
         registered: { sources: [{ source: "customer-pages" }] },
@@ -117,7 +117,9 @@ test("menu configuration follows generic value-driven path semantics", () => {
     }));
 
     const menus = module.xshell.services.menus.options.definitions;
-    assert.equal(menus.navigation.sources[0].source, "/_assets/x/1.0.0.dev/pages/navigation");
+    assert.deepEqual(menus.navigation.sources[0], {
+        source: "/_assets/x/1.0.0.dev/pages/navigation", path: "/friendly/navigation/", default: false
+    });
     assert.equal(menus.tools.sources[0].source, "/_assets/x/1.0.0.dev/pages/tools");
     assert.equal(menus.arbitraryMenu123.sources[0].source, "/_assets/x/1.0.0.dev/pages/custom");
     assert.equal(menus.registered.sources[0].source, "customer-pages");

@@ -17,7 +17,8 @@ Bootstrap applies the same rules to all configuration sections.
 
 Menus is a declarative singleton. Its options own named application menu definitions. Areas maps logical slots to those names and composes routes
 from participating modules. An Area-scoped menu can be selected by several Areas. Menus applies each Area's prefix to its own read-only
-projection. Global menus are static and application-wide. Canonical asset paths identify the resources and their runtime modules.
+projection. Global menus are static and application-wide. Area slots select only Area-scoped definitions and reserve global menu names for
+canonical lookup and enumeration. Canonical asset paths identify the resources and their runtime modules.
 
 ## Consequences and open work
 
@@ -25,7 +26,11 @@ XShell resolves Areas and Menus before initializing module controllers. The Menu
 Module controllers can register sources during initialization. XShell then initializes the contextual menus and derives Area routes and homes
 before Navigation starts. Menu shortcuts initialize after Navigation.
 
-Navigation uses menu aliases and canonical Area-aware hrefs. Page loading removes the matched Area prefix for resource lookup. Menus emits
-`xshell:menus:change` for effective source updates. Areas emits `xshell:area:change` when navigation changes the active Area.
+Inventory sources may set a friendly prefix and choose whether their root participates in default home selection. Menus checks all navigable
+aliases within each Area at startup and before publishing any source refresh. A shared alias must resolve to the same destination. A conflicting
+refresh preserves the previous projections, and valid changes emit `xshell:menus:change`.
+
+Navigation uses menu aliases and canonical Area-aware hrefs. Page loading removes the matched Area prefix for resource lookup. Areas emits
+`xshell:area:change` when navigation changes the active Area.
 
 See [Areas](../30-subsystems/10-areas.md), [Navigation](../10-architecture/120-navigation.md), and [Configuration](../10-architecture/20-configuration.md).

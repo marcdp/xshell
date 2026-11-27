@@ -273,6 +273,27 @@ test("Menus validates named options and rejects obsolete module menu configurati
     }
 });
 
+test("Menus options reserve source path and default for inventory definitions", () => {
+    const definition = {};
+    const options = { definitions: { navigation: definition } };
+    for (const valid of [
+        { source: "registered" },
+        { source: "/_assets/test/pages", path: "/customers/", default: false },
+        { source: "/_assets/test/pages", path: "", default: true }
+    ]) {
+        definition.sources = [valid];
+        assert.equal(menusOptionsValidator.validate(options).valid, true, JSON.stringify(valid));
+    }
+    for (const invalid of [
+        { source: "registered", path: "customers" }, { source: "registered", default: false },
+        { source: "/_assets/test/pages", path: null }, { source: "/_assets/test/pages", default: "true" },
+        { source: "/_assets/test/pages", path: "/customers?sort=name" }, { source: "/_assets/test/pages", path: "https://example.test/" }
+    ]) {
+        definition.sources = [invalid];
+        assert.equal(menusOptionsValidator.validate(options).valid, false, JSON.stringify(invalid));
+    }
+});
+
 test("Menus options accept Page presentation fields and reject removed embedded spellings", () => {
     const items = [{ label: "Inline report", href: "/pages/report.js", open: "embed", outlet: "self" }];
     const options = { definitions: { navigation: { items } } };

@@ -327,10 +327,14 @@ async function main() {
                     // The global navigation prefix belongs to the application URL, independent of the declaring module.
                     const globalPrefix = key === "globalPrefix" && manifestPath.length === 4 && manifestPath[0] === "xshell" &&
                         manifestPath[1] === "services" && manifestPath[2] === "navigation" && manifestPath[3] === "options";
+                    // Inventory menu prefixes are Area-relative paths. The source resource still normalizes against the module.
+                    const inventoryPrefix = key === "path" && manifestPath.length === 8 && manifestPath[0] === "xshell" &&
+                        manifestPath[1] === "services" && manifestPath[2] === "menus" && manifestPath[3] === "options" &&
+                        manifestPath[4] === "definitions" && manifestPath[6] === "sources" && Number.isInteger(manifestPath[7]);
                     // Logger selection is a literal dictionary key even when it looks like a URL.
                     const loggerProvider = key === "provider" && manifestPath.length === 4 && manifestPath[0] === "xshell" &&
                         manifestPath[1] === "services" && manifestPath[2] === "logger" && manifestPath[3] === "options";
-                    return [key, inventoryResource || searchPrefixes || globalPrefix || loggerProvider
+                    return [key, inventoryResource || searchPrefixes || globalPrefix || inventoryPrefix || loggerProvider
                         ? item : normalizeManifest(item, module, declaringPath, [...manifestPath, key])];
                 }));
             }

@@ -52,13 +52,13 @@
   },
   "events": {
     "xshell:menus:change": {
-      "description": "Emitted on the Bus when a registered dynamic menu source refreshes and changes its menu items.",
+      "description": "Emitted on the Bus when a registered source refresh publishes a validated menu change.",
       "detail": {}
     }
   },
   "methods": {
     "getMenus": {
-      "description": "Returns effective Area menu definitions followed by global menu definitions. If no Area exists, returns global menus. An invalid explicitly requested Area returns an empty array.",
+      "description": "Returns contextual slots for the requested or current Area followed by every global definition exactly once. With no Area, returns global definitions. An unknown explicit Area returns an empty array.",
       "parameters": [
         {
           "name": "areaId",
@@ -79,7 +79,7 @@
       }
     },
     "getMenu": {
-      "description": "Returns the effective menu for an Area slot or global definition name, or null.",
+      "description": "Returns a global menu by its canonical definition name or a contextual slot from the requested or current Area. An unknown name or unknown explicit Area returns null.",
       "parameters": [
         {
           "name": "name",
@@ -117,7 +117,7 @@
       }
     },
     "resolvePath": {
-      "description": "Finds a menu item by its public path across all areas, or returns null.",
+      "description": "Finds the first navigable Area menu item with the exact friendly path, or returns null.",
       "parameters": [
         {
           "name": "path",
@@ -150,7 +150,7 @@
       }
     },
     "registerSource": {
-      "description": "Registers a dynamic menu source with resolve() and optional dependsOn events; installs a refresh() method on the source.",
+      "description": "Registers a dynamic menu source with resolve() and optional dependsOn events and installs refresh(). An invalid refresh throws and preserves the previously published menus.",
       "parameters": [
         {
           "name": "name",

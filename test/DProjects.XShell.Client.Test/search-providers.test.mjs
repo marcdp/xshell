@@ -11,6 +11,29 @@ import FilesystemsSearchProvider from "../../src/DProjects.XShell/Resources/DPro
 import StoresSearchProvider from "../../src/DProjects.XShell/Resources/DProjects.XShell/x-store/providers/search-stores.js";
 import SampleStore from "../../src/DProjects.XShell/Resources/DProjects.XShell/x-store/samples/store.json" with {type: "json"};
 import Search from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/search.js";
+import Areas from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/areas.js";
+import Menus from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/menus.js";
+
+test("shortcuts search continues to return global menus across Area changes", async () => {
+    const config = { modules: {}, xshell: { assets: { basePath: "/_assets" } } };
+    const bus = new EventTarget();
+    bus.emit = (type, detail) => bus.dispatchEvent(new CustomEvent(type, { detail }));
+    const areas = new Areas({ config, bus }, { default: "shop", definitions: {
+        shop: { prefix: "shop", menus: { navigation: "catalog" } },
+        account: { prefix: "account", menus: { navigation: "profile" } }
+    } });
+    const menus = new Menus({ config, bus, areas }, { definitions: {
+        catalog: {}, profile: {},
+        shortcuts: { scope: "global", items: [{ label: "Support", href: "/_assets/help/pages/index.js" }] }
+    } });
+    menus.init();
+    const provider = new ShortcutsSearchProvider({ menus });
+    const initial = await provider.query("support", {});
+    assert.deepEqual(initial.map(item => item.href), ["/_assets/help/pages/index.js"]);
+    bus.emit("xshell:navigation:end", { src: "/account/home" });
+    assert.equal(areas.getCurrentArea().id, "account");
+    assert.deepEqual(await provider.query("support", {}), initial);
+});
 
 test("module manifests resolve Search providers through the standard providers directory", () => {
     for (const [moduleName, expected] of [

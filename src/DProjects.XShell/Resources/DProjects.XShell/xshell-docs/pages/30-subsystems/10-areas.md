@@ -83,12 +83,17 @@ const preferences = menus.getMenu("preferences");
 const inventoryMenus = menus.getMenus("inventory");
 ```
 
-`getMenu(name, areaId)` looks up a slot in the requested or current Area, then falls back to a global definition named `name`.
-`getMenus(areaId)` lists the contextual slots, followed by global definitions whose names are available in that Area. An Area slot can refer to a global menu, which retains its global identity. An unknown explicit Area yields
-`null` or `[]`, respectively. Both methods expose global definitions when the application has no Area. Effective definitions and their
-item trees are read-only. Read `menu.items` again after a change event to obtain the latest snapshot.
+`getMenu(name, areaId)` resolves a global definition by its canonical name or a slot in the requested or current Area. Area slots can select only
+Area-scoped definitions and must use names distinct from every global menu. Invalid selections and name conflicts fail before module controllers
+start. `getMenus(areaId)` lists the contextual slots in selection order, then every global definition once in configuration order. An unknown
+explicit Area yields `null` or `[]`, respectively. Global definitions are available even without configured Areas. Effective definitions and
+their item trees are read-only. Read `menu.items` again after a change event to obtain the latest snapshot.
 
-`menus.resolvePath(path)` searches contextual menus for an exact friendly alias. `menus.resolveHref(href, areaId)` matches canonical identity
+`menus.resolvePath(path)` searches contextual menus for an exact friendly alias with an `href`. A targetless group can keep a path for
+organization. Menus validates aliases across all slots and descendants in each Area. Repeated aliases may share a destination, including
+its default query parameters and fragment. Conflicting destinations fail with the Area, path, and contributing slots.
+
+`menus.resolveHref(href, areaId)` matches canonical identity
 without query parameters or fragments. Without an explicit Area, it tries a recognized Area prefix, Areas associated with the target module,
 the current Area, then other configured Areas. `menus.getMenuitemBreadcrumb(href, areaId)` returns the matching Area's depth-first ancestor
 chain for the canonical Area-aware href. Breadcrumb entries carry `path` and `href` for navigation.
@@ -101,12 +106,23 @@ order after the static items. A source starting with `/` names an inventory dire
 
 ```jsonc
 {
-    "report-navigation": {
+    "management": {
         "items": [{ "label": "Customers", "childrenSource": "customer-pages" }],
-        "sources": [{ "id": "pages", "source": "/pages" }, { "id": "tools", "source": "report-tools" }]
+        "sources": [
+            { "id": "customers", "source": "/pages/customers", "path": "customers", "default": true },
+            { "id": "inventory", "source": "/pages/inventory", "path": "inventory", "default": false },
+            { "id": "tools", "source": "report-tools" }
+        ]
     }
 }
 ```
+
+An inventory source accepts an optional Area-relative `path` prefix and boolean `default` for its generated root. In the `/main` Area, the
+example generates roots at `/main/customers` and `/main/inventory`, and descendants such as `/main/customers/help` and `/main/inventory/help`.
+Leading and trailing slashes on the prefix are optional. Bootstrap preserves the authored prefix as text and normalizes the `source` resource
+path against its module. An omitted or empty prefix uses the Area root. An omitted `default` keeps the root eligible for home selection,
+with the first eligible destination winning in menu order. Set `default: false` to skip the default search for that root. It remains
+eligible for the ordinary home fallback. Registered source references accept `id` and `source`.
 
 An inventory source selects its module inventory by the normalized asset path. Menus generates entries for JavaScript, HTML, and Markdown
 Pages. HTML Page hrefs use `.js`, and Markdown keeps `.md`. Directory index Pages provide directory destinations. Numeric file and directory
@@ -114,8 +130,9 @@ prefixes determine generated order and are removed from labels and friendly path
 and icon. The module label names the generated root item.
 
 Module controllers register runtime sources during initialization. A source exposes `resolve()` and can list Bus events in `dependsOn`.
-Call `source.refresh()` or emit a dependency event to refresh root or child content. When the effective content changes, Menus publishes a
-read-only snapshot and emits `xshell:menus:change`. A removed source override exposes the original static entry again.
+Call `source.refresh()` or emit a dependency event to refresh root or child content. Menus validates every affected Area before publishing
+new snapshots. A conflict causes `refresh()` to throw and leaves the previous menus effective. On a valid content change, Menus publishes
+the read-only snapshots and emits `xshell:menus:change`. A removed source override exposes the original static entry again.
 
 ## Routes
 
