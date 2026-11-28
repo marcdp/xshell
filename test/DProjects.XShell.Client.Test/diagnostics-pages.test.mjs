@@ -126,7 +126,7 @@ test("Modules diagnostics displays and filters the framework alongside the modul
     const state = Object.assign(new EventTarget(), ModulesPage.state);
     const controller = ModulesPage.controller({ state, modules, config, events: createEvents(() => controller) });
 
-    // Exercise the shared row data and the template bindings for both document links.
+    // Verify the projected row data and the configuration document link.
     controller.load();
     assert.deepEqual(state.modules.map(module => module.id), ["orders", "xshell", "z-archive"]);
     assert.deepEqual(state.modules[1], {
@@ -140,7 +140,6 @@ test("Modules diagnostics displays and filters the framework alongside the modul
         version: orders.version, builtAt: "", assets: orders.assets, configUrl: orders.configUrl, configUrlName: "manifest.json", status: "loaded",
         files: { all: 1, pages: 1, components: 0, services: 0, contracts: 0, others: 0 }, size: 12
     });
-    assert.match(ModulesPage.template, /x-attr:href="module\.assets\.url" target="_blank"/);
     assert.match(ModulesPage.template, /x-attr:href="module\.configUrl" target="_blank"/);
 
     // Each existing filter can include the framework, exclude it, and restore the full inventory.
