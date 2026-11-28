@@ -219,7 +219,7 @@ async function verifyFilesystems() {
         },
         xshell: {
             assets: { basePath: "/_assets" },
-            ui: { layouts: { main: "x-layout-main", embed: "test-layout" } },
+            ui: { layouts: { main: "x-layout-main", embed: "test-layout", stack: "test-layout" } },
             resolver: { page: {
                 "x-filesystem:/pages/explorer.js": { src: explorerPath, loader: "page-js" },
                 [explorerPath]: { src: explorerPath, loader: "page-js" }
@@ -231,6 +231,7 @@ async function verifyFilesystems() {
         ...Object.fromEntries(entries.map(entry => [entry.name, entry.navigation]))
     };
     const searchSrc = "/_assets/x/pages/search.js";
+    const preferencesSrc = "/_assets/x/pages/workspace.js";
     const intersections = new Map();
     if (verifyShortcuts) {
         // Deliver the intersection after verifying visibility since virtual time may skip compositor updates.
@@ -244,9 +245,12 @@ async function verifyFilesystems() {
         // Use the bundled Search item with the same resource normalization performed by bootstrap.
         const source = await (await fetch("/resources/x/manifest.jsonc")).text();
         const manifest = JSON.parse(source.replace(/^\s*\/\/[^\r\n]*/gm, ""));
-        const search = manifest.xshell.services.menus.options.definitions.global.items.find(item => item.id === "search");
+        const items = manifest.xshell.services.menus.options.definitions.global.items;
+        const search = items.find(item => item.id === "search");
+        const settings = items.find(item => item.label === "Settings");
         definitions.global.items.push(
             {...search, shortcut: [search.shortcut, "Meta+K"], children: search.children.map(item => ({...item, href: "/_assets/x" + item.href}))},
+            {...settings, children: settings.children.filter(item => item.label === "Preferences").map(item => ({...item, href: "/_assets/x" + item.href}))},
             {label: "Expand sidebar", command: "expand", shortcut: "Ctrl+Shift+E"},
             {label: "Open separately", href: "/help", target: "_blank", shortcut: "Ctrl+Shift+L"}
         );
@@ -326,6 +330,7 @@ async function verifyFilesystems() {
     if (verifyShortcuts) {
         const {default: searchPage} = await import("/resources/x/pages/search.js");
         pages.set(searchSrc, await createPageClassFromJsDefinition(searchSrc, context, searchPage));
+        pages.set(preferencesSrc, await createPageClassFromJsDefinition(preferencesSrc, context, {template: "<p>Preferences</p>"}));
     }
     for (const name of ["filesystem1", "filesystem2"]) {
         await filesystems.saveDefinition({ name, label: name, provider: "mem", options: {} });
@@ -360,6 +365,11 @@ async function verifyFilesystems() {
         check(embeddedSearch.page.hasCommand("focus"), "The loaded Search Page has no focus method");
         check(embeddedSearch.page.refs.search === searchField(), "Search Page did not resolve its focus ref");
         await waitFor(focus, "Search submenu did not focus its embedded input");
+        const input = searchField().shadowRoot.activeElement;
+        input.click();
+        input.value = "about";
+        input.dispatchEvent(new InputEvent("input", {bubbles: true, composed: true, data: "about"}));
+        check(item.shadowRoot.querySelector("x-contextmenu").checkVisibility() && focus(), "Search interaction dismissed the submenu or lost focus");
         check(press(searchField().shadowRoot.activeElement, "k", {ctrlKey: false, metaKey: true}), "Meta+K from Search did not toggle the submenu");
         await waitFor(() => !item.shadowRoot.querySelector("x-contextmenu").checkVisibility(), "Search did not close");
         anchor().click();
@@ -393,6 +403,25 @@ async function verifyFilesystems() {
 
         shortcuts.dispose();
         check(!press(host, "k"), "A disposed shortcut listener accepted the event");
+
+        // Activate the slotted Preferences label while Stack navigation keeps the existing sidebar mounted.
+        const settings = appMenu.querySelector('x-menuitem[label="Settings"]');
+        const link = item => item?.shadowRoot?.querySelector("x-anchor")?.shadowRoot?.querySelector("a");
+        const trigger = await waitFor(() => link(settings), "Settings trigger did not render");
+        const submenu = () => settings.shadowRoot.querySelector("x-contextmenu");
+        trigger.click();
+        await waitFor(() => submenu()?.checkVisibility(), "Settings dropdown did not open");
+        const preferencesItem = settings.querySelector('x-menuitem[label="Preferences"]');
+        await waitFor(() => link(preferencesItem)?.hasAttribute("href"), "Preferences link did not render");
+        const requests = [];
+        const navigate = navigation.navigate.bind(navigation);
+        navigation.navigate = options => { requests.push(options.href); return navigate(options); };
+        preferencesItem.shadowRoot.querySelector(".text").click();
+        await waitFor(() => navigation.getXPages()[1]?.page?.src?.endsWith(preferencesSrc + "?menu-name=preferences"), "Preferences did not open in Stack");
+        check(settings.isConnected && requests.length === 1, "Expected one navigation request and the same Settings item");
+        await waitFor(() => submenu()?.checkVisibility() === false, "Settings dropdown stayed open after activating Preferences");
+        trigger.click();
+        await waitFor(() => submenu()?.checkVisibility(), "Settings dropdown did not reopen after activating Preferences");
         return;
     }
 
@@ -479,5 +508,5 @@ test("Workspace reflects IDs and reuses its outlet across selection and embedded
 test("Global Filesystem links work on direct access and history and preserve Area layout preferences", chromiumOnly,
     () => runInChromium(verifyFilesystems, ["mode=path", "mode=hash", "mode=path&direct", "mode=hash&direct"]));
 
-test("Ctrl+K opens and toggles the real Search submenu with focus from the collapsed sidebar", chromiumOnly,
+test("App menu activates shortcuts, preserves Search focus, and dismisses Settings after Preferences navigation", chromiumOnly,
     () => runInChromium(verifyFilesystems, ["mode=path&shortcuts"]));

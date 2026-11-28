@@ -207,10 +207,21 @@ export default {
             },
 
             click(event) {
-                // Ignore interactions inside embedded Pages.
+                // Ignore embedded Page interactions except navigation link activations.
                 const path = event.composedPath();
-                if (path.slice(0, path.indexOf(host)).some(element => element.localName === "x-page")) return;
-                
+                const descendants = path.slice(0, path.indexOf(host));
+                const pageIndex = descendants.findIndex(element => element.localName === "x-page");
+
+                if (pageIndex !== -1) {
+                    const anchor = descendants.slice(0, pageIndex).find(element => element.localName === "x-anchor");
+
+                    if (anchor?.href && !anchor.disabled && !event.defaultPrevented &&
+                        !descendants.some(element => element.classList?.contains("has-childs"))) {
+                        if (state.expanded && !host.classList.contains("inline")) this.collapse();
+                    }
+                    return;
+                }
+
                 // Let nested items activate independently and dismiss this dropdown after activation.
                 const item = path.find(element => element.localName === "x-menuitem");
                 if (item !== host) {

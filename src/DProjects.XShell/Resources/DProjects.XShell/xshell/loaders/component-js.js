@@ -366,7 +366,6 @@ export async function createComponentClassFromJsDefinition(src, context, definit
                     throw new Error(`Component '${definition.meta.id}' declares public method '${methodName}' in definition.contract.methods but controller.${methodName} is not a function.`);
                 }
             }
-            logger.trace("Components: controller initialized", {componentId, moduleId});
             stage = "construction";
             // attribute mutation observer (listen for changes in attributes that start with state map attribute names)
             if (stateMapAttributes.length) {
@@ -496,7 +495,7 @@ export async function createComponentClassFromJsDefinition(src, context, definit
             }
 
             throwCleanupErrors(errors, `Multiple errors occurred while unloading Component '${definition.meta.id ?? src}'.`);
-            logger.trace("Components: unloaded", {componentId, moduleId});
+            
             return result;
         }
         // methods (private)
@@ -614,7 +613,7 @@ export async function createComponentClassFromJsDefinition(src, context, definit
         throw new Error(`Component '${id}' from '${src}' cannot be registered because that id is already registered.`);
     }
     window.customElements.define(id, WebComponent);
-    logger.trace("Components: definition loaded", {componentId, moduleId});
+    logger.trace("Components: definition loaded: " + id, {componentId, moduleId});
     // return class
     return WebComponent
 }
