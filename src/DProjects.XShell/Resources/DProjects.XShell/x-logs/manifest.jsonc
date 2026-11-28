@@ -15,9 +15,34 @@
         }
     },
 
-    // Logger provider contributions and log reader service
     "xshell": {
+        // Keep the public tag in this module rather than using the generic x-* resolver.
+        "resolver": {
+            "component": {
+                "x-logview": {"src": "/components/x-logview.js", "loader": "component-js", "cache": true, "moduleId": "x-logs", "modulePath": "/"}
+            }
+        },
+
+        // Logger providers, log reader service and optional Diagnostics tabs
         "services": {
+            "menus": {
+                "options": {
+                    "definitions": {
+                        "diagnostics": {
+                            "items": [{
+                                "id": "console",
+                                "children": [{
+                                    "id": "runtime",
+                                    "children": [
+                                        {"id": "logs", "label": "Logs", "order": 50, "path": "logs", "href": "/pages/logs.js"},
+                                        {"id": "live-logs", "label": "Live Logs", "order": 60, "path": "live-logs", "href": "/pages/live-logs.js"}
+                                    ]
+                                }]
+                            }]
+                        }
+                    }
+                }
+            },
             "logger": {
                 "options": {
                     "providers": {

@@ -516,23 +516,28 @@ namespace DProjects.XShell.Test {
             Assert.Equal(0, catalog.NextCalls + module.NextCalls + descriptor.NextCalls + resource.NextCalls);
         }
         [Fact]
-        public async Task DevelopmentRepository_CompilesLogsPageAndIncludesItsContract() {
-            // Check that the real resource inventory includes the Page, its public service contract and the shared utility.
+        public async Task DevelopmentRepository_CompilesLogPagesAndViewer() {
+            // Check inventory and compilation for both Pages and the shared Component.
             var root = Path.Combine(AppContext.BaseDirectory, "Resources", "DProjects.XShell");
             var descriptor = await SendAsync(root, "/_resources/x-logs/0.9.0.dev/manifest.json", true);
             Assert.Equal(200, descriptor.StatusCode);
             using var manifest = JsonDocument.Parse(descriptor.Body);
             var files = manifest.RootElement.GetProperty("modules").GetProperty("x-logs").GetProperty("files");
-            foreach (var path in new[] { "/pages/logs.js", "/contracts/log-reader.json", "/utils/indexeddb.js" }) {
+            foreach (var path in new[] { "/pages/logs.js", "/pages/live-logs.js", "/components/x-logview.js" }) {
+                Assert.Contains(files.EnumerateArray(), file => file.GetProperty("path").GetString() == path);
+                var resource = await SendAsync(root, "/_resources/x-logs/0.9.0.dev" + path, true);
+                Assert.Equal(200, resource.StatusCode);
+                Assert.Contains("templateRenderer:", resource.Text);
+            }
+            foreach (var path in new[] { "/contracts/log-reader.json", "/utils/indexeddb.js" }) {
                 Assert.Contains(files.EnumerateArray(), file => file.GetProperty("path").GetString() == path);
             }
-            var page = await SendAsync(root, "/_resources/x-logs/0.9.0.dev/pages/logs.js", true);
-            Assert.Equal(200, page.StatusCode);
-            Assert.Contains("templateRenderer:", page.Text);
             var demo = await SendAsync(root, "/_resources/x-demo/0.9.0.dev/manifest.json", true);
             Assert.Equal(200, demo.StatusCode);
             Assert.Contains("module:x-logs:latest", demo.Text);
-            Assert.Contains("page:x-logs:/pages/logs.js", demo.Text);
+            Assert.Contains("module:xshell-diagnostics:latest", demo.Text);
+            Assert.DoesNotContain("page:x-logs:/pages/logs.js", demo.Text);
+            Assert.DoesNotContain("page:x-logs:/pages/live-logs.js", demo.Text);
         }
         [Fact]
         public async Task DevelopmentRepository_IndexesAndServesGroupedDiagnosticsPages() {

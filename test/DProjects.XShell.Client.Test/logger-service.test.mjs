@@ -5,6 +5,7 @@ import {setImmediate as waitTurn} from "node:timers/promises";
 import vm from "node:vm";
 import LoggerContract from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/contracts/logger.json" with {type: "json"};
 import LogReaderContract from "../../src/DProjects.XShell/Resources/DProjects.XShell/x-logs/contracts/log-reader.json" with {type: "json"};
+import MenusContract from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/contracts/menus.json" with {type: "json"};
 import ContractSchema from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/schemas/contract.schema.json" with {type: "json"};
 import ModuleSchema from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/schemas/module.schema.json" with {type: "json"};
 import ServiceSchema from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/schemas/service.schema.json" with {type: "json"};
@@ -12,6 +13,7 @@ import LoaderEsmJs from "../../src/DProjects.XShell/Resources/DProjects.XShell/x
 import Services from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services.js";
 import JsonValidator from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/json-validator.js";
 import Logger from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/logger.js";
+import Menus from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/menus.js";
 import Tasks from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/tasks.js";
 import Resolver from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/resolver.js";
 import LoggerConsole from "../../src/DProjects.XShell/Resources/DProjects.XShell/x-logs/providers/logger-console.js";
@@ -64,13 +66,14 @@ async function createServices(config, loadProvider = () => assert.fail("Unexpect
     const loader = {async load(resource) {
         if (resource === `esm:${config.xshell.services.logger.implementation}`) return Logger;
         if (resource === `esm:${config.xshell.services.logReader?.implementation}`) return LogReader;
+        if (resource === `esm:${config.xshell.services.menus?.implementation}`) return Menus;
         const resolved = resolver.resolve(resource);
         loads.push(resolved);
         if (!resolved) throw new Error(`Resource not found: ${resource}`);
         return loadProvider(resolved);
     }};
     const services = new Services({config, resolver, loader, contracts: {
-        getContractItemById: id => ({id, contract: {"logger": LoggerContract, "log-reader": LogReaderContract}[id]})
+        getContractItemById: id => ({id, contract: {"logger": LoggerContract, "log-reader": LogReaderContract, "menus": MenusContract}[id]})
     }});
     services.register("loader", loader);
     services.register("bus", {emit() {}});
@@ -331,7 +334,8 @@ test("x-logs providers are selected, configured or disabled by the application",
     assert.equal(discovered.version, module.version);
     const contributions = [
         {name: "x", assetsPath: "/_assets/x/1.dev", manifest: {modules: {x: {files: []}}}},
-        {name: "xshell", assetsPath: "/_assets/xshell/1.dev", manifest: {xshell: {resolver: manifest.xshell.resolver, services: {logger: registration}}}},
+        {name: "xshell", assetsPath: "/_assets/xshell/1.dev", manifest: {xshell: {resolver: manifest.xshell.resolver,
+            services: {logger: registration, menus: manifest.xshell.services.menus}}}},
         {...discovered, assetsPath, assetsUrl: discovered.baseUrl, manifest: loggerManifest}
     ];
     const defaults = {maxEntries: 10000, retentionDays: 7};

@@ -1,7 +1,7 @@
 # Logging
 
 XShell Core registers the write-oriented `logger` singleton. The optional `x-logs` module contributes the `console` and `indexeddb` writers,
-the `logReader` singleton, an IndexedDB reader and a Logs Page. The application selects and configures each service's provider independently.
+the `logReader` singleton, an IndexedDB reader and two log Pages. The application selects and configures each service's provider independently.
 
 ## Module dependency
 
@@ -252,12 +252,23 @@ return an idempotent unsubscribe function directly or resolve one asynchronously
 Providers report query failures to callers and isolate subscriber callback failures. Use native diagnostics where needed to avoid a feedback loop
 through the logger being observed.
 
-### Logs Page
+### Logs and Live Logs
 
-Open `page:x-logs:/pages/logs.js`. In the Cookbook application (`x-demo`), choose **Logs** from the global menu. Each row shows its category or
-**Uncategorized**. Expand **Categories** to select one or more categories and apply them with severity and local date filters. Applying new filters
-returns to the first page. Open a record to inspect its arguments, and use **Older** and **Newer** to browse historical results. **Resume live**
-returns to the newest matching records. The Page discovers categories on mount and **Refresh** and retains selections even when their records expire.
+Open **XShell Diagnostics → Runtime → Logs** to investigate stored records. Set category, severity, and local date/time filters, then choose **Query**
+to start at the newest matching records. **Older** and **Newer** navigate pages of 100 records using reader cursors. **Refresh** repeats the current
+page's query with its applied filters. The results stay stable between explicit actions.
+
+Open **XShell Diagnostics → Runtime → Live Logs** to monitor the latest 200 matching persisted records, with the newest at the bottom. Category and
+severity changes apply immediately. **Pause** keeps the current display and allows manual **Refresh**. **Resume** starts observation again and reads
+the latest matching records. Live observation is suspended while the tab is hidden and resumes when shown if monitoring is still enabled.
+Turn off **Auto-scroll** to inspect older rows without following new records. The window reflects persisted records and provider retention.
+
+Both Pages discover categories on mount and on **Refresh** and retain selected categories after their records expire. Clear all category selections
+to show every category. **Uncategorized** selects records with a null category, distinct from the named category of the same spelling.
+All five levels are selected initially. Clearing every level produces an empty result. Timestamps use local time with three digits of millisecond
+precision. Select a record to inspect its complete stored arguments, including structured values.
+
+The standalone Page references are `page:x-logs:/pages/logs.js` and `page:x-logs:/pages/live-logs.js`.
 
 ## Platform logging conventions
 

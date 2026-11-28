@@ -3,10 +3,10 @@ import {chromiumOnly, runInChromium} from "./helpers/chromium.mjs";
 
 async function verifyLogsPage() {
     const [
-        {default: definition}, {default: button}, {default: object}, {createPageClassFromJsDefinition},
+        {createPageClassFromJsDefinition},
         {createComponentClassFromJsDefinition}, {default: renderer}, {default: proxy}, {default: LogReader}
     ] = await Promise.all([
-        "x-logs/pages/logs.js", "x/components/x-button.js", "x/components/x-object.js", "xshell/loaders/page-js.js",
+        "xshell/loaders/page-js.js",
         "xshell/loaders/component-js.js", "xshell/render-engines/x-client.js", "xshell/state-engines/proxy.js", "x-logs/services/log-reader.js"
     ].map(path => import("/resources/" + path)));
     const check = (condition, message) => { if (!condition) throw new Error(message); };
@@ -22,10 +22,13 @@ async function verifyLogsPage() {
     const subscriptions = [];
     const diagnostics = [];
     let discoveries = 0;
-    const noReader = new URLSearchParams(location.search).has("disabled");
+    const params = new URLSearchParams(location.search);
+    const noReader = params.has("disabled");
+    const live = params.has("live");
+    const pagePath = live ? "/pages/live-logs.js" : "/pages/logs.js";
     const logReader = noReader ? new LogReader({}) : {
         getCategories() {
-            return ++discoveries === 1 ? [null, "inventory,棚卸し"] : ["new category"];
+            return ++discoveries === 1 ? [null, "inventory,棚卸し", "Uncategorized"] : ["new category"];
         },
         subscribe(callback) {
             const subscription = {...Promise.withResolvers(), callback, cleaned: 0};
@@ -72,22 +75,33 @@ async function verifyLogsPage() {
     const context = (moduleId, resourceName, resourcePath) => ({
         resourceName, resourcePath, resourceDefinition: {moduleId}, appBasePath: "", services
     });
-    for (const [name, component] of [["x-button", button], ["x-object", object]]) {
-        const path = "/_assets/x/current/components/" + name + ".js";
-        await createComponentClassFromJsDefinition(path, context("x", name, path), {
+    for (const name of ["x-button", "x-toolbar", "x-object", "x-listview-head", "x-listview-column", "x-listview-body",
+        "x-listview-item", "x-listview", "x-logview"]) {
+        const owner = name === "x-logview" ? "x-logs" : "x";
+        const file = "/components/" + name + ".js";
+        const path = "/_assets/" + owner + "/current" + file;
+        const {default: component} = await import("/resources/" + owner + file);
+        await createComponentClassFromJsDefinition(path, context(owner, name, path), {
             ...component, meta: {id: name, renderEngine: "x-client"}
         });
     }
-    const src = "/_assets/x-logs/current/pages/logs.js";
+    const src = "/_assets/x-logs/current" + pagePath;
+    const {default: definition} = await import("/resources/x-logs" + pagePath);
     const Page = await createPageClassFromJsDefinition(src, context("x-logs", src, src), definition);
     const instance = new Page({src, context: {}, bus});
     const host = document.createElement("main");
     host.setAttribute("src", src);
     document.body.append(host);
     const action = label => host.querySelector(`x-button[label="${label}"]`)?.shadowRoot.querySelector(".button");
-    const record = (id, ...args) => ({id, timestamp: id * 1000, level: "warn", category: null, args});
+    const record = (id, ...args) => ({id, timestamp: id * 1000 + 5, level: "warn", category: null, args});
     const reply = (index, items, cursor = null) => queries[index].resolve({items, nextCursor: cursor, hasMore: cursor !== null});
-    const rows = () => [...host.querySelectorAll(".logs summary")].map(element => element.textContent);
+    const view = () => host.querySelector("x-logview")?.shadowRoot;
+    const items = () => [...(view()?.querySelectorAll("x-listview-item") ?? [])];
+    const rows = () => items().map(element => element.textContent);
+    const inspector = () => view()?.querySelector("x-object");
+    const form = () => host.querySelector("form");
+    const categories = () => [...host.querySelectorAll('input[name="category"]')];
+    const levels = () => [...host.querySelectorAll('input[name="level"]')];
     const unsubscribe = index => () => subscriptions[index].cleaned++;
 
     await instance.load();
@@ -100,97 +114,166 @@ async function verifyLogsPage() {
         await instance.unload();
         return;
     }
-    await until(() => subscriptions.length === 1 && host.textContent.includes("Loading logs"), "Live registration or loading state missing");
-    check(queries.length === 0, "Query started before subscription registration");
-    subscriptions[0].resolve(unsubscribe(0));
-    await until(() => queries.length === 1, "Initial query did not start");
-    subscriptions[0].callback();
-    subscriptions[0].callback();
-    reply(0, [record(2, "before reconciliation")]);
-    await until(() => queries.length === 2, "Changes during initial query were not reconciled");
-
-    // Verify that display uses text and that ordinary live row updates produce no logging diagnostics.
+    const nextQuery = async count => until(() => queries.length === count, "Expected query " + count);
+    const press = async label => {
+        await until(() => action(label), "Missing action " + label);
+        action(label).click();
+    };
     const markup = '<img src="bad" onerror="window.executed = true">';
     const circular = {};
     circular.self = circular;
-    const sample = {...record(3, markup, circular, 42n, new Error("stored error"), {unserializable: true}), category: "inventory,棚卸し"};
-    const priorCount = diagnostics.length;
-    reply(1, [sample], "older");
-    await until(() => rows()[0]?.includes(markup) && action("Older"), "Newest records or pagination did not render");
-    check(!host.querySelector(".logs img") && !window.executed, "Stored text was interpreted as HTML");
-    check(rows()[0].includes(sample.category), "The structured category did not render");
-    check(discoveries === 1, "Live notifications triggered category discovery");
-    const categoryInputs = () => [...host.querySelectorAll('input[name="category"]')];
-    host.querySelector(".log-filters details").open = true;
-    await until(() => categoryInputs().length === 2, "Discovered categories were not offered");
-    categoryInputs().forEach(input => input.click());
-    check(diagnostics.length === priorCount, "Live query generated logging diagnostics");
-    host.querySelector(".logs details").open = true;
-    await until(() => host.querySelector("x-object")?.shadowRoot.textContent.includes("Arguments"), "Stored arguments were not available");
-    const inspector = host.querySelector("x-object");
-    check(inspector.value === sample.args, "Object inspector received rewritten values");
-    const nested = () => [...inspector.shadowRoot.querySelectorAll("x-object")];
-    await until(() => nested().length === 5 && nested()[2].shadowRoot.textContent.includes("42n"), "Structured values were not safely rendered");
-    nested()[1].expand();
-    await until(() => nested()[1].shadowRoot.querySelector("x-object")?.shadowRoot.textContent.includes("[Circular]"), "Object inspector lost a cycle");
+    const sample = {...record(3, markup, circular, 42n, new Error("stored error"), {unserializable: true},
+        new Map([["key", "value"]]), new Set(["value"])), category: "inventory,棚卸し"};
+    const verifyInspector = async () => {
+        check(!view().querySelector("img") && !window.executed, "Stored text was interpreted as HTML");
+        const item = items().find(item => item.value === sample.id);
+        check(item.label.includes(".005") && item.textContent.includes(sample.category), "Milliseconds or Unicode category missing");
+        item.querySelector("span").click();
+        await until(() => inspector()?.value === sample.args, "Original arguments were not passed to the inspector");
+        const nested = () => [...inspector().shadowRoot.querySelectorAll("x-object")];
+        await until(() => nested().length === 7 && nested()[2].shadowRoot.textContent.includes("42n"), "Structured arguments did not render");
+        nested()[1].expand();
+        await until(() => nested()[1].shadowRoot.querySelector("x-object")?.shadowRoot.textContent.includes("[Circular]"), "Circular argument was lost");
+        return inspector();
+    };
 
-    // Historical browsing pauses observation and only manual actions issue historical queries.
-    action("Older").click();
-    await until(() => queries.length === 3, "Older page did not query");
-    check(subscriptions[0].cleaned === 1 && queries[2].options.cursor === "older", "Historical browsing did not pause or use the cursor");
-    reply(2, [record(1, "older page")]);
-    await until(() => rows()[0]?.includes("older page"), "Older records were not shown");
-    check(rows()[0].includes("Uncategorized"), "Null category did not render as Uncategorized");
+    await until(() => categories().length === 3, "Discovered categories were not offered");
+    check(categories()[0].value !== categories()[2].value && categories()[0].parentNode.textContent !== categories()[2].parentNode.textContent,
+        "Null and named Uncategorized choices are indistinguishable");
+
+    if (!live) {
+        await nextQuery(1);
+        check(queries[0].options.limit === 100 && queries[0].options.order === "desc", "Incorrect historical query");
+        reply(0, [sample, {...record(2, "older"), timestamp: NaN}], "opaque:older");
+        await until(() => rows()[0]?.includes(markup), "Historical display order is wrong");
+        check(items()[1].label === "Invalid timestamp", "Invalid timestamp was not handled safely");
+        await verifyInspector();
+        await press("Older");
+        await nextQuery(2);
+        check(queries[1].options.cursor === "opaque:older", "Older query lost its cursor");
+        reply(1, [record(1, "older page")]);
+        await until(() => rows()[0]?.includes("older page") && !inspector(), "Older page or selection did not update");
+        categories().slice(0, 2).forEach(input => input.click());
+        await press("Refresh");
+        await nextQuery(3);
+        check(queries[2].options.cursor === "opaque:older", "Refresh lost the cursor");
+        await until(() => discoveries === 2 && categories().length === 3 && categories().filter(input => input.checked).length === 2,
+            "Refresh did not preserve selections and discover the new category");
+        for (const input of levels()) input.checked = input.value === "warn";
+        host.querySelector('[name="from"]').value = "2025-01-01T00:00";
+        host.querySelector('[name="to"]').value = "2025-01-02T00:00";
+        form().requestSubmit();
+        await nextQuery(4);
+        reply(2, [record(2, "stale result")]);
+        const options = queries[3].options;
+        check(!options.cursor && options.levels.join() === "warn" && JSON.stringify(options.categories) === JSON.stringify([null, sample.category])
+            && options.from === new Date("2025-01-01T00:00").getTime() && options.to === new Date("2025-01-02T00:00").getTime(),
+            "Filters did not reach the reader or reset pagination");
+        await wait(30);
+        check(rows()[0]?.includes("older page"), "Stale query overwrote the display");
+        reply(3, [sample], "next-cursor");
+        await until(() => rows()[0]?.includes(markup), "Filtered page did not render");
+        await press("Older");
+        await nextQuery(5);
+        reply(4, [record(1, "second filtered page")]);
+        await until(() => rows()[0]?.includes("second filtered page"), "Filtered pagination did not render");
+        await press("Newer");
+        await nextQuery(6);
+        check(!queries[5].options.cursor && queries[5].options.levels.join() === "warn", "Newer lost the applied filter or cursor");
+        reply(5, []);
+        await until(() => host.textContent.includes("No matching logs"), "Empty result was not shown");
+        await press("Refresh");
+        await nextQuery(7);
+        queries[6].reject(new Error("Reader unavailable"));
+        await until(() => host.querySelector('[role="alert"]')?.textContent === "Reader unavailable", "Query error was not shown");
+        await press("Refresh");
+        await nextQuery(8);
+        await instance.unmount();
+        await instance.unload();
+        reply(7, [sample]);
+        await wait(40);
+        check(subscriptions.length === 0 && queries.length === 8 && !items().length, "Historical Page observed or updated after disposal");
+        return;
+    }
+
+    await until(() => subscriptions.length === 1 && host.textContent.includes("Loading logs"), "Live registration or loading state missing");
+    check(queries.length === 0, "Query started before subscription registration");
+    subscriptions[0].resolve(unsubscribe(0));
+    await nextQuery(1);
+    check(queries[0].options.limit === 200 && queries[0].options.order === "desc", "Live query is unbounded or ordered incorrectly");
     subscriptions[0].callback();
-    await wait(40);
-    check(queries.length === 3 && rows()[0].includes("older page"), "Late live notification replaced the historical page");
-    action("Refresh").click();
-    await until(() => queries.length === 4, "Paused manual refresh did not query");
-    check(queries[3].options.cursor === "older", "Manual refresh lost the historical cursor");
-    await until(() => categoryInputs().length === 3, "Refresh did not offer the new category or preserve pending selections");
-    check(discoveries === 2 && categoryInputs().filter(input => input.checked).length === 2, "Refresh dropped a pending category selection");
+    subscriptions[0].callback();
+    await wait(30);
+    check(queries.length === 1, "Live reads overlapped");
+    reply(0, [sample, record(2, "older")]);
+    await nextQuery(2);
+    reply(1, [sample, record(2, "older")]);
+    await until(() => rows()[1]?.includes(markup), "Live records did not render oldest first");
+    const diagnosticsBefore = diagnostics.length;
+    await wait(50);
+    check(queries.length === 2 && discoveries === 1 && diagnostics.length === diagnosticsBefore, "Idle live viewer triggered work");
+    const originalInspector = await verifyInspector();
+    subscriptions[0].callback();
+    await nextQuery(3);
+    const replacement = record(3, "replacement arguments");
+    reply(2, [record(4, "new tail"), replacement]);
+    await until(() => rows()[1]?.includes("new tail") && inspector()?.value === replacement.args, "New row or replaced arguments did not render");
+    check(inspector() === originalInspector, "Refreshing recreated the inspector");
+    await wait(50);
+    check(queries.length === 3 && discoveries === 1 && diagnostics.length === diagnosticsBefore, "Open inspection triggered a logging feedback loop");
 
-    // Change filters while a query is pending and verify the stale result never reaches the DOM.
-    for (const input of host.querySelectorAll('[name="level"]')) input.checked = input.value === "warn";
-    host.querySelector('[name="from"]').value = "2025-01-01T00:00";
-    host.querySelector('[name="to"]').value = "2025-01-02T00:00";
-    host.querySelector("form").requestSubmit();
-    reply(3, [record(1, "stale result")]);
-    await until(() => queries.length === 5, "New filters did not query");
-    check(!rows().some(row => row.includes("stale result")), "Old request overwrote new filters");
-    check(queries[4].options.levels.join() === "warn" && !queries[4].options.cursor
-        && JSON.stringify(queries[4].options.categories) === JSON.stringify([null, sample.category])
-        && queries[4].options.from === new Date("2025-01-01T00:00").getTime() && queries[4].options.to === new Date("2025-01-02T00:00").getTime(),
-        "Severity or date options did not reach the reader");
+    await press("Pause");
+    await until(() => subscriptions[0].cleaned === 1, "Pause did not release observation");
+    subscriptions[0].callback();
+    await wait(30);
+    check(queries.length === 3, "Paused callback queried");
+    categories()[2].click();
+    levels().forEach(input => { input.checked = false; });
+    levels()[0].dispatchEvent(new Event("change", {bubbles: true}));
+    await nextQuery(4);
+    check(queries[3].options.levels.length === 0 && queries[3].options.categories[0] === "Uncategorized",
+        "Live filters discarded no-level selection or the real Uncategorized category");
+    reply(3, []);
+    await until(() => !inspector(), "Selection outlived a removed record");
+    await press("Refresh");
+    await nextQuery(5);
     reply(4, []);
-    await until(() => host.textContent.includes("No matching logs"), "Empty result was not shown");
-    action("Refresh").click();
-    await until(() => queries.length === 6, "Error test query did not start");
-    queries[5].reject(new Error("Reader unavailable"));
-    await until(() => host.querySelector('[role="alert"]')?.textContent === "Reader unavailable", "Query error was not shown");
-    action("Resume live").click();
+    await until(() => discoveries === 2 && categories().some(input => input.checked && input.value === '"Uncategorized"'),
+        "Paused refresh did not discover new categories and preserve selections");
+    host.hidden = true;
+    await wait(50);
+    host.hidden = false;
+    await wait(50);
+    check(subscriptions.length === 1, "Visibility changes resumed explicitly paused monitoring");
+
+    await press("Resume");
     await until(() => subscriptions.length === 2, "Resume did not subscribe");
+    await press("Pause");
+    await press("Resume");
+    await until(() => subscriptions.length === 3, "Rapid resume did not subscribe");
     subscriptions[1].resolve(unsubscribe(1));
-    await until(() => queries.length === 7, "Resume did not reconcile immediately");
-    check(!queries[6].options.cursor && queries[6].options.levels.join() === "warn"
-        && JSON.stringify(queries[6].options.categories) === JSON.stringify([null, sample.category]), "Resume lost active filters");
-    reply(6, [record(8, "latest after pause")]);
-    await until(() => rows()[0]?.includes("latest after pause"), "Resumed Page did not show the latest record");
-    subscriptions[1].callback();
-    await until(() => queries.length === 8, "Live category refresh did not query");
-    check(JSON.stringify(queries[7].options.categories) === JSON.stringify([null, sample.category]) && discoveries === 3,
-        "Live refresh lost the category filters or ran category discovery");
-    reply(7, []);
-    action("Pause live").click();
-    await until(() => subscriptions[1].cleaned === 1 && action("Resume live"), "Pause did not release observation");
-    action("Resume live").click();
-    await until(() => subscriptions.length === 3, "Late registration test did not reach subscribe");
+    subscriptions[2].resolve(unsubscribe(2));
+    await until(() => subscriptions[1].cleaned === 1, "Late paused registration leaked");
+    await nextQuery(6);
+    check(queries[5].options.categories[0] === "Uncategorized", "Resume lost live filters");
+    subscriptions[2].callback();
+    reply(5, []);
+    await nextQuery(7);
+    check(queries[6].options.categories[0] === "Uncategorized" && discoveries === 2, "Notification lost filters or rediscovered categories");
+    reply(6, []);
+    host.hidden = true;
+    await until(() => subscriptions[2].cleaned === 1, "Hidden Page kept its subscription");
+    host.hidden = false;
+    await until(() => subscriptions.length === 4, "Visible Page did not resume observation");
     await instance.unmount();
     await instance.unload();
-    subscriptions[2].resolve(unsubscribe(2));
-    await until(() => subscriptions[2].cleaned === 1, "Page did not clean up late registration after unload");
-    check(queries.length === 8, "Disposed Page queried after late registration");
+    subscriptions[3].resolve(unsubscribe(3));
+    await until(() => subscriptions[3].cleaned === 1, "Disposed Page leaked late registration");
+    check(queries.length === 7, "Disposed Page queried after late registration");
 }
 
-test("Logs Page renders, reconciles, filters and cleans up through the Page lifecycle", chromiumOnly,
-    () => runInChromium(verifyLogsPage, ["enabled", "disabled"], {realTime: true}));
+test("Historical Logs queries, paginates and inspects persisted records through the Page lifecycle", chromiumOnly,
+    () => runInChromium(verifyLogsPage, ["historical", "historical&disabled"], {realTime: true}));
+
+test("Live Logs reconciles a bounded window and releases subscriptions through the Page lifecycle", chromiumOnly,
+    () => runInChromium(verifyLogsPage, ["live", "live&disabled"], {realTime: true}));

@@ -1,5 +1,7 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import test from "node:test";
+import { fillResolverRules, mergeManifests, normalizeManifest } from "./helpers/manifest-composition.mjs";
 
 import DiagnosticsPage from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell-diagnostics/pages/index.js";
 import BusPage from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell-diagnostics/pages/runtime/bus.js";
@@ -18,6 +20,10 @@ import Anchor from "../../src/DProjects.XShell/Resources/DProjects.XShell/x/comp
 import ListView from "../../src/DProjects.XShell/Resources/DProjects.XShell/x/components/x-listview.js";
 import Page from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/page.js";
 import Logger from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/logger.js";
+import Areas from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/areas.js";
+import JsonValidator from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/json-validator.js";
+import Menus from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/menus.js";
+import Resolver from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/resolver.js";
 import Navigation from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/navigation.js";
 import createStateEngine from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/state-engines/proxy.js";
 import NavigationContract from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/contracts/navigation.json" with { type: "json" };
@@ -53,6 +59,73 @@ const sampleMenu = [{ id: "console", href: "/console.js", children: [
     ] },
     { id: "empty", children: [{ id: "detail" }] }
 ] }];
+
+test("optional x-logs contributions compose with Diagnostics Runtime and keep their own resource paths", async () => {
+    const root = new URL("../../src/DProjects.XShell/Resources/DProjects.XShell/", import.meta.url);
+    const module = name => {
+        const entry = { name, assetsPath: "/_assets/" + name, manifestUrl: "https://example.test/" + name + "/manifest.json" };
+        const authored = JSON.parse(readFileSync(new URL(name + "/manifest.jsonc", root), "utf8").replace(/^\s*\/\/[^\r\n]*/gm, ""));
+        return { ...entry, manifest: normalizeManifest(authored, entry) };
+    };
+    const diagnostics = module("xshell-diagnostics"), logs = module("x-logs");
+    const framework = { name: "xshell", manifest: { xshell: { resolver: { esm: { xshell: { src: "/xshell.js" } } } } } };
+    const existing = ["runtime", "errors", "bus", "tasks"];
+
+    // Compose and initialize Menus and Areas for each combination of optional modules.
+    for (const contributions of [[], [logs], [diagnostics], [logs, diagnostics], [diagnostics, logs]]) {
+        const dependencies = Object.fromEntries(contributions.map(({ name }) => [name, "module:" + name + ":latest"]));
+        const app = { name: "app", assetsPath: "/_assets/app", manifest: { modules: { app: {} } }, dependencies };
+        const config = structuredClone(mergeManifests([framework, ...contributions, app], app));
+        config.app = { baseUrl: "https://example.test/" };
+        config.xshell.assets = { basePath: "/_assets" };
+        if (contributions.includes(logs)) {
+            fillResolverRules(config);
+            const resolver = new Resolver({ config });
+            const viewer = resolver.resolve("component:x-logview");
+            assert.equal(viewer.path, "/_assets/x-logs/components/x-logview.js");
+            assert.equal(viewer.definition.moduleId, "x-logs");
+            assert.equal(viewer.definition.modulePath, "/_assets/x-logs/");
+            for (const id of ["logs", "live-logs"]) {
+                const page = resolver.resolve("page:x-logs:/pages/" + id + ".js");
+                assert.equal(page.path, "/_assets/x-logs/pages/" + id + ".js");
+            }
+        }
+        const bus = Object.assign(new EventTarget(), { emit() {} });
+        const areas = new Areas({ config, bus }, { default: null, ...config.xshell.services?.areas?.options });
+        const options = config.xshell.services?.menus?.options ?? { definitions: {} };
+        const validation = new JsonValidator().validate(options, Menus.optionsSchema);
+        assert.equal(validation.valid, true, JSON.stringify(validation.errors));
+        const menus = new Menus({ config, bus, areas }, options);
+        menus.init();
+        areas.init({ menus });
+        const menu = menus.getMenu("navigation", "xshell-diagnostics");
+        if (!contributions.includes(diagnostics)) {
+            assert.equal(menu, null);
+            continue;
+        }
+        assert.deepEqual(menu.items.filter(item => item.id === "console").map(item => item.id), ["console"]);
+        const consoleItem = menu.items.find(item => item.id === "console");
+        assert.deepEqual(consoleItem.children.map(group => group.id), ["application", "runtime", "resources", "ui", "apis", "browser"]);
+        const runtime = consoleItem.children.find(item => item.id === "runtime");
+        const withLogs = contributions.includes(logs);
+        assert.deepEqual(runtime.children.map(item => item.id), withLogs ? [...existing, "logs", "live-logs"] : existing);
+        if (!withLogs) continue;
+        for (const id of ["logs", "live-logs"]) {
+            const item = runtime.children.find(item => item.id === id);
+            assert.equal(item.module, "x-logs");
+            assert.equal(item.href, "/xshell-diagnostics/_assets/x-logs/pages/" + id + ".js");
+            assert.equal(menus.resolvePath("/xshell-diagnostics/" + id), item);
+        }
+
+        const stored = { [navigationPreference]: { groupId: "runtime", pageIds: { runtime: "live-logs" } } };
+        const { state, controller } = diagnosticsConsole(menu.items, stored);
+        await controller.load();
+        assert.deepEqual(state.visited, { "/xshell-diagnostics/_assets/x-logs/pages/live-logs.js": true });
+        await controller.selectPage({ event: { currentTarget: { dataset: { groupId: "runtime" } }, detail: { selectedIndex: 4 } } });
+        assert.equal(stored[navigationPreference].pageIds.runtime, "logs");
+        assert.deepEqual(Object.keys(state.visited), ["/xshell-diagnostics/_assets/x-logs/pages/live-logs.js", "/xshell-diagnostics/_assets/x-logs/pages/logs.js"]);
+    }
+});
 
 test("Diagnostics uses the configured groups, remembers each selection and creates only visited Pages", async () => {
     const stored = {};

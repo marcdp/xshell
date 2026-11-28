@@ -1,167 +1,100 @@
 // page
 export default {
-    meta: {title: "Logs", description: "Browse stored application logs and monitor new records."},
+    meta: {title: "Logs", description: "Query and inspect stored application logs."},
     style: `
-        .log-actions, .log-dates {display:flex; flex-wrap:wrap; align-items:center; gap:.5em;}
-        .log-filters {margin-block-end:1em;}
-        .log-filters label {margin-inline-end:.75em;}
-        .log-dates {margin-block:.5em;}
-        .logs {list-style:none; padding:0;}
-        .logs li {margin-block:.5em;}
-        .logs summary {cursor:pointer; overflow-wrap:anywhere;}
-        .logs time, .logs strong, .log-category {margin-inline-end:.5em;}
+        .log-filter {position:relative; margin-inline-end:.75em;}
+        .log-filter > div {position:absolute; z-index:1; background:var(--x-color-background-page); border:1px solid var(--x-color-text-gray);
+            padding:.5em; max-inline-size: min(22rem, 70vw); width:max-content; max-block-size:14em; overflow:auto;}
+        .log-filter label, .log-filter small {display:block; overflow-wrap:anywhere;}
+        .log-dates {display:flex; flex-wrap:wrap; gap:.5em; margin-block:.5em;}
     `,
     template: `
-        <form class="log-filters" x-on:submit="applyFilters">
-            <fieldset>
-                <legend>Severity</legend>
-                <label><input type="checkbox" name="level" value="trace" x-prop:checked="state.levels.trace"> Trace</label>
-                <label><input type="checkbox" name="level" value="debug" x-prop:checked="state.levels.debug"> Debug</label>
-                <label><input type="checkbox" name="level" value="info" x-prop:checked="state.levels.info"> Info</label>
-                <label><input type="checkbox" name="level" value="warn" x-prop:checked="state.levels.warn"> Warn</label>
-                <label><input type="checkbox" name="level" value="error" x-prop:checked="state.levels.error"> Error</label>
-            </fieldset>
-            <details>
-                <summary>Categories</summary>
-                <label x-for="option in state.categoryOptions" x-key="value">
-                    <input type="checkbox" name="category" x-prop:value="option.value" x-model="option.checked">
-                    <span x-text="option.label"></span>
-                </label>
-                <p>Clear all category selections to show all categories.</p>
-                <p role="alert" x-if="state.categoryError" x-text="state.categoryError"></p>
-            </details>
-            <div class="log-dates">
-                <label>From (local time) <input type="datetime-local" name="from" step="0.001" x-prop:value="state.from"></label>
-                <label>To (local time) <input type="datetime-local" name="to" step="0.001" x-prop:value="state.to"></label>
-                <button type="submit">Apply filters</button>
-            </div>
-        </form>
-        <div class="log-actions">
-            <x-button x-attr:label="state.live ? 'Pause live' : 'Resume live'" x-on:click="toggleLive"></x-button>
-            <x-button label="Refresh" x-on:click="refresh"></x-button>
-            <x-button label="Newer" x-attr:disabled="state.loading || state.pageIndex == 0" x-on:click="newer"></x-button>
-            <x-button label="Older" x-attr:disabled="state.loading || !state.hasMore" x-on:click="older"></x-button>
-            <span x-text="state.live ? 'Live' : 'Paused'"></span>
-            <span x-text="'Page ' + (state.pageIndex + 1)"></span>
-        </div>
-        <p role="status" x-if="state.loading">Loading logsâ€¦</p>
-        <p role="alert" x-if="state.error" x-text="state.error"></p>
-        <p role="alert" x-if="state.subscriptionError" x-text="state.subscriptionError"></p>
-        <p role="status" x-if="!state.loading && !state.error && state.rows.length == 0">No matching logs.</p>
-        <ol class="logs" aria-label="Log records">
-            <li x-for="row in state.rows" x-key="id">
-                <details x-attr:data-id="row.id" x-on:toggle="inspect">
-                    <summary><time x-attr:datetime="row.iso" x-text="row.time"></time> <strong x-text="row.level"></strong>
-                        <span class="log-category" x-text="row.category"></span> <span x-text="row.preview"></span></summary>
-                    <x-object x-if="row.id == state.inspectedId" name="Arguments" expanded x-prop:value="state.inspectedArgs"></x-object>
+        <form x-on:submit="applyFilters">
+            <x-toolbar aria-label="Log query">
+                <details class="log-filter">
+                    <summary>Categories</summary>
+                    <div>
+                        <label x-for="option in state.categoryOptions" x-key="value">
+                            <input type="checkbox" name="category" x-prop:value="option.value" x-model="option.checked">
+                            <span x-text="option.label"></span>
+                        </label>
+                        <small>Clear all selections to show all categories.</small>
+                    </div>
                 </details>
-            </li>
-        </ol>
+                <details class="log-filter">
+                    <summary>Levels</summary>
+                    <div>
+                        <label><input type="checkbox" name="level" value="trace" checked> Trace</label>
+                        <label><input type="checkbox" name="level" value="debug" checked> Debug</label>
+                        <label><input type="checkbox" name="level" value="info" checked> Info</label>
+                        <label><input type="checkbox" name="level" value="warn" checked> Warn</label>
+                        <label><input type="checkbox" name="level" value="error" checked> Error</label>
+                    </div>
+                </details>
+                <details>
+                    <summary>Date range</summary>
+                    <div class="log-dates">
+                        <label>From <input type="datetime-local" name="from" step="0.001"></label>
+                        <label>To <input type="datetime-local" name="to" step="0.001"></label>
+                    </div>
+                </details>
+                <button type="submit">Query</button>
+                <x-button label="Refresh" x-on:click="refresh"></x-button>
+            </x-toolbar>
+        </form>
+        <p role="status" x-if="state.loading">Loading logs…</p>
+        <p role="alert" x-if="state.error" x-text="state.error"></p>
+        <p role="alert" x-if="state.categoryError" x-text="state.categoryError"></p>
+        <p role="status" x-if="!state.loading && !state.error && state.records.length == 0">No matching logs.</p>
+        <x-logview x-prop:records="state.records"></x-logview>
+        <x-toolbar aria-label="Log pages">
+            <x-button label="Newer" x-attr:disabled="state.loading || state.pageIndex == 0" x-on:click="newer"></x-button>
+            <span x-text="'Page ' + (state.pageIndex + 1)"></span>
+            <x-button label="Older" x-attr:disabled="state.loading || !state.hasMore" x-on:click="older"></x-button>
+        </x-toolbar>
     `,
-    state: {
-        live: true, loading: true, error: "", subscriptionError: "", pageIndex: 0, hasMore: false, rows: [],
-        levels: {trace: true, debug: true, info: true, warn: true, error: true},
-        categoryOptions: [], categoryError: "",
-        from: "", to: "", inspectedId: null, inspectedArgs: null
-    },
+    state: {records: [], loading: true, error: "", categoryOptions: [], categoryError: "", pageIndex: 0, hasMore: false},
     controller({state, logReader}) {
         let active = false;
-        let subscription;
-        let generation = 0;
-        let pending;
-        let running = false;
-        let dirty = false;
-        let scheduled = false;
+        let queryRequest, categoryRequest;
         let filters = {};
         let cursors = [undefined];
-        let openDetails;
-        let categoryRequest;
 
         return {
             mount() {
-                // Start observing only while mounted and register before querying the live page.
+                // Load the current historical page once on mount.
                 active = true;
-                if (state.live) void this.startLive();
-                this.requestPage(state.pageIndex);
-                void this.discoverCategories();
+                this.refresh();
             },
             unmount() {
-                // Ignore in-flight work and release both active and pending subscriptions.
+                // Invalidate both pending operations when the Page leaves its host.
                 active = false;
-                generation++;
-                pending = undefined;
-                categoryRequest = undefined;
-                this.stopLive();
-                openDetails = undefined;
-                state.inspectedId = state.inspectedArgs = null;
+                queryRequest = categoryRequest = undefined;
             },
             unload() {
-                // Also cover disposal without a preceding unmount.
                 this.unmount();
             },
-            async startLive() {
-                // Tie the eventual unsubscribe function to this specific registration attempt.
-                const registration = {ready: false};
-                subscription = registration;
-                state.subscriptionError = "";
-                try {
-                    const unsubscribe = await logReader.subscribe(() => {
-                        if (!active || subscription !== registration) return;
-                        dirty = true;
-                        this.schedule();
-                    });
-                    if (!active || subscription !== registration) {
-                        unsubscribe();
-                        return;
-                    }
-                    registration.unsubscribe = unsubscribe;
-                } catch (error) {
-                    if (!active || subscription !== registration) return;
-                    subscription = undefined;
-                    state.live = false;
-                    state.subscriptionError = error.message;
-                } finally {
-                    registration.ready = true;
-                    this.schedule();
-                }
-            },
-            stopLive() {
-                // Clear the token before calling out so late callbacks are ignored.
-                const registration = subscription;
-                subscription = undefined;
-                dirty = false;
-                registration?.unsubscribe?.();
-            },
-            toggleLive() {
-                // Keep historical queries independent of the live refresh loop.
-                state.live = !state.live;
-                if (state.live) {
-                    void this.startLive();
-                    this.requestPage(0);
-                } else {
-                    this.stopLive();
-                    this.schedule();
-                }
-            },
             applyFilters({event}) {
-                // Apply category, severity and date bounds together and discard incompatible cursors.
+                // Read pending controls only on submit and start a new cursor history.
                 event.preventDefault();
                 const form = new FormData(event.currentTarget);
                 const levels = form.getAll("level");
-                state.levels = Object.fromEntries(Object.keys(state.levels).map(level => [level, levels.includes(level)]));
-                state.from = form.get("from");
-                state.to = form.get("to");
                 const categories = form.getAll("category").map(value => JSON.parse(value));
+                const from = form.get("from"), to = form.get("to");
                 filters = {
-                    levels,
+                    ...(levels.length === 5 ? {} : {levels}),
                     ...(categories.length ? {categories} : {}),
-                    ...(state.from ? {from: new Date(state.from).getTime()} : {}),
-                    ...(state.to ? {to: new Date(state.to).getTime()} : {})
+                    ...(from ? {from: new Date(from).getTime()} : {}),
+                    ...(to ? {to: new Date(to).getTime()} : {})
                 };
-                this.requestPage(0);
+                cursors = [undefined];
+                state.pageIndex = 0;
+                state.hasMore = false;
+                this.read(0);
             },
             refresh() {
-                this.requestPage(state.pageIndex);
+                // Refresh the applied query and discover new category choices independently.
+                this.read(state.pageIndex);
                 void this.discoverCategories();
             },
             async discoverCategories() {
@@ -175,7 +108,7 @@ export default {
                     const options = new Set([...categories, ...(filters.categories ?? []), ...[...checked].map(value => JSON.parse(value))]);
                     state.categoryOptions = [...options].map(category => {
                         const value = JSON.stringify(category);
-                        return {value, label: category ?? "Uncategorized", checked: checked.has(value)};
+                        return {value, label: category === "Uncategorized" ? "Uncategorized (named category)" : category ?? "Uncategorized", checked: checked.has(value)};
                     });
                     state.categoryError = "";
                 } catch (error) {
@@ -184,104 +117,29 @@ export default {
                     if (categoryRequest === request) categoryRequest = undefined;
                 }
             },
-            newer() { if (!state.loading && state.pageIndex > 0) this.browse(state.pageIndex - 1); },
-            older() { if (!state.loading && state.hasMore) this.browse(state.pageIndex + 1); },
-            browse(index) {
-                // Pause observation for historical browsing. Resume always returns to the newest page.
-                state.live = false;
-                this.stopLive();
-                this.requestPage(index);
-            },
-            inspect({event}) {
-                // Keep only the disclosure opened by the user and pass raw arguments to the object inspector.
-                const details = event.currentTarget;
-                const row = state.rows.find(item => String(item.id) === details.dataset.id);
-                if (!row) return;
-                if (details.open) {
-                    if (openDetails && openDetails !== details) openDetails.open = false;
-                    openDetails = details;
-                    state.inspectedArgs = row.args;
-                    state.inspectedId = row.id;
-                } else if (state.inspectedId === row.id) {
-                    openDetails = undefined;
-                    state.inspectedId = state.inspectedArgs = null;
-                }
-            },
-            requestPage(index) {
-                // Replace queued user requests and prevent any older result from changing the view.
-                if (index === 0) cursors = [undefined];
-                generation++;
-                pending = {index, version: generation};
-                state.pageIndex = index;
+            newer() { if (!state.loading && state.pageIndex > 0) this.read(state.pageIndex - 1); },
+            older() { if (!state.loading && state.hasMore) this.read(state.pageIndex + 1); },
+            async read(index) {
+                if (!active) return;
+
+                // Only the most recent request may commit a page and its next cursor.
+                const request = queryRequest = {};
                 state.loading = true;
                 state.error = "";
-                this.schedule();
-            },
-            schedule() {
-                // Coalesce requests before the next query and wait for subscription registration in live mode.
-                if (!active || scheduled) return;
-                scheduled = true;
-                queueMicrotask(() => {
-                    scheduled = false;
-                    void this.read();
-                });
-            },
-            async read() {
-                if (!active || running || (subscription && !subscription.ready)) return;
-                const request = pending ?? (state.live && dirty ? {index: 0, version: generation, automatic: true} : null);
-                if (!request) return;
-
-                // Keep notifications that arrive during the read for one follow-up reconciliation.
-                if (!pending) dirty = false;
-                pending = undefined;
-                running = true;
-                const {index, version, automatic} = request;
-                const current = () => active && generation === version && (!automatic || state.live);
                 const cursor = cursors[index];
                 try {
-                    const result = await logReader.query({...filters, ...(cursor == null ? {} : {cursor}), order: "desc"});
-                    if (!current()) return;
-                    const rows = result.items.map(item => this.present(item));
-                    if (!rows.some(row => row.id === state.inspectedId)) this.clearInspection();
-                    state.rows = rows;
-                    state.error = "";
+                    const result = await logReader.query({...filters, ...(cursor == null ? {} : {cursor}), limit: 100, order: "desc"});
+                    if (queryRequest !== request) return;
+                    state.records = result.items;
+                    state.pageIndex = index;
                     state.hasMore = result.hasMore;
                     cursors[index + 1] = result.nextCursor;
                     cursors.length = index + 2;
                 } catch (error) {
-                    if (!current()) return;
-                    this.clearInspection();
-                    state.rows = [];
-                    state.hasMore = false;
-                    state.error = error.message;
+                    if (queryRequest === request) state.error = error.message;
                 } finally {
-                    if (current()) {
-                        state.loading = false;
-                        if (state.subscriptionError === state.error) state.subscriptionError = "";
-                    }
-                    running = false;
-                    this.schedule();
+                    if (queryRequest === request) state.loading = false;
                 }
-            },
-            clearInspection() {
-                // Release the DOM node and arguments when its record leaves the page.
-                openDetails = undefined;
-                state.inspectedId = state.inspectedArgs = null;
-            },
-            present({id, timestamp, level, category, args}) {
-                // Display a bounded, text-only preview while keeping the stored argument array intact.
-                const date = new Date(timestamp);
-                const validDate = Number.isFinite(date.getTime());
-                const value = args[0];
-                let preview;
-                if (!args.length) preview = "(no arguments)";
-                else if (value instanceof Error) preview = value.name + ": " + value.message;
-                else if (Array.isArray(value)) preview = "Array(" + value.length + ")";
-                else if (value && typeof value === "object") preview = value.unserializable === true ? "[Unserializable]" : Object.prototype.toString.call(value);
-                else preview = typeof value === "bigint" ? String(value) + "n" : String(value);
-                if (preview.length > 240) preview = preview.slice(0, 239) + "â€¦";
-                return {id, level, category: category ?? "Uncategorized", args, preview,
-                    time: validDate ? date.toLocaleString() : String(timestamp), iso: validDate ? date.toISOString() : ""};
             }
         };
     }

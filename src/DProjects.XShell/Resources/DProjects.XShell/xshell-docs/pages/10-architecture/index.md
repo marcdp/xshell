@@ -27,7 +27,7 @@ Open **Diagnostics console** from the global menu to use it in the dock. Choose 
 | Group | Diagnostic Pages |
 | --- | --- |
 | Application | App, Config, Modules |
-| Runtime | Runtime, Errors, Bus, Tasks |
+| Runtime | Runtime, Errors, Bus, Tasks, Logs and Live Logs (with `x-logs`) |
 | Resources | Resolver, Loader, Schemas |
 | UI | Components, Pages, Navigation, Icons, I18n |
 | APIs | Services, Contracts, Commands, Queries |
@@ -35,6 +35,7 @@ Open **Diagnostics console** from the global menu to use it in the dock. Choose 
 
 The console remembers the last tab in each group and the last active group through Preferences. A tab loads on its first visit and keeps its Page
 state while the console stays mounted. Contract Detail, Service Inspector, and Task Details open from their diagnostic Pages in the Stack.
+The optional `x-logs` module contributes [Logs and Live Logs](../30-subsystems/150-logging.md#logs-and-live-logs) after Tasks.
 
 Friendly links such as `/xshell-diagnostics/modules` still resolve. Direct Page references and asset links to the old flat files must use the group
 directory, for example `page:xshell-diagnostics:/pages/application/modules.js`, `page:xshell-diagnostics:/pages/apis/services.js`, and

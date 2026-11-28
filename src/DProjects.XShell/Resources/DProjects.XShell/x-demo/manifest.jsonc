@@ -55,8 +55,7 @@
                             "items":[
                                 {"label": "Home", "icon":"x-home", "href": "/pages/index.js?home=1", "order": -1},
                                 {"label": "-", "order": -1},
-                                {"label": "Demo", "order": -1, "icon":"x-demo", "href": "/pages/index.js"},
-                                {"label": "Logs", "icon": "x-debug", "href": "page:x-logs:/pages/logs.js"}
+                                {"label": "Demo", "order": -1, "icon":"x-demo", "href": "/pages/index.js"}
                             ]
                         }
                     }
