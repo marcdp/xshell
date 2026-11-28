@@ -21,8 +21,12 @@ async function verifyLogsPage() {
     const queries = [];
     const subscriptions = [];
     const diagnostics = [];
+    let discoveries = 0;
     const noReader = new URLSearchParams(location.search).has("disabled");
     const logReader = noReader ? new LogReader({}) : {
+        getCategories() {
+            return ++discoveries === 1 ? [null, "inventory,棚卸し"] : ["new category"];
+        },
         subscribe(callback) {
             const subscription = {...Promise.withResolvers(), callback, cleaned: 0};
             subscriptions.push(subscription);
@@ -81,7 +85,7 @@ async function verifyLogsPage() {
     host.setAttribute("src", src);
     document.body.append(host);
     const action = label => host.querySelector(`x-button[label="${label}"]`)?.shadowRoot.querySelector(".button");
-    const record = (id, ...args) => ({id, timestamp: id * 1000, level: "warn", args});
+    const record = (id, ...args) => ({id, timestamp: id * 1000, level: "warn", category: null, args});
     const reply = (index, items, cursor = null) => queries[index].resolve({items, nextCursor: cursor, hasMore: cursor !== null});
     const rows = () => [...host.querySelectorAll(".logs summary")].map(element => element.textContent);
     const unsubscribe = index => () => subscriptions[index].cleaned++;
@@ -109,11 +113,17 @@ async function verifyLogsPage() {
     const markup = '<img src="bad" onerror="window.executed = true">';
     const circular = {};
     circular.self = circular;
-    const sample = record(3, markup, circular, 42n, new Error("stored error"), {unserializable: true});
+    const sample = {...record(3, markup, circular, 42n, new Error("stored error"), {unserializable: true}), category: "inventory,棚卸し"};
     const priorCount = diagnostics.length;
     reply(1, [sample], "older");
     await until(() => rows()[0]?.includes(markup) && action("Older"), "Newest records or pagination did not render");
     check(!host.querySelector(".logs img") && !window.executed, "Stored text was interpreted as HTML");
+    check(rows()[0].includes(sample.category), "The structured category did not render");
+    check(discoveries === 1, "Live notifications triggered category discovery");
+    const categoryInputs = () => [...host.querySelectorAll('input[name="category"]')];
+    host.querySelector(".log-filters details").open = true;
+    await until(() => categoryInputs().length === 2, "Discovered categories were not offered");
+    categoryInputs().forEach(input => input.click());
     check(diagnostics.length === priorCount, "Live query generated logging diagnostics");
     host.querySelector(".logs details").open = true;
     await until(() => host.querySelector("x-object")?.shadowRoot.textContent.includes("Arguments"), "Stored arguments were not available");
@@ -130,12 +140,15 @@ async function verifyLogsPage() {
     check(subscriptions[0].cleaned === 1 && queries[2].options.cursor === "older", "Historical browsing did not pause or use the cursor");
     reply(2, [record(1, "older page")]);
     await until(() => rows()[0]?.includes("older page"), "Older records were not shown");
+    check(rows()[0].includes("Uncategorized"), "Null category did not render as Uncategorized");
     subscriptions[0].callback();
     await wait(40);
     check(queries.length === 3 && rows()[0].includes("older page"), "Late live notification replaced the historical page");
     action("Refresh").click();
     await until(() => queries.length === 4, "Paused manual refresh did not query");
     check(queries[3].options.cursor === "older", "Manual refresh lost the historical cursor");
+    await until(() => categoryInputs().length === 3, "Refresh did not offer the new category or preserve pending selections");
+    check(discoveries === 2 && categoryInputs().filter(input => input.checked).length === 2, "Refresh dropped a pending category selection");
 
     // Change filters while a query is pending and verify the stale result never reaches the DOM.
     for (const input of host.querySelectorAll('[name="level"]')) input.checked = input.value === "warn";
@@ -146,6 +159,7 @@ async function verifyLogsPage() {
     await until(() => queries.length === 5, "New filters did not query");
     check(!rows().some(row => row.includes("stale result")), "Old request overwrote new filters");
     check(queries[4].options.levels.join() === "warn" && !queries[4].options.cursor
+        && JSON.stringify(queries[4].options.categories) === JSON.stringify([null, sample.category])
         && queries[4].options.from === new Date("2025-01-01T00:00").getTime() && queries[4].options.to === new Date("2025-01-02T00:00").getTime(),
         "Severity or date options did not reach the reader");
     reply(4, []);
@@ -158,9 +172,15 @@ async function verifyLogsPage() {
     await until(() => subscriptions.length === 2, "Resume did not subscribe");
     subscriptions[1].resolve(unsubscribe(1));
     await until(() => queries.length === 7, "Resume did not reconcile immediately");
-    check(!queries[6].options.cursor && queries[6].options.levels.join() === "warn", "Resume lost active filters");
+    check(!queries[6].options.cursor && queries[6].options.levels.join() === "warn"
+        && JSON.stringify(queries[6].options.categories) === JSON.stringify([null, sample.category]), "Resume lost active filters");
     reply(6, [record(8, "latest after pause")]);
     await until(() => rows()[0]?.includes("latest after pause"), "Resumed Page did not show the latest record");
+    subscriptions[1].callback();
+    await until(() => queries.length === 8, "Live category refresh did not query");
+    check(JSON.stringify(queries[7].options.categories) === JSON.stringify([null, sample.category]) && discoveries === 3,
+        "Live refresh lost the category filters or ran category discovery");
+    reply(7, []);
     action("Pause live").click();
     await until(() => subscriptions[1].cleaned === 1 && action("Resume live"), "Pause did not release observation");
     action("Resume live").click();
@@ -169,7 +189,7 @@ async function verifyLogsPage() {
     await instance.unload();
     subscriptions[2].resolve(unsubscribe(2));
     await until(() => subscriptions[2].cleaned === 1, "Page did not clean up late registration after unload");
-    check(queries.length === 7, "Disposed Page queried after late registration");
+    check(queries.length === 8, "Disposed Page queried after late registration");
 }
 
 test("Logs Page renders, reconciles, filters and cleans up through the Page lifecycle", chromiumOnly,

@@ -55,6 +55,16 @@ export default class LogReader {
         }
     }
 
+    async getCategories() {
+        // Use the same lazy provider and operation error handling as queries.
+        const provider = await this.#getProvider();
+        try {
+            return await provider.getCategories();
+        } catch (cause) {
+            throw new Error(`Service 'logReader' category discovery failed: ${cause?.message ?? String(cause)}`, {cause});
+        }
+    }
+
     async #getProvider() {
         // Share an in-flight initialization and keep successful initialization for later operations.
         const {provider: id, providers = {}} = this.#options;
@@ -86,8 +96,8 @@ export default class LogReader {
         } catch (cause) {
             throw new Error(`Service 'logReader' could not initialize ${context}: ${cause?.message ?? String(cause)}`, {cause});
         }
-        if (typeof provider.query !== "function" || typeof provider.subscribe !== "function") {
-            throw new TypeError(`Service 'logReader' has an invalid implementation for ${context}. Expected callable query() and subscribe() methods.`);
+        if (typeof provider.query !== "function" || typeof provider.subscribe !== "function" || typeof provider.getCategories !== "function") {
+            throw new TypeError(`Service 'logReader' has an invalid implementation for ${context}. Expected callable query(), subscribe() and getCategories() methods.`);
         }
         return provider;
     }

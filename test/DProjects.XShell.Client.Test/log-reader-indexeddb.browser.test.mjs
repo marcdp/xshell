@@ -35,6 +35,7 @@ async function verifyLogReader() {
         const dependencies = {config, resolver: new Resolver({config})};
         const request = indexedDB.open(name, 1);
         const levels = ["trace", "debug", "info", "warn", "error"];
+        const unicode = "棚卸し 📦".repeat(100);
         request.onupgradeneeded = () => {
             const store = request.result.createObjectStore("logs", {keyPath: "id", autoIncrement: true});
             store.createIndex("timestamp", "timestamp");
@@ -42,7 +43,8 @@ async function verifyLogReader() {
             const cyclic = {label: "original"};
             cyclic.self = cyclic;
             for (const [index, level] of levels.entries()) {
-                store.add({timestamp: index <= 2 ? 10 : 20, level, args: [level, cyclic, 23n, new Error("historical"),
+                const category = [undefined, unicode, "other", "Other", unicode][index];
+                store.add({timestamp: index <= 2 ? 10 : 20, level, ...(category === undefined ? {} : {category}), args: [level, cyclic, 23n, new Error("historical"),
                     new Map([["key", 4]]), new Set([5]), {unserializable: true}]});
             }
         };
@@ -57,7 +59,9 @@ async function verifyLogReader() {
         const args = all.items[0].args;
         check(args[1].self === args[1] && args[2] === 23n && args[3] instanceof Error && args[3].message === "historical"
             && args[4].get("key") === 4 && args[5].has(5) && args[6].unserializable, "Stored arguments were reconstructed incorrectly");
-        check(Object.keys(all.items[0]).sort().join() === "args,id,level,timestamp", "Record shape changed");
+        check(Object.keys(all.items[0]).sort().join() === "args,category,id,level,timestamp" && all.items[0].category === null,
+            "Legacy record did not return an explicit null category");
+        check(!(await result(database.transaction("logs").objectStore("logs").get(1))).hasOwnProperty("category"), "Historical record was rewritten");
         for (const level of levels) check((await reader.query({levels: [level]})).items[0]?.level === level, "Individual severity unavailable");
         check(!(await reader.query({levels: []})).items.length, "Empty severity selection returned rows");
         check(byId(await reader.query({from: 10, to: 10})) === "3,2,1", "Inclusive timestamp filtering failed");
@@ -65,6 +69,25 @@ async function verifyLogReader() {
         const sparse = await reader.query({limit: 1, levels: ["debug", "error"]});
         check(byId(sparse) === "5" && sparse.hasMore, "Lookahead failed to skip nonmatching rows");
         check(byId(await reader.query({cursor: sparse.nextCursor, levels: ["error", "debug"]})) === "2", "Equivalent filter ordering rejected a cursor");
+        check(byId(await reader.query({categories: [unicode]})) === "5,2", "Unicode category filter failed");
+        check(byId(await reader.query({categories: ["other"]})) === "3", "Category matching was not exact");
+        check(byId(await reader.query({categories: [null]})) === "1", "Uncategorized filter failed");
+        check(!(await reader.query({categories: []})).items.length, "Empty category selection returned rows");
+        check(byId(await reader.query({categories: [unicode, "other"], levels: ["debug", "info", "warn"], to: 10})) === "3,2",
+            "Categories did not combine with severity and time bounds");
+        const options = {categories: [unicode, null], limit: 1};
+        const categoryPage = await reader.query(options);
+        check(byId(categoryPage) === "5" && categoryPage.hasMore && categoryPage.nextCursor.length > 512, "Category lookahead or long cursor failed");
+        check(byId(await reader.query({categories: [null, unicode, unicode], cursor: categoryPage.nextCursor})) === "2,1",
+            "Equivalent category selection rejected the Unicode cursor or lost matching records");
+        for (const categories of [undefined, [], [null], [unicode]]) {
+            await reject(() => reader.query({categories, cursor: categoryPage.nextCursor}), /cursor/);
+        }
+        await reject(() => new Reader({}, {databaseName: "new"}).query({...options, cursor: categoryPage.nextCursor}), /cursor/);
+        for (const categories of [null, "other", [""], [1], [undefined], Array(1)]) {
+            await reject(() => reader.query({categories}), /categories/);
+        }
+        check(JSON.stringify(await reader.getCategories()) === JSON.stringify([null, "Other", "other", unicode]), "Category discovery lost or duplicated values");
 
         // Walk timestamp ties in both directions and continue after removing the cursor records.
         const asc = await reader.query({order: "asc", limit: 2});
@@ -76,6 +99,7 @@ async function verifyLogReader() {
         removal.objectStore("logs").delete(2);
         removal.objectStore("logs").delete(5);
         await committed;
+        check(JSON.stringify(await reader.getCategories()) === JSON.stringify([null, "Other", "other"]), "Category discovery did not reflect committed deletion");
         check(byId(await reader.query({cursor: asc.nextCursor, order: "asc", limit: 500})) === "3,4", "Ascending cursor depended on deleted row");
         check(byId(await reader.query({cursor: desc.nextCursor})) === "4,3,1", "Descending cursor depended on deleted row");
         for (const [options, pattern] of [
@@ -95,6 +119,7 @@ async function verifyLogReader() {
         database.close();
         await result(indexedDB.deleteDatabase(name));
         check(!(await reader.query()).items.length, "Reader did not reopen after a version change");
+        check(!(await reader.getCategories()).length, "Empty storage reported categories");
     } else if (scenario === "observation") {
         const name = "shared logs";
         const {logChannelName} = await import("/resources/x-logs/utils/indexeddb.js");
@@ -121,12 +146,12 @@ async function verifyLogReader() {
             request.addEventListener("success", () => this.transaction.abort(), {once: true});
             return request;
         };
-        writer.log("warn", "abort this");
+        writer.log("warn", null, "abort this");
         await until(() => aborted, "Writer did not finish its aborted transaction");
         check(!wire.length && !affected.length && !(await reader.query()).items.length, "An aborted write notified observers");
         IDBObjectStore.prototype.add = nativeAdd;
         console.warn = originalWarn;
-        for (const argument of ["first", "second", "third"]) writer.log("info", argument);
+        for (const argument of ["first", "second", "third"]) writer.log("info", null, argument);
         await until(() => affected.length === 1, "Same-context subscriber was not notified");
         check(affected[0].items.map(item => item.args[0]).join() === "third,second", "Notification preceded commit or retention");
         check(JSON.stringify(affected[0].change) === '{"type":"changed"}' && JSON.stringify(wire) === '[{"type":"logs:changed"}]',
@@ -136,7 +161,7 @@ async function verifyLogReader() {
         const frame = document.createElement("iframe");
         frame.srcdoc = `<script type="module">
             import Writer from "/resources/x-logs/providers/logger-indexeddb.js";
-            new Writer({}, {databaseName: "shared logs", maxEntries: 2}).log("error", "separate context");
+            new Writer({}, {databaseName: "shared logs", maxEntries: 2}).log("error", null, "separate context");
         <\/script>`;
         document.body.append(frame);
         await until(() => affected.some(message => message.items[0]?.args[0] === "separate context"), "Separate browser context did not notify");
@@ -146,7 +171,7 @@ async function verifyLogReader() {
         leaveThrow();
         leaveReject();
         leaveOther();
-        writer.log("warn", "after unsubscribe");
+        writer.log("warn", null, "after unsubscribe");
         await until(() => wire.length === 3, "Final test write did not commit");
         await wait(50);
         check(affected.length === 2, "Unsubscribed listener received a change");

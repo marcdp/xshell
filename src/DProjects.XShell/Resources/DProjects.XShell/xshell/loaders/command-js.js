@@ -1,6 +1,7 @@
 
 import JsonValidator from "../services/json-validator.js";
 import { deepFreeze } from "../utils/object.js";
+import { moduleOperationId } from "../utils/urls.js";
 
 export default class LoaderCommandJs {
 
@@ -46,6 +47,8 @@ export default class LoaderCommandJs {
         // Command contracts and definitions are immutable after loading
         deepFreeze(definition);
         const moduleId = context.resourceDefinition.moduleId;
+        const id = moduleOperationId("command", "commands", context);
+        const consumer = id ? Object.freeze({type: "command", id}) : undefined;
 
         // Return a class, like the Component/Page loaders, with instance-owned context, controller, and Services scope
         return class Command {
@@ -85,7 +88,7 @@ export default class LoaderCommandJs {
                             } else if (typeof prop === "symbol") {
                                 return undefined;
                             } else {
-                                return this._servicesScope.resolve(prop);
+                                return this._servicesScope.resolve(prop, consumer);
                             }
                         }
                     });

@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import Logger from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/logger.js";
 
-import Services from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services.js";
+import Services, {serviceForConsumer} from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services.js";
 import Events from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/events.js";
 import Timer from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/timer.js";
 import {createThrowingLogger} from "./fixtures/throwing-logger.mjs";
@@ -92,6 +92,7 @@ function createRuntime({ order = [], scopedDispose, logger = new Logger({}) } = 
     const root = new Services({ config, loader, contracts: {}, resolver: {}, bus: { emit() {} } });
     const modules = { getModuleById() { return { controller: {} }; } };
     root.register("logger", logger);
+    root.register("identity", {[serviceForConsumer]: consumer => consumer});
     root.register("config", config);
     root.register("loader", loader);
     root.register("modules", modules);
@@ -133,11 +134,12 @@ function createPageHost(src = "/pages/test.js") {
     return { nodeName: "X-PAGE", dispatchEvent() {}, getAttribute() { return src; }, getRootNode() { return root; } };
 }
 
-function ownerController({ services, singleton, session, formatter }) {
+function ownerController({ services, singleton, session, formatter, identity }) {
     const secondTransient = services.resolve("formatter");
     return {
         services,
         singleton,
+        identity,
         session,
         transients: [formatter, secondTransient]
     };
@@ -153,7 +155,11 @@ function pageOwnerController(dependencies) {
 
 test("definition-based Pages create one direct root scope with lifetime-aware injection", async () => {
     const { root, context } = createRuntime();
-    const PageClass = await createPageClassFromJsDefinition("page-scopes.js", context, {
+    const modulePath = "/_assets/test/1.0.dev";
+    const resourcePath = modulePath + "/pages/nested/page-scopes.js";
+    Object.assign(context, {resource: "page:test:/pages/nested/page-scopes.js?private=1", resourcePath});
+    context.resourceDefinition.modulePath = modulePath;
+    const PageClass = await createPageClassFromJsDefinition(resourcePath, context, {
         meta: { id: "page-scopes" },
         controller: pageOwnerController
     });
@@ -168,6 +174,8 @@ test("definition-based Pages create one direct root scope with lifetime-aware in
     assert.strictEqual(second._servicesScope.resolve("services"), root);
     assert.strictEqual(firstController.services, first._servicesScope);
     assert.strictEqual(firstController.singleton, secondController.singleton);
+    assert.deepEqual(firstController.identity, {type: "page", id: "test:/pages/nested/page-scopes.js"});
+    assert.deepEqual(secondController.identity, firstController.identity);
     assert.strictEqual(firstController.session, first._servicesScope.resolve("session"));
     assert.notStrictEqual(firstController.session, secondController.session);
     assert.notStrictEqual(firstController.transients[0], firstController.transients[1]);
@@ -190,8 +198,8 @@ test("definition-based Pages create one direct root scope with lifetime-aware in
 
 test("definition-based Components create independent scopes before attachment and preserve them across reconnects", async () => {
     const { root, context } = createRuntime();
-    const Component = await createComponentClassFromJsDefinition("component-scopes.js", context, {
-        meta: { id: `x-component-scopes-${++runtimeId}` },
+    const Component = await createComponentClassFromJsDefinition("/_assets/test/1.0.dev/components/x-component-scopes.js", context, {
+        meta: { id: "x-component-scopes" },
         controller: ownerController
     });
 
@@ -205,6 +213,8 @@ test("definition-based Components create independent scopes before attachment an
     assert.notStrictEqual(parent._controller.session, nested._controller.session);
     assert.notStrictEqual(nested._controller.session, sibling._controller.session);
     assert.strictEqual(parent._controller.singleton, nested._controller.singleton);
+    assert.deepEqual(parent._controller.identity, {type: "component", id: "x-component-scopes"});
+    assert.deepEqual(nested._controller.identity, parent._controller.identity);
     assert.strictEqual(parent._controller.services, parent._servicesScope);
     assert.notStrictEqual(parent._controller.transients[0], parent._controller.transients[1]);
 

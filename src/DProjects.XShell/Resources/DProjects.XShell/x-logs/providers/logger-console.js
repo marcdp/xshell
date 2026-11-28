@@ -1,7 +1,8 @@
 export default class LoggerConsole {
 
-    log(level, ...args) {
-        // Forward the original arguments to the native console method for this level.
-        console[level](...args);
+    log(level, category, ...args) {
+        // Use a fixed format so the category's own format characters remain literal.
+        if (category === null) console[level](...args);
+        else console[level]("[%s]", category, ...args);
     }
 }

@@ -41,7 +41,7 @@ export default class LoggerIndexedDB {
         this.#retentionMs = retentionDays * DAY_MS;
     }
 
-    log(level, ...args) {
+    log(level, category, ...args) {
         // Capture the call before yielding so later mutations cannot change its snapshot.
         const timestamp = Date.now();
         try {
@@ -55,7 +55,7 @@ export default class LoggerIndexedDB {
 
         // Keep the most recent pending records and schedule one writer.
         if (this.#pending.length === MAX_PENDING_ENTRIES) this.#pending.shift();
-        this.#pending.push({timestamp, level, args});
+        this.#pending.push({timestamp, level, category, args});
         if (this.#writing) return;
         this.#writing = true;
         queueMicrotask(() => { void this.#flush(); });

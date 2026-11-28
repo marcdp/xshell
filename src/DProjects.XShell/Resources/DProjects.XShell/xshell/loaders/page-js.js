@@ -2,6 +2,7 @@ import Page, { pageUnloaded } from "../page.js"
 import JsonValidator from "../services/json-validator.js"
 import { processStyle } from "../utils/style.js";
 import { deepFreeze } from "../utils/object.js";
+import { moduleResourcePath } from "../utils/urls.js";
 
 
 // utils
@@ -277,6 +278,9 @@ export async function createPageClassFromJsDefinition(src, context, definition) 
     // Reuse the injected logger and keep diagnostic identity independent of the Page's URL and query.
     const logger = context.services.logger;
     const pageId = typeof definition.meta.id === "string" && /^[\w.-]+$/.test(definition.meta.id) ? definition.meta.id : undefined;
+    // Use the canonical module-qualified path even when navigation loaded the Page via an asset path.
+    const identity = moduleResourcePath(context.resourcePath, context.resourceDefinition.modulePath) ?? definition.meta.id;
+    const consumer = identity ? Object.freeze({type: "page", id: `${moduleId}:${identity}`}) : undefined;
     try {
         validateQueryProperties(definition, definition.meta?.name || src);
         await validatePage(src, definition, context);
@@ -429,7 +433,7 @@ export async function createPageClassFromJsDefinition(src, context, definition) 
                         return undefined;
                     } else {
                         // resolve ordinary services through this Page's scope
-                        return self._servicesScope.resolve(prop);
+                        return self._servicesScope.resolve(prop, consumer);
                     }
                 }
             });            

@@ -10,7 +10,7 @@ import menuShortcutsContract from "../../src/DProjects.XShell/Resources/DProject
 
 const framework = new URL("../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/", import.meta.url);
 
-test("XShell init registers the native x-page and Loader returns the registered class", async t => {
+for (const enabled of [false, true]) test(`XShell initializes native x-page with ${enabled ? "an active" : "no"} logging provider`, async t => {
     const factoryUrl = new URL("x-page.js", framework).href;
     const rootUrl = new URL("xshell.js", framework).href;
     const hooks = registerHooks({
@@ -26,7 +26,7 @@ test("XShell init registers the native x-page and Loader returns the registered 
     globalThis.HTMLElement = class extends EventTarget {
         attachShadow() { this.shadowRoot = { adoptedStyleSheets: [] }; }
     };
-    globalThis.CSSStyleSheet = class { replaceSync() {} };
+    globalThis.CSSStyleSheet ??= class { replaceSync() {} };
     const { createXPageClass } = await import(factoryUrl);
     const StandaloneXPage = createXPageClass({});
     const [localSheet] = new StandaloneXPage().shadowRoot.adoptedStyleSheets;
@@ -54,6 +54,16 @@ test("XShell init registers the native x-page and Loader returns the registered 
     // Register test implementations at the Services boundary for the production initialization path.
     const sharedSheet = new CSSStyleSheet();
     const startup = [];
+    const calls = [];
+    class StartupLogger extends Logger {
+        constructor(dependencies) {
+            super(dependencies, enabled ? {provider: "sample", providers: {sample: {implementation: "/startup-logger.js"}}} : {});
+        }
+    }
+    class BootstrapProbe {
+        static optionsSchema = {type: "object", additionalProperties: false};
+        constructor({logger}) { logger.info("Module startup"); }
+    }
     const initShortcuts = MenuShortcuts.prototype.init;
     t.mock.method(MenuShortcuts.prototype, "init", function () {
         startup.push("shortcuts");
@@ -68,14 +78,23 @@ test("XShell init registers the native x-page and Loader returns the registered 
     t.mock.method(Services.prototype, "init", async function () {
         this.register("areas", { init() {}, getCurrentArea: () => null });
         this.register("menus", { init() {}, getMenus: () => [] });
-        this.register("logger", null, { implementationItem: { class: Logger } });
+        this.register("logger", null, { implementationItem: { class: StartupLogger } });
+        this.register("bootstrapProbe", null, { implementationItem: { class: BootstrapProbe } });
+        const loader = this.resolve("loader");
+        const load = loader.load;
+        t.mock.method(loader, "load", function (name, ...args) {
+            if (name !== "esm:/startup-logger.js") return load.call(this, name, ...args);
+            startup.push("provider load");
+            return class { log(level, category, ...values) { calls.push([level, category, ...values]); } };
+        });
         this.register("navigation", { init() { startup.push("navigation"); } });
         // Construct the real service through the runtime's options and contract validation.
         this.register("menuShortcuts", null, {
             implementationItem: { class: MenuShortcuts },
             contractItem: { contract: menuShortcutsContract }
         });
-        this.register("modules", { init() { startup.push("modules"); }, shadowStyleSheets: [sharedSheet] });
+        const services = this;
+        this.register("modules", { init() { startup.push("modules"); services.resolve("bootstrapProbe"); }, shadowStyleSheets: [sharedSheet] });
         assert.equal(customElements.get("x-page"), undefined);
     });
     const manifestSource = await readFile(new URL("manifest.jsonc", framework), "utf8");
@@ -96,7 +115,8 @@ test("XShell init registers the native x-page and Loader returns the registered 
     // Resolve the manifest entry without loading the factory as a Component definition.
     assert.equal(await xshell._loader.load("component:x-page"), XPage);
     assert.deepEqual(xshell._loader.registry, []);
-    assert.deepEqual(startup, ["logger", "modules", "navigation", "shortcuts"]);
+    assert.deepEqual(startup, [...(enabled ? ["provider load"] : []), "logger", "modules", "navigation", "shortcuts"]);
+    assert.deepEqual(calls, enabled ? [["info", "bootstrapProbe", "Module startup"]] : []);
     assert.equal(getEventListeners(window.document, "keydown").length, 1);
     await xshell._services.dispose();
     assert.equal(getEventListeners(window.document, "keydown").length, 0);

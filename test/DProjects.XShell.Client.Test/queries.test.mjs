@@ -6,7 +6,7 @@ import Contracts from "../../src/DProjects.XShell/Resources/DProjects.XShell/xsh
 import JsonValidator from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/json-validator.js";
 import Loader from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/loader.js";
 import Resolver from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/resolver.js";
-import Services from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services.js";
+import Services, {serviceForConsumer} from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services.js";
 import InvokePage from "../../src/DProjects.XShell/Resources/DProjects.XShell/x/pages/invoke.js";
 import queriesPage from "../../src/DProjects.XShell/Resources/DProjects.XShell/x-demo/pages/90-advanced/10-queries.js";
 import DiagnosticsQueries from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell-diagnostics/pages/apis/queries.js";
@@ -322,8 +322,8 @@ test("Concurrent Queries isolate scoped and transient dependencies and await asy
     const disposed = [];
     const run = definition({
         parameters: [{name: "value", type: "object", required: true}], returns: {type: "object"}
-    }, `({hooks, singleton, session, services, definition, context, module, moduleConfig}) => {
-        hooks.records.push({singleton, session, services, definition, context, module, moduleConfig,
+    }, `({hooks, singleton, session, services, definition, context, module, moduleConfig, identity}) => {
+        hooks.records.push({singleton, session, services, definition, context, module, moduleConfig, identity,
             sameSession: services.resolve("session"), transients: [services.resolve("formatter"), services.resolve("formatter")]});
         return {async query(value) {
             if (hooks.records.length === 2) hooks.executing.resolve();
@@ -335,6 +335,7 @@ test("Concurrent Queries isolate scoped and transient dependencies and await asy
         definitions: {run},
         register(root) {
             root.register("hooks", {records, executing, release});
+            root.register("identity", {[serviceForConsumer]: consumer => consumer});
             class Singleton {
                 static optionsSchema = {type: "object", additionalProperties: false};
                 dispose() { assert.fail("Invocation disposed an application singleton."); }
@@ -375,6 +376,7 @@ test("Concurrent Queries isolate scoped and transient dependencies and await asy
             assert.strictEqual(record.module, module);
             assert.strictEqual(record.moduleConfig, config.modules.catalog);
             assert.deepEqual(record.context, {id: "run"});
+            assert.deepEqual(record.identity, {type: "query", id: "catalog:run"});
             assert.ok(Object.isFrozen(record.definition));
         }
         release.resolve();

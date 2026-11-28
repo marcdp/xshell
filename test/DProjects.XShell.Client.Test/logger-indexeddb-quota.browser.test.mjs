@@ -119,7 +119,7 @@ async function verifyQuotaRecovery() {
         if (entry.deletes.length === 1 && !entry.adds.length) {
             if (scenario === "reclamation-abort") request.addEventListener("success", () => this.transaction.abort());
             if (scenario === "queue") {
-                for (let index = 0; index < 1006; index++) writer.log("info", index);
+                for (let index = 0; index < 1006; index++) writer.log("info", null, index);
             }
         }
         return request;
@@ -148,9 +148,9 @@ async function verifyQuotaRecovery() {
         // Force rollback of a queued insert and prove the retry uses both original snapshots.
         const snapshot = {kept: true};
         now--;
-        writer.log("warn", "before quota", snapshot, 42);
+        writer.log("warn", "quota recovery", "before quota", snapshot, 42);
         now++;
-        writer.log("error", "needs capacity", 23, snapshot);
+        writer.log("error", null, "needs capacity", 23, snapshot);
         snapshot.kept = false;
         await until(() => sent.length === 2, "Reclamation or retry did not commit");
         check(outcomes() === "abort,commit,commit", "Write, reclamation and retry were not independent");
@@ -163,19 +163,19 @@ async function verifyQuotaRecovery() {
         const stored = await rows();
         check(stored.slice(0, -2).map(row => row.id).join() === (expired ? "2,3" : "103,1,104"), "Wrong retained rows");
         const [first, second] = stored.slice(-2);
-        check(first.timestamp === start - 1 && first.level === "warn" && first.args[1].kept && first.args[2] === 42
-            && second.timestamp === start && second.level === "error" && second.args[1] === 23 && second.args[2].kept,
+        check(first.timestamp === start - 1 && first.level === "warn" && first.category === "quota recovery" && first.args[1].kept && first.args[2] === 42
+            && second.timestamp === start && second.level === "error" && second.category === null && second.args[1] === 23 && second.args[2].kept,
             "Retried records lost their original snapshots");
         check(sent.map(entry => entry.outcomes).join("|") === "abort,commit|abort,commit,commit" && !warnings.length,
             "Notification timing or recovery diagnostics changed");
 
         // A successful recovery leaves the next quota failure eligible to reclaim immediately.
         pressure = reclaimed + 1;
-        writer.log("info", "next pressure");
+        writer.log("info", null, "next pressure");
         await until(() => sent.length === 4, "Recovery success suppressed the next reclamation");
         check(outcomes() === "abort,commit,commit,abort,commit,commit", "The next quota recovery was not bounded");
     } else if (scenario === "queue") {
-        writer.log("error", "oversized");
+        writer.log("error", null, "oversized");
         await until(() => sent.length === 11, "The writer did not drain the queue after a failed retry");
         const queued = entries().slice(3);
         check(outcomes().startsWith("abort,commit,abort,") && queued.length === 10 && queued.every(entry => entry.adds.length === 100),
@@ -186,8 +186,8 @@ async function verifyQuotaRecovery() {
     } else if (scenario === "concurrent") {
         // Both instances hit quota and share the native transaction queue.
         pressure = 1;
-        writer.log("info", "first instance");
-        new Writer({}, options).log("info", "second instance");
+        writer.log("info", null, "first instance");
+        new Writer({}, options).log("info", null, "second instance");
         await until(() => entries().filter(entry => entry.adds.length && entry.outcome === "commit").length === 2,
             "Concurrent providers did not both commit");
         const stored = await rows();
@@ -199,7 +199,7 @@ async function verifyQuotaRecovery() {
         // Observe committed deletions even when the retry is discarded.
         const changes = [];
         const unsubscribe = await reader.subscribe(async change => changes.push({change, rows: await rows()}));
-        writer.log("warn", "failed");
+        writer.log("warn", null, "failed");
         await until(() => warnings.length === 1, "A failed write was not reported");
         const retried = ["retry-quota", "retry-other"].includes(scenario);
         const expected = scenario === "ordinary-abort" ? "abort" : scenario === "reclamation-abort" ? "abort,abort"
@@ -215,11 +215,11 @@ async function verifyQuotaRecovery() {
         if (scenario !== "ordinary-abort") {
             // A write at 29,999 ms still runs but skips reclamation. Exactly 30 seconds unlocks it.
             now += 29999;
-            writer.log("info", "during cooldown");
+            writer.log("info", null, "during cooldown");
             await until(() => outcomes() === expected + ",abort", "Ordinary writes stalled during cooldown or reclaimed again");
             if (scenario === "empty") {
                 now++;
-                writer.log("warn", "at expiry");
+                writer.log("warn", null, "at expiry");
                 await until(() => outcomes() === expected + ",abort,abort,commit", "Recovery stayed blocked after cooldown expiry");
             }
             check(warnings.length === 1 && sent.length === Number(retried), "Failures repeated a warning or published a signal");
@@ -227,11 +227,11 @@ async function verifyQuotaRecovery() {
 
         // An ordinary success clears both warning suppression and any active cooldown.
         pressure = 0;
-        writer.log("info", "ordinary success");
+        writer.log("info", null, "ordinary success");
         await until(() => sent.length === Number(retried) + 1, "Writer stopped processing ordinary writes");
         pressure = Infinity;
         const before = entries().length;
-        writer.log("error", "after success");
+        writer.log("error", null, "after success");
         await until(() => warnings.length === 2, "Successful write did not reset warning suppression");
         const after = entries().slice(before).map(entry => entry.outcome).join();
         check(after === (scenario === "ordinary-abort" ? "abort" : scenario === "reclamation-abort" ? "abort,abort" : "abort,commit,abort"),

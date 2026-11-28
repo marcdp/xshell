@@ -6,7 +6,7 @@ export async function createThrowingLogger(t) {
         level, t.mock.fn(() => { throw new Error("Logging failed."); })
     ]));
     class ThrowingProvider {
-        log(level, ...args) { calls[level](...args); }
+        log(level, category, ...args) { calls[level](...args); }
     }
     const logger = new Logger({loader: {async load() { return ThrowingProvider; }}}, {
         provider: "test", providers: {test: {implementation: "test-logger.js"}}

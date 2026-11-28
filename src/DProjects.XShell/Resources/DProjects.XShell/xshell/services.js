@@ -1,6 +1,8 @@
 
 import JsonValidator from "./services/json-validator.js";
 
+export const serviceForConsumer = Symbol("serviceForConsumer");
+
 // class
 export default class Services {
 
@@ -154,10 +156,13 @@ export default class Services {
         this.#assertActive();
         return Object.hasOwn(this.#root.#items, name);
     }
-    resolve(name) {
+    resolve(name, consumer) {
         // select root, scope-local, or per-resolution ownership by registration lifetime
         this.#assertActive();
-        return this.#root.#resolve(name, this);
+        const instance = this.#root.#resolve(name, this);
+
+        // Adapt only the returned dependency after ordinary lifetime resolution.
+        return consumer && typeof instance?.[serviceForConsumer] === "function" ? instance[serviceForConsumer](consumer) : instance;
     }
     initialize(name) {
         // initialize cached singleton or scoped instances through their owning context
@@ -244,10 +249,11 @@ export default class Services {
         if (runtime) runtime.state = "creating";
         this.#creationPath.push({ name, lifetime: registration.lifetime });
         try {
+            const consumer = Object.freeze({type: "service", id: name});
             const dependencies = new Proxy({}, {
                 get: (target, prop) => prop === "services" ? context
                     : prop === "scopeContext" ? context.#context
-                    : typeof prop === "string" ? context.resolve(prop) : undefined
+                    : typeof prop === "string" ? context.resolve(prop, consumer) : undefined
             });
             const options = registration.options ?? {};
             this.#validateOptions(name, registration.implementationItem.class, options);

@@ -153,6 +153,7 @@ export default class Modules {
                     invokeController(command, ...params) { return module.controller?.[command]?.(...params); }
                 }});
                 this.#controllerScopes.set(moduleId, moduleScope);
+                const consumer = Object.freeze({type: "module", id: moduleId});
                 const servicesProvider = new Proxy({}, {
                     get: (obj, prop) => {
                         if (prop == "moduleAssetsPath") {
@@ -168,7 +169,7 @@ export default class Modules {
                             return undefined;
                         } else {
                             // resolve ordinary dependencies through the Module-owned scope
-                            return moduleScope.resolve(prop);
+                            return moduleScope.resolve(prop, consumer);
                         }
                     }
                 });

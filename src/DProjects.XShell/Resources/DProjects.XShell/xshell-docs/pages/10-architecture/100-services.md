@@ -138,6 +138,28 @@ constructs a service. `Services.resolve(name)` remains synchronous and selects t
 scoped instances are cached by their root or child owner; transient instances are not cached. Every newly constructed instance is validated against
 the contract's declared methods and properties.
 
+### Consumer-aware resolution
+
+The Service constructor and Module, Page, Component, Command, and Query controller dependency proxies pass a descriptor of the form
+`{type: "service", id: "preferences"}` as the optional second argument to `Services.resolve(name, consumer)`. The descriptor identifies the
+immediate consumer and is reused by its dependency proxy.
+
+| Consumer `type` | Logical `id` |
+| --- | --- |
+| `service` | Registered Service name, such as `preferences` |
+| `module` | Module ID, such as `x-demo` |
+| `page` | Module-qualified resource path, such as `x-demo:/pages/index.js`. Custom sources can fall back to the definition ID. |
+| `component` | Custom-element name, such as `x-listview` |
+| `command`, `query` | Module-qualified operation name, such as `x-demo:demo.inventory.count` |
+
+A Service may implement a synchronous internal method keyed by the `serviceForConsumer` symbol exported by `xshell/services.js`.
+The container calls the method with the descriptor after lifetime resolution and returns the hook's result to the consumer. A Service without
+the hook is returned directly. Ordinary `resolve(name)` calls, including explicit lookups through an injected Services scope, return the actual
+Service. Initialization and inspection use the actual Service. Its existing owner handles caching and disposal. The hook result has no
+container-managed lifecycle and can be created again on each resolution.
+
+### Initialization
+
 Registration, construction, and asynchronous initialization are separate operations:
 
 ```js

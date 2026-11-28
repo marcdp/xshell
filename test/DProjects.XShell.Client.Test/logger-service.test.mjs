@@ -96,7 +96,7 @@ test("Core registers Logger as a singleton with a schema-valid public contract",
 test("Log Reader validates its public contract and shares retryable lazy provider initialization", async () => {
     const validation = new JsonValidator().validate(LogReaderContract, ServiceSchema, {"./contract.schema.json": ContractSchema});
     assert.equal(validation.valid, true, JSON.stringify(validation.errors));
-    assert.deepEqual(Object.keys(LogReaderContract.methods), ["query", "subscribe"]);
+    assert.deepEqual(Object.keys(LogReaderContract.methods), ["getCategories", "query", "subscribe"]);
     const configured = {provider: "sample", providers: {sample: {implementation: "sample.js", options: {databaseName: "sample-db"}}}};
     const gate = Promise.withResolvers();
     let attempts = 0;
@@ -111,6 +111,7 @@ test("Log Reader validates its public contract and shares retryable lazy provide
     const query = reader.query({limit: 1});
     const callback = () => {};
     const subscription = reader.subscribe(callback);
+    const categories = reader.getCategories();
     assert.equal(attempts, 2);
     let instances = 0;
     const unsubscribe = () => {};
@@ -123,9 +124,11 @@ test("Log Reader validates its public contract and shares retryable lazy provide
         }
         async query(options) { return options; }
         subscribe(received) { assert.equal(received, callback); return unsubscribe; }
+        async getCategories() { return [null, "example"]; }
     });
     assert.deepEqual(await query, {limit: 1});
     assert.equal(await subscription, unsubscribe);
+    assert.deepEqual(await categories, [null, "example"]);
     assert.deepEqual(await reader.query(), {});
     assert.equal(instances, 1);
     assert.equal(attempts, 2);
@@ -145,9 +148,11 @@ test("Log Reader reports configuration, invalid implementation and operation fai
     const operations = reader(class {
         query() { throw new Error("query details"); }
         async subscribe() { throw new Error("subscribe details"); }
+        getCategories() { throw new Error("category details"); }
     });
     await assert.rejects(operations.query(), /query failed.*query details/);
     await assert.rejects(operations.subscribe(() => {}), /subscription failed.*subscribe details/);
+    await assert.rejects(operations.getCategories(), /category discovery failed.*category details/);
 });
 
 test("missing and explicit null selection ignore all calls without loading providers or writing output", async t => {
@@ -176,8 +181,8 @@ test("a provider can resolve an instrumented service during initialization and i
     let tasks;
     const {services, loads} = await createServices(config, () => class {
         constructor(dependencies) { tasks = dependencies.tasks; }
-        log(level, message, metadata) {
-            events.push({level, message, metadata});
+        log(level, category, message, metadata) {
+            events.push({level, category, message, metadata});
             throw new Error("provider failed");
         }
     });
@@ -186,10 +191,24 @@ test("a provider can resolve an instrumented service during initialization and i
     const metadata = {count: 1};
     for (const level of levels) assert.equal(logger[level]("Provider isolation", metadata), undefined);
     assert.deepEqual(events.map(event => event.level), levels);
+    assert.ok(events.every(event => event.category === null));
     assert.ok(events.every(event => event.metadata === metadata));
     const task = tasks.run({title: "Logging enabled", handler() { return 42; }});
     assert.equal(await task.getResult(), 42);
-    assert.ok(events.some(({level, message, metadata}) => level === "debug" && message === "Tasks: execution completed" && metadata.taskId === task.id));
+    assert.ok(events.some(({level, category, message, metadata}) => level === "debug" && category === "tasks"
+        && message === "Tasks: execution completed" && metadata.taskId === task.id));
+    const first = services.resolve("logger", {type: "module", id: "inventory"});
+    const second = services.resolve("logger", {type: "component", id: "x-inventory"});
+    assert.notEqual(first, second);
+    assert.deepEqual(Object.keys(first), levels);
+    assert.equal(first.warn("First", metadata), undefined);
+    assert.equal(second.warn("Second", metadata), undefined);
+    assert.deepEqual(events.slice(-2), [
+        {level: "warn", category: "inventory", message: "First", metadata},
+        {level: "warn", category: "x-inventory", message: "Second", metadata}
+    ]);
+    assert.strictEqual(events.at(-1).metadata, metadata);
+    assert.strictEqual(services.resolve("logger"), logger);
     assert.equal(loads.length, 1);
 });
 
@@ -218,11 +237,12 @@ test("provider contributions compose, preserve module ownership and delegate ori
     const values = ["message", 42, {key: "value"}, [1], new Error("failure"), undefined, Symbol("value")];
     assert.equal(logger.trace(), undefined);
     for (const level of levels) assert.equal(logger[level](...values), undefined);
-    assert.deepEqual(calls.shift(), ["trace"]);
+    assert.deepEqual(calls.shift(), ["trace", null]);
     for (const [index, call] of calls.entries()) {
         assert.equal(call[0], levels[index]);
-        assert.equal(call.length, values.length + 1);
-        values.forEach((value, position) => assert.strictEqual(call[position + 1], value));
+        assert.equal(call[1], null);
+        assert.equal(call.length, values.length + 2);
+        values.forEach((value, position) => assert.strictEqual(call[position + 2], value));
     }
     assert.equal(calls.length, levels.length);
     assert.equal(constructions, 1);
@@ -269,13 +289,16 @@ test("LoggerConsole synchronously forwards the original arguments to the matchin
 
     // Verify direct delegation, including zero arguments, by inspecting only the selected console method.
     for (const [index, level] of levels.entries()) {
-        assert.equal(provider.log(level), undefined);
-        assert.equal(provider.log(level, ...args), undefined);
-        assert.deepEqual(methods.map(method => method.mock.callCount()), levels.map((_, position) => position <= index ? 2 : 0));
-        const [empty, call] = methods[index].mock.calls;
+        assert.equal(provider.log(level, null), undefined);
+        assert.equal(provider.log(level, null, ...args), undefined);
+        assert.equal(provider.log(level, "%s %c", ...args), undefined);
+        assert.deepEqual(methods.map(method => method.mock.callCount()), levels.map((_, position) => position <= index ? 3 : 0));
+        const [empty, call, categorized] = methods[index].mock.calls;
         assert.deepEqual(empty.arguments, []);
         assert.equal(call.arguments.length, args.length);
         args.forEach((value, position) => assert.strictEqual(call.arguments[position], value));
+        assert.deepEqual(categorized.arguments.slice(0, 2), ["[%s]", "%s %c"]);
+        args.forEach((value, position) => assert.strictEqual(categorized.arguments[position + 2], value));
     }
     assert.equal(fallback.mock.callCount(), 0);
 });

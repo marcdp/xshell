@@ -7,7 +7,7 @@ import Events from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell
 import Timer from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/timer.js";
 import JsonValidator from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/json-validator.js";
 import LoaderCommandJs from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/loaders/command-js.js";
-import Services from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services.js";
+import Services, {serviceForConsumer} from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services.js";
 import Tasks from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/tasks.js";
 import {createThrowingLogger} from "./fixtures/throwing-logger.mjs";
 
@@ -83,9 +83,12 @@ test("each concurrent Command invocation owns an independent direct-root lifetim
     let LoadedCommand = Placeholder;
     const {commands, root, disposed} = createRuntime(Placeholder, {loader: {async load() { return LoadedCommand; }}});
     root.register("hooks", {invocations});
+    root.register("identity", {[serviceForConsumer]: consumer => consumer});
     const schema = {type: "object", required: ["contract", "controller"], properties: {contract: {type: "object"}, controller: {type: "object"}}};
     const context = {
-        resourceDefinition: {moduleId: "sample"},
+        resource: "command:scoped?private=1",
+        resourcePath: "/_assets/sample/1.0.dev/commands/scoped.js",
+        resourceDefinition: {moduleId: "sample", modulePath: "/_assets/sample/1.0.dev"},
         services: {
             loader: {async load(id) { assert.equal(id, "schema:command"); return schema; }},
             config: {modules: {sample: {id: "sample"}}},
@@ -98,7 +101,7 @@ test("each concurrent Command invocation owns an independent direct-root lifetim
         controller(provider) {
             const session = provider.session;
             provider.hooks.invocations.push({task: provider.task, services: provider.services, rootServices: provider.services.resolve("services"), singleton: provider.singleton, session,
-                repeated: provider.session, transients: [provider.formatter, provider.formatter]});
+                repeated: provider.session, identity: provider.identity, transients: [provider.formatter, provider.formatter]});
             return {execute(value) { return value; }};
         }
     };`;
@@ -115,6 +118,7 @@ test("each concurrent Command invocation owns an independent direct-root lifetim
     assert.ok(invocations.every(invocation => invocation.services !== root && invocation.rootServices === root));
     assert.deepEqual(await Promise.all([foreground.getResult(), background.getResult()]), [1, 2]);
     assert.strictEqual(invocations[0].singleton, invocations[1].singleton);
+    for (const invocation of invocations) assert.deepEqual(invocation.identity, {type: "command", id: "sample:scoped"});
     assert.strictEqual(invocations[0].session, invocations[0].repeated);
     assert.notStrictEqual(invocations[0].session, invocations[1].session);
     assert.ok(invocations.every(invocation => invocation.transients[0] !== invocation.transients[1]));

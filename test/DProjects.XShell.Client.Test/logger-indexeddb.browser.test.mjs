@@ -66,7 +66,7 @@ async function verifyIndexedDBLogger() {
             if (this.name === name && args[1] === "readwrite") {
                 maximumActive = Math.max(maximumActive, ++active);
                 transaction.addEventListener("complete", () => active--);
-                if (++writes === 1) provider.log("info", "during write");
+                if (++writes === 1) provider.log("info", null, "during write");
             }
             return transaction;
         };
@@ -75,17 +75,18 @@ async function verifyIndexedDBLogger() {
         const shared = {value: 1};
         shared.circular = shared;
         const error = new Error("sample");
-        check(provider.log("trace", "first", shared, shared, [1], undefined, 23n, true, null,
+        check(provider.log("trace", "棚卸し 📦", "first", shared, shared, [1], undefined, 23n, true, null,
             new Date(123), new Map([["key", 4]]), new Set([5]), error) === undefined, "Logging did not return synchronously");
-        provider.log("debug");
-        provider.log("info", 42, false);
-        provider.log("warn", () => {}, Symbol("sample"), document.body, new Proxy({}, {}), "last value");
+        provider.log("debug", null);
+        provider.log("info", null, 42, false);
+        provider.log("warn", null, () => {}, Symbol("sample"), document.body, new Proxy({}, {}), "last value");
         const wasm = new WebAssembly.Module(new Uint8Array([0, 97, 115, 109, 1, 0, 0, 0]));
-        provider.log("error", "storage-only fallback", wasm, {kept: true});
+        provider.log("error", null, "storage-only fallback", wasm, {kept: true});
         shared.value = 2;
         timestamp++;
         const stored = await until(() => records(name), rows => rows.length === 6, "Records did not commit");
         check(stored.map(entry => entry.level).join() === "trace,debug,info,warn,error,info", "Log levels or FIFO order changed");
+        check(stored[0].category === "棚卸し 📦" && stored.slice(1).every(entry => entry.category === null), "Categories were not persisted independently");
         check(stored.every((entry, index) => entry.id === index + 1), "Primary keys were not generated in order");
         check(stored.every((entry, index) => entry.timestamp === 1700000000000 + (index === 5 ? 1 : 0)), "Timestamps were captured at write time");
         const args = stored[0].args;
@@ -105,8 +106,8 @@ async function verifyIndexedDBLogger() {
         check(store.keyPath === "id" && store.autoIncrement && Array.from(store.indexNames).join() === "level,timestamp", "Incorrect log schema");
         check(["level", "timestamp"].every(key => store.index(key).keyPath === key && !store.index(key).unique), "Incorrect log indexes");
         database.close();
-        logger({}, "/demo-app/shared/").log("info", "reopened");
-        logger().log("info", "root only");
+        logger({}, "/demo-app/shared/").log("info", null, "reopened");
+        logger().log("info", null, "root only");
         const reopened = await until(() => records(name), rows => rows.length === 7, "Records did not survive reinitialization");
         const root = await until(() => records("xshell-logs"), rows => rows.length === 1, "Root database name was incorrect");
         check(reopened[0].args[0] === "first" && root[0].args[0] === "root only" && opens === 2 && warnings.length === 0, "Namespaces or prior records changed");
@@ -132,15 +133,15 @@ async function verifyIndexedDBLogger() {
         const now = 1700000000000;
         let timestamp = now - 2 * day;
         Date.now = () => timestamp;
-        first.log("warn", "expired");
+        first.log("warn", null, "expired");
         timestamp = now - day;
-        first.log("info", "exact boundary");
+        first.log("info", null, "exact boundary");
         timestamp = now;
-        for (const value of ["tie 1", "tie 2", "tie 3"]) first.log("info", value);
+        for (const value of ["tie 1", "tie 2", "tie 3"]) first.log("info", null, value);
         const retained = await until(() => records(name), rows => rows.length === 4, "Expired records were retained");
         check(retained.map(entry => entry.args[0]).join() === "exact boundary,tie 1,tie 2,tie 3", "Age boundary or order changed");
-        first.log("warn", "left tab");
-        second.log("warn", "right tab");
+        first.log("warn", null, "left tab");
+        second.log("warn", null, "right tab");
         const shared = await until(() => records(name), rows => rows.some(row => row.args[0] === "left tab")
             && rows.some(row => row.args[0] === "right tab"), "Concurrent provider records did not coexist");
         check(shared.length === 4 && shared[0].args[0] === "tie 2" && shared[1].args[0] === "tie 3", "Oldest entries or timestamp ties were removed incorrectly");
@@ -155,7 +156,7 @@ async function verifyIndexedDBLogger() {
             if (this.name === name && args[1] === "readwrite") batches++;
             return nativeTransaction.apply(this, args);
         };
-        for (let index = 0; index < 1006; index++) provider.log("trace", index);
+        for (let index = 0; index < 1006; index++) provider.log("trace", null, index);
         const stored = await until(() => records(name), rows => rows.length === 1000, "Did not flush the bounded queue");
         check(stored.every((row, index) => row.args[0] === index + 6) && batches === 10, "Overflow or batching policy changed");
     } else {
@@ -177,25 +178,25 @@ async function verifyIndexedDBLogger() {
             if (inject === "abort") request.addEventListener("success", () => this.transaction.abort(), {once: true});
             return request;
         };
-        provider.log("error", "aborted record");
+        provider.log("error", null, "aborted record");
         await until(() => warnings, entries => entries.length === 1, "Abort was not diagnosed");
         check((await records(name)).length === 0, "Request success was treated as a commit");
         failure = "quota";
-        provider.log("error", "private quota record");
+        provider.log("error", null, "private quota record");
         await new Promise(resolve => setTimeout(resolve, 10));
         check(warnings.length === 1 && (await records(name)).length === 0, "Quota failure wrote or repeated warnings");
         failure = null;
-        provider.log("info", "recovered");
+        provider.log("info", null, "recovered");
         await until(() => records(name), rows => rows.some(row => row.args[0] === "recovered"), "Write did not resume after failure");
         connection.close();
-        provider.log("error", "invalidated connection");
+        provider.log("error", null, "invalidated connection");
         await until(() => warnings, entries => entries.length === 2, "Invalid connection was not diagnosed");
-        provider.log("info", "reopened connection");
+        provider.log("info", null, "reopened connection");
         await until(() => records(name), rows => rows.length === 2, "Provider did not reopen its invalidated connection");
 
         // A real version-change event closes the writer's connection and allows deletion and reopening.
         await result(indexedDB.deleteDatabase(name));
-        provider.log("info", "after version change");
+        provider.log("info", null, "after version change");
         const reopened = await until(() => records(name), rows => rows.length === 1, "Provider did not reopen after a version change");
         check(reopened[0].args[0] === "after version change" && unhandled.length === 0, "Recovery or promise isolation failed");
         check(warnings.every(args => args.length === 1 && args[0] === "IndexedDB logger could not persist a batch."), "Warnings exposed storage or data details");

@@ -1,3 +1,5 @@
+import { serviceForConsumer } from "../services.js";
+
 export default class Logger {
 
     // Validate effective declarations before the service is constructed.
@@ -53,16 +55,28 @@ export default class Logger {
     }
 
     // Forward each call synchronously with the original arguments.
-    trace(...args) { this.#log("trace", args); }
-    debug(...args) { this.#log("debug", args); }
-    info(...args) { this.#log("info", args); }
-    warn(...args) { this.#log("warn", args); }
-    error(...args) { this.#log("error", args); }
+    trace(...args) { this.#log("trace", null, args); }
+    debug(...args) { this.#log("debug", null, args); }
+    info(...args) { this.#log("info", null, args); }
+    warn(...args) { this.#log("warn", null, args); }
+    error(...args) { this.#log("error", null, args); }
 
-    #log(level, args) {
+    [serviceForConsumer]({id}) {
+        // Capture the logical identity in a facade backed by this logger's selected provider.
+        const category = typeof id === "string" && id.length > 0 ? id : null;
+        return {
+            trace: (...args) => this.#log("trace", category, args),
+            debug: (...args) => this.#log("debug", category, args),
+            info: (...args) => this.#log("info", category, args),
+            warn: (...args) => this.#log("warn", category, args),
+            error: (...args) => this.#log("error", category, args)
+        };
+    }
+
+    #log(level, category, args) {
         // A synchronous provider failure must not interrupt the operation being logged.
         try {
-            this.#provider?.log(level, ...args);
+            this.#provider?.log(level, category, ...args);
         } catch {}
     }
 }

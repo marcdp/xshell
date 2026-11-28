@@ -9,7 +9,7 @@ export default {
         .logs {list-style:none; padding:0;}
         .logs li {margin-block:.5em;}
         .logs summary {cursor:pointer; overflow-wrap:anywhere;}
-        .logs time, .logs strong {margin-inline-end:.5em;}
+        .logs time, .logs strong, .log-category {margin-inline-end:.5em;}
     `,
     template: `
         <form class="log-filters" x-on:submit="applyFilters">
@@ -21,6 +21,15 @@ export default {
                 <label><input type="checkbox" name="level" value="warn" x-prop:checked="state.levels.warn"> Warn</label>
                 <label><input type="checkbox" name="level" value="error" x-prop:checked="state.levels.error"> Error</label>
             </fieldset>
+            <details>
+                <summary>Categories</summary>
+                <label x-for="option in state.categoryOptions" x-key="value">
+                    <input type="checkbox" name="category" x-prop:value="option.value" x-model="option.checked">
+                    <span x-text="option.label"></span>
+                </label>
+                <p>Clear all category selections to show all categories.</p>
+                <p role="alert" x-if="state.categoryError" x-text="state.categoryError"></p>
+            </details>
             <div class="log-dates">
                 <label>From (local time) <input type="datetime-local" name="from" step="0.001" x-prop:value="state.from"></label>
                 <label>To (local time) <input type="datetime-local" name="to" step="0.001" x-prop:value="state.to"></label>
@@ -42,7 +51,8 @@ export default {
         <ol class="logs" aria-label="Log records">
             <li x-for="row in state.rows" x-key="id">
                 <details x-attr:data-id="row.id" x-on:toggle="inspect">
-                    <summary><time x-attr:datetime="row.iso" x-text="row.time"></time> <strong x-text="row.level"></strong> <span x-text="row.preview"></span></summary>
+                    <summary><time x-attr:datetime="row.iso" x-text="row.time"></time> <strong x-text="row.level"></strong>
+                        <span class="log-category" x-text="row.category"></span> <span x-text="row.preview"></span></summary>
                     <x-object x-if="row.id == state.inspectedId" name="Arguments" expanded x-prop:value="state.inspectedArgs"></x-object>
                 </details>
             </li>
@@ -51,6 +61,7 @@ export default {
     state: {
         live: true, loading: true, error: "", subscriptionError: "", pageIndex: 0, hasMore: false, rows: [],
         levels: {trace: true, debug: true, info: true, warn: true, error: true},
+        categoryOptions: [], categoryError: "",
         from: "", to: "", inspectedId: null, inspectedArgs: null
     },
     controller({state, logReader}) {
@@ -64,6 +75,7 @@ export default {
         let filters = {};
         let cursors = [undefined];
         let openDetails;
+        let categoryRequest;
 
         return {
             mount() {
@@ -71,12 +83,14 @@ export default {
                 active = true;
                 if (state.live) void this.startLive();
                 this.requestPage(state.pageIndex);
+                void this.discoverCategories();
             },
             unmount() {
                 // Ignore in-flight work and release both active and pending subscriptions.
                 active = false;
                 generation++;
                 pending = undefined;
+                categoryRequest = undefined;
                 this.stopLive();
                 openDetails = undefined;
                 state.inspectedId = state.inspectedArgs = null;
@@ -130,21 +144,46 @@ export default {
                 }
             },
             applyFilters({event}) {
-                // Apply severity and local date bounds as one query and discard incompatible cursors.
+                // Apply category, severity and date bounds together and discard incompatible cursors.
                 event.preventDefault();
                 const form = new FormData(event.currentTarget);
                 const levels = form.getAll("level");
                 state.levels = Object.fromEntries(Object.keys(state.levels).map(level => [level, levels.includes(level)]));
                 state.from = form.get("from");
                 state.to = form.get("to");
+                const categories = form.getAll("category").map(value => JSON.parse(value));
                 filters = {
                     levels,
+                    ...(categories.length ? {categories} : {}),
                     ...(state.from ? {from: new Date(state.from).getTime()} : {}),
                     ...(state.to ? {to: new Date(state.to).getTime()} : {})
                 };
                 this.requestPage(0);
             },
-            refresh() { this.requestPage(state.pageIndex); },
+            refresh() {
+                this.requestPage(state.pageIndex);
+                void this.discoverCategories();
+            },
+            async discoverCategories() {
+                // Refresh on mount or explicit request and retain applied and pending selections after retention.
+                if (!active || categoryRequest) return;
+                const request = categoryRequest = {};
+                try {
+                    const categories = await logReader.getCategories();
+                    if (categoryRequest !== request) return;
+                    const checked = new Set(state.categoryOptions.filter(option => option.checked).map(option => option.value));
+                    const options = new Set([...categories, ...(filters.categories ?? []), ...[...checked].map(value => JSON.parse(value))]);
+                    state.categoryOptions = [...options].map(category => {
+                        const value = JSON.stringify(category);
+                        return {value, label: category ?? "Uncategorized", checked: checked.has(value)};
+                    });
+                    state.categoryError = "";
+                } catch (error) {
+                    if (categoryRequest === request) state.categoryError = error.message;
+                } finally {
+                    if (categoryRequest === request) categoryRequest = undefined;
+                }
+            },
             newer() { if (!state.loading && state.pageIndex > 0) this.browse(state.pageIndex - 1); },
             older() { if (!state.loading && state.hasMore) this.browse(state.pageIndex + 1); },
             browse(index) {
@@ -229,7 +268,7 @@ export default {
                 openDetails = undefined;
                 state.inspectedId = state.inspectedArgs = null;
             },
-            present({id, timestamp, level, args}) {
+            present({id, timestamp, level, category, args}) {
                 // Display a bounded, text-only preview while keeping the stored argument array intact.
                 const date = new Date(timestamp);
                 const validDate = Number.isFinite(date.getTime());
@@ -241,7 +280,8 @@ export default {
                 else if (value && typeof value === "object") preview = value.unserializable === true ? "[Unserializable]" : Object.prototype.toString.call(value);
                 else preview = typeof value === "bigint" ? String(value) + "n" : String(value);
                 if (preview.length > 240) preview = preview.slice(0, 239) + "â€¦";
-                return {id, level, args, preview, time: validDate ? date.toLocaleString() : String(timestamp), iso: validDate ? date.toISOString() : ""};
+                return {id, level, category: category ?? "Uncategorized", args, preview,
+                    time: validDate ? date.toLocaleString() : String(timestamp), iso: validDate ? date.toISOString() : ""};
             }
         };
     }

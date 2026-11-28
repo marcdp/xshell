@@ -22,7 +22,8 @@ Select `console` in the application manifest to enable console logging.
 {"xshell": {"services": {"logger": {"options": {"provider": "console"}}}}}
 ```
 
-The provider forwards the original arguments synchronously, preserving native console formatting and stack traces. It has no provider-specific options.
+The provider forwards the original arguments synchronously, preserving native object and error inspection. Categorized calls have a literal
+`[category]` prefix. Direct calls keep native console formatting. The provider has no provider-specific options.
 
 | Logger level | Native console method |
 | --- | --- |
@@ -67,7 +68,8 @@ database name can share logs within the same origin and browser storage partitio
 namespace because URL-like manifest values follow ordinary manifest normalization. Invalid options fail provider initialization.
 
 The version 1 database has a `logs` object store with an auto-incrementing `id` and non-unique `timestamp` and `level` indexes. Each record
-contains `{id, timestamp, level, args}`. The timestamp is epoch milliseconds captured when the logger receives the call.
+contains `{id, timestamp, level, category, args}`. The timestamp is epoch milliseconds captured when the logger receives the call. The reader
+returns `category: null` for historical records that lack the field. The existing database schema serves both record shapes.
 
 The provider takes a structured clone snapshot of the argument array before queueing it. Structured clone preserves supported values and
 relationships, including circular references. If the full array cannot be cloned, the provider clones arguments individually and substitutes
@@ -128,11 +130,17 @@ The public methods are `trace(...args)`, `debug(...args)`, `info(...args)`, `war
 arbitrary JavaScript values, including arrays and errors, and returns `undefined` synchronously. Values reach the provider in their original order
 and objects retain their identity. Calls are silently ignored when `provider` is omitted or null.
 
+Injected loggers automatically use the [immediate consumer's logical ID](../10-architecture/100-services.md#consumer-aware-resolution) as
+their category, for example `secrets`, `x-listview`, or `x-logs:/pages/logs.js`. The logger returns a small object with the five public methods
+bound to that category and delegates every call to the same singleton's provider. Direct `services.resolve("logger")` calls use a null category.
+Categories are arbitrary nonempty, case-sensitive strings. Null marks an uncategorized record.
+
 ## Writer provider interface
 
 A provider default-exports a class. Its constructor receives the logger's standard XShell service dependencies and the effective provider options
-as `constructor(dependencies, options)`. The class implements `log(level, ...args)`, where `level` is `trace`, `debug`, `info`, `warn`, or
-`error`. For example, the call above reaches the provider as `log("debug", "Inventory: refresh completed", {count})`.
+as `constructor(dependencies, options)`. Custom writer providers must implement the updated signature `log(level, category, ...args)`, where
+`level` is `trace`, `debug`, `info`, `warn`, or `error` and `category` is a string or null. For an Inventory Page, the example above could reach
+the provider as `log("debug", "shop:/pages/inventory.js", "Inventory: refresh completed", {count})`.
 
 XShell awaits logger initialization before starting module controllers. Initialization uses the standard ESM resolver and loader to import only
 the selected implementation, constructs it once, and checks that it exposes a callable `log`. With logging disabled, startup skips provider
@@ -143,9 +151,10 @@ handling for asynchronous work. The logger ignores the return value of `log()`.
 
 ## Log Reader service
 
-Inject `logReader` by name. Its public contract exposes `query(options = {})` and `subscribe(callback)`, both asynchronous. The service loads the
-selected provider through the ordinary ESM loader on first use. Concurrent requests share initialization, a successful instance is reused, and a
-failed initialization can be retried. With no selected provider, calls reject and the service keeps storage and observation idle.
+Inject `logReader` by name. Its public contract exposes three asynchronous methods, `query(options = {})`, `getCategories()`, and
+`subscribe(callback)`. The service loads the selected provider through the ordinary ESM loader on first use. Concurrent requests share
+initialization, a successful instance is reused, and a failed initialization can be retried. With no selected provider, calls reject and the
+service keeps storage and observation idle.
 
 ```jsonc
 "xshell": {
@@ -186,6 +195,7 @@ set the same nonblank name on both providers when they should share records. The
 ```javascript
 const result = await logReader.query({
     levels: ["warn", "error"],
+    categories: ["navigation", null],
     limit: 100
 });
 ```
@@ -193,19 +203,28 @@ const result = await logReader.query({
 | Option | Behavior |
 | --- | --- |
 | `levels` | Array containing any of `trace`, `debug`, `info`, `warn`, and `error`. Omit to match all. An empty array matches no records. |
+| `categories` | Match any selected category exactly. Values are nonempty strings or null. Omit to match all, pass `[null]` for uncategorized records, or pass `[]` for no matches. |
 | `from`, `to` | Inclusive finite timestamps in epoch milliseconds. When both are present, `from` must be at or before `to`. |
 | `order` | `"desc"` for newest first, the default, or `"asc"` for oldest first. |
 | `limit` | Integer from 1 through 500. Defaults to 100. |
 | `cursor` | Opaque continuation from a prior result. Omit to start at the beginning. |
 
 The IndexedDB reader rejects unknown options, unsupported values and malformed or incompatible cursors. It queries using a readonly transaction
-and returns `{items, nextCursor, hasMore}`. Each item retains its stored `{id, timestamp, level, args}` shape, including structured-cloned argument
-values. An empty result or a final nonempty page has `nextCursor: null` and `hasMore: false`.
+and returns `{items, nextCursor, hasMore}`. Each item contains `{id, timestamp, level, category, args}`, including structured-cloned argument values.
+Category, severity, and timestamp filters all apply to each record. Duplicate category values are ignored. An empty result or a final nonempty
+page has `nextCursor: null` and `hasMore: false`.
 
-Pass `nextCursor` back with compatible severity and timestamp filters and the same order. Page size can change. The timestamp index orders records
-by timestamp and then by primary key, so the reader can continue even when retention removed the cursor record. It looks for an extra matching
-record to determine whether another page is available. Each query runs in its own transaction. New writes and retention can change the results
-between pages.
+Pass `nextCursor` back for the same database with equivalent category, severity, and timestamp filters and the same order. Page size can change.
+The timestamp index orders records by timestamp and then by primary key, so the reader can continue even when retention removed the cursor
+record. It looks for an extra matching record to determine whether another page is available. Each query runs in its own transaction. New writes
+and retention can change the results between pages. When upgrading from a version that did not support categories, restart pagination with a
+fresh query to obtain a current cursor.
+
+### Discovering categories
+
+`await logReader.getCategories()` returns the distinct categories currently in the source. The IndexedDB reader lists null first when present,
+then sorts strings by code unit. Discovery scans the stored records once in a readonly transaction and keeps only the distinct values in
+memory. Its cost grows with the number of stored records.
 
 ### Observing changes
 
@@ -228,16 +247,17 @@ the records that are still persisted when queried.
 ### Reader provider interface
 
 A reader provider default-exports a class with `constructor(dependencies, options = {})`. The constructor receives the standard service dependencies
-and the effective provider options. The class exposes `async query(options)` and `subscribe(callback)`. Subscription registration may return an
-idempotent unsubscribe function directly or resolve one asynchronously. The service checks both methods and always returns a Promise to callers.
+and the effective provider options. The class exposes `query(options)`, `getCategories()`, and `subscribe(callback)`. Subscription registration may
+return an idempotent unsubscribe function directly or resolve one asynchronously. The service checks all three methods and returns a Promise to callers.
 Providers report query failures to callers and isolate subscriber callback failures. Use native diagnostics where needed to avoid a feedback loop
 through the logger being observed.
 
 ### Logs Page
 
-Open `page:x-logs:/pages/logs.js`. In the Cookbook application (`x-demo`), choose **Logs** from the global menu. Apply severity and local date filters,
-open a record to inspect its arguments, and use **Older** and **Newer** to browse result pages. Historical browsing pauses live refresh. **Refresh**
-updates the visible page, and **Resume live** returns to the newest matching records and reconciles with current storage.
+Open `page:x-logs:/pages/logs.js`. In the Cookbook application (`x-demo`), choose **Logs** from the global menu. Each row shows its category or
+**Uncategorized**. Expand **Categories** to select one or more categories and apply them with severity and local date filters. Applying new filters
+returns to the first page. Open a record to inspect its arguments, and use **Older** and **Newer** to browse historical results. **Resume live**
+returns to the newest matching records. The Page discovers categories on mount and **Refresh** and retains selections even when their records expire.
 
 ## Platform logging conventions
 

@@ -3,7 +3,7 @@ import test from "node:test";
 
 import Logger from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/logger.js";
 import Modules from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/modules.js";
-import Services from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services.js";
+import Services, {serviceForConsumer} from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services.js";
 import Loader from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/loader.js";
 import Resolver from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/resolver.js";
 import Events from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/events.js";
@@ -150,6 +150,7 @@ test("module controllers own independent direct-root scopes with scoped dispatch
         dispose() { disposals.push(`transient:${this.id}`); }
     }
     root.register("singleton", singleton);
+    root.register("identity", {[serviceForConsumer]: consumer => consumer});
     registerImplementation(root, "scoped", ScopedSession, "scoped");
     registerImplementation(root, "transient", TransientSession, "transient");
     registerImplementation(root, "events", Events, "transient");
@@ -173,6 +174,7 @@ test("module controllers own independent direct-root scopes with scoped dispatch
                     captures.set(id, {
                         scope: provider.services,
                         singleton: provider.singleton,
+                        identity: provider.identity,
                         scoped,
                         repeatedScoped: provider.scoped,
                         firstTransient: provider.transient,
@@ -208,6 +210,8 @@ test("module controllers own independent direct-root scopes with scoped dispatch
     assert.notStrictEqual(second.scope, unrelatedScope);
     assert.strictEqual(first.singleton, singleton);
     assert.strictEqual(second.singleton, singleton);
+    assert.deepEqual(first.identity, {type: "module", id: "first"});
+    assert.deepEqual(second.identity, {type: "module", id: "second"});
     assert.strictEqual(first.scoped, first.repeatedScoped);
     assert.notStrictEqual(first.scoped, second.scoped);
     assert.notStrictEqual(first.firstTransient, first.secondTransient);

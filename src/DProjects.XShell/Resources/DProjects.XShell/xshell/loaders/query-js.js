@@ -1,5 +1,6 @@
 import JsonValidator from "../services/json-validator.js";
 import { deepFreeze } from "../utils/object.js";
+import { moduleOperationId } from "../utils/urls.js";
 
 export default class LoaderQueryJs {
 
@@ -34,6 +35,8 @@ export default class LoaderQueryJs {
 
         deepFreeze(definition);
         const moduleId = context.resourceDefinition.moduleId;
+        const id = moduleOperationId("query", "queries", context);
+        const consumer = id ? Object.freeze({type: "query", id}) : undefined;
 
         // Cache the class while keeping the scope and controller local to an invocation.
         return class Query {
@@ -58,7 +61,7 @@ export default class LoaderQueryJs {
                         if (prop === "moduleConfig") return context.services.config.modules[moduleId];
                         if (prop === "module") return context.services.modules.getModuleById(moduleId);
                         if (prop === "services") return this.#scope;
-                        if (typeof prop === "string") return this.#scope.resolve(prop);
+                        if (typeof prop === "string") return this.#scope.resolve(prop, consumer);
                     }
                 });
                 const controller = await definition.controller(provider);

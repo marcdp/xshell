@@ -28,6 +28,22 @@ export function matchesPathPrefix(path, prefix) {
     // Match a complete path segment, or the prefix itself.
     return Boolean(prefix) && (path === prefix || path.startsWith(prefix + "/"));
 }
+export function moduleResourcePath(path, modulePath) {
+    // Strip the resolved module asset prefix and any URL suffix from an owned resource.
+    const pathname = path?.split(/[?#]/, 1)[0];
+    return pathname && pathname !== modulePath && matchesPathPrefix(pathname, modulePath) ? pathname.slice(modulePath.length) : undefined;
+}
+export function moduleOperationId(type, directory, {resourceDefinition, resourcePath, resource, resourceName}) {
+    // Qualified operation rules can point at the operation directory while inventory rules point at the module root.
+    const {moduleId, modulePath} = resourceDefinition;
+    const path = moduleResourcePath(resourcePath, modulePath);
+    const prefix = modulePath?.endsWith(`/${directory}`) ? "/" : `/${directory}/`;
+    const locator = resource?.split(/[?#]/, 1)[0].slice(type.length + 1) ?? resourceName?.split(/[?#]/, 1)[0];
+    const qualifiedPrefix = `${moduleId}:`;
+    const name = path?.startsWith(prefix) ? path.slice(prefix.length).replace(/\.js$/, "")
+        : locator?.startsWith(qualifiedPrefix) ? locator.slice(qualifiedPrefix.length) : locator;
+    return name && !name.startsWith("/") ? qualifiedPrefix + name : undefined;
+}
 export function indexedDBName(service, prefix) {
     // Encode path segments before the service name without leading or repeated database-name separators.
     const path = normalizeUrlPrefix(prefix).slice(1, -1);

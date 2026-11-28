@@ -162,6 +162,7 @@ export async function createComponentClassFromJsDefinition(src, context, definit
     const logger = context.services.logger;
     const moduleId = context.resourceDefinition.moduleId;
     const componentId = typeof definition.meta.id === "string" && /^[\w.-]+$/.test(definition.meta.id) ? definition.meta.id : undefined;
+    const consumer = Object.freeze({type: "component", id: definition.meta.id});
     try {
         await validateComponent(src, definition, context);
     } catch (error) {
@@ -352,7 +353,7 @@ export async function createComponentClassFromJsDefinition(src, context, definit
                         return undefined;
                     } else {
                         // resolve ordinary services through this Component's scope
-                        return self._servicesScope.resolve(prop);
+                        return self._servicesScope.resolve(prop, consumer);
                     }                    
                 }
             });

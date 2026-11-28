@@ -5,7 +5,7 @@
     "types": {
         "logQueryOptions": {
             "type": "object",
-            "description": "Optional severity and timestamp filters, page size, ordering and continuation cursor.",
+            "description": "Optional severity, category and timestamp filters, page size, ordering and continuation cursor.",
             "schema": {
                 "type": "object",
                 "properties": {
@@ -25,6 +25,11 @@
                     "from": {
                         "type": "number",
                         "description": "Inclusive minimum timestamp in epoch milliseconds."
+                    },
+                    "categories": {
+                        "type": "array",
+                        "items": {"type": ["string", "null"], "minLength": 1},
+                        "description": "Match any selected category exactly. Omit for all categories, use null for uncategorized records, or pass an empty array for no matches."
                     },
                     "to": {
                         "type": "number",
@@ -72,6 +77,11 @@
                                 "level": {
                                     "type": "string"
                                 },
+                                "category": {
+                                    "type": ["string", "null"],
+                                    "minLength": 1,
+                                    "description": "Logical source, or null for an uncategorized record."
+                                },
                                 "args": {
                                     "type": "array",
                                     "description": "Original structured-cloned argument values."
@@ -81,6 +91,7 @@
                                 "id",
                                 "timestamp",
                                 "level",
+                                "category",
                                 "args"
                             ]
                         }
@@ -104,6 +115,14 @@
         }
     },
     "methods": {
+        "getCategories": {
+            "description": "Asynchronously discovers the distinct categories currently present in storage, including null for uncategorized records.",
+            "returns": {
+                "type": "array",
+                "schema": {"type": "array", "items": {"type": ["string", "null"], "minLength": 1}},
+                "description": "Promise resolving to categories in deterministic order."
+            }
+        },
         "query": {
             "description": "Asynchronously returns the current page of matching log records. The Promise rejects if the reader is disabled or the query fails.",
             "parameters": [

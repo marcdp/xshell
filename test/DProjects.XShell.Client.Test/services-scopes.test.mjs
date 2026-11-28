@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import Services from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services.js";
+import Services, {serviceForConsumer} from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services.js";
 
 function createServices() {
     return new Services({
@@ -11,6 +11,72 @@ function createServices() {
         resolver: { resolve() { return undefined; } }
     });
 }
+
+test("consumer adaptation preserves ordinary lookup, nested identities and lifetime ownership", async () => {
+    const root = createServices();
+    const adapted = [];
+    const disposed = [];
+    const plain = {forConsumer() { assert.fail("A public method is not the internal hook"); }};
+    class Adapter {
+        static optionsSchema = {type: "object", additionalProperties: false};
+        init() { this.initialized = true; }
+        dispose() { disposed.push(this); }
+        [serviceForConsumer](consumer) {
+            adapted.push(consumer);
+            return {consumer, owner: this, dispose() { assert.fail("The returned view has no lifecycle"); }};
+        }
+    }
+    class Nested {
+        static optionsSchema = {type: "object", additionalProperties: false};
+        constructor({singleton}) { this.consumer = singleton.consumer; }
+    }
+    class Consumer {
+        static optionsSchema = {type: "object", additionalProperties: false};
+        constructor(dependencies) {
+            this.nested = dependencies.nested;
+            this.first = dependencies.singleton;
+            this.second = dependencies.singleton;
+        }
+    }
+    for (const lifetime of ["singleton", "scoped", "transient"]) {
+        root.register(lifetime, null, {lifetime, implementationItem: {class: Adapter}});
+    }
+    root.register("plain", plain);
+    root.register("nested", null, {implementationItem: {class: Nested}});
+    root.register("consumer", null, {implementationItem: {class: Consumer}});
+    await root.init();
+    const a = root.beginScope();
+    const b = root.beginScope();
+    const descriptor = {type: "page", id: "sample:/pages/index.js"};
+    const singleton = await a.initialize("singleton");
+    const scoped = await a.initialize("scoped");
+    assert.ok(singleton.initialized && scoped.initialized);
+    assert.equal(a.getServiceInfo("singleton").lifetime, "singleton");
+    assert.equal(a.registry.length, 6);
+    assert.deepEqual(adapted, []);
+    assert.equal(a.resolve("plain", descriptor), plain);
+    assert.throws(() => a.resolve("missing", descriptor), /Service not found: missing/);
+    assert.equal(a.resolve("singleton", descriptor).consumer, descriptor);
+    assert.equal(b.resolve("singleton", descriptor).owner, singleton);
+    assert.equal(a.resolve("singleton"), singleton);
+    assert.equal(a.resolve("scoped", descriptor).owner, scoped);
+    const sibling = b.resolve("scoped", descriptor).owner;
+    assert.notEqual(sibling, scoped);
+    const first = a.resolve("transient", descriptor).owner;
+    const second = a.resolve("transient", descriptor).owner;
+    assert.notEqual(first, second);
+    const consumer = a.resolve("consumer", descriptor);
+    assert.deepEqual(consumer.nested.consumer, {type: "service", id: "nested"});
+    assert.deepEqual(consumer.first.consumer, {type: "service", id: "consumer"});
+    assert.equal(consumer.first.consumer, consumer.second.consumer);
+    assert.notEqual(consumer.first, consumer.second);
+    await a.dispose();
+    assert.deepEqual(disposed, [second, first, scoped]);
+    assert.equal(root.resolve("singleton"), singleton);
+    await b.dispose();
+    assert.equal(disposed.at(-1), sibling);
+    await root.dispose();
+});
 
 test("Services scopes do not expose registry, ownership, context, or lifecycle internals", async () => {
     const root = createServices();
@@ -105,7 +171,7 @@ test("scoped resolution preserves missing, circular, contract, and options valid
     const scope = root.beginScope();
 
     assert.throws(() => scope.resolve("missing"), /Service not found: missing/);
-    assert.throws(() => scope.resolve("first"), /Circular service dependency detected: first -> second -> first/);
+    assert.throws(() => scope.resolve("first", {type: "module", id: "test"}), /Circular service dependency detected: first -> second -> first/);
     assert.throws(() => scope.resolve("invalidContract"), /does not implement required method 'execute'/);
     assert.throws(() => scope.resolve("invalidOptions"), /Invalid options for service 'invalidOptions'/);
 });
