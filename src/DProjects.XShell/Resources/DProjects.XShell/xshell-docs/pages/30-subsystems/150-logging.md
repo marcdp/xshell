@@ -81,13 +81,30 @@ once its transaction commits. Within that transaction, the provider removes reco
 then removes the oldest remaining records above `maxEntries`. The generated primary key breaks timestamp ties. Native IndexedDB transactions
 coordinate writes and retention across tabs sharing the database. Ordering across tabs depends on their transactions.
 
-Storage failures discard the failed batch and produce one fixed native console warning until a later write succeeds. If opening fails, remaining
-queued records wait for a later logging call. The provider closes stale connections on version changes. Retention runs during writes and can leave
-expired records in an inactive application. The age and count limits apply to records. Browser quotas and eviction govern storage in bytes.
+Retention runs during writes and can leave expired records in an inactive application. `retentionDays` and `maxEntries` set intended maximums
+for history age and record count. Browser quota depends on storage used across the origin, so these limits cannot guarantee room for a new batch.
+Under storage pressure, the provider may evict history before it reaches the configured age.
 
 Use the Logs Page or the browser's IndexedDB storage panel to inspect stored records. Records can survive reloads and browser sessions subject to
 storage policy. Writes are best-effort, and closing a tab or browser can discard pending records. Code with access to the same browser storage
 namespace can read the records. Keep credentials and other sensitive information out of log arguments. Use a separate system for guaranteed auditing.
+
+### Quota recovery
+
+When a write fails with `QuotaExceededError`, the provider waits for the failed transaction to roll back. A separate transaction uses the
+timestamp index to delete expired logs. If it finds none, it deletes up to 100 of the oldest retained records, breaking timestamp ties by
+generated primary key. Recovery deletes individual records from the logging object store. Other object stores, databases, and application
+storage are outside its scope.
+
+If deletions commit, the provider signals active readers and retries the original batch once with normal retention. The deletion transaction
+commits independently, so the reclaimed space and the reader notification survive a failed retry. The single retry limits work and data loss
+under persistent quota pressure. The eviction limit counts records per attempt, and the space freed depends on the stored records. Each provider
+instance manages its own attempts and cooldown, so multiple tabs can each reclaim history.
+
+If reclamation fails, removes nothing, or the retry fails, the provider discards that batch and suppresses further reclamation for 30 seconds.
+Later batches still attempt normal writes during the cooldown. Any successful write clears the cooldown. Failed batches produce one fixed native
+console warning until a write succeeds. If opening fails, remaining queued records wait for a later logging call. The provider closes stale
+connections on version changes.
 
 ## Logger contract
 
@@ -200,8 +217,9 @@ unsubscribe();
 
 Register before the initial query and run another query when a notification arrives during that query. Callbacks receive `{type: "changed"}` as a
 signal to requery. Each committed IndexedDB write batch publishes one BroadcastChannel signal for its database, covering writes and retention in
-the same transaction. The transport carries no record data and works across browser contexts that share the database's origin and storage
-partition. The reader shares one channel per provider instance and sends a reconciliation notification about every five seconds while there
+the same transaction. Committed quota recovery deletions also publish one signal, even if the subsequent retry fails. The transport carries
+no record data and works across browser contexts that share the database's origin and storage partition. The reader shares one channel per
+provider instance and sends a reconciliation notification about every five seconds while there
 are subscribers, including when BroadcastChannel is unavailable. The final unsubscribe closes the channel and stops reconciliation.
 
 Treat notifications as hints about committed storage. They may be coalesced, duplicated or missed while a context is inactive. Query results reflect

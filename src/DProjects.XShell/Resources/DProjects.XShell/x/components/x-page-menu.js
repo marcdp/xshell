@@ -19,6 +19,7 @@ export default {
     style: `
         :host {
             display:block;
+            overflow-x:hidden;
             overflow-y:auto;
             height:100%;
             width: var(--x-layout-main-drawer-width);           
@@ -28,6 +29,7 @@ export default {
         nav {
             border-left: var(--x-layout-main-border); 
             padding:1.3em; 
+            width:100%;
             min-height:100%;
             box-sizing: border-box;
             width: var(--x-layout-main-drawer-width);           

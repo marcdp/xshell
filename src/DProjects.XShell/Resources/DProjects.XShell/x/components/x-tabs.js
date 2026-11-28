@@ -87,32 +87,9 @@ export default {
         ::slotted(x-tab) {display:none;}
 
         /* sidebar */
-        :host(.sidebar) {
-            display:flex; 
-            flex-direction: row;            
-        }
-        :host(.sidebar) nav {
-            box-sizing:border-box; 
-            flex:0 0 100%; 
-            min-width:0;
-            padding:1em;
-            flex-direction:column; 
-            flex-basis:18em; 
-            flex-direction:column; 
-            flex-wrap:nowrap; 
-            margin:0 1.25em 0 0; 
-            border:0; 
-            background: var(--x-layout-main-drawer-background);
-        }
-        :host(.sidebar) nav a {
-        min-width:0; 
-            white-space:normal; 
-            overflow-wrap:anywhere; 
-            font-size:unset; font-weight:normal; border:none; border-radius: var(--x-menuitem-border-radius);
-            padding-left:.75em; 
-            line-height:2.1em; height:2.1em;
-            margin-bottom:.1em;
-        }
+        :host(.sidebar) {display:flex; flex-direction: row;            }
+        :host(.sidebar) nav {box-sizing:border-box; flex:0 0 100%; min-width:0;padding:1em;flex-direction:column; flex-basis:18em; flex-direction:column; flex-wrap:nowrap; margin:0 1.25em 0 0; border:0; background: var(--x-layout-main-drawer-background);}
+        :host(.sidebar) nav a {min-width:0; white-space:normal; overflow-wrap:anywhere; font-size:unset; font-weight:normal; border:none; border-radius: var(--x-menuitem-border-radius);padding-left:.75em; line-height:2.1em; height:2.1em;margin-bottom:.1em;}
         :host(.sidebar) nav a:hover {color:unset; background: var(--x-color-background-x-gray);}
         :host(.sidebar) nav a.selected {border:none; font-weight: 500; background: var(--x-color-background-x-gray); color:unset;}
         :host(.sidebar) nav a.selected:after {border:none;}
