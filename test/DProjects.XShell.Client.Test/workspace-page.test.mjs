@@ -3,9 +3,11 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 
 import WorkspacePage from "../../src/DProjects.XShell/Resources/DProjects.XShell/x/pages/workspace.js";
+import AreasSearchProvider from "../../src/DProjects.XShell/Resources/DProjects.XShell/x/providers/search-areas.js";
 import Menus from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/menus.js";
-import { mergeManifests, normalizeManifest } from "./helpers/manifest-composition.mjs";
+import { fillResolverRules, mergeManifests, normalizeManifest } from "./helpers/manifest-composition.mjs";
 import Areas from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/areas.js";
+import Resolver from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/resolver.js";
 
 const href = "/_assets/reports/first-generation/pages/overview.js";
 const reports = { scope: "global", label: "Reports", description: "Review the latest results.", icon: "x-chart",
@@ -121,23 +123,40 @@ test("Workspace validates duplicate IDs across branches and resolves unique sibl
 });
 
 
-test("bundled manifests select named Area navigation menus and compose global shortcuts", () => {
+test("bundled manifests select named Area navigation menus and compose global shortcuts", async () => {
     const resources = new URL("../../src/DProjects.XShell/Resources/DProjects.XShell/", import.meta.url);
     const readManifest = id => JSON.parse(readFileSync(new URL(`${id}/manifest.jsonc`, resources), "utf8")
         .replace(/^\s*\/\/[^\r\n]*/gm, "").replace(/,(?=\s*[}\]])/g, ""));
     const ids = ["xshell", "x", "x-filesystem", "xshell-diagnostics", "xshell-docs", "x-home", "x-demo"];
+    const diagnostics = [
+        ["application", "Application", ["app", "config", "modules"]],
+        ["runtime", "Runtime", ["runtime", "errors", "bus", "tasks"]],
+        ["resources", "Resources", ["resolver", "loader", "schemas"]],
+        ["ui", "UI", ["components", "pages", "navigation", "icons", "i18n"]],
+        ["apis", "APIs", ["services", "contracts", "commands", "queries"]],
+        ["browser", "Browser", ["storage", "service-worker"]]
+    ];
+    const diagnosticPages = diagnostics.flatMap(([group, , pages]) => pages.map(id => `/pages/${group}/${id}.js`));
+    const detailPages = ["contract-detail", "service-inspector", "tasks-detail"];
     const modules = ids.map(name => {
         const manifest = readManifest(name);
         const assetsPath = "/_assets/" + name + "/0.9.0.dev";
         const module = { name, assetsPath, manifestUrl: "https://example.test/" + name + "/manifest.json" };
         const definition = manifest.modules?.[name];
         if (definition) definition.files = [{ path: name === "xshell-docs" ? "/pages/index.md" : "/pages/index.js" }];
+        if (name === "xshell-diagnostics") {
+            const pages = [...diagnosticPages, ...detailPages.map(id => `/pages/detail/${id}.js`)];
+            definition.files.push(...pages.map(path => ({ path, resource: { type: "page" } })));
+        }
         module.dependencies = Object.fromEntries(Object.keys(definition?.dependencies ?? {}).filter(id => ids.includes(id)).map(id => [id, "0.9.0"]));
         module.manifest = normalizeManifest(manifest, module);
         return module;
     });
     const config = mergeManifests(modules, modules.at(-1));
+    config.app = { baseUrl: "https://example.test/" };
     config.xshell.assets.basePath = "/_assets";
+    fillResolverRules(config);
+    const resolver = new Resolver({ config });
     const bus = new EventTarget();
     const areas = new Areas({ config, bus }, config.xshell.services.areas.options);
     const menus = new Menus({ areas, bus, config }, config.xshell.services.menus.options);
@@ -170,7 +189,35 @@ test("bundled manifests select named Area navigation menus and compose global sh
     const shortcuts = settings[0].children;
     assert.equal(shortcuts.find(item => item.label === "Preferences").href, workspaceSrc);
     assert.ok(shortcuts.some(item => item.label === "About"));
-    assert.equal(shortcuts.find(item => item.label === "Diagnostics console").module, "xshell-diagnostics");
+    const dock = shortcuts.find(item => item.label === "Diagnostics console");
+    assert.deepEqual([dock.module, dock.open, dock.href],
+        ["xshell-diagnostics", "dock", "/_assets/xshell-diagnostics/0.9.0.dev/pages/index.js"]);
+
+    // Check the composed hierarchy, friendly aliases and actual relocated resources.
+    const [consoleItem, details] = menus.getMenu("navigation", "xshell-diagnostics").items;
+    assert.equal(menus.resolvePath("/xshell-diagnostics/"), consoleItem);
+    assert.deepEqual(consoleItem.children.map(group => [group.id, group.label, group.children.map(item => item.id)]), diagnostics);
+    const tabs = consoleItem.children.flatMap(group => group.children);
+    assert.equal(new Set(tabs.map(item => item.href)).size, 21);
+    const assetRoot = "/_assets/xshell-diagnostics/0.9.0.dev";
+    for (const [index, tab] of tabs.entries()) {
+        const path = diagnosticPages[index];
+        const { default: definition } = await import(new URL("xshell-diagnostics" + path, resources));
+        assert.equal(tab.label, definition.meta.title);
+        assert.equal(tab.module, "xshell-diagnostics");
+        assert.equal(tab.href, "/xshell-diagnostics" + assetRoot + path);
+        assert.equal(menus.resolvePath("/xshell-diagnostics/" + tab.id), tab);
+        const resolved = resolver.resolve("page:xshell-diagnostics:" + path);
+        assert.equal(resolved.path, assetRoot + path);
+        assert.equal(resolved.definition.loader, "page-js");
+    }
+    assert.deepEqual(details.children.map(item => item.id), detailPages);
+    for (const id of detailPages) {
+        assert.equal(menus.resolvePath(`/xshell-diagnostics/detail/${id}`).href, `/xshell-diagnostics${assetRoot}/pages/detail/${id}.js`);
+    }
+    const search = new AreasSearchProvider({ areas, menus, config });
+    assert.ok((await search.query("modules", {})).some(item => item.type === "page" && item.href === "/xshell-diagnostics/modules"));
+    assert.ok((await search.query("service inspector", {})).some(item => item.type === "page" && item.href === "/xshell-diagnostics/detail/service-inspector"));
     assert.equal(menus.getMenu("global", "cookbook").scope, "global");
     const embeddedItems = config.xshell.services.menus.options.definitions.global.items.flatMap(item => item.children || []).filter(item => item.open === "embed");
     assert.equal(embeddedItems.length, 3);

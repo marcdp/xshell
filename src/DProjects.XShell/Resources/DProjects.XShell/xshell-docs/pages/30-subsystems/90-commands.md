@@ -24,7 +24,7 @@ The optional `moduleId` and `category` filters are exact. `query` is a case-inse
 rule: the path below the owning `/commands/` directory with only the final `.js` removed, so nested paths retain `/` and dotted filenames retain
 their dots.
 
-The Diagnostics console's Commands Page presents these descriptors with ID, label, owner, category, tags, description, size, and source filters. Enter
+In the Diagnostics console, **APIs → Commands** presents these descriptors with ID, label, owner, category, tags, description, size, and source filters. Enter
 or double-click on a Command row opens the existing invocation Page in stack mode. The listing uses the discovery API and therefore does not load
 Command implementations; the invocation Page resolves the selected implementation only after activation. Discovery describes what can be
 resolved, while execution remains the separate operation below.

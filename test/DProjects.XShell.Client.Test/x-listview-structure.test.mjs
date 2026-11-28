@@ -6,19 +6,19 @@ const sourceRoot = new URL("../../src/DProjects.XShell/Resources/DProjects.XShel
 const structureFiles = [
     "x/pages/search.js",
     "x-demo/pages/01-components/05-listviews.js",
-    "xshell-diagnostics/pages/bus.js",
-    "xshell-diagnostics/pages/components.js",
-    "xshell-diagnostics/pages/commands.js",
-    "xshell-diagnostics/pages/contracts.js",
-    "xshell-diagnostics/pages/icons.js",
-    "xshell-diagnostics/pages/loader.js",
-    "xshell-diagnostics/pages/modules.js",
-    "xshell-diagnostics/pages/navigation.js",
-    "xshell-diagnostics/pages/pages.js",
-    "xshell-diagnostics/pages/resolver.js",
-    "xshell-diagnostics/pages/schemas.js",
-    "xshell-diagnostics/pages/service-worker.js",
-    "xshell-diagnostics/pages/services.js"
+    "xshell-diagnostics/pages/runtime/bus.js",
+    "xshell-diagnostics/pages/ui/components.js",
+    "xshell-diagnostics/pages/apis/commands.js",
+    "xshell-diagnostics/pages/apis/contracts.js",
+    "xshell-diagnostics/pages/ui/icons.js",
+    "xshell-diagnostics/pages/resources/loader.js",
+    "xshell-diagnostics/pages/application/modules.js",
+    "xshell-diagnostics/pages/ui/navigation.js",
+    "xshell-diagnostics/pages/ui/pages.js",
+    "xshell-diagnostics/pages/resources/resolver.js",
+    "xshell-diagnostics/pages/resources/schemas.js",
+    "xshell-diagnostics/pages/browser/service-worker.js",
+    "xshell-diagnostics/pages/apis/services.js"
 ];
 
 function readSource(path) {
@@ -51,19 +51,19 @@ test("every listview has a direct body after its optional head", () => {
 
 test("details listviews preserve expected column counts and interactive headers", () => {
     const expectedColumns = new Map([
-        ["xshell-diagnostics/pages/bus.js", [4]],
-        ["xshell-diagnostics/pages/components.js", [8]],
-        ["xshell-diagnostics/pages/commands.js", [7]],
-        ["xshell-diagnostics/pages/contracts.js", [8]],
-        ["xshell-diagnostics/pages/icons.js", [6]],
-        ["xshell-diagnostics/pages/loader.js", [7]],
-        ["xshell-diagnostics/pages/modules.js", [8]],
-        ["xshell-diagnostics/pages/navigation.js", [6, 4, 5]],
-        ["xshell-diagnostics/pages/pages.js", [8]],
-        ["xshell-diagnostics/pages/resolver.js", [5]],
-        ["xshell-diagnostics/pages/schemas.js", [7]],
-        ["xshell-diagnostics/pages/service-worker.js", [5]],
-        ["xshell-diagnostics/pages/services.js", [9]]
+        ["xshell-diagnostics/pages/runtime/bus.js", [4]],
+        ["xshell-diagnostics/pages/ui/components.js", [9]],
+        ["xshell-diagnostics/pages/apis/commands.js", [8]],
+        ["xshell-diagnostics/pages/apis/contracts.js", [9]],
+        ["xshell-diagnostics/pages/ui/icons.js", [6]],
+        ["xshell-diagnostics/pages/resources/loader.js", [7]],
+        ["xshell-diagnostics/pages/application/modules.js", [10]],
+        ["xshell-diagnostics/pages/ui/navigation.js", [5, 4, 5]],
+        ["xshell-diagnostics/pages/ui/pages.js", [9]],
+        ["xshell-diagnostics/pages/resources/resolver.js", [5]],
+        ["xshell-diagnostics/pages/resources/schemas.js", [7]],
+        ["xshell-diagnostics/pages/browser/service-worker.js", [5]],
+        ["xshell-diagnostics/pages/apis/services.js", [12]]
     ]);
 
     for (const [path, counts] of expectedColumns) {
@@ -73,9 +73,9 @@ test("details listviews preserve expected column counts and interactive headers"
         assert.deepEqual(actual, counts, path);
     }
 
-    assert.match(readSource("xshell-diagnostics/pages/bus.js"), /<x-listview-column[^>]*>[\s\S]*<x-datafield[^>]*x-model="state\.query_type"/);
-    assert.match(readSource("xshell-diagnostics/pages/bus.js"), /<x-listview-column[^>]*>[\s\S]*<x-button[^>]*command="clear"/);
-    assert.match(readSource("xshell-diagnostics/pages/loader.js"), /<x-listview-column[^>]*>[\s\S]*<x-button[^>]*command="clear"/);
+    assert.match(readSource("xshell-diagnostics/pages/runtime/bus.js"), /<x-listview-column[^>]*>[\s\S]*<x-datafield[^>]*x-model="state\.query_type"/);
+    assert.match(readSource("xshell-diagnostics/pages/runtime/bus.js"), /<x-listview-column[^>]*>[\s\S]*<x-button[^>]*command="clear"/);
+    assert.match(readSource("xshell-diagnostics/pages/resources/loader.js"), /<x-listview-column[^>]*>[\s\S]*<x-button[^>]*command="clear"/);
 });
 
 test("listview pages preserve dynamic items, navigation, selection, auto-scroll, and treeview", () => {
@@ -86,10 +86,10 @@ test("listview pages preserve dynamic items, navigation, selection, auto-scroll,
     assert.match(search, /x-attr:open="result\.open"/);
     assert.doesNotMatch(search, /x-on:activate=/);
 
-    assert.match(readSource("xshell-diagnostics/pages/bus.js"), /<x-listview[^>]*ref="listview"[^>]*auto-scroll="true"/);
-    assert.match(readSource("xshell-diagnostics/pages/loader.js"), /<x-listview[^>]*auto-scroll/);
+    assert.match(readSource("xshell-diagnostics/pages/runtime/bus.js"), /<x-listview[^>]*ref="listview"[^>]*auto-scroll="true"/);
+    assert.match(readSource("xshell-diagnostics/pages/resources/loader.js"), /<x-listview[^>]*auto-scroll/);
 
-    const navigation = readSource("xshell-diagnostics/pages/navigation.js");
+    const navigation = readSource("xshell-diagnostics/pages/ui/navigation.js");
     assert.match(navigation, /<x-treeview>/);
     assert.match(navigation, /<x-treeview-item x-recursive=/);
 });

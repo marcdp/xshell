@@ -29,7 +29,54 @@
             "menus": {
                 "options": {
                     "definitions": {
-                        "diagnostics": { "sources": [{ "source": "/pages" }] },
+                        // Keep the existing friendly Area paths as aliases for the grouped Pages.
+                        "diagnostics": {
+                            "items": [{
+                                "id": "console", "label": "XShell Diagnostics", "path": "xshell-diagnostics/", "href": "/pages/index.js", "default": true,
+                                "children": [
+                                    { "id": "application", "label": "Application", "order": 10, "children": [
+                                        { "id": "app", "label": "App", "order": 10, "path": "app", "href": "/pages/application/app.js" },
+                                        { "id": "config", "label": "Config", "order": 20, "path": "config", "href": "/pages/application/config.js" },
+                                        { "id": "modules", "label": "Modules", "order": 30, "path": "modules", "href": "/pages/application/modules.js" }
+                                    ] },
+                                    { "id": "runtime", "label": "Runtime", "order": 20, "children": [
+                                        { "id": "runtime", "label": "Runtime", "order": 10, "path": "runtime", "href": "/pages/runtime/runtime.js" },
+                                        { "id": "errors", "label": "Errors", "order": 20, "path": "errors", "href": "/pages/runtime/errors.js" },
+                                        { "id": "bus", "label": "Bus", "order": 30, "path": "bus", "href": "/pages/runtime/bus.js" },
+                                        { "id": "tasks", "label": "Tasks", "order": 40, "path": "tasks", "href": "/pages/runtime/tasks.js" }
+                                    ] },
+                                    { "id": "resources", "label": "Resources", "order": 30, "children": [
+                                        { "id": "resolver", "label": "Resolver", "order": 10, "path": "resolver", "href": "/pages/resources/resolver.js" },
+                                        { "id": "loader", "label": "Loader", "order": 20, "path": "loader", "href": "/pages/resources/loader.js" },
+                                        { "id": "schemas", "label": "Schemas", "order": 30, "path": "schemas", "href": "/pages/resources/schemas.js" }
+                                    ] },
+                                    { "id": "ui", "label": "UI", "order": 40, "children": [
+                                        { "id": "components", "label": "Components", "order": 10, "path": "components", "href": "/pages/ui/components.js" },
+                                        { "id": "pages", "label": "Pages", "order": 20, "path": "pages", "href": "/pages/ui/pages.js" },
+                                        { "id": "navigation", "label": "Navigation", "order": 30, "path": "navigation", "href": "/pages/ui/navigation.js" },
+                                        { "id": "icons", "label": "Icons", "order": 40, "path": "icons", "href": "/pages/ui/icons.js" },
+                                        { "id": "i18n", "label": "I18n", "order": 50, "path": "i18n", "href": "/pages/ui/i18n.js" }
+                                    ] },
+                                    { "id": "apis", "label": "APIs", "order": 50, "children": [
+                                        { "id": "services", "label": "Services", "order": 10, "path": "services", "href": "/pages/apis/services.js" },
+                                        { "id": "contracts", "label": "Contracts", "order": 20, "path": "contracts", "href": "/pages/apis/contracts.js" },
+                                        { "id": "commands", "label": "Commands", "order": 30, "path": "commands", "href": "/pages/apis/commands.js" },
+                                        { "id": "queries", "label": "Queries", "order": 40, "path": "queries", "href": "/pages/apis/queries.js" }
+                                    ] },
+                                    { "id": "browser", "label": "Browser", "order": 60, "children": [
+                                        { "id": "storage", "label": "Storage", "order": 10, "path": "storage", "href": "/pages/browser/storage.js" },
+                                        { "id": "service-worker", "label": "Service Worker", "order": 20, "path": "service-worker", "href": "/pages/browser/service-worker.js" }
+                                    ] }
+                                ]
+                            }, {
+                                // Keep detail links available to Area navigation and search outside the console's tab groups.
+                                "id": "detail", "label": "Detail", "order": 10, "children": [
+                                    { "id": "contract-detail", "label": "Contract detail", "path": "detail/contract-detail", "href": "/pages/detail/contract-detail.js" },
+                                    { "id": "service-inspector", "label": "Service Inspector", "path": "detail/service-inspector", "href": "/pages/detail/service-inspector.js" },
+                                    { "id": "tasks-detail", "label": "Task details", "path": "detail/tasks-detail", "href": "/pages/detail/tasks-detail.js" }
+                                ]
+                            }]
+                        },
                         "global": {
                             "items": [
                                 {"id": "root", "children": [

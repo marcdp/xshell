@@ -2,18 +2,19 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import DiagnosticsPage from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell-diagnostics/pages/index.js";
-import BusPage from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell-diagnostics/pages/bus.js";
-import ModulesPage from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell-diagnostics/pages/modules.js";
-import ServicesPage from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell-diagnostics/pages/services.js";
+import BusPage from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell-diagnostics/pages/runtime/bus.js";
+import ModulesPage from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell-diagnostics/pages/application/modules.js";
+import ServicesPage from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell-diagnostics/pages/apis/services.js";
 import InspectorPage from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell-diagnostics/pages/detail/service-inspector.js";
-import LoaderPage from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell-diagnostics/pages/loader.js";
-import ComponentsPage from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell-diagnostics/pages/components.js";
-import PagesPage from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell-diagnostics/pages/pages.js";
-import SchemasPage from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell-diagnostics/pages/schemas.js";
-import CommandsPage from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell-diagnostics/pages/commands.js";
-import ContractsPage from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell-diagnostics/pages/contracts.js";
+import LoaderPage from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell-diagnostics/pages/resources/loader.js";
+import ComponentsPage from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell-diagnostics/pages/ui/components.js";
+import PagesPage from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell-diagnostics/pages/ui/pages.js";
+import SchemasPage from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell-diagnostics/pages/resources/schemas.js";
+import CommandsPage from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell-diagnostics/pages/apis/commands.js";
+import ContractsPage from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell-diagnostics/pages/apis/contracts.js";
 import ContractDetailPage from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell-diagnostics/pages/detail/contract-detail.js";
-import NavigationPage from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell-diagnostics/pages/navigation.js";
+import NavigationPage from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell-diagnostics/pages/ui/navigation.js";
+import Anchor from "../../src/DProjects.XShell/Resources/DProjects.XShell/x/components/x-anchor.js";
 import ListView from "../../src/DProjects.XShell/Resources/DProjects.XShell/x/components/x-listview.js";
 import Page from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/page.js";
 import Logger from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/logger.js";
@@ -29,14 +30,79 @@ function createEvents(getController) {
     };
 }
 
-test("Diagnostics console derives its tabs from the effective navigation menu items", async () => {
+function diagnosticsConsole(items, stored = {}) {
+    // Exercise the Page controller with a different effective menu and an in-memory Preferences service.
     const state = structuredClone(DiagnosticsPage.state);
-    const tasks = { label: "Tasks", href: "/_assets/xshell-diagnostics/pages/tasks.js" };
-    const menu = { name: "navigation", label: "Navigation", description: "", icon: null,
-        items: [{ children: [tasks, { label: "Detail" }] }] };
-    const menus = { getMenu: () => menu };
-    await DiagnosticsPage.controller({ state, menus, preferences: { get: async () => 0 } }).load();
-    assert.deepEqual(state.menuitems, [tasks]);
+    const menus = { getMenu(name, area) {
+        assert.deepEqual([name, area], ["navigation", "xshell-diagnostics"]);
+        return { items };
+    } };
+    const preferences = { async get(key) { return stored[key]; }, async set(key, value) { stored[key] = structuredClone(value); } };
+    const controller = DiagnosticsPage.controller({ state, menus, preferences });
+    return { state, controller };
+}
+
+const navigationPreference = "xshell-diagnostics.navigation";
+const legacyPreference = "xshell-diagnostics.selectedIndex";
+const sampleMenu = [{ id: "console", href: "/console.js", children: [
+    { id: "operations", label: "Operations", children: [
+        { id: "runtime", href: "/runtime.js" }, { id: "tasks", href: "/tasks.js" }, { id: "detail" }
+    ] },
+    { id: "overview", label: "Overview", children: [
+        { id: "app", href: "/app.js" }, { id: "modules", href: "/modules.js" }
+    ] },
+    { id: "empty", children: [{ id: "detail" }] }
+] }];
+
+test("Diagnostics uses the configured groups, remembers each selection and creates only visited Pages", async () => {
+    const stored = {};
+    const { state, controller } = diagnosticsConsole(sampleMenu, stored);
+    await controller.load();
+    assert.deepEqual(state.groups.map(group => [group.id, group.items.map(item => item.id)]),
+        [["operations", ["runtime", "tasks"]], ["overview", ["app", "modules"]]]);
+    assert.equal(state.selectedGroupId, "operations");
+    assert.deepEqual(state.visited, { "/runtime.js": true });
+    assert.deepEqual(stored, {});
+
+    const selectPage = (groupId, selectedIndex) =>
+        controller.selectPage({ event: { currentTarget: { dataset: { groupId } }, detail: { selectedIndex } } });
+    await selectPage("operations", 1);
+    assert.deepEqual(stored[navigationPreference].pageIds, { operations: "tasks" });
+    await controller.selectGroup({ groupId: "overview" });
+    await selectPage("overview", 1);
+    await controller.selectGroup({ groupId: "operations" });
+    assert.equal(state.groups[0].selectedIndex, 1);
+    assert.deepEqual(state.visited, { "/runtime.js": true, "/tasks.js": true, "/app.js": true, "/modules.js": true });
+    assert.deepEqual(stored[navigationPreference], { groupId: "operations", pageIds: { operations: "tasks", overview: "modules" } });
+
+    const reopened = diagnosticsConsole(sampleMenu, stored);
+    await reopened.controller.load();
+    assert.deepEqual(reopened.state.visited, { "/tasks.js": true });
+    await reopened.controller.selectGroup({ groupId: "overview" });
+    assert.equal(reopened.state.groups[1].selectedIndex, 1);
+    assert.deepEqual(reopened.state.visited, { "/tasks.js": true, "/modules.js": true });
+});
+
+test("Diagnostics migrates the former flat ordering and falls back from obsolete or malformed preferences", async () => {
+    const stored = { [legacyPreference]: 10 };
+    const migrated = diagnosticsConsole(sampleMenu, stored);
+    await migrated.controller.load();
+    assert.equal(migrated.state.selectedGroupId, "overview");
+    assert.deepEqual(migrated.state.visited, { "/modules.js": true });
+    assert.equal(stored[navigationPreference].pageIds.overview, "modules");
+
+    for (const invalid of [null, [], { groupId: "obsolete", pageIds: { operations: "removed", overview: "modules" } }]) {
+        const { state, controller } = diagnosticsConsole(sampleMenu, { ...stored, [navigationPreference]: invalid });
+        await controller.load();
+        assert.equal(state.selectedGroupId, "operations");
+        assert.deepEqual(state.visited, { "/runtime.js": true });
+        await controller.selectGroup({ groupId: "obsolete" });
+        assert.equal(state.selectedGroupId, "operations");
+    }
+
+    const empty = diagnosticsConsole([]);
+    await empty.controller.load();
+    assert.deepEqual(empty.state.groups, []);
 });
 
 test("Modules diagnostics displays and filters the framework alongside the module registry", () => {
@@ -188,12 +254,12 @@ test("Commands diagnostics reads and filters service descriptors without configu
     assert.deepEqual(state.items.map(item => item.id), ["filesystem.encrypt"]);
     assert.match(CommandsPage.template, /x-for="item in state\.items"/);
     assert.match(CommandsPage.template, /x-attr:href="item\.path"/);
-    assert.match(CommandsPage.template, /<x-empty x-else/);
+    assert.match(CommandsPage.template, /<x-listview-body>/);
 });
 
 test("Commands diagnostics opens invoke.js in stack mode on keyboard and double-click activation", async t => {
     const id = "filesystem.entry.encrypt.aes";
-    const page = {src: "/_assets/xshell-diagnostics/pages/commands.js"};
+    const page = {src: "/_assets/xshell-diagnostics/pages/apis/commands.js"};
     const commands = {getInfo: value => value === id ? {id} : null};
     const navigation = {navigate: t.mock.fn()};
     const controller = CommandsPage.controller({commands, navigation, page});
@@ -254,7 +320,7 @@ test("Services diagnostics re-reads the public registry on Refresh", () => {
 test("Double-clicking a service opens and closes a stacked Inspector with the exact service ID", async t => {
     const href = "page:xshell-diagnostics:/pages/detail/service-inspector.js";
     const inspectorPath = "/_assets/xshell-diagnostics/pages/detail/service-inspector.js";
-    const page = { src: "/_assets/xshell-diagnostics/pages/services.js" };
+    const page = { src: "/_assets/xshell-diagnostics/pages/apis/services.js" };
     const state = { ...ServicesPage.state, id: "navigation" };
     const serviceId = "navigation /?#&+%=ñ";
     const services = { has: id => id === serviceId };
@@ -314,19 +380,17 @@ test("Double-clicking a service opens and closes a stacked Inspector with the ex
     assert.equal(state.id, "navigation");
 });
 
-test("Services diagnostics file links retain native activation without activating the row", t => {
+test("Services diagnostics file links retain native activation", t => {
     for (const binding of ["item.contractUrl", "item.url"]) {
         const anchor = Array.from(ServicesPage.template.matchAll(/<x-anchor\b[^>]+>/g), match => match[0])
             .find(markup => markup.includes(`x-attr:href="${binding}"`));
         assert.match(anchor, /target="_blank"/);
     }
-    const controller = ServicesPage.controller({});
-    for (const type of ["dblclick", "keydown"]) {
-        const event = new Event(type, { bubbles: true, cancelable: true });
-        const stop = t.mock.method(event, "stopPropagation");
-        assert.equal(stop.mock.callCount(), 1);
-        assert.equal(event.defaultPrevented, false);
-    }
+    const navigate = t.mock.fn();
+    const event = Object.assign(new Event("click", { cancelable: true }), { button: 0 });
+    Anchor.controller({ state: { href: "/service.js", target: "_blank" }, navigation: { navigate } }).click({ event });
+    assert.equal(navigate.mock.callCount(), 0);
+    assert.equal(event.defaultPrevented, false);
 });
 
 const contractDetailHref = "page:xshell-diagnostics:/pages/detail/contract-detail.js";
@@ -361,7 +425,8 @@ for (const [listing, kind, item, id] of [
     [ContractsPage, "contract", "contractItem", "navigation"]
 ]) {
     test(`The ${kind} listing activates the row contract by keyboard and double-click while preserving its file link`, async t => {
-        const page = { src: "/_assets/xshell-diagnostics/pages/" + kind + "s.js" };
+        const group = kind === "contract" ? "apis" : "ui";
+        const page = { src: `/_assets/xshell-diagnostics/pages/${group}/${kind}s.js` };
         const navigation = { navigate: t.mock.fn() };
         const controller = listing.controller({ page, navigation });
         const row = Object.assign(new EventTarget(), { value: id, selected: true, closest() { return this; } });
@@ -379,12 +444,6 @@ for (const [listing, kind, item, id] of [
         const anchor = Array.from(listing.template.matchAll(/<x-anchor\b[^>]+>/g), match => match[0])
             .find(markup => markup.includes(`x-attr:href="${item}.url"`));
         assert.match(anchor, /target="_blank"/);
-        for (const type of ["dblclick", "keydown"]) {
-            const event = new Event(type, { bubbles: true, cancelable: true });
-            const stop = t.mock.method(event, "stopPropagation");
-            assert.equal(stop.mock.callCount(), 1);
-            assert.equal(event.defaultPrevented, false);
-        }
     });
 }
 
@@ -422,7 +481,7 @@ test("Navigation reconstructs a stacked contract reference and exact query ID fr
     const serialized = navigation.parseUrl(pushState.mock.calls.at(-1).arguments[2]);
     assert.deepEqual(serialized.nav.stack[0].classes, ["size-wide"]);
     const page = new Page({ src: hosts[1].src, bus: { emit() {} } });
-    const state = structuredClone(ContractDetailPage.state);
+    const state = { ...structuredClone(ContractDetailPage.state), ...page.query };
     const contracts = {
         getContractById: t.mock.fn(() => ({ label: "Shared API" })),
         getContractItemById: () => ({ moduleId: "example" })

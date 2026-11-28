@@ -4,7 +4,12 @@ export default {
     contract: {
         description: "Displays tab headers and the selected tab panel.",
         tags: ["navigation", "tabs", "selection"],
-        events: {},
+        events: {
+            tabchange: {
+                description: "Raised when the user selects a different tab.",
+                detail: { selectedIndex: { type: "number" } }
+            }
+        },
         properties: {
             selectedIndex: {type:"number", default:0, attribute:true, state:true, description:""},
             selectedHash:  {type:"string", default:"", attribute:true, state:true, description:""},
@@ -170,12 +175,14 @@ export default {
             },
 
             click(params) {
-                //click
-                let event = params.event;
-                let anchors = Array.from(host.shadowRoot.querySelectorAll("nav a"));
-                state.selectedIndex = anchors.indexOf(event.target);
-                this.refresh();
+                // Let consumers persist changes made through the tab headers.
+                const { event } = params;
                 event.preventDefault();
+                const selectedIndex = Array.from(host.shadowRoot.querySelectorAll("nav a")).indexOf(event.target);
+                if (selectedIndex < 0 || selectedIndex === state.selectedIndex) return;
+                state.selectedIndex = selectedIndex;
+                this.refresh();
+                host.dispatchEvent(new CustomEvent("tabchange", { detail: { selectedIndex } }));
             },
 
             refresh(params) {

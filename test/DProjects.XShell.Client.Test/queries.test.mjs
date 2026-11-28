@@ -1,7 +1,6 @@
 import assert from "node:assert/strict";
 import {readFileSync} from "node:fs";
 import test from "node:test";
-import vm from "node:vm";
 
 import Contracts from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/contracts.js";
 import JsonValidator from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/json-validator.js";
@@ -10,14 +9,10 @@ import Resolver from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshe
 import Services from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services.js";
 import InvokePage from "../../src/DProjects.XShell/Resources/DProjects.XShell/x/pages/invoke.js";
 import queriesPage from "../../src/DProjects.XShell/Resources/DProjects.XShell/x-demo/pages/90-advanced/10-queries.js";
-import DiagnosticsQueries from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell-diagnostics/pages/queries.js";
+import DiagnosticsQueries from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell-diagnostics/pages/apis/queries.js";
+import { fillResolverRules } from "./helpers/manifest-composition.mjs";
 
 const resources = new URL("../../src/DProjects.XShell/Resources/DProjects.XShell/", import.meta.url);
-const bootstrap = readFileSync(new URL("bootstrap/index.js", resources), "utf8");
-const fillResolverRules = vm.runInNewContext("(" + bootstrap.slice(
-    bootstrap.indexOf("function fillXShellResolverRules(config)"),
-    bootstrap.indexOf("config = fillXShell(config);")
-).trim() + ")");
 
 const queryFile = (owner, id, resource) => ({path: `/${owner}/queries/${id}.js`, size: 120, resource});
 const deferred = () => Promise.withResolvers();
@@ -192,7 +187,7 @@ test("Diagnostics filters Query metadata and activating a row opens invoke.js in
     const state = {...structuredClone(DiagnosticsQueries.state), id: "COUNT", tags: "INVENTORY"};
     const events = {on: t.mock.fn()};
     const navigate = t.mock.fn();
-    const diagnosticsPage = {src: "/xshell-diagnostics/pages/queries.js"};
+    const diagnosticsPage = {src: "/xshell-diagnostics/pages/apis/queries.js"};
     const diagnostics = DiagnosticsQueries.controller({state, queries, events, page: diagnosticsPage, navigation: {navigate}});
     const loads = loader.registry.length;
     diagnostics.load();

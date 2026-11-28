@@ -20,10 +20,30 @@ routes separately from canonical Page/resource hrefs.
 Subsystems that own collections expose read-only `registry` snapshots for observation. Reading a registry does not create, resolve, or load an item;
 operational APIs such as `services.resolve(...)` and `loader.load(...)` remain separate.
 
+### Diagnostics console
+
+Open **Diagnostics console** from the global menu to use it in the dock. Choose a group in the header, then choose a diagnostic Page in its tab bar.
+
+| Group | Diagnostic Pages |
+| --- | --- |
+| Application | App, Config, Modules |
+| Runtime | Runtime, Errors, Bus, Tasks |
+| Resources | Resolver, Loader, Schemas |
+| UI | Components, Pages, Navigation, Icons, I18n |
+| APIs | Services, Contracts, Commands, Queries |
+| Browser | Storage, Service Worker |
+
+The console remembers the last tab in each group and the last active group through Preferences. A tab loads on its first visit and keeps its Page
+state while the console stays mounted. Contract Detail, Service Inspector, and Task Details open from their diagnostic Pages in the Stack.
+
+Friendly links such as `/xshell-diagnostics/modules` still resolve. Direct Page references and asset links to the old flat files must use the group
+directory, for example `page:xshell-diagnostics:/pages/application/modules.js`, `page:xshell-diagnostics:/pages/apis/services.js`, and
+`page:xshell-diagnostics:/pages/runtime/tasks.js`. The console entry and detail Page hrefs keep their existing paths.
+
 ### Diagnostics contract reference
 
-In the Diagnostics console, activate a row in **Components**, **Pages**, or **Contracts** to open **Contract Detail** in the Stack.
-In **Services**, activate a row to open the interactive **Service Inspector**, then choose **View Contract** to read the same reference.
+Activate a row in **UI → Components**, **UI → Pages**, or **APIs → Contracts** to open **Contract Detail** in the Stack.
+In **APIs → Services**, activate a row to open the interactive **Service Inspector**, then choose **View Contract** to read the same reference.
 The Inspector can read live properties, invoke methods, and monitor events. Contract Detail reads Service registrations without constructing a Service.
 Contract Detail opens on **Overview** and shows tabs for the contract sections and examples that are present.
 

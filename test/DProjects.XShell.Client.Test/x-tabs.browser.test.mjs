@@ -24,6 +24,8 @@ async function verifyTabs({ template, style, controller: createController }) {
     const slot = root.querySelector("slot");
     const [overview, details] = host.children;
     for (const panel of host.children) panel.hash = panel.getAttribute("hash");
+    const selections = [];
+    host.addEventListener("tabchange", event => selections.push(event.detail.selectedIndex));
 
     // Bind the fixture's state and template events to the real controller.
     const listeners = new Map();
@@ -77,6 +79,8 @@ async function verifyTabs({ template, style, controller: createController }) {
     selected(overview);
     state.selectedHash = "details";
     selected(details);
+    nav.children[1].click();
+    check(selections.join() === "0,1", "Only changes made through the tab bar should emit tabchange");
 
     // Let actual slotchange events refresh the tab list around the current selection.
     const extra = document.createElement("x-tab");
@@ -85,11 +89,14 @@ async function verifyTabs({ template, style, controller: createController }) {
     let update = changed();
     host.append(extra);
     await update;
-    check(nav.children.length === 3 && box(nav.children[2]).height > box(nav.children[0]).height, "Inserted long labels should wrap");
+    const label = document.createRange();
+    label.selectNodeContents(nav.children[2]);
+    check(nav.children.length === 3 && label.getClientRects().length > 1, "Inserted long sidebar labels should wrap");
     selected(details);
+    host.classList.remove("sidebar");
     frame.style.width = "360px";
     check(getComputedStyle(nav).flexDirection === "row" && box(details).top >= box(nav).bottom, "Narrow tabs should stack");
-    check(host.scrollWidth === host.clientWidth && nav.scrollWidth === nav.clientWidth, "Narrow tabs should stay within the container");
+    check(host.scrollWidth === host.clientWidth && box(nav).right <= box(host).right, "Narrow tabs should stay within the container");
     update = changed();
     extra.remove();
     await update;
@@ -97,7 +104,7 @@ async function verifyTabs({ template, style, controller: createController }) {
     selected(details);
 
     frame.style.width = "900px";
-    host.classList.add("no-header");
+    host.classList.add("sidebar", "no-header");
     check(display(nav) === "none" && box(details).width === box(host).width, "Sidebar no-header should give the panel full width");
     host.classList.remove("sidebar", "no-header");
     check(getComputedStyle(nav).flexDirection === "row", "Removing sidebar should restore the default layout");

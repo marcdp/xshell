@@ -535,6 +535,32 @@ namespace DProjects.XShell.Test {
             Assert.Contains("page:x-logs:/pages/logs.js", demo.Text);
         }
         [Fact]
+        public async Task DevelopmentRepository_IndexesAndServesGroupedDiagnosticsPages() {
+            // Read the generated inventory and request representative Pages through the versioned resource handler.
+            var root = Path.Combine(AppContext.BaseDirectory, "Resources", "DProjects.XShell");
+            const string module = "/_resources/xshell-diagnostics/0.9.0.dev";
+            var descriptor = await SendAsync(root, module + "/manifest.json", true);
+            Assert.Equal(200, descriptor.StatusCode);
+            using var manifest = JsonDocument.Parse(descriptor.Body);
+            var pages = manifest.RootElement.GetProperty("modules").GetProperty("xshell-diagnostics").GetProperty("files").EnumerateArray()
+                .Where(file => file.TryGetProperty("resource", out var resource) && resource.GetProperty("type").GetString() == "page")
+                .ToDictionary(file => file.GetProperty("path").GetString()!, file => file.GetProperty("resource").GetProperty("title").GetString());
+            Assert.Equal(25, pages.Count);
+            Assert.Single(pages.Keys, path => path.Split('/').Length == 3);
+            foreach (var (path, title) in new[] {
+                ("/pages/index.js", "Diagnostics console"), ("/pages/application/modules.js", "Modules"), ("/pages/runtime/tasks.js", "Tasks"),
+                ("/pages/resources/resolver.js", "Resolver"), ("/pages/ui/components.js", "Components"), ("/pages/apis/services.js", "Services"),
+                ("/pages/browser/service-worker.js", "Service Worker"), ("/pages/detail/tasks-detail.js", "Task details")
+            }) {
+                Assert.Equal(title, pages[path]);
+                var page = await SendAsync(root, module + path, true);
+                Assert.Equal(200, page.StatusCode);
+                Assert.Contains("templateRenderer:", page.Text);
+            }
+            var oldPage = await SendAsync(root, module + "/pages/modules.js", true);
+            Assert.Equal(404, oldPage.StatusCode);
+        }
+        [Fact]
         public async Task DevelopmentModuleIndex_ReflectsManifestChanges() {
             using var workspace = new TemporaryDirectory();
             workspace.Write("resources/demo/manifest.jsonc", "{ \"modules\": { \"demo\": { \"version\": \"0.9.0\" } } }");

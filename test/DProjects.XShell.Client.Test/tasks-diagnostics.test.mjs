@@ -1,20 +1,22 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import TasksPage from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell-diagnostics/pages/tasks.js";
-import TaskDetailPage from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell-diagnostics/pages/tasks-detail.js";
+import TasksPage from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell-diagnostics/pages/runtime/tasks.js";
+import TaskDetailPage from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell-diagnostics/pages/detail/tasks-detail.js";
 import ListView from "../../src/DProjects.XShell/Resources/DProjects.XShell/x/components/x-listview.js";
 import { createPageClassFromJsDefinition } from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/loaders/page-js.js";
 import createStateEngine from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/state-engines/proxy.js";
 import Logger from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/logger.js";
+import Events from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/events.js";
+import Timer from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/timer.js";
 import Navigation from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/navigation.js";
 import Tasks from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/services/tasks.js";
 import PageSchema from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/schemas/page.schema.json" with { type: "json" };
 import ContractSchema from "../../src/DProjects.XShell/Resources/DProjects.XShell/xshell/schemas/contract.schema.json" with { type: "json" };
 
-const listPath = "/_assets/xshell-diagnostics/pages/tasks.js";
-const detailPath = "/_assets/xshell-diagnostics/pages/tasks-detail.js";
-const detailHref = "page:xshell-diagnostics:/pages/tasks-detail.js";
+const listPath = "/_assets/xshell-diagnostics/pages/runtime/tasks.js";
+const detailPath = "/_assets/xshell-diagnostics/pages/detail/tasks-detail.js";
+const detailHref = "page:xshell-diagnostics:/pages/detail/tasks-detail.js";
 const flush = () => new Promise(resolve => setImmediate(resolve));
 
 function createBus() {
@@ -35,9 +37,15 @@ async function loadPage(definition, src, services) {
         "state-engine:proxy": function (state, context) { return createStateEngine(state, context); },
         "render-engine:test": class { dependencies = []; slots = []; init() {} }
     };
+    // Resolve and dispose the same scoped helpers used by the running Pages.
+    const scope = { beginScope({ context }) {
+        const events = new Events({ scopeContext: context });
+        const timer = new Timer({ scopeContext: context });
+        return { resolve: name => ({ events, timer })[name] ?? services[name], async dispose() { events.dispose(); timer.dispose(); } };
+    } };
     const PageClass = await createPageClassFromJsDefinition(src, {
         resourceDefinition: { moduleId: "xshell-diagnostics" },
-        services: { logger: new Logger({}), ...services, config, loader: { load: name => resources[name] } }
+        services: { logger: new Logger({}), ...services, services: scope, config, loader: { load: name => resources[name] } }
     }, { ...definition, contract: structuredClone(definition.contract), meta: { ...definition.meta } });
     const page = new PageClass({ src, context: {}, bus: services.bus });
     await page.load();
@@ -104,7 +112,7 @@ test("Tasks activates the selected row in the stack and retains its live filtere
     assert.equal(detailHost.layout, "stack");
     assert.equal(detailHost.src, detailPath + "?id=" + target.id);
     detailHost.page = await loadPage(TaskDetailPage, detailHost.src, { tasks, bus });
-    assert.equal(detailHost.page._state.task.id, target.id);
+    assert.equal(detailHost.page._state.taskId, target.id);
 
     detailHost.dispatchEvent(new Event("close"));
     await new Promise(resolve => setImmediate(resolve));
@@ -131,8 +139,8 @@ test("Task details reports missing and unknown query IDs", async t => {
     t.after(() => unknown.unload());
     assert.deepEqual(get.mock.calls[0].arguments, ["unknown"]);
     assert.match(unknown._state.notice, /unknown.*unavailable/);
-    assert.equal(unknown._state.task, null);
-    assert.equal(unknown._state.canCancel, false);
+    assert.equal(unknown._state.ready, false);
+    assert.equal(unknown._state.running, false);
     assert.equal(unknown._state.canRemove, false);
 });
 
@@ -148,37 +156,34 @@ test("Task details updates progress, duration, output and failure for the inspec
     const page = await loadPage(TaskDetailPage, detailPath + "?id=" + task.id, { bus, tasks });
     t.after(() => page.unload());
     const state = page._state;
-    assert.equal(state.task.progressLabel, "Indeterminate");
-    assert.equal(state.task.background, "No");
-    assert.equal(state.task.endedAt, undefined);
-    assert.equal(state.task.error, null);
-    const snapshot = state.task;
-    bus.emit("xshell:tasks:updated", { id: "another task" });
-    assert.equal(state.task, snapshot);
+    assert.equal(state.taskProgress, null);
+    assert.equal(state.taskBackground, "No");
+    assert.equal(state.endedAt, null);
+    assert.equal(state.taskError, null);
 
     const duration = t.mock.getter(task, "duration", () => 1234);
-    t.mock.timers.tick(1000);
-    assert.equal(state.duration, 1234);
+    t.mock.timers.tick(250);
+    assert.equal(state.taskDuration, 1234);
     assert.equal(duration.mock.callCount(), 1);
     execution.setDescription("Reading orders");
     execution.setProgress(2, 5);
     execution.warn("Partial data");
-    assert.equal(state.task.description, "Reading orders");
-    assert.equal(state.task.progressLabel, "40%");
+    assert.equal(state.taskDescription, "Reading orders");
+    assert.deepEqual(state.taskProgress, { value: 2, max: 5 });
 
     t.mock.timers.tick(1000);
     await flush();
-    assert.equal(state.output[0].text, "Partial data");
-    assert.equal(state.output[0].level, "warn");
-    assert.doesNotThrow(() => new Date(state.output[0].timestamp).toISOString());
+    assert.equal(state.visibleTaskOutput[0].text, "Partial data");
+    assert.equal(state.visibleTaskOutput[0].level, "warn");
+    assert.ok(state.visibleTaskOutput[0].timestamp);
 
     hold.reject(new Error("Import failed"));
     await task.wait();
-    assert.equal(state.task.status, "error");
-    assert.equal(state.task.error.message, "Import failed");
-    assert.ok(state.task.endedAt);
+    assert.equal(state.taskStatus, "error");
+    assert.equal(state.taskError.message, "Import failed");
+    assert.ok(state.endedAt);
     assert.equal(state.canRemove, true);
-    assert.equal(state.canCancel, false);
+    assert.equal(state.running, false);
 });
 
 test("Task details pages through retained output in order and caps the visible window", async t => {
@@ -190,39 +195,40 @@ test("Task details pages through retained output in order and caps the visible w
     const getOutput = t.mock.method(task, "getOutput");
     const page = await loadPage(TaskDetailPage, detailPath + "?id=" + task.id, { bus, tasks });
     t.after(() => page.unload());
+    await flush();
     const state = page._state;
-    assert.equal(state.output.length, 100);
-    assert.equal(state.output[0].text, "50");
+    assert.equal(state.taskOutput.length, 500);
+    assert.equal(state.taskOutput[0].text, "4550");
+    assert.equal(state.taskOutput.at(-1).text, "5049");
     assert.equal(state.outputSkipped, true);
-    assert.equal(state.hasMoreOutput, true);
-    for (let i = 0; i < 5; i++) await page.onCommand("readOutput");
-    assert.equal(state.output.length, 500);
-    assert.equal(state.output[0].text, "150");
-    assert.equal(state.output.at(-1).text, "649");
-    assert.deepEqual(getOutput.mock.calls.map(call => call.arguments[0].cursor), [undefined, "150", "250", "350", "450", "550"]);
-    assert.ok(getOutput.mock.calls.every(call => call.arguments[0].limit === 100));
+    assert.deepEqual(state.visibleTaskOutput, []);
+    await page.onCommand("toggleOutput");
+    assert.deepEqual(state.visibleTaskOutput, state.taskOutput);
+    assert.deepEqual(getOutput.mock.calls.map(call => call.arguments[0].cursor), [undefined, "1050", "2050", "3050", "4050", "5050"]);
+    assert.ok(getOutput.mock.calls.every(call => call.arguments[0].limit === 1000));
 });
 
 test("Task details coalesces output reads and handles an empty page after a full page", async t => {
     const { bus, tasks } = setup(t);
     const task = tasks.run({ title: "Exact page", handler(context) {
-        for (let i = 0; i < 100; i++) context.log("same text");
+        for (let i = 0; i < 1000; i++) context.log("same text");
     } });
     await task.wait();
+    const pending = Promise.withResolvers();
+    const output = await task.getOutput({ limit: 1000 });
+    const getOutput = t.mock.method(task, "getOutput");
+    getOutput.mock.mockImplementationOnce(() => pending.promise);
     const page = await loadPage(TaskDetailPage, detailPath + "?id=" + task.id, { bus, tasks });
     t.after(() => page.unload());
     const state = page._state;
-    assert.equal(state.hasMoreOutput, true);
-    const getOutput = t.mock.method(task, "getOutput");
-    const first = page.onCommand("readOutput");
-    const second = page.onCommand("readOutput");
-    bus.emit("xshell:tasks:updated", { id: task.id });
-    t.mock.timers.tick(1000);
-    await Promise.all([first, second]);
+    await page.onCommand("readOutput");
     assert.equal(getOutput.mock.callCount(), 1);
-    assert.equal(state.hasMoreOutput, false);
-    assert.equal(state.output.length, 100);
-    assert.equal(new Set(state.output.map(entry => entry.offset)).size, 100);
+    pending.resolve(output);
+    await flush();
+    assert.equal(getOutput.mock.callCount(), 2);
+    assert.equal(getOutput.mock.calls[1].arguments[0].cursor, "1000");
+    assert.equal(state.taskOutput.length, 500);
+    assert.equal(new Set(state.taskOutput.map(entry => entry.offset)).size, 500);
 });
 
 test("Task details ignores pending output after a target change, removal, or unload", async t => {
@@ -238,20 +244,20 @@ test("Task details ignores pending output after a target change, removal, or unl
     const page = await loadPage(TaskDetailPage, detailPath + "?id=" + previous.id, { bus, tasks });
     const state = page._state;
     state.id = next.id;
-    assert.equal(state.task.id, next.id);
+    assert.equal(state.taskId, next.id);
     assert.equal(nextRead.mock.callCount(), 0);
     previousRead.resolve(previousOutput);
     await flush();
-    assert.deepEqual(state.output.map(entry => entry.text), ["next"]);
+    assert.deepEqual(state.taskOutput.map(entry => entry.text), ["next"]);
 
     const removedRead = Promise.withResolvers();
     nextRead.mock.mockImplementation(() => removedRead.promise);
     const removedRequest = page.onCommand("readOutput");
-    tasks.remove(next.id);
-    assert.match(state.notice, /unavailable/);
+    await page.onCommand("removeTask");
+    assert.match(state.notice, /was removed/);
     removedRead.resolve(nextOutput);
     await removedRequest;
-    assert.deepEqual(state.output, []);
+    assert.deepEqual(state.taskOutput, []);
 
     const unloadedRead = Promise.withResolvers();
     t.mock.method(previous, "getOutput", () => unloadedRead.promise);
@@ -259,32 +265,32 @@ test("Task details ignores pending output after a target change, removal, or unl
     await page.unload();
     unloadedRead.resolve(previousOutput);
     await flush();
-    assert.deepEqual(state.output, []);
+    assert.deepEqual(state.taskOutput, []);
 });
 
 test("Task details cancels cooperatively, removes terminal tasks and disposes scoped listeners and timers", async t => {
     const { bus, tasks } = setup(t);
-    const removeListener = t.mock.method(bus, "removeEventListener");
     const clearInterval = t.mock.method(globalThis, "clearInterval");
     let execution;
     const hold = Promise.withResolvers();
     const task = tasks.run({ title: "Cancelable", handler(context) { execution = context; return hold.promise; } });
     t.after(() => hold.resolve());
+    const removeListener = t.mock.method(task, "removeEventListener");
     const cancel = t.mock.method(task, "cancel");
     const remove = t.mock.method(tasks, "remove");
     const page = await loadPage(TaskDetailPage, detailPath + "?id=" + task.id, { bus, tasks });
     const state = page._state;
     await page.onCommand("removeTask");
     assert.equal(remove.mock.callCount(), 0);
-    assert.equal(state.canCancel, true);
+    assert.equal(state.running, true);
     await page.onCommand("cancelTask");
     await page.onCommand("cancelTask");
     assert.equal(cancel.mock.callCount(), 1);
     assert.equal(execution.signal.aborted, true);
-    assert.equal(state.task.status, "running");
+    assert.equal(state.taskStatus, "running");
     hold.resolve();
     await task.wait();
-    assert.equal(state.task.status, "canceled");
+    assert.equal(state.taskStatus, "canceled");
     await page.onCommand("cancelTask");
     assert.equal(cancel.mock.callCount(), 1);
 
@@ -293,6 +299,6 @@ test("Task details cancels cooperatively, removes terminal tasks and disposes sc
     assert.equal(tasks.get(task.id), undefined);
     assert.match(state.notice, /was removed/);
     await page.unload();
-    assert.deepEqual(removeListener.mock.calls.map(call => call.arguments[0]), ["xshell:tasks:updated", "xshell:tasks:removed"]);
+    assert.deepEqual(removeListener.mock.calls.map(call => call.arguments[0]), ["change"]);
     assert.equal(clearInterval.mock.callCount(), 1);
 });
